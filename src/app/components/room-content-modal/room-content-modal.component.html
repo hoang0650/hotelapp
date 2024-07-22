@@ -1,0 +1,90 @@
+<div  *ngIf="roomData.roomStatus === 'available'">
+  
+  <form>
+    <div class="form-group">
+          <label for="inputAddress"><strong>Phòng: {{roomData['roomNumber']}}</strong></label><br>
+          <label for="inputAddress"><strong>Trạng thái phòng:</strong> Trống</label><br>
+        </div>
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="inputState">Tính tiền</label>
+        <select id="inputState" class="form-control">
+          <option selected>Tính theo giờ</option>
+          <option>Tính qua đêm</option>
+          <option>Tính qua ngày</option>
+          <option>Tính ngày đêm</option>
+        </select>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="inputCity">Đồ uống</label>
+        <select id="inputCity" class="form-control">
+          <option selected>chọn đồ uống</option>
+          <option>nước ngọt</option>
+          <option>bia</option>
+          <option>bò húc</option>
+        </select>
+      </div>
+      <!-- <div class="form-group col-md-2">
+        <label for="inputZip">Zip</label>
+        <input type="text" class="form-control" id="inputZip">
+      </div> -->
+    </div>
+
+    <!-- <div class="form-group">
+      <label for="inputAddress">Address</label>
+      <input type="text" class="form-control" id="inputAddress" placeholder="1234 Main St">
+    </div> -->
+  </form>
+</div>
+
+<div  *ngIf="roomData.roomStatus === 'active'">
+  
+    <form>
+      <div class="form-group">
+            <label for="inputAddress"><strong>Phòng: {{roomData['roomNumber']}}</strong></label><br>
+            <label for="inputEmail4">Nhận phòng lúc: {{listData[0].checkinTime | date: 'dd/MM/yyyy HH:mm:ss'}} -
+              Đến: <span *ngIf="!listData[0].checkoutTime">hiện tại</span>
+            </label><br>
+            <label for="inputAddress"><strong>Trạng thái phòng:</strong> Đang sử dụng</label><br>
+          </div>
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="inputState">Tính tiền</label>
+          <select id="inputState" class="form-control">
+            <option selected>Tính theo giờ</option>
+            <option>Tính qua đêm</option>
+            <option>Tính qua ngày</option>
+            <option>Tính ngày đêm</option>
+          </select>
+        </div>
+        <div class="form-group col-md-6">
+          <label for="inputCity">Đồ uống</label>
+          <select id="inputCity" class="form-control">
+            <option selected>chọn đồ uống</option>
+            <option>nước ngọt</option>
+            <option>bia</option>
+            <option>bò húc</option>
+          </select>
+        </div>
+      </div>
+      <label for="inputAddress">Tổng tiền: {{listData[0].payment}}</label><br>
+    </form>
+</div>
+
+  
+<div *ngIf="roomData.roomStatus === 'dirty'">
+    <label for="inputAddress">Dọn Dẹp Phòng</label><br>
+    <form>
+      <div class="form-group">
+            <label for="inputAddress"><strong>Phòng: {{roomData['roomNumber']}}</strong></label><br>
+            <label for="inputEmail4">Nhận phòng lúc: {{listData[0].checkinTime | date: 'dd/MM/yyyy HH:mm:ss'}} -
+              Đến: {{listData[0].checkoutTime | date: 'dd/MM/yyyy HH:mm:ss'}}
+            </label><br>
+            <label for="inputAddress"><strong>Trạng thái phòng:</strong> Đang bẩn</label><br>
+          </div>
+      <div class="form-row">
+        <label for="inputAddress">Tổng tiền: {{listData[0].payment}}</label><br>
+      </div>
+    </form>
+</div>
+  

@@ -1,0 +1,65 @@
+.room-box {
+    height: 100px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    text-align: center;
+    line-height: 100px;
+}
+
+.active-room {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.inactive-room {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.dirty-room{
+    background-color: grey;
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transition: margin-left 0.3s;
+    }
+}
+
+@media (min-width: 200px) {
+    .sidebar {
+        transition: margin-left 0.3s;
+    }
+}
+
+/* antd */
+
+.logo {
+    height: 32px;
+    margin: 16px;
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  nz-header {
+    background: #fff;
+    padding: 0;
+  }
+
+  nz-content {
+    margin: 0 16px;
+  }
+
+  nz-breadcrumb {
+    margin: 16px 0;
+  }
+
+  .inner-content {
+    padding: 24px;
+    background: #fff;
+    min-height: 360px;
+  }
+
+  nz-footer {
+    text-align: center;
+  }

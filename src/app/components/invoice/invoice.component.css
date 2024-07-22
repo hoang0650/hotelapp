@@ -1,0 +1,47 @@
+/* CSS chung */
+.nz-card {
+  width: 100%;
+}
+
+/* Responsive CSS */
+@media (max-width: 480px) {
+  .nz-table {
+    overflow-x: auto;
+  }
+
+  .nz-table td,
+  .nz-table th {
+    white-space: nowrap;
+  }
+
+  .hidden-mobile {
+    display: none;
+  }
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Chia layout thành hai cột bằng nhau */
+  gap: 10px; /* Khoảng cách giữa các cột */
+}
+
+.left-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.right-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* Căn phải các phần tử bên trong */
+}
+
+.nzCardBordered {
+  border: 1px solid #d9d9d9; /* Set border for the nz-card */
+}
+
+.custom-footer {
+  display: flex;
+  justify-content: flex-end; /* Align the button to the right */
+  margin-top: 10px; /* Add some top margin for spacing */
+}

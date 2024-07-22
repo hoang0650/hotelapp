@@ -1,0 +1,48 @@
+.active-room {
+    background: orange !important;
+}
+
+.inactive-room {
+    background: #28a745 !important;
+}
+
+.dirty-room {
+    background: grey !important;
+}
+
+.slider {
+    width: 50%;
+}
+
+.slider-container {
+    margin-bottom: 16px;
+}
+
+.ant-card{
+    background: none !important;
+}
+
+.grid-config{
+    height: 120px;
+    font-size: 14px;
+    line-height: 120px;
+    border-radius: 4px;
+}
+
+
+.gutter-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.occupied {
+    border: 1px solid red;
+    /* or any style for occupied rooms */
+}
+
+.available {
+    border: 1px solid green;
+    /* or any style for available rooms */
+}

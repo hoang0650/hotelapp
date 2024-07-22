@@ -1,0 +1,91 @@
+<div class="container my-4">
+    <div class="border rounded border-warning bg-custom p-3">
+        <h2>Danh mục sản phẩm</h2>
+
+        <div class="header-title">
+            <h1>TỔ YẾN SẠCH - TINH CHẾ</h1>
+        </div>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+            <div class="col" *ngFor ="let product of productService.products$ | async"  (click)="onSelect(product.roomNumber)" [routerLink]="['/product', product.roomNumber]">
+                <div class="card h-100">
+                    <img src="../assets/images/yenchungbay1.jpg" class="card-img-top" alt="...">
+                    <div class="card-body product-info">
+                        <h3><a href="#">{{product?.roomNumber}}</a></h3>
+                        <p class="price">{{product?.dailyRate}}</p>
+                        <p class="description">{{product?.description}}</p>
+                    </div>
+                </div>
+            </div>
+            <!-- <div class="col">
+                <div class="card h-100">
+                    <img src="../assets/images/yenchungbay1.jpg" class="card-img-top" alt="...">
+                    <div class="card-body product-info">
+                        <h3><a href="#">Product 1</a></h3>
+                        <p class="price">100,000 đ</p>
+                        <p class="description">Product description goes here</p>
+                    </div>
+                </div>
+            </div> -->
+            <!-- <div class="col">
+                <div class="card h-100">
+                    <img src="../assets/images/yenchungbay2.jpg" class="card-img-top" alt="...">
+                    <div class="card-body product-info">
+                        <h3><a href="#">Product 1</a></h3>
+                        <p class="price">100,000 đ</p>
+                        <p class="description">Product description goes here</p>
+                    </div>
+                </div>
+            </div> -->
+            <!-- <div class="col">
+                <div class="card h-100">
+                    <img src="../assets/images/yenchungbay2.jpg" class="card-img-top" alt="...">
+                    <div class="card-body product-info">
+                        <h3><a href="#">Product 1</a></h3>
+                        <p class="price">100,000 đ</p>
+                        <p class="description">Product description goes here</p>
+                    </div>
+                </div>
+            </div> -->
+            <!-- <div class="col">
+                <div class="card h-100">
+                    <img src="../assets/images/yenchungbay2.jpg" class="card-img-top" alt="...">
+                    <div class="card-body product-info">
+                        <h3><a href="#">Product 1</a></h3>
+                        <p class="price">100,000 đ</p>
+                        <p class="description">Product description goes here</p>
+                    </div>
+                </div>
+            </div> -->
+            <!-- <div class="col">
+                <div class="card h-100">
+                    <img src="../assets/images/yenchungbay2.jpg" class="card-img-top" alt="...">
+                    <div class="card-body product-info">
+                        <h3><a href="#">Product 1</a></h3>
+                        <p class="price">100,000 đ</p>
+                        <p class="description">Product description goes here</p>
+                    </div>
+                </div>
+            </div> -->
+            <!-- <div class="col">
+                <div class="card h-100">
+                    <img src="../assets/images/yenchungbay2.jpg" class="card-img-top" alt="...">
+                    <div class="card-body product-info">
+                        <h3><a href="#">Product 1</a></h3>
+                        <p class="price">100,000 đ</p>
+                        <p class="description">Product description goes here</p>
+                    </div>
+                </div>
+            </div> -->
+            <!-- <div class="col">
+                <div class="card h-100">
+                    <img src="../assets/images/yenchungbay2.jpg" class="card-img-top" alt="...">
+                    <div class="card-body product-info">
+                        <h3><a href="#">Product 1</a></h3>
+                        <p class="price">100,000 đ</p>
+                        <p class="description">Product description goes here</p>
+                    </div>
+                </div>
+            </div> -->
+        </div>
+    </div>
+</div>

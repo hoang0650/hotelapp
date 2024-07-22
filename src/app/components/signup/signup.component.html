@@ -1,0 +1,37 @@
+<div class="container">
+    <div class="row justify-content-center mt-5">
+      <div class="col-sm-6 col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title text-center mb-4">Đăng ký tài khoản</h5>
+            <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+              <div class="form-floating mb-3">
+                <input type="email" class="form-control" id="username" formControlName="username">
+                <label for="floatingInput">User name</label>
+              </div>
+              <!-- <div class="form-floating mb-3">
+                <input type="email" class="form-control" id="username" formControlName="username">
+                <label for="floatingInput">Số điện thoại</label>
+              </div> -->
+              <div class="form-floating mb-3">
+                <input type="email" class="form-control" id="email" formControlName="email">
+                <label for="floatingInput">Email</label>
+              </div>
+              <div class="form-floating mb-3">
+                <input type="password" class="form-control" id="password" formControlName="password">
+                <label for="floatingInput">Mật khẩu</label>
+              </div>
+              <div class="form-floating mb-3">
+                <input type="password" class="form-control" id="password" formControlName="password">
+                <label for="floatingPassword">Nhập lại mật khẩu</label>
+                <a href="#" class="link-primary float-end">Quên mật khẩu?</a>
+              </div>
+              <button type="submit" class="btn btn-lg btn-primary mt-3 w-100" [disabled]="registerForm.invalid">Đăng ký</button>
+            </form>
+            <hr>
+            <p class="text-center">Đã có tài khoản đăng nhập? <a [routerLink]="['/login']">Tại đây</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

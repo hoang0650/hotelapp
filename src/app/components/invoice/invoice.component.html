@@ -1,0 +1,79 @@
+<div class="container">
+  <nz-card>
+    <div nz-title>
+      <div class="container">
+        <div class="left-section">
+          <p>
+            <strong>Nhà nghỉ Thanh Vy</strong>
+          </p>
+          <p>
+            15/A1 Khu Phố Đồng An 2 - Phường Bình Hòa - Thành phố Thuận An - Tỉnh Bình Dương
+          </p>
+          <p>
+            ĐT: 0931881584
+          </p>
+        </div>
+        <div class="right-section">
+          <p>Số hóa đơn: {{ invoiceData?.invoiceNumber }}</p>
+        </div>
+      </div>
+      <hr style="border-top: 2px solid #000; margin-top: 10px;">
+      <h5 style="text-align: center;"><strong>HOÁ ĐƠN THANH TOÁN</strong><br>
+        24-02-2024
+      </h5>
+      
+    </div>
+    <div nz-body>
+      <p>Nhân viên: Phan Huy Hoàng</p>
+      <p>Khách hàng: Phan Thanh Bình</p>
+      <p>Phòng: 101</p>
+      <p>Ngày đến: 10:50 23/02/2024 - Ngày đi: 08:50 24/02/2024</p>
+  
+      <nz-table [nzData]="invoiceData?.products" nzShowPagination="false">
+        <thead>
+          <tr>
+            <th class="hidden-mobile">Tên hàng<br>(Product)</th>
+            <th class="hidden-mobile">Số lượng<br>(Quantity)</th>
+            <th>Đơn giá<br>(Unit)</th>
+            <th>Thành tiền<br>(Price)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let product of invoiceData?.products">
+            <td class="hidden-mobile">{{product.name}}</td>
+            <td class="hidden-mobile">x1</td>
+            <td>{{ product.price | currency: 'VND' }}</td>
+            <td>{{ product.price | currency: 'VND' }}</td>
+          </tr>
+          <tr>
+            <td><strong>Phụ thu(Charges):</strong></td>
+            <td></td>
+            <td></td>
+            <td>
+              <p>0</p>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Khuyến mãi(Discount):</strong></td>
+            <td></td>
+            <td></td>
+            <td>
+              <p>0</p>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Tổng tiền(Total):</strong></td>
+            <td></td>
+            <td></td>
+            <td>
+              <p>{{ invoiceData?.totalAmount | currency: 'VND' }}</p>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </div>
+    <div nz-actions class="custom-footer">
+      <button nz-button nzType="primary" (click)="exportInvoice()">In <span nz-icon nzType="printer" nzTheme="outline"></span></button>
+    </div>
+  </nz-card>
+</div>
