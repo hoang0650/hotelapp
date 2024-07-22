@@ -10,14 +10,14 @@ export class HeaderComponent implements OnInit {
   infor: any;
 
   constructor(private userService: UserService) {
-    // this.userInfor()
+    this.userInfor()
   }
 
   ngOnInit(): void {
     this.userService.isLoggedIn.subscribe((status)=>{
       console.log('status',status);
       this.isLoggedIn = status
-      // this.userInfor()
+      this.userInfor()
     })
   }
 
@@ -28,12 +28,12 @@ export class HeaderComponent implements OnInit {
 
   }
 
-  // userInfor(){
-  //   return this.userService.getUserInfor().subscribe(data=>{
-  //     this.infor=data
-  //     console.log('data',data);
+  userInfor(){
+    return this.userService.getUserInfor().subscribe(data=>{
+      this.infor=data
+      console.log('data',data);
       
-  //   });
-  // }
+    });
+  }
 
 }

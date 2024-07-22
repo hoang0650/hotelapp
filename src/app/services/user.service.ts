@@ -11,7 +11,7 @@ export class UserService {
   private apiUrl = 'https://hotel-app-smp2.onrender.com/users'
   public loggedIn = new BehaviorSubject<boolean>(false);
   constructor(private http: HttpClient) { 
-    // this.checkToken();
+    this.checkToken();
   }
 
    // Hàm này kiểm tra token và cập nhật trạng thái đăng nhập
@@ -69,11 +69,11 @@ export class UserService {
   //   return this.http.get('/api/users').pipe(map((res: any) => { return res.JSON() }))
   // }
 
-  // getUserInfor(): Observable <any>{
-  //   const token = localStorage.getItem('access_token')
-  //   const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`)
-  //   return this.http.get<any>(`${this.apiUrl}/info`, { headers });
-  // }
+  getUserInfor(): Observable <any>{
+    const token = localStorage.getItem('access_token')
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`)
+    return this.http.get<any>(`${this.apiUrl}/info`, { headers });
+  }
 
   countUsers(): Observable<any>{
     return this.http.get('/api/users/count').pipe(map((res:any)=>{return res.JSON()}))
