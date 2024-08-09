@@ -192,16 +192,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       const durationInHours = Math.ceil((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60));
   
       let payment = 0;
-      const checkOutHourLimit = 22;
+      const checkOutHourLimit = 22;   
 
-      
-
-      if(this.room.options.isNight || checkoutHour >= checkOutHourLimit){
+      if(checkoutHour >= checkOutHourLimit){
         payment = this.room.nightlyRate;
-      }
-
-      if(this.room.options.isDay){
-        payment = this.room.dailyRate;
       }
   
       // Giá cho giờ đầu là 50$
