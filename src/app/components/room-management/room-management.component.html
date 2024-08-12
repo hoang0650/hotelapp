@@ -1,0 +1,53 @@
+<nz-card>
+    <nz-table #roomTable [nzData]="rooms" [nzBordered]="true">
+      <thead>
+        <tr>
+          <th nzWidth="25%">Tên Phòng</th>
+          <th nzWidth="25%">Loại Phòng</th>
+          <th nzWidth="25%">Giá Phòng</th>
+          <th nzWidth="25%">Trạng Thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let room of roomTable.data">
+          <td>{{ room['name'] }}</td>
+          <td>{{ room['type'] }}</td>
+          <td>{{ room['price'] | currency }}</td>
+          <td>{{ room['status'] }}</td>
+        </tr>
+      </tbody>
+    </nz-table>
+  
+    <nz-form [formGroup]="roomForm" (ngSubmit)="onSubmitRoom()">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Tên Phòng</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="roomName" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Loại Phòng</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="roomType" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Giá Phòng</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="roomPrice" type="number" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Trạng Thái</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="roomStatus" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-control [nzSpan]="14" [nzOffset]="6">
+          <button nz-button nzType="primary" type="submit">Thêm Phòng</button>
+        </nz-form-control>
+      </nz-form-item>
+    </nz-form>
+  </nz-card>
+  

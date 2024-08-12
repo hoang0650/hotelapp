@@ -47,6 +47,10 @@ import { UnauthorizedComponent } from './components/unauthorized/unauthorized.co
 import { NotfoundComponent } from './components/notfound/notfound.component';
 import { RoomContentModalComponent } from './components/room-content-modal/room-content-modal.component';
 import { InvoiceComponent } from './components/invoice/invoice.component';
+import { CompanyManagementComponent } from './components/company-management/company-management.component';
+import { HotelManagementComponent } from './components/hotel-management/hotel-management.component';
+import { RoomManagementComponent } from './components/room-management/room-management.component';
+import { StaffManagementComponent } from './components/staff-management/staff-management.component';
 
 registerLocaleData(en);
 
@@ -70,7 +74,11 @@ registerLocaleData(en);
     UnauthorizedComponent,
     NotfoundComponent,
     RoomContentModalComponent,
-    InvoiceComponent
+    InvoiceComponent,
+    CompanyManagementComponent,
+    HotelManagementComponent,
+    RoomManagementComponent,
+    StaffManagementComponent
   ],
   imports: [
     BrowserModule,

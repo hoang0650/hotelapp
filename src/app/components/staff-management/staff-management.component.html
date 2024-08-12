@@ -1,0 +1,53 @@
+<nz-card>
+    <nz-table #staffTable [nzData]="staff" [nzBordered]="true">
+      <thead>
+        <tr>
+          <th nzWidth="25%">Tên Nhân Viên</th>
+          <th nzWidth="25%">Chức Vụ</th>
+          <th nzWidth="25%">Số Điện Thoại</th>
+          <th nzWidth="25%">Email</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let staffMember of staffTable.data">
+          <td>{{ staffMember['name'] }}</td>
+          <td>{{ staffMember['position'] }}</td>
+          <td>{{ staffMember['phone'] }}</td>
+          <td>{{ staffMember['email'] }}</td>
+        </tr>
+      </tbody>
+    </nz-table>
+  
+    <nz-form [formGroup]="staffForm" (ngSubmit)="onSubmitStaff()">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Tên Nhân Viên</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="staffName" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Chức Vụ</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="staffPosition" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Số Điện Thoại</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="staffPhone" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Email</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="staffEmail" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-control [nzSpan]="14" [nzOffset]="6">
+          <button nz-button nzType="primary" type="submit">Thêm Nhân Viên</button>
+        </nz-form-control>
+      </nz-form-item>
+    </nz-form>
+  </nz-card>
+  

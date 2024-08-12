@@ -11,22 +11,33 @@ import { NotfoundComponent } from './components/notfound/notfound.component';
 import { InvoiceComponent } from './components/invoice/invoice.component';
 import { RoomHistoryComponent } from './components/room-history/room-history.component';
 import { RoomComponent } from './components/room/room.component';
+import { CompanyManagementComponent } from './components/company-management/company-management.component';
+import { HotelManagementComponent } from './components/hotel-management/hotel-management.component';
+import { RoomManagementComponent } from './components/room-management/room-management.component';
+import { StaffManagementComponent } from './components/staff-management/staff-management.component';
 const routes: Routes = [
   { path: '', redirectTo: 'admin', pathMatch: 'full' },
-  { path: 'home', component: HomeComponent},
+  { path: 'home', component: HomeComponent },
   { path: 'login', component: LoginComponent },
-  { path: 'signup', component: SignupComponent},
-  { path: 'product/:id', component: ProductDetailComponent},
-  { path: 'admin', component: AdminComponent,children: [
-    { path: 'room', component: RoomComponent },
-    { path: 'history', component: RoomHistoryComponent },
-    { path: 'bill', component: InvoiceComponent },
-    // Thêm các route con khác nếu cần
-  ]},
-  { path: 'modal', component: ModalComponent},
-  { path: 'unauthorized', component: UnauthorizedComponent},
-  { path: 'notfound', component: NotfoundComponent},
-  { path: 'bill', component: InvoiceComponent}
+  { path: 'signup', component: SignupComponent },
+  { path: 'product/:id', component: ProductDetailComponent },
+  {
+    path: 'admin', component: AdminComponent, children: [
+      { path: 'room', component: RoomComponent },
+      { path: 'history', component: RoomHistoryComponent },
+      { path: 'bill', component: InvoiceComponent },
+      { path: 'company', component: CompanyManagementComponent },
+      { path: 'room-management', component: RoomManagementComponent },
+      { path: 'hotel', component: HotelManagementComponent },
+      { path: 'staff', component: StaffManagementComponent }
+      // Thêm các route con khác nếu cần
+    ]
+  },
+  { path: 'modal', component: ModalComponent },
+  { path: 'unauthorized', component: UnauthorizedComponent },
+  { path: 'notfound', component: NotfoundComponent },
+  { path: 'bill', component: InvoiceComponent }
+
 ];
 
 @NgModule({

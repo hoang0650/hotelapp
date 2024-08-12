@@ -1,0 +1,34 @@
+<nz-card>
+    <nz-table #hotelTable [nzData]="business" [nzBordered]="true">
+        <thead>
+          <tr>
+            <th nzWidth="25%">Tên Khách Sạn</th>
+            <th nzWidth="25%">Địa Chỉ</th>
+            <th nzWidth="25%">Số Phòng</th>
+            <th nzWidth="25%">Quản Lý</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let hotel of hotelTable.data">
+            <td>Nhà nghỉ Thanh Vy</td>
+            <td>A1/15 phường Bình Hòa, Thuận An, Bình Dương</td>
+            <td>101</td>
+            <td>Phan Huy Hoang</td>
+          </tr>
+        </tbody>
+      </nz-table>
+    <nz-form [formGroup]="companyForm" (ngSubmit)="onSubmitCompany()">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Tên Doanh Nghiệp</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="companyName" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-control [nzSpan]="14" [nzOffset]="6">
+          <button nz-button nzType="primary" type="submit">Tạo Doanh Nghiệp</button>
+        </nz-form-control>
+      </nz-form-item>
+    </nz-form>
+  </nz-card>
+  

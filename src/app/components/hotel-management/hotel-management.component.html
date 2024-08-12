@@ -1,0 +1,53 @@
+<nz-card>
+    <nz-table #hotelTable [nzData]="hotels" [nzBordered]="true">
+      <thead>
+        <tr>
+          <th nzWidth="25%">Tên Khách Sạn</th>
+          <th nzWidth="25%">Địa Chỉ</th>
+          <th nzWidth="25%">Số Phòng</th>
+          <th nzWidth="25%">Quản Lý</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let hotel of hotelTable.data">
+          <td>Nhà nghỉ Thanh Vy</td>
+          <td>A1/15 phường Bình Hòa, Thuận An, Bình Dương</td>
+          <td>101</td>
+          <td>Phan Huy Hoang</td>
+        </tr>
+      </tbody>
+    </nz-table>
+  
+    <nz-form [formGroup]="hotelForm" (ngSubmit)="onSubmitHotel()">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Tên Khách Sạn</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="hotelName" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Địa Chỉ</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="hotelAddress" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Số Phòng</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="hotelRoomsCount" type="number" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Quản Lý</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="hotelManager" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-control [nzSpan]="14" [nzOffset]="6">
+          <button nz-button nzType="primary" type="submit">Thêm Khách Sạn</button>
+        </nz-form-control>
+      </nz-form-item>
+    </nz-form>
+  </nz-card>
+  
