@@ -10,22 +10,14 @@
     background: grey !important;
 }
 
-.slider {
-    width: 50%;
-}
-
-.slider-container {
-    margin-bottom: 16px;
-}
-
 .ant-card{
     background: none !important;
 }
 
-.grid-config{
-    height: 120px;
+.grid-config {
+    height: auto; /* Thay đổi thành auto nếu cần điều chỉnh chiều cao */
     font-size: 14px;
-    line-height: 120px;
+    line-height: 1.5; /* Sử dụng line-height hợp lý hơn */
     border-radius: 4px;
 }
 
@@ -45,4 +37,44 @@
 .available {
     border: 1px solid green;
     /* or any style for available rooms */
+}
+
+/* Đảm bảo không có khoảng cách không mong muốn */
+.slider-container {
+    margin-bottom: 16px;
+  }
+  
+  .slider {
+    margin-bottom: 16px;
+  }
+  
+  /* Đảm bảo các thẻ phòng có thể cuộn ngang trên màn hình nhỏ */
+  .gutter-example {
+    overflow-x: auto;
+    margin: 0; /* Đảm bảo không có margin không mong muốn */
+    padding: 0; /* Loại bỏ padding không cần thiết */
+}
+  .grid-config {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+  }
+  
+  .nz-card {
+    width: 100%;
+    box-sizing: border-box; /* Đảm bảo padding và border không làm tăng chiều rộng */
+}
+  
+@media (max-width: 1024px) {
+    .grid-config {
+        font-size: 12px; /* Giảm kích thước chữ cho màn hình vừa */
+    }
+}
+
+@media (max-width: 768px) {
+    .grid-config {
+        height: auto; /* Điều chỉnh chiều cao cho màn hình nhỏ hơn */
+        font-size: 10px; /* Giảm kích thước chữ cho màn hình nhỏ */
+    }
 }

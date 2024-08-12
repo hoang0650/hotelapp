@@ -12,10 +12,11 @@ export class HotelManagementComponent implements OnInit {
 
   constructor(private fb: FormBuilder) {
     this.hotelForm = this.fb.group({
-      hotelName: ['', Validators.required],
-      hotelAddress: ['', Validators.required],
-      hotelRoomsCount: [0, Validators.required],
-      hotelManager: ['']
+      name: ['', Validators.required],
+      tax_code: [0, Validators.required],
+      address: ['', Validators.required],
+      phone: ['', Validators.required],
+      email: ['', Validators.required],
     });
   }
 

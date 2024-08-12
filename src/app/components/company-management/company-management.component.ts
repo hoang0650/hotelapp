@@ -12,7 +12,11 @@ export class CompanyManagementComponent implements OnInit {
 
   constructor(private fb: FormBuilder) {
     this.companyForm = this.fb.group({
-      companyName: ['', Validators.required]
+      name: ['', Validators.required],
+      tax_code: [0, Validators.required],
+      address: ['', Validators.required],
+      phone: ['', Validators.required],
+      email: ['', Validators.required]
     });
   }
 

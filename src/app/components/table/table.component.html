@@ -42,6 +42,7 @@
 [nzTitle]="settingValue.title ? 'Lịch sử đặt phòng' : null"
 [nzSize]="settingValue.size"
 (nzCurrentPageDataChange)="currentPageDataChange($event)"
+[nzScroll]="{ x: '100%' }"
 >
 <!-- [nzShowTotal]="totalTemplate" -->
 <thead>

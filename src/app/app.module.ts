@@ -1,5 +1,7 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule, provideClientHydration } from '@angular/platform-browser';
+import { NgxEchartsModule } from 'ngx-echarts'; // Import NgxEchartsModule
+import { HighchartsChartModule } from 'highcharts-angular';
 
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient } from '@angular/common/http';
@@ -42,6 +44,8 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
+
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { UnauthorizedComponent } from './components/unauthorized/unauthorized.component';
 import { NotfoundComponent } from './components/notfound/notfound.component';
@@ -51,6 +55,7 @@ import { CompanyManagementComponent } from './components/company-management/comp
 import { HotelManagementComponent } from './components/hotel-management/hotel-management.component';
 import { RoomManagementComponent } from './components/room-management/room-management.component';
 import { StaffManagementComponent } from './components/staff-management/staff-management.component';
+import { RevenueChartComponent } from './components/revenue-chart/revenue-chart.component';
 
 registerLocaleData(en);
 
@@ -78,10 +83,13 @@ registerLocaleData(en);
     CompanyManagementComponent,
     HotelManagementComponent,
     RoomManagementComponent,
-    StaffManagementComponent
+    StaffManagementComponent,
+    RevenueChartComponent
   ],
   imports: [
     BrowserModule,
+    NgxEchartsModule.forRoot({ echarts: () => import('echarts') }),
+    HighchartsChartModule ,
     AppRoutingModule,
     FormsModule,
     ReactiveFormsModule,
@@ -101,7 +109,8 @@ registerLocaleData(en);
     NzDividerModule,
     NzFormModule,
     NzCardModule,
-    NzModalModule
+    NzModalModule,
+    NzTabsModule
   ],
   providers: [
     provideClientHydration(),

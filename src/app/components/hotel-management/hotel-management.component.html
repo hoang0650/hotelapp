@@ -1,11 +1,12 @@
 <nz-card>
-    <nz-table #hotelTable [nzData]="hotels" [nzBordered]="true">
+    <nz-table #hotelTable [nzData]="hotels" [nzBordered]="true" [nzScroll]="{ x: '100%' }">
       <thead>
         <tr>
-          <th nzWidth="25%">Tên Khách Sạn</th>
-          <th nzWidth="25%">Địa Chỉ</th>
-          <th nzWidth="25%">Số Phòng</th>
-          <th nzWidth="25%">Quản Lý</th>
+          <th nzWidth="20%">Tên Khách Sạn</th>
+          <th nzWidth="20%">Mã số thuế</th>
+          <th nzWidth="20%">Địa chỉ</th>
+          <th nzWidth="20%">Số điện thoại</th>
+          <th nzWidth="20%">Email</th>
         </tr>
       </thead>
       <tbody>
@@ -22,25 +23,31 @@
       <nz-form-item>
         <nz-form-label [nzSpan]="6">Tên Khách Sạn</nz-form-label>
         <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="hotelName" />
+          <input nz-input formControlName="name" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Địa Chỉ</nz-form-label>
+        <nz-form-label [nzSpan]="6">Mã số thuế</nz-form-label>
         <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="hotelAddress" />
+          <input nz-input formControlName="tax_code" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Số Phòng</nz-form-label>
+        <nz-form-label [nzSpan]="6">Địa chỉ</nz-form-label>
         <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="hotelRoomsCount" type="number" />
+          <input nz-input formControlName="address"/>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Quản Lý</nz-form-label>
+        <nz-form-label [nzSpan]="6">Số điện thoại</nz-form-label>
         <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="hotelManager" />
+          <input nz-input formControlName="phone"/>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="6">Email</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+          <input nz-input formControlName="email" type="email" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>

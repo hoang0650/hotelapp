@@ -1,11 +1,13 @@
 <nz-card>
-    <nz-table #staffTable [nzData]="staff" [nzBordered]="true">
+    <nz-table #staffTable [nzData]="staff" [nzBordered]="true" [nzScroll]="{ x: '100%' }">
       <thead>
         <tr>
-          <th nzWidth="25%">Tên Nhân Viên</th>
-          <th nzWidth="25%">Chức Vụ</th>
-          <th nzWidth="25%">Số Điện Thoại</th>
-          <th nzWidth="25%">Email</th>
+          <th nzWidth="20%">Tên Nhân Viên</th>
+          <th nzWidth="20%">Chức Vụ</th>
+          <th nzWidth="15%">Số Điện Thoại</th>
+          <th nzWidth="15%">Email</th>
+          <th nzWidth="15%">Ngày làm</th>
+          <th nzWidth="15%">Ca</th>
         </tr>
       </thead>
       <tbody>
@@ -14,6 +16,8 @@
           <td>{{ staffMember['position'] }}</td>
           <td>{{ staffMember['phone'] }}</td>
           <td>{{ staffMember['email'] }}</td>
+          <td>{{ staffMember['day'] }}</td>
+          <td>{{ staffMember['shift'] }}</td>
         </tr>
       </tbody>
     </nz-table>
@@ -22,27 +26,41 @@
       <nz-form-item>
         <nz-form-label [nzSpan]="6">Tên Nhân Viên</nz-form-label>
         <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="staffName" />
+          <input nz-input formControlName="name" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-label [nzSpan]="6">Chức Vụ</nz-form-label>
         <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="staffPosition" />
+          <input nz-input formControlName="position" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-label [nzSpan]="6">Số Điện Thoại</nz-form-label>
         <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="staffPhone" />
+          <input nz-input formControlName="phone" />
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
+      <nz-form-item> 
         <nz-form-label [nzSpan]="6">Email</nz-form-label>
         <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="staffEmail" />
+          <input nz-input formControlName="email" type="email"/>
         </nz-form-control>
       </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Ngày làm</nz-form-label>
+          <nz-form-control [nzSpan]="14">
+            <input nz-input formControlName="day" type="date"/>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Ca</nz-form-label>
+          <nz-form-control [nzSpan]="14">
+            <input nz-input formControlName="shift"  type="datetime"/>
+          </nz-form-control>
+        </nz-form-item>
+      
       <nz-form-item>
         <nz-form-control [nzSpan]="14" [nzOffset]="6">
           <button nz-button nzType="primary" type="submit">Thêm Nhân Viên</button>

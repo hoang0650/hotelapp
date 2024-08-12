@@ -15,6 +15,7 @@ import { CompanyManagementComponent } from './components/company-management/comp
 import { HotelManagementComponent } from './components/hotel-management/hotel-management.component';
 import { RoomManagementComponent } from './components/room-management/room-management.component';
 import { StaffManagementComponent } from './components/staff-management/staff-management.component';
+import { RevenueChartComponent } from './components/revenue-chart/revenue-chart.component';
 const routes: Routes = [
   { path: '', redirectTo: 'admin', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
@@ -29,7 +30,8 @@ const routes: Routes = [
       { path: 'company', component: CompanyManagementComponent },
       { path: 'room-management', component: RoomManagementComponent },
       { path: 'hotel', component: HotelManagementComponent },
-      { path: 'staff', component: StaffManagementComponent }
+      { path: 'staff', component: StaffManagementComponent },
+      { path: 'chart', component: RevenueChartComponent }
       // Thêm các route con khác nếu cần
     ]
   },

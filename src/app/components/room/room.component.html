@@ -1,56 +1,36 @@
-<!-- <div class="row">
-    <div class="col-md-3 col-sm-6" *ngFor="let room of productService.products$ | async">
-
-        <div class="room-box" [ngClass]="isActive ? 'active-room' : 'inactive-room'">
-            Room {{ room?.id }}
-        </div>
-
-    </div>
-    <div>
-        <app-room-history></app-room-history>
-        
-    </div>
-</div> -->
-
-
 <div class="slider-container">
-    
-    <nz-switch [(ngModel)]="switchValue">
-    </nz-switch>
+    <nz-switch [(ngModel)]="switchValue"></nz-switch>
     <div *ngIf="switchValue">
-        <span>Horizontal Gutter (px):</span>
-        <div class="slider">
-            <nz-slider [nzMarks]="marksHGutter" [nzStep]="null" [nzMin]="8" [nzMax]="48" [(ngModel)]="hGutter"></nz-slider>
-        </div>
-        <span>Vertical Gutter (px):</span>
-        <div class="slider">
-            <nz-slider [nzMarks]="marksVGutter" [nzStep]="null" [nzMin]="8" [nzMax]="48" [(ngModel)]="vGutter"></nz-slider>
-        </div>
-        <span>Column Count:</span>
-        <div class="slider">
-            <nz-slider [nzMarks]="marksCount" [nzStep]="null" [nzMin]="2" [nzMax]="12" [(ngModel)]="count"
-                (ngModelChange)="reGenerateArray($event)"></nz-slider>
-        </div>
+      <span>Horizontal Gutter (px):</span>
+      <div class="slider">
+        <nz-slider [nzMarks]="marksHGutter" [nzStep]="null" [nzMin]="8" [nzMax]="48" [(ngModel)]="hGutter"></nz-slider>
+      </div>
+      <span>Vertical Gutter (px):</span>
+      <div class="slider">
+        <nz-slider [nzMarks]="marksVGutter" [nzStep]="null" [nzMin]="8" [nzMax]="48" [(ngModel)]="vGutter"></nz-slider>
+      </div>
+      <span>Column Count:</span>
+      <div class="slider">
+        <nz-slider [nzMarks]="marksCount" [nzStep]="null" [nzMin]="2" [nzMax]="12" [(ngModel)]="count"
+          (ngModelChange)="reGenerateArray($event)"></nz-slider>
+      </div>
     </div>
-</div>
-
-<div class="gutter-example">
-    <div nz-row [nzGutter]="[hGutter, vGutter]" >
-        <!-- <app-modal [isVisible]="modalControl"></app-modal> -->
-        <div nz-col class="gutter-row" [nzSpan]="24 / count" *ngFor="let room of productService.products$ | async">            
-                <div class="grid-config " appModalControl [room]="room" [ngClass]="getRoomStatusClass(room.roomStatus)">
-                    <nz-card [nzBordered]="false">
-                        <div nz-title>{{ room?.roomNumber }}</div>
-                        <div nz-body>
-                          <p>{{ room?.description }}</p>
-                        </div>
-                    </nz-card>
-                </div>
-       
+  </div>
+  
+  <div class="gutter-example">
+    <div nz-row [nzGutter]="[hGutter, vGutter]">
+      <div nz-col [nzSpan]="24 / count" *ngFor="let room of productService.products$ | async">
+        <div class="grid-config" appModalControl [room]="room" [ngClass]="getRoomStatusClass(room.roomStatus)">
+          <nz-card [nzBordered]="false">
+            <div nz-title>{{ room?.roomNumber }}</div>
+            <div nz-body>
+              <p>{{ room?.description }}</p>
+            </div>
+          </nz-card>
         </div>
+      </div>
     </div>
-</div>
-
-<div><br><br></div>
-
-<app-room-history></app-room-history>
+  </div>
+  
+  <app-room-history></app-room-history>
+  

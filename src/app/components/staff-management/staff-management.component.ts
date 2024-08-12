@@ -12,10 +12,12 @@ export class StaffManagementComponent implements OnInit {
 
   constructor(private fb: FormBuilder) {
     this.staffForm = this.fb.group({
-      staffName: ['', Validators.required],
-      staffPosition: ['', Validators.required],
-      staffPhone: ['', Validators.required],
-      staffEmail: ['', [Validators.required, Validators.email]]
+      name: ['', Validators.required],
+      position: ['', Validators.required],
+      phone: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      day: ['', Validators.required],
+      shift: ['', Validators.required],
     });
   }
 

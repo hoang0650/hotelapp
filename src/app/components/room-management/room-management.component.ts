@@ -12,10 +12,12 @@ export class RoomManagementComponent implements OnInit {
 
   constructor(private fb: FormBuilder) {
     this.roomForm = this.fb.group({
-      roomName: ['', Validators.required],
+      roomNumber: [0, Validators.required],
       roomType: ['', Validators.required],
-      roomPrice: [0, Validators.required],
-      roomStatus: ['']
+      hourlyRate: [0, Validators.required],
+      nightlyRate: [0, Validators.required],
+      dailyRate: [0, Validators.required],
+      maxcount: [0, Validators.required],
     });
   }
 
