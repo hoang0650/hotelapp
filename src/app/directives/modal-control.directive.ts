@@ -5,6 +5,7 @@ import { take, takeUntil } from 'rxjs/operators';
 import { Subject} from 'rxjs';
 import { RoomContentModalComponent } from '../components/room-content-modal/room-content-modal.component';
 import { InvoiceComponent } from '../components/invoice/invoice.component';
+import { log } from 'console';
 
 
 @Directive({
@@ -148,9 +149,9 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         (room) => {
           console.log('Check-in/out successful. Room:', room);
           this.roomsService.notifyRoomDataUpdated();
+          // const invoiceData = this.generateInvoice(this.room.roomNumber);
+          // this.showInvoice(invoiceData);
           this.modalRef?.close();
-          const invoiceData = this.generateInvoice(this.room.roomNumber);
-          this.showInvoice(invoiceData);
         },
         (error) => {
           console.error('Error during check-in/out:', error);
@@ -192,10 +193,16 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       const durationInHours = Math.ceil((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60));
   
       let payment = 0;
-      const checkOutHourLimit = 22;   
+      const checkOutHourLimit = 22;
 
-      if(checkoutHour >= checkOutHourLimit){
+      
+
+      if(this.room.options.isNight || checkoutHour >= checkOutHourLimit){
         payment = this.room.nightlyRate;
+      }
+
+      if(this.room.options.isDay){
+        payment = this.room.dailyRate;
       }
   
       // Giá cho giờ đầu là 50$
