@@ -1,60 +1,78 @@
 <nz-card>
-    <nz-table #hotelTable [nzData]="business" [nzBordered]="true" [nzScroll]="{ x: '100%' }">
-        <thead>
-          <tr>
-            <th nzWidth="20%">Tên Doanh Nghiệp</th>
-            <th nzWidth="20%">Mã số thuế</th>
-            <th nzWidth="20%">Địa chỉ</th>
-            <th nzWidth="20%">Số điện thoại</th>
-            <th nzWidth="20%">Email</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let hotel of hotelTable.data">
-            <td>Nhà nghỉ Thanh Vy</td>
-            <td>A1/15 phường Bình Hòa, Thuận An, Bình Dương</td>
-            <td>101</td>
-            <td>Phan Huy Hoang</td>
-          </tr>
-        </tbody>
-      </nz-table>
-    <nz-form [formGroup]="companyForm" (ngSubmit)="onSubmitCompany()">
-      <nz-form-item>
-        <nz-form-label [nzSpan]="6">Tên Doanh Nghiệp</nz-form-label>
-        <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="name" />
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item>
-        <nz-form-label [nzSpan]="6">Mã số thuế</nz-form-label>
-        <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="tax_code" type="number"/>
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item>
-        <nz-form-label [nzSpan]="6">Địa chỉ</nz-form-label>
-        <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="address" />
-        </nz-form-control>
-      </nz-form-item>     
-      <nz-form-item>
-        <nz-form-label [nzSpan]="6">Số điện thoại</nz-form-label>
-        <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="phone" />
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item>
-        <nz-form-label [nzSpan]="6">Email</nz-form-label>
-        <nz-form-control [nzSpan]="14">
-          <input nz-input formControlName="email" type="email"/>
-        </nz-form-control>
-      </nz-form-item>
-      <!-- button -->
-      <nz-form-item>
-        <nz-form-control [nzSpan]="14" [nzOffset]="6">
-          <button nz-button nzType="primary" type="submit">Tạo Doanh Nghiệp</button>
-        </nz-form-control>
-      </nz-form-item>
-    </nz-form>
-  </nz-card>
-  
+  <nz-table #hotelTable [nzData]="businesses" [nzBordered]="true" [nzScroll]="{ x: '100%' }">
+    <thead>
+      <tr>
+        <th nzWidth="20%">Tên Doanh Nghiệp</th>
+        <th nzWidth="15%">Mã số thuế</th>
+        <th nzWidth="15%">Địa chỉ</th>
+        <th nzWidth="15%">Số điện thoại</th>
+        <th nzWidth="15%">Email</th>
+        <th nzWidth="20%">Hành Động</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let business of hotelTable.data">
+        <td>{{ business.name }}</td>
+        <td>{{ business.tax_code }}</td>
+        <td>{{ business.address }}</td>
+        <td>{{ business.contact.phone }}</td>
+        <td>{{ business.contact.email }}</td>
+        <td>
+          <a>Sửa</a>
+            <nz-divider nzType="vertical"></nz-divider>
+            <a>Xoá</a>
+        </td>
+      </tr>
+      <tr>
+        <td>Nhà nghỉ Thanh Vy</td>
+        <td>12346</td>
+        <td>Thuận An, Bình Dương</td>
+        <td>+8465694</td>
+        <td>hoanggmail.com</td>
+        <td>
+          <a>Sửa</a>
+          <nz-divider nzType="vertical"></nz-divider>
+          <a>Xoá</a>
+        </td>
+      </tr>
+    </tbody>
+  </nz-table>
+
+  <nz-form [formGroup]="companyForm" (ngSubmit)="createBusiness()">
+    <nz-form-item>
+      <nz-form-label [nzSpan]="24" [nzSm]="8">Tên Doanh Nghiệp</nz-form-label>
+      <nz-form-control [nzSpan]="24" [nzSm]="16">
+        <input nz-input formControlName="name" />
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item>
+      <nz-form-label [nzSpan]="24" [nzSm]="8">Mã số thuế</nz-form-label>
+      <nz-form-control [nzSpan]="24" [nzSm]="16">
+        <input nz-input formControlName="tax_code" type="number"/>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item>
+      <nz-form-label [nzSpan]="24" [nzSm]="8">Địa chỉ</nz-form-label>
+      <nz-form-control [nzSpan]="24" [nzSm]="16">
+        <input nz-input formControlName="address" />
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item>
+      <nz-form-label [nzSpan]="24" [nzSm]="8">Số điện thoại</nz-form-label>
+      <nz-form-control [nzSpan]="24" [nzSm]="16">
+        <input nz-input formControlName="phone" />
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item>
+      <nz-form-label [nzSpan]="24" [nzSm]="8">Email</nz-form-label>
+      <nz-form-control [nzSpan]="24" [nzSm]="16">
+        <input nz-input formControlName="email" type="email"/>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item>
+      <nz-form-control [nzSpan]="24" [nzOffset]="0">
+        <button nz-button nzType="primary" type="submit">Tạo Doanh Nghiệp</button>
+      </nz-form-control>
+    </nz-form-item>
+  </nz-form>
+</nz-card>

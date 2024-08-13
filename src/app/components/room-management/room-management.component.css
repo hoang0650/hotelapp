@@ -1,4 +1,27 @@
-.nz-table {
-    overflow-x: auto;
-    display: block;
+.nz-form-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.nz-form-label {
+  margin-bottom: 8px;
+}
+
+.nz-form-control {
+  flex: 1;
+}
+
+@media (max-width: 767px) {
+  .nz-form-item {
+    margin-bottom: 12px;
   }
+
+  .nz-form-label, .nz-form-control input {
+    font-size: 14px;
+  }
+
+  button {
+    width: 100%;
+    font-size: 14px;
+  }
+}

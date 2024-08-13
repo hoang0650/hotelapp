@@ -8,6 +8,7 @@
           <th nzWidth="15%">Email</th>
           <th nzWidth="15%">Ngày làm</th>
           <th nzWidth="15%">Ca</th>
+          <th nzWidth="20%">Hành động</th>
         </tr>
       </thead>
       <tbody>
@@ -18,51 +19,56 @@
           <td>{{ staffMember['email'] }}</td>
           <td>{{ staffMember['day'] }}</td>
           <td>{{ staffMember['shift'] }}</td>
+          <td>
+            <a>Sửa</a>
+              <nz-divider nzType="vertical"></nz-divider>
+              <a>Xoá</a>
+          </td>
         </tr>
       </tbody>
     </nz-table>
   
     <nz-form [formGroup]="staffForm" (ngSubmit)="onSubmitStaff()">
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Tên Nhân Viên</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Tên Nhân Viên</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="name" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Chức Vụ</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Chức Vụ</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="position" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Số Điện Thoại</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Số Điện Thoại</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="phone" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item> 
-        <nz-form-label [nzSpan]="6">Email</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Email</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="email" type="email"/>
         </nz-form-control>
       </nz-form-item>
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Ngày làm</nz-form-label>
-          <nz-form-control [nzSpan]="14">
+          <nz-form-label [nzSpan]="24" [nzSm]="8">Ngày làm</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="16">
             <input nz-input formControlName="day" type="date"/>
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Ca</nz-form-label>
-          <nz-form-control [nzSpan]="14">
+          <nz-form-label [nzSpan]="24" [nzSm]="8">Ca</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="16">
             <input nz-input formControlName="shift"  type="datetime"/>
           </nz-form-control>
         </nz-form-item>
       
       <nz-form-item>
-        <nz-form-control [nzSpan]="14" [nzOffset]="6">
+        <nz-form-control [nzSpan]="24" [nzOffset]="0">
           <button nz-button nzType="primary" type="submit">Thêm Nhân Viên</button>
         </nz-form-control>
       </nz-form-item>

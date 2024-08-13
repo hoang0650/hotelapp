@@ -3,11 +3,12 @@
       <thead>
         <tr>
           <th nzWidth="10%">Số Phòng</th>
-          <th nzWidth="30%">Loại Phòng</th>
+          <th nzWidth="20%">Loại Phòng</th>
           <th nzWidth="15%">Giá theo giờ</th>
           <th nzWidth="15%">Giá qua đêm</th>
           <th nzWidth="15%">Giá ngày đêm</th>
           <th nzWidth="15%">Số người tối đa</th>
+          <th nzWidth="20%">Hành động</th>
         </tr>
       </thead>
       <tbody>
@@ -18,49 +19,54 @@
           <td>{{ room['price'] | currency }}</td>
           <td>{{ room['price'] | currency }}</td>
           <td>{{ room['status'] }}</td>
+          <td>
+            <a>Sửa</a>
+              <nz-divider nzType="vertical"></nz-divider>
+              <a>Xoá</a>
+          </td>
         </tr>
       </tbody>
     </nz-table>
   
     <nz-form [formGroup]="roomForm" (ngSubmit)="onSubmitRoom()">
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Số Phòng</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Số Phòng</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="roomNumber" type="number"/>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Loại Phòng</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Loại Phòng</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="roomType" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Giá theo giờ</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Giá theo giờ</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="hourlyRate" type="number" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Giá qua đêm</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Giá qua đêm</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="nightlyRate" type="number"/>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Giá ngày đêm</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Giá ngày đêm</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="dailyRate" type="number" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="6">Số người tối đa</nz-form-label>
-        <nz-form-control [nzSpan]="14">
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Số người tối đa</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <input nz-input formControlName="maxcount" type="number" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-control [nzSpan]="14" [nzOffset]="6">
+        <nz-form-control [nzSpan]="24" [nzOffset]="0">
           <button nz-button nzType="primary" type="submit">Thêm Phòng</button>
         </nz-form-control>
       </nz-form-item>

@@ -1,65 +1,106 @@
-.room-box {
-    height: 100px;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    text-align: center;
-    line-height: 100px;
+/* Sidebar */
+.sidebar {
+  width: 200px; /* Kích thước mặc định của sidebar */
+  transition: margin-left 0.3s, width 0.3s;
 }
 
-.active-room {
-    background-color: #28a745;
-    color: #fff;
-}
-
-.inactive-room {
-    background-color: #dc3545;
-    color: #fff;
-}
-
-.dirty-room{
-    background-color: grey;
-    color: #fff;
-}
-
+/* Đảm bảo sidebar không chiếm quá nhiều không gian khi màn hình nhỏ */
 @media (max-width: 768px) {
-    .sidebar {
-        transition: margin-left 0.3s;
-    }
-}
-
-@media (min-width: 200px) {
-    .sidebar {
-        transition: margin-left 0.3s;
-    }
-}
-
-/* antd */
-
-.logo {
-    height: 32px;
-    margin: 16px;
-    background: rgba(255, 255, 255, 0.3);
+  .sidebar {
+    width: 100%; /* Đặt chiều rộng của sidebar thành 100% trên màn hình nhỏ */
+    height: auto; /* Đảm bảo chiều cao tự động */
+    position: fixed; /* Đặt vị trí fixed để sidebar không làm lệch nội dung chính */
+    z-index: 1000; /* Đảm bảo sidebar nằm trên các phần tử khác */
   }
 
-  nz-header {
-    background: #fff;
-    padding: 0;
+  nz-sider {
+    width: 100% !important; /* Đảm bảo thẻ nz-sider cũng có chiều rộng 100% */
+  }
+
+  nz-layout {
+    margin-left: 0; /* Đặt lại margin-left */
   }
 
   nz-content {
-    margin: 0 16px;
+    margin-left: 0; /* Đặt margin-left về 0 để tránh bị lệch */
+  }
+}
+
+/* Giảm chiều rộng của sidebar khi màn hình nhỏ hơn 312px */
+@media (max-width: 312px) {
+  .sidebar {
+    width: 15%; /* Giảm chiều rộng của sidebar xuống 15% trên màn hình rất nhỏ */
   }
 
-  nz-breadcrumb {
-    margin: 16px 0;
+  nz-sider {
+    width: 15% !important; /* Đảm bảo thẻ nz-sider cũng có chiều rộng 15% */
+  }
+}
+
+/* Room Box */
+.room-box {
+  height: 100px;
+  border: 1px solid #ddd;
+  margin-bottom: 10px;
+  text-align: center;
+  line-height: 100px;
+  border-radius: 4px; /* Thêm border-radius để làm mềm góc */
+  transition: background-color 0.3s, color 0.3s; /* Hiệu ứng chuyển màu mượt mà */
+}
+
+/* Room Status Classes */
+.active-room {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.inactive-room {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.dirty-room {
+  background-color: grey;
+  color: #fff;
+}
+
+/* Ant Design Styles */
+.logo {
+  height: 32px;
+  margin: 16px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+nz-header {
+  background: #fff;
+  padding: 0;
+}
+
+nz-content {
+  margin: 0 16px;
+}
+
+nz-breadcrumb {
+  margin: 16px 0;
+}
+
+.inner-content {
+  padding: 24px;
+  background: #fff;
+  min-height: 360px;
+}
+
+nz-footer {
+  text-align: center;
+}
+
+/* Responsive Layout Adjustments */
+@media (max-width: 768px) {
+  nz-content {
+    margin: 0 8px; /* Giảm margin để tiết kiệm không gian trên màn hình nhỏ */
   }
 
   .inner-content {
-    padding: 24px;
-    background: #fff;
-    min-height: 360px;
+    padding: 16px; /* Giảm padding để phù hợp với màn hình nhỏ */
   }
-
-  nz-footer {
-    text-align: center;
-  }
+}
