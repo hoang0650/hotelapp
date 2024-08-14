@@ -73,51 +73,125 @@
     </nz-form>
   </nz-card>
    -->
+  <nz-card>
+    <button nz-button (click)="addRow()" nzType="primary">Add</button>
+    <br />
+    <br />
+    <div class="table-container">
+      <nz-table #editRowTable nzBordered [nzData]="listOfData">
+        <thead>
+          <tr>
+            <th>Số Phòng</th>
+            <th>Loại Phòng</th>
+            <th>Giá theo giờ</th>
+            <th>Giá qua đêm</th>
+            <th>Giá ngày đêm</th>
+            <th>Số người</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let data of editRowTable.data" class="editable-row">
+            <td>
+              <div [hidden]="editId !== data.id" (click)="startEdit(data.id)">
+                <input nz-input [(ngModel)]="data.name" (blur)="stopEdit()" />
+              </div>
+              <div [hidden]="editId === data.id" (click)="startEdit(data.id)">
+                {{ data.name }}
+              </div>
+            </td>
+            <td>
+              <div [hidden]="editId !== data.id">
+                <input nz-input [(ngModel)]="data.age" (blur)="stopEdit()" />
+              </div>
+              <div [hidden]="editId === data.id">
+                {{ data.age }}
+              </div>
+            </td>
+            <td>
+              <div [hidden]="editId !== data.id">
+                <input nz-input [(ngModel)]="data.address" (blur)="stopEdit()" />
+              </div>
+              <div [hidden]="editId === data.id">
+                {{ data.address }}
+              </div>
+            </td>
+            <td>
+             <div [hidden]="editId !== data.id">
+               <input nz-input [(ngModel)]="data.age" (blur)="stopEdit()" />
+             </div>
+             <div [hidden]="editId === data.id">
+               {{ data.age }}
+             </div>
+           </td>
+           <td>
+             <div [hidden]="editId !== data.id">
+               <input nz-input [(ngModel)]="data.address" (blur)="stopEdit()" />
+             </div>
+             <div [hidden]="editId === data.id">
+               {{ data.address }}
+             </div>
+           </td>
+           <td>
+             <div [hidden]="editId !== data.id">
+               <input nz-input [(ngModel)]="data.address" (blur)="stopEdit()" />
+             </div>
+             <div [hidden]="editId === data.id">
+               {{ data.address }}
+             </div>
+           </td>
+            <td>
+              <button nz-button (click)="startEdit(data.id)" nzType="default" *ngIf="editId !== data.id">Edit</button>
+              <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteRow(data.id)" *ngIf="editId !== data.id">Delete</a>
+              <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === data.id">Save</button>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </div>
+    <nz-form [formGroup]="roomForm" (ngSubmit)="onSubmitRoom()">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Số Phòng</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
+          <input nz-input formControlName="roomNumber" type="number"/>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Loại Phòng</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
+          <input nz-input formControlName="roomType" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Giá theo giờ</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
+          <input nz-input formControlName="hourlyRate" type="number" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Giá qua đêm</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
+          <input nz-input formControlName="nightlyRate" type="number"/>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Giá ngày đêm</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
+          <input nz-input formControlName="dailyRate" type="number" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Số người tối đa</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
+          <input nz-input formControlName="maxcount" type="number" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-control [nzSpan]="24" [nzOffset]="0">
+          <button nz-button nzType="primary" type="submit">Thêm Phòng</button>
+        </nz-form-control>
+      </nz-form-item>
+    </nz-form>
 
-   <button nz-button (click)="addRow()" nzType="primary">Add</button>
-   <br />
-   <br />
-   <nz-table #editRowTable nzBordered [nzData]="listOfData">
-     <thead>
-       <tr>
-         <th nzWidth="30%">Name</th>
-         <th>Age</th>
-         <th>Address</th>
-         <th>Action</th>
-       </tr>
-     </thead>
-     <tbody>
-       <tr *ngFor="let data of editRowTable.data" class="editable-row">
-         <td>
-           <div [hidden]="editId !== data.id" (click)="startEdit(data.id)">
-             <input nz-input [(ngModel)]="data.name" (blur)="stopEdit()" />
-           </div>
-           <div [hidden]="editId === data.id" (click)="startEdit(data.id)">
-             {{ data.name }}
-           </div>
-         </td>
-         <td>
-           <div [hidden]="editId !== data.id">
-             <input nz-input [(ngModel)]="data.age" (blur)="stopEdit()" />
-           </div>
-           <div [hidden]="editId === data.id">
-             {{ data.age }}
-           </div>
-         </td>
-         <td>
-           <div [hidden]="editId !== data.id">
-             <input nz-input [(ngModel)]="data.address" (blur)="stopEdit()" />
-           </div>
-           <div [hidden]="editId === data.id">
-             {{ data.address }}
-           </div>
-         </td>
-         <td>
-           <button nz-button (click)="startEdit(data.id)" nzType="default" *ngIf="editId !== data.id">Edit</button>
-           <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteRow(data.id)" *ngIf="editId !== data.id">Delete</a>
-           <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === data.id">Save</button>
-         </td>
-       </tr>
-     </tbody>
-   </nz-table>
+  </nz-card>
    

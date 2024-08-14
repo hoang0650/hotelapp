@@ -37,3 +37,13 @@
   border-radius: 4px;
   padding: 4px 11px;
 }
+
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Cải thiện hiệu suất cuộn trên thiết bị cảm ứng */
+}
+
+/* Điều chỉnh kiểu dáng bảng để phù hợp với các màn hình nhỏ */
+.nz-table {
+  min-width: 600px; /* Kích thước tối thiểu của bảng */
+}

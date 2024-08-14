@@ -149,8 +149,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         (room) => {
           console.log('Check-in/out successful. Room:', room);
           this.roomsService.notifyRoomDataUpdated();
-          // const invoiceData = this.generateInvoice(this.room.roomNumber);
-          // this.showInvoice(invoiceData);
+          const invoiceData = this.generateInvoice(this.room.roomNumber);
+          this.showInvoice(invoiceData);
           this.modalRef?.close();
         },
         (error) => {
