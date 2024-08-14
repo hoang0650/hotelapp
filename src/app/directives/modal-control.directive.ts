@@ -197,12 +197,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
       
 
-      if(this.room.options.isNight || checkoutHour >= checkOutHourLimit){
+      if( checkoutHour >= checkOutHourLimit){
         payment = this.room.nightlyRate;
-      }
-
-      if(this.room.options.isDay){
-        payment = this.room.dailyRate;
       }
   
       // Giá cho giờ đầu là 50$

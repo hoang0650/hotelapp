@@ -45,6 +45,7 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { UnauthorizedComponent } from './components/unauthorized/unauthorized.component';
@@ -110,7 +111,8 @@ registerLocaleData(en);
     NzFormModule,
     NzCardModule,
     NzModalModule,
-    NzTabsModule
+    NzTabsModule,
+    NzPopconfirmModule
   ],
   providers: [
     provideClientHydration(),

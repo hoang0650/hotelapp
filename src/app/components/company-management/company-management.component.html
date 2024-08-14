@@ -1,4 +1,4 @@
-<nz-card>
+<!-- <nz-card>
   <nz-table #hotelTable [nzData]="businesses" [nzBordered]="true" [nzScroll]="{ x: '100%' }">
     <thead>
       <tr>
@@ -30,9 +30,9 @@
         <td>+8465694</td>
         <td>hoanggmail.com</td>
         <td>
-          <a>Sửa</a>
+          <span nz-icon nzType="edit" nzTheme="outline"><a>Sửa</a></span>
           <nz-divider nzType="vertical"></nz-divider>
-          <a>Xoá</a>
+          <span nz-icon nzType="delete" nzTheme="outline"><a>Xoá</a></span>
         </td>
       </tr>
     </tbody>
@@ -75,4 +75,51 @@
       </nz-form-control>
     </nz-form-item>
   </nz-form>
-</nz-card>
+</nz-card> -->
+
+<button nz-button (click)="addRow()" nzType="primary">Add</button>
+<br />
+<br />
+<nz-table #editRowTable nzBordered [nzData]="listOfData">
+  <thead>
+    <tr>
+      <th nzWidth="30%">Name</th>
+      <th>Age</th>
+      <th>Address</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let data of editRowTable.data" class="editable-row">
+      <td>
+        <div [hidden]="editId !== data.id" (click)="startEdit(data.id)">
+          <input nz-input [(ngModel)]="data.name" (blur)="stopEdit()" />
+        </div>
+        <div [hidden]="editId === data.id" (click)="startEdit(data.id)">
+          {{ data.name }}
+        </div>
+      </td>
+      <td>
+        <div [hidden]="editId !== data.id">
+          <input nz-input [(ngModel)]="data.age" (blur)="stopEdit()" />
+        </div>
+        <div [hidden]="editId === data.id">
+          {{ data.age }}
+        </div>
+      </td>
+      <td>
+        <div [hidden]="editId !== data.id">
+          <input nz-input [(ngModel)]="data.address" (blur)="stopEdit()" />
+        </div>
+        <div [hidden]="editId === data.id">
+          {{ data.address }}
+        </div>
+      </td>
+      <td>
+        <button nz-button (click)="startEdit(data.id)" nzType="default" *ngIf="editId !== data.id">Edit</button>
+        <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteRow(data.id)" *ngIf="editId !== data.id">Delete</a>
+        <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === data.id">Save</button>
+      </td>
+    </tr>
+  </tbody>
+</nz-table>
