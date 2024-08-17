@@ -1,24 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { Business } from '../interfaces/business';
 
-export interface Business {
-  _id?: string;
-  name: string;
-  address: string;
-  tax_code: number;
-  contact: {
-    phone: string;
-    email: string;
-  };
-  hotels?: string[]; // Nếu bạn có mối quan hệ với Hotel
-}
 
 @Injectable({
   providedIn: 'root'
 })
 export class BusinessService {
-  private apiUrl = 'http:localhost:3000/businesses'
+  private apiUrl = 'http://localhost:3000/businesses'
 
   constructor(private http: HttpClient) { }
 
