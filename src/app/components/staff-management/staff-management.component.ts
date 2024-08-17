@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { StaffService } from '../../services/staff.service';
+import { Staff } from '../../interfaces/staff';
 interface ItemData {
   id: string;
   name: string;
@@ -13,16 +15,22 @@ interface ItemData {
 })
 export class StaffManagementComponent implements OnInit {
   staffForm: FormGroup;
-  staff = []; // Example data, replace with real data
+  staff: Staff[] = []; // Example data, replace with real data
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder,private staffService: StaffService) {
     this.staffForm = this.fb.group({
       name: ['', Validators.required],
       position: ['', Validators.required],
-      phone: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      day: ['', Validators.required],
-      shift: ['', Validators.required],
+      contact: this.fb.group({
+        phone: ['', Validators.required],
+        email: ['', [Validators.required, Validators.email]]
+      }),
+      schedule: this.fb.group({
+        day: ['', Validators.required],
+        shift: ['', Validators.required],
+      }),
+      hotelId:[[]]
+
     });
   }
 
@@ -65,5 +73,23 @@ export class StaffManagementComponent implements OnInit {
       // Handle form submission
       console.log(this.staffForm.value);
     }
+  }
+
+  getStaff() {
+    this.staffService.getStaff().subscribe((data) => {
+      this.staff = data;
+    });
+  }
+
+  createStaff() {
+    this.staffService.createStaff(this.staffForm.value).subscribe(() => {
+      this.getStaff();
+    });
+  }
+
+  deleteStaff(id: string) {
+    this.staffService.deleteStaff(id).subscribe(() => {
+      this.getStaff();
+    });
   }
 }

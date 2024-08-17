@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Hotel } from '../../interfaces/hotel';
 interface ItemData {
   id: string;
   name: string;
@@ -13,7 +14,7 @@ interface ItemData {
 })
 export class HotelManagementComponent implements OnInit {
   hotelForm: FormGroup;
-  hotels = []; // Example data, replace with real data
+  hotels: Hotel[] = []; 
 
   constructor(private fb: FormBuilder) {
     this.hotelForm = this.fb.group({
@@ -22,6 +23,20 @@ export class HotelManagementComponent implements OnInit {
       address: ['', Validators.required],
       phone: ['', Validators.required],
       email: ['', Validators.required],
+      contact: this.fb.group({
+        phone: ['', Validators.required],
+        email: ['', [Validators.required, Validators.email]]
+      }),
+      businessId: {},
+      rooms : [[]],
+      staff:[[]],
+      services: this.fb.group({
+        name: ['', Validators.required],
+        description: ['', [Validators.required]],
+        quantity: [0, Validators.required],
+        price: [0, [Validators.required]]
+      })
+
     });
   }
   i = 0;

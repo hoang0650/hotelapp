@@ -17,6 +17,11 @@ export class BusinessService {
     return this.http.get<Business[]>(this.apiUrl);
   }
 
+  //Lấy danh sách khách sạn
+  getHotels(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/hotels`);
+  }
+
   // Lấy doanh nghiệp theo ID
   getBusinessById(id: string): Observable<Business> {
     return this.http.get<Business>(`${this.apiUrl}/${id}`);

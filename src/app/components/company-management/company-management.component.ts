@@ -2,14 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { BusinessService } from '../../services/business.service'; 
 import { Business } from '../../interfaces/business';
-import { log } from 'console';
+import { Hotel } from '../../interfaces/hotel';
+import { HotelService } from '../../services/hotel.service';
 
-interface ItemData {
-  id: string;
-  name: string;
-  age: string;
-  address: string;
-}
 @Component({
   selector: 'app-company-management',
   templateUrl: './company-management.component.html',
@@ -19,9 +14,10 @@ export class CompanyManagementComponent implements OnInit {
   businessForm: FormGroup;
   businesses: Business[] = [];
   loadbusinesData: Business[] = []
+  availableHotels: Hotel[] = [];
   selectedBusiness: Business | null = null;
 
-  constructor(private businessService: BusinessService,private fb: FormBuilder) { 
+  constructor(private businessService: BusinessService,private hotelService: HotelService,private fb: FormBuilder) { 
     this.businessForm = this.fb.group({
       name: ['', Validators.required],     
       address: ['', Validators.required], 
@@ -29,9 +25,15 @@ export class CompanyManagementComponent implements OnInit {
       contact: this.fb.group({
         phone: ['', Validators.required],
         email: ['', [Validators.required, Validators.email]]
-      })
+      }),
+      hotels: [[]]
     });
   }
+  ngOnInit(): void { 
+    this.loadBusinesses();
+    this.loadHotels();
+  }
+
   i = 0;
   editId: string | null = null;
   listOfData: Business[] = [];
@@ -93,14 +95,11 @@ export class CompanyManagementComponent implements OnInit {
     this.listOfData = this.listOfData.filter(d => d._id !== _id);
   }
 
-  ngOnInit(): void { 
-    this.loadBusinesses();
-    this.addRow();
+  loadHotels(): void {
+    this.hotelService.getHotels().subscribe(data => {
+      this.availableHotels = data;
+    });
   }
-
-  // ngOnInit(): void {
-  //   this.loadBusinesses();
-  // }
 
   onSubmitCompany(): void {
     if (this.businessForm.valid) {

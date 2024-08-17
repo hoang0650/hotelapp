@@ -104,6 +104,14 @@
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Chọn Khách Sạn</nz-form-label>
+        <nz-form-control nzErrorTip="Vui lòng chọn khách sạn" [nzSpan]="8" >
+          <nz-select formControlName="hotels" nzMode="multiple" nzPlaceHolder="Chọn khách sạn">
+            <nz-option *ngFor="let hotel of availableHotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
         <nz-form-control [nzSpan]="24" [nzOffset]="0">
           <button nz-button nzType="primary" type="submit">Tạo Doanh Nghiệp</button>
         </nz-form-control>
