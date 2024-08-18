@@ -41,7 +41,7 @@ export class HotelManagementComponent implements OnInit {
         phone: ['', Validators.required],
         email: ['', [Validators.required, Validators.email]]
       }),
-      businessId: ['', Validators.required],
+      businessId: [this.businesses.map(data=>data._id), Validators.required],
       rooms: [[]],
       staff: [[]],
       service: this.fb.group({
@@ -126,7 +126,7 @@ export class HotelManagementComponent implements OnInit {
   loadRooms(): void {
     this.roomService.getRooms().subscribe(
       data => {
-        this.rooms = data;
+        this.availableRooms = data;
       },
       error => console.error('Error fetching rooms:', error)
     );
@@ -135,7 +135,7 @@ export class HotelManagementComponent implements OnInit {
   loadStaffs(): void {
     this.staffService.getStaff().subscribe(
       data => {
-        this.staffs = data;
+        this.availableStaffs = data;
       },
       error => console.error('Error fetching staffs:', error)
     );
