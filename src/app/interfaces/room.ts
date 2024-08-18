@@ -45,4 +45,5 @@ export interface ItemData {
     paginationType: NzTablePaginationType;
 }
 
+
 type TableScroll = 'unset' | 'scroll' | 'fixed';

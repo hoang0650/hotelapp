@@ -13,11 +13,10 @@ import { HotelService } from '../../services/hotel.service';
 export class CompanyManagementComponent implements OnInit {
   businessForm: FormGroup;
   businesses: Business[] = [];
-  loadbusinesData: Business[] = []
-  availableHotels: Hotel[] = [];
   selectedBusiness: Business | null = null;
+  availableHotels: Hotel[] = [];
 
-  constructor(private businessService: BusinessService,private hotelService: HotelService,private fb: FormBuilder) { 
+  constructor(private businessService: BusinessService, private hotelService: HotelService, private fb: FormBuilder) { 
     this.businessForm = this.fb.group({
       name: ['', Validators.required],     
       address: ['', Validators.required], 
@@ -29,12 +28,12 @@ export class CompanyManagementComponent implements OnInit {
       hotels: [[]]
     });
   }
+
   ngOnInit(): void { 
     this.loadBusinesses();
     this.loadHotels();
   }
 
-  i = 0;
   editId: string | null = null;
   listOfData: Business[] = [];
 
@@ -47,113 +46,43 @@ export class CompanyManagementComponent implements OnInit {
         name: this.selectedBusiness.name,
         tax_code: this.selectedBusiness.tax_code,
         address: this.selectedBusiness.address,
-        phone: this.selectedBusiness.contact.phone,
-        email: this.selectedBusiness.contact.email
+        contact: {
+          phone: this.selectedBusiness.contact.phone,
+          email: this.selectedBusiness.contact.email
+        },
+        hotels: this.selectedBusiness.hotels || [] // Ensure hotels are patched correctly
       });
     }
   }
   
-
   stopEdit(): void {
     this.editId = null;
     this.selectedBusiness = null;
     this.businessForm.reset();
   }
-
-  addRow(): void {
-    const newRow: Business = {
-      _id: `${this.i}`, // Temporary ID for display purposes
-      name: '',
-      tax_code: 0,
-      address: '',
-      contact: {
-        phone: '',
-        email: ''
-      }
-    };
-  
-    this.businesses.push(newRow);
-    this.listOfData = [
-      ...this.listOfData,
-      {
-        _id: `${this.i}`,
-        name: newRow.name,
-        tax_code: newRow.tax_code,
-        address: newRow.address,
-        contact:{
-          phone: newRow.contact.phone,
-          email: newRow.contact.email
-        }
-      }
-    ];
-    this.i++;
-  }
-
-  
-
-  deleteRow(_id: string): void {
-    this.listOfData = this.listOfData.filter(d => d._id !== _id);
-  }
-
+ 
   loadHotels(): void {
     this.hotelService.getHotels().subscribe(data => {
       this.availableHotels = data;
     });
   }
-
-  onSubmitCompany(): void {
-    if (this.businessForm.valid) {
-      if (this.selectedBusiness && this.selectedBusiness._id) {
-        // Update existing business
-        this.updateBusiness(this.selectedBusiness._id);
-      } else {
-        // Create new business
-        this.createBusiness();
-      }
-    }
-  }
   
-
   loadBusinesses(): void {
     this.businessService.getBusinesses().subscribe(
       data => {
         this.businesses = data; // Store the fetched businesses
-        console.log('businesses',data);
-        
-        this.listOfData = data.map((business, index) => ({
-          _id: business._id || `${index}`, // Ensure there's an ID for each item
-          name: business.name,
-          tax_code: business.tax_code, // Convert to string for display
-          address: business.address,
-          contact:{
-            phone: business.contact.phone,
-            email: business.contact.email
-          }
-        }));
+        this.listOfData = data;
       },
       error => console.error('Error fetching businesses:', error)
     );
   }
 
-  
-
-  viewBusiness(id: string): void {
-    this.businessService.getBusinessById(id).subscribe(
-      data => this.selectedBusiness = data,
-      error => console.error('Error fetching business:', error)
-    );
-  }
-
   createBusiness(): void {
-    // Check if the form is valid before proceeding
     if (this.businessForm.valid) {
-      // Retrieve the form values
       const newBusiness: Business = this.businessForm.value;
-  
-      // Call the service method to create the business
+
       this.businessService.createBusiness(newBusiness).subscribe(
         (data: Business) => {
-          console.log('Business created successfully:', data);
           this.businesses.push(data); // Add the new business to the local list
           this.businessForm.reset(); // Reset the form after successful creation
         },
@@ -165,51 +94,21 @@ export class CompanyManagementComponent implements OnInit {
       console.error('Form is invalid');
     }
   }
-  
 
-  updateBusiness(id: string): void {
-    if (this.businessForm.valid) {
-      const updatedBusiness: Business = {
-        ...this.selectedBusiness!,
-        ...this.businessForm.value,
-        contact: {
-          phone: this.businessForm.value.phone,
-          email: this.businessForm.value.email
-        }
-      };
-      
-      this.businessService.updateBusiness(id, updatedBusiness).subscribe(
-        (data: Business) => {
-          const index = this.businesses.findIndex(b => b._id === id);
-          if (index !== -1) {
-            this.businesses[index] = data;
-            this.listOfData = this.listOfData.map(item =>
-              item._id === id ? {
-                ...item,
-                name: data.name,
-                tax_code: data.tax_code,
-                address: data.address,
-                phone: data.contact.phone,
-                email: data.contact.email
-              } : item
-            );
-          }
-          this.selectedBusiness = null;
-          this.editId = null;
-          this.businessForm.reset(); // Reset the form after successful update
-        },
-        error => console.error('Error updating business:', error)
-      );
-    } else {
-      console.error('Form is invalid');
+  updateBusiness(): void {
+    if (this.selectedBusiness && this.businessForm.valid) {
+      this.businessService.updateBusiness(this.selectedBusiness._id!, this.businessForm.value).subscribe(() => {
+        this.loadHotels();
+        this.businessForm.reset();
+        this.selectedBusiness = null;
+      });
     }
   }
-  
 
   deleteBusiness(id: string): void {
     this.businessService.deleteBusiness(id).subscribe(
       () => {
-        this.businesses = this.businesses.filter(b => b._id !== id);
+        this.listOfData = this.listOfData.filter(d => d._id !== id);
         this.selectedBusiness = null;
       },
       error => console.error('Error deleting business:', error)

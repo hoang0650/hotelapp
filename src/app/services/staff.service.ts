@@ -19,12 +19,11 @@ export class StaffService {
     return this.http.get<Staff>(`${this.baseUrl}/${id}`);
   }
 
-  updateHotel(id: string, hotel: Staff): Observable<Staff> {
-    return this.http.put<Staff>(`${this.baseUrl}/${id}`, hotel);
+  updateStaff(id: string, staff: Staff): Observable<Staff> {
+    return this.http.put<Staff>(`${this.baseUrl}/${id}`, staff);
   }
-
-  createStaff(data: any): Observable<Staff> {
-    return this.http.post<Staff>(`${this.baseUrl}`, data);
+  createStaff(staff: Staff): Observable<Staff> {
+    return this.http.post<Staff>(`${this.baseUrl}`, staff);
   }
 
   deleteStaff(id: string): Observable<void> {

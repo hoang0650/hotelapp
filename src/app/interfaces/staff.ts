@@ -2,13 +2,13 @@ export interface Staff {
     _id: string;
     hotelId: string;
     name: string;
-    positive: string;
+    position: string;
     contact: {
         phone: string;
         email: string;
     };
     schedule:{
-        day: string;
+        day: Date;
         shift: string;
     }
 }

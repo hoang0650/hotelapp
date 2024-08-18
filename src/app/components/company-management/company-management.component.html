@@ -1,77 +1,53 @@
 <nz-card>
-  <button nz-button (click)="addRow()" nzType="primary">Add</button>
   <br />
   <br />
   <div class="table-container">
     <nz-table #businessTable nzBordered [nzData]="listOfData">
       <thead>
         <tr>
-          <th>Id</th>
           <th>Tên Doanh Nghiệp</th>
           <th>Mã số thuế</th>
           <th>Địa chỉ</th>
           <th>Số điện thoại</th>
           <th>Email</th>
+          <th>Khách Sạn</th>
           <th>Hành Động</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let business of businessTable.data" class="editable-row">
           <td>
-            <div>
-              {{ business._id }}
-            </div>
-          </td>
-          <td>
-            <div [hidden]="editId !== business._id" (click)="startEdit(business._id)">
-              <input nz-input [(ngModel)]="business.name" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === business._id" (click)="startEdit(business._id)">
               {{ business.name }}
-            </div>
           </td>
           <td>
-            <div [hidden]="editId !== business._id">
-              <input nz-input [(ngModel)]="business.tax_code" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === business._id">
               {{ business.tax_code }}
-            </div>
           </td>
           <td>
-            <div [hidden]="editId !== business._id">
-              <input nz-input [(ngModel)]="business.address" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === business._id">
               {{ business.address }}
-            </div>
           </td>
           <td>
-            <div [hidden]="editId !== business._id">
-              <input nz-input [(ngModel)]="business.contact.phone" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === business._id">
               {{ business.contact.phone }}
-            </div>
           </td>
           <td>
-            <div [hidden]="editId !== business._id">
-              <input nz-input [(ngModel)]="business.contact.email" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === business._id">
               {{ business.contact.email }}
+          </td>
+          <td>
+            <div *ngFor="let hotel of availableHotels">
+              {{ hotel.name }}
             </div>
           </td>
           <td>
             <button nz-button (click)="startEdit(business._id)" nzType="default" *ngIf="editId !== business._id">Edit</button>
-            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteRow(business._id)" *ngIf="editId !== business._id">Delete</a>
+            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteBusiness(business._id)" *ngIf="editId !== business._id">Delete</a>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === business._id">Save</button>
+            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === business._id" type="submit">Save</button>
           </td>
         </tr>
       </tbody>
     </nz-table>
-    <form nz-form [formGroup]="businessForm" (ngSubmit)="createBusiness()">
+
+    <!-- Form for Creating a New Business -->
+    <form nz-form [formGroup]="businessForm" (ngSubmit)="selectedBusiness ? updateBusiness() : createBusiness()">
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Tên Doanh Nghiệp</nz-form-label>
         <nz-form-control nzErrorTip="Vui lòng nhập tên doanh nghiệp" [nzSpan]="24" [nzSm]="16">
@@ -105,7 +81,7 @@
       </nz-form-item>
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Chọn Khách Sạn</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng chọn khách sạn" [nzSpan]="8" >
+        <nz-form-control nzErrorTip="Vui lòng chọn khách sạn" [nzSpan]="8">
           <nz-select formControlName="hotels" nzMode="multiple" nzPlaceHolder="Chọn khách sạn">
             <nz-option *ngFor="let hotel of availableHotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
           </nz-select>
@@ -113,10 +89,9 @@
       </nz-form-item>
       <nz-form-item>
         <nz-form-control [nzSpan]="24" [nzOffset]="0">
-          <button nz-button nzType="primary" type="submit">Tạo Doanh Nghiệp</button>
+          <button nz-button nzType="primary" type="submit">{{selectedBusiness ? 'Cập Nhật doanh nghiệp' : 'Tạo Doanh nghiệp'}}</button>
         </nz-form-control>
       </nz-form-item>
     </form>
-    
   </div>
 </nz-card>
