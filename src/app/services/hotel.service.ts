@@ -6,7 +6,8 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class HotelService {
-  private apiUrl = 'http://localhost:3000/hotels'
+  private apiUrl = 'https://hotel-app-smp2.onrender.com/hotels';
+  // private apiUrl = 'http://localhost:3000/hotels'
 
   constructor(private http: HttpClient) { }
   getHotels(): Observable<Hotel[]> {

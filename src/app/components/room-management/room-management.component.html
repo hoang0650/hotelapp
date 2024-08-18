@@ -1,10 +1,6 @@
-
 <nz-card>
   <div class="table-container">
-    <!-- <button nz-button (click)="addRow()" nzType="primary">Add</button>
-      <br />
-      <br /> -->
-    <nz-table #roomTable nzBordered [nzData]="listOfData">
+    <nz-table #roomTable nzBordered [nzData]="rooms">
       <thead>
         <tr>
           <th>Số Phòng</th>
@@ -17,69 +13,37 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let data of roomTable.data" class="editable-row">
+        <tr *ngFor="let room of rooms" class="editable-row">
+          <td>{{ room.roomNumber }}</td>
+          <td>{{ room.roomType }}</td>
+          <td>{{ room.hourlyRate }}</td>
+          <td>{{ room.nightlyRate }}</td>
+          <td>{{ room.dailyRate }}</td>
+          <td>{{ room.maxcount }}</td>
           <td>
-            <div [hidden]="editId !== data.id">
-              <input nz-input [(ngModel)]="data.name" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === data.id">
-              {{ data.name }}
-            </div>
-          </td>
-          <td>
-            <div [hidden]="editId !== data.id">
-              <input nz-input [(ngModel)]="data.age" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === data.id">
-              {{ data.age }}
-            </div>
-          </td>
-          <td>
-            <div [hidden]="editId !== data.id">
-              <input nz-input [(ngModel)]="data.address" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === data.id">
-              {{ data.address }}
-            </div>
-          </td>
-          <td>
-            <div [hidden]="editId !== data.id">
-              <input nz-input [(ngModel)]="data.age" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === data.id">
-              {{ data.age }}
-            </div>
-          </td>
-          <td>
-            <div [hidden]="editId !== data.id">
-              <input nz-input [(ngModel)]="data.address" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === data.id">
-              {{ data.address }}
-            </div>
-          </td>
-          <td>
-            <div [hidden]="editId !== data.id">
-              <input nz-input [(ngModel)]="data.address" (blur)="stopEdit()" />
-            </div>
-            <div [hidden]="editId === data.id">
-              {{ data.address }}
-            </div>
-          </td>
-          <td>
-            <button nz-button (click)="startEdit(data.id)" nzType="default" *ngIf="editId !== data.id">Edit</button>
-            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteRow(data.id)"
-              *ngIf="editId !== data.id">Delete</a>
+            <button nz-button (click)="startEdit(room._id)" nzType="default" *ngIf="editId !== room._id">Sửa</button>
+            <a nz-popconfirm nzPopconfirmTitle="Chắc chắn xoá?" (nzOnConfirm)="deleteRoom(room._id)" *ngIf="editId !== room._id">Xoá</a>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === data.id">Save</button>
+            <button nz-button (click)="updateRoom()" nzType="default" *ngIf="editId === room._id">Lưu</button>
+            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === room._id">Huỷ</button>
           </td>
         </tr>
       </tbody>
     </nz-table>
-    <form nz-form [formGroup]="roomForm" (ngSubmit)="onSubmitRoom()">
+
+    <!-- Form to Create or Update Room -->
+    <form nz-form [formGroup]="roomForm" (ngSubmit)="selectedRoom ? updateRoom() : createRoom()">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Tên Khách sạn</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
+          <nz-select formControlName="hotelId" nzMode="multiple" nzPlaceHolder="Chọn Khách sạn">
+            <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Số Phòng</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng số phòng" [nzSpan]="24" [nzSm]="16">
+        <nz-form-control nzErrorTip="Vui lòng nhập số phòng" [nzSpan]="24" [nzSm]="16">
           <input placeholder="Nhập số phòng" nz-input formControlName="roomNumber" type="number" />
         </nz-form-control>
       </nz-form-item>
@@ -89,33 +53,46 @@
           <input placeholder="Nhập loại phòng" nz-input formControlName="roomType" />
         </nz-form-control>
       </nz-form-item>
+
+
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Giá theo giờ</nz-form-label>
         <nz-form-control nzErrorTip="Vui lòng nhập giá theo giờ" [nzSpan]="24" [nzSm]="16">
           <input placeholder="Nhập giá theo giờ" nz-input formControlName="hourlyRate" type="number" />
         </nz-form-control>
       </nz-form-item>
+
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Giá qua đêm</nz-form-label>
         <nz-form-control nzErrorTip="Vui lòng nhập giá qua đêm" [nzSpan]="24" [nzSm]="16">
           <input placeholder="Nhập giá qua đêm" nz-input formControlName="nightlyRate" type="number" />
         </nz-form-control>
       </nz-form-item>
+
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Giá ngày đêm</nz-form-label>
         <nz-form-control nzErrorTip="Vui lòng nhập giá ngày đêm" [nzSpan]="24" [nzSm]="16">
           <input placeholder="Nhập giá ngày đêm" nz-input formControlName="dailyRate" type="number" />
         </nz-form-control>
       </nz-form-item>
+
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Số người tối đa</nz-form-label>
         <nz-form-control nzErrorTip="Vui lòng nhập số người tối đa" [nzSpan]="24" [nzSm]="16">
           <input placeholder="Nhập số người tối đa" nz-input formControlName="maxcount" type="number" />
         </nz-form-control>
       </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Mô tả</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Nhập mô tả" nz-input formControlName="description" />
+        </nz-form-control>
+      </nz-form-item>
+
       <nz-form-item>
         <nz-form-control [nzSpan]="24" [nzOffset]="0">
-          <button nz-button nzType="primary" type="submit">Thêm Phòng</button>
+          <button nz-button nzType="primary" type="submit">{{selectedRoom ? 'Cập Nhật Phòng' : 'Tạo Phòng'}}</button>
         </nz-form-control>
       </nz-form-item>
     </form>

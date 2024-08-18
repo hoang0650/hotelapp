@@ -19,16 +19,15 @@
   
   <div class="gutter-example">
     <div nz-row [nzGutter]="[hGutter, vGutter]">
-      <div nz-col [nzSpan]="24 / count" *ngFor="let room of productService.products$ | async">
-        <div class="grid-config" appModalControl [room]="room" [ngClass]="getRoomStatusClass(room.roomStatus)">
-          <nz-card [nzBordered]="false">
-            <div nz-title>{{ room?.roomNumber }}</div>
-            <div nz-body>
-              <p>{{ room?.description }}</p>
-            </div>
-          </nz-card>
+      <ng-container *ngIf="(productService.products$ | async) as rooms">
+        <div nz-col [nzSpan]="24 / count" *ngFor="let room of (rooms | sortRooms: 'roomNumber')">
+          <div class="grid-config" appModalControl [room]="room" [ngClass]="getRoomStatusClass(room.roomStatus)">
+            <nz-card [nzBordered]="false">
+              <div>{{ room?.roomNumber }}</div>
+            </nz-card>
+          </div>
         </div>
-      </div>
+      </ng-container>
     </div>
   </div>
   

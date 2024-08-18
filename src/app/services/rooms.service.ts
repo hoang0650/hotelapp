@@ -3,17 +3,35 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { BehaviorSubject } from 'rxjs';
 import * as XLSX from 'xlsx';
+import { Room } from '../interfaces/rooms';
 @Injectable({
   providedIn: 'root'
 })
 export class RoomsService {
   private roomDataUpdated$ = new BehaviorSubject<any>(null);
   private apiUrl = 'https://hotel-app-smp2.onrender.com/rooms';
+  // private apiUrl = 'http://localhost:3000/rooms';
 
   constructor(private http: HttpClient) { }
 
   getRooms(){
     return this.http.get<any[]>(this.apiUrl);
+  }
+
+  getRoomById(id: string): Observable<Room> {
+    return this.http.get<Room>(`${this.apiUrl}/${id}`);
+  }
+
+  createRoom(data: Room): Observable<Room> {
+    return this.http.post<Room>(this.apiUrl, data);
+  }
+
+  updateRoom(id: string, room: Room): Observable<Room> {
+    return this.http.put<Room>(`${this.apiUrl}/${id}`, room);
+  }
+
+  deleteRoom(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
   getRoomDataUpdated$() {

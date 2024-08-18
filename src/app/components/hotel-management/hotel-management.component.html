@@ -1,7 +1,4 @@
 <nz-card>
-  <button nz-button nzType="primary">Add</button>
-  <br />
-  <br />
   <div class="table-container">
     <nz-table #hotelTable nzBordered [nzData]="listOfData">
       <thead>
@@ -11,31 +8,33 @@
           <th>Địa chỉ</th>
           <th>Số điện thoại</th>
           <th>Email</th>
-          <th>Business ID</th>
-          <th>Rooms</th>
-          <th>Staffs</th>
+          <th>Tên Doanh nghiệp</th>
+          <th>Phòng</th>
+          <th>Nhân viên</th>
           <th>Hành Động</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let hotel of hotelTable.data" class="editable-row">
           <td>
-              {{ hotel.name }}
+            {{ hotel.name }}
           </td>
           <td>
-              {{ hotel.tax_code }}
+            {{ hotel.tax_code }}
           </td>
           <td>
-              {{ hotel.address }}
+            {{ hotel.address }}
           </td>
           <td>
-              {{ hotel.contact.phone }}
+            {{ hotel.contact.phone }}
           </td>
           <td>
-              {{ hotel.contact.email }}
+            {{ hotel.contact.email }}
           </td>
           <td>
-              {{ hotel.businessId }}
+            <div *ngFor="let business of businesses">
+              {{ business.name }}
+            </div>
           </td>
           <td>
             <div *ngFor="let room of availableRooms">
@@ -48,15 +47,16 @@
             </div>
           </td>
           <td>
-            <button nz-button (click)="startEdit(hotel._id)" nzType="default" *ngIf="editId !== hotel._id">Edit</button>
-            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteHotel(hotel._id)" *ngIf="editId !== hotel._id">Delete</a>
+            <button nz-button (click)="startEdit(hotel._id)" nzType="default" *ngIf="editId !== hotel._id">Sửa</button>
+            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteHotel(hotel._id)"
+              *ngIf="editId !== hotel._id">Xoá</a>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === hotel._id">Save</button>
+            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === hotel._id">Lưu</button>
           </td>
         </tr>
       </tbody>
     </nz-table>
-    <form nz-form [formGroup]="hotelForm" (ngSubmit)="createHotel()">
+    <form nz-form [formGroup]="hotelForm" (ngSubmit)="selectedHotel ? updateHotel() : createHotel()">
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Tên Khách Sạn</nz-form-label>
         <nz-form-control nzErrorTip="Vui lòng nhập tên khách sạn" [nzSpan]="24" [nzSm]="16">
@@ -66,7 +66,7 @@
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Mã số thuế</nz-form-label>
         <nz-form-control nzErrorTip="Vui lòng nhập mã số thuế" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập mã số thuế" nz-input formControlName="tax_code" type="number"/>
+          <input placeholder="Nhập mã số thuế" nz-input formControlName="tax_code" type="number" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
@@ -84,22 +84,21 @@
       <nz-form-item formGroupName="contact">
         <nz-form-label [nzSpan]="24" [nzSm]="8">Email</nz-form-label>
         <nz-form-control nzErrorTip="Vui lòng nhập địa chỉ email" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập địa chỉ email" nz-input formControlName="email" type="email"/>
+          <input nz-input placeholder="Nhập địa chỉ email" nz-input formControlName="email" type="email" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Tên Doanh nghiệp</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập tên Doanh nghiệp" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập business ID" nz-input formControlName="businessId" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Business ID</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
+          <nz-select formControlName="businessId" nzMode="multiple" nzPlaceHolder="Chọn khách sạn">
+            <nz-option *ngFor="let data of businesses" [nzValue]="data._id" [nzLabel]="data.name"></nz-option>
+          </nz-select>
         </nz-form-control>
-        <!-- <nz-form-label [nzSpan]="24" [nzSm]="8">Business ID</nz-form-label>
-        <nz-select formControlName="hotels" nzMode="multiple" nzPlaceHolder="Chọn khách sạn">
-          <nz-option *ngFor="let data of businesses" [nzValue]="data._id" [nzLabel]="data.name"></nz-option>
-        </nz-select> -->
       </nz-form-item>
+
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Chọn phòng</nz-form-label>
-        <nz-form-control [nzSpan]="8">
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <nz-select formControlName="rooms" nzMode="multiple" nzPlaceHolder="Chọn phòng">
             <nz-option *ngFor="let room of availableRooms" [nzValue]="room._id" [nzLabel]="room.roomNumber"></nz-option>
           </nz-select>
@@ -107,7 +106,7 @@
       </nz-form-item>
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Chọn nhân viên</nz-form-label>
-        <nz-form-control [nzSpan]="8">
+        <nz-form-control [nzSpan]="24" [nzSm]="16">
           <nz-select formControlName="staff" nzMode="multiple" nzPlaceHolder="Chọn nhân viên">
             <nz-option *ngFor="let staff of availableStaffs" [nzValue]="staff._id" [nzLabel]="staff.name"></nz-option>
           </nz-select>
@@ -115,7 +114,8 @@
       </nz-form-item>
       <nz-form-item>
         <nz-form-control [nzSpan]="24" [nzOffset]="0">
-          <button nz-button nzType="primary" type="submit">Tạo Khách sạn</button>
+          <button nz-button nzType="primary" type="submit">{{selectedHotel ? 'Cập Nhật Khách sạn' : 'Tạo Khách
+            sạn'}}</button>
         </nz-form-control>
       </nz-form-item>
     </form>

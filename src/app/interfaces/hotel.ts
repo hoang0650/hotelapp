@@ -8,12 +8,6 @@ export interface Hotel {
         email: string;
     };
     businessId: string;
-    rooms?: string[];
-    staff?: string[];
-    service:{
-        name: string;
-        description: string;
-        quantity: number;
-        price: number;
-    }
+    rooms: string[];
+    staff: string[];
 }

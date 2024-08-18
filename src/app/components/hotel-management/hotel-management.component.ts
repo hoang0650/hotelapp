@@ -41,15 +41,9 @@ export class HotelManagementComponent implements OnInit {
         phone: ['', Validators.required],
         email: ['', [Validators.required, Validators.email]]
       }),
-      businessId: [this.businesses.map(data=>data._id), Validators.required],
+      businessId: [],
       rooms: [[]],
       staff: [[]],
-      service: this.fb.group({
-        name: ['', Validators.required],
-        description: ['', Validators.required],
-        quantity: [0, [Validators.required, Validators.min(1)]],
-        price: [0, [Validators.required, Validators.min(0)]]
-      })
     });
   }
 
@@ -68,34 +62,7 @@ export class HotelManagementComponent implements OnInit {
       this.hotelForm.patchValue(hotelToEdit);
     }
   }
-
-  updateHotel(id: string): void {
-    if (this.hotelForm.valid) {
-      const updatedHotel: Hotel = {
-        ...this.selectedHotel!,
-        ...this.hotelForm.value
-      };
-
-      this.hotelService.updateHotel(id, updatedHotel).subscribe(
-        (data: Hotel) => {
-          const index = this.hotels.findIndex(h => h._id === id);
-          if (index !== -1) {
-            this.hotels[index] = data;
-            this.listOfData = this.listOfData.map(item =>
-              item._id === id ? data : item
-            );
-          }
-          this.selectedHotel = null;
-          this.editId = null;
-          this.hotelForm.reset();
-        },
-        error => console.error('Error updating hotel:', error)
-      );
-    } else {
-      console.error('Form is invalid');
-    }
-  }
-
+  
   stopEdit(): void {
     this.editId = null;
     this.selectedHotel = null;
@@ -141,6 +108,7 @@ export class HotelManagementComponent implements OnInit {
     );
   }
 
+
   createHotel(): void {
     if (this.hotelForm.valid) {
       const newHotel: Hotel = this.hotelForm.value;
@@ -153,6 +121,16 @@ export class HotelManagementComponent implements OnInit {
       );
     } else {
       console.error('Form is invalid');
+    }
+  }
+
+  updateHotel(): void {
+    if (this.selectedHotel && this.hotelForm.valid) {
+      this.hotelService.updateHotel(this.selectedHotel._id!, this.hotelForm.value).subscribe(() => {
+        this.loadHotels();
+        this.hotelForm.reset();
+        this.selectedHotel = null;
+      });
     }
   }
 

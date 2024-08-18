@@ -7,7 +7,8 @@ import { Staff } from '../interfaces/staff';
   providedIn: 'root'
 })
 export class StaffService {
-  private baseUrl = 'http://localhost:3000/staffs';
+  private baseUrl = 'https://hotel-app-smp2.onrender.com/staffs';
+  // private baseUrl = 'http://localhost:3000/staffs';
 
   constructor(private http: HttpClient) {}
 

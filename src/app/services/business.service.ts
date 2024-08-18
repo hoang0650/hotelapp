@@ -8,18 +8,14 @@ import { Business } from '../interfaces/business';
   providedIn: 'root'
 })
 export class BusinessService {
-  private apiUrl = 'http://localhost:3000/businesses'
+  private apiUrl = 'https://hotel-app-smp2.onrender.com/businesses';
+  // private apiUrl = 'http://localhost:3000/businesses'
 
   constructor(private http: HttpClient) { }
 
   // Lấy tất cả doanh nghiệp
   getBusinesses(): Observable<Business[]> {
     return this.http.get<Business[]>(this.apiUrl);
-  }
-
-  //Lấy danh sách khách sạn
-  getHotels(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/hotels`);
   }
 
   // Lấy doanh nghiệp theo ID

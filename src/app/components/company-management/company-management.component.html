@@ -1,6 +1,4 @@
 <nz-card>
-  <br />
-  <br />
   <div class="table-container">
     <nz-table #businessTable nzBordered [nzData]="listOfData">
       <thead>
@@ -37,10 +35,10 @@
             </div>
           </td>
           <td>
-            <button nz-button (click)="startEdit(business._id)" nzType="default" *ngIf="editId !== business._id">Edit</button>
-            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteBusiness(business._id)" *ngIf="editId !== business._id">Delete</a>
+            <button nz-button (click)="startEdit(business._id)" nzType="default" *ngIf="editId !== business._id">Sửa</button>
+            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteBusiness(business._id)" *ngIf="editId !== business._id">Xoá</a>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === business._id" type="submit">Save</button>
+            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === business._id" type="submit">Lưu</button>
           </td>
         </tr>
       </tbody>
@@ -81,7 +79,7 @@
       </nz-form-item>
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Chọn Khách Sạn</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng chọn khách sạn" [nzSpan]="8">
+        <nz-form-control nzErrorTip="Vui lòng chọn khách sạn"[nzSpan]="24" [nzSm]="16">
           <nz-select formControlName="hotels" nzMode="multiple" nzPlaceHolder="Chọn khách sạn">
             <nz-option *ngFor="let hotel of availableHotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
           </nz-select>

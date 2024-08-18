@@ -47,6 +47,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzInputModule } from 'ng-zorro-antd/input';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { UnauthorizedComponent } from './components/unauthorized/unauthorized.component';
@@ -58,6 +59,7 @@ import { HotelManagementComponent } from './components/hotel-management/hotel-ma
 import { RoomManagementComponent } from './components/room-management/room-management.component';
 import { StaffManagementComponent } from './components/staff-management/staff-management.component';
 import { RevenueChartComponent } from './components/revenue-chart/revenue-chart.component';
+import { SortRoomsPipe } from './pipes/sort-rooms.pipe';
 
 registerLocaleData(en);
 
@@ -86,7 +88,8 @@ registerLocaleData(en);
     HotelManagementComponent,
     RoomManagementComponent,
     StaffManagementComponent,
-    RevenueChartComponent
+    RevenueChartComponent,
+    SortRoomsPipe
   ],
   imports: [
     BrowserModule,
@@ -114,7 +117,8 @@ registerLocaleData(en);
     NzModalModule,
     NzTabsModule,
     NzPopconfirmModule,
-    NzSelectModule
+    NzSelectModule,
+    NzInputModule
   ],
   providers: [
     provideClientHydration(),
