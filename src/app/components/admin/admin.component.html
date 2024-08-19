@@ -34,8 +34,9 @@
   </nz-sider>
   <nz-layout>
     <nz-breadcrumb>
-      <nz-breadcrumb-item>User</nz-breadcrumb-item>
-      <nz-breadcrumb-item>Bill</nz-breadcrumb-item>
+      <nz-breadcrumb-item *ngFor="let breadcrumb of breadcrumbs">
+        <a [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a>
+      </nz-breadcrumb-item>
     </nz-breadcrumb>
     <nz-content>
       <router-outlet></router-outlet>

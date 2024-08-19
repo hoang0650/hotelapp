@@ -67,9 +67,13 @@
       <td [nzLeft]="fixedColumn">{{ room['type'] }}</td>
       <td [nzEllipsis]="settingValue.ellipsis">{{ room['payment'] }}</td>
       <td [nzRight]="fixedColumn" [nzEllipsis]="settingValue.ellipsis">
-        <a href="#">Delete</a>
+        <button nz-button nzShape="round" nzType="default">
+          <i nz-icon nzType="edit"></i>Sửa
+        </button>
         <nz-divider nzType="vertical"></nz-divider>
-        <a href="#">More action</a>
+        <button nz-button nzShape="round" nzType="default" nzDanger="true">
+          <i nz-icon nzType="delete"></i>Xóa
+        </button>
       </td>
     </tr>
     <tr *ngIf="settingValue.expandable" [nzExpand]="room.expand">

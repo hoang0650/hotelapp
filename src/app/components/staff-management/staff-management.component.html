@@ -33,12 +33,19 @@
               {{ staff.schedule.shift}}
           </td>
           <td>
-            <button nz-button (click)="startEdit(staff._id)" nzType="default"
-              *ngIf="editId !== staff._id">Sửa</button>
+            <button nz-button nzShape="round" (click)="startEdit(staff._id)" nzType="default" *ngIf="editId !== staff._id">
+              <i nz-icon nzType="edit"></i>Sửa
+            </button>
             <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteStaff(staff._id)"
-              *ngIf="editId !== staff._id">Xoá</a>
+              *ngIf="editId !== staff._id">
+              <button nz-button nzShape="round" nzType="text" [nzDanger]="true">
+                <i nz-icon nzType="delete"></i>Xoá
+              </button>
+            </a>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === staff._id">Lưu</button>
+            <button nz-button nzShape="round" (click)="stopEdit()" nzType="default" *ngIf="editId === staff._id">
+              <i nz-icon nzType="save"></i>Hủy
+            </button>
           </td>
         </tr>
       </tbody>

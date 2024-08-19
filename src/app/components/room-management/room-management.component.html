@@ -21,11 +21,18 @@
           <td>{{ room.dailyRate }}</td>
           <td>{{ room.maxcount }}</td>
           <td>
-            <button nz-button (click)="startEdit(room._id)" nzType="default" *ngIf="editId !== room._id">Sửa</button>
-            <a nz-popconfirm nzPopconfirmTitle="Chắc chắn xoá?" (nzOnConfirm)="deleteRoom(room._id)" *ngIf="editId !== room._id">Xoá</a>
+            <button nz-button nzShape="round" (click)="startEdit(room._id)" nzType="default" *ngIf="editId !== room._id">
+              <i nz-icon nzType="edit"></i>Sửa
+            </button>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button (click)="updateRoom()" nzType="default" *ngIf="editId === room._id">Lưu</button>
-            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === room._id">Huỷ</button>
+            <a nz-popconfirm nzPopconfirmTitle="Chắc chắn xoá?" (nzOnConfirm)="deleteRoom(room._id)" *ngIf="editId !== room._id">
+              <button nz-button nzShape="round" nzType="text" [nzDanger]="true">
+                <i nz-icon nzType="delete"></i>Xoá
+              </button>
+            </a>
+            <button nz-button nzShape="round" (click)="stopEdit()" nzType="default" *ngIf="editId === room._id">
+              <i nz-icon nzType="save"></i>Hủy
+            </button>
           </td>
         </tr>
       </tbody>

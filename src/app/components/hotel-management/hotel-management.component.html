@@ -47,11 +47,20 @@
             </div>
           </td>
           <td>
-            <button nz-button (click)="startEdit(hotel._id)" nzType="default" *ngIf="editId !== hotel._id">Sửa</button>
-            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteHotel(hotel._id)"
-              *ngIf="editId !== hotel._id">Xoá</a>
+            <button nz-button nzShape="round" (click)="startEdit(hotel._id)" nzType="default"
+              *ngIf="editId !== hotel._id">
+              <i nz-icon nzType="edit"></i>Sửa
+            </button>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button (click)="stopEdit()" nzType="default" *ngIf="editId === hotel._id">Lưu</button>
+            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteHotel(hotel._id)"
+              *ngIf="editId !== hotel._id">
+              <button nz-button nzShape="round" nzType="text" [nzDanger]="true">
+                <i nz-icon nzType="delete"></i>Xoá
+              </button>
+            </a>
+
+            <button nz-button nzShape="round" (click)="stopEdit()" nzType="default" *ngIf="editId === hotel._id">
+              <i nz-icon nzType="save"></i>Hủy</button>
           </td>
         </tr>
       </tbody>
@@ -114,8 +123,9 @@
       </nz-form-item>
       <nz-form-item>
         <nz-form-control [nzSpan]="24" [nzOffset]="0">
-          <button nz-button nzType="primary" type="submit">{{selectedHotel ? 'Cập Nhật Khách sạn' : 'Tạo Khách
-            sạn'}}</button>
+          <button nz-button nzType="primary" type="submit">
+            {{selectedHotel ? 'Cập Nhật Khách sạn' : 'Tạo Khách sạn'}}
+          </button>
         </nz-form-control>
       </nz-form-item>
     </form>
