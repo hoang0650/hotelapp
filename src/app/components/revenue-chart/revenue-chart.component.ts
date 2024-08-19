@@ -16,10 +16,10 @@ export class RevenueChartComponent implements OnInit {
     { title: 'Năm', key: 'yearly' }
   ];
 
-  public currentTab = 'monthly';
+  public currentTab = 'daily';
 
   ngOnInit(): void {
-    this.updateChartData('monthly'); // Default to daily
+    this.updateChartData(this.currentTab); // Default to daily
   }
 
   updateChartData(period: string): void {

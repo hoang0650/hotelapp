@@ -1,50 +1,72 @@
 .product-list {
-    display: flex;
-    flex-wrap: wrap;
-  }
-  
-  .product {
-    margin: 10px;
-    width: 25%;
-    flex-basis: calc(25% -20px);
-  }
-  
-  .product img {
-    display: block;
-    width: 100%;
-  }
-  
-  .product-info {
-    padding: 10px;
-    background-color: #f9f9f9;
-  }
-  
-  .product-info h3 {
-    margin-top: 0;
-  }
+  display: flex;
+  flex-wrap: wrap;
+}
 
-  .product-info h3 a {
-      text-decoration: none;
-  }
-  
-  .product-info .price {
-    font-weight: bold;
-    color: #ff6600;
-  }
-  
-  .product-info .description {
-    font-size: 14px;
-  }
+.product {
+  margin: 10px;
+  width: 25%;
+  flex-basis: calc(25% -20px);
+}
 
-  .bg-custom {
-    background-color: #faf6e8;
-  }
+.product img {
+  display: block;
+  width: 100%;
+}
 
-  h2 {
-    text-align: center;
-    color: red;
-  }
+.product-info {
+  padding: 10px;
+  background-color: #f9f9f9;
+}
 
- 
- 
-  
+.product-info h3 {
+  margin-top: 0;
+}
+
+.product-info h3 a {
+  text-decoration: none;
+}
+
+.product-info .price {
+  font-weight: bold;
+  color: #ff6600;
+}
+
+.product-info .description {
+  font-size: 14px;
+}
+
+.bg-custom {
+  background-color: #faf6e8;
+}
+
+h2 {
+  text-align: center;
+  color: red;
+}
+
+.hotel-logo {
+  width: 150px;
+  /* Điều chỉnh kích thước của logo */
+  height: auto;
+  /* Giữ tỷ lệ khung hình của logo */
+}
+
+.header-logo-title {
+  display: flex;
+  align-items: center;
+  /* Căn giữa theo chiều dọc */
+  justify-content: center;
+  /* Căn giữa các phần tử theo chiều ngang */
+  position: relative;
+  /* Để căn giữa chữ với logo bên trái */
+}
+
+.header-logo-title h2 {
+  margin-left: 10px;
+  /* Khoảng cách giữa logo và chữ "PHHOTEL" */
+  text-align: center;
+  /* Căn giữa chữ "PHHOTEL" */
+  flex-grow: 1;
+  /* Đẩy chữ "PHHOTEL" ra giữa */
+}

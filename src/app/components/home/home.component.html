@@ -1,12 +1,15 @@
-<div class="container-fluid">
+<div class="home-container">
     <!-- <div class="row landing">
         <div class="col-md-12 text-center cent">
             <h3>Yến sào Thanh Bình</h3>
             <button class="btn btn-own">đặt ngay</button>
         </div>
     </div> -->
-    <app-product-list>
-    </app-product-list>
+    <!-- Product List Component -->
+
+    <app-product-list></app-product-list>
+
+    <!-- Carousel -->
     <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
         <ol class="carousel-indicators">
             <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active"></li>
@@ -25,8 +28,8 @@
                         <div class="col-md-3">
                             <img src="https://via.placeholder.com/150" class="rounded-circle mx-auto d-block">
                             <h4 class="text-center mt-3">Nguyễn Văn B</h4>
-                            <p class="text-center">"Yến sạch tốt, ngon miệng, sức khỏe của tôi đã cải thiện sau khi sử
-                                dụng."</p>
+                            <p class="text-center">"Yến sạch tốt, ngon miệng, sức khỏe của tôi đã cải thiện sau khi
+                                sử dụng."</p>
                         </div>
                         <div class="col-md-3">
                             <img src="https://via.placeholder.com/150" class="rounded-circle mx-auto d-block">
@@ -43,5 +46,37 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Footer -->
+    <footer class="bg-blue text-white pt-4">
+        <div class="container-fluid">
+          <div class="row footer-content">
+            <!-- Column 1 -->
+            <div class="col-lg-4 col-md-6 mb-4">
+              <h5>About Us</h5>
+              <p>We are a team of passionate developers who create stunning web applications.</p>
+            </div>
+            <!-- Column 2 -->
+            <div class="col-lg-4 col-md-6 mb-4">
+              <h5>Quick Links</h5>
+              <ul class="list-unstyled">
+                <li><a href="#" class="text-white">Home</a></li>
+                <li><a href="#" class="text-white">Services</a></li>
+                <li><a href="#" class="text-white">Contact</a></li>
+                <li><a href="#" class="text-white">About</a></li>
+              </ul>
+            </div>
+            <!-- Column 3 -->
+            <div class="col-lg-4 col-md-12 mb-4">
+              <h5>Contact Us</h5>
+              <p><i class="fas fa-map-marker-alt"></i> 123 Main Street, Anytown, USA</p>
+              <p><i class="fas fa-phone"></i> +1 234 567 890</p>
+              <p><i class="fas fa-envelope"></i> info&#64;example.com</p>
+            </div>
+          </div>
+          <div class="text-center py-3">
+            &copy; 2024 PHHotel. All rights reserved.
+          </div>
+        </div>
+      </footer>
 </div>

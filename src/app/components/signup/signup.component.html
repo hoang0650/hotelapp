@@ -9,10 +9,6 @@
                 <input type="email" class="form-control" id="username" formControlName="username">
                 <label for="floatingInput">User name</label>
               </div>
-              <!-- <div class="form-floating mb-3">
-                <input type="email" class="form-control" id="username" formControlName="username">
-                <label for="floatingInput">Số điện thoại</label>
-              </div> -->
               <div class="form-floating mb-3">
                 <input type="email" class="form-control" id="email" formControlName="email">
                 <label for="floatingInput">Email</label>
@@ -24,7 +20,7 @@
               <div class="form-floating mb-3">
                 <input type="password" class="form-control" id="password" formControlName="password">
                 <label for="floatingPassword">Nhập lại mật khẩu</label>
-                <a href="#" class="link-primary float-end">Quên mật khẩu?</a>
+                <a href="/home" class="link-primary float-end">Quên mật khẩu?</a>
               </div>
               <button type="submit" class="btn btn-lg btn-primary mt-3 w-100" [disabled]="registerForm.invalid">Đăng ký</button>
             </form>

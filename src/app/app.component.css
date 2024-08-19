@@ -1,14 +1,31 @@
-.fb-customerchat {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    z-index: 1000;
-    transform: translateX(100%);
-  }
-  .fb-customerchat.show {
-    transform: translateX(0);
-}
-
 nz-layout {
   background-color: white;
+}
+
+/* Đặt màu nền cho footer */
+.bg-blue {
+  background-color: #007bff; /* Màu xanh dương Bootstrap */
+}
+
+/* Đặt màu nền cho nội dung footer */
+.footer-content {
+  color: #ffffff; /* Màu chữ trắng */
+}
+
+.footer-content .text-white {
+  color: #ffffff !important;
+}
+
+.footer-content a {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.footer-content a:hover {
+  text-decoration: underline;
+}
+
+/* Đặt khoảng cách cho các cột */
+.mb-4 {
+  margin-bottom: 1.5rem;
 }
