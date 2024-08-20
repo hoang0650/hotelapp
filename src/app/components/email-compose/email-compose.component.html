@@ -1,0 +1,38 @@
+<nz-form [formGroup]="emailForm">
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6" nzRequired>Địa chỉ email</nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <input nz-input formControlName="to" placeholder="Nhập địa chỉ email"/>
+      </nz-form-control>
+    </nz-form-item>
+  
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6" nzRequired>Chủ đề</nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <input nz-input formControlName="subject" placeholder="Nhập chủ đề"/>
+      </nz-form-control>
+    </nz-form-item>
+  
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6" nzRequired>Nội dung</nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <!-- <nz-input-textarea formControlName="body" rows="6" placeholder="Nhập nội dung email"></nz-input-textarea> -->
+        <textarea nz-input formControlName="body" placeholder="Nhập nội dung email" [nzAutosize]="{ minRows: 3, maxRows: 5 }"></textarea>
+      </nz-form-control>
+    </nz-form-item>
+  
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6">Đính kèm</nz-form-label>
+      <nz-form-control [nzSpan]="14">
+        <input type="file" (change)="onFileChange($event)" />
+      </nz-form-control>
+    </nz-form-item>
+  
+    <nz-form-item>
+      <nz-form-control [nzSpan]="14" [nzOffset]="6">
+        <button nz-button nzType="primary" (click)="onSend()">Gửi</button>
+        <button nz-button nzType="default" (click)="sendOtp()">Gửi OTP</button>
+      </nz-form-control>
+    </nz-form-item>
+  </nz-form>
+  

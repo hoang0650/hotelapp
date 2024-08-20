@@ -50,6 +50,9 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzCarouselModule } from 'ng-zorro-antd/carousel';
+import { NzDatePickerModule} from 'ng-zorro-antd/date-picker';
+import { NzCalendarModule } from 'ng-zorro-antd/calendar';
+import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { UnauthorizedComponent } from './components/unauthorized/unauthorized.component';
@@ -62,6 +65,12 @@ import { RoomManagementComponent } from './components/room-management/room-manag
 import { StaffManagementComponent } from './components/staff-management/staff-management.component';
 import { RevenueChartComponent } from './components/revenue-chart/revenue-chart.component';
 import { SortRoomsPipe } from './pipes/sort-rooms.pipe';
+import { VisaPaymentComponent } from './components/visa-payment/visa-payment.component';
+import { QrPaymentComponent } from './components/qr-payment/qr-payment.component';
+import { CalendarComponent } from './components/calendar/calendar.component';
+import { EmailComposeComponent } from './components/email-compose/email-compose.component';
+import { EmailListComponent } from './components/email-list/email-list.component';
+import { EmailAdminComponent } from './components/email-admin/email-admin.component';
 
 
 registerLocaleData(en);
@@ -93,6 +102,13 @@ registerLocaleData(en);
     StaffManagementComponent,
     RevenueChartComponent,
     SortRoomsPipe,
+    VisaPaymentComponent,
+    QrPaymentComponent,
+    CalendarComponent,
+    EmailComposeComponent,
+    EmailListComponent,
+    EmailAdminComponent,
+    
   ],
   imports: [
     BrowserModule,
@@ -123,7 +139,10 @@ registerLocaleData(en);
     NzSelectModule,
     NzInputModule,
     NzDropDownModule,
-    NzCarouselModule
+    NzCarouselModule,
+    NzDatePickerModule,
+    NzCalendarModule,
+    NzTimelineModule
   ],
   providers: [
     provideClientHydration(),

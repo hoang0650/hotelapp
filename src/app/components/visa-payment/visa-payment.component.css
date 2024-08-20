@@ -1,0 +1,31 @@
+/* form {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  nz-card {
+    margin-top: 50px;
+  }
+  
+button {
+    width: 100%;
+} */
+
+.nz-card {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.nz-row {
+    display: flex;
+    align-items: center;
+}
+
+.nz-col {
+    padding: 10px;
+}
+
+form {
+    padding-left: 20px;
+}
+  

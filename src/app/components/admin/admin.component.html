@@ -5,8 +5,8 @@
       <li nz-submenu nzTitle="Khách sạn" nzIcon="table">
         <ul>
           <li nz-menu-item routerLink="/admin/room">Phòng</li>
-          <li nz-menu-item routerLink="/admin/history">Lịch sử thanh toán</li>
           <li nz-menu-item routerLink="/admin/bill">Hoá đơn</li>
+          <li nz-menu-item routerLink="/admin/calendar">Lịch đặt phòng</li>
         </ul>
       </li>
       <li nz-submenu nzTitle="Quản lí" nzIcon="team">
@@ -21,9 +21,20 @@
         <span nz-icon nzType="pie-chart"></span>
         <span>Doanh thu</span>
       </li>
-      <li nz-menu-item routerLink="/option2">
-        <span nz-icon nzType="desktop"></span>
-        <span>Option 2</span>
+      <li nz-submenu nzTitle="Thanh toán" nzIcon="dollar">
+        <ul>
+          <li nz-menu-item routerLink="/admin/qr-payment">Quét mã QR</li>
+          <li nz-menu-item routerLink="/admin/visa-payment">Visa</li>
+        </ul>
+      </li>
+      <li nz-submenu nzTitle="Home Page" nzIcon="plus">
+        <ul>
+          <li nz-menu-item routerLink="/admin/unauthorized">Unauthorized</li>
+          <li nz-menu-item routerLink="/admin/notfound">Notfound</li>
+          <li nz-menu-item routerLink="/admin/email-list">Email List</li>
+          <li nz-menu-item routerLink="/admin/email-compose">Email Compose</li>
+          <li nz-menu-item routerLink="/admin/email-admin">Email Admin</li>
+        </ul>
       </li>
       
       <li nz-menu-item routerLink="/file">

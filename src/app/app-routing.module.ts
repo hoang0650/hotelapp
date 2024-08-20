@@ -16,6 +16,12 @@ import { HotelManagementComponent } from './components/hotel-management/hotel-ma
 import { RoomManagementComponent } from './components/room-management/room-management.component';
 import { StaffManagementComponent } from './components/staff-management/staff-management.component';
 import { RevenueChartComponent } from './components/revenue-chart/revenue-chart.component';
+import { VisaPaymentComponent } from './components/visa-payment/visa-payment.component';
+import { QrPaymentComponent } from './components/qr-payment/qr-payment.component';
+import { CalendarComponent } from './components/calendar/calendar.component';
+import { EmailComposeComponent } from './components/email-compose/email-compose.component';
+import { EmailListComponent } from './components/email-list/email-list.component';
+import { EmailAdminComponent } from './components/email-admin/email-admin.component';
 const routes: Routes = [
   { path: '', redirectTo: 'admin', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
@@ -25,13 +31,20 @@ const routes: Routes = [
   {
     path: 'admin', component: AdminComponent, children: [
       { path: 'room', component: RoomComponent },
-      { path: 'history', component: RoomHistoryComponent },
       { path: 'bill', component: InvoiceComponent },
+      { path: 'calendar', component: CalendarComponent },
+      { path: 'email-list', component: EmailListComponent },
+      { path: 'email-compose', component: EmailComposeComponent },
+      { path: 'email-admin', component: EmailAdminComponent },
+      { path: 'qr-payment', component: QrPaymentComponent },
+      { path: 'visa-payment', component: VisaPaymentComponent },
       { path: 'company', component: CompanyManagementComponent },
       { path: 'room-management', component: RoomManagementComponent },
       { path: 'hotel', component: HotelManagementComponent },
       { path: 'staff', component: StaffManagementComponent },
-      { path: 'chart', component: RevenueChartComponent }
+      { path: 'chart', component: RevenueChartComponent },
+      { path: 'unauthorized', component: UnauthorizedComponent },
+      { path: 'notfound', component: NotfoundComponent },
       // Thêm các route con khác nếu cần
     ]
   },

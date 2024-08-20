@@ -1,0 +1,75 @@
+<!-- <nz-card nzTitle="Visa Payment">
+    <div style="display: flex; align-items: center;">
+        <img src="https://images.oyoroomscdn.com/uploads/hotel_image/61897/large/91e22bde28e70337.jpg" alt="Visa"
+            style="width: 50px; height: auto; margin-right: 20px;" />
+        <form nz-form [formGroup]="paymentForm" (ngSubmit)="onSubmit()" style="flex: 1;">
+            <nz-form-item>
+                <nz-form-label [nzSpan]="6" nzFor="cardNumber">Card Number</nz-form-label>
+                <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid card number">
+                    <input nz-input formControlName="cardNumber" id="cardNumber" placeholder="Enter your card number" />
+                </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+                <nz-form-label [nzSpan]="6" nzFor="expiryDate">Expiry Date</nz-form-label>
+                <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid expiry date">
+                    <input nz-input formControlName="expiryDate" id="expiryDate" placeholder="MM/YY" />
+                </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+                <nz-form-label [nzSpan]="6" nzFor="cvv">CVV</nz-form-label>
+                <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid CVV">
+                    <input nz-input formControlName="cvv" id="cvv" placeholder="Enter your CVV" />
+                </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+                <nz-form-control [nzSpan]="24" nzOffset="6">
+                    <button nz-button nzType="primary" [disabled]="paymentForm.invalid">Pay Now</button>
+                </nz-form-control>
+            </nz-form-item>
+        </form>
+    </div>
+</nz-card> -->
+
+
+<nz-card nzTitle="Visa Payment">
+    <div nz-row>
+        <div nz-col nzSpan="12" style="text-align: center;">
+            <img src="https://thumbs.dreamstime.com/b/card-accepted-business-color-debit-credit-card-business-payment-flat-icon-set-mastercard-visa-logo-maestro-card-302796417.jpg?w=360"
+                alt="Visa Card" style="max-width: 100%; height: auto;" />
+        </div>
+        <div nz-col nzSpan="12">
+            <form nz-form [formGroup]="paymentForm" (ngSubmit)="onSubmit()" style="flex: 1;">
+                <nz-form-item>
+                    <nz-form-label [nzSpan]="6" nzFor="cardNumber">Card Number</nz-form-label>
+                    <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid card number">
+                        <input nz-input formControlName="cardNumber" id="cardNumber"
+                            placeholder="Enter your card number" />
+                    </nz-form-control>
+                </nz-form-item>
+
+                <nz-form-item>
+                    <nz-form-label [nzSpan]="6" nzFor="expiryDate">Expiry Date</nz-form-label>
+                    <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid expiry date">
+                        <input nz-input formControlName="expiryDate" id="expiryDate" placeholder="MM/YY" />
+                    </nz-form-control>
+                </nz-form-item>
+
+                <nz-form-item>
+                    <nz-form-label [nzSpan]="6" nzFor="cvv">CVV</nz-form-label>
+                    <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid CVV">
+                        <input nz-input formControlName="cvv" id="cvv" placeholder="Enter your CVV" />
+                    </nz-form-control>
+                </nz-form-item>
+
+                <nz-form-item>
+                    <nz-form-control [nzSpan]="24" nzOffset="6">
+                        <button nz-button nzType="primary" [disabled]="paymentForm.invalid">Pay Now</button>
+                    </nz-form-control>
+                </nz-form-item>
+            </form>
+        </div>
+    </div>
+</nz-card>

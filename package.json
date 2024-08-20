@@ -28,6 +28,7 @@
     "highcharts-angular": "^4.0.1",
     "ng-zorro-antd": "^17.4.1",
     "ngx-echarts": "^18.0.0",
+    "qrious": "^4.0.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "xlsx": "^0.18.5",

@@ -99,7 +99,7 @@
       <nz-form-item>
         <nz-form-label [nzSpan]="24" [nzSm]="8">Business ID</nz-form-label>
         <nz-form-control [nzSpan]="24" [nzSm]="16">
-          <nz-select formControlName="businessId" nzMode="multiple" nzPlaceHolder="Chọn khách sạn">
+          <nz-select formControlName="businessId" nzPlaceHolder="Chọn khách sạn">
             <nz-option *ngFor="let data of businesses" [nzValue]="data._id" [nzLabel]="data.name"></nz-option>
           </nz-select>
         </nz-form-control>

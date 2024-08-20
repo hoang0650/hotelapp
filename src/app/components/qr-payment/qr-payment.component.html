@@ -1,0 +1,24 @@
+<nz-card nzTitle="QR Code Payment">
+    <div style="text-align: center;">
+        <p>Scan the QR code below to complete your payment</p>
+        <!-- Hình ảnh mã QR từ ngân hàng -->
+        <img [src]="qrCodeDataUrl" alt="Bank QR Code" style="width: 200px; height: 200px; margin: 20px 0;" />
+
+        <!-- Thông tin thanh toán -->
+        <div>
+            <p><strong>Amount:</strong> 500,000 VND</p>
+            <p><strong>Expiry:</strong> 24 hours</p>
+            <p><strong>Order ID:</strong> 123456789</p>
+        </div>
+        <!-- Hướng dẫn người dùng -->
+        <div style="margin-top: 20px;">
+            <p>Use your banking app to scan the QR code and complete the payment.</p>
+        </div>
+
+        <!-- Nút điều hướng -->
+        <div style="margin-top: 30px;">
+            <button nz-button nzType="primary">View Order Details</button>
+            <button nz-button nzType="default" style="margin-left: 10px;">Cancel Payment</button>
+        </div>
+    </div>
+</nz-card>

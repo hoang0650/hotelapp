@@ -1,0 +1,31 @@
+.nz-timeline-item {
+    margin-bottom: 20px;
+  }
+  
+  .nz-card {
+    border: 1px solid #d4b106; /* Adjust border color */
+    background-color: #fff9e6; /* Adjust background color */
+  }
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .card-status {
+    font-weight: bold;
+  }
+  
+  .status-booked {
+    color: green;
+  }
+  
+  .status-cancelled {
+    color: red;
+  }
+  
+  .nz-collapse-panel {
+    background: #f7f7f7; /* Adjust background color */
+  }
+  

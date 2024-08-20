@@ -1,0 +1,14 @@
+/* CSS cho giao diện soạn email */
+.nz-form-item {
+    margin-bottom: 20px;
+  }
+  
+  .nz-card {
+    border: 1px solid #d4b106; /* Adjust border color */
+    background-color: #fff9e6; /* Adjust background color */
+  }
+  
+  .nz-table {
+    margin-top: 20px;
+  }
+  

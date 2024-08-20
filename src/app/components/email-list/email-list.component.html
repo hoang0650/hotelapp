@@ -1,0 +1,22 @@
+<!-- Giao diện danh sách email -->
+<nz-table #basicTable [nzData]="emailList" [nzBordered]="true">
+    <thead>
+      <tr>
+        <th nzWidth="25%">Người nhận</th>
+        <th nzWidth="35%">Chủ đề</th>
+        <th nzWidth="30%">Ngày gửi</th>
+        <th nzWidth="10%">Hành động</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let email of basicTable.data">
+        <td>{{ email.email }}</td>
+        <td>{{ email.subject }}</td>
+        <td>{{ email.date | date: 'short' }}</td>
+        <td>
+          <button nz-button nzType="link" (click)="onView(email)">Xem</button>
+        </td>
+      </tr>
+    </tbody>
+  </nz-table>
+  
