@@ -1,0 +1,29 @@
+<nz-form [formGroup]="form">
+    <nz-form-item>
+        <nz-form-label [nzSpan]="6" nzRequired>Chọn ngày</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+            <nz-date-picker formControlName="date" [nzShowTime]="true" nzFormat="yyyy-MM-dd HH:mm:ss"></nz-date-picker>
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label [nzSpan]="6" nzRequired>Tên khách hàng</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+            <input nz-input formControlName="customerName" placeholder="Nhập tên khách hàng" />
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label [nzSpan]="6">Số tiền chuyển</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+            <input nz-input formControlName="amount" placeholder="Nhập số tiền" />
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label [nzSpan]="6">Ghi chú</nz-form-label>
+        <nz-form-control [nzSpan]="14">
+            <textarea nz-input formControlName="note" rows="3" placeholder="Ghi chú"></textarea>
+        </nz-form-control>
+    </nz-form-item>
+</nz-form>

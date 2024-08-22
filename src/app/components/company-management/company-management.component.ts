@@ -98,6 +98,7 @@ export class CompanyManagementComponent implements OnInit {
   updateBusiness(): void {
     if (this.selectedBusiness && this.businessForm.valid) {
       this.businessService.updateBusiness(this.selectedBusiness._id!, this.businessForm.value).subscribe(() => {
+        this.loadBusinesses();
         this.loadHotels();
         this.businessForm.reset();
         this.selectedBusiness = null;
@@ -114,4 +115,5 @@ export class CompanyManagementComponent implements OnInit {
       error => console.error('Error deleting business:', error)
     );
   }
+
 }

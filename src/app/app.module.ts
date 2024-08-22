@@ -71,6 +71,8 @@ import { CalendarComponent } from './components/calendar/calendar.component';
 import { EmailComposeComponent } from './components/email-compose/email-compose.component';
 import { EmailListComponent } from './components/email-list/email-list.component';
 import { EmailAdminComponent } from './components/email-admin/email-admin.component';
+import { CaliendarModalComponent } from './components/caliendar-modal/caliendar-modal.component';
+
 
 
 registerLocaleData(en);
@@ -108,6 +110,7 @@ registerLocaleData(en);
     EmailComposeComponent,
     EmailListComponent,
     EmailAdminComponent,
+    CaliendarModalComponent,
     
   ],
   imports: [

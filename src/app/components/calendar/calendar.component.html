@@ -1,65 +1,53 @@
-<!-- Giao diện đặt lịch -->
-<nz-form [formGroup]="form">
-  <nz-form-item>
-    <nz-form-label [nzSpan]="6" nzRequired>Chọn ngày</nz-form-label>
-    <nz-form-control [nzSpan]="14">
-      <nz-date-picker formControlName="date" [nzShowTime]="true" nzFormat="yyyy-MM-dd HH:mm:ss"></nz-date-picker>
-    </nz-form-control>
-  </nz-form-item>
-
-  <nz-form-item>
-    <nz-form-label [nzSpan]="6" nzRequired>Tên khách hàng</nz-form-label>
-    <nz-form-control [nzSpan]="14">
-      <input nz-input formControlName="customerName" placeholder="Nhập tên khách hàng"/>
-    </nz-form-control>
-  </nz-form-item>
-
-  <nz-form-item>
-    <nz-form-label [nzSpan]="6">Số tiền chuyển</nz-form-label>
-    <nz-form-control [nzSpan]="14">
-      <input nz-input formControlName="amount" placeholder="Nhập số tiền"/>
-    </nz-form-control>
-  </nz-form-item>
-
-  <nz-form-item>
-    <nz-form-label [nzSpan]="6">Ghi chú</nz-form-label>
-    <nz-form-control [nzSpan]="14">
-      <textarea nz-input formControlName="note" rows="3" placeholder="Ghi chú"></textarea>
-    </nz-form-control>
-  </nz-form-item>
-
-  <nz-form-item>
-    <nz-form-control [nzSpan]="14" [nzOffset]="6">
-      <button nz-button nzType="primary" (click)="onSubmit()">Đặt lịch</button>
-    </nz-form-control>
-  </nz-form-item>
-</nz-form>
-
-<!-- Giao diện lịch và timeline -->
-<div *ngIf="showCalendar">
-  <nz-date-picker [(ngModel)]="currentDate" [nzShowTime]="true" (ngModelChange)="onDateChange($event)"></nz-date-picker>
+<div class="calendar-container">
+  <header class="calendar-header">
+    <button (click)="prevMonth()">&#9664;</button>
+    <span>{{ currentMonth }} {{ currentYear }}</span>
+    <button (click)="nextMonth()">&#9654;</button>
+  </header>
+  <div class="calendar-grid">
+    <div class="day-header" *ngFor="let day of daysOfWeek">{{ day }}</div>
+    <div
+      class="calendar-day"
+      *ngFor="let date of datesInMonth"
+      [class.today]="isToday(date)"
+      [class.selected]="isSelected(date)"
+      (click)="selectDate(date)"
+    >
+      <div class="date">{{ date.getDate() }}</div>
+      <div class="booking-info" *ngFor="let booking of getBookingsForDate(date)">
+        <div class="booking-timeline">
+          {{ booking.startTime }} - {{ booking.endTime }}
+        </div>
+        <div class="booking-user">
+          {{ booking.userName }}
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-
-<div *ngIf="events.length > 0">
+<br>
+<div class="booking-info" *ngIf="selectedDate">
   <nz-timeline>
-    <nz-timeline-item *ngFor="let event of events" [nzColor]="'gold'">
+    <nz-timeline-item *ngFor="let booking of bookings" [nzColor]="'gold'">
       <nz-card>
         <div class="card-header">
           <nz-card-meta
-            [nzTitle]="event.customerName"
-            [nzDescription]="event.date">
+            [nzTitle]="booking.userName"
+            [nzDescription]="selectedDate | date: 'fullDate'">
           </nz-card-meta>
           <div class="card-status">
-            <span [ngClass]="{'status-booked': event.status === 'Booked', 'status-cancelled': event.status === 'Cancelled'}">{{ event.status }}</span>
+            <button nz-button nzShape="round" nzType="default" (click)="showModal()">Sửa</button>
+            <span [ngClass]="{'status-booked': booking.status === 'Booked', 'status-cancelled': booking.status === 'Cancelled'}">{{ booking.status }}</span>
           </div>
         </div>
         <nz-collapse>
-          <nz-collapse-panel nzHeader="Chi tiết" *ngIf="event.amount || event.note">
-            <p><strong>Số tiền:</strong> {{ event.amount }}</p>
-            <p><strong>Ghi chú:</strong> {{ event.note }}</p>
+          <nz-collapse-panel nzHeader="Chi tiết" *ngIf="booking.startTime || booking.endTime">
+            <p><strong>Từ ngày:</strong> {{ booking.startTime }}</p>
+            <p><strong>Đến ngày:</strong> {{ booking.endTime }}</p>
           </nz-collapse-panel>
         </nz-collapse>
       </nz-card>
     </nz-timeline-item>
   </nz-timeline>
 </div>
+

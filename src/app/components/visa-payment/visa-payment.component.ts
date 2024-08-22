@@ -6,21 +6,31 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
   styleUrl: './visa-payment.component.css'
 })
 export class VisaPaymentComponent {
-  paymentForm: FormGroup;
+  paymentForm: FormGroup;   
+  cardNumber = '';
+  cardHolder = '';
+  expiryDate = '';
+  cvv = '';
 
   constructor(private fb: FormBuilder) {
     this.paymentForm = this.fb.group({
-      cardNumber: ['', [Validators.required, Validators.pattern('^[0-9]{16}$')]],
-      expiryDate: ['', [Validators.required, Validators.pattern('(0[1-9]|1[0-2])/[0-9]{2}')]],
-      cvv: ['', [Validators.required, Validators.pattern('^[0-9]{3,4}$')]]
+      cardNumber: ['', [Validators.required, Validators.pattern(/^\d{16}$/)]],
+      cardHolder: ['', [Validators.required]],
+      expiryDate: ['', [Validators.required, Validators.pattern(/^\d{2}\/\d{2}$/)]],
+      cvv: ['', [Validators.required, Validators.pattern(/^\d{3}$/)]]
+    });
+
+    this.paymentForm.valueChanges.subscribe(value => {
+      this.cardNumber = value.cardNumber;
+      this.cardHolder = value.cardHolder;
+      this.expiryDate = value.expiryDate;
+      this.cvv = value.cvv;
     });
   }
 
-  onSubmit(): void {
-    if (this.paymentForm.valid) {
-      console.log('Payment details:', this.paymentForm.value);
-      // Xử lý thanh toán ở đây
-    }
+  onSubmit(){
+    
   }
-
 }
+  
+

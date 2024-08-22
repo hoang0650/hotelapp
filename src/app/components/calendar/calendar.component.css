@@ -1,31 +1,94 @@
 .nz-timeline-item {
-    margin-bottom: 20px;
-  }
-  
-  .nz-card {
-    border: 1px solid #d4b106; /* Adjust border color */
-    background-color: #fff9e6; /* Adjust background color */
-  }
-  
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .card-status {
-    font-weight: bold;
-  }
-  
-  .status-booked {
-    color: green;
-  }
-  
-  .status-cancelled {
-    color: red;
-  }
-  
-  .nz-collapse-panel {
-    background: #f7f7f7; /* Adjust background color */
-  }
-  
+  margin-bottom: 20px;
+}
+
+.nz-card {
+  border: 1px solid #d4b106;
+  background-color: #fff9e6;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-status {
+  font-weight: bold;
+}
+
+.status-booked {
+  color: green;
+}
+
+.status-cancelled {
+  color: red;
+}
+
+.nz-collapse-panel {
+  background: #f7f7f7;
+}
+
+
+.calendar-container {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.day-header {
+  font-weight: bold;
+  text-align: center;
+}
+
+.calendar-day {
+  text-align: center;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  background-color: #fff;
+}
+
+.calendar-day:hover {
+  background-color: #e0e0e0;
+}
+
+.today {
+  background-color: #ffeeba;
+}
+
+.selected {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.booking-info {
+  margin-top: 5px;
+  font-size: 0.8em;
+  text-align: left;
+}
+
+.booking-timeline {
+  font-weight: bold;
+}
+
+.booking-user {
+  font-style: italic;
+}
