@@ -3,15 +3,15 @@
     <nz-table #hotelTable nzBordered [nzData]="listOfData">
       <thead>
         <tr>
-          <th>Tên Khách Sạn</th>
-          <th>Mã số thuế</th>
-          <th>Địa chỉ</th>
-          <th>Số điện thoại</th>
+          <th>Hotel Name</th>
+          <th>Tax code</th>
+          <th>Address</th>
+          <th>Phone Number</th>
           <th>Email</th>
-          <th>Tên Doanh nghiệp</th>
-          <th>Phòng</th>
-          <th>Nhân viên</th>
-          <th>Hành Động</th>
+          <th>Business Name</th>
+          <th>Room</th>
+          <th>Staff</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -49,74 +49,74 @@
           <td>
             <button nz-button nzShape="round" (click)="startEdit(hotel._id)" nzType="default"
               *ngIf="editId !== hotel._id">
-              <i nz-icon nzType="edit"></i>Sửa
+              <i nz-icon nzType="edit"></i>Edit
             </button>
             <nz-divider nzType="vertical"></nz-divider>
             <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteHotel(hotel._id)"
               *ngIf="editId !== hotel._id">
               <button nz-button nzShape="round" nzType="text" [nzDanger]="true">
-                <i nz-icon nzType="delete"></i>Xoá
+                <i nz-icon nzType="delete"></i>Delete
               </button>
             </a>
 
             <button nz-button nzShape="round" (click)="stopEdit()" nzType="default" *ngIf="editId === hotel._id">
-              <i nz-icon nzType="save"></i>Hủy</button>
+              <i nz-icon nzType="save"></i>Cancel</button>
           </td>
         </tr>
       </tbody>
     </nz-table>
     <form nz-form [formGroup]="hotelForm" (ngSubmit)="selectedHotel ? updateHotel() : createHotel()">
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Tên Khách Sạn</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập tên khách sạn" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập tên khách sạn" nz-input formControlName="name" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Hotel Name</nz-form-label>
+        <nz-form-control nzErrorTip="Please enter your hotel name" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter your hotel name" nz-input formControlName="name" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Mã số thuế</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập mã số thuế" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập mã số thuế" nz-input formControlName="tax_code" type="number" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Tax code</nz-form-label>
+        <nz-form-control nzErrorTip="Please enter your tax code" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter your tax code" nz-input formControlName="tax_code" type="number" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Địa chỉ</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập địa chỉ" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập địa chỉ" nz-input formControlName="address" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Address</nz-form-label>
+        <nz-form-control nzErrorTip="Please enter your address" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter your address" nz-input formControlName="address" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item formGroupName="contact">
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Số điện thoại</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập số điện thoại" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập số điện thoại" nz-input formControlName="phone" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Phone Number</nz-form-label>
+        <nz-form-control nzErrorTip="Please enter your phone number" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter your phone number" nz-input formControlName="phone" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item formGroupName="contact">
         <nz-form-label [nzSpan]="24" [nzSm]="8">Email</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập địa chỉ email" [nzSpan]="24" [nzSm]="16">
-          <input nz-input placeholder="Nhập địa chỉ email" nz-input formControlName="email" type="email" />
+        <nz-form-control nzErrorTip="Please enter your email" [nzSpan]="24" [nzSm]="16">
+          <input nz-input placeholder="Enter your email" nz-input formControlName="email" type="email" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Business ID</nz-form-label>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Business</nz-form-label>
         <nz-form-control [nzSpan]="24" [nzSm]="16">
-          <nz-select formControlName="businessId" nzPlaceHolder="Chọn khách sạn">
+          <nz-select formControlName="businessId" nzPlaceHolder="Select Business">
             <nz-option *ngFor="let data of businesses" [nzValue]="data._id" [nzLabel]="data.name"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Chọn phòng</nz-form-label>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Room</nz-form-label>
         <nz-form-control [nzSpan]="24" [nzSm]="16">
-          <nz-select formControlName="rooms" nzMode="multiple" nzPlaceHolder="Chọn phòng">
+          <nz-select formControlName="rooms" nzMode="multiple" nzPlaceHolder="Select Rooms">
             <nz-option *ngFor="let room of availableRooms" [nzValue]="room._id" [nzLabel]="room.roomNumber"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Chọn nhân viên</nz-form-label>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Staff</nz-form-label>
         <nz-form-control [nzSpan]="24" [nzSm]="16">
-          <nz-select formControlName="staff" nzMode="multiple" nzPlaceHolder="Chọn nhân viên">
+          <nz-select formControlName="staff" nzMode="multiple" nzPlaceHolder="Select Staffs">
             <nz-option *ngFor="let staff of availableStaffs" [nzValue]="staff._id" [nzLabel]="staff.name"></nz-option>
           </nz-select>
         </nz-form-control>
@@ -124,7 +124,7 @@
       <nz-form-item>
         <nz-form-control [nzSpan]="24" [nzOffset]="0">
           <button nz-button nzType="primary" type="submit">
-            {{selectedHotel ? 'Cập Nhật Khách sạn' : 'Tạo Khách sạn'}}
+            {{selectedHotel ? 'Update your hotel' : 'Create a Hotel'}}
           </button>
         </nz-form-control>
       </nz-form-item>

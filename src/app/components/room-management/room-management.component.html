@@ -3,13 +3,13 @@
     <nz-table #roomTable nzBordered [nzData]="rooms">
       <thead>
         <tr>
-          <th>Số Phòng</th>
-          <th>Loại Phòng</th>
-          <th>Giá theo giờ</th>
-          <th>Giá qua đêm</th>
-          <th>Giá ngày đêm</th>
-          <th>Số người</th>
-          <th>Hành động</th>
+          <th>Number of Rooms</th>
+          <th>Room Type</th>
+          <th>Hourly prices</th>
+          <th>Overnight prices</th>
+          <th>Dayli prices</th>
+          <th>Number of people</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -22,16 +22,16 @@
           <td>{{ room.maxcount }}</td>
           <td>
             <button nz-button nzShape="round" (click)="startEdit(room._id)" nzType="default" *ngIf="editId !== room._id">
-              <i nz-icon nzType="edit"></i>Sửa
+              <i nz-icon nzType="edit"></i>Edit
             </button>
             <nz-divider nzType="vertical"></nz-divider>
-            <a nz-popconfirm nzPopconfirmTitle="Chắc chắn xoá?" (nzOnConfirm)="deleteRoom(room._id)" *ngIf="editId !== room._id">
+            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteRoom(room._id)" *ngIf="editId !== room._id">
               <button nz-button nzShape="round" nzType="text" [nzDanger]="true">
-                <i nz-icon nzType="delete"></i>Xoá
+                <i nz-icon nzType="delete"></i>Delete
               </button>
             </a>
             <button nz-button nzShape="round" (click)="stopEdit()" nzType="default" *ngIf="editId === room._id">
-              <i nz-icon nzType="save"></i>Hủy
+              <i nz-icon nzType="save"></i>Cancel
             </button>
           </td>
         </tr>
@@ -41,65 +41,65 @@
     <!-- Form to Create or Update Room -->
     <form nz-form [formGroup]="roomForm" (ngSubmit)="selectedRoom ? updateRoom() : createRoom()">
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Tên Khách sạn</nz-form-label>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Hotel Name</nz-form-label>
         <nz-form-control [nzSpan]="24" [nzSm]="16">
-          <nz-select formControlName="hotelId" nzMode="multiple" nzPlaceHolder="Chọn Khách sạn">
+          <nz-select formControlName="hotelId" nzMode="multiple" nzPlaceHolder="Select Hotel">
             <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Số Phòng</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập số phòng" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập số phòng" nz-input formControlName="roomNumber" type="number" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Number of Rooms</nz-form-label>
+        <nz-form-control nzErrorTip="Plaese enter the room number" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter the room number" nz-input formControlName="roomNumber" type="number" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Loại Phòng</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập loại phòng" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập loại phòng" nz-input formControlName="roomType" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Room Type</nz-form-label>
+        <nz-form-control nzErrorTip="Please enter the room type" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter the room type" nz-input formControlName="roomType" />
         </nz-form-control>
       </nz-form-item>
 
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Giá theo giờ</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập giá theo giờ" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập giá theo giờ" nz-input formControlName="hourlyRate" type="number" />
-        </nz-form-control>
-      </nz-form-item>
-
-      <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Giá qua đêm</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập giá qua đêm" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập giá qua đêm" nz-input formControlName="nightlyRate" type="number" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Hourly prices</nz-form-label>
+        <nz-form-control nzErrorTip="Please enter an hourly price" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter an hourly price" nz-input formControlName="hourlyRate" type="number" />
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Giá ngày đêm</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập giá ngày đêm" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập giá ngày đêm" nz-input formControlName="dailyRate" type="number" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Overnight prices</nz-form-label>
+        <nz-form-control nzErrorTip="Please enter the overnight price" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter the overnight price" nz-input formControlName="nightlyRate" type="number" />
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Số người tối đa</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập số người tối đa" [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập số người tối đa" nz-input formControlName="maxcount" type="number" />
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Daily prices</nz-form-label>
+        <nz-form-control nzErrorTip="Please enter the daily price" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter the daily price" nz-input formControlName="dailyRate" type="number" />
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Mô tả</nz-form-label>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Maximum number of people</nz-form-label>
+        <nz-form-control nzErrorTip="Please enter the maximun of people" [nzSpan]="24" [nzSm]="16">
+          <input placeholder="Enter the maximun of people" nz-input formControlName="maxcount" type="number" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" [nzSm]="8">Description</nz-form-label>
         <nz-form-control [nzSpan]="24" [nzSm]="16">
-          <input placeholder="Nhập mô tả" nz-input formControlName="description" />
+          <input placeholder="Enter a description" nz-input formControlName="description" />
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
         <nz-form-control [nzSpan]="24" [nzOffset]="0">
-          <button nz-button nzType="primary" type="submit">{{selectedRoom ? 'Cập Nhật Phòng' : 'Tạo Phòng'}}</button>
+          <button nz-button nzType="primary" type="submit">{{selectedRoom ? 'Update your room' : 'Create a room'}}</button>
         </nz-form-control>
       </nz-form-item>
     </form>

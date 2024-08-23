@@ -23,11 +23,11 @@ import { EmailComposeComponent } from './components/email-compose/email-compose.
 import { EmailListComponent } from './components/email-list/email-list.component';
 import { EmailAdminComponent } from './components/email-admin/email-admin.component';
 const routes: Routes = [
-  { path: '', redirectTo: 'admin', pathMatch: 'full' },
+  { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
-  { path: 'product/:id', component: ProductDetailComponent },
+  { path: 'room/:id', component: ProductDetailComponent },
   {
     path: 'admin', component: AdminComponent, children: [
       { path: 'room', component: RoomComponent },

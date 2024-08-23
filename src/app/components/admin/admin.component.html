@@ -1,5 +1,5 @@
 <nz-layout>
-  <nz-sider nzCollapsible nzWidth="200px">
+  <!-- <nz-sider nzCollapsible nzWidth="200px">
     <div class="logo"></div>
     <ul nz-menu nzTheme="dark" nzMode="inline">
       <li nz-submenu nzTitle="Khách sạn" nzIcon="table">
@@ -42,9 +42,60 @@
         <span>File</span>
       </li>
     </ul>
+  </nz-sider> -->
+
+  <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null">
+    <div class="logo"></div>
+    <ul nz-menu nzTheme="dark" nzMode="inline">
+      <li nz-submenu nzTitle="Hotel" nzIcon="table">
+        <ul>
+          <li nz-menu-item routerLink="/admin/room">Room</li>
+          <li nz-menu-item routerLink="/admin/bill">Invoice</li>
+          <li nz-menu-item routerLink="/admin/calendar">Calendar</li>
+        </ul>
+      </li>
+      <li nz-submenu nzTitle="Management" nzIcon="team">
+        <ul>
+          <li nz-menu-item routerLink="/admin/company">Business Management</li>
+          <li nz-menu-item routerLink="/admin/hotel">Hotel Management</li>
+          <li nz-menu-item routerLink="/admin/room-management">Room Management</li>
+          <li nz-menu-item routerLink="/admin/staff">Staff Management</li>
+        </ul>
+      </li>
+      <li nz-menu-item routerLink="/admin/chart">
+        <span nz-icon nzType="pie-chart"></span>
+        <span>Revenue</span>
+      </li>
+      <li nz-submenu nzTitle="Payment" nzIcon="dollar">
+        <ul>
+          <li nz-menu-item routerLink="/admin/qr-payment">QR Code</li>
+          <li nz-menu-item routerLink="/admin/visa-payment">Visa</li>
+        </ul>
+      </li>
+      <li nz-submenu nzTitle="Expand Page" nzIcon="plus">
+        <ul>
+          <li nz-menu-item routerLink="/admin/unauthorized">Unauthorized</li>
+          <li nz-menu-item routerLink="/admin/notfound">Notfound</li>
+          <li nz-menu-item routerLink="/admin/email-list">Email List</li>
+          <li nz-menu-item routerLink="/admin/email-compose">Email Compose</li>
+          <li nz-menu-item routerLink="/admin/email-admin">Email Admin</li>
+        </ul>
+      </li>
+      
+      <li nz-menu-item routerLink="/file">
+        <span nz-icon nzType="file"></span>
+        <span>File</span>
+      </li>
+    </ul>
   </nz-sider>
   <nz-layout>
     <nz-breadcrumb>
+      <span
+      class="trigger"
+      nz-icon
+      [nzType]="isCollapsed ? 'menu-unfold' : 'menu-fold'"
+      (click)="isCollapsed = !isCollapsed"
+    ></span>
       <nz-breadcrumb-item *ngFor="let breadcrumb of breadcrumbs">
         <a [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a>
       </nz-breadcrumb-item>

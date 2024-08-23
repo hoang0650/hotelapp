@@ -10,7 +10,8 @@ import { filter, map } from 'rxjs/operators';
 export class AdminComponent implements OnInit {
   // breadcrumbs: string[] = []; dành cho 1 breadcrumb
   breadcrumbs: Array<{ label: string, url: string }> = []; //dành cho route kiểu admin/hotel
-
+  isCollapsed = false;
+  showModal: boolean = false;
   constructor(private router: Router, private activatedRoute: ActivatedRoute) { }
 
   ngOnInit(): void {
@@ -40,8 +41,7 @@ export class AdminComponent implements OnInit {
       });
   }
 
-  isCollapsed = false;
-  showModal: boolean = false;
+  
 
   toggleModal(show: boolean): void {
     this.showModal = show;

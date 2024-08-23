@@ -2,7 +2,7 @@
     <div class="border rounded border-warning bg-custom p-3">
         <div class="header-logo-title d-flex align-items-center justify-content-between">
             <img src="../../../assets/phhotel2.PNG" alt="Hotel Logo" class="hotel-logo">
-            <h2 class="mx-auto">DANH SÁCH PHÒNG</h2>
+            <h2 class="mx-auto">PHHOTEL</h2>
         </div>
         <br>
         <!-- <div class="header-title">
@@ -10,7 +10,7 @@
         </div> -->
         <ng-container *ngIf="(productService.products$ | async) as products">
             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                <div class="col" *ngFor="let product of (products | sortRooms: 'roomNumber')" (click)="onSelect(product.roomNumber)" [routerLink]="['/product', product.roomNumber]">
+                <div class="col" *ngFor="let product of (products | sortRooms: 'roomNumber')" (click)="onSelect(product.roomNumber)" [routerLink]="['/room', product.roomNumber]">
                     <div class="card h-100">
                         <img src="{{product?.imageurls}}" class="card-img-top" alt="...">
                         <div class="card-body product-info">
