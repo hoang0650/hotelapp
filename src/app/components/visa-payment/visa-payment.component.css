@@ -1,14 +1,20 @@
+.scroll-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Cuộn mượt mà trên iOS */
+}
+
 .card-form-container {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Ngăn chặn wrapping, cho phép cuộn ngang */
   gap: 20px;
   justify-content: center;
-  align-items: flex-start; /* Căn chỉnh các phần tử ở đầu để tránh khoảng trống không cần thiết */
+  align-items: flex-start;
+  /* min-width: 600px;  */
 }
 
 .card-container {
   flex: 1 1 50%;
-  max-width: 500px; /* Kích thước tối đa của thẻ */
+  max-width: 500px;
   perspective: 1000px;
   margin: 0 auto; /* Căn giữa thẻ trong container */
 }
@@ -32,6 +38,18 @@
   background-image: url('../../../assets/images/bg.png');
 }
 
+.card-back {
+  width: 300px;
+  height: 180px;
+  backface-visibility: hidden;
+  transform: rotateY(180deg);
+  background-color: #333;
+  border-radius: 5px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  background-image: url('../../../assets/images/bg.png');
+  position: relative;
+}
+
 .card-container:hover .card-front {
   transform: rotateY(180deg);
 }
@@ -40,15 +58,23 @@
   transform: rotateY(0deg);
 }
 
+.payment-form-container {
+  flex: 1 1 50%;
+  max-width: 500px;
+  margin: 0 auto; /* Căn giữa form trong container */
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  height: 30px; /* Chiều cao cố định cho header để chứa chip và logo */
 }
 
 .chip {
   position: absolute;
-  top: 10px;
+  top: 0;
   left: 10px;
   width: 50px;
   height: 30px;
@@ -58,28 +84,30 @@
 
 .visa-logo {
   position: absolute;
-  top: 10px;
+  top: 0;
   right: 10px;
   width: 50px;
   height: 30px;
-}
-
-.card-number {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: 'Arial Bold', sans-serif;
-  font-size: 20px;
-  color: #fff;
+  object-fit: contain; /* Giữ nguyên tỷ lệ của logo */
+  background-color: white; /* Đảm bảo logo có nền trắng */
+  padding: 2px; /* Thêm khoảng cách xung quanh logo */
 }
 
 .card-content {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center; /* Căn giữa nội dung thẻ */
   align-items: center;
-  height: 100%;
+  height: calc(100% - 30px); /* Trừ chiều cao của header ra */
+  position: relative;
+  padding-top: 10px; /* Thêm khoảng cách phía trên để không bị chèn với header */
+}
+
+.card-number {
+  font-family: 'Arial Bold', sans-serif;
+  font-size: 20px;
+  color: #fff;
+  text-align: center; /* Căn giữa số thẻ */
 }
 
 .card-bottom {
@@ -92,16 +120,21 @@
   left: 10px;
 }
 
-.card-back {
-  width: 300px;
-  height: 180px;
-  backface-visibility: hidden;
-  transform: rotateY(180deg);
-  background-color: #333;
-  border-radius: 5px;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
-  background-image: url('../../../assets/images/bg.png');
-  position: relative;
+.card-expiry-container, .card-expiry{
+  padding-right: 20px;
+}
+
+.card-holder-container, .card-expiry-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.card-holder-container .form-label, .card-expiry-container .form-label {
+  font-size: 12px;
+  color: #fff;
+  margin-bottom: 5px;
+  font-weight: bold;
 }
 
 .stripe {
@@ -148,46 +181,29 @@
   color: #fff;
 }
 
-.card-expiry{
-  padding-right: 20px;
-}
-
-.payment-form-container {
-  flex: 1 1 50%;
-  max-width: 500px;
-  margin: 0 auto; /* Căn giữa form trong container */
-}
-
 @media screen and (max-width: 768px) {
   .card-form-container {
-      flex-direction: column; /* Xếp chồng các phần tử theo cột */
+
+      flex-direction: column; /* Sắp xếp theo cột */
       align-items: center;
   }
 
-  .card-container {
-      width: 300px; /* Kích thước nhỏ hơn khi ở chế độ di động */
-  }
-
+  .card-container,
   .payment-form-container {
-      width: 300px; /* Kích thước nhỏ hơn khi ở chế độ di động */
-  }
-
-  .card-number, .card-holder, .card-expiry, .cvv {
-      font-size: 14px; /* Kích thước chữ nhỏ hơn khi ở chế độ di động */
+      width: 100%; /* Đảm bảo cả thẻ và form chiếm 100% chiều rộng */
+      height: auto;
   }
 }
 
+/* Xử lý khi ở màn hình nhỏ hơn 480px */
 @media screen and (max-width: 480px) {
+  .card-container,
+  .payment-form-container {
+    max-width: 100%; /* Đảm bảo cả thẻ và form chiếm 100% chiều rộng */
+    height: auto;
+  }
+
   .card-container {
-      width: 250px; /* Kích thước nhỏ hơn cho các màn hình nhỏ hơn */
-      height: 150px;
-  }
-
-  .card-number {
-      font-size: 12px; /* Kích thước chữ nhỏ hơn */
-  }
-
-  .card-holder, .card-expiry, .cvv {
-      font-size: 10px; /* Kích thước chữ nhỏ hơn */
+      margin-bottom: 20px; /* Tạo khoảng cách giữa thẻ và form */
   }
 }
