@@ -48,6 +48,8 @@
     background-color: #0056b3;
     border-color: #0056b3;
   } */
+  @import url("https://unicons.iconscout.com/release/v2.1.9/css/unicons.css");
+  @import url("https://fonts.googleapis.com/css?family=Poppins:400,500,600,700,800,900");
 
   .card-img-top {
     height: 70vh;
@@ -68,9 +70,7 @@
   }
 
   /* new css */
-                                        
-@import url("https://unicons.iconscout.com/release/v2.1.9/css/unicons.css");
-@import url("https://fonts.googleapis.com/css?family=Poppins:400,500,600,700,800,900");
+                                    
 *,
 *::before,
 *::after {
