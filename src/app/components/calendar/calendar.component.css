@@ -1,10 +1,64 @@
-.nz-timeline-item {
-  margin-bottom: 20px;
+.calendar-container {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 10px;
+  box-sizing: border-box;
 }
 
-.nz-card {
-  border: 1px solid #d4b106;
-  background-color: #fff9e6;
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 0 10px;
+}
+
+.month-year {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.day-header, .calendar-day {
+  text-align: center;
+  padding: 10px;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+}
+
+.calendar-day {
+  cursor: pointer;
+  min-height: 80px;
+  position: relative;
+}
+
+.calendar-day.today {
+  background-color: #f0f0f0;
+}
+
+.calendar-day.selected {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.date {
+  font-size: 1.2em;
+  margin-bottom: 5px;
+}
+
+.booking-info {
+  font-size: 0.8em;
+  margin-top: 5px;
+  text-align: left;
+}
+
+.booking-info-detail {
+  margin-top: 20px;
 }
 
 .card-header {
@@ -14,81 +68,74 @@
 }
 
 .card-status {
-  font-weight: bold;
+  display: flex;
+  align-items: center;
 }
 
-.status-booked {
+.card-status .status-booked {
   color: green;
 }
 
-.status-cancelled {
+.card-status .status-cancelled {
   color: red;
 }
 
-.nz-collapse-panel {
-  background: #f7f7f7;
+@media (max-width: 768px) {
+  .calendar-header {
+    flex-direction: column;
+  }
+
+  .month-year {
+    margin: 10px 0;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .calendar-day {
+    min-height: 100px;
+  }
+
+  .booking-info {
+    font-size: 0.7em;
+  }
 }
 
+@media (max-width: 480px) {
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 
-.calendar-container {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-}
+  .calendar-day {
+    min-height: 120px;
+  }
 
-.calendar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
+  .day-header {
+    display: none; /* Ẩn tiêu đề ngày khi ở chế độ cột */
+  }
 
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
-}
+  .booking-info {
+    font-size: 0.7em;
+  }
 
-.day-header {
-  font-weight: bold;
-  text-align: center;
-}
+  .calendar-header {
+    padding: 0 5px;
+  }
 
-.calendar-day {
-  text-align: center;
-  padding: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  position: relative;
-  background-color: #fff;
-}
+  .calendar-day {
+    padding: 8px;
+  }
 
-.calendar-day:hover {
-  background-color: #e0e0e0;
-}
+  .month-year {
+    font-size: 1.2em;
+  }
 
-.today {
-  background-color: #ffeeba;
-}
-
-.selected {
-  background-color: #007bff;
-  color: #fff;
-}
-
-.booking-info {
-  margin-top: 5px;
-  font-size: 0.8em;
-  text-align: left;
-}
-
-.booking-timeline {
-  font-weight: bold;
-}
-
-.booking-user {
-  font-style: italic;
+  .date {
+    font-size: 1em;
+  }
 }

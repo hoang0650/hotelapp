@@ -1,7 +1,7 @@
 <div class="calendar-container">
   <header class="calendar-header">
     <button (click)="prevMonth()">&#9664;</button>
-    <span>{{ currentMonth }} {{ currentYear }}</span>
+    <span>{{ getDisplayMonth() }} {{ currentYear }}</span>
     <button (click)="nextMonth()">&#9654;</button>
   </header>
   <div class="calendar-grid">
@@ -50,4 +50,3 @@
     </nz-timeline-item>
   </nz-timeline>
 </div>
-

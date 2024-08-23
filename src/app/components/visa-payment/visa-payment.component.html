@@ -1,60 +1,62 @@
 <nz-card nzTitle="Visa Payment">
-    <div nz-row>
-        <div nz-col nzSpan="12">
-            <div class="card-container">
-                <div class="card-front">
-                    <div class="card-header">
-                        <div class="chip"></div>
-                        <img src="../../../assets/images/visa2.png" alt="Visa Logo" class="visa-logo">
-                    </div>
-                    <div class="card-content">
-                        <div class="card-number">{{ cardNumber }}</div>
-
-                    </div>
-                    <div class="card-bottom">
-                        <div class="card-holder">{{ cardHolder }}</div>
-                        <div class="card-expiry">{{ expiryDate }}</div>
-                    </div>
+    <div class="card-form-container">
+        <div class="card-container">
+            <div class="card-front">
+                <div class="card-header">
+                    <div class="chip"></div>
+                    <img src="../../../assets/images/visa2.png" alt="Visa Logo" class="visa-logo">
                 </div>
-                <div class="card-back">
-                    <div class="stripe"></div>
-                    <div class="cvv">{{ cvv }}</div>
+                <div class="card-content">
+                    <div class="card-number">{{ formattedCardNumber }}</div>
+                </div>
+                <div class="card-bottom">
+                    <div class="card-holder">{{ cardHolder }}</div>
+                    <div class="card-expiry">{{ expiryDate }}</div>
+                </div>
+            </div>
+            <div class="card-back">
+                <div class="stripe"></div>
+                <div class="cvv-container">
+                    <div class="cvv-box">
+                        <div class="cvv">{{cvv}}</div>
+                    </div>
+                    <div class="cvv-label">CVV</div>
                 </div>
             </div>
         </div>
         
-        <div nz-col nzSpan="12">
+        <div class="payment-form-container">
             <form nz-form [formGroup]="paymentForm" (ngSubmit)="onSubmit()">
                 <nz-form-item>
-                    <nz-form-label [nzSpan]="6" nzFor="cardNumber">Card Number</nz-form-label>
-                    <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid card number">
+                    <nz-form-label [nzSpan]="24" nzFor="cardNumber">Card Number</nz-form-label>
+                    <nz-form-control [nzSpan]="24" nzErrorTip="Please enter a valid card number">
                         <input nz-input formControlName="cardNumber" id="cardNumber"
                             placeholder="Enter your card number" />
                     </nz-form-control>
                 </nz-form-item>
                 <nz-form-item>
-                    <nz-form-label [nzSpan]="6" nzFor="cardHolder">Card Holder</nz-form-label>
-                    <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid card number">
+                    <nz-form-label [nzSpan]="24" nzFor="cardHolder">Card Holder</nz-form-label>
+                    <nz-form-control [nzSpan]="24" nzErrorTip="Please enter a valid card holder name">
                         <input nz-input formControlName="cardHolder" id="cardHolder"
-                            placeholder="Enter your card card holder" />
+                            placeholder="Enter your card holder" />
                     </nz-form-control>
                 </nz-form-item>
                 <nz-form-item>
-                    <nz-form-label [nzSpan]="6" nzFor="expiryDate">Expiry Date</nz-form-label>
-                    <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid expiry date">
+                    <nz-form-label [nzSpan]="24" nzFor="expiryDate">Expiry Date</nz-form-label>
+                    <nz-form-control [nzSpan]="24" nzErrorTip="Please enter a valid expiry date">
                         <input nz-input formControlName="expiryDate" id="expiryDate" placeholder="MM/YY" />
                     </nz-form-control>
                 </nz-form-item>
 
                 <nz-form-item>
-                    <nz-form-label [nzSpan]="6" nzFor="cvv">CVV</nz-form-label>
-                    <nz-form-control [nzSpan]="18" nzErrorTip="Please enter a valid CVV">
+                    <nz-form-label [nzSpan]="24" nzFor="cvv">CVV</nz-form-label>
+                    <nz-form-control [nzSpan]="24" nzErrorTip="Please enter a valid CVV">
                         <input nz-input formControlName="cvv" id="cvv" placeholder="Enter your CVV" />
                     </nz-form-control>
                 </nz-form-item>
 
                 <nz-form-item>
-                    <nz-form-control [nzSpan]="24" nzOffset="6">
+                    <nz-form-control [nzSpan]="24">
                         <button nz-button nzType="primary" [disabled]="paymentForm.invalid">Pay Now</button>
                     </nz-form-control>
                 </nz-form-item>
@@ -62,3 +64,5 @@
         </div>
     </div>
 </nz-card>
+
+

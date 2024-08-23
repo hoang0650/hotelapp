@@ -30,20 +30,19 @@ export class CalendarComponent implements OnInit {
       startTime: '10:00 AM',
       endTime: '12:00 PM',
       status: 'Booked',
-      date: new Date(2024, 7, 22)
+      date: new Date(2024, 7, 22) // Tháng 7 là August
     },
     {
       userName: 'Jane Smith',
       startTime: '01:00 PM',
       endTime: '03:00 PM',
       status: 'Cancelled',
-      date: new Date(2024, 7, 23)
+      date: new Date(2024, 7, 23) // Tháng 7 là August
     }
     // Add more bookings as needed
   ];
 
-  constructor(private modalService: NzModalService) {
-  }
+  constructor(private modalService: NzModalService) {}
 
   ngOnInit(): void {
     this.initializeCalendar();
@@ -51,9 +50,9 @@ export class CalendarComponent implements OnInit {
 
   initializeCalendar() {
     const today = new Date();
-    this.currentMonth = today.getMonth();
-    this.currentYear = today.getFullYear();
-    this.generateDates(today.getMonth(), today.getFullYear());
+    this.currentMonth = today.getMonth(); // Tháng hiện tại (0-11)
+    this.currentYear = today.getFullYear(); // Năm hiện tại
+    this.generateDates(this.currentMonth, this.currentYear);
   }
 
   generateDates(month: number, year: number) {
@@ -98,24 +97,29 @@ export class CalendarComponent implements OnInit {
   }
 
   prevMonth(): void {
-    if (this.currentMonth === 1) { // Nếu đang ở tháng 1 (January)
-      this.currentMonth = 12; // Quay về tháng 12 (December)
-      this.currentYear--; // Giảm năm xuống 1
+    if (this.currentMonth === 0) {
+      this.currentMonth = 11;
+      this.currentYear--;
     } else {
-      this.currentMonth--; // Giảm tháng xuống 1
+      this.currentMonth--;
     }
-    this.generateDates(this.currentMonth, this.currentYear); // Tạo lại danh sách ngày cho tháng mới
+    this.generateDates(this.currentMonth, this.currentYear);
   }
 
   nextMonth(): void {
-    if (this.currentMonth === 12) { // Nếu đang ở tháng 12 (December)
-      this.currentMonth = 1; // Quay về tháng 1 (January)
-      this.currentYear++; // Tăng năm lên 1
+    if (this.currentMonth === 11) {
+      this.currentMonth = 0;
+      this.currentYear++;
     } else {
-      this.currentMonth++; // Tăng tháng lên 1
+      this.currentMonth++;
     }
-    this.generateDates(this.currentMonth, this.currentYear); // Tạo lại danh sách ngày cho tháng mới
+    this.generateDates(this.currentMonth, this.currentYear);
   }
+
+  getDisplayMonth(): number {
+    return this.currentMonth + 1; // Cộng 1 để hiển thị đúng tháng (1-12)
+  }
+
   confirmBooking() {
     // Implement booking confirmation logic
   }
@@ -124,7 +128,7 @@ export class CalendarComponent implements OnInit {
     this.modalRef = this.modalService.create({
       nzTitle: 'Sửa thông tin đặt phòng',
       nzContent: CaliendarModalComponent,
-      nzData:{
+      nzData: {
         roomData: this.bookings
       },
       nzFooter: [
@@ -136,18 +140,14 @@ export class CalendarComponent implements OnInit {
         {
           label: 'Hủy',
           type: 'dashed',
-          onClick: ()=> this.modalRef?.close(),
+          onClick: () => this.modalRef?.close(),
         }
       ],
       // Add more modal options as needed
     });
   }
 
-  handleLabel(){
+  handleLabel() {}
 
-  }
-
-  handleCheck(){
-
-  }
+  handleCheck() {}
 }

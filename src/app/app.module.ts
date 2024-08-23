@@ -53,6 +53,7 @@ import { NzCarouselModule } from 'ng-zorro-antd/carousel';
 import { NzDatePickerModule} from 'ng-zorro-antd/date-picker';
 import { NzCalendarModule } from 'ng-zorro-antd/calendar';
 import { NzTimelineModule } from 'ng-zorro-antd/timeline';
+import { NzTagModule } from 'ng-zorro-antd/tag';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { UnauthorizedComponent } from './components/unauthorized/unauthorized.component';
@@ -72,7 +73,7 @@ import { EmailComposeComponent } from './components/email-compose/email-compose.
 import { EmailListComponent } from './components/email-list/email-list.component';
 import { EmailAdminComponent } from './components/email-admin/email-admin.component';
 import { CaliendarModalComponent } from './components/caliendar-modal/caliendar-modal.component';
-
+import { CapitalizePipe } from './pipes/capitalize.pipe';
 
 
 registerLocaleData(en);
@@ -111,6 +112,7 @@ registerLocaleData(en);
     EmailListComponent,
     EmailAdminComponent,
     CaliendarModalComponent,
+    CapitalizePipe
     
   ],
   imports: [
@@ -145,7 +147,8 @@ registerLocaleData(en);
     NzCarouselModule,
     NzDatePickerModule,
     NzCalendarModule,
-    NzTimelineModule
+    NzTimelineModule,
+    NzTagModule
   ],
   providers: [
     provideClientHydration(),

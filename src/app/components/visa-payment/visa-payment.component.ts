@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+
 @Component({
   selector: 'app-visa-payment',
   templateUrl: './visa-payment.component.html',
-  styleUrl: './visa-payment.component.css'
+  styleUrls: ['./visa-payment.component.css']
 })
 export class VisaPaymentComponent {
   paymentForm: FormGroup;   
@@ -28,9 +29,14 @@ export class VisaPaymentComponent {
     });
   }
 
+  get formattedCardNumber(): string {
+    if (this.cardNumber.length === 16) {
+      return `${this.cardNumber.substring(0, 4)} **** **** ${this.cardNumber.substring(12)}`;
+    }
+    return this.cardNumber;
+  }
+
   onSubmit(){
-    
+    // Implement form submission logic
   }
 }
-  
-
