@@ -1,5 +1,5 @@
-<nav id="header" class="navbar navbar-expand-lg navbar-dark bg-primary">
-  <!-- <a class="navbar-brand" href="#">Navbar</a> -->
+<!-- <nav id="header" class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <a class="navbar-brand" href="#">Navbar</a>
   <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
     aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
@@ -15,9 +15,20 @@
       <li class="nav-item">
         <a class="nav-link" href="/home" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Liên hệ</a>
       </li>
-      <!-- <li class="nav-item">
+      <li class="nav-item">
           <a class="nav-link disabled" href="#" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Disabled</a>
-        </li> -->
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Dropdown
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" href="#">Action</a>
+          <a class="dropdown-item" href="#">Another action</a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#">Something else here</a>
+        </div>
+      </li>
     </ul>
     <ul class="navbar-nav mb-2 mb-lg-0 ms-auto justify-content-end">
       <li *ngIf="!isLoggedIn" class="nav-item">
@@ -46,4 +57,42 @@
       </li>
     </ul>
   </div>
-</nav>
+</nav> -->
+
+<ul nz-menu nzTheme="dark" nzMode="horizontal" class="menu-container">
+  <li nz-menu-item routerLink="/home">
+    <span nz-icon nzType="home"></span>
+    <span>Home</span>
+  </li>
+  <li nz-menu-item routerLink="/admin/chart">
+    <span nz-icon nzType=""></span>
+    <span>Admin</span>
+  </li>
+  <li nz-submenu nzTitle="Expand Page" nzIcon="plus">
+    <ul>
+      <li nz-menu-item routerLink="/unauthorized">Unauthorized</li>
+      <li nz-menu-item routerLink="/notfound">Notfound</li>
+      <li nz-menu-item routerLink="/email-compose">Email Compose</li>
+      <li nz-menu-item routerLink="/email-list">Email List</li>
+      <li nz-menu-item routerLink="/admin/email-admin">Email Admin</li>
+    </ul>
+  </li>  
+  <li nz-submenu nzTitle="Sign in" class="login-menu" *ngIf="!isLoggedIn">
+    <ul>
+      <li nz-menu-item routerLink="/signup">Sign up</li>
+      <li nz-menu-item routerLink="/login">Sign in</li>
+    </ul>
+  </li>  
+  <li nz-menu-item class="ms-auto" *ngIf="isLoggedIn">
+    <ul>
+      <li nz-menu-item>
+        <nz-avatar nzIcon="user" nzSrc="https://mdbcdn.b-cdn.net/img/new/avatars/2.webp"></nz-avatar>
+        {{infor?.email}}
+      </li>
+    </ul>     
+  </li>
+  <li nz-menu-item *ngIf="isLoggedIn"(click)="logOut()">
+    <span>Sign out</span>
+  </li>
+
+</ul>

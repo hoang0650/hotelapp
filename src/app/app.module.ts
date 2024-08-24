@@ -54,6 +54,7 @@ import { NzDatePickerModule} from 'ng-zorro-antd/date-picker';
 import { NzCalendarModule } from 'ng-zorro-antd/calendar';
 import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { UnauthorizedComponent } from './components/unauthorized/unauthorized.component';
@@ -144,7 +145,9 @@ registerLocaleData(en);
         NzDatePickerModule,
         NzCalendarModule,
         NzTimelineModule,
-        NzTagModule], providers: [
+        NzTagModule,
+        NzAvatarModule
+    ], providers: [
         provideClientHydration(),
         { provide: NZ_I18N, useValue: en_US },
         provideAnimationsAsync(),

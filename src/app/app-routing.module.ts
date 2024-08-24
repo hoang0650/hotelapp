@@ -33,8 +33,6 @@ const routes: Routes = [
       { path: 'room', component: RoomComponent },
       { path: 'bill', component: InvoiceComponent },
       { path: 'calendar', component: CalendarComponent },
-      { path: 'email-list', component: EmailListComponent },
-      { path: 'email-compose', component: EmailComposeComponent },
       { path: 'email-admin', component: EmailAdminComponent },
       { path: 'qr-payment', component: QrPaymentComponent },
       { path: 'visa-payment', component: VisaPaymentComponent },
@@ -51,7 +49,9 @@ const routes: Routes = [
   { path: 'modal', component: ModalComponent },
   { path: 'unauthorized', component: UnauthorizedComponent },
   { path: 'notfound', component: NotfoundComponent },
-  { path: 'bill', component: InvoiceComponent }
+  { path: 'bill', component: InvoiceComponent },
+  { path: 'email-list', component: EmailListComponent },
+  { path: 'email-compose', component: EmailComposeComponent },
 
 ];
 

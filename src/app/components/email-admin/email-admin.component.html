@@ -1,56 +1,25 @@
 <div class="app-container">
-    <!-- Sidebar (Có thể dùng cho điều hướng hoặc tùy chọn khác) -->
-    <div class="sidebar">
-      <!-- Nội dung sidebar có thể bao gồm các liên kết đến các phần khác của ứng dụng -->
+  <!-- Sidebar -->
+  <div class="sidebar">
       <ul nz-menu nzMode="inline">
-        <li nz-menu-item>
-          <i nz-icon nzType="inbox"></i>
-          <span>Hộp thư đến</span>
-        </li>
-        <li nz-menu-item>
-          <i nz-icon nzType="send"></i>
-          <span>Gửi</span>
-        </li>
+          <li nz-menu-item>
+              <i nz-icon nzType="inbox"></i>
+              <span>Hộp thư đến</span>
+          </li>
+          <li nz-menu-item>
+              <i nz-icon nzType="send"></i>
+              <span>Gửi</span>
+          </li>
       </ul>
-    </div>
-  
-    <!-- Phần nội dung chính -->
-    <div class="content">
+  </div>
+
+  <!-- Content Section -->
+  <div class="content">
       <div class="compose-section">
-        <app-email-compose></app-email-compose>
+          <app-email-compose></app-email-compose>
       </div>
       <div class="list-section">
-        <app-email-list></app-email-list>
-      </div>
-      <!-- <nz-tabset>
-        <nz-tab nzTitle="titleTemplate1">
-          <ng-template #titleTemplate1>
-            <span nz-icon [nzType]="apple"></span>
-            Soạn thảo
-          </ng-template>
-        <app-email-compose></app-email-compose>
-      </nz-tab>
-        <nz-tab nzTitle="titleTemplate2">
-          <ng-template #titleTemplate2>
-            <span nz-icon [nzType]="apple"></span>
-            Danh sách
-          </ng-template>
-          
           <app-email-list></app-email-list>
-        </nz-tab>
-        <nz-tab nzTitle="Tab 3">Content of Tab Pane 3</nz-tab>
-      </nz-tabset> -->
-      <!-- <nz-tabset>
-        @for (tab of tabs; track tab) {
-          <nz-tab [nzTitle]="titleTemplate">
-            <ng-template #titleTemplate>
-              <span nz-icon [nzType]="tab.icon"></span>
-              {{ tab.name }}
-            </ng-template>
-            {{ tab.name }}
-          </nz-tab>
-        }
-      </nz-tabset> -->
-    </div>
+      </div>
   </div>
-  
+</div>

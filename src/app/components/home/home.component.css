@@ -12,7 +12,7 @@
 }
 
 .btn-own:hover {
-    background-color:#0d6efd;
+    background-color: #0d6efd;
     color: #fff;
 }
 
@@ -35,6 +35,7 @@
     justify-content: center;
     align-items: center;
 }
+
 .card-img-top {
     max-height: 250px;
 }
@@ -42,32 +43,57 @@
 .home-content {
     min-height: calc(100vh - 56px); /* Adjust based on header height */
     padding-bottom: 100px; /* Adjust to ensure footer is visible */
-  }
-  
-  footer {
+}
+
+footer {
     position: relative;
     bottom: 0;
     width: 100%;
-  }
-  
-  .bg-blue {
-    background-color: #007bff; /* Bootstrap blue color */
-  }
-  
-  .text-white {
+    background-color: #001529; /* Updated footer background color */
+}
+
+.text-white {
     color: #ffffff;
-  }
-  
-  .footer-content {
+}
+
+.footer-content {
     color: #ffffff;
-  }
-  
-  .footer-content a {
+}
+
+.footer-content a {
     color: #ffffff;
     text-decoration: none;
-  }
-  
-  .footer-content a:hover {
+}
+
+.footer-content a:hover {
     text-decoration: underline;
-  }
+}
+
+.dark-footer {
+  background-color: #001529;
+  color: #ffffff;
+  padding: 2rem 0;
+}
+
+.footer-content {
+  color: #ffffff;
+}
+
+.footer-content a {
+  color: #a9a9a9;
+  text-decoration: none;
+}
+
+.footer-content a:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.text-white {
+  color: #ffffff !important;
+}
+
+.text-muted {
+  color: #a9a9a9 !important;
+}
 

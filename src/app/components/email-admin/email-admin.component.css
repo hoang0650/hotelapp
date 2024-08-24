@@ -1,28 +1,34 @@
 .app-container {
-    display: flex;
-    height: 100vh;
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 200px;
+  background-color: #f0f0f0;
+  padding: 10px;
+}
+
+.content {
+  flex: 1;
+  padding: 20px;
+  overflow-x: auto; /* Allow horizontal scrolling for tables */
+}
+
+@media screen and (max-width: 768px) {
+  .app-container {
+      flex-direction: column;
   }
-  
+
   .sidebar {
-    width: 200px;
-    background-color: #f4f4f4;
-    border-right: 1px solid #ddd;
+      width: 100%;
+      order: 1; /* Sidebar at the top */
   }
-  
+
   .content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 16px;
+      width: 100%;
+      order: 2; /* Content section below the sidebar */
+      overflow-x: auto; /* Enable horizontal scrolling */
   }
-  
-  .compose-section {
-    flex: 1;
-    margin-bottom: 16px;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .list-section {
-    flex: 3;
-  }
-  
+}
