@@ -75,6 +75,7 @@ import { EmailListComponent } from './components/email-list/email-list.component
 import { EmailAdminComponent } from './components/email-admin/email-admin.component';
 import { CaliendarModalComponent } from './components/caliendar-modal/caliendar-modal.component';
 import { CapitalizePipe } from './pipes/capitalize.pipe';
+import { AboutUsComponent } from './components/about-us/about-us.component';
 
 
 registerLocaleData(en);
@@ -112,7 +113,8 @@ registerLocaleData(en);
         EmailListComponent,
         EmailAdminComponent,
         CaliendarModalComponent,
-        CapitalizePipe
+        CapitalizePipe,
+        AboutUsComponent
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         NgxEchartsModule.forRoot({ echarts: () => import('echarts') }),

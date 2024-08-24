@@ -1,11 +1,11 @@
-/* .bg-custom{
+.bg-custom{
   background-color: #c13341;
 }
 
 #header {
   z-index: 2;
-} */
-.menu-container {
+}
+/* .menu-container {
     display: flex;
     justify-content: space-between;
     width: 100%;
@@ -18,4 +18,4 @@
 
 .ms-auto {
   margin-left: auto;
-}
+} */

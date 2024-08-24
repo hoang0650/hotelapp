@@ -1,81 +1,57 @@
 <div class="home-container">
-    <!-- <div class="row landing">
-        <div class="col-md-12 text-center cent">
-            <h3>Yến sào Thanh Bình</h3>
-            <button class="btn btn-own">đặt ngay</button>
-        </div>
-    </div> -->
-    <!-- Product List Component -->
-    <app-product-list></app-product-list>
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Welcome to PHHOTEL</h1>
+      <button nz-button nzType="primary" nzSize="large" class="hero-button">Book now</button>
+    </div>
+  </div>
 
-    <!-- Carousel -->
-    <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
-        <ol class="carousel-indicators">
-            <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active"></li>
-            <li data-target="#carouselExampleIndicators" data-slide-to="1"></li>
-            <li data-target="#carouselExampleIndicators" data-slide-to="2"></li>
-        </ol>
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <img src="https://via.placeholder.com/150" class="rounded-circle mx-auto d-block">
-                            <h4 class="text-center mt-3">Nguyễn Văn A</h4>
-                            <p class="text-center">"Quality product, right for the price."</p>
-                        </div>
-                        <div class="col-md-3">
-                            <img src="https://via.placeholder.com/150" class="rounded-circle mx-auto d-block">
-                            <h4 class="text-center mt-3">Nguyễn Văn B</h4>
-                            <p class="text-center">"The bird's nest is clean and delicious, my health has improved after use."</p>
-                        </div>
-                        <div class="col-md-3">
-                            <img src="https://via.placeholder.com/150" class="rounded-circle mx-auto d-block">
-                            <h4 class="text-center mt-3">Nguyễn Văn C</h4>
-                            <p class="text-center">"Enthusiastic staff, very good advice."</p>
-                        </div>
-                        <div class="col-md-3">
-                            <img src="https://via.placeholder.com/150" class="rounded-circle mx-auto d-block">
-                            <h4 class="text-center mt-3">Nguyễn Văn D</h4>
-                            <p class="text-center">"The quality of the product and the service are very good."</p>
-                        </div>
-                    </div>
-                </div>
+  <!-- Product List Component -->
+  <app-product-list></app-product-list>
+
+  <!-- Testimonials Carousel -->
+  <nz-carousel nzEffect="fade" nzAutoPlay>
+    <div nz-carousel-content *ngFor="let testimonial of testimonials">
+      <div class="testimonial-item">
+        <!-- Sử dụng nz-avatar với kích thước tùy chỉnh -->
+        <nz-avatar [nzSrc]="testimonial.image" nzShape="circle" [nzSize]="120" class="testimonial-avatar"></nz-avatar>
+        <h4 class="testimonial-name">{{ testimonial.name }}</h4>
+        <p class="testimonial-quote">{{ testimonial.quote }}</p>
+      </div>
+    </div>
+  </nz-carousel>
+
+  <!-- Footer -->
+  <footer class="bg-primary text-white pt-4">
+    <div class="container-fluid">
+        <div class="row footer-content">
+            <!-- Column 1 -->
+            <div class="col-lg-4 col-md-6 mb-4">
+              <h5>About Us</h5>
+              <p>We are a team of passionate developers who create stunning web applications.</p>
+            </div>
+            <!-- Column 2 -->
+            <div class="col-lg-4 col-md-6 mb-4">
+              <h5>Quick Links</h5>
+              <ul class="list-unstyled">
+                <li><a href="#" class="text-white">Home</a></li>
+                <li><a href="#" class="text-white">Services</a></li>
+                <li><a href="#" class="text-white">Contact</a></li>
+                <li><a href="#" class="text-white">About</a></li>
+              </ul>
+            </div>
+            <!-- Column 3 -->
+            <div class="col-lg-4 col-md-12 mb-4">
+              <h5>Contact Us</h5>
+              <p><i class="fas fa-map-marker-alt"></i> 123 Main Street, Anytown, USA</p>
+              <p><i class="fas fa-phone"></i> +1 234 567 890</p>
+              <p><i class="fas fa-envelope"></i> info&#64;example.com</p>
             </div>
         </div>
+        <div class="text-center py-3">
+            &copy; 2024 PHHotel. All rights reserved.
+        </div>
     </div>
-
-    <nz-footer class="dark-footer">
-      <div class="container-fluid">
-        <div class="row footer-content">
-          <!-- Column 1 -->
-          <div class="col-lg-4 col-md-6 mb-4">
-            <h5 class="text-white">About Us</h5>
-            <p class="text-muted">We are a team of passionate developers who create stunning web applications.</p>
-          </div>
-          <!-- Column 2 -->
-          <div class="col-lg-4 col-md-6 mb-4">
-            <h5 class="text-white">Quick Links</h5>
-            <ul class="list-unstyled">
-              <li><a href="#" class="text-muted">Home</a></li>
-              <li><a href="#" class="text-muted">Services</a></li>
-              <li><a href="#" class="text-muted">Contact</a></li>
-              <li><a href="#" class="text-muted">About</a></li>
-            </ul>
-          </div>
-          <!-- Column 3 -->
-          <div class="col-lg-4 col-md-12 mb-4">
-            <h5 class="text-white">Contact Us</h5>
-            <p class="text-muted"><i nz-icon nzType="environment"></i> 123 Main Street, Anytown, USA</p>
-            <p class="text-muted"><i nz-icon nzType="phone"></i> +1 234 567 890</p>
-            <p class="text-muted"><i nz-icon nzType="mail"></i> info&#64;example.com</p>
-          </div>
-        </div>
-        <div class="text-center text-muted py-3">
-          &copy; 2024 PHHotel. All rights reserved.
-        </div>
-      </div>
-    </nz-footer>
-    
-     
+</footer>
 </div>

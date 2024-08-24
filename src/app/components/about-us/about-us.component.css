@@ -1,0 +1,56 @@
+.about-us-container {
+    padding: 24px;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .about-us-card {
+    width: 100%;
+    max-width: 1000px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+  
+  .hero-section {
+    background: linear-gradient(135deg, #6b9ac4, #b3cde0);
+    color: white;
+    padding: 40px 24px;
+    text-align: center;
+  }
+  
+  .hero-title {
+    margin: 0;
+    font-size: 36px;
+    font-weight: bold;
+  }
+  
+  .hero-subtitle {
+    margin: 10px 0 0 0;
+    font-size: 18px;
+  }
+  
+  .about-us-heading {
+    color: #001529;
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  
+  .team-section {
+    text-align: center;
+    margin-top: 40px;
+  }
+  
+  .team-member-name {
+    margin-top: 16px;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
+  .team-member-position {
+    color: #8c8c8c;
+  }
