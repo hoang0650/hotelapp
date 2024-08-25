@@ -1,0 +1,14 @@
+.social-login {
+    margin-top: 20px;
+    text-align: center;
+}
+  
+.social-btn {
+    margin: 5px;
+    width: auto;
+    padding: 10px 15px;
+}
+  
+.social-btn i {
+    margin-right: 10px;
+}

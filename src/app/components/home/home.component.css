@@ -37,6 +37,12 @@ footer {
     font-weight: bold;
     margin-bottom: 16px;
   }
+
+  .text-gradient {
+    background: linear-gradient(45deg, #ff4e50, #f9d423);
+    -webkit-background-clip: text;
+    color: transparent;
+  }
   
   .hero-button {
     margin-top: 24px;
@@ -47,7 +53,7 @@ footer {
     flex-direction: column;
     align-items: center;
     padding: 40px;
-    background: #fff;
+    background: whitesmoke;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     margin: 24px 0;
