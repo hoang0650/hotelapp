@@ -55,6 +55,7 @@ import { NzCalendarModule } from 'ng-zorro-antd/calendar';
 import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
+import { NzListModule } from 'ng-zorro-antd/list';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { UnauthorizedComponent } from './components/unauthorized/unauthorized.component';
@@ -76,6 +77,7 @@ import { EmailAdminComponent } from './components/email-admin/email-admin.compon
 import { CaliendarModalComponent } from './components/caliendar-modal/caliendar-modal.component';
 import { CapitalizePipe } from './pipes/capitalize.pipe';
 import { AboutUsComponent } from './components/about-us/about-us.component';
+import { ChatComponent } from './components/chat/chat.component';
 
 
 registerLocaleData(en);
@@ -114,7 +116,8 @@ registerLocaleData(en);
         EmailAdminComponent,
         CaliendarModalComponent,
         CapitalizePipe,
-        AboutUsComponent
+        AboutUsComponent,
+        ChatComponent
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         NgxEchartsModule.forRoot({ echarts: () => import('echarts') }),
@@ -148,7 +151,8 @@ registerLocaleData(en);
         NzCalendarModule,
         NzTimelineModule,
         NzTagModule,
-        NzAvatarModule
+        NzAvatarModule,
+        NzListModule
     ], providers: [
         provideClientHydration(),
         { provide: NZ_I18N, useValue: en_US },

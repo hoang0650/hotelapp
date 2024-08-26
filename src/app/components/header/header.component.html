@@ -13,8 +13,21 @@
         <a class="nav-link" href="/about-us" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">About us</a>
       </li>
       <li class="nav-item">
+        <a class="nav-link" routerLink="chat" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Chat</a>
+      </li> 
+      <li class="nav-item">
         <a class="nav-link" routerLink="/admin/room" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Admin</a>
-      </li>   
+      </li>  
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+          Payment
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" routerLink="/qr-payment">QR Code</a>
+          <a class="dropdown-item" routerLink="/visa-payment">Visa</a>
+          <!-- <div class="dropdown-divider"></div> -->
+        </div>
+      </li>        
       <!-- <li class="nav-item">
           <a class="nav-link disabled" href="#" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Disabled</a>
       </li> -->

@@ -23,6 +23,7 @@ import { EmailComposeComponent } from './components/email-compose/email-compose.
 import { EmailListComponent } from './components/email-list/email-list.component';
 import { EmailAdminComponent } from './components/email-admin/email-admin.component';
 import { AboutUsComponent } from './components/about-us/about-us.component';
+import { ChatComponent } from './components/chat/chat.component';
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
@@ -54,6 +55,9 @@ const routes: Routes = [
   { path: 'email-list', component: EmailListComponent },
   { path: 'email-compose', component: EmailComposeComponent },
   { path: 'about-us', component: AboutUsComponent },
+  { path: 'chat', component: ChatComponent },
+  { path: 'qr-payment', component: QrPaymentComponent },
+  { path: 'visa-payment', component: VisaPaymentComponent }
 
 ];
 
