@@ -1,56 +1,100 @@
 .about-us-container {
-    padding: 24px;
-    background-color: #f4f4f4;
-    display: flex;
-    justify-content: center;
-  }
-  
-  .about-us-card {
-    width: 100%;
-    max-width: 1000px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-  }
-  
-  .hero-section {
-    background: linear-gradient(135deg, #6b9ac4, #b3cde0);
-    color: white;
-    padding: 40px 24px;
-    text-align: center;
-  }
-  
-  .hero-title {
-    margin: 0;
-    font-size: 36px;
-    font-weight: bold;
-  }
-  
-  .hero-subtitle {
-    margin: 10px 0 0 0;
-    font-size: 18px;
-  }
-  
-  .about-us-heading {
-    color: #001529;
-    margin-top: 0;
-    margin-bottom: 24px;
-    font-size: 28px;
-    font-weight: bold;
-  }
-  
-  .team-section {
-    text-align: center;
-    margin-top: 40px;
-  }
-  
-  .team-member-name {
-    margin-top: 16px;
-    font-size: 20px;
-    font-weight: bold;
-  }
-  
-  .team-member-position {
-    color: #8c8c8c;
-  }
+  padding: 20px;
+  background-color: #f0f2f5;
+}
+
+.about-us-card {
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #ffffff;
+}
+
+.hero-section {
+  text-align: center;
+  padding: 40px 0;
+  background: linear-gradient(to right, #ff4e50, #f9d423);
+  color: #fff;
+  border-radius: 10px;
+}
+
+.hero-title {
+  font-size: 2.5rem;
+  margin: 0;
+}
+
+.hero-subtitle {
+  font-size: 1.2rem;
+  margin-top: 10px;
+}
+
+.section-heading {
+  font-size: 2rem;
+  color: #ff4e50;
+  margin-bottom: 20px;
+}
+
+.story-section p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+.cta-button {
+  margin-top: 20px;
+}
+
+.team-section {
+  margin-top: 40px;
+}
+
+.team-member {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.team-member-name {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+.team-member-position {
+  font-size: 1rem;
+  color: #666;
+}
+
+.team-member-bio {
+  font-size: 0.9rem;
+  color: #777;
+}
+
+.services-section {
+  margin-top: 40px;
+}
+
+.service-item {
+  text-align: center;
+}
+
+.service-icon {
+  font-size: 3rem;
+  color: #ff4e50;
+  margin-bottom: 10px;
+}
+
+.service-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.service-description {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.service-item .cta-button {
+  margin-top: 10px;
+}

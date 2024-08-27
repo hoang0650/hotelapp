@@ -10,8 +10,11 @@
             <div class="row g-4">
                 <div class="col-12 col-md-6 col-lg-4" *ngFor="let product of (products | sortRooms: 'roomNumber')" (click)="onSelect(product.roomNumber)" [routerLink]="['/room', product.roomNumber]">
                     <div class="card product-card h-100 position-relative overflow-hidden">
-                        <div class="product-image-wrapper">
+                        <div class="product-image-wrapper position-relative">
                             <img src="{{product?.imageurls}}" class="card-img-top img-fluid product-image" alt="Room Image">
+                            <div class="discount-badge">
+                                <span>{{ product?.discount }}% OFF</span>
+                            </div>
                             <div class="overlay">
                                 <h4 class="text-white">{{product?.roomNumber}}</h4>
                             </div>
@@ -19,7 +22,10 @@
                         <div class="card-body text-center">
                             <h4 class="product-title">{{product?.roomNumber}}</h4>
                             <p class="product-description">{{product?.description}}</p>
-                            <p class="product-price text-primary">{{product?.dailyRate | currency}}</p>
+                            <div class="price-container">
+                                <p class="product-discounted-price">{{ product?.dailyRate | currency }}</p>
+                                <p class="product-original-price">{{ 500000 | currency }}</p>
+                            </div>
                         </div>
                         <div class="product-decoration"></div>
                     </div>

@@ -1,132 +1,112 @@
-.home-container .content {
-    flex: 1; /* This will make the content expand and push the footer down */
+.home-container {
+  font-family: Arial, sans-serif;
 }
 
-footer {
-    background-color: #001529;
-    color: white;
-    padding: 20px;
-    text-align: center;
-    position: relative;
-    bottom: 0;
-    width: 100%;
-    margin-top: auto; /* Ensure footer sticks to the bottom */
-}
- 
-.home-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; /* Ensure the container fills the viewport */
-}
-  
 .hero-section {
-    background: linear-gradient(135deg, #6b9ac4, #b3cde0);
-    color: white;
-    padding: 100px 24px;
-    text-align: center;
-    position: relative;
-  }
-  
-  .hero-content {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-  
-  .hero-title {
-    font-size: 48px;
-    font-weight: bold;
-    margin-bottom: 16px;
-  }
-
-  .text-gradient {
-    background: linear-gradient(45deg, #ff4e50, #f9d423);
-    -webkit-background-clip: text;
-    color: transparent;
-  }
-  
-  .hero-button {
-    margin-top: 24px;
-  }
-  
-  .testimonial-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px;
-    background: whitesmoke;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    margin: 24px 0;
-  }
-  
-  .testimonial-avatar {
-    width: 120px !important;
-    height: 120px !important;
-    margin-bottom: 16px;
-  }
-  
-  .testimonial-name {
-    margin-top: 16px;
-    font-size: 20px;
-    font-weight: bold;
-  }
-  
-  .testimonial-quote {
-    font-style: italic;
-    color: #555;
-    margin-top: 8px;
-    text-align: center;
-  }
-  
-  .footer-section {
-    background-color: #001529;
-    color: white;
-    padding: 40px 24px;
-  }
-  
-  .footer-section h5 {
-    color: #ffffff;
-  }
-  
-  .footer-section ul {
-    padding: 0;
-    list-style: none;
-  }
-  
-  .footer-section a {
-    color: #b3cde0;
-    text-decoration: none;
-  }
-  
-  .footer-section a:hover {
-    text-decoration: underline;
-  }
-  
-  .footer-bottom {
-    text-align: center;
-    margin-top: 24px;
-    border-top: 1px solid #333;
-    padding-top: 16px;
-    font-size: 14px;
-  }
-
-  html, body {
-    height: 100%;
-    margin: 0;
+  /* background: url('path-to-your-hero-image.jpg') no-repeat center center/cover; */
+  color: #fff;
+  text-align: center;
+  padding: 100px 20px;
+  position: relative;
 }
 
-.home-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; /* Ensure the container fills the viewport */
+.hero-content {
+  position: relative;
+  z-index: 2;
 }
 
-/* Remove any extra margin/padding from other elements */
-.container-fluid {
-    padding-bottom: 0;
-    margin-bottom: 0;
+.hero-title {
+  font-size: 3rem;
+  margin: 0;
 }
 
-body > div {
-    padding-bottom: 0;
+.hero-subtitle {
+  font-size: 1.5rem;
+  margin: 10px 0;
+}
+
+.hero-button {
+  margin-top: 20px;
+}
+
+.featured-rooms {
+  padding: 40px 20px;
+  background-color: #f9f9f9;
+  text-align: center;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  margin-bottom: 30px;
+  color: #ff4e50;
+}
+
+.testimonials-section {
+  padding: 40px 20px;
+}
+
+.testimonial-item {
+  text-align: center;
+  padding: 20px;
+}
+
+.testimonial-avatar {
+  margin-bottom: 15px;
+}
+
+.testimonial-name {
+  font-size: 1.2rem;
+  margin: 10px 0;
+}
+
+.testimonial-quote {
+  font-size: 1rem;
+  color: #666;
+}
+
+.cta-section {
+  background-color: #ff4e50;
+  color: #fff;
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.cta-title {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+}
+
+.cta-text {
+  font-size: 1.2rem;
+  margin-bottom: 30px;
+}
+
+.cta-button {
+  margin-top: 10px;
+}
+
+.footer {
+  background-color: #001529;
+}
+
+.footer-content h5 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+}
+
+.footer-content p, .footer-content a {
+  font-size: 0.9rem;
+}
+
+.footer-content .list-unstyled li {
+  margin-bottom: 10px;
+}
+
+.footer-content a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.footer-content a:hover {
+  text-decoration: underline;
 }

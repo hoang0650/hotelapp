@@ -1,78 +1,71 @@
-<!-- <div class="col">
-    <div class="card h-100">
-        <img src="{{product?.imageurls}}" class="card-img-top" alt="..." style="border-radius: 5px 5px 0 0;">
-        <div class="card-body product-info">
-            <h3><a href="#">{{product?.roomNumber}}</a></h3>
-            <p class="price">{{product?.dailyRate}}</p>
-            <p class="description">{{product?.description}}</p>
-            <button nz-button nzType="primary">Đặt phòng ngay</button>
+<div class="container my-4">
+    <div class="product-detail-container border-0 rounded-3 shadow-lg p-4">
+        <div class="header-logo-title d-flex align-items-center justify-content-center position-relative mb-5">
+            <img src="../../../assets/phhotel2.PNG" alt="Hotel Logo" class="hotel-logo animated-logo">
+            <h2 class="mx-3 text-uppercase text-gradient">PHHOTEL</h2>
+            <div class="header-decoration"></div>
         </div>
-    </div>
-</div>
 
-   -->
-
-   <div class="section-fluid-main">
-    <div class="section">
-        <div class="info-wrap mob-margin">
-            <p class="title-up">Modern chair</p>
-            <h2>Sella Gastro</h2>
-            <h4>$174 <span>$237</span></h4>
-            <div class="section-fluid">
-                <input class="desc-btn" type="radio" id="desc-1" name="desc-btn" checked />
-                <label for="desc-1">Description</label>
-                <input class="desc-btn" type="radio" id="desc-2" name="desc-btn" />
-                <label for="desc-2">Details</label>
-                <div class="section-fluid desc-sec accor-1">
-                    <p>The chair construction is made of ash tree. Upholstery and wood color at customer's request.
-                    </p>
-                </div>
-                <div class="section-fluid desc-sec accor-2">
-                    <div class="section-inline">
-                        <p><span>76</span>cm<br>Lenght</p>
+        <div class="row">
+            <div class="col-md-6">
+                <!-- Swiper -->
+                <nz-carousel>
+                    <div nz-carousel-content *ngFor="let image of product?.imageurls">
+                      <img [src]="image" class="img-fluid product-image" alt="Room Image">
                     </div>
-                    <div class="section-inline">
-                        <p><span>68</span>cm<br>Width</p>
-                    </div>
-                    <div class="section-inline">
-                        <p><span>87</span>cm<br>Height</p>
-                    </div>
-                    <div class="section-inline">
-                        <p><span>10</span>kg<br>Weight</p>
-                    </div>
+                </nz-carousel>
+                <!-- End Swiper -->
+                <div class="discount-badge">
+                    <span>{{ product?.discount }}% OFF</span>
                 </div>
             </div>
-            <h5>Choose upholstery:</h5>
+            <div class="col-md-6">
+                <div class="booking-form">
+                    <div class="product-details">
+                        <h3 class="product-title">{{product?.roomNumber}}</h3>
+                        <p class="product-description">{{product?.description}}</p>
+                        <div class="price-container mb-3">
+                            <p class="product-discounted-price">{{ product?.dailyRate | currency }}</p>
+                            <p class="product-original-price">{{ product?.originalPrice | currency }}</p>
+                        </div>
+                    </div>
+                    <h4 class="mb-3">Book This Room</h4>
+                    <form (submit)="bookRoom()">
+                        <div class="mb-3">
+                            <label for="checkin" class="form-label">Check-in Date</label>
+                            <!-- <input type="date" id="checkin" class="form-control" [(ngModel)]="booking.checkinDate" name="checkinDate" required> -->
+                            <input type="date" id="checkin" class="form-control" name="checkinDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="checkout" class="form-label">Check-out Date</label>
+                            <!-- <input type="date" id="checkout" class="form-control" [(ngModel)]="booking.checkoutDate" name="checkoutDate" required> -->
+                            <input type="date" id="checkout" class="form-control" name="checkoutDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="guests" class="form-label">Number of Guests</label>
+                            <!-- <input type="number" id="guests" class="form-control" [(ngModel)]="booking.guests" name="guests" min="1" max="{{product?.maxcount}}" required> -->
+                            <input type="number" id="guests" class="form-control" name="guests" min="1" max="{{product?.maxcount}}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payment Method</label>
+                            <!-- <select class="form-select" [(ngModel)]="booking.paymentMethod" name="paymentMethod" required> -->
+                            <select class="form-select" name="paymentMethod" required>
+                                <option value="" disabled>Select payment method</option>
+                                <option value="creditCard">Credit Card</option>
+                                <option value="paypal">PayPal</option>
+                                <option value="bankTransfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Book Now</button>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="clearfix"></div>
-        <input class="color-btn for-color-1" type="radio" id="color-1" name="color-btn" checked />
-        <label class="first-color" for="color-1"></label>
-        <input class="color-btn for-color-2" type="radio" id="color-2" name="color-btn" />
-        <label class="color-2" for="color-2"></label>
-        <input class="color-btn for-color-3" type="radio" id="color-3" name="color-btn" />
-        <label class="color-3" for="color-3"></label>
-        <input class="color-btn for-color-4" type="radio" id="color-4" name="color-btn" />
-        <label class="color-4" for="color-4"></label>
-        <input class="color-btn for-color-5" type="radio" id="color-5" name="color-btn" />
-        <label class="color-5" for="color-5"></label>
-        <input class="color-btn for-color-6" type="radio" id="color-6" name="color-btn" />
-        <label class="color-6" for="color-6"></label>
-        <div class="clearfix"></div>
-        <div class="info-wrap">
-            <a href="#" class="btn"><i class="uil uil-shopping-cart icon"></i> Add To Cart</a>
-        </div>
-        <div class="img-wrap chair-1"></div>
-        <div class="img-wrap chair-2"></div>
-        <div class="img-wrap chair-3"></div>
-        <div class="img-wrap chair-4"></div>
-        <div class="img-wrap chair-5"></div>
-        <div class="img-wrap chair-6"></div>
-        <div class="back-color"></div>
-        <div class="back-color chair-2"></div>
-        <div class="back-color chair-3"></div>
-        <div class="back-color chair-4"></div>
-        <div class="back-color chair-5"></div>
-        <div class="back-color chair-6"></div>
 
+        <!-- <div class="row mt-4">
+            <div class="col-md-6">
+                
+            </div>
+        </div> -->
     </div>
 </div>

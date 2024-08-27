@@ -1,41 +1,62 @@
 <div class="about-us-container">
-    <nz-card nzTitle="About Us" [nzBordered]="false" class="about-us-card">
-      <div class="hero-section">
-        <h1 class="hero-title">Who We Are</h1>
-        <p class="hero-subtitle">Driven by Passion, Inspired by Innovation</p>
+  <nz-card nzTitle="About Us" [nzBordered]="false" class="about-us-card">
+    <div class="hero-section">
+      <h1 class="hero-title">Discover Who We Are</h1>
+      <p class="hero-subtitle">Passionate About Innovation, Committed to Excellence</p>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <div nz-row nzAlign="middle" nzGutter="24" class="story-section">
+      <div nz-col nzSpan="12">
+        <h2 class="section-heading">Our Journey</h2>
+        <p>
+          From our humble beginnings, we've evolved into a leading name in the hospitality industry, driven by our commitment to exceptional service and guest satisfaction.
+        </p>
+        <p>
+          Our growth story is a testament to our dedication and innovative approach, ensuring that each guest enjoys an unparalleled experience with us.
+        </p>
+        <nz-button nzType="primary" nzSize="large" [routerLink]="['/book']" class="cta-button">
+          Book Your Stay Now
+        </nz-button>
       </div>
-      <nz-divider></nz-divider>
-  
-      <div nz-row nzAlign="middle" nzGutter="24">
-        <div nz-col nzSpan="12">
-          <h2 class="about-us-heading">Our Story</h2>
-          <p>
-            Founded in the heart of innovation, our journey began with a simple idea: to make a difference. Over the years, we've grown into a
-            dynamic team of professionals dedicated to creating value and delivering excellence in everything we do.
-          </p>
-          <p>
-            From our humble beginnings to becoming a recognized leader in our industry, our story is one of passion, perseverance, and a commitment to
-            quality.
-          </p>
-        </div>
-        <div nz-col nzSpan="12">
-          <nz-timeline>
-            <nz-timeline-item>Create a company 2015-09-01</nz-timeline-item>
-            <nz-timeline-item>Initial launch 2016-01-01</nz-timeline-item>
-            <nz-timeline-item>Expanded to new markets 2017-05-01</nz-timeline-item>
-            <nz-timeline-item>Rebrand and relaunch 2018-09-01</nz-timeline-item>
-          </nz-timeline>
+      <div nz-col nzSpan="12">
+        <nz-timeline>
+          <nz-timeline-item [nzColor]="'green'">Company Established - 2015</nz-timeline-item>
+          <nz-timeline-item [nzColor]="'blue'">First Hotel Opening - 2016</nz-timeline-item>
+          <nz-timeline-item [nzColor]="'purple'">Expanded to New Destinations - 2017</nz-timeline-item>
+          <nz-timeline-item [nzColor]="'red'">New Brand Launch - 2018</nz-timeline-item>
+        </nz-timeline>
+      </div>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <div nz-row nzAlign="middle" nzGutter="24" class="team-section">
+      <div nz-col nzSpan="8" *ngFor="let member of teamMembers" class="team-member">
+        <nz-avatar [nzSrc]="member.avatarUrl" nzSize="large"></nz-avatar>
+        <h3 class="team-member-name">{{ member.name }}</h3>
+        <p class="team-member-position">{{ member.position }}</p>
+        <p class="team-member-bio">{{ member.bio }}</p>
+      </div>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <div class="services-section">
+      <h2 class="section-heading">Our Services</h2>
+      <div nz-row nzGutter="24">
+        <div nz-col nzSpan="8" *ngFor="let service of services" class="service-item">
+          <div class="service-icon">
+            <i [ngClass]="service.icon"></i>
+          </div>
+          <h3 class="service-title">{{ service.title }}</h3>
+          <p class="service-description">{{ service.description }}</p>
+          <nz-button nzType="default" [routerLink]="service.link" class="cta-button">
+            Learn More
+          </nz-button>
         </div>
       </div>
-  
-      <nz-divider></nz-divider>
-  
-      <div nz-row nzAlign="middle" nzGutter="24" class="team-section">
-        <div nz-col nzSpan="8" *ngFor="let member of teamMembers">
-          <nz-avatar [nzSrc]="member.avatarUrl" nzSize="large"></nz-avatar>
-          <h3 class="team-member-name">{{ member.name }}</h3>
-          <p class="team-member-position">{{ member.position }}</p>
-        </div>
-      </div>
-    </nz-card>
-  </div>
+    </div>
+  </nz-card>
+</div>
