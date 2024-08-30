@@ -1,4 +1,4 @@
-<div class="chat-container">
+<!-- <div class="chat-container">
   <div class="friends-list">
     <nz-list [nzDataSource]="friends">
       <nz-list-item *ngFor="let friend of friends" (click)="selectFriend(friend)">
@@ -16,10 +16,10 @@
             <ng-container *ngIf="message.text">
               <strong>{{ message.user }}:</strong> {{ message.text }}
             </ng-container>
-            <!-- <ng-container *ngIf="message.imageUrl">
+            <ng-container *ngIf="message.imageUrl">
               <strong>{{ message.user }}:</strong> 
               <img [src]="message.imageUrl" class="chat-image"/>
-            </ng-container> -->
+            </ng-container>
           </div>
         </nz-list-item>
       </nz-list>
@@ -27,8 +27,79 @@
     
     <div class="message-input">
       <input nz-input [(ngModel)]="newMessage" placeholder="Type your message...">
-      <!-- <input type="file" (change)="sendImage($event)" /> -->
+      <input type="file" (change)="sendImage($event)" />
       <button nz-button nzType="primary" (click)="sendMessage()">Send</button>
     </div>
   </div>
+</div> -->
+
+<div class="chat-container">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Chat</h2>
+    </div>
+    <div class="friends-list">
+      <nz-list nzBordered [nzDataSource]="friends">
+        <nz-list-item *ngFor="let friend of friends" (click)="selectFriend(friend)">
+          <div class="friend-info">
+            <nz-avatar nzSize="large" [nzSrc]="friend.avatar" [ngClass]="{ 'online': friend.online }"></nz-avatar>
+            <div class="friend-details">
+              <span class="friend-name">{{ friend.name }}</span>
+              <span class="status-indicator" [ngClass]="{ 'online': friend.online, 'offline': !friend.online }"></span>
+            </div>
+          </div>
+        </nz-list-item>
+      </nz-list>
+      <nz-divider></nz-divider>
+      <nz-list nzBordered [nzDataSource]="groups">
+        <nz-list-item *ngFor="let group of groups" (click)="selectGroup(group)">
+          <nz-avatar nzIcon="team" nzSize="large"></nz-avatar>
+          <span class="group-name">{{ group.name }}</span>
+        </nz-list-item>
+      </nz-list>
+    </div>
+  </div>
+
+  <div class="chat-area">
+    <div class="chat-header">
+      <h2>{{ selectedFriend?.name || selectedGroup?.name || 'Select a chat' }}</h2>
+    </div>
+
+    <div class="chat-messages">
+      <nz-list>
+        <nz-list-item *ngFor="let message of messages">
+          <div [ngClass]="{ 'message-left': message.user !== 'You', 'message-right': message.user === 'You' }" class="message-container">
+            <div class="message-content">
+              <ng-container *ngIf="message.text">
+                <div class="message-text">
+                  <strong>{{ message.user }}:</strong> {{ message.text }}
+                </div>
+              </ng-container>
+              <ng-container *ngIf="message.imageUrl">
+                <div class="message-image">
+                  <strong>{{ message.user }}:</strong> 
+                  <img [src]="message.imageUrl" class="chat-image"/>
+                </div>
+              </ng-container>
+              <div class="message-time">
+                {{ message.timestamp | date: 'shortTime' }}
+              </div>
+            </div>
+            <nz-avatar *ngIf="message.user === 'You'" nzIcon="user" nzSize="small"></nz-avatar>
+          </div>
+        </nz-list-item>
+      </nz-list>
+    </div>
+
+    <div class="message-input">
+      <input nz-input [(ngModel)]="newMessage" placeholder="Type your message..." />
+      <input type="file" (change)="sendImage($event)" style="display: none;" #fileInput />
+      <button nz-button nzType="primary" (click)="sendMessage()">Send</button>
+      <button nz-button nzType="default" nzShape="circle" nzIcon="picture" (click)="fileInput.click()"></button>
+    </div>
+  </div>
 </div>
+
+
+
+

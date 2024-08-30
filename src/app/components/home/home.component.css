@@ -1,9 +1,9 @@
-.home-container {
+/* .home-container {
   font-family: Arial, sans-serif;
 }
 
 .hero-section {
-  /* background: url('path-to-your-hero-image.jpg') no-repeat center center/cover; */
+  background: url('path-to-your-hero-image.jpg') no-repeat center center/cover;
   color: #fff;
   text-align: center;
   padding: 100px 20px;
@@ -109,4 +109,180 @@
 
 .footer-content a:hover {
   text-decoration: underline;
+} */
+
+.home-container {
+  .hero-section {
+    position: relative;
+    height: 100vh;
+    background: url('https://images.unsplash.com/photo-1555685813-c5b48a9b9cf6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGZvcmVzdHxlbnwwfHx8fDE2NjE2ODIxMjQ&ixlib=rb-1.2.1&q=80&w=1080') no-repeat center center/cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    overflow: hidden;
+
+    .hero-content {
+      text-align: center;
+      z-index: 1;
+
+      .hero-title {
+        font-size: 4rem;
+        font-weight: bold;
+        background: linear-gradient(45deg, #ff7e5f, #feb47b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 20px;
+      }
+
+      .hero-subtitle {
+        font-size: 1.5rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 20px;
+      }
+
+      .hero-button {
+        font-size: 1.25rem;
+        background-color: #ff7e5f;
+        border-color: #ff7e5f;
+        color: #fff;
+        &:hover {
+          background-color: #feb47b;
+          border-color: #feb47b;
+        }
+      }
+    }
+
+    .rain-animation {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('https://media.giphy.com/media/l0MYOJyR2loD10lh6/giphy.gif') repeat;
+      z-index: 0;
+      opacity: 0.5;
+    }
+  }
+
+  .featured-rooms, .our-services, .testimonials-section, .cta-section {
+    padding: 60px 20px;
+    text-align: center;
+  }
+
+  .section-title {
+    font-size: 2.5rem;
+    margin-bottom: 40px;
+    color: #333;
+  }
+
+  .our-services {
+    background-color: #f4f4f4;
+
+    .services-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+
+      .service-item {
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        text-align: center;
+        width: 250px;
+        transition: transform 0.3s, box-shadow 0.3s;
+
+        .service-icon {
+          font-size: 3rem;
+          color: #ff7e5f;
+          margin-bottom: 15px;
+        }
+
+        h3 {
+          font-size: 1.5rem;
+          margin-bottom: 10px;
+          color: #333;
+        }
+
+        p {
+          color: #555;
+        }
+
+        &:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+      }
+    }
+  }
+
+  .testimonials-section {
+    background-color: #eee;
+  }
+
+  .cta-section {
+    background-color: #ff7e5f;
+    color: #fff;
+    padding: 60px 20px;
+
+    .cta-title {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    .cta-text {
+      font-size: 1.25rem;
+      margin-bottom: 30px;
+    }
+
+    .cta-button {
+      background-color: #fff;
+      color: #ff7e5f;
+      border-color: #fff;
+      &:hover {
+        background-color: #feb47b;
+        color: #fff;
+      }
+    }
+  }
+
+  .footer {
+    background-color: #333;
+    color: #fff;
+    padding: 40px 20px;
+
+    .footer-content {
+      margin-bottom: 20px;
+
+      h5 {
+        margin-bottom: 20px;
+        color: #fff;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+
+        li {
+          margin-bottom: 10px;
+
+          a {
+            color: #ddd;
+            text-decoration: none;
+            &:hover {
+              color: #fff;
+              text-decoration: underline;
+            }
+          }
+        }
+      }
+    }
+
+    .text-center {
+      margin-top: 20px;
+      color: #ddd;
+    }
+  }
 }

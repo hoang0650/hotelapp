@@ -14,18 +14,22 @@ export class ChatService {
     this.socket = io(this.baseUrl);
   }
 
+  // Tham gia vào một nhóm chat
   joinGroup(groupId: string): void {
     this.socket.emit('joinGroup', groupId);
   }
 
-  sendMessage(message: any): void {
-    this.socket.emit('sendMessage', message);
+  // Gửi tin nhắn văn bản
+  sendMessage(groupId: string, message: any): void {
+    this.socket.emit('sendMessage', { ...message, groupId });
   }
 
-  sendImage(imageData: any): void {
-    this.socket.emit('sendImage', imageData);
+  // Gửi hình ảnh
+  sendImage(groupId: string, imageData: any): void {
+    this.socket.emit('sendImage', { ...imageData, groupId });
   }
 
+  // Nhận tin nhắn từ server
   receiveMessages(): Observable<any> {
     return new Observable((observer) => {
       this.socket.on('receiveMessage', (message) => {
@@ -34,6 +38,7 @@ export class ChatService {
     });
   }
 
+  // Nhận hình ảnh từ server
   receiveImages(): Observable<any> {
     return new Observable((observer) => {
       this.socket.on('receiveImage', (imageData) => {
@@ -42,7 +47,8 @@ export class ChatService {
     });
   }
 
+  // Lấy lịch sử tin nhắn từ server
   getMessages(groupId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/messages/${groupId}`);
+    return this.http.get<any[]>(`${this.baseUrl}/chats/${groupId}`);
   }
 }

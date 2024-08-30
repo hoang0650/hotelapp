@@ -13,7 +13,7 @@
 .content {
   flex: 1;
   padding: 20px;
-  overflow-x: auto; /* Allow horizontal scrolling for tables */
+  overflow-x: auto; 
 }
 
 @media screen and (max-width: 768px) {
@@ -23,12 +23,12 @@
 
   .sidebar {
       width: 100%;
-      order: 1; /* Sidebar at the top */
+      order: 1;
   }
 
   .content {
       width: 100%;
-      order: 2; /* Content section below the sidebar */
-      overflow-x: auto; /* Enable horizontal scrolling */
+      order: 2;
+      overflow-x: auto;
   }
 }
