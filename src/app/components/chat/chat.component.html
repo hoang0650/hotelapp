@@ -1,38 +1,3 @@
-<!-- <div class="chat-container">
-  <div class="friends-list">
-    <nz-list [nzDataSource]="friends">
-      <nz-list-item *ngFor="let friend of friends" (click)="selectFriend(friend)">
-        <nz-avatar nzIcon="user" nzSize="small" nzSrc="{{ friend.avatar }}"></nz-avatar>
-        <span>{{ friend.name }}</span>
-      </nz-list-item>
-    </nz-list>
-  </div>
-  
-  <div class="chat-area">
-    <div class="chat-messages">
-      <nz-list>
-        <nz-list-item *ngFor="let message of messages">
-          <div [ngClass]="{ 'message-left': message.user !== 'You', 'message-right': message.user === 'You' }">
-            <ng-container *ngIf="message.text">
-              <strong>{{ message.user }}:</strong> {{ message.text }}
-            </ng-container>
-            <ng-container *ngIf="message.imageUrl">
-              <strong>{{ message.user }}:</strong> 
-              <img [src]="message.imageUrl" class="chat-image"/>
-            </ng-container>
-          </div>
-        </nz-list-item>
-      </nz-list>
-    </div>
-    
-    <div class="message-input">
-      <input nz-input [(ngModel)]="newMessage" placeholder="Type your message...">
-      <input type="file" (change)="sendImage($event)" />
-      <button nz-button nzType="primary" (click)="sendMessage()">Send</button>
-    </div>
-  </div>
-</div> -->
-
 <div class="chat-container">
   <div class="sidebar">
     <div class="sidebar-header">
@@ -77,17 +42,13 @@
           </div>
         </nz-list-item>
       </nz-list>
-      <!-- <div #chatMessages class="chat-messages">
-        <div *ngFor="let message of messages" class="chat-message text-light">
-            <strong>Phan Hoàng:</strong> {{ message }} 
-        </div>
-    </div> -->
+    </div>
 
-      <div class="message-input">
-        <input nz-input [(ngModel)]="newMessage" placeholder="Type your message..." />
-        <input type="file" (change)="sendImage($event)" style="display: none;" #fileInput />
-        <button nz-button nzType="primary" (click)="sendMessage()">Send</button>
-        <button nz-button nzType="default" nzShape="circle" nzIcon="picture" (click)="fileInput.click()"></button>
-      </div>
+    <div class="message-input">
+      <input nz-input [(ngModel)]="newMessage" placeholder="Type your message..." />
+      <button nz-button nzType="primary" (click)="sendMessage()">Send</button>
+      <input type="file" (change)="sendImage($event)" style="display: none;" #fileInput />
+      <button nz-button nzType="default" nzShape="circle" nzIcon="picture" (click)="fileInput.click()"></button>
     </div>
   </div>
+</div>
