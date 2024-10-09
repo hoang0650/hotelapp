@@ -11,7 +11,10 @@ export class ChatService {
   private baseUrl: string = 'http://localhost:3000';
 
   constructor(private http: HttpClient) {
-    this.socket = io(this.baseUrl);
+    this.socket = io('https://hotel-app-smp2.onrender.com', {
+      transports: ['websocket', 'polling'], // Cung cấp các phương thức kết nối
+      withCredentials: true, // Cho phép gửi thông tin xác thực (nếu cần)
+    });
   }
 
   // Tham gia vào một nhóm chat
@@ -20,8 +23,8 @@ export class ChatService {
   }
 
   // Gửi tin nhắn văn bản
-  sendMessage(groupId: string, message: any): void {
-    this.socket.emit('sendMessage', { ...message, groupId });
+  sendMessage(message: string): void {
+    this.socket.emit('message', message);
   }
 
   // Gửi hình ảnh
@@ -50,5 +53,14 @@ export class ChatService {
   // Lấy lịch sử tin nhắn từ server
   getMessages(groupId: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/chats/${groupId}`);
+  }
+
+  onMessage(callback: (message: string) => void): void {
+    this.socket.on('message', callback);
+  }
+  
+  // Ngắt kết nối socket
+  disconnect(): void {
+    this.socket.disconnect();
   }
 }
