@@ -10,4 +10,5 @@ export interface Hotel {
     businessId: string;
     rooms: string[];
     staff: string[];
+    phoneNumber?: string;
 }

@@ -1,79 +1,292 @@
 <div class="container">
   <nz-card>
     <div nz-title>
-      <div class="container">
+      <div class="header-container">
         <div class="left-section">
           <p>
-            <strong>Nhà nghỉ Thanh Vy</strong>
+            <strong>{{ invoiceData.businessName || 'Khách sạn' }}</strong>
           </p>
           <p>
-            15/A1 Khu Phố Đồng An 2 - Phường Bình Hòa - Thành phố Thuận An - Tỉnh Bình Dương
+            {{ invoiceData.business_address || 'Chưa có địa chỉ' }}
           </p>
           <p>
-            ĐT: 0931881584
+            ĐT: {{ invoiceData.phoneNumber || 'Chưa có số điện thoại' }}
           </p>
         </div>
         <div class="right-section">
-          <p>Số hóa đơn: {{ invoiceData?.invoiceNumber }}</p>
+          <p><strong>Số hóa đơn:</strong> {{ invoiceData.invoiceNumber || invoiceData['bookingId'] || 'N/A' }}</p>
+          <p><strong>Ngày:</strong> {{ invoiceData.date | date:'dd/MM/yyyy HH:mm' }}</p>
         </div>
       </div>
-      <hr style="border-top: 2px solid #000; margin-top: 10px;">
-      <h5 style="text-align: center;"><strong>HOÁ ĐƠN THANH TOÁN</strong><br>
-        24-02-2024
-      </h5>
-      
+      <hr style="border-top: 2px solid #000; margin: 10px 0;">
+      <h3 style="text-align: center;"><strong>HOÁ ĐƠN THANH TOÁN</strong></h3>
     </div>
+    
     <div nz-body>
-      <p>Nhân viên: Phan Huy Hoàng</p>
-      <p>Khách hàng: Phan Thanh Bình</p>
-      <p>Phòng: 101</p>
-      <p>Ngày đến: 10:50 23/02/2024 - Ngày đi: 08:50 24/02/2024</p>
+      <div class="customer-info">
+        <div class="info-row">
+          <div class="info-item">
+            <span><strong>Mã đặt phòng:</strong></span>
+            <span>{{ invoiceData['bookingId'] || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span><strong>Khách hàng:</strong></span>
+            <span>{{ invoiceData.customerName || invoiceData['guestInfo']?.name || 'Khách lẻ' }}</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-item">
+            <span><strong>Phòng:</strong></span>
+            <span>{{ invoiceData.roomNumber }}</span>
+          </div>
+          <div class="info-item">
+            <span><strong>Nhân viên:</strong></span>
+            <span>{{ invoiceData.staffName || 'Không có thông tin' }}</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-item">
+            <span><strong>Ngày đến:</strong></span>
+            <span>{{ invoiceData?.checkInTime | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="info-item">
+            <span><strong>Ngày đi:</strong></span>
+            <span>{{ invoiceData?.checkOutTime | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-item">
+            <span><strong>Thời gian lưu trú:</strong></span>
+            <span>{{ durationText }}</span>
+          </div>
+          <div class="info-item">
+            <span><strong>Phương thức thanh toán:</strong></span>
+            <span>{{ getPaymentMethodLabel(invoiceData?.paymentMethod || '') }}</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-item">
+            <span><strong>Trạng thái:</strong></span>
+            <span [ngClass]="getPaymentStatusClass(invoiceData?.paymentStatus || '')">{{ getPaymentStatusLabel(invoiceData?.paymentStatus || '') }}</span>
+          </div>
+          <div class="info-item">
+            <span><strong>SĐT khách hàng:</strong></span>
+            <span>{{ invoiceData?.customerPhone || invoiceData?.['guestInfo']?.phone || 'Không có thông tin' }}</span>
+          </div>
+        </div>
+      </div>
   
-      <nz-table [nzData]="invoiceData?.products" nzShowPagination="false">
+      <nz-table [nzData]="invoiceData?.products || []" nzShowPagination="false" class="invoice-table">
         <thead>
           <tr>
-            <th class="hidden-mobile">Tên hàng<br>(Product)</th>
-            <th class="hidden-mobile">Số lượng<br>(Quantity)</th>
+            <th>Tên hàng<br>(Product)</th>
+            <th>Số lượng<br>(Quantity)</th>
             <th>Đơn giá<br>(Unit)</th>
             <th>Thành tiền<br>(Price)</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let product of invoiceData?.products">
-            <td class="hidden-mobile">{{product.name}}</td>
-            <td class="hidden-mobile">x1</td>
-            <td>{{ product.price | currency: 'VND' }}</td>
-            <td>{{ product.price | currency: 'VND' }}</td>
+          <tr *ngFor="let product of invoiceData?.products || []">
+            <td>{{product.name}}</td>
+            <td class="text-center">x{{product.quantity || 1}}</td>
+            <td class="text-right">{{ formatCurrency(product.price) }}</td>
+            <td class="text-right">{{ formatCurrency(product.price * (product.quantity || 1)) }}</td>
           </tr>
+          
+          <!-- Hiển thị dịch vụ nếu có -->
+          <ng-container *ngIf="hasServices && !hasServiceProductsDuplicated()">
+            <tr class="section-header">
+              <td colspan="4"><strong>Dịch vụ sử dụng</strong></td>
+            </tr>
+            <tr *ngFor="let service of invoiceData.services" 
+                [hidden]="isServiceInProducts(service)">
+              <td>{{ service.name }}</td>
+              <td class="text-center">x{{ service.quantity || 1 }}</td>
+              <td class="text-right">{{ formatCurrency(service.price) }}</td>
+              <td class="text-right">{{ formatCurrency(service.price * (service.quantity || 1)) }}</td>
+            </tr>
+          </ng-container>
+          
+          <!-- Hiển thị nếu không có sản phẩm -->
+          <tr *ngIf="(invoiceData?.products || []).length === 0">
+            <td>Tiền phòng {{ invoiceData?.roomNumber }}</td>
+            <td class="text-center">x1</td>
+            <td class="text-right">{{ formatCurrency(invoiceData?.['amount'] || 0) }}</td>
+            <td class="text-right">{{ formatCurrency(invoiceData?.['amount'] || 0) }}</td>
+          </tr>
+          
+          <!-- Hiển thị tổng tiền -->
           <tr>
-            <td><strong>Phụ thu(Charges):</strong></td>
-            <td></td>
-            <td></td>
-            <td>
-              <p>0</p>
+            <td><strong>Tổng tiền hàng:</strong></td>
+            <td class="text-center"></td>
+            <td class="text-center"></td>
+            <td class="text-right">
+              <p>{{ formatCurrency(subtotal || invoiceData?.['amount'] || 0) }}</p>
+            </td>
+          </tr>
+          
+          <!-- Hiển thị tiền dịch vụ nếu có -->
+          <tr *ngIf="serviceTotal > 0 && !hasServiceProductsDuplicated()">
+            <td><strong>Tổng tiền dịch vụ:</strong></td>
+            <td class="text-center"></td>
+            <td class="text-center"></td>
+            <td class="text-right">
+              <p>{{ formatCurrency(serviceTotal) }}</p>
+            </td>
+          </tr>
+          
+          <!-- Hiển thị tiền trả trước nếu có -->
+          <tr *ngIf="invoiceData?.['advancePayment'] && invoiceData?.['advancePayment'] > 0">
+            <td><strong>Đã thanh toán trước:</strong></td>
+            <td class="text-center"></td>
+            <td class="text-center"></td>
+            <td class="text-right">
+              <p>{{ formatCurrency(invoiceData?.['advancePayment'] || 0) }}</p>
+            </td>
+          </tr>
+          
+          <!-- Hiển thị phụ thu và giảm giá -->
+          <tr>
+            <td><strong>Phụ thu (Charges):</strong></td>
+            <td class="text-center"></td>
+            <td class="text-center"></td>
+            <td class="text-right">
+              <p>{{ formatCurrency(invoiceData?.additionalCharges || 0) }}</p>
             </td>
           </tr>
           <tr>
-            <td><strong>Khuyến mãi(Discount):</strong></td>
-            <td></td>
-            <td></td>
-            <td>
-              <p>0</p>
+            <td><strong>Khuyến mãi (Discount):</strong></td>
+            <td class="text-center"></td>
+            <td class="text-center"></td>
+            <td class="text-right">
+              <p>{{ formatCurrency(invoiceData?.discount || 0) }}</p>
             </td>
           </tr>
-          <tr>
-            <td><strong>Tổng tiền(Total):</strong></td>
-            <td></td>
-            <td></td>
-            <td>
-              <p>{{ invoiceData?.totalAmount | currency: 'VND' }}</p>
+          
+          <!-- Tổng cộng -->
+          <tr class="total-row">
+            <td><strong>Tổng tiền (Total):</strong></td>
+            <td class="text-center"></td>
+            <td class="text-center"></td>
+            <td class="text-right">
+              <p><strong>{{ formatCurrency(invoiceData.totalAmount || invoiceData['amount'] || 0) }}</strong></p>
             </td>
           </tr>
         </tbody>
       </nz-table>
+
+      <!-- Hiển thị ghi chú nếu có -->
+      <div *ngIf="invoiceData.notes" class="notes">
+        <p><strong>Ghi chú:</strong> {{ invoiceData.notes }}</p>
+      </div>
+
+      <div class="thank-you">
+        <p>Cảm ơn quý khách đã sử dụng dịch vụ!</p>
+        <p>Chúc quý khách một ngày tốt lành!</p>
+        <p class="invoice-date">Ngày in: {{ today | date:'dd/MM/yyyy HH:mm' }}</p>
+      </div>
     </div>
+    
     <div nz-actions class="custom-footer">
-      <button nz-button nzType="primary" (click)="exportInvoice()">In <span nz-icon nzType="printer" nzTheme="outline"></span></button>
+      <button nz-button nzType="primary" (click)="exportInvoice()">
+        <span nz-icon nzType="printer" nzTheme="outline"></span> In hóa đơn
+      </button>
     </div>
   </nz-card>
 </div>
+
+<style>
+  .section-header {
+    background-color: #f0f5ff;
+    font-weight: bold;
+    text-align: center;
+  }
+  
+  .notes {
+    margin: 20px 0;
+    padding: 10px;
+    background-color: #fffbe6;
+    border-left: 4px solid #faad14;
+  }
+  
+  .text-right {
+    text-align: right;
+  }
+  
+  .text-center {
+    text-align: center;
+  }
+  
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  .info-item {
+    width: 48%;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .customer-info {
+    margin-bottom: 20px;
+  }
+  
+  .invoice-table {
+    margin-bottom: 20px;
+  }
+  
+  .total-row {
+    background-color: #e6f7ff;
+    font-weight: bold;
+  }
+  
+  .thank-you {
+    text-align: center;
+    margin: 30px 0;
+  }
+  
+  .status-paid {
+    color: #52c41a;
+    font-weight: bold;
+  }
+  
+  .status-pending {
+    color: #faad14;
+    font-weight: bold;
+  }
+  
+  .status-partial {
+    color: #1890ff;
+    font-weight: bold;
+  }
+  
+  .status-included {
+    color: #722ed1;
+    font-weight: bold;
+  }
+  
+  .header-container {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .left-section {
+    text-align: left;
+  }
+  
+  .right-section {
+    text-align: right;
+  }
+  
+  .custom-footer {
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  .invoice-date {
+    font-size: 12px;
+    color: #999;
+  }
+</style>

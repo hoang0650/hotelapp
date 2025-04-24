@@ -1,0 +1,168 @@
+<div class="container">
+  <nz-card>
+    <h2>Quản lý dịch vụ</h2>
+    <div class="filters">
+      <nz-row [nzGutter]="16">
+        <nz-col [nzSpan]="12">
+          <nz-form-item>
+            <nz-form-label>Khách sạn</nz-form-label>
+            <nz-select [(ngModel)]="selectedHotelId" (ngModelChange)="onHotelChange($event)" class="w-100" nzPlaceHolder="Chọn khách sạn">
+              <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+            </nz-select>
+          </nz-form-item>
+        </nz-col>
+        <nz-col [nzSpan]="12">
+          <nz-form-item>
+            <nz-form-label>Danh mục</nz-form-label>
+            <nz-select [(ngModel)]="selectedCategory" (ngModelChange)="onCategoryChange($event)" class="w-100" nzPlaceHolder="Tất cả danh mục" [nzAllowClear]="true">
+              <nz-option *ngFor="let category of categories" [nzValue]="category" [nzLabel]="category"></nz-option>
+            </nz-select>
+          </nz-form-item>
+        </nz-col>
+      </nz-row>
+    </div>
+
+    <div class="service-list mt-4">
+      <nz-spin [nzSpinning]="isLoading">
+        <nz-table #serviceTable [nzData]="services" nzBordered>
+          <thead>
+            <tr>
+              <th>Tên dịch vụ</th>
+              <th>Danh mục</th>
+              <th>Giá</th>
+              <th>Khách sạn</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let service of serviceTable.data">
+              <td>{{ service.name }}</td>
+              <td>{{ service.category }}</td>
+              <td>{{ service.price | currency:'VND':'' }} đ</td>
+              <td>{{ getHotelName(service.hotelId) }}</td>
+              <td>
+                <nz-tag [nzColor]="service.isAvailable ? 'green' : 'red'">
+                  {{ service.isAvailable ? 'Đang hoạt động' : 'Không hoạt động' }}
+                </nz-tag>
+              </td>
+              <td>
+                <button nz-button nzType="primary" nzShape="circle" (click)="editService(service)" title="Sửa dịch vụ">
+                  <i nz-icon nzType="edit"></i>
+                </button>
+                <nz-divider nzType="vertical"></nz-divider>
+                <button nz-button nzType="primary" nzDanger nzShape="circle" nz-popconfirm 
+                        nzPopconfirmTitle="Bạn có chắc chắn muốn xóa dịch vụ này không?" 
+                        (nzOnConfirm)="deleteService(service._id!)" 
+                        title="Xóa dịch vụ">
+                  <i nz-icon nzType="delete"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </nz-spin>
+    </div>
+
+    <div class="service-form mt-4">
+      <h3>{{ editMode ? 'Cập nhật dịch vụ' : 'Thêm dịch vụ mới' }}</h3>
+      <form nz-form [formGroup]="serviceForm" (ngSubmit)="submitForm()">
+        <nz-row [nzGutter]="16">
+          <nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Tên dịch vụ</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập tên dịch vụ">
+                <input nz-input formControlName="name" placeholder="Nhập tên dịch vụ" />
+              </nz-form-control>
+            </nz-form-item>
+          </nz-col>
+          <nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Khách sạn</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng chọn khách sạn">
+                <nz-select formControlName="hotelId" nzPlaceHolder="Chọn khách sạn">
+                  <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </nz-col>
+        </nz-row>
+
+        <nz-row [nzGutter]="16">
+          <nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Danh mục</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập danh mục">
+                <nz-select formControlName="category" nzPlaceHolder="Chọn danh mục" nzShowSearch nzAllowClear>
+                  <nz-option *ngFor="let category of categories" [nzValue]="category" [nzLabel]="category"></nz-option>
+                  <nz-option nzValue="Ẩm thực" nzLabel="Ẩm thực"></nz-option>
+                  <nz-option nzValue="Đồ uống" nzLabel="Đồ uống"></nz-option>
+                  <nz-option nzValue="Tiện nghi" nzLabel="Tiện nghi"></nz-option>
+                  <nz-option nzValue="Spa" nzLabel="Spa"></nz-option>
+                  <nz-option nzValue="Vui chơi" nzLabel="Vui chơi"></nz-option>
+                  <nz-option nzValue="Giải trí" nzLabel="Giải trí"></nz-option>
+                  <nz-option nzValue="Vận chuyển" nzLabel="Vận chuyển"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </nz-col>
+          <nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Giá</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập giá dịch vụ">
+                <nz-input-number formControlName="price" [nzMin]="0" [nzStep]="10000" [nzFormatter]="formatter" class="w-100"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </nz-col>
+        </nz-row>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>Mô tả</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng nhập mô tả dịch vụ">
+            <textarea nz-input formControlName="description" rows="4" placeholder="Nhập mô tả dịch vụ"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSm]="6" [nzXs]="24" nzRequired>Hình ảnh</nz-form-label>
+          <nz-form-control [nzSm]="14" [nzXs]="24">
+            <nz-upload
+              [nzAction]="uploadUrl"
+              [nzHeaders]="{Authorization: 'Bearer ' + authToken}"
+              [nzName]="'file'"
+              [nzData]="{upload_preset: cloudinaryPreset}"
+              [nzShowUploadList]="false"
+              [nzBeforeUpload]="beforeUpload"
+              (nzChange)="handleImageChange($event)">
+              <button nz-button>
+                <i nz-icon nzType="upload"></i>
+                <span>Tải ảnh lên</span>
+              </button>
+            </nz-upload>
+            
+            <img *ngIf="imageUrl" [src]="imageUrl" alt="Hình ảnh dịch vụ khách sạn" style="max-width: 200px; margin-top: 10px;" />
+            <div *ngIf="!imageUrl" class="ant-upload-hint">
+              Hỗ trợ file hình ảnh JPG, PNG, JPEG dưới 2MB
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>Trạng thái</nz-form-label>
+          <nz-form-control>
+            <nz-switch formControlName="isAvailable" [nzCheckedChildren]="'Đang hoạt động'" [nzUnCheckedChildren]="'Không hoạt động'"></nz-switch>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-control>
+            <button nz-button nzType="primary" [disabled]="!serviceForm.valid" type="submit">
+              {{ editMode ? 'Cập nhật dịch vụ' : 'Thêm dịch vụ' }}
+            </button>
+            <button nz-button nzType="default" class="ml-2" (click)="resetForm()" type="button">Hủy</button>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </div>
+  </nz-card>
+</div> 

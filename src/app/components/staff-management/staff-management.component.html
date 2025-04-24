@@ -1,100 +1,155 @@
 <nz-card>
-  <div class="table-container">
-    <nz-table #staffTable [nzData]="staffs" [nzBordered]="true">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Location</th>
-          <th>Phone Number</th>
-          <th>Email</th>
-          <th>Work day</th>
-          <th>Shift</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let staff of staffTable.data">
-          <td>
-              {{ staff.name }}           
-          </td>
-          <td>
-              {{ staff.position }}
-          </td>
-          <td>
-              {{ staff.contact.phone }}
-          </td>
-          <td>
-              {{ staff.contact.email }}
-          </td>
-          <td>
-              {{ staff.schedule.day |  date: 'dd/MM/yyyy'}}
-          </td>
-          <td>
-              {{ staff.schedule.shift}}
-          </td>
-          <td>
-            <button nz-button nzShape="round" (click)="startEdit(staff._id)" nzType="default" *ngIf="editId !== staff._id">
-              <i nz-icon nzType="edit"></i>Edit
-            </button>
-            <nz-divider nzType="vertical"></nz-divider>
-            <a nz-popconfirm nzPopconfirmTitle="Sure to delete?" (nzOnConfirm)="deleteStaff(staff._id)"
-              *ngIf="editId !== staff._id">
-              <button nz-button nzShape="round" nzType="text" [nzDanger]="true">
-                <i nz-icon nzType="delete"></i>Delete
+  <h2>Quản lý nhân viên</h2>
+  <nz-spin [nzSpinning]="isLoading">
+    <div class="table-container">
+      <nz-table #staffTable [nzData]="staffs" [nzBordered]="true">
+        <thead>
+          <tr>
+            <th>Tên nhân viên</th>
+            <th>Chức vụ</th>
+            <th>SĐT</th>
+            <th>Email</th>
+            <th>Lịch làm việc</th>
+            <th>Lương</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let staff of staffTable.data">
+            <td>{{ staff.name }}</td>
+            <td>{{ staff.position }}</td>
+            <td>{{ staff.contact.phone }}</td>
+            <td>{{ staff.contact.email }}</td>
+            <td>
+              <div *ngFor="let scheduleItem of staff.schedule; let i = index">
+                {{ scheduleItem.date | date: 'dd/MM/yyyy' }} - {{ scheduleItem.shift }}
+                <br *ngIf="i < staff.schedule.length - 1">
+              </div>
+            </td>
+            <td>{{ staff.salary?.amount | number }} VNĐ</td>
+            <td>
+              <button nz-button nzShape="round" (click)="startEdit(staff._id!)" nzType="default" 
+                      *ngIf="editId !== staff._id" title="Chỉnh sửa nhân viên">
+                <i nz-icon nzType="edit"></i>
               </button>
-            </a>
-            <button nz-button nzShape="round" (click)="stopEdit()" nzType="default" *ngIf="editId === staff._id">
-              <i nz-icon nzType="save"></i>Cancel
+              <nz-divider nzType="vertical"></nz-divider>
+              <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa không?" 
+                 (nzOnConfirm)="deleteStaff(staff._id!)" *ngIf="editId !== staff._id">
+                <button nz-button nzShape="round" nzType="text" [nzDanger]="true" title="Xóa nhân viên">
+                  <i nz-icon nzType="delete"></i>
+                </button>
+              </a>
+              <button nz-button nzShape="round" (click)="stopEdit()" nzType="default" 
+                      *ngIf="editId === staff._id" title="Hủy chỉnh sửa">
+                <i nz-icon nzType="close"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+      
+      <h3 class="mt-4">{{ selectedStaff ? 'Cập nhật nhân viên' : 'Thêm nhân viên mới' }}</h3>
+      <form nz-form [formGroup]="staffForm" (ngSubmit)="selectedStaff ? updateStaff() : createStaff()">
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" [nzSm]="8">ID Khách sạn</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Vui lòng nhập ID khách sạn">
+            <input nz-input formControlName="hotelId" placeholder="ID khách sạn" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" [nzSm]="8">Tên nhân viên</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Vui lòng nhập tên nhân viên">
+            <input nz-input formControlName="name" placeholder="Tên nhân viên" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" [nzSm]="8">Chức vụ</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Vui lòng chọn chức vụ">
+            <nz-select formControlName="position" nzPlaceHolder="Chọn chức vụ">
+              <nz-option *ngFor="let pos of positions" [nzValue]="pos" [nzLabel]="pos"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item formGroupName="contact">
+          <nz-form-label [nzSpan]="24" [nzSm]="8">Số điện thoại</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Vui lòng nhập số điện thoại">
+            <input nz-input formControlName="phone" placeholder="Số điện thoại" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item formGroupName="contact">
+          <nz-form-label [nzSpan]="24" [nzSm]="8">Email</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Vui lòng nhập email hợp lệ">
+            <input nz-input formControlName="email" type="email" placeholder="Email" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <div formArrayName="schedule">
+          <div *ngFor="let scheduleItem of scheduleArray.controls; let i = index" [formGroupName]="i">
+            <h4>Lịch làm việc #{{ i + 1 }}</h4>
+            
+            <nz-form-item>
+              <nz-form-label [nzSpan]="24" [nzSm]="8">Ngày làm việc</nz-form-label>
+              <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Vui lòng chọn ngày làm việc">
+                <nz-date-picker formControlName="date"></nz-date-picker>
+              </nz-form-control>
+            </nz-form-item>
+            
+            <nz-form-item>
+              <nz-form-label [nzSpan]="24" [nzSm]="8">Ca làm việc</nz-form-label>
+              <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Vui lòng chọn ca làm việc">
+                <nz-select formControlName="shift" nzPlaceHolder="Chọn ca làm việc">
+                  <nz-option *ngFor="let shift of shifts" [nzValue]="shift" [nzLabel]="shift"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+            
+            <div class="schedule-buttons">
+              <button nz-button type="button" nzDanger (click)="removeScheduleItem(i)" 
+                      [disabled]="scheduleArray.length <= 1">
+                <i nz-icon nzType="minus"></i> Xóa lịch
+              </button>
+            </div>
+          </div>
+          
+          <div class="add-schedule-button">
+            <button nz-button type="button" (click)="addScheduleItem()">
+              <i nz-icon nzType="plus"></i> Thêm lịch làm việc
             </button>
-          </td>
-        </tr>
-      </tbody>
-    </nz-table>
-    <form nz-form [formGroup]="staffForm" (ngSubmit)="selectedStaff ? updateStaff() : createStaff()">
-      <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Staff Name</nz-form-label>
-        <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Please enter the staff's name">
-          <input placeholder="Enter the staff's name" nz-input formControlName="name" />
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item>
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Position</nz-form-label>
-        <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Please enter a position">
-          <input nz-input formControlName="position" placeholder="Enter a position" />
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item formGroupName="contact">
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Phone Number</nz-form-label>
-        <nz-form-control  [nzSpan]="24" [nzSm]="16" nzErrorTip="Please enter a phone number">
-          <input nz-input formControlName="phone" placeholder="Enter a phone number" />
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item formGroupName="contact">
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Email</nz-form-label>
-        <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Please enter an email">
-          <input nz-input formControlName="email" type="email" placeholder="Enter an email" />
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item formGroupName="schedule">
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Work day</nz-form-label>
-        <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Please enter a work day">
-          <input nz-input formControlName="day"/>
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item formGroupName="schedule">
-        <nz-form-label [nzSpan]="24" [nzSm]="8">Shift</nz-form-label>
-        <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Please shift entry">
-          <input nz-input formControlName="shift" placeholder="Shift Entry" />
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item>
-        <nz-form-control [nzSpan]="24" [nzOffset]="0">
-          <button nz-button nzType="primary" type="submit">
-            {{ selectedStaff ? 'Update' : 'Create a staff' }}
-          </button>
-        </nz-form-control>
-      </nz-form-item>
-    </form>
-  </div>
+          </div>
+        </div>
+        
+        <nz-form-item formGroupName="salary">
+          <nz-form-label [nzSpan]="24" [nzSm]="8">Lương</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="16" nzErrorTip="Vui lòng nhập lương">
+            <nz-input-number formControlName="amount" [nzMin]="0" [nzStep]="100000" [nzFormatter]="formatterVND"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" [nzSm]="8">Quyền</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="16">
+            <nz-select formControlName="permissions" nzMode="multiple" nzPlaceHolder="Chọn quyền">
+              <nz-option *ngFor="let perm of permissions" [nzValue]="perm" [nzLabel]="perm"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-control [nzSpan]="24" [nzOffset]="0">
+            <button nz-button nzType="primary" type="submit" [disabled]="staffForm.invalid">
+              {{ selectedStaff ? 'Cập nhật' : 'Thêm nhân viên' }}
+            </button>
+            <button nz-button type="button" (click)="stopEdit()" *ngIf="selectedStaff" class="ml-2">
+              Hủy
+            </button>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </div>
+  </nz-spin>
 </nz-card>
   

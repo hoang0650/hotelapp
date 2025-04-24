@@ -24,11 +24,15 @@ import { EmailListComponent } from './components/email-list/email-list.component
 import { EmailAdminComponent } from './components/email-admin/email-admin.component';
 import { AboutUsComponent } from './components/about-us/about-us.component';
 import { ChatComponent } from './components/chat/chat.component';
+import { BusinessSignupComponent } from './components/business-signup/business-signup.component';
+import { ServiceManagementComponent } from './components/service-management/service-management.component';
+
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
+  { path: 'business-signup', component: BusinessSignupComponent },
   { path: 'room/:id', component: ProductDetailComponent },
   {
     path: 'admin', component: AdminComponent, children: [
@@ -57,8 +61,8 @@ const routes: Routes = [
   { path: 'about-us', component: AboutUsComponent },
   { path: 'chat', component: ChatComponent },
   { path: 'qr-payment', component: QrPaymentComponent },
-  { path: 'visa-payment', component: VisaPaymentComponent }
-
+  { path: 'visa-payment', component: VisaPaymentComponent },
+  { path: 'service-management', component: ServiceManagementComponent }
 ];
 
 @NgModule({

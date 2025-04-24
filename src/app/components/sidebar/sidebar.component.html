@@ -19,7 +19,7 @@
     
 </nav> -->
 
-    <button nz-button nzType="primary"  (click)="toggleCollapsed()">
+    <button nz-button nzType="primary" (click)="toggleCollapsed()" title="Thu gọn/Mở rộng sidebar">
        <span nz-icon [nzType]="isCollapsed ? 'menu-unfold' : 'menu-fold'"></span>
      </button>
      <ul nz-menu nzMode="inline" [nzInlineCollapsed]="isCollapsed">
@@ -27,29 +27,38 @@
          nz-menu-item
          nz-tooltip
          nzTooltipPlacement="right"
-         [nzTooltipTitle]="isCollapsed ? 'Navigation One' : ''"
+         [nzTooltipTitle]="isCollapsed ? 'Trang chủ' : ''"
          nzSelected
+         routerLink="/home"
        >
-         <span nz-icon nzType="mail"></span>
-         <span>Navigation One</span>
+         <span nz-icon nzType="home"></span>
+         <span>Trang chủ</span>
        </li>
-       <li nz-submenu nzTitle="Navigation Two" nzIcon="appstore">
+       <li
+         nz-menu-item
+         nz-tooltip
+         nzTooltipPlacement="right"
+         [nzTooltipTitle]="isCollapsed ? 'Đăng ký doanh nghiệp' : ''"
+         routerLink="/business-signup"
+       >
+         <span nz-icon nzType="shop"></span>
+         <span>Đăng ký doanh nghiệp</span>
+       </li>
+       <li nz-submenu nzTitle="Tài khoản" nzIcon="user">
          <ul>
-           <li nz-menu-item>Option 5</li>
-           <li nz-menu-item>Option 6</li>
-           <li nz-submenu nzTitle="Submenu">
-             <ul>
-               <li nz-menu-item>Option 7</li>
-               <li nz-menu-item>Option 8</li>
-             </ul>
-           </li>
+           <li nz-menu-item routerLink="/login">Đăng nhập</li>
+           <li nz-menu-item routerLink="/signup">Đăng ký</li>
          </ul>
        </li>
-       <li nz-submenu nzTitle="Navigation Three" nzIcon="setting">
+       <li nz-submenu nzTitle="Quản lý" nzIcon="setting">
          <ul>
-           <li nz-menu-item>Option 9</li>
-           <li nz-menu-item>Option 10</li>
-           <li nz-menu-item>Option 11</li>
+           <li nz-menu-item routerLink="/admin/company">Quản lý doanh nghiệp</li>
+           <li nz-menu-item routerLink="/admin/hotel">Quản lý khách sạn</li>
+           <li nz-menu-item routerLink="/admin/room-management">Quản lý phòng</li>
+           <li nz-menu-item routerLink="/service-management">
+             <i nz-icon nzType="coffee" nzTheme="outline"></i>
+             <span>Quản lý dịch vụ</span>
+           </li>
          </ul>
        </li>
      </ul>

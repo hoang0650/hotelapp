@@ -1,81 +1,430 @@
-<div  *ngIf="roomData.roomStatus === 'available'">
-  
-  <form>
-    <div class="form-group">
-          <label for="inputAddress"><strong>Phòng: {{roomData['roomNumber']}}</strong></label><br>
-          <label for="inputAddress"><strong>Trạng thái phòng:</strong> Trống</label><br>
-        </div>
-    <div class="form-row">
-      <div class="form-group col-md-6">
-        <label for="rateType">Tính tiền</label>
-        <select id="rateType" [(ngModel)]="roomData.rateType" class="form-control">
-          <!-- <option selected>Tính theo giờ</option> -->
-          <option value="hourly">Tính qua đêm</option>
-          <option value="daily"> Tính qua ngày</option>
-          <option value="nightly">Tính ngày đêm</option>
-        </select>
-      </div>
-      <div class="form-group col-md-6">
-        <label for="inputCity">Đồ uống</label>
-        <select id="inputCity" class="form-control">
-          <option selected>chọn đồ uống</option>
-          <option>nước ngọt</option>
-          <option>bia</option>
-          <option>bò húc</option>
-        </select>
-      </div>
+<div *ngIf="modalType === 'checkin'">
+  <ng-container *ngIf="roomData.roomStatus === 'available'; else checkinError">
+    <h3>Nhận phòng {{ roomData.roomNumber }} - Tầng {{ roomData.floor }}</h3>
+    
+    <div class="mb-3 room-rates">
+      <strong>Giá tham khảo:</strong>
+      <span>Theo giờ: {{ roomData.hourlyRate | number }} đ</span>
+      <span>Theo ngày: {{ roomData.dailyRate | number }} đ</span>
+      <span>Qua đêm: {{ roomData.nightlyRate | number }} đ</span>
+      <span *ngIf="roomData.firstHourRate">Giờ đầu: {{ roomData.firstHourRate | number }} đ</span>
+      <span *ngIf="roomData.additionalHourRate">Giờ tiếp theo: {{ roomData.additionalHourRate | number }} đ</span>
     </div>
-  </form>
+    
+    <form nz-form [formGroup]="checkInForm" (ngSubmit)="submitForm()">
+      <nz-divider nzText="Thông tin khách hàng"></nz-divider>
+      
+      <div formGroupName="guestInfo">
+        <nz-form-item>
+          <nz-form-label [nzSpan]="8">Tên khách hàng</nz-form-label>
+          <nz-form-control [nzSpan]="16">
+            <input nz-input formControlName="name" placeholder="Nhập tên khách hàng" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="8">Số CMND/CCCD</nz-form-label>
+          <nz-form-control [nzSpan]="16">
+            <input nz-input formControlName="idNumber" placeholder="Nhập số CMND/CCCD" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="8">Số điện thoại</nz-form-label>
+          <nz-form-control [nzSpan]="16" nzErrorTip="Số điện thoại không hợp lệ">
+            <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="8">Email</nz-form-label>
+          <nz-form-control [nzSpan]="16" nzErrorTip="Email không hợp lệ">
+            <input nz-input formControlName="email" placeholder="Nhập email" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="8">Địa chỉ</nz-form-label>
+          <nz-form-control [nzSpan]="16">
+            <input nz-input formControlName="address" placeholder="Nhập địa chỉ" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      
+      <nz-divider nzText="Thông tin thanh toán"></nz-divider>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Hình thức tính tiền</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <nz-radio-group formControlName="rateType">
+            <label nz-radio-button nzValue="hourly">Theo giờ</label>
+            <label nz-radio-button nzValue="daily">Theo ngày</label>
+            <label nz-radio-button nzValue="nightly">Qua đêm</label>
+          </nz-radio-group>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Phương thức thanh toán</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <nz-select formControlName="paymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+            <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label"></nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Thanh toán trước</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <nz-input-number 
+            formControlName="advancePayment" 
+            [nzMin]="0" 
+            [nzStep]="10000" 
+            [nzFormatter]="formatterVND" 
+            [nzParser]="parserVND"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Phụ thu</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <nz-input-number
+            formControlName="additionalCharges"
+            [nzMin]="0"
+            [nzStep]="10000"
+            [nzFormatter]="formatterVND"
+            [nzParser]="parserVND"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Khuyến mãi</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <nz-input-number
+            formControlName="discount"
+            [nzMin]="0"
+            [nzStep]="10000"
+            [nzFormatter]="formatterVND"
+            [nzParser]="parserVND"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-divider nzText="Dịch vụ đi kèm"></nz-divider>
+      
+      <div class="service-selection">
+        <nz-form-item [formGroup]="servicesForm">
+          <nz-form-label [nzSpan]="8">Dịch vụ</nz-form-label>
+          <nz-form-control [nzSpan]="16">
+            <div nz-row [nzGutter]="8">
+              <div nz-col [nzSpan]="14">
+                <nz-select formControlName="serviceId" style="width: 100%">
+                  <nz-option *ngFor="let service of services" [nzValue]="service.id" [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'"></nz-option>
+                </nz-select>
+              </div>
+              <div nz-col [nzSpan]="6">
+                <nz-input-number formControlName="quantity" [nzMin]="1" [nzMax]="100" style="width: 100%"></nz-input-number>
+              </div>
+              <div nz-col [nzSpan]="4">
+                <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" title="Thêm dịch vụ">
+                  <i nz-icon nzType="plus"></i>
+                </button>
+              </div>
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      
+      <div *ngIf="selectedServices.length > 0">
+        <nz-table #servicesTable [nzData]="selectedServices" nzSize="small" [nzShowPagination]="false">
+          <thead>
+            <tr>
+              <th>Dịch vụ</th>
+              <th>Số lượng</th>
+              <th>Đơn giá</th>
+              <th>Thành tiền</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let service of selectedServices; let i = index">
+              <td>{{ service.serviceName }}</td>
+              <td>{{ service.quantity }}</td>
+              <td>{{ service.price | number }} đ</td>
+              <td>{{ service.totalPrice | number }} đ</td>
+              <td>
+                <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa dịch vụ này?" (nzOnConfirm)="removeService(i)">
+                  <i nz-icon nzType="delete" nzTheme="outline" style="color: #ff4d4f;"></i>
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </div>
+      
+      <div *ngIf="selectedServices.length > 0 || checkInForm.get('advancePayment')?.value > 0" class="totals-summary mb-3">
+        <p *ngIf="servicesPriceTotal > 0"><strong>Tổng tiền dịch vụ:</strong> {{ servicesPriceTotal | number }} đ</p>
+        <p *ngIf="checkInForm.get('advancePayment')?.value > 0"><strong>Đã trả trước:</strong> {{ checkInForm.get('advancePayment')?.value | number }} đ</p>
+      </div>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Ghi chú</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <textarea nz-input formControlName="notes" rows="2" placeholder="Nhập ghi chú"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <div class="footer-actions text-right">
+        <button nz-button (click)="closeModal()" type="button" class="mr-2">
+          <i nz-icon nzType="close"></i> Hủy
+        </button>
+        <button nz-button nzType="primary" type="submit" [nzLoading]="isLoading">
+          <i nz-icon nzType="check"></i> Nhận phòng
+        </button>
+      </div>
+    </form>
+  </ng-container>
+  <ng-template #checkinError>
+    <nz-alert nzType="error" [nzMessage]="errorTitleCheckin" [nzDescription]="errorDescCheckin" nzShowIcon></nz-alert>
+    <ng-template #errorTitleCheckin>Không thể nhận phòng</ng-template>
+    <ng-template #errorDescCheckin>
+      Phòng <strong>{{ roomData.roomNumber }}</strong> hiện đang ở trạng thái 
+      <strong>'{{ roomData.roomStatus }}'</strong> và không sẵn sàng để nhận phòng.
+    </ng-template>
+    <div class="footer-actions text-right mt-3">
+      <button nz-button (click)="closeModal()">Đóng</button>
+    </div>
+  </ng-template>
 </div>
 
-<div  *ngIf="roomData.roomStatus === 'active'">
-  
-    <form>
-      <div class="form-group">
-            <label for="inputAddress"><strong>Phòng: {{roomData['roomNumber']}}</strong></label><br>
-            <label for="inputEmail4">Nhận phòng lúc: {{listData[0].checkinTime | date: 'dd/MM/yyyy HH:mm:ss'}} -
-              Đến: <span *ngIf="!listData[0].checkoutTime">hiện tại</span>
-            </label><br>
-            <label for="inputAddress"><strong>Trạng thái phòng:</strong> Đang sử dụng</label><br>
+<div *ngIf="modalType === 'checkout'">
+  <ng-container *ngIf="roomData.roomStatus === 'occupied' || roomData.roomStatus === 'active'; else checkoutError">
+    <h3>Trả phòng {{ roomData.roomNumber }} - Tầng {{ roomData.floor }}</h3>
+    
+    <div class="mb-3">
+      <nz-descriptions nzTitle="Thông tin phòng" nzBordered [nzColumn]="1">
+        <nz-descriptions-item nzTitle="Loại phòng">{{ roomData.roomType }}</nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Thời gian nhận phòng">
+          {{ listData[0]?.checkinTime | date: 'dd/MM/yyyy HH:mm:ss' }}
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Thời gian hiện tại">
+          {{ getCurrentTime() | date: 'dd/MM/yyyy HH:mm:ss' }}
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Khách hàng">
+          {{ listData[0]?.guestInfo?.name || 'Khách lẻ' }}
+        </nz-descriptions-item>
+        <nz-descriptions-item *ngIf="listData[0]?.guestInfo?.phone" nzTitle="Số điện thoại">
+          {{ listData[0]?.guestInfo?.phone }}
+        </nz-descriptions-item>
+        <nz-descriptions-item *ngIf="listData[0]?.advancePayment" nzTitle="Đã thanh toán trước">
+          {{ listData[0]?.advancePayment | number }} đồng
+        </nz-descriptions-item>
+      </nz-descriptions>
+    </div>
+    
+    <nz-divider nzText="Dịch vụ sử dụng"></nz-divider>
+    
+    <div class="service-selection mb-3">
+      <nz-form-item [formGroup]="servicesForm">
+        <nz-form-label [nzSpan]="8">Thêm dịch vụ</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <div nz-row [nzGutter]="8">
+            <div nz-col [nzSpan]="14">
+              <nz-select formControlName="serviceId" style="width: 100%">
+                <nz-option *ngFor="let service of services" [nzValue]="service.id" [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'"></nz-option>
+              </nz-select>
+            </div>
+            <div nz-col [nzSpan]="6">
+              <nz-input-number formControlName="quantity" [nzMin]="1" [nzMax]="100" style="width: 100%"></nz-input-number>
+            </div>
+            <div nz-col [nzSpan]="4">
+              <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" title="Thêm dịch vụ">
+                <i nz-icon nzType="plus"></i>
+              </button>
+            </div>
           </div>
-      <div class="form-row">
-        <div class="form-group col-md-6">
-          <label for="inputState">Tính tiền</label>
-          <select id="inputState" class="form-control">
-            <option selected>Tính theo giờ</option>
-            <option>Tính qua đêm</option>
-            <option>Tính qua ngày</option>
-            <option>Tính ngày đêm</option>
-          </select>
-        </div>
-        <div class="form-group col-md-6">
-          <label for="inputCity">Đồ uống</label>
-          <select id="inputCity" class="form-control">
-            <option selected>chọn đồ uống</option>
-            <option>nước ngọt</option>
-            <option>bia</option>
-            <option>bò húc</option>
-          </select>
-        </div>
+        </nz-form-control>
+      </nz-form-item>
+    </div>
+    
+    <div *ngIf="selectedServices.length > 0" class="mb-3">
+      <nz-table #servicesTable [nzData]="selectedServices" nzSize="small" [nzShowPagination]="false">
+        <thead>
+          <tr>
+            <th>Dịch vụ</th>
+            <th>Số lượng</th>
+            <th>Đơn giá</th>
+            <th>Thành tiền</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let service of selectedServices; let i = index">
+            <td>{{ service.serviceName }}</td>
+            <td>{{ service.quantity }}</td>
+            <td>{{ service.price | number }} đ</td>
+            <td>{{ service.totalPrice | number }} đ</td>
+            <td>
+              <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa dịch vụ này?" (nzOnConfirm)="removeService(i)">
+                <i nz-icon nzType="delete" nzTheme="outline" style="color: #ff4d4f;"></i>
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </div>
+    
+    <nz-divider nzText="Thông tin thanh toán"></nz-divider>
+    
+    <form nz-form [formGroup]="checkOutForm" (ngSubmit)="submitForm()">
+      <div class="totals-summary mb-3">
+        <p><strong>Tổng tiền phòng:</strong> {{ roomPriceTotal | number }} đồng</p>
+        <p><strong>Tổng tiền dịch vụ:</strong> {{ servicesPriceTotal | number }} đồng</p>
       </div>
-      <label for="inputAddress">Tổng tiền: {{listData[0].payment}}</label><br>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Phụ thu</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <nz-input-number
+            formControlName="additionalCharges"
+            [nzMin]="0"
+            [nzStep]="10000"
+            [nzFormatter]="formatterVND"
+            [nzParser]="parserVND"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Khuyến mãi</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <nz-input-number
+            formControlName="discount"
+            [nzMin]="0"
+            [nzStep]="10000"
+            [nzFormatter]="formatterVND"
+            [nzParser]="parserVND"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Phương thức thanh toán</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <nz-select formControlName="paymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+            <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label"></nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Lý do phụ thu/giảm giá</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <input nz-input formControlName="reason" placeholder="Nhập lý do phụ thu/giảm giá">
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Ghi chú</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <textarea nz-input formControlName="notes" rows="2" placeholder="Nhập ghi chú"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <div class="final-totals mt-3">
+         <nz-descriptions nzBordered>
+           <nz-descriptions-item nzTitle="Tổng cộng" [nzSpan]="3">
+             <strong>{{ totalPrice | number }} đồng</strong>
+           </nz-descriptions-item>
+           <nz-descriptions-item *ngIf="advancePayment > 0" nzTitle="Đã trả trước" [nzSpan]="3">
+             - {{ advancePayment | number }} đồng
+           </nz-descriptions-item>
+           <nz-descriptions-item nzTitle="Còn lại phải thanh toán" [nzSpan]="3">
+             <strong>{{ (totalPrice - advancePayment) | number }} đồng</strong>
+           </nz-descriptions-item>
+         </nz-descriptions>
+       </div>
+      
+      <div class="footer-actions text-right mt-3">
+        <button nz-button (click)="closeModal()" type="button" class="mr-2">
+          <i nz-icon nzType="close"></i> Hủy
+        </button>
+        <button nz-button nzType="primary" type="submit" [nzLoading]="isLoading">
+          <i nz-icon nzType="dollar"></i> Thanh toán và trả phòng
+        </button>
+      </div>
     </form>
+  </ng-container>
+  <ng-template #checkoutError>
+    <nz-alert nzType="error" [nzMessage]="errorTitleCheckout" [nzDescription]="errorDescCheckout" nzShowIcon></nz-alert>
+    <ng-template #errorTitleCheckout>Không thể trả phòng</ng-template>
+    <ng-template #errorDescCheckout>
+      Phòng <strong>{{ roomData.roomNumber }}</strong> hiện không có khách (Trạng thái: 
+      <strong>'{{ roomData.roomStatus }}'</strong>).
+    </ng-template>
+    <div class="footer-actions text-right mt-3">
+      <button nz-button (click)="closeModal()">Đóng</button>
+    </div>
+  </ng-template>
 </div>
 
-  
-<div *ngIf="roomData.roomStatus === 'dirty'">
-    <label for="inputAddress">Dọn Dẹp Phòng</label><br>
-    <form>
-      <div class="form-group">
-            <label for="inputAddress"><strong>Phòng: {{roomData['roomNumber']}}</strong></label><br>
-            <label for="inputEmail4">Nhận phòng lúc: {{listData[0].checkinTime | date: 'dd/MM/yyyy HH:mm:ss'}} -
-              Đến: {{listData[0].checkoutTime | date: 'dd/MM/yyyy HH:mm:ss'}}
-            </label><br>
-            <label for="inputAddress"><strong>Trạng thái phòng:</strong> Đang bẩn</label><br>
-          </div>
-      <div class="form-row">
-        <label for="inputAddress">Tổng tiền: {{listData[0].payment}}</label><br>
-      </div>
-    </form>
+<div *ngIf="modalType === 'cleaning'">
+  <ng-container *ngIf="roomData.roomStatus === 'dirty' || roomData.roomStatus === 'maintenance'; else cleaningError">
+    <h3>Xác nhận cập nhật trạng thái phòng {{ roomData.roomNumber }}</h3>
+    <p>
+      Bạn có chắc chắn muốn cập nhật trạng thái phòng từ 
+      <strong>'{{ roomData.roomStatus }}'</strong> thành <strong>'available'</strong> (Sẵn sàng) không?
+    </p>
+    <div class="footer-actions text-right mt-3">
+      <button nz-button (click)="closeModal()" type="button" class="mr-2">
+        <i nz-icon nzType="close"></i> Hủy
+      </button>
+      <button nz-button nzType="primary" (click)="submitForm()" [nzLoading]="isLoading">
+        <i nz-icon nzType="check"></i> Xác nhận
+      </button>
+    </div>
+  </ng-container>
+  <ng-template #cleaningError>
+    <nz-alert nzType="warning" [nzMessage]="errorTitleCleaning" [nzDescription]="errorDescCleaning" nzShowIcon></nz-alert>
+    <ng-template #errorTitleCleaning>Không thể thực hiện thao tác</ng-template>
+    <ng-template #errorDescCleaning>
+      Phòng <strong>{{ roomData.roomNumber }}</strong> hiện không cần dọn dẹp hoặc đang ở trạng thái 
+      <strong>'{{ roomData.roomStatus }}'</strong>.
+    </ng-template>
+    <div class="footer-actions text-right mt-3">
+      <button nz-button (click)="closeModal()">Đóng</button>
+    </div>
+  </ng-template>
 </div>
+
+<div class="text-center" *ngIf="isLoading">
+  <nz-spin nzTip="Đang xử lý..."></nz-spin>
+</div>
+
+<style>
+  .room-rates span {
+    display: inline-block;
+    margin-right: 15px;
+    padding: 2px 5px;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+    font-size: 0.9em;
+  }
+  .compact-list {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0;
+  }
+  .compact-list li {
+    margin-bottom: 3px;
+    font-size: 0.95em;
+  }
+</style>
   

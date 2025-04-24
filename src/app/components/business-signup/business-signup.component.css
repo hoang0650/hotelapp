@@ -1,0 +1,51 @@
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.signup-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.section-title {
+  margin-top: 20px;
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #1890ff;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 8px;
+}
+
+nz-form-item {
+  margin-bottom: 20px;
+}
+
+nz-form-label {
+  font-weight: 500;
+}
+
+button[nz-button] {
+  height: 40px;
+  font-size: 16px;
+}
+
+button[nzType="primary"] {
+  margin-right: 16px;
+}
+
+[nz-icon] {
+  cursor: pointer;
+}
+
+@media (max-width: 576px) {
+  .container {
+    padding: 0 10px;
+  }
+  
+  nz-form-label {
+    padding-bottom: 8px;
+  }
+}

@@ -56,6 +56,14 @@ import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzListModule } from 'ng-zorro-antd/list';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
+import { NzMessageModule } from 'ng-zorro-antd/message';
+import { NzUploadModule } from 'ng-zorro-antd/upload';
+import { NzAlertModule } from 'ng-zorro-antd/alert';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { UnauthorizedComponent } from './components/unauthorized/unauthorized.component';
@@ -78,7 +86,9 @@ import { CaliendarModalComponent } from './components/caliendar-modal/caliendar-
 import { CapitalizePipe } from './pipes/capitalize.pipe';
 import { AboutUsComponent } from './components/about-us/about-us.component';
 import { ChatComponent } from './components/chat/chat.component';
-
+import { BusinessSignupComponent } from './components/business-signup/business-signup.component';
+import { RoomServiceComponent } from './components/room-service/room-service.component';
+import { ServiceManagementComponent } from './components/service-management/service-management.component';
 
 registerLocaleData(en);
 
@@ -117,7 +127,10 @@ registerLocaleData(en);
         CaliendarModalComponent,
         CapitalizePipe,
         AboutUsComponent,
-        ChatComponent
+        ChatComponent,
+        BusinessSignupComponent,
+        RoomServiceComponent,
+        ServiceManagementComponent
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         NgxEchartsModule.forRoot({ echarts: () => import('echarts') }),
@@ -152,7 +165,15 @@ registerLocaleData(en);
         NzTimelineModule,
         NzTagModule,
         NzAvatarModule,
-        NzListModule
+        NzListModule,
+        NzEmptyModule,
+        NzSpinModule,
+        NzInputNumberModule,
+        NzDrawerModule,
+        NzDescriptionsModule,
+        NzMessageModule,
+        NzUploadModule,
+        NzAlertModule
     ], providers: [
         provideClientHydration(),
         { provide: NZ_I18N, useValue: en_US },

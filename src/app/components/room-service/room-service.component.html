@@ -1,0 +1,261 @@
+<div class="service-container">
+  <nz-spin [nzSpinning]="isLoading">
+    <div class="service-header">
+      <h2>Quản lý dịch vụ phòng</h2>
+      <div>
+        <button 
+          nz-button 
+          nzType="primary" 
+          (click)="showAddServiceForm()" 
+          *ngIf="!isServiceFormVisible && !roomId">
+          <i nz-icon nzType="plus"></i> Thêm dịch vụ mới
+        </button>
+        <button 
+          nz-button 
+          [nzType]="displayOrders ? 'default' : 'primary'" 
+          (click)="toggleDisplayOrders()" 
+          *ngIf="roomId">
+          <i nz-icon [nzType]="displayOrders ? 'shopping' : 'history'"></i>
+          {{ displayOrders ? 'Đặt dịch vụ' : 'Lịch sử đơn hàng' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Form thêm/sửa dịch vụ -->
+    <div class="service-form-container" *ngIf="isServiceFormVisible && !roomId">
+      <div class="form-header">
+        <h3>{{ isEditing ? 'Cập nhật dịch vụ' : 'Thêm dịch vụ mới' }}</h3>
+        <button nz-button nzType="default" (click)="cancelServiceForm()" title="Đóng form">
+          <i nz-icon nzType="close"></i>
+        </button>
+      </div>
+
+      <form [formGroup]="serviceForm" (ngSubmit)="submitServiceForm()">
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Tên dịch vụ</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập tên dịch vụ">
+                <input nz-input formControlName="name" placeholder="Nhập tên dịch vụ" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Danh mục</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng chọn danh mục">
+                <nz-select formControlName="category" nzPlaceHolder="Chọn danh mục" nzAllowClear>
+                  <nz-option *ngFor="let category of categories" [nzValue]="category" [nzLabel]="category"></nz-option>
+                  <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Giá</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập giá dịch vụ">
+                <nz-input-number
+                  formControlName="price"
+                  [nzMin]="0"
+                  [nzStep]="1000"
+                  [nzFormatter]="formatterVND"
+                  [nzParser]="parserVND"
+                  style="width: 100%">
+                </nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Hình ảnh</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="image" placeholder="URL hình ảnh" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <nz-form-item>
+          <nz-form-label>Mô tả</nz-form-label>
+          <nz-form-control>
+            <textarea nz-input formControlName="description" [nzAutosize]="{ minRows: 3, maxRows: 5 }" placeholder="Mô tả dịch vụ"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-control>
+            <label nz-checkbox formControlName="isAvailable">Có sẵn</label>
+          </nz-form-control>
+        </nz-form-item>
+
+        <div class="form-footer">
+          <button nz-button nzType="default" (click)="cancelServiceForm()">Hủy</button>
+          <button nz-button nzType="primary" type="submit" [disabled]="serviceForm.invalid">
+            {{ isEditing ? 'Cập nhật' : 'Thêm mới' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Danh mục dịch vụ -->
+    <div class="category-tabs" *ngIf="!isServiceFormVisible">
+      <nz-tabset>
+        <nz-tab nzTitle="Tất cả" (nzClick)="filterByCategory('')"></nz-tab>
+        <nz-tab *ngFor="let category of categories" [nzTitle]="category" (nzClick)="filterByCategory(category)"></nz-tab>
+      </nz-tabset>
+    </div>
+
+    <ng-container *ngIf="!displayOrders && !isServiceFormVisible">
+      <!-- Danh sách dịch vụ -->
+      <div class="service-grid">
+        <nz-card 
+          *ngFor="let service of getFilteredServices()" 
+          class="service-card"
+          [nzCover]="coverTemplate"
+          [nzActions]="roomId ? [actionAddToCart] : [actionEdit, actionDelete]">
+          <ng-template #coverTemplate>
+            <div class="card-cover">
+              <img [src]="service.image || 'assets/images/default-service.jpg'" [alt]="service.name" [title]="service.name" />
+            </div>
+          </ng-template>
+          <nz-card-meta
+            [nzTitle]="service.name"
+            [nzDescription]="service.description || 'Không có mô tả'">
+          </nz-card-meta>
+          <p class="price">{{ formatCurrency(service.price) }}</p>
+          
+          <ng-template #actionAddToCart>
+            <i 
+              nz-icon 
+              nzType="shopping-cart" 
+              nzTheme="outline" 
+              (click)="addToCart(service)" 
+              title="Thêm vào giỏ hàng">
+            </i>
+          </ng-template>
+          
+          <ng-template #actionEdit>
+            <i 
+              nz-icon 
+              nzType="edit" 
+              nzTheme="outline" 
+              (click)="showEditServiceForm(service)" 
+              title="Chỉnh sửa">
+            </i>
+          </ng-template>
+          
+          <ng-template #actionDelete>
+            <i 
+              nz-icon 
+              nzType="delete" 
+              nzTheme="outline" 
+              (click)="deleteService(service._id)" 
+              title="Xóa">
+            </i>
+          </ng-template>
+        </nz-card>
+      </div>
+
+      <!-- Giỏ hàng -->
+      <div class="cart-container" *ngIf="roomId && cart.length > 0">
+        <div class="cart-header">
+          <h3>Giỏ hàng</h3>
+          <button nz-button nzType="default" (click)="clearCart()">
+            <i nz-icon nzType="delete"></i> Xóa tất cả
+          </button>
+        </div>
+        
+        <div class="cart-items">
+          <div class="cart-item" *ngFor="let item of cart">
+            <div class="item-name">{{ item.serviceName }}</div>
+            <div class="item-price">{{ formatCurrency(item.price) }}</div>
+            <div class="item-quantity">
+              <button nz-button nzType="default" nzShape="circle" (click)="updateCartItemQuantity(item, -1)" title="Giảm số lượng">
+                <i nz-icon nzType="minus"></i>
+              </button>
+              <span>{{ item.quantity }}</span>
+              <button nz-button nzType="default" nzShape="circle" (click)="updateCartItemQuantity(item, 1)" title="Tăng số lượng">
+                <i nz-icon nzType="plus"></i>
+              </button>
+            </div>
+            <div class="item-total">{{ formatCurrency(item.totalPrice) }}</div>
+            <button nz-button nzType="default" nzShape="circle" (click)="removeFromCart(item)" title="Xóa khỏi giỏ hàng">
+              <i nz-icon nzType="close"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="cart-note">
+          <nz-form-item>
+            <nz-form-label>Ghi chú</nz-form-label>
+            <nz-form-control>
+              <textarea nz-input [(ngModel)]="noteForOrder" [nzAutosize]="{ minRows: 2, maxRows: 4 }" placeholder="Ghi chú đặc biệt cho đơn hàng"></textarea>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        
+        <div class="cart-total">
+          <div>Tổng tiền:</div>
+          <div class="total-amount">{{ formatCurrency(totalAmount) }}</div>
+        </div>
+        
+        <div class="cart-footer">
+          <button nz-button nzType="default" (click)="clearCart()">Hủy</button>
+          <button nz-button nzType="primary" (click)="submitOrder()">Đặt dịch vụ</button>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Lịch sử đơn hàng -->
+    <div class="orders-container" *ngIf="displayOrders && roomId">
+      <div class="orders-header">
+        <h3>Lịch sử đơn hàng</h3>
+        <button nz-button nzType="primary" (click)="loadServiceOrders()">
+          <i nz-icon nzType="reload"></i> Làm mới
+        </button>
+      </div>
+      
+      <div *ngIf="serviceOrders.length === 0" style="text-align: center; padding: 20px;">
+        <nz-empty nzDescription="Không có đơn hàng nào"></nz-empty>
+      </div>
+      
+      <div class="order-item" *ngFor="let order of serviceOrders">
+        <div class="order-header">
+          <div>
+            <nz-tag [nzColor]="getStatusColor(order.status)">
+              {{ getStatusLabel(order.status) }}
+            </nz-tag>
+            <span style="margin-left: 8px;">#{{ order._id }}</span>
+          </div>
+          <div class="order-time">{{ order.requestTime | date:'dd/MM/yyyy HH:mm' }}</div>
+        </div>
+        
+        <div class="order-services">
+          <div class="service-item" *ngFor="let item of order.services">
+            <div class="service-detail">{{ item.serviceName }}</div>
+            <div>{{ item.quantity }} x {{ formatCurrency(item.price) }}</div>
+          </div>
+        </div>
+        
+        <div class="order-total">
+          <div>Tổng tiền:</div>
+          <div class="total-amount">{{ formatCurrency(order.totalAmount) }}</div>
+        </div>
+        
+        <div class="order-note" *ngIf="order.notes">
+          <i nz-icon nzType="message" nzTheme="outline"></i> {{ order.notes }}
+        </div>
+        
+        <div class="order-actions" *ngIf="order.status === 'pending'">
+          <button nz-button nzType="primary" nzDanger (click)="cancelOrder(order._id || '')">
+            <i nz-icon nzType="close-circle"></i> Hủy đơn
+          </button>
+        </div>
+      </div>
+    </div>
+  </nz-spin>
+</div> 

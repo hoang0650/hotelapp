@@ -1,50 +1,128 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
-// import { JwtHelper } from 'angular2-jwt';
-import { UserService } from '../services/user.service';
+import { User } from '../interfaces/user';
+import { jwtDecode } from 'jwt-decode';
+
+interface AuthResponse {
+  token: string;
+  user: User;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  loggedIn = false;
-  isAdmin = false;
-  // jwtHelper: JwtHelper = new JwtHelper();
-  currentUser = { userId: '', username: '', role: '' }
-  constructor(private userService: UserService, private route:Router) {
-    const token:any = localStorage.getItem('access_token');
-    if(token){
-      // const decodedUser = this.d
+  private apiUrl = 'http://localhost:3000/api';
+  private currentUserSubject = new BehaviorSubject<User | null>(null);
+  public currentUser$ = this.currentUserSubject.asObservable();
+  private tokenExpirationTimer: any;
+
+  constructor(private http: HttpClient, private router: Router) {
+    this.loadUserFromLocalStorage();
+  }
+
+  private loadUserFromLocalStorage() {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decodedToken: any = jwtDecode(token);
+        if (decodedToken && decodedToken.user) {
+          this.currentUserSubject.next(decodedToken.user);
+        }
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        this.logout();
+      }
     }
-   }
+  }
 
-   login(emailAndPassword:any){
-      return this.userService.login(emailAndPassword).subscribe(res=>{
-        localStorage.setItem('access_token',res.token);
-        const decodedUser = this.decodedUserFromToken(res.token);
-        this.setCurrentUser(decodedUser);
-        return this.loggedIn;
-      })
-   }
+  login(email: string, password: string): Observable<boolean> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/users/login`, { email, password })
+      .pipe(
+        map(response => {
+          if (response && response.token) {
+            localStorage.setItem('token', response.token);
+            this.currentUserSubject.next(response.user);
+            return true;
+          }
+          return false;
+        }),
+        catchError(error => {
+          console.error('Login error:', error);
+          return of(false);
+        })
+      );
+  }
 
-   logout(){
-    localStorage.removeItem('access_token');
-    this.loggedIn = false;
-    this.isAdmin = false;
-    this.currentUser = {userId:'', username:'', role:''};
-    this.route.navigate(['/'])
-   }
+  logout(): void {
+    localStorage.removeItem('token');
+    this.currentUserSubject.next(null);
+    this.router.navigate(['/login']);
+    if (this.tokenExpirationTimer) {
+      clearTimeout(this.tokenExpirationTimer);
+    }
+  }
 
-   decodedUserFromToken(token:any){
-    // return this.jwtHelper.decodeToken(token).user;
-   }
+  isLoggedIn(): boolean {
+    return !!this.getToken();
+  }
 
-   setCurrentUser(decodedUser:any){
-    this.loggedIn = true;
-    this.currentUser.userId = decodedUser.userId;
-    this.currentUser.username = decodedUser.username;
-    this.currentUser.role = decodedUser.role;
-    decodedUser.role === 'admin' ? this.isAdmin = true: this.isAdmin = false;
-    delete decodedUser.role;
-   }
+  getToken(): string | null {
+    return localStorage.getItem('token');
+  }
 
+  getCurrentUser(): User | null {
+    return this.currentUserSubject.value;
+  }
+
+  // Kiểm tra xem người dùng có phải là admin không
+  isAdmin(): boolean {
+    const user = this.getCurrentUser();
+    return !!user && user.role === 'admin';
+  }
+
+  // Kiểm tra xem người dùng có phải là business không
+  isBusiness(): boolean {
+    const user = this.getCurrentUser();
+    return !!user && user.role === 'business';
+  }
+
+  // Kiểm tra xem người dùng có phải là hotel manager không
+  isHotelManager(): boolean {
+    const user = this.getCurrentUser();
+    return !!user && user.role === 'hotel';
+  }
+
+  // Lấy businessId của người dùng hiện tại
+  getBusinessId(): string | null {
+    const user = this.getCurrentUser();
+    return user && user.businessId ? user.businessId : null;
+  }
+
+  // Lấy hotelId của người dùng hiện tại
+  getHotelId(): string | null {
+    const user = this.getCurrentUser();
+    return user && user.hotelId ? user.hotelId : null;
+  }
+
+  // Kiểm tra xem người dùng có quyền truy cập tài nguyên không
+  canAccessResource(resourceId: string): boolean {
+    const user = this.getCurrentUser();
+    if (!user) return false;
+
+    if (user.role === 'admin') return true;
+    
+    if (user.role === 'business' && user.businessId) {
+      return user.businessId === resourceId;
+    }
+    
+    if (user.role === 'hotel' && user.hotelId) {
+      return user.hotelId === resourceId;
+    }
+    
+    return false;
+  }
 }

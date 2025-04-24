@@ -1,35 +1,296 @@
-<div class="slider-container">
-    <nz-switch [(ngModel)]="switchValue"></nz-switch>
-    <div *ngIf="switchValue">
-      <span>Horizontal Gutter (px):</span>
-      <div class="slider">
-        <nz-slider [nzMarks]="marksHGutter" [nzStep]="null" [nzMin]="8" [nzMax]="48" [(ngModel)]="hGutter"></nz-slider>
-      </div>
-      <span>Vertical Gutter (px):</span>
-      <div class="slider">
-        <nz-slider [nzMarks]="marksVGutter" [nzStep]="null" [nzMin]="8" [nzMax]="48" [(ngModel)]="vGutter"></nz-slider>
-      </div>
-      <span>Column Count:</span>
-      <div class="slider">
-        <nz-slider [nzMarks]="marksCount" [nzStep]="null" [nzMin]="2" [nzMax]="12" [(ngModel)]="count"
-          (ngModelChange)="reGenerateArray($event)"></nz-slider>
+<div class="room-container">
+  <!-- Nút giao ca và các điều khiển khách -->
+  <div class="action-bar mb-3">
+    <div nz-row>
+      <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+        <div class="action-buttons">
+          <button nz-button nzType="primary" (click)="openShiftHandoverModal()" title="Giao ca">
+            <i nz-icon nzType="sync" nzTheme="outline"></i> Giao ca
+          </button>
+          
+          <nz-divider nzType="vertical"></nz-divider>
+          
+          <button nz-button nzType="default" (click)="showRoomHistory()" title="Lịch sử phòng">
+            <i nz-icon nzType="history" nzTheme="outline"></i> Lịch sử
+          </button>
+        </div>
       </div>
     </div>
   </div>
-  
-  <div class="gutter-example">
-    <div nz-row [nzGutter]="[hGutter, vGutter]">
-      <ng-container *ngIf="(productService.products$ | async) as rooms">
-        <div nz-col [nzSpan]="24 / count" *ngFor="let room of (rooms | sortRooms: 'roomNumber')">
-          <div class="grid-config" appModalControl [room]="room" [ngClass]="getRoomStatusClass(room.roomStatus)">
-            <nz-card [nzBordered]="false">
-              <div>{{ room?.roomNumber }}</div>
-            </nz-card>
+
+  <!-- Bộ lọc phòng -->
+  <div class="filter-section">
+    <div nz-row [nzGutter]="16">
+      <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="8" [nzLg]="6">
+        <nz-form-item>
+          <nz-form-label>Khách sạn</nz-form-label>
+          <nz-form-control>
+            <nz-select 
+              nzPlaceHolder="Chọn khách sạn" 
+              [(ngModel)]="selectedHotelId" 
+              (ngModelChange)="onHotelChange($event)"
+              class="w-100">
+              <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="6">
+        <nz-form-item>
+          <nz-form-label>Tầng</nz-form-label>
+          <nz-form-control>
+            <nz-select 
+              nzPlaceHolder="Chọn tầng" 
+              [(ngModel)]="selectedFloor"
+              (ngModelChange)="onFloorChange($event)"
+              class="w-100"
+              nzAllowClear>
+              <nz-option *ngFor="let floor of floors" [nzValue]="floor" [nzLabel]="'Tầng ' + floor"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="6">
+        <nz-form-item>
+          <nz-form-label>Hiển thị</nz-form-label>
+          <nz-form-control>
+            <div class="display-controls">
+              <nz-slider 
+                [nzMarks]="marksCount" 
+                [nzStep]="null" 
+                [nzMin]="2" 
+                [nzMax]="12" 
+                [(ngModel)]="count"
+                (ngModelChange)="reGenerateArray($event)">
+              </nz-slider>
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+    
+    <div nz-row>
+      <div nz-col [nzSpan]="24">
+        <div class="legend mt-2">
+          <span class="legend-item">
+            <span class="status-dot available"></span>
+            <span>Trống</span>
+          </span>
+          <span class="legend-item">
+            <span class="status-dot occupied"></span>
+            <span>Đang sử dụng</span>
+          </span>
+          <span class="legend-item">
+            <span class="status-dot dirty"></span>
+            <span>Cần dọn dẹp</span>
+          </span>
+          <span class="legend-item">
+            <span class="status-dot maintenance"></span>
+            <span>Bảo trì</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hiển thị lưới phòng -->
+  <div class="room-grid mt-3">
+    <nz-spin [nzSpinning]="isLoading">
+      <div class="floor-info" *ngIf="selectedFloor !== null">
+        <h3>Tầng {{ selectedFloor }}</h3>
+      </div>
+      
+      <!-- Lưới phòng -->
+      <div nz-row [nzGutter]="[hGutter, vGutter]">
+        <div 
+          nz-col 
+          [nzXs]="24" 
+          [nzSm]="12" 
+          [nzMd]="24 / (count > 6 ? 6 : count)" 
+          [nzLg]="24 / count" 
+          *ngFor="let room of rooms"
+          class="room-col">
+          <div 
+            class="room-item" 
+            [ngClass]="getRoomStatusClass(room.roomStatus)"
+            appModalControl 
+            [room]="room">
+            <div class="room-number">{{ room.roomNumber }}</div>
+            <div class="room-floor">Tầng {{ room.floor }}</div>
+            <div class="room-type">{{ room.roomType }}</div>
+            <div class="room-status">{{ room.roomStatus }}</div>
           </div>
         </div>
-      </ng-container>
-    </div>
+      </div>
+      
+      <!-- Hiển thị khi không có phòng -->
+      <div class="empty-state" *ngIf="rooms.length === 0 && !isLoading">
+        <nz-empty 
+          [nzNotFoundContent]="selectedHotelId ? 'Không tìm thấy phòng nào' : 'Vui lòng chọn khách sạn'"
+          [nzNotFoundImage]="'simple'">
+        </nz-empty>
+      </div>
+    </nz-spin>
   </div>
   
+  <!-- Lịch sử phòng -->
   <app-room-history></app-room-history>
+</div>
+
+<style>
+  .room-container {
+    padding: 16px;
+  }
+  
+  .filter-section {
+    background-color: #f5f5f5;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .w-100 {
+    width: 100%;
+  }
+  
+  .mt-2 {
+    margin-top: 8px;
+  }
+  
+  .mt-3 {
+    margin-top: 16px;
+  }
+  
+  .room-grid {
+    background-color: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+  }
+  
+  .room-item {
+    height: 120px;
+    padding: 16px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+  }
+  
+  .room-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  }
+  
+  .room-number {
+    font-size: 24px;
+    font-weight: bold;
+  }
+  
+  .room-floor {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  
+  .room-type {
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  
+  .room-status {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  
+  .inactive-room {
+    background-color: #52c41a;
+    color: white;
+  }
+  
+  .active-room {
+    background-color: #f5222d;
+    color: white;
+  }
+  
+  .dirty-room {
+    background-color: #fa8c16;
+    color: white;
+  }
+  
+  .maintenance-room {
+    background-color: #722ed1;
+    color: white;
+  }
+  
+  .cleaning-room {
+    background-color: #1890ff;
+    color: white;
+  }
+  
+  .floor-info {
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .empty-state {
+    padding: 32px 0;
+  }
+  
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+  }
+  
+  .status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 4px;
+  }
+  
+  .status-dot.available {
+    background-color: #52c41a;
+  }
+  
+  .status-dot.occupied {
+    background-color: #f5222d;
+  }
+  
+  .status-dot.dirty {
+    background-color: #fa8c16;
+  }
+  
+  .status-dot.maintenance {
+    background-color: #722ed1;
+  }
+  
+  /* Responsive styles */
+  @media (max-width: 575px) {
+    .room-item {
+      height: 100px;
+    }
+    
+    .room-number {
+      font-size: 20px;
+    }
+    
+    .legend {
+      justify-content: space-between;
+      gap: 8px;
+    }
+  }
+</style>
   
