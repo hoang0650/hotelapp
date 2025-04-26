@@ -242,7 +242,11 @@ export class RoomServiceComponent implements OnInit {
   }
 
   calculateTotal(): void {
-    this.totalAmount = this.cart.reduce((total, item) => total + item.totalPrice, 0);
+    this.totalAmount = this.cart.reduce((total, item) => {
+      const itemTotal = item.totalPrice !== undefined ? 
+        item.totalPrice : (item.price * item.quantity);
+      return total + itemTotal;
+    }, 0);
   }
 
   clearCart(): void {
@@ -365,8 +369,11 @@ export class RoomServiceComponent implements OnInit {
     }
   }
 
-  formatCurrency(amount: number): string {
-    return amount.toLocaleString('vi-VN') + ' đ';
+  formatCurrency(amount: number | undefined): string {
+    if (amount === undefined) {
+      return this.formatterVND(0);
+    }
+    return this.formatterVND(amount);
   }
 
   formatterVND = (value: number): string => `${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} đ`;

@@ -50,9 +50,11 @@ export interface GuestInfo {
 export interface OrderedService {
     serviceId: string;
     serviceName: string;
-    quantity: number;
     price: number;
-    totalPrice: number;
+    quantity: number;
+    totalPrice?: number;
+    orderTime?: Date;
+    notes?: string;
 }
 
 // Interface cho lịch sử đặt phòng

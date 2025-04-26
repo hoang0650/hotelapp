@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { BrowserModule, provideClientHydration } from '@angular/platform-browser';
 import { NgxEchartsModule } from 'ngx-echarts'; // Import NgxEchartsModule
 import { HighchartsChartModule } from 'highcharts-angular';
+import { DatePipe } from '@angular/common'; // Import DatePipe
 
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
@@ -179,6 +180,7 @@ registerLocaleData(en);
         { provide: NZ_I18N, useValue: en_US },
         provideAnimationsAsync(),
         provideHttpClient(),
-        provideHttpClient(withInterceptorsFromDi())
+        provideHttpClient(withInterceptorsFromDi()),
+        DatePipe
     ] })
 export class AppModule { }

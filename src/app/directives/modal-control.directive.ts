@@ -5,16 +5,17 @@ import { take, takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { RoomContentModalComponent } from '../components/room-content-modal/room-content-modal.component';
 import { InvoiceComponent } from '../components/invoice/invoice.component';
+import { Room } from '../interfaces/rooms';
 
 @Directive({
   selector: '[appModalControl]',
   exportAs: 'appModalControl'
 })
 export class ModalControlDirective implements OnInit, OnDestroy {
-  @Input() room: any; // Phòng được truyền vào directive
+  @Input() room!: Room; // Phòng được truyền vào directive
   private destroy$ = new Subject<void>();
   private modalRef: NzModalRef | null = null;
-
+  newRoom: any;
   constructor(
     private modalService: NzModalService,
     private roomsService: RoomsService
@@ -29,9 +30,11 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  @HostListener('click') onClick() {
+  @HostListener('click') 
+  onClick(): void {
     if (this.room) {
-      this.showModal();
+      const modalType = this.getModalType();
+      this.showModal(this.room, modalType);
     }
   }
 
@@ -179,7 +182,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     }
     
     // Lấy danh sách phòng trống
-    this.roomsService.getAvailableRooms(this.room.hotelId).pipe(
+    this.roomsService.getAvailableRooms({ hotelId: this.room.hotelId }).pipe(
       take(1),
       takeUntil(this.destroy$)
     ).subscribe(
@@ -416,34 +419,36 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     });
   }
 
-  showModal(): void {
-    // Xác định loại modal dựa trên trạng thái phòng
-    const modalType = this.getModalType();
-    const modalTitle = this.getModalTitle();
-
-    // Tạo cấu hình modal tùy theo trạng thái phòng
-    this.modalRef = this.modalService.create({
-      nzTitle: modalTitle,
-      nzContent: RoomContentModalComponent,
-      nzData: {
-        roomData: this.room,
-        skipValidation: false, // Đổi thành false để bật validation mặc định
-        modalType: modalType 
-      },
-      nzWidth: 800,
-      nzFooter: null, 
-      nzMaskClosable: false,
-      nzClosable: true,
-      // Bỏ nzOnOk vì logic xử lý đã nằm trong component
-    });
+  showModal(room: Room, type: string): void {
+    console.log(`Hiển thị modal với type: ${type} cho phòng ${room.roomNumber}`);
     
-    // Lắng nghe sự kiện đóng modal để cập nhật dữ liệu
-    this.modalRef.afterClose.pipe(
-      take(1),
-      takeUntil(this.destroy$)
-    ).subscribe(() => {
-      this.roomsService.notifyRoomDataUpdated();
+    const modal = this.modalService.create({
+      nzTitle: `Phòng ${room.roomNumber}`,
+      nzContent: RoomContentModalComponent,
+      nzFooter: null,
+      nzMaskClosable: false,
+      nzClassName: 'room-detail-modal',
+      nzWidth: 700,
+      nzData: {
+        roomData: room,
+        modalType: type
+      }
     });
+
+    this.modalRef = modal;
+  }
+
+  handleLabel(): string{
+    switch (this.room.roomStatus) {
+      case 'available':
+        return 'Nhận Phòng';
+      case 'active':
+        return 'Trả Phòng';
+      case 'dirty':
+        return 'Dọn Dẹp';
+      default:
+        return 'Nhận Phòng'; // Handle any other cases or return a default class
+    }
   }
 
   // Xác định loại modal dựa trên trạng thái phòng
@@ -477,6 +482,337 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       default:
         return 'Thông Tin Phòng';
     }
+  }
+
+  handleCheck(): void {
+    if (!this.room || !this.room._id) {
+      console.warn('Invalid room or room ID provided.');
+      this.modalRef?.close();
+      return;
+    }
+  
+    const lastEvent = this.room.events && this.room.events.length > 0 
+      ? this.room.events[this.room.events.length - 1] 
+      : null;
+  
+    if (this.room.roomStatus === 'available') {
+      
+      // Room is available, perform check-in
+      this.newRoom = {
+        roomStatus: 'active',
+        events: [
+          ...(this.room.events || []),
+          {
+            type: 'checkin',
+            checkinTime: new Date(),
+          },
+        ],
+      };
+      this.roomsService.checkInRoom(this.room._id, this.newRoom)
+      .pipe(take(1))
+      .subscribe(
+        (room) => {
+          console.log('Check-in/out successful. Room:', room);
+          this.roomsService.notifyRoomDataUpdated();
+          this.modalRef?.close();
+        },
+        (error) => {
+          console.error('Error during check-in/out:', error);
+          this.modalRef?.close();
+        }
+      );
+    } else if (this.room.roomStatus === 'active' && lastEvent && lastEvent.type === 'checkin') {
+      // Room is active and last event is check-in, perform check-out    
+      const updatedLastEvent = {
+        ...lastEvent,
+        type: 'checkout',
+        checkoutTime: new Date(),
+        payment: this.calculatePayment(lastEvent.checkinTime, new Date(), this.room.roomType)
+      };
+  
+      this.newRoom = {
+        roomStatus: 'dirty',
+        events: [
+          ...(this.room.events || []).slice(0, -1),
+          updatedLastEvent,
+          {
+            type: 'checkout',
+            checkoutTime: new Date(),
+            payment: updatedLastEvent.payment,
+          },
+        ]
+      };
+      
+      this.roomsService.checkOutRoom(this.room._id, this.newRoom)
+      .pipe(take(1))
+      .subscribe(
+        (room) => {
+          console.log('Check-in/out successful. Room:', room);
+          this.roomsService.notifyRoomDataUpdated();
+          const invoiceData = this.generateInvoice(this.room.roomNumber.toString());
+          this.showInvoice(invoiceData);
+          this.modalRef?.close();
+        },
+        (error) => {
+          console.error('Error during check-in/out:', error);
+          this.modalRef?.close();
+        }
+      );
+    } else if(this.room.roomStatus === 'dirty' && lastEvent && lastEvent.type === 'checkout'){
+      this.newRoom = {
+        roomStatus: 'available',
+      };
+      this.roomsService.cleanRoom(this.room._id, this.newRoom)
+      .pipe(take(1))
+      .subscribe(
+        (room) => {
+          console.log('Clean successful. Room:', room);
+          this.roomsService.notifyRoomDataUpdated();
+          this.modalRef?.close();
+        },
+        (error) => {
+          console.error('Error during check-in/out:', error);
+          this.modalRef?.close();
+        }
+      );
+    } else {
+      // Handle other cases as needed
+      console.warn('Invalid room status or room not in a check-in state for check-in/check-out.');
+      this.modalRef?.close();
+      return;
+    }
+  }
+
+  calculatePayment(checkinTime: any, checkoutTime: any, roomType: any): number {
+    if (!checkinTime || !checkoutTime) {
+      return 0;
+    }
+
+    // Chuyển đổi chuỗi ngày thành đối tượng Date
+    const checkinDate = new Date(checkinTime);
+    const checkoutDate = new Date(checkoutTime);
+    
+    // Tính thời gian sử dụng phòng
+    const durationInHours = Math.ceil((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60));
+    const durationInDays = Math.ceil(durationInHours / 24);
+    
+    // Lấy thông tin check-in/check-out
+    const checkInHour = checkinDate.getHours();
+    const checkOutHour = checkoutDate.getHours();
+    const isWeekend = [0, 6].includes(checkinDate.getDay()); // Kiểm tra có phải cuối tuần (thứ 7, chủ nhật)
+    
+    // Biến lưu kết quả
+    let roomTotal = 0;
+    let serviceTotal = 0;
+    let additionalCharge = 0;
+    let discount = 0;
+    
+    // --- TÍNH GIÁ PHÒNG ---
+    // Xác định loại giá (hourly, daily, nightly)
+    let rateType = 'hourly'; // Mặc định theo giờ
+    
+    // Nếu check-in sau 22h, sử dụng giá đêm
+    if (checkInHour >= 22) {
+      rateType = 'nightly';
+    }
+    
+    // Nếu thời gian lưu trú > 12 giờ, sử dụng giá ngày
+    if (durationInHours > 12) {
+      rateType = 'daily';
+    }
+    
+    // Tính giá dựa theo loại giá
+    switch (rateType) {
+      case 'hourly':
+        // Giá giờ đầu
+        roomTotal = this.room.firstHourRate || this.room.hourlyRate;
+        
+        // Tính giá cho các giờ tiếp theo
+        if (durationInHours > 1) {
+          const additionalHours = durationInHours - 1;
+          const additionalHourRate = this.room.additionalHourRate || (this.room.hourlyRate * 0.8); // Nếu không có giá giờ bổ sung, lấy 80% giá giờ đầu
+          roomTotal += additionalHours * additionalHourRate;
+        }
+        
+        // Nếu số giờ vượt quá 6 giờ, chuyển sang tính ngày
+        if (durationInHours > 6) {
+          roomTotal = this.room.dailyRate;
+        }
+        break;
+        
+      case 'daily':
+        // Tính số ngày (làm tròn lên)
+        roomTotal = durationInDays * this.room.dailyRate;
+        
+        // Phụ thu cuối tuần nếu có
+        if (isWeekend) {
+          // Giả sử phụ thu là 20% cho cuối tuần
+          additionalCharge += roomTotal * 0.2;
+        }
+        break;
+        
+      case 'nightly':
+        // Giá qua đêm
+        roomTotal = this.room.nightlyRate;
+        
+        // Nếu ở nhiều hơn 1 đêm
+        if (durationInDays > 1) {
+          roomTotal += (durationInDays - 1) * this.room.dailyRate;
+        }
+        break;
+    }
+    
+    // --- TÍNH TIỀN DỊCH VỤ ---
+    const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
+    if (savedCheckinData) {
+      try {
+        const checkinInfo = JSON.parse(savedCheckinData);
+        if (checkinInfo.selectedServices && Array.isArray(checkinInfo.selectedServices) && checkinInfo.selectedServices.length > 0) {
+          // Tính tổng tiền dịch vụ
+          serviceTotal = checkinInfo.selectedServices.reduce((sum: number, service: any) => {
+            return sum + (service.price * (service.quantity || 1));
+          }, 0);
+        }
+        
+        // Lấy phụ thu từ thông tin check-in (nếu có)
+        if (checkinInfo.additionalCharges) {
+          additionalCharge += checkinInfo.additionalCharges;
+        }
+        
+        // Lấy giảm giá từ thông tin check-in (nếu có)
+        if (checkinInfo.discount) {
+          discount += checkinInfo.discount;
+        }
+      } catch (error) {
+        console.error('Lỗi khi tính tiền dịch vụ:', error);
+      }
+    }
+    
+    // --- TÍNH KHUYẾN MÃI ---
+    // Khuyến mãi theo thời gian lưu trú (ví dụ: giảm 10% nếu ở từ 3 ngày trở lên)
+    if (durationInDays >= 3) {
+      discount += roomTotal * 0.1;
+    }
+    
+    // --- TÍNH PHỤ THU ---
+    // Phụ thu trả phòng muộn (nếu trả phòng sau 12h trưa và trước 18h)
+    if (checkOutHour > 12 && checkOutHour < 18 && rateType !== 'hourly') {
+      // Phụ thu 50% giá giờ
+      additionalCharge += this.room.hourlyRate * 0.5;
+    }
+    
+    // --- TÍNH TỔNG TIỀN ---
+    const totalPrice = roomTotal + serviceTotal + additionalCharge - discount;
+    
+    return Math.max(0, Math.round(totalPrice)); // Đảm bảo không âm và làm tròn
+  }
+
+  // Hàm generateInvoice mới
+  generateInvoice(roomNumber: string): any {
+    if (!this.room || !this.room._id) {
+      console.warn('Không có thông tin phòng hợp lệ để tạo hóa đơn.');
+      return null;
+    }
+    
+    // Tìm event check-in và check-out mới nhất
+    let checkinEvent, checkoutEvent;
+    
+    if (this.room.events && this.room.events.length > 0) {
+      checkinEvent = this.room.events.find((event: any) => event.type === 'checkin');
+      checkoutEvent = this.room.events.find((event: any) => event.type === 'checkout');
+    }
+    
+    // Lấy thông tin lưu trữ từ localStorage nếu có
+    const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
+    let checkinInfo = null;
+    
+    if (savedCheckinData) {
+      try {
+        checkinInfo = JSON.parse(savedCheckinData);
+      } catch (error) {
+        console.error('Lỗi khi phân tích dữ liệu check-in:', error);
+      }
+    }
+    
+    // Tính thời gian sử dụng
+    const checkInTime = new Date(checkinEvent?.checkinTime || checkinInfo?.checkinTime || new Date());
+    const checkOutTime = new Date(checkoutEvent?.checkoutTime || new Date());
+    const durationInHours = Math.ceil((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60));
+    const durationInDays = Math.ceil(durationInHours / 24);
+    
+    // Tính tiền phòng và dịch vụ
+    const roomTotal = checkoutEvent?.payment || this.calculatePayment(checkInTime, checkOutTime, this.room.roomType);
+    let serviceTotal = 0;
+    let additionalCharges = checkinInfo?.additionalCharges || 0;
+    let discount = checkinInfo?.discount || 0;
+    let selectedServices = [];
+    
+    // Tính tiền dịch vụ
+    if (checkinInfo?.selectedServices && Array.isArray(checkinInfo.selectedServices)) {
+      selectedServices = checkinInfo.selectedServices;
+      serviceTotal = checkinInfo.selectedServices.reduce((sum: number, service: any) => {
+        return sum + (service.price * (service.quantity || 1));
+      }, 0);
+    }
+    
+    // Tính tổng tiền
+    const totalAmount = roomTotal + serviceTotal + additionalCharges - discount;
+    
+    // Tạo dữ liệu hóa đơn
+    const invoiceData: any = {
+      invoiceNumber: 'INV-' + new Date().getTime(),
+      date: new Date(),
+      customerName: checkinInfo?.guestInfo?.name || 'Khách lẻ',
+      customerPhone: checkinInfo?.guestInfo?.phone || '',
+      customerEmail: checkinInfo?.guestInfo?.email || '',
+      staffName: localStorage.getItem('staffName') || 'Nhân viên',
+      roomNumber: roomNumber,
+      roomType: this.room.roomType || 'Phòng thường',
+      checkInTime: checkInTime,
+      checkOutTime: checkOutTime,
+      duration: {
+        hours: durationInHours,
+        days: durationInDays
+      },
+      
+      // Thông tin tài chính
+      roomAmount: roomTotal,
+      serviceAmount: serviceTotal,
+      additionalCharges: additionalCharges,
+      discount: discount,
+      totalAmount: totalAmount,
+      paymentMethod: checkinInfo?.paymentMethod || 'cash',
+      advancePayment: checkinInfo?.advancePayment || 0,
+      
+      // Thông tin khách sạn
+      hotelId: this.room.hotelId,
+      
+      // Thông tin dịch vụ
+      products: []
+    };
+    
+    // Thêm sản phẩm/dịch vụ tiền phòng
+    invoiceData.products.push({
+      name: `Tiền phòng ${roomNumber}`,
+      price: roomTotal,
+      quantity: 1
+    });
+    
+    // Thêm các dịch vụ đã sử dụng
+    if (selectedServices.length > 0) {
+      const services = selectedServices.map((service: any) => ({
+        name: service.serviceName || 'Dịch vụ',
+        price: service.price || 0,
+        quantity: service.quantity || 1
+      }));
+      
+      invoiceData.products = [...invoiceData.products, ...services];
+    }
+    
+    // Thêm thông tin khách hàng
+    invoiceData.guestDetails = checkinInfo?.guestInfo || {};
+    
+    return invoiceData;
   }
 
   // Hiển thị hóa đơn

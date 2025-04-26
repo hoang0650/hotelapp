@@ -1,5 +1,8 @@
-<div *ngIf="modalType === 'checkin'">
-  <ng-container *ngIf="roomData.roomStatus === 'available'; else checkinError">
+<!-- Debug info -->
+
+
+<div *ngIf="modalType === 'checkin'" class="checkin-form">
+  <ng-container *ngIf="roomData?.roomStatus === 'available'; else checkinError">
     <h3>Nhận phòng {{ roomData.roomNumber }} - Tầng {{ roomData.floor }}</h3>
     
     <div class="mb-3 room-rates">
@@ -193,8 +196,8 @@
     <nz-alert nzType="error" [nzMessage]="errorTitleCheckin" [nzDescription]="errorDescCheckin" nzShowIcon></nz-alert>
     <ng-template #errorTitleCheckin>Không thể nhận phòng</ng-template>
     <ng-template #errorDescCheckin>
-      Phòng <strong>{{ roomData.roomNumber }}</strong> hiện đang ở trạng thái 
-      <strong>'{{ roomData.roomStatus }}'</strong> và không sẵn sàng để nhận phòng.
+      Phòng <strong>{{ roomData?.roomNumber }}</strong> hiện đang ở trạng thái 
+      <strong>'{{ roomData?.roomStatus }}'</strong> và không sẵn sàng để nhận phòng.
     </ng-template>
     <div class="footer-actions text-right mt-3">
       <button nz-button (click)="closeModal()">Đóng</button>
@@ -202,8 +205,8 @@
   </ng-template>
 </div>
 
-<div *ngIf="modalType === 'checkout'">
-  <ng-container *ngIf="roomData.roomStatus === 'occupied' || roomData.roomStatus === 'active'; else checkoutError">
+<div *ngIf="modalType === 'checkout'" class="checkout-form">
+  <ng-container *ngIf="roomData?.roomStatus === 'occupied' || roomData?.roomStatus === 'active'; else checkoutError">
     <h3>Trả phòng {{ roomData.roomNumber }} - Tầng {{ roomData.floor }}</h3>
     
     <div class="mb-3">
@@ -366,8 +369,8 @@
     <nz-alert nzType="error" [nzMessage]="errorTitleCheckout" [nzDescription]="errorDescCheckout" nzShowIcon></nz-alert>
     <ng-template #errorTitleCheckout>Không thể trả phòng</ng-template>
     <ng-template #errorDescCheckout>
-      Phòng <strong>{{ roomData.roomNumber }}</strong> hiện không có khách (Trạng thái: 
-      <strong>'{{ roomData.roomStatus }}'</strong>).
+      Phòng <strong>{{ roomData?.roomNumber }}</strong> hiện không có khách (Trạng thái: 
+      <strong>'{{ roomData?.roomStatus }}'</strong>).
     </ng-template>
     <div class="footer-actions text-right mt-3">
       <button nz-button (click)="closeModal()">Đóng</button>
@@ -375,12 +378,12 @@
   </ng-template>
 </div>
 
-<div *ngIf="modalType === 'cleaning'">
-  <ng-container *ngIf="roomData.roomStatus === 'dirty' || roomData.roomStatus === 'maintenance'; else cleaningError">
-    <h3>Xác nhận cập nhật trạng thái phòng {{ roomData.roomNumber }}</h3>
+<div *ngIf="modalType === 'cleaning'" class="cleaning-form">
+  <ng-container *ngIf="roomData?.roomStatus === 'dirty' || roomData?.roomStatus === 'maintenance'; else cleaningError">
+    <h3>Xác nhận cập nhật trạng thái phòng {{ roomData?.roomNumber }}</h3>
     <p>
       Bạn có chắc chắn muốn cập nhật trạng thái phòng từ 
-      <strong>'{{ roomData.roomStatus }}'</strong> thành <strong>'available'</strong> (Sẵn sàng) không?
+      <strong>'{{ roomData?.roomStatus }}'</strong> thành <strong>'available'</strong> (Sẵn sàng) không?
     </p>
     <div class="footer-actions text-right mt-3">
       <button nz-button (click)="closeModal()" type="button" class="mr-2">
@@ -395,13 +398,31 @@
     <nz-alert nzType="warning" [nzMessage]="errorTitleCleaning" [nzDescription]="errorDescCleaning" nzShowIcon></nz-alert>
     <ng-template #errorTitleCleaning>Không thể thực hiện thao tác</ng-template>
     <ng-template #errorDescCleaning>
-      Phòng <strong>{{ roomData.roomNumber }}</strong> hiện không cần dọn dẹp hoặc đang ở trạng thái 
-      <strong>'{{ roomData.roomStatus }}'</strong>.
+      Phòng <strong>{{ roomData?.roomNumber }}</strong> hiện không cần dọn dẹp hoặc đang ở trạng thái 
+      <strong>'{{ roomData?.roomStatus }}'</strong>.
     </ng-template>
     <div class="footer-actions text-right mt-3">
       <button nz-button (click)="closeModal()">Đóng</button>
     </div>
   </ng-template>
+</div>
+
+<div *ngIf="modalType !== 'checkin' && modalType !== 'checkout' && modalType !== 'cleaning'" class="default-form">
+  <h3>Thông tin phòng {{ roomData?.roomNumber }}</h3>
+  <p>Trạng thái hiện tại: <strong>{{ roomData?.roomStatus }}</strong></p>
+  <p>Loại phòng: <strong>{{ roomData?.roomType }}</strong></p>
+  <p>Tầng: <strong>{{ roomData?.floor }}</strong></p>
+  
+  <div class="mb-3 room-rates">
+    <strong>Giá phòng:</strong>
+    <p>Theo giờ: {{ roomData?.hourlyRate | number }} đ</p>
+    <p>Theo ngày: {{ roomData?.dailyRate | number }} đ</p>
+    <p>Qua đêm: {{ roomData?.nightlyRate | number }} đ</p>
+  </div>
+  
+  <div class="footer-actions text-right mt-3">
+    <button nz-button (click)="closeModal()">Đóng</button>
+  </div>
 </div>
 
 <div class="text-center" *ngIf="isLoading">
@@ -427,4 +448,5 @@
     font-size: 0.95em;
   }
 </style>
+
   

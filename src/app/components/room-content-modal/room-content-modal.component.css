@@ -1,0 +1,17 @@
+.room-rates span {
+    display: inline-block;
+    margin-right: 15px;
+    padding: 2px 5px;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+    font-size: 0.9em;
+  }
+  .compact-list {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0;
+  }
+  .compact-list li {
+    margin-bottom: 3px;
+    font-size: 0.95em;
+  }
