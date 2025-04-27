@@ -142,35 +142,32 @@ export class RoomsService {
   }
 
   // Lịch sử phòng
-  getRoomHistory(params: { hotelId?: string, roomId?: string, page?: number, limit?: number }): Observable<{
+  getRoomHistory(hotelId?: string, filterType?: string, page: number = 1, limit: number = 20): Observable<{
     history: BookingHistory[],
     totalPages: number,
     currentPage: number,
-    totalPayment: number
+    totalPayment: number,
+    totalItems: number
   }> {
     let httpParams = new HttpParams();
     
-    if (params.hotelId) {
-      httpParams = httpParams.set('hotelId', params.hotelId);
+    if (hotelId) {
+      httpParams = httpParams.set('hotelId', hotelId);
     }
     
-    if (params.roomId) {
-      httpParams = httpParams.set('roomId', params.roomId);
+    if (filterType) {
+      httpParams = httpParams.set('filterType', filterType);
     }
     
-    if (params.page !== undefined) {
-      httpParams = httpParams.set('page', params.page.toString());
-    }
-    
-    if (params.limit !== undefined) {
-      httpParams = httpParams.set('limit', params.limit.toString());
-    }
+    httpParams = httpParams.set('page', page.toString());
+    httpParams = httpParams.set('limit', limit.toString());
     
     return this.http.get<{
       history: BookingHistory[],
       totalPages: number,
       currentPage: number,
-      totalPayment: number
+      totalPayment: number,
+      totalItems: number
     }>(`${this.apiUrl}/history`, { params: httpParams });
   }
 

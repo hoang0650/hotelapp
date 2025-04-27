@@ -46,6 +46,28 @@
       <i nz-icon nzType="file-excel"></i>
       <span>Xuất Excel</span>
     </button>
+    <button nz-button nzType="primary" nzDanger (click)="openShiftHandoverModal()" nz-tooltip nzTooltipTitle="Giao ca" aria-label="Giao ca">
+      <i nz-icon nzType="sync"></i>
+      <span>Giao ca</span>
+    </button>
+    
+    <!-- Nút lọc dữ liệu -->
+    <nz-select 
+      [ngModel]="currentFilterType" 
+      (ngModelChange)="onFilterChange($event)" 
+      nzPlaceHolder="Lọc lịch sử"
+      style="min-width: 150px; margin-left: 8px"
+    >
+      <nz-option nzValue="all" nzLabel="Tất cả lịch sử"></nz-option>
+      <nz-option nzValue="checkout" nzLabel="Checkout mới nhất"></nz-option>
+      <nz-option nzValue="checkin" nzLabel="Check-in"></nz-option>
+      <nz-option nzValue="maintenance" nzLabel="Bảo trì"></nz-option>
+    </nz-select>
+    
+    <!-- Nút tải lại dữ liệu -->
+    <button nz-button nzType="default" (click)="loadHistory(currentFilterType)" [nzLoading]="settingValue.loading" nz-tooltip nzTooltipTitle="Tải lại dữ liệu" aria-label="Tải lại dữ liệu">
+      <i nz-icon nzType="reload"></i>
+    </button>
   </div>
   <div class="right-controls">
     <nz-input-group [nzSuffix]="suffixIconSearch">
@@ -111,8 +133,8 @@
       <th [nzWidth]="'100px'" [nzLeft]="fixedColumn">Phòng</th>
       <th [nzWidth]="'150px'">Khách hàng</th>
       <th [nzWidth]="'180px'">Thời gian</th>
-      <th [nzWidth]="'150px'">Trạng thái</th>
-      <th [nzWidth]="'150px'">Phương thức</th>
+      <th [nzWidth]="'120px'">Trạng thái</th>
+      <th [nzWidth]="'130px'">Hình thức</th>
       <th [nzWidth]="'150px'">Số tiền</th>
       <th [nzWidth]="'120px'" [nzRight]="fixedColumn">Thao tác</th>
     </tr>
@@ -141,22 +163,25 @@
         </td>
         <td>{{ data.customerName || 'Khách lẻ' }}</td>
         <td>
-           {{ data.checkinTime | date:'dd/MM HH:mm' }} - {{ data.checkoutTime | date:'dd/MM HH:mm' }}
+           <div>Nhận: {{ formatDateTime(data.checkInTime) }}</div>
+           <div>Trả: {{ formatDateTime(data.checkOutTime) }}</div>
+           <div class="time-duration" *ngIf="data.checkInTime && data.checkOutTime">
+             ({{ calculateDuration(data.checkInTime, data.checkOutTime) }})
+           </div>
         </td>
         <td>
-          <nz-tag [nzColor]="getPaymentStatusColor(data.payment?.status)">
-            {{ getPaymentStatusText(data.payment?.status) }}
+          <nz-tag [nzColor]="getPaymentStatusColor((data.amount > 0 || data.totalAmount > 0) ? 'paid' : data.paymentStatus)">
+            {{ getPaymentStatusText((data.amount > 0 || data.totalAmount > 0) ? 'paid' : data.paymentStatus) }}
           </nz-tag>
-          <div *ngIf="data.payment?.amount" class="payment-amount">
-            {{ data.payment.amount | currency:'VND':'symbol-narrow':'1.0-0' }}
-          </div>
         </td>
         <td>
-          {{ data.payment }}
-       </td>
-       <td>
-        {{ data.payment }}
-      </td>
+          <nz-tag [nzColor]="getPaymentMethodColor(data.paymentMethod || 'cash')">
+            {{ getPaymentMethodLabel(data.paymentMethod || 'cash') }}
+          </nz-tag>
+        </td>
+        <td>
+          {{ (data.amount || data.totalAmount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+        </td>
         <td [nzRight]="fixedColumn">
           <div class="action-buttons">
             <button
@@ -169,42 +194,42 @@
               aria-label="Xem hóa đơn">
               <i nz-icon nzType="file-text"></i>
             </button>
-             <!-- Các nút sửa/xóa đã bị loại bỏ -->
           </div>
         </td>
       </tr>
       <tr *ngIf="data.expand">
-         <!-- Cập nhật colspan -->
-        <td [attr.colspan]="settingValue.checkbox ? 7 : 6">
+        <td [attr.colspan]="(settingValue.checkbox && settingValue.expandable) ? 9 : ((settingValue.checkbox || settingValue.expandable) ? 8 : 7)">
           <div class="expanded-row">
             <nz-card [nzTitle]="'Thông tin chi tiết phòng ' + data.roomNumber" [nzBordered]="false">
               <nz-descriptions [nzBordered]="true" [nzSize]="'small'">
                 <nz-descriptions-item nzTitle="Loại phòng" [nzSpan]="1">
-                  {{ data.type }}
+                  {{ data.roomType || 'Không xác định' }}
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Số điện thoại" [nzSpan]="2">
                   {{ data.customerPhone || 'Không có' }}
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Thời gian ở" [nzSpan]="3">
-                  Từ: {{ data.checkinTime | date:'dd/MM/yyyy HH:mm:ss' }} <br>
-                  Đến: {{ data.checkoutTime | date:'dd/MM/yyyy HH:mm:ss' }} <br>
-                  ({{ ((data.checkoutTime - data.checkinTime) / 3600000) | number:'1.0-1' }} giờ)
+                  <ng-container *ngIf="data.checkInTime && data.checkOutTime">
+                    Từ: {{ formatDateTime(data.checkInTime, true) }} <br>
+                    Đến: {{ formatDateTime(data.checkOutTime, true) }} <br>
+                    ({{ calculateDuration(data.checkInTime, data.checkOutTime) }})
+                  </ng-container>
+                  <ng-container *ngIf="!data.checkInTime || !data.checkOutTime">
+                    Không có thông tin thời gian
+                  </ng-container>
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Số tiền" [nzSpan]="3">
-                  <nz-tag>
-                    {{data.payment}}
-                  </nz-tag>
-                  <div *ngIf="data.payment?.amount" class="payment-amount">
-                    {{ data.payment.amount | currency:'VND':'symbol-narrow':'1.0-0' }}
-                  </div>
+                  {{ (data.amount || data.totalAmount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Thanh toán" [nzSpan]="3">
-                  <nz-tag [nzColor]="getPaymentStatusColor(data.payment?.status)">
-                    {{ getPaymentStatusText(data.payment?.status) }}
+                  <nz-tag [nzColor]="getPaymentStatusColor((data.amount > 0 || data.totalAmount > 0) ? 'paid' : data.paymentStatus)">
+                    {{ getPaymentStatusText((data.amount > 0 || data.totalAmount > 0) ? 'paid' : data.paymentStatus) }}
                   </nz-tag>
-                  <div *ngIf="data.payment?.amount" class="payment-amount">
-                    {{ data.payment.amount | currency:'VND':'symbol-narrow':'1.0-0' }}
-                  </div>
+                  <span class="payment-method">
+                    <nz-tag [nzColor]="getPaymentMethodColor(data.paymentMethod || 'cash')">
+                      {{ getPaymentMethodLabel(data.paymentMethod || 'cash') }}
+                    </nz-tag>
+                  </span>
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Ghi chú" [nzSpan]="3">
                   {{ data.notes || 'Không có ghi chú' }}
@@ -217,6 +242,162 @@
     </ng-container>
   </tbody>
 </nz-table>
+
+<!-- Modal giao ca, giao tiền -->
+<nz-modal
+  [(nzVisible)]="isShiftHandoverModalVisible"
+  [nzTitle]="modalTitle"
+  [nzWidth]="600"
+  (nzOnCancel)="isShiftHandoverModalVisible = false"
+  [nzFooter]="modalFooter"
+>
+  <ng-template #modalTitle>
+    <div class="modal-title">
+      <span nz-icon nzType="swap" nzTheme="outline"></span>
+      <span class="ml-2">Giao ca - Giao tiền quản lý</span>
+    </div>
+  </ng-template>
+
+  <form nz-form [formGroup]="shiftHandoverForm" (ngSubmit)="submitShiftHandover()">
+    <!-- ID giao ca -->
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6">Mã giao ca</nz-form-label>
+      <nz-form-control [nzSpan]="18">
+        <input nz-input formControlName="shiftId" readonly style="background-color: #f5f5f5" aria-label="Mã giao ca" />
+      </nz-form-control>
+    </nz-form-item>
+    
+    <!-- Nhân viên giao ca -->
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6" nzRequired>Nhân viên giao ca</nz-form-label>
+      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập tên nhân viên giao ca!">
+        <input nz-input formControlName="handoverEmployee" placeholder="Nhập tên nhân viên giao ca" />
+      </nz-form-control>
+    </nz-form-item>
+
+    <!-- Nhân viên nhận ca -->
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6" nzRequired>Nhân viên nhận ca</nz-form-label>
+      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập tên nhân viên nhận ca!">
+        <input nz-input formControlName="receivingEmployee" placeholder="Nhập tên nhân viên nhận ca" />
+      </nz-form-control>
+    </nz-form-item>
+
+    <!-- Thời gian giao ca -->
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6" nzRequired>Thời gian giao ca</nz-form-label>
+      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng chọn thời gian giao ca!">
+        <nz-date-picker 
+          formControlName="handoverTime" 
+          [nzShowTime]="{ nzFormat: 'HH:mm' }" 
+          nzFormat="dd/MM/yyyy HH:mm"
+          [nzPlaceHolder]="'Chọn ngày và giờ'"
+          style="width: 100%"
+        ></nz-date-picker>
+      </nz-form-control>
+    </nz-form-item>
+
+    <!-- Số tiền giao ca -->
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6" nzRequired>Số tiền giao ca</nz-form-label>
+      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập số tiền giao ca!">
+        <nz-input-group [nzPrefix]="prefixTemplate">
+          <input 
+            nz-input
+            formControlName="amount"
+            type="number"
+            min="0"
+            placeholder="Nhập số tiền giao ca"
+          />
+          <ng-template #prefixTemplate><span>VND</span></ng-template>
+        </nz-input-group>
+      </nz-form-control>
+    </nz-form-item>
+
+    <!-- Hình thức thanh toán -->
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6" nzRequired>Hình thức thanh toán</nz-form-label>
+      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng chọn hình thức thanh toán!">
+        <nz-radio-group formControlName="paymentMethod">
+          <label nz-radio-button nzValue="cash">
+            <span nz-icon nzType="dollar" nzTheme="outline"></span> Tiền mặt
+          </label>
+          <label nz-radio-button nzValue="transfer">
+            <span nz-icon nzType="bank" nzTheme="outline"></span> Chuyển khoản
+          </label>
+          <label nz-radio-button nzValue="card">
+            <span nz-icon nzType="credit-card" nzTheme="outline"></span> Thẻ tín dụng
+          </label>
+        </nz-radio-group>
+      </nz-form-control>
+    </nz-form-item>
+
+    <!-- Trạng thái thanh toán -->
+    <nz-form-item *ngIf="handoverMessage">
+      <nz-form-label [nzSpan]="6">Trạng thái</nz-form-label>
+      <nz-form-control [nzSpan]="18">
+        <nz-alert
+          [nzType]="handoverMessageType"
+          [nzMessage]="handoverMessage"
+          nzShowIcon
+        ></nz-alert>
+      </nz-form-control>
+    </nz-form-item>
+
+    <!-- Ghi chú giao ca -->
+    <nz-form-item>
+      <nz-form-label [nzSpan]="6">Ghi chú</nz-form-label>
+      <nz-form-control [nzSpan]="18">
+        <textarea
+          nz-input
+          formControlName="notes"
+          rows="3"
+          placeholder="Nhập ghi chú giao ca (nếu có)"
+        ></textarea>
+      </nz-form-control>
+    </nz-form-item>
+
+    <!-- Thống kê tổng quan -->
+    <nz-divider></nz-divider>
+    <div class="summary-stats">
+      <nz-descriptions nzTitle="Thống kê thanh toán" nzBordered [nzColumn]="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }">
+        <nz-descriptions-item nzTitle="Đã thanh toán">
+          <nz-tag nzColor="success">{{countByStatus('paid')}} giao dịch</nz-tag>
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Chờ thanh toán">
+          <nz-tag nzColor="warning">{{countByStatus('pending')}} giao dịch</nz-tag>
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Hủy/Hoàn tiền">
+          <div class="multi-stats">
+            <nz-tag nzColor="error">{{countByStatus('cancelled')}} hủy</nz-tag>
+            <nz-tag nzColor="cyan">{{countByStatus('refunded')}} hoàn</nz-tag>
+          </div>
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Tổng tiền" [nzSpan]="2">
+          <span class="total-amount">{{formatterVND(getTotalAmount())}} VND</span>
+        </nz-descriptions-item>
+      </nz-descriptions>
+    </div>
+    
+    <!-- Hiển thị tiến trình -->
+    <nz-spin *ngIf="isSubmitting" nzTip="Đang xử lý giao ca..."></nz-spin>
+  </form>
+
+  <ng-template #modalFooter>
+    <button nz-button nzType="default" (click)="isShiftHandoverModalVisible = false" [disabled]="isSubmitting">
+      Hủy
+    </button>
+    <button 
+      nz-button 
+      nzType="primary" 
+      [nzLoading]="isSubmitting" 
+      (click)="submitShiftHandover()"
+      [disabled]="isSubmitting || shiftHandoverForm.invalid"
+    >
+      Xác nhận giao ca
+    </button>
+  </ng-template>
+</nz-modal>
 
 <!-- Phần style cập nhật -->
 <style>
@@ -233,9 +414,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
-    padding: 12px 16px; /* Thêm padding */
-    border-radius: 4px; /* Bo góc */
-    /* box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); */ /* Thêm đổ bóng nhẹ */
+    padding: 12px 16px;
+    border-radius: 4px;
     background-color: #ffffff;
   }
 
@@ -250,38 +430,57 @@
 
   .status-summary {
     display: flex;
-    justify-content: space-around; /* Phân bố đều */
+    justify-content: space-around;
     flex-wrap: wrap;
     gap: 16px;
     margin-bottom: 16px;
     padding: 16px;
     background-color: #ffffff;
     border-radius: 4px;
-    /* box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); */
   }
 
   .action-buttons {
     display: flex;
-    justify-content: center; /* Căn giữa nút action */
+    justify-content: center;
     gap: 8px;
   }
 
   .expanded-row {
-    padding: 16px; /* Tăng padding cho dễ nhìn */
-    background-color: #fafafa; /* Thêm màu nền nhẹ */
+    padding: 16px;
+    background-color: #fafafa;
   }
 
   .payment-amount {
-    font-size: 0.9em; /* Giảm kích thước font */
-    color: rgba(0, 0, 0, 0.65); /* Màu nhạt hơn */
-    margin-top: 4px; /* Giảm margin top */
+    font-size: 0.9em;
+    color: rgba(0, 0, 0, 0.65);
+    margin-top: 4px;
+  }
+  
+  .payment-method {
+    margin-left: 8px;
   }
 
-  /* Bỏ style cho pagination-footer vì đã dùng nzFooter */
+  .time-duration {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    margin-top: 2px;
+  }
+  
+  .w-100 {
+    width: 100%;
+  }
+  
+  .mt-3 {
+    margin-top: 16px;
+  }
+  
+  .mb-3 {
+    margin-bottom: 16px;
+  }
 
   @media (max-width: 768px) {
     .status-summary {
-       justify-content: flex-start; /* Căn trái trên mobile */
+       justify-content: flex-start;
     }
 
     .control-bar {
@@ -293,5 +492,54 @@
     .right-controls {
       width: 100%;
     }
+  }
+
+  .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .shift-summary {
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .shift-summary h4 {
+    margin-bottom: 16px;
+    color: rgba(0, 0, 0, 0.85);
+    font-weight: 500;
+  }
+  
+  nz-divider {
+    margin: 12px 0;
+  }
+  
+  .payment-status-display {
+    display: flex;
+    align-items: center;
+  }
+  
+  .payment-status-note {
+    margin-left: 8px;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+  }
+
+  .multi-stats {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .total-amount {
+    font-weight: 700;
+    font-size: 16px;
+    color: #722ed1;
+  }
+  
+  nz-spin {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
   }
 </style>

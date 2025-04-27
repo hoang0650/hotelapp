@@ -1,15 +1,177 @@
-<nz-card>
-  <div class="chart-controls mb-3">
-    <nz-radio-group [(ngModel)]="selectedPeriod" (ngModelChange)="onPeriodChange($event)">
-      <label nz-radio-button nzValue="day">Ngày</label>
-      <label nz-radio-button nzValue="week">Tuần</label>
-      <label nz-radio-button nzValue="month">Tháng</label>
-      <!-- Bỏ Năm nếu không cần thiết -->
-    </nz-radio-group>
+<nz-card [nzLoading]="isLoading" [nzBodyStyle]="{ padding: '20px' }">
+  <div class="chart-header">
+    <div class="chart-title">
+      <h3 class="main-title">Thống kê doanh thu</h3>
+      <div class="chart-controls">
+        <nz-radio-group [(ngModel)]="selectedPeriod" (ngModelChange)="onPeriodChange($event)" [nzButtonStyle]="'solid'">
+          <label nz-radio-button nzValue="day">Ngày</label>
+          <label nz-radio-button nzValue="week">Tuần</label>
+          <label nz-radio-button nzValue="month">Tháng</label>
+        </nz-radio-group>
+      </div>
+    </div>
+    
+    <div class="chart-summary">
+      <div class="summary-card revenue">
+        <div class="summary-icon">
+          <i nz-icon nzType="fund" nzTheme="outline"></i>
+        </div>
+        <div class="summary-content">
+          <div class="summary-label">Tổng doanh thu</div>
+          <div class="summary-value">{{ formatCurrency(totalRevenue) }}</div>
+        </div>
+      </div>
+      
+      <div class="summary-card payment">
+        <div class="summary-icon">
+          <i nz-icon nzType="wallet" nzTheme="outline"></i>
+        </div>
+        <div class="summary-content">
+          <div class="summary-label">Tổng thanh toán</div>
+          <div class="summary-value">{{ formatCurrency(totalPayment) }}</div>
+        </div>
+      </div>
+    </div>
   </div>
-  <highcharts-chart 
-    [Highcharts]="Highcharts" 
-    [options]="chartOptions"
-    style="width: 100%; height: 400px; display: block;">
-  </highcharts-chart>
+  
+  <div class="chart-container">
+    <highcharts-chart 
+      [Highcharts]="Highcharts" 
+      [options]="chartOptions"
+      style="width: 100%; height: 400px; display: block;">
+    </highcharts-chart>
+  </div>
+  
+  <div class="chart-footer" *ngIf="labels.length > 0">
+    <nz-alert
+      nzType="info"
+      nzMessage="Thông tin biểu đồ"
+      [nzDescription]="'Biểu đồ hiển thị doanh thu theo ' + getPeriodTitle(selectedPeriod).toLowerCase() + '. Tổng cộng: ' + formatCurrency(totalRevenue) + ''"
+      nzShowIcon
+    ></nz-alert>
+  </div>
 </nz-card>
+
+<style>
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .chart-title {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .main-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.85);
+  }
+  
+  .chart-controls {
+    margin-bottom: 16px;
+  }
+  
+  .chart-summary {
+    display: flex;
+    gap: 16px;
+  }
+  
+  .summary-card {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border-radius: 8px;
+    background-color: white;
+    min-width: 200px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+    transition: all 0.3s;
+  }
+  
+  .summary-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+  
+  .summary-card.revenue {
+    border-left: 4px solid #1890ff;
+  }
+  
+  .summary-card.payment {
+    border-left: 4px solid #52c41a;
+  }
+  
+  .summary-icon {
+    font-size: 24px;
+    padding: 8px;
+    border-radius: 50%;
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .revenue .summary-icon {
+    color: #1890ff;
+    background-color: rgba(24, 144, 255, 0.1);
+  }
+  
+  .payment .summary-icon {
+    color: #52c41a;
+    background-color: rgba(82, 196, 26, 0.1);
+  }
+  
+  .summary-content {
+    flex: 1;
+  }
+  
+  .summary-label {
+    color: rgba(0, 0, 0, 0.65);
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  
+  .summary-value {
+    font-size: 20px;
+    font-weight: 500;
+  }
+  
+  .chart-container {
+    margin-bottom: 20px;
+  }
+  
+  .chart-footer {
+    margin-top: 16px;
+  }
+  
+  @media (max-width: 992px) {
+    .chart-header {
+      flex-direction: column;
+    }
+    
+    .chart-summary {
+      width: 100%;
+    }
+    
+    .summary-card {
+      flex: 1;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .chart-summary {
+      flex-direction: column;
+    }
+    
+    .summary-card {
+      width: 100%;
+    }
+  }
+</style>

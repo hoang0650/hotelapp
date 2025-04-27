@@ -93,6 +93,7 @@ import { ChatComponent } from './components/chat/chat.component';
 import { BusinessSignupComponent } from './components/business-signup/business-signup.component';
 import { RoomServiceComponent } from './components/room-service/room-service.component';
 import { ServiceManagementComponent } from './components/service-management/service-management.component';
+import { InvoiceModalComponent } from './components/invoice-modal/invoice-modal.component';
 
 registerLocaleData(en);
 
@@ -135,7 +136,8 @@ registerLocaleData(en);
         ChatComponent,
         BusinessSignupComponent,
         RoomServiceComponent,
-        ServiceManagementComponent
+        ServiceManagementComponent,
+        InvoiceModalComponent
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         NgxEchartsModule.forRoot({ echarts: () => import('echarts') }),

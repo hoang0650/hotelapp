@@ -1,27 +1,8 @@
 <div class="room-container">
-  <!-- Nút giao ca và các điều khiển khách -->
-  <div class="action-bar mb-3">
-    <div nz-row>
-      <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
-        <div class="action-buttons">
-          <button nz-button nzType="primary" (click)="openShiftHandoverModal()" title="Giao ca">
-            <i nz-icon nzType="sync" nzTheme="outline"></i> Giao ca
-          </button>
-          
-          <nz-divider nzType="vertical"></nz-divider>
-          
-          <button nz-button nzType="default" (click)="showRoomHistory()" title="Lịch sử phòng">
-            <i nz-icon nzType="history" nzTheme="outline"></i> Lịch sử
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bộ lọc phòng -->
-  <div class="filter-section">
+  <!-- Header với bộ lọc phòng -->
+  <div class="page-header">
     <div nz-row [nzGutter]="16">
-      <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="8" [nzLg]="6">
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="6">
         <nz-form-item>
           <nz-form-label>Khách sạn</nz-form-label>
           <nz-form-control>
@@ -35,7 +16,7 @@
           </nz-form-control>
         </nz-form-item>
       </div>
-      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="6">
+      <div nz-col [nzXs]="12" [nzSm]="12" [nzMd]="8" [nzLg]="6">
         <nz-form-item>
           <nz-form-label>Tầng</nz-form-label>
           <nz-form-control>
@@ -50,7 +31,7 @@
           </nz-form-control>
         </nz-form-item>
       </div>
-      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="6">
+      <div nz-col [nzXs]="12" [nzSm]="12" [nzMd]="8" [nzLg]="6">
         <nz-form-item>
           <nz-form-label>Hiển thị</nz-form-label>
           <nz-form-control>
@@ -67,8 +48,20 @@
           </nz-form-control>
         </nz-form-item>
       </div>
+      <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="6">
+        <div class="action-buttons text-right">
+          <button nz-button nzType="primary" (click)="openShiftHandoverModal()" title="Giao ca">
+            <i nz-icon nzType="sync" nzTheme="outline"></i> Giao ca
+          </button>
+          
+          <button nz-button nzType="default" (click)="showRoomHistory()" title="Lịch sử phòng" class="ml-2">
+            <i nz-icon nzType="history" nzTheme="outline"></i> Lịch sử
+          </button>
+        </div>
+      </div>
     </div>
     
+    <!-- Legend -->
     <div nz-row>
       <div nz-col [nzSpan]="24">
         <div class="legend mt-2">
@@ -94,10 +87,10 @@
   </div>
 
   <!-- Hiển thị lưới phòng -->
-  <div class="room-grid mt-3">
+  <div class="section-container room-grid mt-3">
     <nz-spin [nzSpinning]="isLoading">
-      <div class="floor-info" *ngIf="selectedFloor !== null">
-        <h3>Tầng {{ selectedFloor }}</h3>
+      <div class="section-header" *ngIf="selectedFloor !== null">
+        <h3>Danh sách phòng - Tầng {{ selectedFloor }}</h3>
       </div>
       
       <!-- Lưới phòng -->
@@ -133,8 +126,32 @@
     </nz-spin>
   </div>
   
-  <!-- Lịch sử phòng -->
-  <app-room-history></app-room-history>
+  <!-- Biểu đồ doanh thu -->
+  <div class="section-container mt-4" *ngIf="selectedHotelId">
+    <div class="section-header">
+      <h3>Doanh thu khách sạn {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}</h3>
+    </div>
+    <app-revenue-chart
+      [hotelId]="selectedHotelId"
+      [labels]="chartLabels"
+      [revenueData]="chartRevenueData"
+      [paymentData]="chartPaymentData"
+      [totalRevenue]="totalPayment"
+      [totalPayment]="totalPayment">
+    </app-revenue-chart>
+  </div>
+  
+  <!-- Bảng lịch sử phòng -->
+  <div class="section-container mt-4" *ngIf="selectedHotelId">
+    <div class="section-header">
+      <h3>Lịch sử phòng {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}</h3>
+    </div>
+    <app-table 
+      [listOfData]="roomTableData" 
+      [hotelId]="selectedHotelId"
+      (onViewInvoice)="viewInvoice($event)">
+    </app-table>
+  </div>
 </div>
 
 <style>
@@ -142,11 +159,32 @@
     padding: 16px;
   }
   
-  .filter-section {
-    background-color: #f5f5f5;
+  .page-header {
+    background-color: white;
     padding: 16px;
     border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
     margin-bottom: 16px;
+  }
+  
+  .section-container {
+    background-color: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+  }
+  
+  .section-header {
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .section-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.85);
   }
   
   .w-100 {
@@ -161,11 +199,20 @@
     margin-top: 16px;
   }
   
-  .room-grid {
-    background-color: white;
-    padding: 16px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+  .mt-4 {
+    margin-top: 24px;
+  }
+  
+  .ml-2 {
+    margin-left: 8px;
+  }
+  
+  .text-right {
+    text-align: right;
+  }
+  
+  .action-buttons {
+    margin-top: 28px; /* Căn chỉnh theo label và control */
   }
   
   .room-item {
@@ -232,12 +279,6 @@
     color: white;
   }
   
-  .floor-info {
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #f0f0f0;
-  }
-  
   .empty-state {
     padding: 32px 0;
   }
@@ -290,6 +331,11 @@
     .legend {
       justify-content: space-between;
       gap: 8px;
+    }
+    
+    .action-buttons {
+      text-align: left;
+      margin-top: 16px;
     }
   }
 </style>

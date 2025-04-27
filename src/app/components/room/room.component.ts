@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { ProductService } from '../../services/product.service';
 import { Subscription } from 'rxjs';
 import { NzMarks } from 'ng-zorro-antd/slider';
@@ -8,6 +8,8 @@ import { Room, ShiftHandover } from '../../interfaces/rooms';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TableComponent } from '../table/table.component';
+import { InvoiceService } from '../../services/invoice.service';
 
 @Component({
   selector: 'app-room',
@@ -15,13 +17,23 @@ import { NzMessageService } from 'ng-zorro-antd/message';
   styleUrls: ['./room.component.css']
 })
 export class RoomComponent implements OnInit, OnDestroy {
+  @ViewChild(TableComponent) tableComponent!: TableComponent;
+  
   rooms: Room[] = [];
+  roomTableData: any[] = [];
   selectedRoomId: string | null = null;
   hotels: any[] = [];
   selectedHotelId: string | null = null;
   floors: number[] = [];
   selectedFloor: number | null = null;
   isLoading = false;
+  
+  // Dữ liệu thống kê cho biểu đồ doanh thu
+  totalPayment: number = 0;
+  totalRoomCount: number = 0;
+  chartLabels: string[] = [];
+  chartRevenueData: number[] = [];
+  chartPaymentData: number[] = [];
   
   // Form cho giao ca
   shiftHandoverForm: FormGroup;
@@ -34,7 +46,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     private hotelService: HotelService,
     private modalService: NzModalService,
     private fb: FormBuilder,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private invoiceService: InvoiceService
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
       this.loadRooms();
@@ -190,19 +203,75 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
     
     // Tải lịch sử phòng và hiện thị trong modal hoặc cập nhật component room-history
-    this.roomsService.getRoomHistory({
-      hotelId: this.selectedHotelId,
-      page: 1,
-      limit: 20
-    }).subscribe(
+    this.roomsService.getRoomHistory(
+      this.selectedHotelId,
+      'all',
+      1,
+      20
+    ).subscribe(
       (data) => {
         console.log('Lịch sử phòng:', data);
-        // Có thể xử lý dữ liệu ở đây hoặc truyền cho component history
+        this.roomTableData = data.history || [];
+        
+        // Cập nhật thống kê cho biểu đồ
+        this.totalPayment = data.totalPayment || 0;
+        this.totalRoomCount = this.roomTableData.length;
+        
+        // Chuẩn bị dữ liệu cho biểu đồ
+        this.prepareChartData();
       },
       (error) => {
         this.message.error('Lỗi tải lịch sử phòng: ' + error.message);
       }
     );
+  }
+  
+  // Chuẩn bị dữ liệu cho biểu đồ
+  prepareChartData(): void {
+    // Tạo nhóm dữ liệu theo ngày
+    const groupedData = this.groupDataByDate(this.roomTableData);
+    
+    // Sắp xếp các ngày tăng dần
+    const sortedDates = Object.keys(groupedData).sort((a, b) => {
+      return new Date(a).getTime() - new Date(b).getTime();
+    });
+    
+    // Giới hạn 7 ngày gần nhất nếu có nhiều hơn
+    const recentDates = sortedDates.slice(-7);
+    
+    // Chuẩn bị dữ liệu cho biểu đồ
+    this.chartLabels = recentDates.map(date => {
+      const d = new Date(date);
+      return `${d.getDate()}/${d.getMonth() + 1}`;
+    });
+    
+    this.chartRevenueData = recentDates.map(date => groupedData[date].revenue);
+    this.chartPaymentData = recentDates.map(date => groupedData[date].payment);
+  }
+  
+  // Phân nhóm dữ liệu theo ngày
+  groupDataByDate(data: any[]): { [key: string]: { revenue: number, payment: number, count: number } } {
+    const result: { [key: string]: { revenue: number, payment: number, count: number } } = {};
+    
+    data.forEach(item => {
+      if (!item.checkOutTime && !item.date) return;
+      
+      // Lấy ngày từ checkOutTime hoặc date
+      const dateObj = new Date(item.checkOutTime || item.date);
+      const dateStr = dateObj.toISOString().split('T')[0]; // Format YYYY-MM-DD
+      
+      if (!result[dateStr]) {
+        result[dateStr] = { revenue: 0, payment: 0, count: 0 };
+      }
+      
+      // Cộng dồn doanh thu và thanh toán
+      const amount = item.amount || item.totalAmount || 0;
+      result[dateStr].revenue += amount;
+      result[dateStr].payment += amount;
+      result[dateStr].count++;
+    });
+    
+    return result;
   }
 
   loadHotels(): void {
@@ -235,6 +304,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       (data) => {
         this.rooms = data;
         this.isLoading = false;
+        // Cập nhật dữ liệu lịch sử phòng khi có thay đổi phòng
+        this.showRoomHistory();
       },
       (error) => {
         console.error('Lỗi khi tải danh sách phòng:', error);
@@ -264,6 +335,36 @@ export class RoomComponent implements OnInit, OnDestroy {
   onFloorChange(floor: number): void {
     this.selectedFloor = floor;
     this.loadRooms();
+  }
+
+  viewInvoice(item: any): void {
+    if (!item) {
+      this.message.warning('Không thể hiển thị hóa đơn: Thiếu thông tin');
+      return;
+    }
+    
+    console.log('Hiển thị hóa đơn từ component phòng:', item.roomNumber);
+    
+    // Cập nhật thêm thông tin khách sạn nếu cần
+    if (this.selectedHotelId && !item.hotelId) {
+      item.hotelId = this.selectedHotelId;
+      
+      // Thêm tên khách sạn nếu có
+      const hotel = this.hotels.find(h => h._id === this.selectedHotelId);
+      if (hotel) {
+        item.businessName = hotel.name;
+        item.business_address = hotel.address;
+        item.phoneNumber = hotel.phoneNumber;
+      }
+    }
+    
+    // Đảm bảo có ngày
+    if (!item.date) {
+      item.date = new Date();
+    }
+    
+    // Sử dụng InvoiceService để hiển thị modal hóa đơn
+    this.invoiceService.showInvoiceModal(item);
   }
 
   //antd
@@ -315,6 +416,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       default:
         return 'inactive-room';
     }
+  }
+
+  getHotelName(hotelId: string): string {
+    const hotel = this.hotels.find(h => h._id === hotelId);
+    return hotel ? hotel.name : '';
   }
 
   switchValue = false;
