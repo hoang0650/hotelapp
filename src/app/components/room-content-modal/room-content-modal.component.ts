@@ -742,8 +742,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       events: [
         ...this.roomData.events || [],
         {
-          type: 'cleaning',
-          cleaningTime: new Date()
+          type: 'maintenance', // Sử dụng giá trị 'maintenance' thay vì 'maintenance_completed'
+          completedTime: new Date(),
+          notes: this.roomData.roomStatus === 'maintenance' ? 'Đã hoàn thành bảo trì' : 'Đã dọn dẹp phòng'
         }
       ]
     };
@@ -751,7 +752,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.roomsService.cleanRoom(this.roomData._id, newRoom)
       .subscribe(
         (room) => {
-          this.message.success('Đã cập nhật trạng thái phòng thành "Sẵn sàng"');
+          let successMessage = 'Đã cập nhật trạng thái phòng thành "Sẵn sàng"';
+          if (this.roomData.roomStatus === 'maintenance') {
+            successMessage = 'Đã hoàn thành bảo trì và cập nhật trạng thái phòng thành "Sẵn sàng"';
+          }
+          this.message.success(successMessage);
           
           // Đảm bảo không còn phiên nào hoạt động
           this.roomSessionService.endSession(this.roomData._id);

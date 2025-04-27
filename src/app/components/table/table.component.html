@@ -1,106 +1,297 @@
-<div class="components-table-demo-control-bar">
-  <form nz-form nzLayout="inline" [formGroup]="settingForm" *ngIf="switchValue">
-    <nz-form-item *ngFor="let switch of listOfSwitch">
-      <nz-form-label>{{ switch.name }}</nz-form-label>
-      <nz-form-control><nz-switch [formControlName]="switch.formControlName"></nz-switch></nz-form-control>
-    </nz-form-item>
-    <nz-form-item *ngFor="let radio of listOfRadio">
-      <nz-form-label>{{ radio.name }}</nz-form-label>
-      <nz-form-control>
-        <nz-radio-group [formControlName]="radio.formControlName">
-          <label *ngFor="let o of radio.listOfOption" nz-radio-button [nzValue]="o.value">{{ o.label }}</label>
-        </nz-radio-group>
-      </nz-form-control>
-    </nz-form-item>
-  </form>
-  <div style="display: flex; justify-content: space-between; align-items: center;">
-    <h1> 
-      <nz-switch [(ngModel)]="switchValue"></nz-switch>
-    </h1>
-
-      <button nz-button nzType="primary" (click)="exportToExcel()">
-        <span nz-icon nzType="arrow-down" nzTheme="outline">
-        </span>
-        Export to Excel
+<div class="settings-container" *ngIf="settingValue.title">
+  <nz-card class="settings-card" [nzTitle]="'Cài đặt hiển thị'" [nzExtra]="extraTemplate">
+    <ng-template #extraTemplate>
+      <button nz-button nzType="text" nzShape="circle" (click)="switchValue = !switchValue" aria-label="Chuyển đổi hiển thị cài đặt">
+        <i nz-icon [nzType]="switchValue ? 'up' : 'down'"></i>
       </button>
+    </ng-template>
+    <div *ngIf="switchValue">
+      <form nz-form [formGroup]="settingForm" nzLayout="vertical">
+        <div nz-row [nzGutter]="24">
+          <div nz-col [nzSpan]="12">
+            <div *ngFor="let switch of listOfSwitch">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox [formControlName]="switch.formControlName">{{ switch.name }}</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <div *ngFor="let radio of listOfRadio">
+              <nz-form-item>
+                <nz-form-label>{{ radio.name }}</nz-form-label>
+                <nz-form-control>
+                  <nz-radio-group [formControlName]="radio.formControlName">
+                    <label nz-radio-button *ngFor="let option of radio.listOfOption" [nzValue]="option.value">
+                      {{ option.label }}
+                    </label>
+                  </nz-radio-group>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+        </div>
+      </form>
     </div>
+  </nz-card>
 </div>
+
+<div class="control-bar nz-card">
+  <div class="left-controls">
+    <button nz-button nzType="default" (click)="switchValue = !switchValue" nz-tooltip nzTooltipTitle="Cài đặt hiển thị" aria-label="Cài đặt hiển thị">
+      <i nz-icon nzType="setting"></i>
+    </button>
+    <button nz-button [nzLoading]="exported" nzType="primary" (click)="exportToExcel()" nz-tooltip nzTooltipTitle="Xuất Excel" aria-label="Xuất Excel">
+      <i nz-icon nzType="file-excel"></i>
+      <span>Xuất Excel</span>
+    </button>
+  </div>
+  <div class="right-controls">
+    <nz-input-group [nzSuffix]="suffixIconSearch">
+      <input type="text" nz-input placeholder="Tìm kiếm phòng, khách hàng..." [(ngModel)]="searchText" aria-label="Tìm kiếm" />
+    </nz-input-group>
+    <ng-template #suffixIconSearch>
+      <i nz-icon nzType="search"></i>
+    </ng-template>
+  </div>
+</div>
+
+<div class="status-summary nz-card" *ngIf="settingValue.totalPayment">
+  <nz-statistic [nzValue]="countByStatus('paid')" nzTitle="Đã thanh toán" [nzValueStyle]="{ color: '#52c41a' }"></nz-statistic>
+  <nz-statistic [nzValue]="countByStatus('pending')" nzTitle="Chờ thanh toán" [nzValueStyle]="{ color: '#faad14' }"></nz-statistic>
+  <nz-statistic [nzValue]="countByStatus('cancelled')" nzTitle="Đã hủy" [nzValueStyle]="{ color: '#f5222d' }"></nz-statistic>
+  <nz-statistic [nzValue]="listOfData.length" nzTitle="Tổng phòng" [nzValueStyle]="{ color: '#1890ff' }"></nz-statistic>
+  <nz-statistic [nzValue]="totalPayment" nzTitle="Tổng tiền" [nzSuffix]="'đ'" [nzValueStyle]="{ color: '#722ed1' }"></nz-statistic>
+</div>
+
 <nz-table
-#dynamicTable
-[nzScroll]="{ x: scrollX, y: scrollY }"
-[nzData]="listOfData"
-[nzTableLayout]="settingValue.tableLayout"
-[nzBordered]="settingValue.bordered"
-[nzSimple]="settingValue.simple"
-[nzLoading]="settingValue.loading"
-[nzPaginationType]="settingValue.paginationType"
-[nzPaginationPosition]="settingValue.position"
-[nzShowSizeChanger]="settingValue.sizeChanger"
-[nzFrontPagination]="settingValue.pagination"
-[nzShowPagination]="settingValue.pagination"
-[nzFooter]="settingValue.footer ? '' : null"
-[nzTitle]="settingValue.title ? 'Lịch sử thanh toán' : null"
-[nzSize]="settingValue.size"
-(nzCurrentPageDataChange)="currentPageDataChange($event)"
-[nzScroll]="{ x: '100%' }"
+  #basicTable
+  [nzData]="listOfData | filter:searchText:['roomNumber', 'customerName']"
+  [nzBordered]="settingValue.bordered"
+  [nzLoading]="settingValue.loading"
+  [nzPaginationType]="settingValue.paginationType"
+  [nzPaginationPosition]="settingValue.position"
+  [nzShowPagination]="settingValue.pagination"
+  [nzShowSizeChanger]="settingValue.sizeChanger"
+  [nzSimple]="settingValue.simple"
+  [nzSize]="settingValue.size"
+  [nzTableLayout]="settingValue.tableLayout"
+  [nzShowTotal]="totalTemplate"
+  [nzScroll]="{ x: scrollX, y: scrollY }"
+  (nzCurrentPageDataChange)="currentPageDataChange($event)"
+  [nzFooter]="settingValue.footer ? footerTemplate : null"
+  [nzTitle]="settingValue.title ? 'Danh sách phòng' : null"
 >
-<!-- [nzShowTotal]="totalTemplate" -->
-<thead>
-  <tr *ngIf="settingValue.header">
-    <th nzWidth="40px" *ngIf="settingValue.expandable && settingValue.checkbox" [nzLeft]="fixedColumn"></th>
-    <th *ngIf="settingValue.checkbox" nzWidth="60px" [(nzChecked)]="allChecked" [nzLeft]="fixedColumn"
-      [nzIndeterminate]="indeterminate" (nzCheckedChange)="checkAll($event)"></th>
-    <th [nzLeft]="fixedColumn">Room Number</th>
-    <th [nzLeft]="fixedColumn">Type</th>
-    <th [nzLeft]="fixedColumn">Payment</th>
-    <th [nzRight]="fixedColumn">Action</th>
-  </tr>
-</thead>
-<tbody>
-  <ng-container *ngFor="let room of dynamicTable.data">
+  <ng-template #totalTemplate let-total let-range="range">
+    Hiển thị {{ range[0] }}-{{ range[1] }} của {{ total }} mục
+  </ng-template>
+  
+  <ng-template #footerTemplate>
+    <strong *ngIf="settingValue.totalPayment">Tổng tiền: {{ totalPayment | currency:'VND':'symbol-narrow':'1.0-0' }}</strong>
+  </ng-template>
+
+  <thead>
     <tr>
-      <td [nzLeft]="fixedColumn" *ngIf="settingValue.expandable" [(nzExpand)]="room.expand">
-      </td>
-      <td [nzLeft]="fixedColumn" *ngIf="settingValue.checkbox" [(nzChecked)]="room.checked"
-        (nzCheckedChange)="refreshStatus()"></td>
-      <td>{{ room['roomNumber'] }}</td>
-      <td [nzLeft]="fixedColumn">{{ room['type'] }}</td>
-      <td [nzEllipsis]="settingValue.ellipsis">{{ room['payment'] }}</td>
-      <td [nzRight]="fixedColumn" [nzEllipsis]="settingValue.ellipsis">
-        <button nz-button nzShape="round" nzType="default">
-          <i nz-icon nzType="edit"></i>Sửa
-        </button>
-        <nz-divider nzType="vertical"></nz-divider>
-        <button nz-button nzShape="round" nzType="default" nzDanger="true">
-          <i nz-icon nzType="delete"></i>Xóa
-        </button>
-      </td>
+      <th
+        *ngIf="settingValue.checkbox"
+        [nzWidth]="'60px'"
+        [nzLeft]="fixedColumn">
+        <label nz-checkbox
+          [(ngModel)]="allChecked"
+          [nzIndeterminate]="indeterminate"
+          (ngModelChange)="checkAll($event)">
+        </label>
+      </th>
+      <th
+        *ngIf="settingValue.expandable"
+        [nzWidth]="'60px'"
+        [nzLeft]="fixedColumn">
+      </th>
+      <th [nzWidth]="'100px'" [nzLeft]="fixedColumn">Phòng</th>
+      <th [nzWidth]="'150px'">Khách hàng</th>
+      <th [nzWidth]="'180px'">Thời gian</th>
+      <th [nzWidth]="'150px'">Trạng thái</th>
+      <th [nzWidth]="'150px'">Phương thức</th>
+      <th [nzWidth]="'150px'">Số tiền</th>
+      <th [nzWidth]="'120px'" [nzRight]="fixedColumn">Thao tác</th>
     </tr>
-    <tr *ngIf="settingValue.expandable" [nzExpand]="room.expand">
-      <span>
-        Nhận phòng lúc: {{ room.checkinTime | date: 'dd/MM/yyyy HH:mm:ss' }} - Trả phòng lúc: {{
-          room.checkoutTime | date: 'dd/MM/yyyy HH:mm:ss' }}
-      </span>
-    </tr>
-  </ng-container>
-  <tr>
-    <td [nzLeft]="fixedColumn" *ngIf="settingValue.expandable"></td>
-    <td [nzLeft]="fixedColumn" *ngIf="settingValue.checkbox"></td>
-    <td></td>
-    <td>Total Payment:</td>
-    <td *ngIf="settingValue.totalPayment">{{ totalPayment }}</td>
-    <td [nzRight]="fixedColumn"></td>
-  </tr>
-  <!-- <ng-template #totalTemplate>
-    <tr>
-    <td [nzLeft]="fixedColumn" *ngIf="settingValue.expandable"></td>
-    <td [nzLeft]="fixedColumn" *ngIf="settingValue.checkbox"></td>
-    <td></td>
-    <td>Total Payment:</td>
-    <td *ngIf="settingValue.totalPayment">{{ totalPayment }}</td>
-    <td [nzRight]="fixedColumn"></td>
-  </tr>
-  </ng-template> -->
-</tbody>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let data of basicTable.data">
+      <tr>
+        <td *ngIf="settingValue.checkbox" [nzLeft]="fixedColumn">
+          <label nz-checkbox
+            [(ngModel)]="data.checked"
+            [nzDisabled]="data.disabled">
+          </label>
+        </td>
+        <td *ngIf="settingValue.expandable" [nzLeft]="fixedColumn">
+          <button
+            nz-button
+            nzType="text"
+            nzShape="circle"
+            (click)="data.expand = !data.expand"
+            aria-label="Mở rộng dòng">
+            <i nz-icon [nzType]="data.expand ? 'up' : 'down'"></i>
+          </button>
+        </td>
+        <td [nzLeft]="fixedColumn">
+          <a>{{ data.roomNumber }}</a>
+        </td>
+        <td>{{ data.customerName || 'Khách lẻ' }}</td>
+        <td>
+           {{ data.checkinTime | date:'dd/MM HH:mm' }} - {{ data.checkoutTime | date:'dd/MM HH:mm' }}
+        </td>
+        <td>
+          <nz-tag [nzColor]="getPaymentStatusColor(data.payment?.status)">
+            {{ getPaymentStatusText(data.payment?.status) }}
+          </nz-tag>
+          <div *ngIf="data.payment?.amount" class="payment-amount">
+            {{ data.payment.amount | currency:'VND':'symbol-narrow':'1.0-0' }}
+          </div>
+        </td>
+        <td>
+          {{ data.payment }}
+       </td>
+       <td>
+        {{ data.payment }}
+      </td>
+        <td [nzRight]="fixedColumn">
+          <div class="action-buttons">
+            <button
+              nz-button
+              nzType="primary"
+              nzShape="circle"
+              (click)="viewInvoice(data)"
+              nz-tooltip
+              nzTooltipTitle="Xem hóa đơn"
+              aria-label="Xem hóa đơn">
+              <i nz-icon nzType="file-text"></i>
+            </button>
+             <!-- Các nút sửa/xóa đã bị loại bỏ -->
+          </div>
+        </td>
+      </tr>
+      <tr *ngIf="data.expand">
+         <!-- Cập nhật colspan -->
+        <td [attr.colspan]="settingValue.checkbox ? 7 : 6">
+          <div class="expanded-row">
+            <nz-card [nzTitle]="'Thông tin chi tiết phòng ' + data.roomNumber" [nzBordered]="false">
+              <nz-descriptions [nzBordered]="true" [nzSize]="'small'">
+                <nz-descriptions-item nzTitle="Loại phòng" [nzSpan]="1">
+                  {{ data.type }}
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Số điện thoại" [nzSpan]="2">
+                  {{ data.customerPhone || 'Không có' }}
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Thời gian ở" [nzSpan]="3">
+                  Từ: {{ data.checkinTime | date:'dd/MM/yyyy HH:mm:ss' }} <br>
+                  Đến: {{ data.checkoutTime | date:'dd/MM/yyyy HH:mm:ss' }} <br>
+                  ({{ ((data.checkoutTime - data.checkinTime) / 3600000) | number:'1.0-1' }} giờ)
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Số tiền" [nzSpan]="3">
+                  <nz-tag>
+                    {{data.payment}}
+                  </nz-tag>
+                  <div *ngIf="data.payment?.amount" class="payment-amount">
+                    {{ data.payment.amount | currency:'VND':'symbol-narrow':'1.0-0' }}
+                  </div>
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Thanh toán" [nzSpan]="3">
+                  <nz-tag [nzColor]="getPaymentStatusColor(data.payment?.status)">
+                    {{ getPaymentStatusText(data.payment?.status) }}
+                  </nz-tag>
+                  <div *ngIf="data.payment?.amount" class="payment-amount">
+                    {{ data.payment.amount | currency:'VND':'symbol-narrow':'1.0-0' }}
+                  </div>
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Ghi chú" [nzSpan]="3">
+                  {{ data.notes || 'Không có ghi chú' }}
+                </nz-descriptions-item>
+              </nz-descriptions>
+            </nz-card>
+          </div>
+        </td>
+      </tr>
+    </ng-container>
+  </tbody>
 </nz-table>
 
+<!-- Phần style cập nhật -->
+<style>
+  .settings-container {
+    margin-bottom: 16px;
+  }
+
+  .settings-card {
+    width: 100%;
+  }
+
+  .control-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 12px 16px; /* Thêm padding */
+    border-radius: 4px; /* Bo góc */
+    /* box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); */ /* Thêm đổ bóng nhẹ */
+    background-color: #ffffff;
+  }
+
+  .left-controls {
+    display: flex;
+    gap: 8px;
+  }
+
+  .right-controls {
+    min-width: 250px;
+  }
+
+  .status-summary {
+    display: flex;
+    justify-content: space-around; /* Phân bố đều */
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 16px;
+    background-color: #ffffff;
+    border-radius: 4px;
+    /* box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); */
+  }
+
+  .action-buttons {
+    display: flex;
+    justify-content: center; /* Căn giữa nút action */
+    gap: 8px;
+  }
+
+  .expanded-row {
+    padding: 16px; /* Tăng padding cho dễ nhìn */
+    background-color: #fafafa; /* Thêm màu nền nhẹ */
+  }
+
+  .payment-amount {
+    font-size: 0.9em; /* Giảm kích thước font */
+    color: rgba(0, 0, 0, 0.65); /* Màu nhạt hơn */
+    margin-top: 4px; /* Giảm margin top */
+  }
+
+  /* Bỏ style cho pagination-footer vì đã dùng nzFooter */
+
+  @media (max-width: 768px) {
+    .status-summary {
+       justify-content: flex-start; /* Căn trái trên mobile */
+    }
+
+    .control-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .right-controls {
+      width: 100%;
+    }
+  }
+</style>

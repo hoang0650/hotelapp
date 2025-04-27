@@ -65,8 +65,11 @@ import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
 import { NzMessageModule } from 'ng-zorro-antd/message';
 import { NzUploadModule } from 'ng-zorro-antd/upload';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzStatisticModule } from 'ng-zorro-antd/statistic';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
+import { FilterPipe } from './pipes/filter.pipe';
 import { UnauthorizedComponent } from './components/unauthorized/unauthorized.component';
 import { NotfoundComponent } from './components/notfound/notfound.component';
 import { RoomContentModalComponent } from './components/room-content-modal/room-content-modal.component';
@@ -109,6 +112,7 @@ registerLocaleData(en);
         TableComponent,
         ModalControlDirective,
         SortByCheckinTimePipe,
+        FilterPipe,
         UnauthorizedComponent,
         NotfoundComponent,
         RoomContentModalComponent,
@@ -174,7 +178,9 @@ registerLocaleData(en);
         NzDescriptionsModule,
         NzMessageModule,
         NzUploadModule,
-        NzAlertModule
+        NzAlertModule,
+        NzCheckboxModule,
+        NzStatisticModule
     ], providers: [
         provideClientHydration(),
         { provide: NZ_I18N, useValue: en_US },

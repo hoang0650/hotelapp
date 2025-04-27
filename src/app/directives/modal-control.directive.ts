@@ -588,12 +588,12 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       return 0;
     }
 
-    // Chuyển đổi chuỗi ngày thành đối tượng Date
-    const checkinDate = new Date(checkinTime);
-    const checkoutDate = new Date(checkoutTime);
-    
+      // Chuyển đổi chuỗi ngày thành đối tượng Date
+      const checkinDate = new Date(checkinTime);
+      const checkoutDate = new Date(checkoutTime);
+      
     // Tính thời gian sử dụng phòng
-    const durationInHours = Math.ceil((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60));
+      const durationInHours = Math.ceil((checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60));
     const durationInDays = Math.ceil(durationInHours / 24);
     
     // Lấy thông tin check-in/check-out

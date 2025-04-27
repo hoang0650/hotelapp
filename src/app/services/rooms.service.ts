@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 import { BehaviorSubject } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { Room, Event, BookingHistory, ShiftHandover } from '../interfaces/rooms';
+import { tap, catchError } from 'rxjs/operators';
+import { throwError, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -129,8 +131,14 @@ export class RoomsService {
   }
 
   // Dọn dẹp phòng
-  cleanRoom(id: string, payload: object): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/clean/${id}`, payload);
+  cleanRoom(roomId: string, roomUpdate: any): Observable<any> {
+    const url = `${this.apiUrl}/clean/${roomId}`;
+    return this.http.post<any>(url, roomUpdate).pipe(
+      tap(() => {
+        this.notifyRoomDataUpdated();
+      }),
+      catchError(this.handleError<any>('cleanRoom'))
+    );
   }
 
   // Lịch sử phòng
@@ -214,5 +222,12 @@ export class RoomsService {
   // Lưu hóa đơn
   saveInvoice(invoiceData: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/invoices`, invoiceData);
+  }
+
+  private handleError<T>(operation = 'operation', result?: T) {
+    return (error: any): Observable<T> => {
+      console.error(`${operation} failed: ${error.message}`);
+      return of(result as T);
+    };
   }
 }

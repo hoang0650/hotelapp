@@ -69,7 +69,10 @@ export class RevenueChartComponent implements OnInit, OnChanges {
           data: this.paymentData, // Sử dụng paymentData từ input
           type: 'line'
         }
-      ]
+      ],
+      accessibility: {
+        enabled: false
+      }
     };
   }
 

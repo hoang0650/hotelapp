@@ -247,8 +247,10 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
 
     this.roomsService.getRoomHistory(params).subscribe({
       next: (data: { history: ExtendedBookingHistory[]; totalPages: number; currentPage: number; totalPayment: number; }) => {
-        // Xử lý và chuẩn hóa dữ liệu gốc
-        this.historyList = data.history.filter((item: any) => item.event === 'checkout').map((item: any) => {
+        console.log('API Response:', data);
+        // Xử lý và chuẩn hóa dữ liệu gốc - BỎ BỘ LỌC checkout
+        // this.historyList = data.history.filter((item: any) => item.event === 'checkout').map((item: any) => {
+        this.historyList = data.history.map((item: any) => { // <-- Bỏ .filter() ở đây
           const checkInTime = item.checkInTime || item.checkinTime;
           const checkOutTime = item.checkOutTime || item.checkoutTime;
           return {
@@ -258,16 +260,17 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
             checkOutTime: checkOutTime ? new Date(checkOutTime) : undefined,
             paymentMethod: this.getPaymentMethod(item),
             guestInfo: item.guestInfo || {},
-            amount: item.amount || item.totalAmount || 0 // Đảm bảo có trường amount
+            amount: item.amount || item.totalAmount || 0 
           };
         });
+        console.log('Processed History List (No checkout filter):', this.historyList); // Log lại sau khi bỏ filter
 
         // Lấy tổng số trang và trang hiện tại từ API
         this.totalPages = data.totalPages;
         this.currentPage = data.currentPage; // Cập nhật currentPage từ API
         // Tính toán totalHistoryCount (ước lượng nếu API không trả về)
         // TODO: Nên cập nhật API để trả về totalCount
-        this.totalHistoryCount = data.totalPages * this.pageSize; 
+        this.totalHistoryCount = this.historyList.length; // Tính lại totalHistoryCount dựa trên list mới
 
         // Tính toán các giá trị tổng hợp ban đầu
         this.calculateSummary(data.totalPayment); // Truyền totalPayment từ API
@@ -292,6 +295,7 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
     const start = (this.currentPage - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.displayHistoryList = this.historyList.slice(start, end);
+    console.log('Display History List:', this.displayHistoryList);
     this.refreshStatus(); // Cập nhật trạng thái checkbox
   }
 
@@ -471,13 +475,26 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  // Hàm xử lý sự kiện từ app-table
+  viewInvoiceFromTable(historyItem: any): void {
+    if (historyItem && historyItem._id) {
+      this.viewInvoice(historyItem._id);
+    } else {
+      this.message.error('Không tìm thấy thông tin ID để xem hóa đơn.');
+      console.error('Invalid history item passed to viewInvoiceFromTable:', historyItem);
+    }
+  }
+
+  // Hàm xem hóa đơn gốc (được gọi bởi viewInvoiceFromTable)
   viewInvoice(invoiceId: string | undefined): void {
     if (!invoiceId) {
       this.message.error('Không tìm thấy ID hóa đơn.');
       return;
     }
     this.isLoading = true;
-    this.roomsService.getInvoiceDetails(invoiceId).subscribe({
+    // Giả định getInvoiceDetails có thể lấy hóa đơn từ ID của bản ghi history (_id)
+    // Hoặc cần một API endpoint khác nếu ID hóa đơn khác với _id
+    this.roomsService.getInvoiceDetails(invoiceId).subscribe({ 
       next: (invoiceData: any) => {
         if (invoiceData) {
           this.showInvoiceModal(invoiceData);

@@ -49,7 +49,9 @@ interface InvoiceData {
   services?: Service[];
   additionalCharges?: number;
   discount?: number;
+  advancePayment?: number;
   totalAmount: number;
+  roomTotal?: number;
   paymentMethod?: string;
   paymentStatus?: string;
   duration?: Duration;
@@ -71,28 +73,18 @@ interface InvoiceData {
 export class InvoiceComponent implements OnInit {
   invoiceData: InvoiceData;
   businessInfo: any;
+  isLoading: boolean = false;
   
   today: Date = new Date();
   
-  // Thêm các trường tính toán
-  get subtotal(): number {
-    return this.calculateSubtotal();
-  }
+  // Các trường tính toán mới
+  subtotal: number = 0; // Tổng tiền hàng (products)
+  serviceTotal: number = 0; // Tổng tiền dịch vụ
+  finalTotalAmount: number = 0; // Tổng tiền cuối cùng phải trả
   
+  // Thêm các trường tính toán
   get totalWithoutDiscount(): number {
     return this.subtotal + (this.invoiceData?.additionalCharges || 0);
-  }
-  
-  get serviceTotal(): number {
-    if (!this.invoiceData?.services || !Array.isArray(this.invoiceData.services)) {
-      return 0;
-    }
-    
-    return this.invoiceData.services.reduce((total: number, service: Service) => {
-      const price = service.price || 0;
-      const quantity = service.quantity || 1;
-      return total + (price * quantity);
-    }, 0);
   }
   
   get durationText(): string {
@@ -122,7 +114,8 @@ export class InvoiceComponent implements OnInit {
       invoiceNumber: '',
       date: new Date(),
       products: [],
-      totalAmount: 0
+      services: [],
+      totalAmount: 0 // Giá trị này có thể sẽ bị ghi đè
     };
     this.businessInfo = data.businessInfo;
   }
@@ -146,8 +139,14 @@ export class InvoiceComponent implements OnInit {
       ...this.invoiceData,
       additionalCharges: this.invoiceData.additionalCharges || 0,
       discount: this.invoiceData.discount || 0,
+      advancePayment: this.invoiceData.advancePayment || 0,
       paymentStatus: this.invoiceData.paymentStatus || 'paid'
     };
+    
+    // Tính toán các giá trị
+    this.subtotal = this.calculateSubtotal();
+    this.serviceTotal = this.calculateServiceTotal();
+    this.calculateFinalTotal();
     
     // Tự động thêm dịch vụ vào danh sách sản phẩm nếu chưa có
     if (this.invoiceData.services && this.invoiceData.services.length > 0 && 
@@ -172,28 +171,67 @@ export class InvoiceComponent implements OnInit {
         days: Math.ceil(durationInHours / 24)
       };
     }
+    console.log('Calculated Subtotal:', this.subtotal);
+    console.log('Calculated Service Total:', this.serviceTotal);
+    console.log('Calculated Final Total:', this.finalTotalAmount);
   }
   
-  // Tính tổng tiền hàng
+  // Tính tổng tiền hàng (chỉ products)
   calculateSubtotal(): number {
-    if (!this.invoiceData?.products || !Array.isArray(this.invoiceData.products)) {
+    if (!this.invoiceData.products) {
       return 0;
     }
-    
     return this.invoiceData.products.reduce((total: number, item: InvoiceProduct) => {
       const price = item.price || 0;
       const quantity = item.quantity || 1;
+      // KHÔNG cộng/trừ charges/discount ở đây nữa
       return total + (price * quantity);
     }, 0);
   }
+  
+  // Tính tổng tiền dịch vụ (loại bỏ các dịch vụ trùng với products)
+  calculateServiceTotal(): number {
+    if (!this.invoiceData.services) {
+      return 0;
+    }
+    return this.invoiceData.services.reduce((total: number, service: Service) => {
+      // Kiểm tra xem dịch vụ này có vẻ đã nằm trong products chưa
+      if (this.isServiceInProducts(service)) {
+        return total; // Bỏ qua nếu đã có trong products
+      }
+      const price = service.price || 0;
+      const quantity = service.quantity || 1;
+      return total + (price * quantity);
+    }, 0);
+  }
+  
+  // Tính tổng tiền cuối cùng
+  calculateFinalTotal(): void {
+      // Bắt đầu với tổng sản phẩm và dịch vụ
+      let currentTotal = this.subtotal + this.serviceTotal;
+      
+      // Cộng phụ thu
+      currentTotal += this.invoiceData.additionalCharges || 0;
+      
+      // Trừ giảm giá
+      currentTotal -= this.invoiceData.discount || 0;
+      
+      // Trừ tiền trả trước
+      currentTotal -= this.invoiceData.advancePayment || 0;
+      
+      // Đảm bảo không âm
+      this.finalTotalAmount = Math.max(0, currentTotal);
+  }
 
   // Định dạng tiền tệ
-  formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+  formatCurrency(amount: number | undefined): string {
+    if (amount === undefined || amount === null) return '0 đ';
+    return amount.toLocaleString('vi-VN') + ' đ';
   }
 
   // Lấy nhãn phương thức thanh toán
-  getPaymentMethodLabel(method: string): string {
+  getPaymentMethodLabel(method: string | undefined): string {
+    if (!method) return 'Tiền mặt';
     const paymentMethods: { [key: string]: string } = {
       'cash': 'Tiền mặt',
       'card': 'Thẻ tín dụng',
@@ -204,68 +242,69 @@ export class InvoiceComponent implements OnInit {
       'zalopay': 'ZaloPay',
       'vnpay': 'VNPay'
     };
-    return paymentMethods[method?.toLowerCase()] || method || 'Tiền mặt';
+    return paymentMethods[method.toLowerCase()] || method;
   }
   
   // Lấy nhãn trạng thái thanh toán
-  getPaymentStatusLabel(status: string): string {
+  getPaymentStatusLabel(status: string | undefined): string {
+    if (!status) return 'Đã thanh toán';
     const statusLabels: { [key: string]: string } = {
       'paid': 'Đã thanh toán',
       'pending': 'Chưa thanh toán',
       'partial': 'Thanh toán một phần',
       'included_in_room_charge': 'Đã tính vào tiền phòng'
     };
-    return statusLabels[status?.toLowerCase()] || status || 'Đã thanh toán';
+    return statusLabels[status.toLowerCase()] || status;
+  }
+  
+  // Lấy màu sắc cho phương thức thanh toán
+  getPaymentMethodColor(method: string | undefined): string {
+    if (!method) return 'green';
+    const colorMap: { [key: string]: string } = {
+      'cash': 'green',
+      'card': 'blue',
+      'banking': 'purple',
+      'qr': 'cyan',
+      'visa': 'geekblue',
+      'momo': 'magenta',
+      'zalopay': 'blue',
+      'vnpay': 'orange'
+    };
+    return colorMap[method.toLowerCase()] || 'default';
   }
   
   // Lấy lớp CSS cho trạng thái thanh toán
-  getPaymentStatusClass(status: string): string {
+  getPaymentStatusClass(status: string | undefined): string {
+    if (!status) return 'status-paid';
     const statusClasses: { [key: string]: string } = {
       'paid': 'status-paid',
       'pending': 'status-pending',
       'partial': 'status-partial',
       'included_in_room_charge': 'status-included'
     };
-    return statusClasses[status?.toLowerCase()] || '';
+    return statusClasses[status.toLowerCase()] || '';
   }
   
   // Kiểm tra xem dịch vụ có trong danh sách sản phẩm không
   isServiceInProducts(service: Service): boolean {
-    if (!this.invoiceData?.products || !Array.isArray(this.invoiceData.products)) {
+    if (!this.invoiceData?.products || !service?.name) {
       return false;
     }
-    
-    return this.invoiceData.products.some(product => 
-      product.name === service.name || 
-      (product.name && service.name && product.name.includes(service.name)) || 
-      (service.name && product.name && service.name.includes(product.name))
-    );
+    // Kiểm tra chính xác tên trước
+    if (this.invoiceData.products.some(p => p.name === service.name)) {
+        return true;
+    }
+    // Kiểm tra bao gồm (nếu cần, có thể làm logic phức tạp hơn)
+    // return this.invoiceData.products.some(product => 
+    //   product.name && (product.name.includes(service.name) || service.name.includes(product.name))
+    // );
+    return false; // Chỉ kiểm tra tên chính xác cho đơn giản
   }
   
   // Kiểm tra xem danh sách sản phẩm có chứa các dịch vụ không
   hasServiceProductsDuplicated(): boolean {
-    if (!this.invoiceData?.services || !this.invoiceData?.products || 
-        !Array.isArray(this.invoiceData.services) || 
-        !Array.isArray(this.invoiceData.products)) {
-      return false;
-    }
-    
-    // Kiểm tra xem có bất kỳ dịch vụ nào đã được thêm vào products
-    for (const product of this.invoiceData.products) {
-      if (!product.name) continue;
-      if (product.name.includes('Dịch vụ')) return true;
-      
-      for (const service of this.invoiceData.services) {
-        if (!service.name) continue;
-        if (product.name === service.name || 
-            product.name.includes(service.name) || 
-            service.name.includes(product.name)) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
+     // Hàm này có thể không cần thiết nữa nếu isServiceInProducts hoạt động đúng
+     return false; 
   }
 
   exportInvoice(): void {
@@ -308,7 +347,7 @@ export class InvoiceComponent implements OnInit {
               ['Tổng tiền hàng', '', '', this.formatCurrency(this.subtotal)],
               ['Phụ thu (Charges)', '', '', this.formatCurrency(this.invoiceData?.additionalCharges || 0)],
               ['Khuyến mãi (Discount)', '', '', this.formatCurrency(this.invoiceData?.discount || 0)],
-              [{ text: 'Tổng tiền (Total)', bold: true }, '', '', { text: this.formatCurrency(this.invoiceData?.totalAmount), bold: true }]
+              [{ text: 'Tổng tiền (Total)', bold: true }, '', '', { text: this.formatCurrency(this.finalTotalAmount), bold: true }]
             ]
           }
         },
@@ -365,6 +404,36 @@ export class InvoiceComponent implements OnInit {
     const checkInTime = this.invoiceData.checkInTime ? new Date(this.invoiceData.checkInTime).toLocaleString('vi-VN') : 'N/A';
     const checkOutTime = this.invoiceData.checkOutTime ? new Date(this.invoiceData.checkOutTime).toLocaleString('vi-VN') : 'N/A';
 
+    // Tạo body cho bảng sản phẩm
+    const productBody = (this.invoiceData.products || []).map(item => [
+        item.name,
+        { text: item.quantity || 1, alignment: 'right' },
+        { text: this.formatCurrency(item.price || 0), alignment: 'right' },
+        { text: this.formatCurrency((item.price || 0) * (item.quantity || 1)), alignment: 'right' }
+    ]);
+
+    // Tạo body cho bảng dịch vụ (chỉ những dịch vụ không có trong products)
+    const serviceBody = (this.invoiceData.services || [])
+      .filter(service => !this.isServiceInProducts(service))
+      .map(item => [
+        item.name,
+        { text: item.quantity || 1, alignment: 'right' },
+        { text: this.formatCurrency(item.price || 0), alignment: 'right' },
+        { text: this.formatCurrency((item.price || 0) * (item.quantity || 1)), alignment: 'right' }
+    ]);
+
+    // Header của bảng chi tiết
+     const tableHeader = [{ text: 'Diễn giải', style: 'tableHeader' }, { text: 'Số lượng', style: 'tableHeader', alignment: 'right' }, { text: 'Đơn giá', style: 'tableHeader', alignment: 'right' }, { text: 'Thành tiền', style: 'tableHeader', alignment: 'right' }];
+
+    // Kết hợp body sản phẩm và dịch vụ
+    let tableBody: any[] = [tableHeader, ...productBody];
+    if (serviceBody.length > 0) {
+        // Correctly type the object for colSpan - Use 'any' for simplicity here if type inference fails
+        const serviceHeaderRow: any[] = [{text: '', colSpan: 4, style: 'tableHeader', alignment: 'center'} as any, {}, {}, {}];
+        tableBody.push(serviceHeaderRow);
+        tableBody = tableBody.concat(serviceBody);
+    }
+
     return {
       // defaultStyle: {
       //   font: 'Roboto' // Sử dụng font Roboto
@@ -387,7 +456,7 @@ export class InvoiceComponent implements OnInit {
             {
               width: '*',
               text: [
-                { text: `Số HĐ: ${this.invoiceData.invoiceNumber}`, bold: true },
+                { text: `Số HĐ: ${this.invoiceData.invoiceNumber || this.invoiceData['bookingId'] || 'N/A' }`, bold: true },
                 `\nNgày: ${new Date(this.invoiceData.date).toLocaleDateString('vi-VN')}`,
                 `\nNV Thu ngân: ${this.invoiceData.staffName || 'N/A'}`
               ],
@@ -413,7 +482,7 @@ export class InvoiceComponent implements OnInit {
           text: [
             { text: 'Thông tin phòng:', style: 'subheader' },
             `\nPhòng: ${this.invoiceData.roomNumber || 'N/A'} - Loại: ${this.invoiceData.roomType || 'N/A'}`,
-            `\nGiá phòng: ${this.formatCurrency(this.invoiceData.roomRate || 0)}`,
+            // `\nGiá phòng: ${this.formatCurrency(this.invoiceData.roomRate || 0)}`,
             `\nCheck-in: ${checkInTime}`,
             `\nCheck-out: ${checkOutTime}`,
             `\nThời gian ở: ${this.durationText}`
@@ -421,49 +490,38 @@ export class InvoiceComponent implements OnInit {
           margin: [0, 0, 0, 10]
         },
 
-        // Bảng chi tiết dịch vụ/sản phẩm
+        // Bảng chi tiết mới
         {
           style: 'tableExample',
           table: {
             widths: ['*', 'auto', 'auto', 'auto'],
-            body: [
-              // Header
-              [{ text: 'Diễn giải', style: 'tableHeader' }, { text: 'Số lượng', style: 'tableHeader', alignment: 'right' }, { text: 'Đơn giá', style: 'tableHeader', alignment: 'right' }, { text: 'Thành tiền', style: 'tableHeader', alignment: 'right' }],
-              // Mục phòng
-              [{ text: `Tiền phòng (${this.invoiceData.roomNumber || 'N/A'})` }, { text: 1, alignment: 'right' }, { text: this.formatCurrency(this.invoiceData.roomRate || 0), alignment: 'right' }, { text: this.formatCurrency(this.invoiceData['roomTotal'] || 0), alignment: 'right' }],
-              // Các dịch vụ/sản phẩm khác
-              ...(this.invoiceData.services || []).map(item => [
-                item.name,
-                { text: item.quantity || 1, alignment: 'right' },
-                { text: this.formatCurrency(item.price || 0), alignment: 'right' },
-                { text: this.formatCurrency((item.price || 0) * (item.quantity || 1)), alignment: 'right' }
-              ])
-            ]
+            body: tableBody
           },
-          layout: 'lightHorizontalLines' // Chỉ kẻ dòng ngang
+          layout: 'lightHorizontalLines'
         },
 
-        // Tổng cộng
+        // Tổng cộng - sử dụng giá trị đã tính
         {
           style: 'totalsTable',
           table: {
             widths: ['*', 'auto'],
             body: [
-              ['Tổng tiền phòng', { text: this.formatCurrency(this.invoiceData['roomTotal'] || 0), alignment: 'right' }],
-              ['Tổng tiền dịch vụ', { text: this.formatCurrency(this.serviceTotal || 0), alignment: 'right' }],
+              ['Tổng tiền dịch vụ(Total Service)', { text: this.formatCurrency(this.subtotal), alignment: 'right' }],
+              // Chỉ hiển thị dòng tổng dịch vụ nếu có
+              ...(this.serviceTotal > 0 ? [['Tổng tiền dịch vụ', { text: this.formatCurrency(this.serviceTotal), alignment: 'right' }]] : []),
               ['Phụ thu', { text: this.formatCurrency(this.invoiceData.additionalCharges || 0), alignment: 'right' }],
               ['Giảm giá', { text: this.formatCurrency(-(this.invoiceData.discount || 0)), alignment: 'right' }],
-              ['Đã trả trước', { text: this.formatCurrency(-(this.invoiceData['advancePayment'] || 0)), alignment: 'right' }],
-              [{ text: 'Tổng thanh toán', bold: true }, { text: this.formatCurrency(this.invoiceData.totalAmount), bold: true, alignment: 'right' }]
+              ['Đã trả trước', { text: this.formatCurrency(-(this.invoiceData.advancePayment || 0)), alignment: 'right' }],
+              [{ text: 'Tổng thanh toán', bold: true }, { text: this.formatCurrency(this.finalTotalAmount), bold: true, alignment: 'right' }]
             ]
           },
-          layout: 'noBorders', // Không kẻ viền
+          layout: 'noBorders',
           margin: [0, 10, 0, 10]
         },
 
         // Phương thức thanh toán
-        { text: `Hình thức thanh toán: ${this.getPaymentMethodLabel(this.invoiceData.paymentMethod || 'cash')}`, margin: [0, 0, 0, 5] },
-        { text: `Trạng thái: ${this.getPaymentStatusLabel(this.invoiceData.paymentStatus || 'paid')}`, bold: true, margin: [0, 0, 0, 10] },
+        { text: `Hình thức thanh toán: ${this.getPaymentMethodLabel(this.invoiceData.paymentMethod)}`, margin: [0, 0, 0, 5] },
+        { text: `Trạng thái: ${this.getPaymentStatusLabel(this.invoiceData.paymentStatus)}`, bold: true, margin: [0, 0, 0, 10] },
 
         // Ghi chú
         this.invoiceData.notes ? { text: `Ghi chú: ${this.invoiceData.notes}`, margin: [0, 0, 0, 20] } : '',
@@ -494,5 +552,37 @@ export class InvoiceComponent implements OnInit {
         }
       }
     };
+  }
+
+  // Gửi hóa đơn qua email
+  sendInvoiceEmail(): void {
+    const pdfDocGenerator = window.pdfMake.createPdf(this.getDocumentDefinition());
+    const customerEmail = this.invoiceData.customerEmail || this.invoiceData.guestInfo?.email;
+    if (!customerEmail) {
+        alert('Không tìm thấy địa chỉ email của khách hàng.');
+        return;
+    }
+    console.log('Chuẩn bị gửi hóa đơn PDF qua email cho:', customerEmail);
+    alert(`Hóa đơn sẽ được gửi đến ${customerEmail}. Tính năng đang được phát triển.`);
+    // TODO: Implement email sending logic. Get PDF as base64 or blob and send.
+    // pdfDocGenerator.getBase64((dataUrl: string) => {
+    //   // Send dataUrl to backend or use mailto link
+    // });
+  }
+  
+  // Tải xuống hóa đơn dưới dạng PDF
+  downloadPDF(): void {
+    const filename = `HoaDon_${this.invoiceData.invoiceNumber || this.invoiceData['bookingId'] || new Date().getTime()}.pdf`;
+    const pdfDocGenerator = window.pdfMake.createPdf(this.getDocumentDefinition());
+    pdfDocGenerator.download(filename);
+  }
+  
+  // Xóa hóa đơn
+  deleteInvoice(): void {
+    if (confirm('Bạn có chắc chắn muốn xóa hóa đơn này không?')) {
+      console.log('Xóa hóa đơn:', this.invoiceData.invoiceNumber);
+      // TODO: Implement delete functionality with backend API
+      alert('Hóa đơn đã được đánh dấu xóa. Tính năng đang được phát triển.');
+    }
   }
 }

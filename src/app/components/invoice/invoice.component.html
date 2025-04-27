@@ -1,5 +1,5 @@
 <div class="container">
-  <nz-card>
+  <nz-card [nzLoading]="isLoading">
     <div nz-title>
       <div class="header-container">
         <div class="left-section">
@@ -16,6 +16,9 @@
         <div class="right-section">
           <p><strong>Số hóa đơn:</strong> {{ invoiceData.invoiceNumber || invoiceData['bookingId'] || 'N/A' }}</p>
           <p><strong>Ngày:</strong> {{ invoiceData.date | date:'dd/MM/yyyy HH:mm' }}</p>
+          <nz-tag [nzColor]="getPaymentStatusClass(invoiceData.paymentStatus || '')">
+            {{ getPaymentStatusLabel(invoiceData.paymentStatus || '') }}
+          </nz-tag>
         </div>
       </div>
       <hr style="border-top: 2px solid #000; margin: 10px 0;">
@@ -24,59 +27,61 @@
     
     <div nz-body>
       <div class="customer-info">
-        <div class="info-row">
-          <div class="info-item">
-            <span><strong>Mã đặt phòng:</strong></span>
-            <span>{{ invoiceData['bookingId'] || 'N/A' }}</span>
+        <div class="info-card">
+          <div class="info-row">
+            <div class="info-item">
+              <span><strong>Mã đặt phòng:</strong></span>
+              <span>{{ invoiceData['bookingId'] || 'N/A' }}</span>
+            </div>
+            <div class="info-item">
+              <span><strong>Khách hàng:</strong></span>
+              <span>{{ invoiceData.customerName || invoiceData['guestInfo']?.name || 'Khách lẻ' }}</span>
+            </div>
           </div>
-          <div class="info-item">
-            <span><strong>Khách hàng:</strong></span>
-            <span>{{ invoiceData.customerName || invoiceData['guestInfo']?.name || 'Khách lẻ' }}</span>
+          <div class="info-row">
+            <div class="info-item">
+              <span><strong>Phòng:</strong></span>
+              <span>{{ invoiceData.roomNumber }}</span>
+            </div>
+            <div class="info-item">
+              <span><strong>Nhân viên:</strong></span>
+              <span>{{ invoiceData.staffName || 'Không có thông tin' }}</span>
+            </div>
           </div>
-        </div>
-        <div class="info-row">
-          <div class="info-item">
-            <span><strong>Phòng:</strong></span>
-            <span>{{ invoiceData.roomNumber }}</span>
+          <div class="info-row">
+            <div class="info-item">
+              <span><strong>Ngày đến:</strong></span>
+              <span>{{ invoiceData.checkInTime | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="info-item">
+              <span><strong>Ngày đi:</strong></span>
+              <span>{{ invoiceData.checkOutTime | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
           </div>
-          <div class="info-item">
-            <span><strong>Nhân viên:</strong></span>
-            <span>{{ invoiceData.staffName || 'Không có thông tin' }}</span>
+          <div class="info-row">
+            <div class="info-item">
+              <span><strong>Thời gian lưu trú:</strong></span>
+              <span>{{ durationText }}</span>
+            </div>
+            <div class="info-item">
+              <span><strong>Phương thức thanh toán:</strong></span>
+              <span>
+                <nz-tag [nzColor]="getPaymentMethodColor(invoiceData.paymentMethod || '')">
+                  {{ getPaymentMethodLabel(invoiceData.paymentMethod || '') }}
+                </nz-tag>
+              </span>
+            </div>
           </div>
-        </div>
-        <div class="info-row">
-          <div class="info-item">
-            <span><strong>Ngày đến:</strong></span>
-            <span>{{ invoiceData?.checkInTime | date:'dd/MM/yyyy HH:mm' }}</span>
-          </div>
-          <div class="info-item">
-            <span><strong>Ngày đi:</strong></span>
-            <span>{{ invoiceData?.checkOutTime | date:'dd/MM/yyyy HH:mm' }}</span>
-          </div>
-        </div>
-        <div class="info-row">
-          <div class="info-item">
-            <span><strong>Thời gian lưu trú:</strong></span>
-            <span>{{ durationText }}</span>
-          </div>
-          <div class="info-item">
-            <span><strong>Phương thức thanh toán:</strong></span>
-            <span>{{ getPaymentMethodLabel(invoiceData?.paymentMethod || '') }}</span>
-          </div>
-        </div>
-        <div class="info-row">
-          <div class="info-item">
-            <span><strong>Trạng thái:</strong></span>
-            <span [ngClass]="getPaymentStatusClass(invoiceData?.paymentStatus || '')">{{ getPaymentStatusLabel(invoiceData?.paymentStatus || '') }}</span>
-          </div>
-          <div class="info-item">
-            <span><strong>SĐT khách hàng:</strong></span>
-            <span>{{ invoiceData?.customerPhone || invoiceData?.['guestInfo']?.phone || 'Không có thông tin' }}</span>
+          <div class="info-row">
+            <div class="info-item">
+              <span><strong>SĐT khách hàng:</strong></span>
+              <span>{{ invoiceData.customerPhone || invoiceData['guestInfo']?.phone || 'Không có thông tin' }}</span>
+            </div>
           </div>
         </div>
       </div>
   
-      <nz-table [nzData]="invoiceData?.products || []" nzShowPagination="false" class="invoice-table">
+      <nz-table [nzData]="invoiceData.products || []" nzShowPagination="false" class="invoice-table">
         <thead>
           <tr>
             <th>Tên hàng<br>(Product)</th>
@@ -86,7 +91,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let product of invoiceData?.products || []">
+          <tr *ngFor="let product of invoiceData.products || []">
             <td>{{product.name}}</td>
             <td class="text-center">x{{product.quantity || 1}}</td>
             <td class="text-right">{{ formatCurrency(product.price) }}</td>
@@ -108,26 +113,17 @@
           </ng-container>
           
           <!-- Hiển thị nếu không có sản phẩm -->
-          <tr *ngIf="(invoiceData?.products || []).length === 0">
-            <td>Tiền phòng {{ invoiceData?.roomNumber }}</td>
+          <tr *ngIf="(invoiceData.products || []).length === 0">
+            <td>Tiền phòng {{ invoiceData.roomNumber }}</td>
             <td class="text-center">x1</td>
-            <td class="text-right">{{ formatCurrency(invoiceData?.['amount'] || 0) }}</td>
-            <td class="text-right">{{ formatCurrency(invoiceData?.['amount'] || 0) }}</td>
+            <td class="text-right">{{ formatCurrency(invoiceData['amount'] || 0) }}</td>
+            <td class="text-right">{{ formatCurrency(invoiceData['amount'] || 0) }}</td>
           </tr>
           
-          <!-- Hiển thị tổng tiền -->
-          <tr>
-            <td><strong>Tổng tiền hàng:</strong></td>
-            <td class="text-center"></td>
-            <td class="text-center"></td>
-            <td class="text-right">
-              <p>{{ formatCurrency(subtotal || invoiceData?.['amount'] || 0) }}</p>
-            </td>
-          </tr>
           
           <!-- Hiển thị tiền dịch vụ nếu có -->
-          <tr *ngIf="serviceTotal > 0 && !hasServiceProductsDuplicated()">
-            <td><strong>Tổng tiền dịch vụ:</strong></td>
+          <tr *ngIf="serviceTotal > 0">
+            <td><strong>Tổng tiền dịch vụ(Total Service):</strong></td>
             <td class="text-center"></td>
             <td class="text-center"></td>
             <td class="text-right">
@@ -136,12 +132,12 @@
           </tr>
           
           <!-- Hiển thị tiền trả trước nếu có -->
-          <tr *ngIf="invoiceData?.['advancePayment'] && invoiceData?.['advancePayment'] > 0">
+          <tr *ngIf="invoiceData.advancePayment && invoiceData.advancePayment > 0">
             <td><strong>Đã thanh toán trước:</strong></td>
             <td class="text-center"></td>
             <td class="text-center"></td>
             <td class="text-right">
-              <p>{{ formatCurrency(invoiceData?.['advancePayment'] || 0) }}</p>
+              <p>{{ formatCurrency(invoiceData.advancePayment) }}</p>
             </td>
           </tr>
           
@@ -151,7 +147,7 @@
             <td class="text-center"></td>
             <td class="text-center"></td>
             <td class="text-right">
-              <p>{{ formatCurrency(invoiceData?.additionalCharges || 0) }}</p>
+              <p>{{ formatCurrency(invoiceData.additionalCharges || 0) }}</p>
             </td>
           </tr>
           <tr>
@@ -159,7 +155,7 @@
             <td class="text-center"></td>
             <td class="text-center"></td>
             <td class="text-right">
-              <p>{{ formatCurrency(invoiceData?.discount || 0) }}</p>
+              <p>{{ formatCurrency(-(invoiceData.discount || 0)) }}</p>
             </td>
           </tr>
           
@@ -169,7 +165,7 @@
             <td class="text-center"></td>
             <td class="text-center"></td>
             <td class="text-right">
-              <p><strong>{{ formatCurrency(invoiceData.totalAmount || invoiceData['amount'] || 0) }}</strong></p>
+              <p><strong>{{ formatCurrency(finalTotalAmount) }}</strong></p>
             </td>
           </tr>
         </tbody>
@@ -188,9 +184,24 @@
     </div>
     
     <div nz-actions class="custom-footer">
-      <button nz-button nzType="primary" (click)="exportInvoice()">
-        <span nz-icon nzType="printer" nzTheme="outline"></span> In hóa đơn
-      </button>
+      <div class="footer-buttons">
+        <button nz-button nzType="primary" (click)="exportInvoice()">
+          <span nz-icon nzType="printer" nzTheme="outline"></span> In hóa đơn
+        </button>
+        <button nz-button nzType="primary" (click)="sendInvoiceEmail()">
+          <span nz-icon nzType="mail" nzTheme="outline"></span> Gửi qua email
+        </button>
+        <button nz-button nzType="default" (click)="downloadPDF()">
+          <span nz-icon nzType="download" nzTheme="outline"></span> Tải xuống PDF
+        </button>
+        <button nz-button nzType="primary" nzDanger 
+                nz-popconfirm
+                nzPopconfirmTitle="Bạn có chắc chắn muốn xóa hóa đơn này?"
+                nzPopconfirmPlacement="top"
+                (nzOnConfirm)="deleteInvoice()">
+          <span nz-icon nzType="delete" nzTheme="outline"></span> Xóa hóa đơn
+        </button>
+      </div>
     </div>
   </nz-card>
 </div>
@@ -217,6 +228,13 @@
     text-align: center;
   }
   
+  .info-card {
+    padding: 16px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  
   .info-row {
     display: flex;
     justify-content: space-between;
@@ -227,6 +245,8 @@
     width: 48%;
     display: flex;
     justify-content: space-between;
+    border-bottom: 1px dashed #e8e8e8;
+    padding-bottom: 8px;
   }
   
   .customer-info {
@@ -285,8 +305,35 @@
     margin-top: 20px;
   }
   
+  .footer-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
   .invoice-date {
     font-size: 12px;
     color: #999;
+  }
+  
+  @media (max-width: 768px) {
+    .info-row {
+      flex-direction: column;
+    }
+    
+    .info-item {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    
+    .footer-buttons {
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .footer-buttons button {
+      width: 100%;
+    }
   }
 </style>
