@@ -8,7 +8,6 @@ import * as XLSX from 'xlsx';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import * as moment from 'moment';
 import { format } from 'date-fns';
 import { finalize, catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
