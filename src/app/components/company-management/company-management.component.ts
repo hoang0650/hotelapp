@@ -6,7 +6,7 @@ import { Hotel } from '../../interfaces/hotel';
 import { HotelService } from '../../services/hotel.service';
 import { AuthService } from '../../services/auth.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { UserService } from '../../services/user.service';
+import { UserService, UserResponse } from '../../services/user.service';
 
 @Component({
   selector: 'app-company-management',
@@ -55,13 +55,13 @@ export class CompanyManagementComponent implements OnInit {
 
   ngOnInit(): void { 
     // Kiểm tra quyền admin bằng cách lấy thông tin người dùng
-    this.userService.getUserInfor().subscribe(
-      (user) => {
+    this.userService.getUserInfo().subscribe(
+      (user: UserResponse) => {
         this.isAdmin = user && user.role === 'admin';
         this.loadBusinesses();
         this.loadHotels();
       },
-      (error) => {
+      (error: Error) => {
         console.error('Error getting user info:', error);
         this.loadBusinesses();
         this.loadHotels();

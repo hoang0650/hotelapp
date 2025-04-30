@@ -1,0 +1,78 @@
+.user-management-container {
+  padding: 24px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+
+  .header {
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0;
+      color: rgba(0, 0, 0, 0.85);
+      font-weight: 500;
+    }
+  }
+
+  .search-box {
+    margin-bottom: 16px;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  nz-table {
+    background: white;
+    border-radius: 4px;
+    
+    th {
+      font-weight: 500;
+    }
+  }
+
+  .ant-table-tbody > tr > td {
+    vertical-align: middle;
+  }
+
+  nz-tag {
+    min-width: 80px;
+    text-align: center;
+  }
+
+  nz-badge {
+    .ant-badge-status-dot {
+      top: -2px;
+    }
+  }
+
+  // Custom styles cho table
+  ::ng-deep {
+    .ant-table-thead > tr > th {
+      background: #fafafa;
+      font-weight: 500;
+    }
+
+    .ant-table-row:hover {
+      .ant-btn-link {
+        opacity: 1;
+      }
+    }
+
+    .ant-btn-link {
+      opacity: 0.6;
+      transition: opacity 0.3s;
+      padding: 0 4px;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    .ant-tag {
+      text-transform: capitalize;
+    }
+
+    .ant-badge-status-text {
+      margin-right: 8px;
+    }
+  }
+} 

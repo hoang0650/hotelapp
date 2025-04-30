@@ -1,13 +1,10 @@
-export interface User {
-  _id?: string;
-  userId: string;
-  username: string;
-  email: string;
-  role: 'admin' | 'business' | 'hotel' | 'staff' | 'customer';
-  hotelId?: string;
+import { UserResponse } from '../services/user.service';
+
+export interface User extends UserResponse {
+  _id: string;
+  lastLogin?: Date;
+  isUpdating?: boolean;
   businessId?: string;
+  hotelId?: string;
   permissions?: string[];
-  avatar?: string;
-  blocked?: boolean;
-  online?: boolean;
 } 

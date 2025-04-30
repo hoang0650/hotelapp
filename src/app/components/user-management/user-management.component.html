@@ -1,0 +1,131 @@
+<div class="user-management-container">
+  <!-- Header với tiêu đề -->
+  <div nz-row class="header" [nzGutter]="16" nzAlign="middle" nzJustify="space-between">
+    <div nz-col>
+      <h2>Quản lý người dùng</h2>
+    </div>
+  </div>
+
+  <!-- Bảng danh sách users -->
+  <nz-table
+    #basicTable
+    [nzData]="users"
+    [nzLoading]="isLoading"
+    [nzTotal]="total"
+    [nzPageSize]="pageSize"
+    [nzPageIndex]="pageIndex"
+    (nzPageIndexChange)="onPageIndexChange($event)"
+    (nzPageSizeChange)="onPageSizeChange($event)"
+    [nzScroll]="{ x: '1000px' }"
+  >
+    <thead>
+      <tr>
+        <th nzWidth="60px">STT</th>
+        <th nzWidth="150px">Tên đăng nhập</th>
+        <th nzWidth="200px">Email</th>
+        <th nzWidth="100px">Vai trò</th>
+        <th nzWidth="120px">Trạng thái</th>
+        <th nzWidth="150px">Ngày tạo</th>
+        <th nzWidth="150px">Đăng nhập cuối</th>
+        <th nzWidth="120px">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let user of basicTable.data; let i = index">
+        <td>{{ i + 1 + (pageIndex - 1) * pageSize }}</td>
+        <td>{{ user.username }}</td>
+        <td>{{ user.email }}</td>
+        <td>
+          <nz-tag [nzColor]="
+            user.role === 'admin' ? 'red' : 
+            user.role === 'business' ? 'blue' :
+            user.role === 'hotel' ? 'purple' :
+            user.role === 'staff' ? 'orange' : 'green'
+          ">
+            {{ user.role | titlecase }}
+          </nz-tag>
+        </td>
+        <td>
+          <nz-badge
+            [nzStatus]="user.blocked ? 'error' : 'success'"
+            [nzText]="user.blocked ? 'Bị khóa' : 'Hoạt động'"
+          ></nz-badge>
+          <a 
+            nz-button 
+            nzType="link" 
+            nzSize="small"
+            [nzLoading]="user.isUpdating"
+            (click)="toggleUserBlock(user)"
+          >
+            <i nz-icon [nzType]="user.blocked ? 'unlock' : 'lock'"></i>
+          </a>
+        </td>
+        <td>{{ user.createdAt | date:'short' }}</td>
+        <td>{{ user.lastLogin | date:'short' }}</td>
+        <td>
+          <a nz-button nzType="link" nzSize="small" (click)="showEditModal(user)">
+            <i nz-icon nzType="edit"></i>
+          </a>
+          <nz-divider nzType="vertical"></nz-divider>
+          <a 
+            nz-button 
+            nzType="link" 
+            nzDanger 
+            nzSize="small"
+            (click)="deleteUser(user)"
+          >
+            <i nz-icon nzType="delete"></i>
+          </a>
+        </td>
+      </tr>
+    </tbody>
+  </nz-table>
+
+  <!-- Modal chỉnh sửa -->
+  <nz-modal
+    [(nzVisible)]="isVisible"
+    [nzTitle]="editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng'"
+    (nzOnCancel)="handleCancel()"
+    (nzOnOk)="handleOk()"
+    [nzOkLoading]="isLoading"
+  >
+    <ng-container *nzModalContent>
+      <form nz-form [formGroup]="userForm">
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tên đăng nhập</nz-form-label>
+          <nz-form-control [nzSpan]="14" nzErrorTip="Vui lòng nhập tên đăng nhập!">
+            <input nz-input formControlName="username" placeholder="Nhập tên đăng nhập" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Email</nz-form-label>
+          <nz-form-control [nzSpan]="14" nzErrorTip="Vui lòng nhập email hợp lệ!">
+            <input nz-input formControlName="email" placeholder="Nhập email" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Vai trò</nz-form-label>
+          <nz-form-control [nzSpan]="14" nzErrorTip="Vui lòng chọn vai trò!">
+            <nz-select formControlName="role">
+              <nz-option nzValue="admin" nzLabel="Admin"></nz-option>
+              <nz-option nzValue="business" nzLabel="Business"></nz-option>
+              <nz-option nzValue="hotel" nzLabel="Hotel"></nz-option>
+              <nz-option nzValue="staff" nzLabel="Staff"></nz-option>
+              <nz-option nzValue="customer" nzLabel="Customer"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Trạng thái</nz-form-label>
+          <nz-form-control [nzSpan]="14">
+            <nz-switch formControlName="blocked" [nzCheckedChildren]="'Khóa'" [nzUnCheckedChildren]="'Hoạt động'">
+            </nz-switch>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </ng-container>
+  </nz-modal>
+</div> 

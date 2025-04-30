@@ -26,6 +26,8 @@ import { AboutUsComponent } from './components/about-us/about-us.component';
 import { ChatComponent } from './components/chat/chat.component';
 import { BusinessSignupComponent } from './components/business-signup/business-signup.component';
 import { ServiceManagementComponent } from './components/service-management/service-management.component';
+import { UserManagementComponent } from './components/user-management/user-management.component';
+//import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
@@ -44,6 +46,13 @@ const routes: Routes = [
       { path: 'visa-payment', component: VisaPaymentComponent },
       { path: 'company', component: CompanyManagementComponent },
       { path: 'room-management', component: RoomManagementComponent },
+      { path: 'service-management', component: ServiceManagementComponent },
+      {
+        path: 'users-management',
+        component: UserManagementComponent,
+       // canActivate: [AuthGuard],
+        //data: { roles: ['admin'] }
+      },
       { path: 'hotel', component: HotelManagementComponent },
       { path: 'staff', component: StaffManagementComponent },
       { path: 'chart', component: RevenueChartComponent },
@@ -61,8 +70,7 @@ const routes: Routes = [
   { path: 'about-us', component: AboutUsComponent },
   { path: 'chat', component: ChatComponent },
   { path: 'qr-payment', component: QrPaymentComponent },
-  { path: 'visa-payment', component: VisaPaymentComponent },
-  { path: 'service-management', component: ServiceManagementComponent }
+  { path: 'visa-payment', component: VisaPaymentComponent }
 ];
 
 @NgModule({

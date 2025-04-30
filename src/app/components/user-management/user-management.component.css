@@ -1,0 +1,49 @@
+.user-management-container {
+  padding: 24px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.header h2 {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 500;
+}
+
+:host ::ng-deep {
+  /* Tùy chỉnh style cho table */
+  .ant-table-thead > tr > th {
+    background-color: #fafafa;
+    font-weight: 500;
+  }
+
+  /* Style cho form trong modal */
+  .ant-form-item {
+    margin-bottom: 16px;
+  }
+
+  .ant-form-item-label {
+    text-align: left;
+  }
+
+  /* Style cho các tag vai trò */
+  .ant-tag {
+    margin-right: 0;
+  }
+
+  /* Style cho badge trạng thái */
+  .ant-badge-status-text {
+    margin-right: 8px;
+  }
+
+  /* Style cho các nút thao tác */
+  .ant-btn-link {
+    padding: 0 4px;
+  }
+
+  .ant-divider-vertical {
+    margin: 0 8px;
+  }
+} 

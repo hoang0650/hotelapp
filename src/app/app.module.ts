@@ -27,6 +27,7 @@ import { ModalControlDirective } from './directives/modal-control.directive';
 
 import { NZ_I18N } from 'ng-zorro-antd/i18n';
 import { en_US } from 'ng-zorro-antd/i18n';
+import { vi_VN } from 'ng-zorro-antd/i18n';
 import { registerLocaleData } from '@angular/common';
 import en from '@angular/common/locales/en';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
@@ -67,6 +68,7 @@ import { NzUploadModule } from 'ng-zorro-antd/upload';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzStatisticModule } from 'ng-zorro-antd/statistic';
+import { NzBadgeModule } from 'ng-zorro-antd/badge';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { FilterPipe } from './pipes/filter.pipe';
@@ -94,6 +96,8 @@ import { BusinessSignupComponent } from './components/business-signup/business-s
 import { RoomServiceComponent } from './components/room-service/room-service.component';
 import { ServiceManagementComponent } from './components/service-management/service-management.component';
 import { InvoiceModalComponent } from './components/invoice-modal/invoice-modal.component';
+import { UserManagementComponent } from './components/user-management/user-management.component';
+import { UserFormModalComponent } from './components/user-management/user-form-modal/user-form-modal.component';
 
 registerLocaleData(en);
 
@@ -137,7 +141,9 @@ registerLocaleData(en);
         BusinessSignupComponent,
         RoomServiceComponent,
         ServiceManagementComponent,
-        InvoiceModalComponent
+        InvoiceModalComponent,
+        UserManagementComponent,
+        UserFormModalComponent
     ],
     bootstrap: [AppComponent], imports: [BrowserModule,
         NgxEchartsModule.forRoot({ echarts: () => import('echarts') }),
@@ -182,7 +188,8 @@ registerLocaleData(en);
         NzUploadModule,
         NzAlertModule,
         NzCheckboxModule,
-        NzStatisticModule
+        NzStatisticModule,
+        NzBadgeModule
     ], providers: [
         provideClientHydration(),
         { provide: NZ_I18N, useValue: en_US },
