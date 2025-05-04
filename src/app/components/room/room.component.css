@@ -1,5 +1,5 @@
 .active-room {
-    background: orange !important;
+    background: red !important;
 }
 
 .inactive-room {
@@ -8,6 +8,12 @@
 
 .dirty-room {
     background: grey !important;
+}
+.maintenance {
+    background: #722ed1 !important;
+}
+.cleaning {
+    background: #f59e0b !important;
 }
 
 .ant-card{

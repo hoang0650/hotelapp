@@ -1,0 +1,59 @@
+<div class="ai-assistant-container">
+  <div class="chat-header">
+    <div class="assistant-info">
+      <nz-avatar [nzSize]="40" nzIcon="robot"></nz-avatar>
+      <span class="assistant-name">AI Assistant</span>
+    </div>
+  </div>
+
+  <div #messageContainer class="messages-container">
+    <div *ngFor="let message of messages" 
+         [ngClass]="{'message': true, 'user-message': message.role === 'user', 'assistant-message': message.role === 'assistant'}">
+      <div class="message-content">
+        <nz-avatar *ngIf="message.role === 'assistant'" 
+                   [nzSize]="32" 
+                   nzIcon="robot" 
+                   class="message-avatar">
+        </nz-avatar>
+        <div class="message-bubble">
+          <div class="message-text">{{ message.content }}</div>
+          <div class="message-time">{{ getMessageTime(message.timestamp) }}</div>
+        </div>
+        <nz-avatar *ngIf="message.role === 'user'" 
+                   [nzSize]="32" 
+                   nzIcon="user" 
+                   class="message-avatar">
+        </nz-avatar>
+      </div>
+    </div>
+
+    <div *ngIf="isTyping" class="typing-indicator">
+      <nz-avatar [nzSize]="32" nzIcon="robot"></nz-avatar>
+      <div class="typing-bubble">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-input">
+    <form (ngSubmit)="sendMessage()" class="input-form">
+      <nz-input-group [nzSuffix]="suffixButton">
+        <input nz-input
+               [formControl]="messageInput"
+               placeholder="Nhập tin nhắn..."
+               [disabled]="isTyping">
+      </nz-input-group>
+      <ng-template #suffixButton>
+        <button nz-button 
+                nzType="primary" 
+                type="submit" 
+                [disabled]="!messageInput.value?.trim() || isTyping"
+                title="Gửi tin nhắn">
+          <i nz-icon nzType="send"></i>
+        </button>
+      </ng-template>
+    </form>
+  </div>
+</div> 

@@ -1,0 +1,62 @@
+.bank-transfer-history {
+  padding: 20px;
+}
+
+.search-form {
+  margin-bottom: 24px;
+}
+
+nz-form-item {
+  margin-bottom: 16px;
+}
+
+.search-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.search-buttons button {
+  display: flex;
+  align-items: center;
+}
+
+.search-buttons i {
+  margin-right: 8px;
+}
+
+.amount {
+  text-align: right;
+  font-family: monospace;
+}
+
+nz-table {
+  margin-top: 16px;
+}
+
+.transfer-detail {
+  padding: 16px;
+}
+
+.transfer-detail p {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.transfer-detail strong {
+  display: inline-block;
+  width: 120px;
+  color: #666;
+}
+
+h2 {
+  margin-bottom: 24px;
+  color: #1890ff;
+  font-weight: 500;
+}
+
+nz-tag {
+  min-width: 80px;
+  text-align: center;
+} 

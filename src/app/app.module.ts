@@ -52,7 +52,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzCarouselModule } from 'ng-zorro-antd/carousel';
-import { NzDatePickerModule} from 'ng-zorro-antd/date-picker';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzCalendarModule } from 'ng-zorro-antd/calendar';
 import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -98,10 +98,14 @@ import { ServiceManagementComponent } from './components/service-management/serv
 import { InvoiceModalComponent } from './components/invoice-modal/invoice-modal.component';
 import { UserManagementComponent } from './components/user-management/user-management.component';
 import { UserFormModalComponent } from './components/user-management/user-form-modal/user-form-modal.component';
+import { BankTransferHistoryComponent } from './components/bank-transfer-history/bank-transfer-history.component';
+import { AiAssistantComponent } from './components/ai-assistant/ai-assistant.component';
+import { NlToBrPipe } from './pipes/nl-to-br.pipe';
 
 registerLocaleData(en);
 
-@NgModule({ declarations: [
+@NgModule({
+    declarations: [
         AppComponent,
         HeaderComponent,
         ProductListComponent,
@@ -143,9 +147,14 @@ registerLocaleData(en);
         ServiceManagementComponent,
         InvoiceModalComponent,
         UserManagementComponent,
-        UserFormModalComponent
+        UserFormModalComponent,
+        BankTransferHistoryComponent,
+        AiAssistantComponent,
+        NlToBrPipe
     ],
-    bootstrap: [AppComponent], imports: [BrowserModule,
+    bootstrap: [AppComponent],
+    imports: [
+        BrowserModule,
         NgxEchartsModule.forRoot({ echarts: () => import('echarts') }),
         HighchartsChartModule,
         AppRoutingModule,
@@ -190,12 +199,14 @@ registerLocaleData(en);
         NzCheckboxModule,
         NzStatisticModule,
         NzBadgeModule
-    ], providers: [
+    ],
+    providers: [
         provideClientHydration(),
         { provide: NZ_I18N, useValue: en_US },
         provideAnimationsAsync(),
         provideHttpClient(),
         provideHttpClient(withInterceptorsFromDi()),
         DatePipe
-    ] })
+    ]
+})
 export class AppModule { }

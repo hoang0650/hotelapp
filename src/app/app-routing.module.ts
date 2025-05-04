@@ -27,6 +27,7 @@ import { ChatComponent } from './components/chat/chat.component';
 import { BusinessSignupComponent } from './components/business-signup/business-signup.component';
 import { ServiceManagementComponent } from './components/service-management/service-management.component';
 import { UserManagementComponent } from './components/user-management/user-management.component';
+import { BankTransferHistoryComponent } from './components/bank-transfer-history/bank-transfer-history.component';
 //import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
@@ -58,6 +59,8 @@ const routes: Routes = [
       { path: 'chart', component: RevenueChartComponent },
       { path: 'unauthorized', component: UnauthorizedComponent },
       { path: 'notfound', component: NotfoundComponent },
+      { path: 'shift-handover', component: RoomHistoryComponent },
+      { path: 'bank-transfer-history', component: BankTransferHistoryComponent },
       // Thêm các route con khác nếu cần
     ]
   },
