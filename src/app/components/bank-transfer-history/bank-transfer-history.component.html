@@ -1,127 +1,59 @@
-<div class="bank-transfer-history">
-  <nz-card>
-    <h2>Lịch sử chuyển khoản ngân hàng</h2>
-    
-    <!-- Form tìm kiếm -->
-    <form nz-form [formGroup]="searchForm" class="search-form">
-      <div nz-row [nzGutter]="16">
-        <div nz-col [nzSpan]="6">
-          <nz-form-item>
-            <nz-form-label>Từ ngày</nz-form-label>
-            <nz-form-control>
-              <nz-date-picker formControlName="startDate" nzFormat="dd/MM/yyyy"></nz-date-picker>
-            </nz-form-control>
-          </nz-form-item>
-        </div>
-        <div nz-col [nzSpan]="6">
-          <nz-form-item>
-            <nz-form-label>Đến ngày</nz-form-label>
-            <nz-form-control>
-              <nz-date-picker formControlName="endDate" nzFormat="dd/MM/yyyy"></nz-date-picker>
-            </nz-form-control>
-          </nz-form-item>
-        </div>
-        <div nz-col [nzSpan]="6">
-          <nz-form-item>
-            <nz-form-label>Trạng thái</nz-form-label>
-            <nz-form-control>
-              <nz-select formControlName="status">
-                <nz-option nzValue="" nzLabel="Tất cả"></nz-option>
-                <nz-option nzValue="success" nzLabel="Thành công"></nz-option>
-                <nz-option nzValue="pending" nzLabel="Đang xử lý"></nz-option>
-                <nz-option nzValue="failed" nzLabel="Thất bại"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
-        </div>
-        <div nz-col [nzSpan]="6">
-          <nz-form-item>
-            <nz-form-label>Ngân hàng</nz-form-label>
-            <nz-form-control>
-              <nz-select formControlName="bankName">
-                <nz-option nzValue="" nzLabel="Tất cả"></nz-option>
-                <nz-option nzValue="VCB" nzLabel="Vietcombank"></nz-option>
-                <nz-option nzValue="TCB" nzLabel="Techcombank"></nz-option>
-                <nz-option nzValue="MB" nzLabel="MB Bank"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
-        </div>
-      </div>
-      <div nz-row class="search-buttons">
-        <button nz-button nzType="primary" (click)="search()">
-          <i nz-icon nzType="search"></i>Tìm kiếm
-        </button>
-        <button nz-button (click)="resetForm()">
-          <i nz-icon nzType="reload"></i>Đặt lại
-        </button>
-      </div>
-    </form>
+<div class="bank-transfer-history-container">
+  <p>Lịch sử giao dịch SePay</p>
 
-    <!-- Bảng dữ liệu -->
-    <nz-table
-      #transferTable
-      [nzData]="transfers"
+  <nz-alert *ngIf="errorMessage" nzType="error" [nzMessage]="errorMessage" nzShowIcon class="error-alert"></nz-alert>
+
+  <div *ngIf="isLoading" class="loading-spinner">
+    <nz-spin nzSimple [nzSize]="'large'"></nz-spin>
+    <p>Đang tải dữ liệu...</p>
+  </div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+    <nz-table 
+      #sepayTable 
+      [nzData]="transactions" 
       [nzLoading]="isLoading"
-      [nzPageSize]="10"
-      [nzShowSizeChanger]="true"
-      [nzShowTotal]="totalTemplate">
+      [nzPageSize]="pageSize"
+      [nzPageIndex]="pageIndex"
+      [nzTotal]="totalTransactions" 
+      (nzPageIndexChange)="onPageIndexChange($event)"
+      (nzPageSizeChange)="onPageSizeChange($event)"
+      nzShowSizeChanger
+      nzShowQuickJumper
+      [nzFrontPagination]="false" 
+      nzBordered
+      nzSize="middle"
+    >
       <thead>
         <tr>
-          <th>Mã giao dịch</th>
-          <th>Thời gian</th>
-          <th>Từ tài khoản</th>
-          <th>Đến tài khoản</th>
-          <th>Ngân hàng</th>
-          <th>Số tiền</th>
-          <th>Trạng thái</th>
-          <th>Thao tác</th>
+          <th 
+            *ngFor="let column of listOfColumns" 
+            [nzSortOrder]="column.sortOrder"
+            [nzSortFn]="column.sortFn"
+            [nzSortDirections]="column.sortDirections"
+            [nzFilterMultiple]="column.filterMultiple"
+            [nzFilters]="column.listOfFilter || []"
+            [nzFilterFn]="column.filterFn || true"
+          >
+            {{ column.name }}
+          </th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let transfer of transferTable.data">
-          <td>{{transfer.id}}</td>
-          <td>{{transfer.transferTime | date:'dd/MM/yyyy HH:mm'}}</td>
-          <td>{{transfer.fromAccount}}</td>
-          <td>{{transfer.toAccount}}</td>
-          <td>{{transfer.bankName}}</td>
-          <td class="amount">{{transfer.amount | number}} VNĐ</td>
-          <td>
-            <nz-tag
-              [nzColor]="getStatusColor(transfer.status)">
-              {{getStatusText(transfer.status)}}
-            </nz-tag>
-          </td>
-          <td>
-            <a (click)="viewDetail(transfer)">Chi tiết</a>
-          </td>
+        <tr *ngFor="let data of sepayTable.data">
+          <td>{{ data.id }}</td>
+          <td>{{ data.bank_brand_name }}</td>
+          <td>{{ data.account_number }}</td>
+          <td>{{ data.transaction_date | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+          <td class="amount-out">{{ data.amount_out | number:'1.0-0' }} VND</td>
+          <td class="amount-in">{{ data.amount_in | number:'1.0-0' }} VND</td>
+          <td>{{ data.transaction_content }}</td>
+          <td>{{ data.reference_number }}</td>
         </tr>
       </tbody>
     </nz-table>
-    <ng-template #totalTemplate let-total>Tổng số {{total}} giao dịch</ng-template>
-  </nz-card>
-
-  <!-- Modal chi tiết -->
-  <nz-modal
-    [(nzVisible)]="isDetailVisible"
-    [nzTitle]="'Chi tiết giao dịch'"
-    (nzOnCancel)="handleCancel()"
-    [nzFooter]="null">
-    <ng-container *nzModalContent>
-      <div *ngIf="selectedTransfer" class="transfer-detail">
-        <p><strong>Mã giao dịch:</strong> {{selectedTransfer.id}}</p>
-        <p><strong>Thời gian:</strong> {{selectedTransfer.transferTime | date:'dd/MM/yyyy HH:mm'}}</p>
-        <p><strong>Từ tài khoản:</strong> {{selectedTransfer.fromAccount}}</p>
-        <p><strong>Đến tài khoản:</strong> {{selectedTransfer.toAccount}}</p>
-        <p><strong>Ngân hàng:</strong> {{selectedTransfer.bankName}}</p>
-        <p><strong>Số tiền:</strong> {{selectedTransfer.amount | number}} VNĐ</p>
-        <p><strong>Trạng thái:</strong> 
-          <nz-tag [nzColor]="getStatusColor(selectedTransfer.status)">
-            {{getStatusText(selectedTransfer.status)}}
-          </nz-tag>
-        </p>
-        <p><strong>Mô tả:</strong> {{selectedTransfer.description}}</p>
-      </div>
-    </ng-container>
-  </nz-modal>
+    <div *ngIf="!isLoading && transactions.length === 0 && !errorMessage" class="no-data-message">
+      <nz-empty nzNotFoundContent="Không có dữ liệu giao dịch cho khoảng thời gian đã chọn."></nz-empty>
+    </div>
+  </div>
 </div> 
