@@ -37,4 +37,18 @@ export class BankTransferService {
   }): Observable<BankTransfer[]> {
     return this.http.get<BankTransfer[]>(`${this.apiUrl}/search`, { params: params as any });
   }
+
+  // Đăng nhập SePay
+  sepayLogin(username: string, password: string): Observable<any> {
+    return this.http.post<any>('/sepay/auth', { username, password });
+  }
+
+  // Lấy lịch sử giao dịch từ SePay qua backend proxy, truyền token qua header
+  getSepayTransactions(params?: any, token?: string): Observable<any> {
+    const options: any = { params };
+    if (token) {
+      options.headers = { Authorization: `Bearer ${token}` };
+    }
+    return this.http.get<any>('/sepay/transactions', options);
+  }
 } 

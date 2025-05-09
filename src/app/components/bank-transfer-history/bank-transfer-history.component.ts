@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { BankTransferService, BankTransfer } from '../../services/bank-transfer.service';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 // Định nghĩa Interface cho một giao dịch
 export interface SepayTransaction {
@@ -43,18 +42,11 @@ export class BankTransferHistoryComponent implements OnInit {
   selectedTransfer: BankTransfer | null = null;
   transactions: SepayTransaction[] = [];
   errorMessage: string | null = null;
-
-  // TODO: Thay thế bằng API key thực tế của bạn hoặc cơ chế xác thực phù hợp
-  // Lưu ý: Để API key trực tiếp trong code frontend là không an toàn cho production.
-  // Nên sử dụng proxy backend để quản lý API key.
-  private sepayApiKey = 'YOUR_SEPAY_API_KEY'; // Giữ lại hoặc để trống nếu API SePay chỉ cần Bearer token
-  private sepayApiToken = 'TOZMMVAXQ1EJHU6HTIMCGWZQ7HGGVBSDR0Z68B0ZRSYTEFGEDW2IA7TDEQI9O4WP';
-
-  // Định dạng ngày tháng
-  dateRange: Date[] = [];
+  bankNameFilters: Array<{ text: string; value: any }> = [];
   pageSize = 10;
   pageIndex = 1;
   totalTransactions = 0;
+  sepayToken: string = '';
   
   // Các cột sẽ hiển thị trong bảng
   listOfColumns: Array<{ 
@@ -80,20 +72,22 @@ export class BankTransferHistoryComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private bankTransferService: BankTransferService,
-    private message: NzMessageService,
-    private http: HttpClient
+    private message: NzMessageService
   ) {
     this.searchForm = this.fb.group({
-      startDate: [null],
-      endDate: [null],
+      dateRange: [null],
       status: [''],
-      bankName: ['']
+      bankName: [''],
+      searchKeyword: ['']
     });
   }
 
   ngOnInit() {
+    this.sepayToken = localStorage.getItem('sepayToken') || '';
+    if (this.sepayToken) {
+      this.fetchSepayTransactions();
+    }
     this.loadTransfers();
-    this.fetchSepayTransactions();
   }
 
   loadTransfers() {
@@ -171,69 +165,90 @@ export class BankTransferHistoryComponent implements OnInit {
     }
   }
 
+  onTokenChange(token: string) {
+    this.sepayToken = token;
+    if (token) {
+      localStorage.setItem('sepayToken', token);
+      this.fetchSepayTransactions();
+    } else {
+      localStorage.removeItem('sepayToken');
+      this.transactions = [];
+      this.totalTransactions = 0;
+    }
+  }
+
+  logoutSepay() {
+    this.sepayToken = '';
+    localStorage.removeItem('sepayToken');
+    this.transactions = [];
+    this.totalTransactions = 0;
+  }
+
   fetchSepayTransactions(): void {
+    if (!this.sepayToken) {
+      this.errorMessage = 'Vui lòng nhập API Token SePay!';
+      return;
+    }
     this.isLoading = true;
     this.errorMessage = null;
+    // Chuẩn bị params filter/search/pagination
+    const params: any = {
+      page: this.pageIndex,
+      pageSize: this.pageSize
+    };
+    const { dateRange, status, bankName, searchKeyword } = this.searchForm.value;
+    if (dateRange && dateRange.length === 2) {
+      params.date_from = this.formatDate(dateRange[0]);
+      params.date_to = this.formatDate(dateRange[1]);
+    }
+    if (status) params.status = status;
+    if (bankName) params.bankName = bankName;
+    if (searchKeyword) params.search = searchKeyword;
 
-    const apiUrl = 'https://my.sepay.vn/userapi/transactions/list';
-    
-    // Chuẩn bị headers - SePay có thể yêu cầu API key/token ở đây
-    // Kiểm tra tài liệu API của SePay để biết cách xác thực chính xác
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${this.sepayApiToken}`, // Ví dụ nếu dùng Bearer Token
-      'X-Api-Key': this.sepayApiKey, // Ví dụ nếu dùng API Key qua header
-      'Content-Type': 'application/json'
-      // Thêm các headers khác nếu SePay yêu cầu
-    });
-
-    // Thêm các tham số nếu API hỗ trợ (ví dụ: date_from, date_to, page, limit)
-    // const params = {
-    //   date_from: this.datePipe.transform(this.dateRange[0], 'yyyy-MM-dd'),
-    //   date_to: this.datePipe.transform(this.dateRange[1], 'yyyy-MM-dd'),
-    //   page: this.pageIndex.toString(),
-    //   limit: this.pageSize.toString()
-    // };
-
-    // Lưu ý: Việc truyền API key và token trực tiếp như thế này không an toàn trong môi trường production.
-    // Bạn nên tạo một backend proxy để gọi API SePay một cách an toàn.
-
-    this.http.get<SepayApiResponse>(apiUrl, { headers /*, params */ }).subscribe(
-      response => {
-        if (response && response.messages && response.messages.success && response.transactions) {
-          this.transactions = response.transactions;
-          this.totalTransactions = response.transactions.length; // Hoặc API có thể trả về tổng số
-           // Cập nhật bộ lọc cho cột Ngân hàng
+    this.bankTransferService.getSepayTransactions(params, this.sepayToken).subscribe(
+      res => {
+        if (res && Array.isArray(res.data)) {
+          this.transactions = res.data;
+          this.totalTransactions = res.total;
+          // Cập nhật bộ lọc cho cột Ngân hàng
           const bankNames = [...new Set(this.transactions.map(t => t.bank_brand_name))];
+          this.bankNameFilters = bankNames.map(name => ({ text: name, value: name }));
           const bankColumn = this.listOfColumns.find(col => col.name === 'Ngân hàng');
           if (bankColumn) {
-            bankColumn.listOfFilter = bankNames.map(name => ({ text: name, value: name }));
+            bankColumn.listOfFilter = this.bankNameFilters;
           }
+          this.errorMessage = null;
         } else {
+          this.transactions = [];
+          this.totalTransactions = 0;
           this.errorMessage = 'Không thể lấy dữ liệu giao dịch hoặc định dạng phản hồi không đúng.';
-          console.error('API response error or invalid format:', response);
         }
         this.isLoading = false;
       },
       error => {
-        console.error('Lỗi khi gọi API SePay:', error);
-        this.errorMessage = 'Đã xảy ra lỗi khi cố gắng kết nối đến SePay. Vui lòng thử lại sau.';
-        if (error.status === 0) {
-            this.errorMessage = 'Không thể kết nối đến máy chủ SePay. Vui lòng kiểm tra kết nối mạng và cấu hình CORS.';
-        } else if (error.status === 401 || error.status === 403) {
-            this.errorMessage = 'Xác thực thất bại. Vui lòng kiểm tra API key và token của SePay.';
+        this.transactions = [];
+        this.totalTransactions = 0;
+        if (error.status === 401) {
+          this.errorMessage = 'Token SePay không hợp lệ hoặc đã hết hạn. Vui lòng nhập lại!';
+          this.sepayToken = '';
+          localStorage.removeItem('sepayToken');
+        } else {
+          this.errorMessage = 'Đã xảy ra lỗi khi cố gắng kết nối đến SePay. Vui lòng thử lại sau.';
         }
-        // Bạn có thể muốn xử lý các mã lỗi HTTP khác ở đây
         this.isLoading = false;
       }
     );
   }
-  
-  onDateChange(result: Date[]): void {
-    if (result && result.length === 2) {
-      this.dateRange = result;
-      this.pageIndex = 1; // Reset về trang đầu khi đổi ngày
-      this.fetchSepayTransactions();
-    }
+
+  onFilterSubmit(): void {
+    this.pageIndex = 1;
+    this.fetchSepayTransactions();
+  }
+
+  onResetFilter(): void {
+    this.searchForm.reset();
+    this.pageIndex = 1;
+    this.fetchSepayTransactions();
   }
 
   onPageIndexChange(index: number): void {
@@ -243,10 +258,21 @@ export class BankTransferHistoryComponent implements OnInit {
 
   onPageSizeChange(size: number): void {
     this.pageSize = size;
-    this.pageIndex = 1; // Reset về trang đầu khi đổi page size
+    this.pageIndex = 1;
     this.fetchSepayTransactions();
   }
 
-  // Các hàm xử lý sắp xếp, lọc có thể được thêm ở đây nếu cần
-  // Ví dụ: handleSortChange, handleFilterChange
+  formatDate(date: Date): string {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toISOString().slice(0, 10);
+  }
+
+  getRowClass(data: any): string {
+    const amountIn = Number(data.amount_in || 0);
+    const amountOut = Number(data.amount_out || 0);
+    if (amountIn > 0) return 'row-success';
+    if (amountOut > 0 && amountIn === 0) return 'row-failed';
+    return '';
+  }
 } 
