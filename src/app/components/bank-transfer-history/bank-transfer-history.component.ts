@@ -69,6 +69,9 @@ export class BankTransferHistoryComponent implements OnInit {
     { name: 'Mã tham chiếu', sortOrder: null, sortFn: null, sortDirections: ['ascend', 'descend', null], filterMultiple: false }
   ];
 
+  // Thêm biến lưu filter bảng
+  tableFilters: any = {};
+
   constructor(
     private fb: FormBuilder,
     private bankTransferService: BankTransferService,
@@ -191,7 +194,6 @@ export class BankTransferHistoryComponent implements OnInit {
     }
     this.isLoading = true;
     this.errorMessage = null;
-    // Chuẩn bị params filter/search/pagination
     const params: any = {
       page: this.pageIndex,
       pageSize: this.pageSize
@@ -203,8 +205,12 @@ export class BankTransferHistoryComponent implements OnInit {
     }
     if (status) params.status = status;
     if (bankName) params.bankName = bankName;
-    if (searchKeyword) params.search = searchKeyword;
-
+    if (searchKeyword && searchKeyword.trim()) params.search = searchKeyword.trim();
+    // Thêm filter từ bảng (nếu có)
+    if (this.tableFilters['Ngân hàng'] && this.tableFilters['Ngân hàng'].length > 0) {
+      params.bankName = this.tableFilters['Ngân hàng'][0];
+    }
+    // Có thể mở rộng thêm các filter khác nếu cần
     this.bankTransferService.getSepayTransactions(params, this.sepayToken).subscribe(
       res => {
         if (res && Array.isArray(res.data)) {
@@ -274,5 +280,12 @@ export class BankTransferHistoryComponent implements OnInit {
     if (amountIn > 0) return 'row-success';
     if (amountOut > 0 && amountIn === 0) return 'row-failed';
     return '';
+  }
+
+  // Thêm hàm xử lý filter bảng
+  onTableFilterChange(filters: any): void {
+    this.tableFilters = filters;
+    this.pageIndex = 1;
+    this.fetchSepayTransactions();
   }
 } 

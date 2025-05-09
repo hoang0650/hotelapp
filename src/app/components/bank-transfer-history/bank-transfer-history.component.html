@@ -43,6 +43,7 @@
         [nzTotal]="totalTransactions"
         (nzPageIndexChange)="onPageIndexChange($event)"
         (nzPageSizeChange)="onPageSizeChange($event)"
+        (nzFilterChange)="onTableFilterChange($event)"
         nzShowSizeChanger
         nzShowQuickJumper
         [nzFrontPagination]="false"
