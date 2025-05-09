@@ -9,6 +9,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   timestamp: Date;
   isTyping?: boolean;
+  fileUrl?: string;
+  fileType?: string;
 }
 
 @Injectable({
@@ -28,23 +30,25 @@ export class AiAssistantService {
     return this.isTyping.asObservable();
   }
 
-  async sendMessage(content: string): Promise<void> {
+  async sendMessage(content: string, fileUrl?: string, fileType?: string): Promise<void> {
     // Thêm tin nhắn của user
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content,
       role: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
+      ...(fileUrl ? { fileUrl } : {}),
+      ...(fileType ? { fileType } : {})
     };
     
     this.addMessage(userMessage);
     this.isTyping.next(true);
 
     try {
-      // Gọi API AI Assistant
+      // Gọi API AI Assistant (tạm thời chỉ gửi message, có thể mở rộng gửi file sau)
       const response = await this.http.post<{response: string}>(
         `${environment.apiUrl}/ai-assistant/chat`,
-        { message: content }
+        { message: content, fileUrl, fileType }
       ).toPromise();
 
       // Thêm tin nhắn từ AI

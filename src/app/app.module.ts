@@ -99,8 +99,9 @@ import { InvoiceModalComponent } from './components/invoice-modal/invoice-modal.
 import { UserManagementComponent } from './components/user-management/user-management.component';
 import { UserFormModalComponent } from './components/user-management/user-form-modal/user-form-modal.component';
 import { BankTransferHistoryComponent } from './components/bank-transfer-history/bank-transfer-history.component';
-import { AiAssistantComponent } from './components/ai-assistant/ai-assistant.component';
 import { NlToBrPipe } from './pipes/nl-to-br.pipe';
+import { AiChatboxComponent } from './components/ai-chatbox/ai-chatbox.component';
+import { PricingComponent } from './components/pricing/pricing.component';
 
 registerLocaleData(en);
 
@@ -149,8 +150,9 @@ registerLocaleData(en);
         UserManagementComponent,
         UserFormModalComponent,
         BankTransferHistoryComponent,
-        AiAssistantComponent,
-        NlToBrPipe
+        NlToBrPipe,
+        AiChatboxComponent,
+        PricingComponent
     ],
     bootstrap: [AppComponent],
     imports: [

@@ -1,0 +1,54 @@
+<div class="ai-chatbox-container" [class.minimized]="minimized">
+  <button nz-button nzType="primary" nzShape="circle" class="chatbox-toggle" (click)="toggleMinimize()" [title]="minimized ? 'Mở chat' : 'Đóng chat'" [attr.aria-label]="minimized ? 'Mở chat' : 'Đóng chat'">
+    <i nz-icon [nzType]="minimized ? 'message' : 'close'" nzTheme="outline"></i>
+  </button>
+  <nz-card *ngIf="!minimized" nzTitle="Trợ lý AI" [nzBodyStyle]="{padding: '8px 0 0 0'}" class="ai-chatbox-card">
+    <div class="ai-chatbox-messages" #messagesEnd>
+      <div *ngFor="let msg of messages" class="chat-message-row" [ngClass]="msg.role">
+        <div class="chat-message-bubble-group" [ngClass]="msg.role">
+          <nz-avatar *ngIf="msg.role === 'assistant'" nzIcon="robot" nzShape="circle" nzSize="small" class="avatar"></nz-avatar>
+          <div class="bubble" [ngClass]="msg.role">
+            <div class="msg-content">{{msg.content}}</div>
+            <ng-container *ngIf="msg.fileUrl">
+              <img *ngIf="msg.fileType?.startsWith('image')" [src]="msg.fileUrl" class="chat-img-in-bubble" alt="Ảnh gửi kèm" />
+              <a *ngIf="!msg.fileType?.startsWith('image')" [href]="msg.fileUrl" target="_blank" class="file-link"><i nz-icon nzType="file" nzTheme="outline"></i> {{msg.fileUrl.split('/').pop()}}</a>
+            </ng-container>
+            <div class="msg-time">{{msg.timestamp | date:'shortTime'}}</div>
+          </div>
+          <nz-avatar *ngIf="msg.role === 'user'" nzIcon="user" nzShape="circle" nzSize="small" class="avatar"></nz-avatar>
+        </div>
+      </div>
+      <div *ngIf="isTyping" class="ai-chatbox-typing">
+        <nz-spin nzSimple></nz-spin>
+        <span class="ai-typing-text">AI đang trả lời<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>
+      </div>
+    </div>
+    <div *ngIf="selectedFile" class="selected-file-preview">
+      <div class="file-preview-content">
+        <img *ngIf="selectedFileType?.startsWith('image')" [src]="selectedFilePreview" class="chat-img-thumb" alt="Ảnh xem trước" />
+        <ng-container *ngIf="!selectedFileType?.startsWith('image')">
+          <i nz-icon nzType="file" nzTheme="outline" class="file-icon"></i>
+          <span class="file-name">{{selectedFileName}}</span>
+        </ng-container>
+        <button nz-button nzType="link" (click)="removeSelectedFile()" title="Xóa file" class="remove-file-btn">
+          <i nz-icon nzType="close"></i>
+        </button>
+      </div>
+    </div>
+    <div class="ai-chatbox-input">
+      <nz-upload
+        [nzShowUploadList]="false"
+        [nzBeforeUpload]="beforeUpload"
+        nzAccept="image/*,.pdf,.doc,.docx,.txt"
+      >
+        <button nz-button nzShape="circle" nzType="default" title="Tải lên file/ảnh" class="upload-btn" aria-label="Tải lên file/ảnh">
+          <i nz-icon nzType="paper-clip"></i>
+        </button>
+      </nz-upload>
+      <input nz-input [(ngModel)]="inputValue" (keydown.enter)="sendMessage()" [disabled]="isTyping" placeholder="Nhập tin nhắn..." />
+      <button nz-button nzType="primary" (click)="sendMessage()" [disabled]="!inputValue && !selectedFile || isTyping" title="Gửi">
+        <i nz-icon nzType="send" nzTheme="outline"></i>
+      </button>
+    </div>
+  </nz-card>
+</div>

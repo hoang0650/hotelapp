@@ -28,11 +28,13 @@ import { BusinessSignupComponent } from './components/business-signup/business-s
 import { ServiceManagementComponent } from './components/service-management/service-management.component';
 import { UserManagementComponent } from './components/user-management/user-management.component';
 import { BankTransferHistoryComponent } from './components/bank-transfer-history/bank-transfer-history.component';
+import { PricingComponent } from './components/pricing/pricing.component';
 //import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
+  { path: 'pricing', component: PricingComponent },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
   { path: 'business-signup', component: BusinessSignupComponent },
