@@ -1,188 +1,66 @@
 <div class="pricing-container">
-  <!-- Tab chọn kỳ thanh toán -->
-  <div class="billing-tabs">
-    <div class="tab-group">
-      <button [class.active]="billingType === 'monthly'" (click)="switchBillingType('monthly')" class="tab-btn">
-        <span>Theo tháng</span>
-      </button>
-      <button [class.active]="billingType === 'yearly'" (click)="switchBillingType('yearly')" class="tab-btn">
-        <span>Theo năm</span>
-        <nz-tag class="save-tag">Tiết kiệm 20%</nz-tag>
-      </button>
+  <nz-spin [nzSpinning]="loading">
+    <div class="pricing-header">
+      <h1>Chọn gói dịch vụ phù hợp với bạn</h1>
+      <div class="billing-toggle">
+        <nz-radio-group [(ngModel)]="billingType">
+          <label nz-radio-button value="monthly">Thanh toán theo tháng</label>
+          <label nz-radio-button value="yearly">Thanh toán theo năm</label>
+        </nz-radio-group>
+      </div>
     </div>
-  </div>
 
-  <div class="pricing-row">
-    <!-- FREE PLAN -->
-    <div class="pricing-col free">
-      <div class="pricing-card">
-        <div class="plan-label free">FREE</div>
+    <div class="pricing-plans">
+      <div *ngFor="let package of packages" class="pricing-plan" [class.current-plan]="isCurrentPackage(package.id)">
         <div class="plan-header">
-          <div class="plan-price">0₫<span class="plan-period">/tháng</span></div>
-          <div class="plan-desc">Dùng thử miễn phí, phù hợp cá nhân</div>
-          <div class="plan-note">Không yêu cầu thẻ tín dụng</div>
-        </div>
-        <ul class="plan-features">
-          <li>
-            <i nz-icon nzType="check-circle" nzTheme="twotone" class="text-success"></i>
-            <span nz-tooltip="Tối đa 100 giao dịch mỗi tháng">100 giao dịch/tháng</span>
-          </li>
-          <li>
-            <i nz-icon nzType="cloud-upload" nzTheme="outline"></i>
-            <span nz-tooltip="Dung lượng lưu trữ cho tài liệu">Lưu trữ 1GB</span>
-          </li>
-          <li>
-            <i nz-icon nzType="lock" nzTheme="outline"></i>
-            <span nz-tooltip="Bảo mật 2 lớp và mã hóa dữ liệu">Bảo mật cơ bản</span>
-          </li>
-        </ul>
-        <button nz-button class="plan-select-btn free" nz-tooltip="Bắt đầu dùng thử miễn phí">
-          <i nz-icon nzType="rocket" nzTheme="outline"></i>Dùng thử miễn phí
-        </button>
-        <div class="plan-banks">
-          <div class="plan-banks-title">
-            Ngân hàng hỗ trợ
-            <span class="bank-count" nz-tooltip="3 ngân hàng">3</span>
+          <h2>{{ package.name }}</h2>
+          <div class="price">
+            <span class="amount">{{ billingType === 'yearly' ? package.price * 12 * 0.9 : package.price | currency:'VND':'symbol':'1.0-0' }}</span>
+            <span class="period">/{{ billingType === 'yearly' ? 'năm' : 'tháng' }}</span>
           </div>
-          <div class="plan-banks-list">
-            <img src="assets/banks/vietcombank.png" alt="VCB" class="bank-icon" nz-tooltip="Vietcombank"/>
-            <img src="assets/banks/mbbank.png" alt="MB" class="bank-icon" nz-tooltip="MB Bank"/>
-            <img src="assets/banks/techcombank.png" alt="TCB" class="bank-icon" nz-tooltip="Techcombank"/>
-          </div>
+          <p *ngIf="billingType === 'yearly'" class="savings">Tiết kiệm 10%</p>
         </div>
-      </div>
-    </div>
-    <!-- STARTUP PLAN -->
-    <div class="pricing-col startup">
-      <div class="pricing-card">
-        <div class="plan-label startup">
-          STARTUP
-          <span class="plan-badge pink" nz-tooltip="Lựa chọn phổ biến nhất">Phổ biến</span>
-        </div>
-        <div class="plan-header">
-          <div class="plan-price">
-            {{billingType === 'monthly' ? '99.000₫' : '950.000₫'}}
-            <span class="plan-period">/{{billingType === 'monthly' ? 'tháng' : 'năm'}}</span>
-          </div>
-          <div class="plan-desc">Dành cho nhóm nhỏ, startup</div>
-          <div class="plan-note">{{billingType === 'yearly' ? 'Tiết kiệm 20% khi thanh toán năm' : 'Thanh toán linh hoạt hàng tháng'}}</div>
-        </div>
-        <div class="plan-dropdown">
-          <label for="startup-transactions">
-            <i nz-icon nzType="transaction" nzTheme="outline"></i>
-            Giao dịch:
-          </label>
-          <select id="startup-transactions" class="plan-select" nz-tooltip="Chọn số lượng giao dịch phù hợp">
-            <option>1.000/tháng</option>
-            <option>2.000/tháng</option>
-            <option>5.000/tháng</option>
-          </select>
-        </div>
-        <ul class="plan-features">
-          <li>
-            <i nz-icon nzType="check-circle" nzTheme="twotone" class="text-success"></i>
-            <span nz-tooltip="Không giới hạn trong gói">1.000+ giao dịch/tháng</span>
-          </li>
-          <li>
-            <i nz-icon nzType="cloud-upload" nzTheme="outline"></i>
-            <span nz-tooltip="Dung lượng lưu trữ lớn">Lưu trữ 10GB</span>
-          </li>
-          <li>
-            <i nz-icon nzType="lock" nzTheme="outline"></i>
-            <span nz-tooltip="Bảo mật nâng cao với xác thực 2 yếu tố">Bảo mật nâng cao</span>
-          </li>
-          <li class="feature-more" (click)="showFeatureDetails()">
-            <i nz-icon nzType="eye" nzTheme="outline" class="feature-eye"></i>
-            <span>Xem thêm tính năng</span>
-          </li>
-        </ul>
-        <button nz-button class="plan-select-btn startup">
-          <i nz-icon nzType="thunderbolt" nzTheme="outline"></i>Nâng cấp ngay
-        </button>
-        <div class="plan-banks">
-          <div class="plan-banks-title">
-            Ngân hàng hỗ trợ
-            <span class="bank-count" nz-tooltip="4 ngân hàng">4</span>
-          </div>
-          <div class="plan-banks-list">
-            <img src="assets/banks/vietcombank.png" alt="VCB" class="bank-icon" nz-tooltip="Vietcombank"/>
-            <img src="assets/banks/mbbank.png" alt="MB" class="bank-icon" nz-tooltip="MB Bank"/>
-            <img src="assets/banks/techcombank.png" alt="TCB" class="bank-icon" nz-tooltip="Techcombank"/>
-            <img src="assets/banks/vpbank.png" alt="VPB" class="bank-icon" nz-tooltip="VP Bank"/>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- PINNACLE PLAN -->
-    <div class="pricing-col pinnacle">
-      <div class="pricing-card">
-        <div class="plan-label pinnacle">
-          PINNACLE
-          <span class="plan-badge blue" nz-tooltip="Dành cho doanh nghiệp">Enterprise</span>
-        </div>
-        <div class="plan-header">
-          <div class="plan-price">
-            {{billingType === 'monthly' ? 'Liên hệ' : 'Liên hệ'}}
-            <span class="plan-period">/{{billingType === 'monthly' ? 'tháng' : 'năm'}}</span>
-          </div>
-          <div class="plan-desc">Doanh nghiệp lớn, nhu cầu cao</div>
-          <div class="plan-note">{{billingType === 'yearly' ? 'Tùy chỉnh theo yêu cầu, giảm giá theo cam kết' : 'Tùy chỉnh theo yêu cầu'}}</div>
-        </div>
-        <div class="plan-dropdown">
-          <label for="pinnacle-transactions">
-            <i nz-icon nzType="transaction" nzTheme="outline"></i>
-            Giao dịch:
-          </label>
-          <select id="pinnacle-transactions" class="plan-select" nz-tooltip="Chọn số lượng giao dịch phù hợp">
-            <option>10.000/tháng</option>
-            <option>50.000/tháng</option>
-            <option>100.000+/tháng</option>
-          </select>
-        </div>
-        <ul class="plan-features">
-          <li>
-            <i nz-icon nzType="check-circle" nzTheme="twotone" class="text-success"></i>
-            <span nz-tooltip="Không giới hạn số lượng">Không giới hạn giao dịch</span>
-          </li>
-          <li>
-            <i nz-icon nzType="cloud-upload" nzTheme="outline"></i>
-            <span nz-tooltip="Không giới hạn dung lượng">Lưu trữ không giới hạn</span>
-          </li>
-          <li>
-            <i nz-icon nzType="lock" nzTheme="outline"></i>
-            <span nz-tooltip="Bảo mật cao cấp với nhiều lớp">Bảo mật cao cấp</span>
-          </li>
-          <li class="feature-more" (click)="showFeatureDetails()">
-            <i nz-icon nzType="eye" nzTheme="outline" class="feature-eye"></i>
-            <span>Xem thêm tính năng</span>
-          </li>
-        </ul>
-        <button nz-button class="plan-select-btn pinnacle">
-          <i nz-icon nzType="customer-service" nzTheme="outline"></i>Liên hệ tư vấn
-        </button>
-        <div class="plan-banks">
-          <div class="plan-banks-title">
-            Ngân hàng hỗ trợ
-            <span class="bank-count" nz-tooltip="Tất cả ngân hàng">5+</span>
-          </div>
-          <div class="plan-banks-list">
-            <img src="assets/banks/vietcombank.png" alt="VCB" class="bank-icon" nz-tooltip="Vietcombank"/>
-            <img src="assets/banks/mbbank.png" alt="MB" class="bank-icon" nz-tooltip="MB Bank"/>
-            <img src="assets/banks/techcombank.png" alt="TCB" class="bank-icon" nz-tooltip="Techcombank"/>
-            <img src="assets/banks/vpbank.png" alt="VPB" class="bank-icon" nz-tooltip="VP Bank"/>
-            <img src="assets/banks/agribank.png" alt="AGR" class="bank-icon" nz-tooltip="Agribank"/>
-            <button class="bank-more" nz-tooltip="Xem thêm ngân hàng">
-              <i nz-icon nzType="more" nzTheme="outline"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Dòng chữ nổi bật phía dưới -->
-  <div class="plan-upgrade-note">
-    <i nz-icon nzType="customer-service" nzTheme="outline" style="font-size:1.5rem;color:#ff9800;"></i>
-    <span>Bạn cần gói cao hơn? <a href="mailto:support@phhotel.vn" style="color:#1890ff;font-weight:700;">Liên hệ tư vấn</a></span>
-  </div>
+        <div class="plan-features">
+          <ul>
+            <li *ngFor="let feature of package.features">
+              <i nz-icon nzType="check" nzTheme="outline"></i>
+              {{ feature }}
+            </li>
+          </ul>
+        </div>
+
+        <div class="plan-footer">
+          <ng-container *ngIf="userId; else loginButton">
+            <ng-container *ngIf="isCurrentPackage(package.id); else subscribeButton">
+              <button
+                nz-button
+                nzType="primary"
+                nzDanger
+                (click)="cancelSubscription()"
+                [disabled]="package.name === 'FREE'">
+                Hủy gói
+              </button>
+              <p class="current-plan-text">Gói hiện tại của bạn</p>
+              <p *ngIf="currentPackage?.packageExpiryDate">
+                Hết hạn: {{ currentPackage.packageExpiryDate | date:'dd/MM/yyyy' }}
+              </p>
+            </ng-container>
+            <ng-template #subscribeButton>
+              <button
+                nz-button
+                nzType="primary"
+                [disabled]="isCurrentPackage(package.id) || loading"
+                (click)="subscribeToPlan(package.id)">
+                {{ isCurrentPackage(package.id) ? 'Đã đăng ký' : (loading ? 'Đang xử lý...' : 'Đăng ký') }}
+              </button>
+            </ng-template>
+          </ng-container>
+          <ng-template #loginButton>
+            <button nz-button nzType="primary" (click)="redirectToLogin()">Đăng nhập để đăng ký gói</button>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </nz-spin>
 </div> 

@@ -1,0 +1,167 @@
+<div class="pricing-management-container">
+  <nz-card>
+    <div class="header-actions">
+      <h2>Quản lý gói dịch vụ</h2>
+      <button nz-button nzType="primary" (click)="showModal()">
+        <i nz-icon nzType="plus"></i>Thêm gói mới
+      </button>
+    </div>
+
+    <nz-tabset [nzAnimated]="false">
+      <!-- Tab Danh sách gói -->
+      <nz-tab nzTitle="Danh sách gói">
+        <nz-table #packagesTable [nzData]="packages" [nzLoading]="loading">
+          <thead>
+            <tr>
+              <th>Tên gói</th>
+              <th>Mô tả</th>
+              <th>Giá</th>
+              <th>Thời hạn (tháng)</th>
+              <th>Số người dùng tối đa</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pkg of packagesTable.data">
+              <td>{{ pkg.name }}</td>
+              <td>{{ pkg.description }}</td>
+              <td>{{ formatCurrency(pkg.price) }}</td>
+              <td>{{ pkg.duration }}</td>
+              <td>{{ pkg.maxUsers }}</td>
+              <td>
+                <nz-tag [nzColor]="pkg.isActive ? 'success' : 'error'">
+                  {{ pkg.isActive ? 'Đang hoạt động' : 'Đã tắt' }}
+                </nz-tag>
+              </td>
+              <td>
+                <a nz-button nzType="link" (click)="showModal(pkg.id)">
+                  <i nz-icon nzType="edit"></i>
+                </a>
+                <nz-divider nzType="vertical"></nz-divider>
+                <a nz-button nzType="link" nzDanger (click)="deletePackage(pkg.id)">
+                  <i nz-icon nzType="delete"></i>
+                </a>
+                <nz-divider nzType="vertical"></nz-divider>
+                <button nz-button nzType="default" (click)="onAdminSubscribe(pkg.id)">Đăng ký (Test)</button>
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </nz-tab>
+
+      <!-- Tab Danh sách đăng ký -->
+      <nz-tab nzTitle="Danh sách đăng ký">
+        <nz-table #subscribersTable [nzData]="subscribers" [nzLoading]="loading">
+          <thead>
+            <tr>
+              <th>Người dùng</th>
+              <th>Email</th>
+              <th>Gói đăng ký</th>
+              <th>Ngày hết hạn</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let sub of subscribersTable.data">
+              <td>{{ sub.username }}</td>
+              <td>{{ sub.email }}</td>
+              <td>{{ sub.packageName }}</td>
+              <td>{{ sub.expiryDate | date:'dd/MM/yyyy' }}</td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </nz-tab>
+    </nz-tabset>
+  </nz-card>
+
+  <!-- Modal Form -->
+  <nz-modal
+    [(nzVisible)]="isModalVisible"
+    [nzTitle]="editingPackageId ? 'Chỉnh sửa gói' : 'Thêm gói mới'"
+    (nzOnCancel)="handleCancel()"
+    (nzOnOk)="handleOk()"
+    [nzOkLoading]="loading"
+    [nzWidth]="720"
+    [nzMaskClosable]="false"
+  >
+    <ng-container *nzModalContent>
+      <form nz-form [formGroup]="packageForm" class="package-form">
+        <!-- Tên gói -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Tên gói</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập tên gói">
+            <input nz-input formControlName="name" placeholder="Nhập tên gói" autofocus />
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Mô tả -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Mô tả</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <textarea nz-input formControlName="description" placeholder="Nhập mô tả" [nzAutosize]="{ minRows: 3, maxRows: 5 }"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Giá -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Giá</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập giá hợp lệ">
+            <nz-input-number 
+              formControlName="price" 
+              [nzMin]="0" 
+              [nzStep]="1000" 
+              [nzFormatter]="numberFormatter"
+              style="width: 100%">
+            </nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Thời hạn -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Thời hạn (tháng)</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập thời hạn hợp lệ">
+            <nz-input-number formControlName="duration" [nzMin]="1" [nzStep]="1" style="width: 100%"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Tính năng -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-select formControlName="features" nzMode="tags" nzPlaceHolder="Thêm tính năng">
+              <nz-option *ngFor="let feature of packageForm.get('features')?.value" [nzLabel]="feature" [nzValue]="feature">
+              </nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Quyền -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Quyền</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng chọn ít nhất một quyền">
+            <nz-select formControlName="permissions" nzMode="multiple" nzPlaceHolder="Chọn quyền">
+              <nz-option *ngFor="let permission of availablePermissions" [nzLabel]="permission" [nzValue]="permission">
+              </nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Số người dùng tối đa -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Số người dùng tối đa</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập số người dùng hợp lệ">
+            <nz-input-number formControlName="maxUsers" [nzMin]="1" [nzStep]="1" style="width: 100%"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Trạng thái -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Trạng thái</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-switch formControlName="isActive"></nz-switch>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </ng-container>
+  </nz-modal>
+</div> 

@@ -102,6 +102,7 @@ import { BankTransferHistoryComponent } from './components/bank-transfer-history
 import { NlToBrPipe } from './pipes/nl-to-br.pipe';
 import { AiChatboxComponent } from './components/ai-chatbox/ai-chatbox.component';
 import { PricingComponent } from './components/pricing/pricing.component';
+import { PricingManagementModule } from './components/pricing-management/pricing-management.module';
 
 registerLocaleData(en);
 
@@ -162,6 +163,7 @@ registerLocaleData(en);
         AppRoutingModule,
         FormsModule,
         ReactiveFormsModule,
+        HttpClientModule,
         NzMenuModule,
         NzToolTipModule,
         NzButtonModule,
@@ -200,7 +202,8 @@ registerLocaleData(en);
         NzAlertModule,
         NzCheckboxModule,
         NzStatisticModule,
-        NzBadgeModule
+        NzBadgeModule,
+        PricingManagementModule
     ],
     providers: [
         provideClientHydration(),

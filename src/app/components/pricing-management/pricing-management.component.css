@@ -1,0 +1,130 @@
+.pricing-management-container {
+  padding: 24px;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-actions h2 {
+  margin: 0;
+}
+
+nz-table {
+  margin-top: 16px;
+}
+
+.dynamic-delete-button {
+  cursor: pointer;
+  color: #ff4d4f;
+  transition: all .3s;
+}
+
+.dynamic-delete-button:hover {
+  color: #ff7875;
+}
+
+.add-button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+[nz-form] {
+  max-width: 100%;
+}
+
+.ant-form-item {
+  margin-bottom: 24px;
+}
+
+nz-form-label {
+  font-weight: 500;
+}
+
+nz-input-number {
+  width: 100%;
+}
+
+nz-switch {
+  margin-top: 8px;
+}
+
+.ant-form-item-label {
+  text-align: left;
+}
+
+/* Modal Form Styles */
+.package-form {
+  padding: 24px 0;
+}
+
+.package-form nz-form-item {
+  margin-bottom: 24px;
+}
+
+.package-form nz-form-label {
+  font-weight: 500;
+}
+
+.package-form nz-input-number {
+  width: 100%;
+}
+
+.package-form .ant-form-explain {
+  color: #ff4d4f;
+  min-height: 24px;
+  margin-top: 4px;
+}
+
+.package-form .dynamic-delete-button {
+  cursor: pointer;
+  position: relative;
+  top: 4px;
+  font-size: 16px;
+  color: #ff4d4f;
+  transition: all .3s;
+}
+
+.package-form .dynamic-delete-button:hover {
+  color: #ff7875;
+}
+
+.package-form .add-button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .pricing-management-container {
+    padding: 16px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  [nz-form-label] {
+    padding: 0 0 8px;
+  }
+
+  .ant-form-item-control {
+    flex: 1;
+  }
+
+  .package-form nz-form-label,
+  .package-form nz-form-control {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  
+  .package-form nz-form-label {
+    text-align: left;
+    margin-bottom: 8px;
+  }
+} 

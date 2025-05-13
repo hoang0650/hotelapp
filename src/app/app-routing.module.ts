@@ -29,6 +29,7 @@ import { ServiceManagementComponent } from './components/service-management/serv
 import { UserManagementComponent } from './components/user-management/user-management.component';
 import { BankTransferHistoryComponent } from './components/bank-transfer-history/bank-transfer-history.component';
 import { PricingComponent } from './components/pricing/pricing.component';
+import { PricingManagementComponent } from './components/pricing-management/pricing-management.component';
 //import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
@@ -50,6 +51,7 @@ const routes: Routes = [
       { path: 'company', component: CompanyManagementComponent },
       { path: 'room-management', component: RoomManagementComponent },
       { path: 'service-management', component: ServiceManagementComponent },
+      { path: 'pricing-management', component: PricingManagementComponent },
       {
         path: 'users-management',
         component: UserManagementComponent,

@@ -1,4 +1,132 @@
 .pricing-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.pricing-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.pricing-header h1 {
+  font-size: 2.5rem;
+  color: #1f1f1f;
+  margin-bottom: 20px;
+}
+
+.billing-toggle {
+  margin-bottom: 30px;
+}
+
+.pricing-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.pricing-plan {
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  transition: transform 0.3s ease;
+}
+
+.pricing-plan:hover {
+  transform: translateY(-5px);
+}
+
+.pricing-plan.current-plan {
+  border: 2px solid #1890ff;
+}
+
+.plan-header {
+  text-align: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.plan-header h2 {
+  font-size: 1.5rem;
+  color: #1f1f1f;
+  margin-bottom: 15px;
+}
+
+.price {
+  margin: 20px 0;
+}
+
+.price .amount {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #1890ff;
+}
+
+.price .period {
+  font-size: 1rem;
+  color: #8c8c8c;
+}
+
+.savings {
+  color: #52c41a;
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
+
+.plan-features {
+  padding: 20px 0;
+}
+
+.plan-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.plan-features li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  color: #595959;
+}
+
+.plan-features li i {
+  color: #52c41a;
+  margin-right: 10px;
+}
+
+.plan-footer {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.plan-footer button {
+  min-width: 150px;
+}
+
+.current-plan-text {
+  margin-top: 10px;
+  color: #1890ff;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .pricing-plans {
+    grid-template-columns: 1fr;
+  }
+  
+  .pricing-container {
+    padding: 20px 10px;
+  }
+  
+  .pricing-header h1 {
+    font-size: 2rem;
+  }
+}
+
+.pricing-container {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -82,25 +210,6 @@
 .plan-badge.blue {
   background: #e6f7ff;
   color: #1890ff;
-}
-
-.plan-header {
-  text-align: center;
-  padding: 32px 24px 16px;
-  min-height: 110px;
-}
-
-.plan-price {
-  font-size: 2.6rem;
-  font-weight: 900;
-  color: #1890ff;
-  letter-spacing: 1px;
-}
-
-.plan-period {
-  font-size: 1.2rem;
-  color: #888;
-  margin-left: 4px;
 }
 
 .plan-desc {

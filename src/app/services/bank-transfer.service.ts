@@ -17,7 +17,7 @@ export interface BankTransfer {
   providedIn: 'root'
 })
 export class BankTransferService {
-  private apiUrl = 'api/bank-transfers'; // Thay đổi URL API theo backend của bạn
+  private apiUrl = 'http://localhost:3000'; // Thay đổi URL API theo backend của bạn
 
   constructor(private http: HttpClient) { }
 
@@ -40,7 +40,7 @@ export class BankTransferService {
 
   // Đăng nhập SePay
   sepayLogin(username: string, password: string): Observable<any> {
-    return this.http.post<any>('/sepay/auth', { username, password });
+    return this.http.post<any>(`${this.apiUrl}/sepay/auth`, { username, password });
   }
 
   // Lấy lịch sử giao dịch từ SePay qua backend proxy, truyền token qua header
@@ -49,6 +49,6 @@ export class BankTransferService {
     if (token) {
       options.headers = { Authorization: `Bearer ${token}` };
     }
-    return this.http.get<any>('/sepay/transactions', options);
+    return this.http.get<any>(`${this.apiUrl}/sepay/transactions`, options);
   }
 } 

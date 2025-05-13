@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
+import { PricingService } from '../../services/pricing.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { AuthService } from '../../services/auth.service';
 
 interface PricingPlan {
   name: string;
@@ -23,6 +25,10 @@ interface PricingPlan {
 })
 export class PricingComponent implements OnInit {
   billingType: 'monthly' | 'yearly' = 'monthly';
+  packages: any[] = [];
+  currentPackage: any;
+  loading = false;
+  userId: string = '';
 
   plans: PricingPlan[] = [
     {
@@ -110,11 +116,100 @@ export class PricingComponent implements OnInit {
   };
 
   constructor(
+    private pricingService: PricingService,
     private message: NzMessageService,
-    private modal: NzModalService
-  ) {}
+    private modal: NzModalService,
+    private authService: AuthService
+  ) {
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser?.userId) {
+      this.userId = currentUser.userId;
+    }
+  }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.loadPackages();
+    if (this.userId) {
+      this.loadCurrentPackage();
+    } else {
+      this.currentPackage = null;
+    }
+  }
+
+  loadPackages(): void {
+    this.loading = true;
+    this.pricingService.getAllPackages().subscribe({
+      next: (response) => {
+        this.packages = response.data || [];
+        this.loading = false;
+      },
+      error: (error) => {
+        this.message.error('Không thể tải thông tin gói dịch vụ');
+        this.loading = false;
+      }
+    });
+  }
+
+  loadCurrentPackage(): void {
+    if (!this.userId) return;
+    
+    this.pricingService.getCurrentUserPackage(this.userId).subscribe({
+      next: (data) => {
+        this.currentPackage = data;
+      },
+      error: (error) => {
+        this.message.error('Không thể tải thông tin gói hiện tại');
+      }
+    });
+  }
+
+  subscribeToPlan(packageId: string) {
+    this.pricingService.subscribe(this.userId, packageId).subscribe({
+      next: (response: any) => {
+        this.message.success('Đăng ký gói dịch vụ thành công');
+        this.loadCurrentPackage();
+      },
+      error: (error: Error) => {
+        this.message.error('Có lỗi xảy ra khi đăng ký gói dịch vụ');
+        console.error('Subscribe error:', error);
+      }
+    });
+  }
+
+  cancelSubscription(): void {
+    this.modal.confirm({
+      nzTitle: 'Xác nhận hủy gói',
+      nzContent: 'Bạn có chắc chắn muốn hủy gói hiện tại?',
+      nzOkText: 'Hủy gói',
+      nzCancelText: 'Giữ lại',
+      nzOnOk: () => {
+        this.loading = true;
+        this.pricingService.cancelSubscription(this.userId).subscribe({
+          next: (response) => {
+            this.message.success('Hủy gói thành công');
+            this.currentPackage = null;
+            this.loading = false;
+          },
+          error: (error) => {
+            this.message.error('Hủy gói thất bại');
+            this.loading = false;
+          }
+        });
+      }
+    });
+  }
+
+  isFreePackage(pkg: any): boolean {
+    return pkg?.name?.toUpperCase() === 'FREE' || pkg?.id === 'free';
+  }
+
+  isCurrentPackage(packageId: string): boolean {
+    if (!this.currentPackage) {
+      const pkg = this.packages.find(p => this.isFreePackage(p));
+      return pkg ? pkg.id === packageId : false;
+    }
+    return this.currentPackage?.id === packageId;
+  }
 
   switchBillingType(type: 'monthly' | 'yearly'): void {
     this.billingType = type;
@@ -156,5 +251,9 @@ export class PricingComponent implements OnInit {
       nzFooter: null,
       nzClassName: 'feature-modal'
     });
+  }
+
+  redirectToLogin() {
+    window.location.href = '/login'; // Hoặc router.navigate nếu dùng Angular Router
   }
 }
