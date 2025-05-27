@@ -65,14 +65,14 @@
       </li>
       <li>
         <a *ngIf="isLoggedIn" class="nav-link" aria-current="page">
-          {{infor?.email}}
+          {{currentUser?.email}}
         </a>
 
       </li>
 
       <li *ngIf="isLoggedIn" class="nav-item">
-        <a class="nav-link" aria-current="page" (click)="logOut()">
-          Log out
+        <a class="nav-link" aria-current="page" (click)="logout()">
+          Đăng xuất
         </a>
       </li>
     </ul>

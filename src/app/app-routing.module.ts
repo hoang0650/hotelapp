@@ -30,6 +30,7 @@ import { UserManagementComponent } from './components/user-management/user-manag
 import { BankTransferHistoryComponent } from './components/bank-transfer-history/bank-transfer-history.component';
 import { PricingComponent } from './components/pricing/pricing.component';
 import { PricingManagementComponent } from './components/pricing-management/pricing-management.component';
+import { OtaManagementComponent } from './components/ota-management/ota-management.component';
 //import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
@@ -65,6 +66,7 @@ const routes: Routes = [
       { path: 'notfound', component: NotfoundComponent },
       { path: 'shift-handover', component: RoomHistoryComponent },
       { path: 'bank-transfer-history', component: BankTransferHistoryComponent },
+      { path: 'ota-management', component: OtaManagementComponent },
       // Thêm các route con khác nếu cần
     ]
   },

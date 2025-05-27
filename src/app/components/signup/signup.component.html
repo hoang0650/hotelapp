@@ -4,29 +4,120 @@
         <div class="card">
           <div class="card-body">
             <h5 class="card-title text-center mb-4">Đăng ký tài khoản</h5>
-            <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
-              <div class="form-floating mb-3">
-                <input type="text" class="form-control" id="username" formControlName="username" 
-                  placeholder="Nhập tên người dùng" aria-label="Username">
-                <label for="username">User name</label>
+            <form nz-form [formGroup]="signupForm" class="signup-form" (ngSubmit)="submitForm()">
+              <nz-form-item>
+                <nz-form-label nzRequired>Tên đăng nhập</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng nhập tên đăng nhập (ít nhất 3 ký tự)">
+                  <input nz-input formControlName="username" placeholder="Tên đăng nhập" />
+                </nz-form-control>
+              </nz-form-item>
+
+              <nz-form-item>
+                <nz-form-label nzRequired>Email</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
+                  <input nz-input formControlName="email" placeholder="Email" />
+                </nz-form-control>
+              </nz-form-item>
+
+              <nz-form-item>
+                <nz-form-label nzRequired>Mật khẩu</nz-form-label>
+                <nz-form-control nzErrorTip="Mật khẩu phải có ít nhất 6 ký tự">
+                  <nz-input-group [nzSuffix]="passwordToggle">
+                    <input [type]="passwordVisible ? 'text' : 'password'" nz-input formControlName="password" placeholder="Mật khẩu" />
+                  </nz-input-group>
+                  <ng-template #passwordToggle>
+                    <i nz-icon [nzType]="passwordVisible ? 'eye-invisible' : 'eye'" (click)="passwordVisible = !passwordVisible"></i>
+                  </ng-template>
+                </nz-form-control>
+              </nz-form-item>
+
+              <nz-form-item>
+                <nz-form-label>Họ và tên</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="fullName" placeholder="Họ và tên" />
+                </nz-form-control>
+              </nz-form-item>
+
+              <nz-form-item>
+                <nz-form-label>Số điện thoại</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="phone" placeholder="Số điện thoại" />
+                </nz-form-control>
+              </nz-form-item>
+
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox [(ngModel)]="isBusiness" [ngModelOptions]="{standalone: true}" (ngModelChange)="onBusinessToggle($event)">
+                    Đăng ký với tư cách doanh nghiệp
+                  </label>
+                </nz-form-control>
+              </nz-form-item>
+
+              <div *ngIf="isBusiness" formGroupName="businessInfo">
+                <h4 class="mt-4 mb-3">Thông tin doanh nghiệp</h4>
+                <nz-form-item>
+                  <nz-form-label nzRequired>Tên doanh nghiệp</nz-form-label>
+                  <nz-form-control nzErrorTip="Vui lòng nhập tên doanh nghiệp">
+                    <input nz-input formControlName="name" placeholder="Tên doanh nghiệp" />
+                  </nz-form-control>
+                </nz-form-item>
+
+                <nz-form-item>
+                  <nz-form-label nzRequired>Tên pháp lý</nz-form-label>
+                  <nz-form-control nzErrorTip="Vui lòng nhập tên pháp lý">
+                    <input nz-input formControlName="legalName" placeholder="Tên pháp lý" />
+                  </nz-form-control>
+                </nz-form-item>
+
+                <nz-form-item>
+                  <nz-form-label nzRequired>Mã số thuế</nz-form-label>
+                  <nz-form-control nzErrorTip="Vui lòng nhập mã số thuế">
+                    <input nz-input formControlName="taxId" placeholder="Mã số thuế" />
+                  </nz-form-control>
+                </nz-form-item>
+
+                <nz-form-item>
+                  <nz-form-label nzRequired>Địa chỉ</nz-form-label>
+                  <nz-form-control nzErrorTip="Vui lòng nhập địa chỉ">
+                    <input nz-input formControlName="address" placeholder="Địa chỉ" />
+                  </nz-form-control>
+                </nz-form-item>
+
+                <div formGroupName="contactInfo">
+                  <h5>Thông tin liên hệ (Doanh nghiệp)</h5>
+                  <nz-form-item>
+                    <nz-form-label>Email doanh nghiệp</nz-form-label>
+                    <nz-form-control nzErrorTip="Email doanh nghiệp không hợp lệ">
+                      <input nz-input formControlName="email" placeholder="Email doanh nghiệp" />
+                    </nz-form-control>
+                  </nz-form-item>
+                  <nz-form-item>
+                    <nz-form-label>Số điện thoại doanh nghiệp</nz-form-label>
+                    <nz-form-control>
+                      <input nz-input formControlName="phone" placeholder="Số điện thoại doanh nghiệp" />
+                    </nz-form-control>
+                  </nz-form-item>
+                  <nz-form-item>
+                    <nz-form-label>Website</nz-form-label>
+                    <nz-form-control>
+                      <input nz-input formControlName="website" placeholder="Website" />
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
               </div>
-              <div class="form-floating mb-3">
-                <input type="email" class="form-control" id="email" formControlName="email"
-                  placeholder="Nhập địa chỉ email" aria-label="Email">
-                <label for="email">Email</label>
+
+              <button nz-button 
+                      [nzType]="'primary'" 
+                      [nzLoading]="isLoading"
+                      [disabled]="!signupForm.valid"
+                      class="signup-form-button signup-form-margin">
+                Đăng ký
+              </button>
+
+              <div nz-row class="signup-form-margin">
+                <span>Đã có tài khoản? </span>
+                <a routerLink="/login">Đăng nhập ngay!</a>
               </div>
-              <div class="form-floating mb-3">
-                <input type="password" class="form-control" id="password" formControlName="password"
-                  placeholder="Nhập mật khẩu" aria-label="Password">
-                <label for="password">Mật khẩu</label>
-              </div>
-              <div class="form-floating mb-3">
-                <input type="password" class="form-control" id="confirmPassword" formControlName="password"
-                  placeholder="Nhập lại mật khẩu" aria-label="Confirm Password">
-                <label for="confirmPassword">Nhập lại mật khẩu</label>
-                <a href="/home" class="link-primary float-end">Quên mật khẩu?</a>
-              </div>
-              <button type="submit" class="btn btn-lg btn-primary mt-3 w-100" [disabled]="registerForm.invalid">Đăng ký</button>
             </form>
             <div class=" social-login">
               <p>Or sign up with:</p>
@@ -38,7 +129,6 @@
               </button>
             </div>
             <hr>
-            <p class="text-center">Đã có tài khoản đăng nhập? <a [routerLink]="['/login']">Tại đây</a></p>
             <p class="text-center">Bạn là doanh nghiệp? <a [routerLink]="['/business-signup']">Đăng ký tài khoản doanh nghiệp</a></p>
           </div>
         </div>

@@ -2,10 +2,11 @@ import { NgModule } from '@angular/core';
 import { BrowserModule, provideClientHydration } from '@angular/platform-browser';
 import { NgxEchartsModule } from 'ngx-echarts'; // Import NgxEchartsModule
 import { HighchartsChartModule } from 'highcharts-angular';
-import { DatePipe } from '@angular/common'; // Import DatePipe
+import { DatePipe, registerLocaleData } from '@angular/common'; // Import DatePipe
+import { CommonModule } from '@angular/common'; // Đảm bảo CommonModule được import
 
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HeaderComponent } from './components/header/header.component';
@@ -25,11 +26,7 @@ import { TableComponent } from './components/table/table.component';
 
 import { ModalControlDirective } from './directives/modal-control.directive';
 
-import { NZ_I18N } from 'ng-zorro-antd/i18n';
-import { en_US } from 'ng-zorro-antd/i18n';
-import { vi_VN } from 'ng-zorro-antd/i18n';
-import { registerLocaleData } from '@angular/common';
-import en from '@angular/common/locales/en';
+import { NZ_I18N, vi_VN } from 'ng-zorro-antd/i18n';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -43,7 +40,6 @@ import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
@@ -52,7 +48,6 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzCarouselModule } from 'ng-zorro-antd/carousel';
-import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzCalendarModule } from 'ng-zorro-antd/calendar';
 import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -69,6 +64,9 @@ import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzStatisticModule } from 'ng-zorro-antd/statistic';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
+import { NzSpaceModule } from 'ng-zorro-antd/space';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { FilterPipe } from './pipes/filter.pipe';
@@ -103,8 +101,12 @@ import { NlToBrPipe } from './pipes/nl-to-br.pipe';
 import { AiChatboxComponent } from './components/ai-chatbox/ai-chatbox.component';
 import { PricingComponent } from './components/pricing/pricing.component';
 import { PricingManagementModule } from './components/pricing-management/pricing-management.module';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import vi from '@angular/common/locales/vi';
+import { AuthInterceptor } from './auth.interceptor'; // Import AuthInterceptor
+import { OtaManagementComponent } from './components/ota-management/ota-management.component'; // Import OtaManagementComponent
 
-registerLocaleData(en);
+registerLocaleData(vi);
 
 @NgModule({
     declarations: [
@@ -153,11 +155,13 @@ registerLocaleData(en);
         BankTransferHistoryComponent,
         NlToBrPipe,
         AiChatboxComponent,
-        PricingComponent
+        PricingComponent,
+        OtaManagementComponent // Thêm OtaManagementComponent vào declarations
     ],
     bootstrap: [AppComponent],
     imports: [
         BrowserModule,
+        CommonModule, // Đảm bảo CommonModule được import ở đây
         NgxEchartsModule.forRoot({ echarts: () => import('echarts') }),
         HighchartsChartModule,
         AppRoutingModule,
@@ -171,13 +175,12 @@ registerLocaleData(en);
         NzCollapseModule,
         NzLayoutModule,
         NzBreadCrumbModule,
-        NzGridModule,
+        NzGridModule, // Đảm bảo NzGridModule (cho nz-row, nz-col) được import
         NzSliderModule,
         NzSwitchModule,
         NzTableModule,
         NzRadioModule,
         NzDividerModule,
-        NzFormModule,
         NzCardModule,
         NzModalModule,
         NzTabsModule,
@@ -186,7 +189,6 @@ registerLocaleData(en);
         NzInputModule,
         NzDropDownModule,
         NzCarouselModule,
-        NzDatePickerModule,
         NzCalendarModule,
         NzTimelineModule,
         NzTagModule,
@@ -200,17 +202,21 @@ registerLocaleData(en);
         NzMessageModule,
         NzUploadModule,
         NzAlertModule,
-        NzCheckboxModule,
+        NzCheckboxModule, // Đảm bảo NzCheckboxModule được import
         NzStatisticModule,
         NzBadgeModule,
+        NzFormModule, // Đảm bảo NzFormModule được import
+        NzDatePickerModule,
+        NzSpaceModule,
+        BrowserAnimationsModule,
         PricingManagementModule
     ],
     providers: [
         provideClientHydration(),
-        { provide: NZ_I18N, useValue: en_US },
+        { provide: NZ_I18N, useValue: vi_VN },
         provideAnimationsAsync(),
-        provideHttpClient(),
         provideHttpClient(withInterceptorsFromDi()),
+        { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         DatePipe
     ]
 })

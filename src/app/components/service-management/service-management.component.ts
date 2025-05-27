@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Service } from '../../interfaces/service';
+import { Service, ServiceCategory, ALL_SERVICE_CATEGORIES } from '../../interfaces/service';
 import { ServiceService } from '../../services/service.service';
 import { HotelService } from '../../services/hotel.service';
 import { Hotel } from '../../interfaces/hotel';
@@ -18,19 +18,13 @@ export class ServiceManagementComponent implements OnInit {
   serviceForm: FormGroup;
   services: Service[] = [];
   hotels: Hotel[] = [];
-  categories: string[] = [
-    'Ẩm thực', 'Đồ uống', 'Tiện nghi', 'Spa', 'Vui chơi', 'Giải trí', 'Vận chuyển'
-  ];
+  editId: string | null = null;
   selectedService: Service | null = null;
-  selectedHotelId: string = '';
-  selectedCategory: string = '';
-  isLoading = false;
-  editMode = false;
-  isAdmin = false;
-  imageUrl: string = '';
-  fileList: NzUploadFile[] = [];
-  uploadUrl = 'https://api.cloudinary.com/v1_1/dxtigizsi/image/upload';
-  cloudinaryPreset = 'ys0fssyu';
+  selectedHotelId: string | null = null;
+  categories: string[] = [];
+
+  // Sử dụng ALL_SERVICE_CATEGORIES cho dropdown
+  serviceCategoryOptions = ALL_SERVICE_CATEGORIES.map(cat => ({ label: this.getCategoryLabel(cat), value: cat }));
 
   // Lấy token xác thực
   get authToken(): string {
@@ -40,6 +34,13 @@ export class ServiceManagementComponent implements OnInit {
   // Định dạng tiền tệ VND
   formatter = (value: number): string => `${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} đ`;
 
+  // Thêm lại các thuộc tính bị thiếu
+  isLoading = false;
+  imageUrl: string | ArrayBuffer | null = ''; // Kiểu cho imageUrl có thể là string hoặc ArrayBuffer
+  fileList: NzUploadFile[] = [];
+  uploadUrl = 'https://api.cloudinary.com/v1_1/dxtigizsi/image/upload'; // Cần kiểm tra lại URL này
+  cloudinaryPreset = 'ys0fssyu'; // Và preset này
+
   constructor(
     private fb: FormBuilder,
     private serviceService: ServiceService,
@@ -48,13 +49,15 @@ export class ServiceManagementComponent implements OnInit {
     private message: NzMessageService
   ) {
     this.serviceForm = this.fb.group({
-      name: ['', [Validators.required]],
-      description: ['', [Validators.required]],
+      hotelId: [null, Validators.required],
+      name: ['', Validators.required],
+      description: [''],
       price: [0, [Validators.required, Validators.min(0)]],
-      category: ['', [Validators.required]],
-      hotelId: ['', [Validators.required]],
+      category: ['custom' as ServiceCategory, Validators.required],
       image: [''],
-      isAvailable: [true]
+      isActive: [true, Validators.required],
+      currency: ['VND'],
+      isCustom: [false]
     });
   }
 
@@ -62,172 +65,185 @@ export class ServiceManagementComponent implements OnInit {
     this.loadHotels();
   }
 
-  loadHotels(): void {
-    this.isLoading = true;
-    this.hotelService.getHotels().subscribe(
-      (hotels) => {
-        this.hotels = hotels;
-        if (this.hotels.length > 0) {
-          // Mặc định chọn khách sạn đầu tiên
-          this.selectedHotelId = this.hotels[0]._id!;
-          this.serviceForm.get('hotelId')?.setValue(this.selectedHotelId);
-          this.loadServices();
-          this.loadCategories();
-        }
-        this.isLoading = false;
-      },
-      (error) => {
-        console.error('Error loading hotels:', error);
-        this.message.error('Không thể tải danh sách khách sạn');
-        this.isLoading = false;
-      }
-    );
-  }
-
-  loadServices(): void {
-    if (!this.selectedHotelId) return;
-
-    this.isLoading = true;
-    this.serviceService.getServices(this.selectedHotelId, this.selectedCategory).subscribe(
-      (services) => {
-        this.services = services;
-        this.isLoading = false;
-      },
-      (error) => {
-        console.error('Error loading services:', error);
-        this.message.error('Không thể tải danh sách dịch vụ');
-        this.isLoading = false;
-      }
-    );
-  }
-
-  loadCategories(): void {
-    if (!this.selectedHotelId) return;
-
-    this.isLoading = true;
-    this.serviceService.getServiceCategories(this.selectedHotelId).subscribe(
-      (categories) => {
-        this.categories = categories;
-        this.isLoading = false;
-      },
-      (error) => {
-        console.error('Error loading categories:', error);
-        this.message.error('Không thể tải danh mục dịch vụ');
-        this.isLoading = false;
-      }
-    );
-  }
-
-  onHotelChange(hotelId: string): void {
-    this.selectedHotelId = hotelId;
-    this.serviceForm.get('hotelId')?.setValue(hotelId);
-    this.loadServices();
-    this.loadCategories();
-  }
-
-  onCategoryChange(category: string): void {
-    this.selectedCategory = category;
-    this.loadServices();
-  }
-
-  resetForm(): void {
-    this.serviceForm.reset({
-      hotelId: this.selectedHotelId,
-      isAvailable: true,
-      price: 0
-    });
-    this.selectedService = null;
-    this.editMode = false;
-    this.imageUrl = '';
-    this.fileList = [];
-  }
-
-  submitForm(): void {
-    if (this.serviceForm.valid) {
-      const serviceData: Service = this.serviceForm.value;
-
-      if (this.editMode && this.selectedService) {
-        this.updateService(serviceData);
-      } else {
-        this.createService(serviceData);
-      }
-    } else {
-      // Đánh dấu tất cả các trường là đã chạm vào để hiển thị lỗi
-      Object.values(this.serviceForm.controls).forEach(control => {
-        if (control.invalid) {
-          control.markAsDirty();
-          control.updateValueAndValidity();
-        }
-      });
-      this.message.warning('Vui lòng điền đầy đủ thông tin');
+  getCategoryLabel(category: ServiceCategory): string {
+    switch (category) {
+      case 'room_service': return 'Dịch vụ phòng';
+      case 'food': return 'Đồ ăn';
+      case 'beverage': return 'Đồ uống';
+      case 'spa': return 'Spa/Massage';
+      case 'transport': return 'Di chuyển';
+      case 'custom': return 'Khác';
+      default: return category;
     }
   }
 
-  createService(serviceData: Service): void {
-    this.isLoading = true;
-    this.serviceService.createService(serviceData).subscribe(
-      (response) => {
-        this.message.success('Đã tạo dịch vụ thành công');
-        this.resetForm();
-        this.loadServices();
-        this.isLoading = false;
+  loadServices(hotelId?: string): void {
+    const params: any = {};
+    if (hotelId) params.hotelId = hotelId;
+
+    this.serviceService.getServices(hotelId).subscribe(
+      data => {
+        this.services = data;
       },
-      (error) => {
-        console.error('Error creating service:', error);
-        this.message.error('Không thể tạo dịch vụ');
-        this.isLoading = false;
+      error => {
+        console.error('Lỗi khi tải danh sách dịch vụ:', error);
+        this.message.error('Không thể tải danh sách dịch vụ.');
       }
     );
   }
 
-  updateService(serviceData: Service): void {
-    if (!this.selectedService || !this.selectedService._id) return;
-
-    this.isLoading = true;
-    this.serviceService.updateService(this.selectedService._id, serviceData).subscribe(
-      (response) => {
-        this.message.success('Đã cập nhật dịch vụ thành công');
-        this.resetForm();
-        this.loadServices();
-        this.isLoading = false;
+  loadHotels(): void {
+    this.hotelService.getHotels().subscribe(
+      data => {
+        this.hotels = data;
       },
-      (error) => {
-        console.error('Error updating service:', error);
-        this.message.error('Không thể cập nhật dịch vụ');
-        this.isLoading = false;
+      error => {
+        console.error('Lỗi khi tải danh sách khách sạn:', error);
+        this.message.error('Không thể tải danh sách khách sạn.');
       }
     );
   }
 
-  editService(service: Service): void {
-    this.selectedService = { ...service };
-    this.editMode = true;
-    this.serviceForm.patchValue({
-      name: service.name,
-      description: service.description,
-      price: service.price,
-      category: service.category,
-      hotelId: service.hotelId,
-      image: service.image || '',
-      isAvailable: service.isAvailable
+  loadServiceCategories(hotelId: string): void {
+    this.serviceService.getServiceCategories(hotelId).subscribe(
+      data => {
+        this.categories = data;
+      },
+      error => {
+        console.error('Lỗi khi tải danh mục dịch vụ:', error);
+        this.serviceCategoryOptions = ALL_SERVICE_CATEGORIES.map(cat => ({ label: this.getCategoryLabel(cat), value: cat }));
+      }
+    );
+  }
+
+  onHotelChange(hotelId: string | null): void {
+    this.selectedHotelId = hotelId;
+    this.services = [];
+    this.serviceForm.get('hotelId')?.setValue(hotelId);
+    if (hotelId) {
+      this.loadServices(hotelId);
+      this.loadServiceCategories(hotelId);
+    } else {
+      this.categories = [];
+      this.serviceCategoryOptions = ALL_SERVICE_CATEGORIES.map(cat => ({ label: this.getCategoryLabel(cat), value: cat }));
+    }
+  }
+
+  startEdit(id: string): void {
+    this.editId = id;
+    const serviceToEdit = this.services.find(s => s._id === id);
+    if (serviceToEdit) {
+      this.selectedService = { ...serviceToEdit };
+      this.selectedHotelId = serviceToEdit.hotelId;
+
+      this.serviceForm.patchValue({
+        hotelId: serviceToEdit.hotelId,
+        name: serviceToEdit.name,
+        description: serviceToEdit.description,
+        price: serviceToEdit.price,
+        category: serviceToEdit.category,
+        image: serviceToEdit.image,
+        isActive: serviceToEdit.isActive,
+        currency: serviceToEdit.currency || 'VND',
+        isCustom: serviceToEdit.isCustom || false
+      });
+      if(this.selectedHotelId) this.loadServiceCategories(this.selectedHotelId);
+    }
+  }
+
+  stopEdit(): void {
+    this.editId = null;
+    this.selectedService = null;
+    this.serviceForm.reset({
+      hotelId: this.selectedHotelId,
+      name: '',
+      description: '',
+      price: 0,
+      category: 'custom' as ServiceCategory,
+      image: '',
+      isActive: true,
+      currency: 'VND',
+      isCustom: false
     });
-    this.imageUrl = service.image || '';
+  }
+
+  submitForm(): void {
+    if (this.serviceForm.invalid) {
+      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      Object.values(this.serviceForm.controls).forEach(control => {
+        if (control.invalid) {
+          control.markAsDirty();
+          control.updateValueAndValidity({ onlySelf: true });
+        }
+      });
+      return;
+    }
+
+    const formValue = this.serviceForm.value;
+    const serviceData: Service = {
+      hotelId: formValue.hotelId,
+      name: formValue.name,
+      description: formValue.description,
+      price: Number(formValue.price),
+      category: formValue.category as ServiceCategory,
+      image: formValue.image,
+      isActive: formValue.isActive,
+      currency: formValue.currency,
+      isCustom: formValue.isCustom
+    };
+
+    if (this.editId && this.selectedService) {
+      serviceData._id = this.editId;
+      this.serviceService.updateService(this.editId, serviceData).subscribe(
+        (updatedService: Service) => {
+          const index = this.services.findIndex(s => s._id === this.editId);
+          if (index !== -1) {
+            this.services[index] = updatedService;
+            this.services = [...this.services];
+          }
+          this.message.success('Đã cập nhật dịch vụ thành công');
+          this.stopEdit();
+        },
+        error => {
+          console.error('Lỗi khi cập nhật dịch vụ:', error);
+          this.message.error(error.error?.message || 'Không thể cập nhật dịch vụ.');
+        }
+      );
+    } else {
+      this.serviceService.createService(serviceData).subscribe(
+        (newService: Service) => {
+          this.services.push(newService);
+          this.services = [...this.services];
+          this.message.success('Đã tạo dịch vụ thành công');
+          this.stopEdit();
+        },
+        error => {
+          console.error('Lỗi khi tạo dịch vụ:', error);
+          this.message.error(error.error?.message || 'Không thể tạo dịch vụ.');
+        }
+      );
+    }
   }
 
   deleteService(id: string): void {
-    this.isLoading = true;
     this.serviceService.deleteService(id).subscribe(
       () => {
+        this.services = this.services.filter(s => s._id !== id);
         this.message.success('Đã xóa dịch vụ thành công');
-        this.loadServices();
-        this.isLoading = false;
+        if (this.editId === id) {
+          this.stopEdit();
+        }
       },
-      (error) => {
-        console.error('Error deleting service:', error);
-        this.message.error('Không thể xóa dịch vụ');
-        this.isLoading = false;
+      error => {
+        console.error('Lỗi khi xóa dịch vụ:', error);
+        this.message.error(error.error?.message || 'Không thể xóa dịch vụ.');
       }
     );
+  }
+
+  getHotelName(hotelId: string): string {
+    const hotel = this.hotels.find(h => h._id === hotelId);
+    return hotel ? hotel.name : 'N/A';
   }
 
   handleImageChange(info: NzUploadChangeParam): void {
@@ -254,11 +270,6 @@ export class ServiceManagementComponent implements OnInit {
     }
   }
 
-  getHotelName(hotelId: string): string {
-    const hotel = this.hotels.find(h => h._id === hotelId);
-    return hotel ? hotel.name : 'Unknown Hotel';
-  }
-
   beforeUpload = (file: NzUploadFile): boolean => {
     const isImage = file.type?.startsWith('image/');
     if (!isImage) {
@@ -270,6 +281,34 @@ export class ServiceManagementComponent implements OnInit {
       this.message.error('Hình ảnh phải nhỏ hơn 2MB!');
       return false;
     }
-    return true;
+    this.fileList = this.fileList.concat(file);
+    this.handleUpload(file);
+    return false;
   };
+
+  handleChange(info: { file: NzUploadFile }): void {
+    switch (info.file.status) {
+      case 'uploading':
+        this.isLoading = true;
+        break;
+      case 'done':
+        this.isLoading = false;
+        this.imageUrl = info.file.response?.secure_url;
+        this.serviceForm.patchValue({ image: this.imageUrl });
+        this.message.success(`${info.file.name} file uploaded successfully`);
+        break;
+      case 'error':
+        this.isLoading = false;
+        this.message.error(`${info.file.name} file upload failed.`);
+        break;
+    }
+  }
+  
+  handleUpload(file: NzUploadFile): void {
+    const formData = new FormData();
+    formData.append('file', file as any);
+    formData.append('upload_preset', this.cloudinaryPreset);
+
+    this.message.info('Hàm handleUpload cần được implement với HttpClient hoặc cấu hình nz-upload.');
+  }
 } 

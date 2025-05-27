@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { BusinessUser, UserService } from '../../services/user.service';
+import { UserService, BusinessInfo, SignUpRequest } from '../../services/user.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 
 @Component({
@@ -36,11 +36,13 @@ export class BusinessSignupComponent implements OnInit {
       password: ['', [Validators.required, Validators.minLength(6)]],
       businessInfo: this.fb.group({
         name: ['', [Validators.required]],
+        legalName: ['', [Validators.required]],
+        taxId: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
         address: ['', [Validators.required]],
-        tax_code: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
-        contact: this.fb.group({
+        contactInfo: this.fb.group({
           phone: ['', [Validators.pattern(/^[0-9]+$/)]],
-          email: ['', [Validators.email]]
+          email: ['', [Validators.email]],
+          website: ['']
         })
       })
     });
@@ -56,7 +58,22 @@ export class BusinessSignupComponent implements OnInit {
     }
 
     this.isLoading = true;
-    const formData: BusinessUser = this.businessForm.value;
+    const formData: SignUpRequest & { businessInfo: BusinessInfo } = {
+      username: this.businessForm.value.username,
+      email: this.businessForm.value.email,
+      password: this.businessForm.value.password,
+      businessInfo: {
+        name: this.businessForm.value.businessInfo.name,
+        legalName: this.businessForm.value.businessInfo.legalName,
+        taxId: this.businessForm.value.businessInfo.taxId,
+        address: this.businessForm.value.businessInfo.address,
+        contactInfo: {
+          phone: this.businessForm.value.businessInfo.contactInfo?.phone,
+          email: this.businessForm.value.businessInfo.contactInfo?.email,
+          website: this.businessForm.value.businessInfo.contactInfo?.website
+        }
+      }
+    };
     
     this.userService.signUpBusiness(formData).subscribe({
       next: (response) => {

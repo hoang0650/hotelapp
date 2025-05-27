@@ -46,19 +46,9 @@
           </nz-tag>
         </td>
         <td>
-          <nz-badge
-            [nzStatus]="user.blocked ? 'error' : 'success'"
-            [nzText]="user.blocked ? 'Bị khóa' : 'Hoạt động'"
-          ></nz-badge>
-          <a 
-            nz-button 
-            nzType="link" 
-            nzSize="small"
-            [nzLoading]="user.isUpdating"
-            (click)="toggleUserBlock(user)"
-          >
-            <i nz-icon [nzType]="user.blocked ? 'unlock' : 'lock'"></i>
-          </a>
+          <nz-tag [nzColor]="user.status === 'active' ? 'success' : (user.status === 'suspended' ? 'error' : 'warning')">
+            {{ user.status === 'active' ? 'Hoạt động' : (user.status === 'suspended' ? 'Đã khóa' : 'Không hoạt động') }}
+          </nz-tag>
         </td>
         <td>{{ user.createdAt | date:'short' }}</td>
         <td>{{ user.lastLogin | date:'short' }}</td>
@@ -121,8 +111,35 @@
         <nz-form-item>
           <nz-form-label [nzSpan]="6">Trạng thái</nz-form-label>
           <nz-form-control [nzSpan]="14">
-            <nz-switch formControlName="blocked" [nzCheckedChildren]="'Khóa'" [nzUnCheckedChildren]="'Hoạt động'">
-            </nz-switch>
+            <nz-button-group>
+              <button nz-button 
+                      nz-dropdown 
+                      [nzDropdownMenu]="menu" 
+                      nzPlacement="bottomRight">
+                <span>Trạng thái</span>
+                <i nz-icon nzType="down"></i>
+              </button>
+            </nz-button-group>
+            <nz-dropdown-menu #menu="nzDropdownMenu">
+              <ul nz-menu>
+                <li nz-menu-item (click)="updateUserDisplayStatus(selectedUser!, 'active')" 
+                    *ngIf="selectedUser?.status !== 'active'">
+                  <i nz-icon nzType="check-circle" nzTheme="outline"></i> Kích hoạt
+                </li>
+                <li nz-menu-item (click)="updateUserDisplayStatus(selectedUser!, 'inactive')" 
+                    *ngIf="selectedUser?.status !== 'inactive'">
+                  <i nz-icon nzType="minus-circle" nzTheme="outline"></i> Vô hiệu hóa
+                </li>
+                <li nz-menu-item (click)="updateUserDisplayStatus(selectedUser!, 'suspended')" 
+                    *ngIf="selectedUser?.status !== 'suspended'">
+                  <i nz-icon nzType="pause-circle" nzTheme="outline"></i> Đình chỉ
+                </li>
+                <li nz-menu-item nzDanger (click)="deleteUser(selectedUser!)" 
+                    *ngIf="selectedUser?.status !== 'deleted'">
+                  <i nz-icon nzType="delete" nzTheme="outline"></i> Xóa người dùng
+                </li>
+              </ul>
+            </nz-dropdown-menu>
           </nz-form-control>
         </nz-form-item>
       </form>

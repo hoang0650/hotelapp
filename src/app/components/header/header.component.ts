@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { UserService, UserResponse } from '../../services/user.service';
+import { UserService } from '../../services/user.service';
+import { User } from '../../interfaces/user';
 
 @Component({
   selector: 'app-header',
@@ -7,31 +8,21 @@ import { UserService, UserResponse } from '../../services/user.service';
   styleUrls: ['./header.component.css']
 })
 export class HeaderComponent implements OnInit {
-  isLoggedIn: boolean = false;
-  infor: UserResponse | null = null;
+  currentUser: User | null = null;
 
-  constructor(private userService: UserService) {
-    this.userInfo();
-  }
+  constructor(private userService: UserService) {}
 
   ngOnInit(): void {
-    this.userService.isLoggedIn.subscribe((status: boolean) => {
-      console.log('status', status);
-      this.isLoggedIn = status;
-      this.userInfo();
+    this.userService.currentUser.subscribe(user => {
+      this.currentUser = user;
     });
   }
 
-  logOut(): void {
-    localStorage.removeItem('access_token');
+  get isLoggedIn(): boolean {
+    return this.userService.isLoggedIn;
+  }
+
+  logout(): void {
     this.userService.logout();
-    this.isLoggedIn = false;
-  }
-
-  userInfo(): void {
-    this.userService.getUserInfo().subscribe((data: UserResponse) => {
-      this.infor = data;
-      console.log('data', data);
-    });
   }
 }

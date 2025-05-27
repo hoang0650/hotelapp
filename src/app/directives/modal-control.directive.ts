@@ -120,7 +120,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Hiển thị modal nhận phòng
   showCheckinModal(): void {
-    if (this.room.roomStatus !== 'available') {
+    if (this.room.status !== 'vacant') {
       this.modalService.info({
         nzTitle: 'Thông báo',
         nzContent: 'Chỉ có thể nhận phòng khi phòng đang trống.',
@@ -172,7 +172,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Hiển thị modal chuyển phòng
   showTransferModal(): void {
-    if (this.room.roomStatus !== 'occupied') {
+    if (this.room.status !== 'occupied') {
       this.modalService.info({
         nzTitle: 'Thông báo',
         nzContent: 'Chỉ có thể chuyển phòng khi phòng đang có khách.',
@@ -206,7 +206,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
               <div class="form-item">
                 <label for="target-room">Chọn phòng đích:</label>
                 <select id="target-room" class="form-control">
-                  ${filteredRooms.map(room => `<option value="${room._id}">${room.roomNumber} - ${room.roomType}</option>`).join('')}
+                  ${filteredRooms.map(room => `<option value="${room._id}">${room.roomNumber} - ${room.type}</option>`).join('')}
                 </select>
               </div>
               <div class="form-item">
@@ -290,11 +290,11 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Hiển thị modal cập nhật trạng thái
   showStatusUpdateModal(): void {
-    const currentStatus = this.room.roomStatus;
+    const currentStatus = this.room.status;
     
     // Tạo danh sách trạng thái có thể chuyển đổi dựa trên trạng thái hiện tại
     let availableStatuses = [
-      { value: 'available', label: 'Trống' },
+      { value: 'vacant', label: 'Trống' },
       { value: 'dirty', label: 'Cần dọn dẹp' },
       { value: 'maintenance', label: 'Bảo trì' }
     ];
@@ -371,7 +371,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
               
               this.roomsService.updateRoomStatus(
                 this.room._id,
-                statusSelect.value,
+                statusSelect.value as Room['status'],
                 localStorage.getItem('staffId') || 'unknown',
                 statusNote?.value || ''
               ).pipe(
@@ -383,7 +383,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
                   
                   // Hiển thị thông báo thành công với thêm chi tiết
                   const statusLabels: {[key: string]: string} = {
-                    'available': 'Trống',
+                    'vacant': 'Trống',
                     'dirty': 'Cần dọn dẹp', 
                     'maintenance': 'Bảo trì',
                     'occupied': 'Đang sử dụng'
@@ -439,10 +439,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   }
 
   handleLabel(): string{
-    switch (this.room.roomStatus) {
-      case 'available':
+    switch (this.room.status) {
+      case 'vacant':
         return 'Nhận Phòng';
-      case 'active':
+      case 'occupied':
         return 'Trả Phòng';
       case 'dirty':
         return 'Dọn Dẹp';
@@ -453,27 +453,25 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Xác định loại modal dựa trên trạng thái phòng
   getModalType(): string {
-    switch (this.room.roomStatus) {
-      case 'available':
+    switch (this.room.status) {
+      case 'vacant':
         return 'checkin';
-      case 'active':
       case 'occupied':
         return 'checkout';
       case 'dirty':
       case 'maintenance': // Trả về 'cleaning' cho cả maintenance
         return 'cleaning'; 
       default:
-        console.warn(`Trạng thái phòng không xác định: ${this.room.roomStatus}. Mở modal thông tin mặc định.`);
+        console.warn(`Trạng thái phòng không xác định: ${this.room.status}. Mở modal thông tin mặc định.`);
         return 'info'; // 'info' chưa được xử lý trong template, cân nhắc thêm hoặc trả về null/error
     }
   }
 
   // Xác định tiêu đề modal dựa trên trạng thái phòng
   getModalTitle(): string {
-    switch (this.room.roomStatus) {
-      case 'available':
+    switch (this.room.status) {
+      case 'vacant':
         return 'Nhận Phòng';
-      case 'active':
       case 'occupied':
         return 'Trả Phòng';
       case 'dirty':
@@ -495,11 +493,11 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       ? this.room.events[this.room.events.length - 1] 
       : null;
   
-    if (this.room.roomStatus === 'available') {
+    if (this.room.status === 'vacant') {
       
       // Room is available, perform check-in
       this.newRoom = {
-        roomStatus: 'active',
+        status: 'occupied',
         events: [
           ...(this.room.events || []),
           {
@@ -521,17 +519,17 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           this.modalRef?.close();
         }
       );
-    } else if (this.room.roomStatus === 'active' && lastEvent && lastEvent.type === 'checkin') {
+    } else if (this.room.status === 'occupied' && lastEvent && lastEvent.type === 'checkin') {
       // Room is active and last event is check-in, perform check-out    
       const updatedLastEvent = {
         ...lastEvent,
         type: 'checkout',
         checkoutTime: new Date(),
-        payment: this.calculatePayment(lastEvent.checkinTime, new Date(), this.room.roomType)
+        payment: this.calculatePayment(lastEvent.checkinTime, new Date(), this.room.type)
       };
   
       this.newRoom = {
-        roomStatus: 'dirty',
+        status: 'dirty',
         events: [
           ...(this.room.events || []).slice(0, -1),
           updatedLastEvent,
@@ -558,9 +556,9 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           this.modalRef?.close();
         }
       );
-    } else if(this.room.roomStatus === 'dirty' && lastEvent && lastEvent.type === 'checkout'){
+    } else if(this.room.status === 'dirty' && lastEvent && lastEvent.type === 'checkout'){
       this.newRoom = {
-        roomStatus: 'available',
+        status: 'vacant',
       };
       this.roomsService.cleanRoom(this.room._id, this.newRoom)
       .pipe(take(1))
@@ -625,24 +623,24 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     switch (rateType) {
       case 'hourly':
         // Giá giờ đầu
-        roomTotal = this.room.firstHourRate || this.room.hourlyRate;
+        roomTotal = this.room.pricing?.hourly || this.room.firstHourRate || 0;
         
         // Tính giá cho các giờ tiếp theo
         if (durationInHours > 1) {
           const additionalHours = durationInHours - 1;
-          const additionalHourRate = this.room.additionalHourRate || (this.room.hourlyRate * 0.8); // Nếu không có giá giờ bổ sung, lấy 80% giá giờ đầu
+          const additionalHourRate = this.room.additionalHourRate || (this.room.pricing?.hourly ? this.room.pricing.hourly * 0.8 : 0);
           roomTotal += additionalHours * additionalHourRate;
         }
         
         // Nếu số giờ vượt quá 6 giờ, chuyển sang tính ngày
         if (durationInHours > 6) {
-          roomTotal = this.room.dailyRate;
+          roomTotal = this.room.pricing?.daily || 0;
         }
         break;
         
       case 'daily':
         // Tính số ngày (làm tròn lên)
-        roomTotal = durationInDays * this.room.dailyRate;
+        roomTotal = durationInDays * (this.room.pricing?.daily || 0);
         
         // Phụ thu cuối tuần nếu có
         if (isWeekend) {
@@ -653,11 +651,11 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         
       case 'nightly':
         // Giá qua đêm
-        roomTotal = this.room.nightlyRate;
+        roomTotal = this.room.pricing?.nightly || 0;
         
         // Nếu ở nhiều hơn 1 đêm
         if (durationInDays > 1) {
-          roomTotal += (durationInDays - 1) * this.room.dailyRate;
+          roomTotal += (durationInDays - 1) * (this.room.pricing?.daily || 0);
         }
         break;
     }
@@ -698,7 +696,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     // Phụ thu trả phòng muộn (nếu trả phòng sau 12h trưa và trước 18h)
     if (checkOutHour > 12 && checkOutHour < 18 && rateType !== 'hourly') {
       // Phụ thu 50% giá giờ
-      additionalCharge += this.room.hourlyRate * 0.5;
+      additionalCharge += (this.room.pricing?.hourly || 0) * 0.5;
     }
     
     // --- TÍNH TỔNG TIỀN ---
@@ -741,7 +739,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     const durationInDays = Math.ceil(durationInHours / 24);
     
     // Tính tiền phòng và dịch vụ
-    const roomTotal = checkoutEvent?.payment || this.calculatePayment(checkInTime, checkOutTime, this.room.roomType);
+    const roomTotal = checkoutEvent?.payment || this.calculatePayment(checkInTime, checkOutTime, this.room.type);
     let serviceTotal = 0;
     let additionalCharges = checkinInfo?.additionalCharges || 0;
     let discount = checkinInfo?.discount || 0;
@@ -767,7 +765,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       customerEmail: checkinInfo?.guestInfo?.email || '',
       staffName: localStorage.getItem('staffName') || 'Nhân viên',
       roomNumber: roomNumber,
-      roomType: this.room.roomType || 'Phòng thường',
+      roomType: this.room.type || 'Phòng thường',
       checkInTime: checkInTime,
       checkOutTime: checkOutTime,
       duration: {

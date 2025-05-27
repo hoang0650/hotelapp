@@ -50,7 +50,7 @@
       </div>
       <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="6">
         <div class="action-buttons text-right">
-          <button nz-button nzType="primary" (click)="openShiftHandoverModal()" title="Giao ca">
+          <button nz-button nzType="primary" (click)="openShiftHandoverModal(shiftHandoverContent)" title="Giao ca">
             <i nz-icon nzType="sync" nzTheme="outline"></i> Giao ca
           </button>
           
@@ -105,13 +105,13 @@
           class="room-col">
           <div 
             class="room-item" 
-            [ngClass]="getRoomStatusClass(room.roomStatus)"
+            [ngClass]="getRoomStatusClass(room.status)"
             appModalControl 
             [room]="room">
             <div class="room-number">{{ room.roomNumber }}</div>
             <div class="room-floor">Tầng {{ room.floor }}</div>
-            <div class="room-type">{{ room.roomType }}</div>
-            <div class="room-status">{{ room.roomStatus }}</div>
+            <div class="room-type">{{ room.type }}</div>
+            <div class="room-status">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
           </div>
         </div>
       </div>

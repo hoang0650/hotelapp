@@ -1,0 +1,218 @@
+<!-- Giao diện quản lý OTA sẽ được xây dựng ở đây -->
+<nz-card nzTitle="Quản Lý Tích Hợp OTA">
+    <button nz-button nzType="primary" (click)="openModal()" class="mb-3">
+        <i nz-icon nzType="plus"></i>Thêm Cấu Hình OTA Mới
+    </button>
+
+    <!-- TODO: Thêm bộ lọc theo khách sạn nếu cần -->
+
+    <nz-table 
+        #otaTable 
+        [nzData]="otaIntegrations" 
+        [nzLoading]="isLoading"
+        nzBordered
+        nzSize="small"
+        [nzScroll]="{ x: '1200px' }"
+    >
+        <thead>
+            <tr>
+                <th nzWidth="15%">Khách sạn</th>
+                <th nzWidth="15%">Nhà cung cấp (OTA)</th>
+                <th nzWidth="10%">Trạng thái</th>
+                <th nzWidth="20%">Đồng bộ lần cuối</th>
+                <th nzWidth="40%">Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let item of otaTable.data">
+                <td>{{ getHotelName(item.hotelId) }}</td>
+                <td>{{ item.provider }}</td>
+                <td>
+                    <nz-tag [nzColor]="item.status === 'active' ? 'green' : (item.status === 'error' ? 'red' : 'default')">
+                        {{ item.status }}
+                    </nz-tag>
+                </td>
+                <td>{{ item.lastSync ? (item.lastSync | date:'dd/MM/yyyy HH:mm') : 'Chưa đồng bộ' }}</td>
+                <td>
+                    <button nz-button nzType="primary" nzShape="circle" nz-tooltip="Sửa cấu hình" (click)="openModal(item)" class="mr-2" aria-label="Sửa cấu hình"><i nz-icon nzType="edit"></i></button>
+                    <button nz-button nzType="default" nzShape="circle" nz-tooltip="'Đăng nhập' vào OTA" (click)="loginProvider(item)" [disabled]="item.status === 'active'" class="mr-2" aria-label="Đăng nhập OTA"><i nz-icon nzType="login"></i></button>
+                    <button nz-button nzType="default" nzShape="circle" nz-tooltip="Lấy đặt phòng (mẫu)" (click)="fetchBookings(item)" [disabled]="item.status !== 'active'" class="mr-2" aria-label="Lấy đặt phòng OTA"><i nz-icon nzType="download"></i></button>
+                    <button nz-button nzType="default" nzShape="circle" nz-tooltip="Đồng bộ dữ liệu (mẫu)" (click)="syncData(item)" [disabled]="item.status !== 'active'" class="mr-2" aria-label="Đồng bộ dữ liệu OTA"><i nz-icon nzType="sync"></i></button>
+                    <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa cấu hình này?" (nzOnConfirm)="deleteIntegration(item._id)" nzPopconfirmPlacement="topRight">
+                        <button nz-button nzType="primary" nzDanger nzShape="circle" nz-tooltip="Xóa cấu hình" aria-label="Xóa cấu hình"><i nz-icon nzType="delete"></i></button>
+                    </a>
+                </td>
+            </tr>
+        </tbody>
+    </nz-table>
+
+    <div *ngIf="!isLoading && otaIntegrations.length === 0" class="empty-state mt-3">
+        <nz-empty nzNotFoundContent="Chưa có cấu hình OTA nào."></nz-empty>
+    </div>
+</nz-card>
+
+<!-- Modal thêm/sửa cấu hình OTA -->
+<nz-modal
+    [(nzVisible)]="isModalVisible"
+    [nzTitle]="editId ? 'Cập Nhật Cấu Hình OTA' : 'Thêm Cấu Hình OTA Mới'"
+    (nzOnCancel)="handleCancel()"
+    (nzOnOk)="submitForm()"
+    [nzOkLoading]="isLoading"
+    nzWidth="800px"
+>
+    <ng-container *nzModalContent>
+        <form nz-form [formGroup]="otaForm">
+            <nz-form-item>
+                <nz-form-label [nzSm]="6" [nzXs]="24" nzRequired nzFor="hotelId">Khách sạn</nz-form-label>
+                <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="Vui lòng chọn khách sạn!">
+                    <nz-select formControlName="hotelId" id="hotelId" nzPlaceHolder="Chọn khách sạn" (ngModelChange)="onHotelSelectedForForm($event)" [nzDisabled]="!!editId">
+                        <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+                    </nz-select>
+                </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+                <nz-form-label [nzSm]="6" [nzXs]="24" nzRequired nzFor="provider">Nhà cung cấp OTA</nz-form-label>
+                <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="Vui lòng chọn nhà cung cấp!">
+                    <nz-select formControlName="provider" id="provider" nzPlaceHolder="Chọn OTA Provider" [nzDisabled]="!!editId">
+                        <nz-option *ngFor="let prov of otaProviders" [nzValue]="prov" [nzLabel]="prov"></nz-option>
+                    </nz-select>
+                </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+                <nz-form-label [nzSm]="6" [nzXs]="24" nzRequired nzFor="status">Trạng thái</nz-form-label>
+                <nz-form-control [nzSm]="14" [nzXs]="24">
+                    <nz-radio-group formControlName="status" id="status">
+                        <label nz-radio-button *ngFor="let stat of otaStatuses" [nzValue]="stat">{{ stat }}</label>
+                    </nz-radio-group>
+                </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+                <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="syncFrequency">Tần suất đồng bộ (phút)</nz-form-label>
+                <nz-form-control [nzSm]="14" [nzXs]="24">
+                    <nz-input-number formControlName="syncFrequency" id="syncFrequency" [nzMin]="5" [nzStep]="5" class="w-100"></nz-input-number>
+                </nz-form-control>
+            </nz-form-item>
+
+            <nz-divider nzText="Thông Tin Đăng Nhập (Credentials)"></nz-divider>
+            <div formGroupName="credentials">
+                <nz-form-item>
+                    <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="apiKey">API Key</nz-form-label>
+                    <nz-form-control [nzSm]="14" [nzXs]="24">
+                        <input nz-input formControlName="apiKey" id="apiKey" placeholder="API Key (nếu có)">
+                    </nz-form-control>
+                </nz-form-item>
+                <nz-form-item>
+                    <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="apiSecret">API Secret</nz-form-label>
+                    <nz-form-control [nzSm]="14" [nzXs]="24">
+                        <input nz-input formControlName="apiSecret" id="apiSecret" placeholder="API Secret (nếu có)" type="password">
+                    </nz-form-control>
+                </nz-form-item>
+                 <nz-form-item>
+                    <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="username">Username</nz-form-label>
+                    <nz-form-control [nzSm]="14" [nzXs]="24">
+                        <input nz-input formControlName="username" id="username" placeholder="Tên đăng nhập trên OTA">
+                    </nz-form-control>
+                </nz-form-item>
+                <nz-form-item>
+                    <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="password">Password</nz-form-label>
+                    <nz-form-control [nzSm]="14" [nzXs]="24">
+                        <input nz-input formControlName="password" id="password" placeholder="Mật khẩu trên OTA" type="password">
+                    </nz-form-control>
+                </nz-form-item>
+                <nz-form-item>
+                    <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="hotelCode">Mã Khách Sạn (OTA)</nz-form-label>
+                    <nz-form-control [nzSm]="14" [nzXs]="24">
+                        <input nz-input formControlName="hotelCode" id="hotelCode" placeholder="Mã KS của bạn trên trang OTA">
+                    </nz-form-control>
+                </nz-form-item>
+                 <nz-form-item>
+                    <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="propertyCode">Mã Cơ Sở (OTA)</nz-form-label>
+                    <nz-form-control [nzSm]="14" [nzXs]="24">
+                        <input nz-input formControlName="propertyCode" id="propertyCode" placeholder="Mã cơ sở/Property Code (nếu có)">
+                    </nz-form-control>
+                </nz-form-item>
+            </div>
+
+            <nz-divider nzText="Cài Đặt Đồng Bộ"></nz-divider>
+            <div formGroupName="settings" class="settings-group">
+                <label nz-checkbox formControlName="autoAcceptBookings">Tự động chấp nhận đặt phòng</label>
+                <label nz-checkbox formControlName="updateInventory">Cập nhật số lượng phòng trống</label>
+                <label nz-checkbox formControlName="updatePrices">Cập nhật giá</label>
+                <label nz-checkbox formControlName="updateAvailability">Cập nhật tình trạng phòng (Availability)</label>
+            </div>
+
+            <nz-divider nzText="Ánh Xạ Loại Phòng (Room Type Mappings)"></nz-divider>
+            <div formGroupName="mappings">
+                <div formArrayName="roomTypes">
+                    <div *ngFor="let roomMap of roomTypeMappings.controls; let i = index" [formGroupName]="i" class="mapping-item">
+                        <nz-row [nzGutter]="8">
+                            <nz-col [nzSpan]="10">
+                                <nz-form-item>
+                                    <nz-form-label>Phòng của bạn</nz-form-label>
+                                    <nz-form-control nzErrorTip="Chọn phòng!">
+                                        <nz-select formControlName="localRoomTypeId" nzPlaceHolder="Chọn phòng từ hệ thống">
+                                            <nz-option *ngFor="let room of roomsForHotel" [nzValue]="room._id" [nzLabel]="getRoomName(room)"></nz-option>
+                                        </nz-select>
+                                    </nz-form-control>
+                                </nz-form-item>
+                            </nz-col>
+                            <nz-col [nzSpan]="6">
+                                 <nz-form-item>
+                                    <nz-form-label>ID Phòng OTA</nz-form-label>
+                                    <nz-form-control>
+                                        <input nz-input formControlName="otaRoomTypeId" placeholder="ID phòng trên OTA">
+                                    </nz-form-control>
+                                </nz-form-item>
+                            </nz-col>
+                            <nz-col [nzSpan]="6">
+                                 <nz-form-item>
+                                    <nz-form-label>Tên Phòng OTA</nz-form-label>
+                                    <nz-form-control>
+                                        <input nz-input formControlName="otaRoomTypeName" placeholder="Tên phòng trên OTA">
+                                    </nz-form-control>
+                                </nz-form-item>
+                            </nz-col>
+                            <nz-col [nzSpan]="2">
+                                <button nz-button nzType="dashed" nzDanger (click)="removeRoomTypeMapping(i)" class="mt-form-label-height" aria-label="Xóa ánh xạ phòng">
+                                    <i nz-icon nzType="delete"></i>
+                                </button>
+                            </nz-col>
+                        </nz-row>
+                    </div>
+                    <button nz-button nzType="dashed" (click)="addRoomTypeMapping()" class="w-100 mt-2">
+                        <i nz-icon nzType="plus"></i>Thêm Ánh Xạ Loại Phòng
+                    </button>
+                </div>
+                <!-- TODO: Ánh xạ Rate Plan nếu cần -->
+            </div>
+
+        </form>
+    </ng-container>
+</nz-modal>
+
+<!-- Hiển thị danh sách đặt phòng mẫu từ OTA -->
+<div *ngIf="currentOtaBookings.length > 0" class="mt-4">
+    <nz-divider nzText="Đặt phòng (mẫu) vừa tải từ OTA"></nz-divider>
+    <nz-list [nzDataSource]="currentOtaBookings" [nzRenderItem]="otaBookingItem" [nzLoading]="isLoadingBookings" nzBordered nzItemLayout="horizontal">
+        <ng-template #otaBookingItem let-booking>
+            <nz-list-item>
+                <nz-list-item-meta
+                    [nzTitle]="booking.guestName"
+                    [nzDescription]="booking.source + ' (' + booking.otaBookingId + ')'"
+                >
+                     <nz-list-item-meta-avatar nzIcon="shop"></nz-list-item-meta-avatar>
+                </nz-list-item-meta>
+                <div class="booking-details">
+                    <p><strong>Phòng:</strong> {{ booking.roomTypeName }}</p>
+                    <p><strong>Check-in:</strong> {{ booking.checkInDate | date:'dd/MM/yyyy' }}</p>
+                    <p><strong>Check-out:</strong> {{ booking.checkOutDate | date:'dd/MM/yyyy' }}</p>
+                    <p><strong>Tổng tiền:</strong> {{ booking.totalAmount | currency:booking.currency:'symbol':'1.0-0' }}</p>
+                    <p><strong>Trạng thái:</strong> <nz-tag [nzColor]="booking.status === 'Confirmed' ? 'blue' : 'gold'">{{ booking.status }}</nz-tag></p>
+                </div>
+            </nz-list-item>
+        </ng-template>
+    </nz-list>
+</div> 

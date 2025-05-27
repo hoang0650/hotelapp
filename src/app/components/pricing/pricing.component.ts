@@ -122,8 +122,8 @@ export class PricingComponent implements OnInit {
     private authService: AuthService
   ) {
     const currentUser = this.authService.getCurrentUser();
-    if (currentUser?.userId) {
-      this.userId = currentUser.userId;
+    if (currentUser?._id) {
+      this.userId = currentUser._id;
     }
   }
 

@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
-import { UserService, UserResponse } from '../../services/user.service';
+import { UserService } from '../../services/user.service';
 import { User } from '../../interfaces/user';
 
 @Component({
@@ -16,6 +16,7 @@ export class UserManagementComponent implements OnInit {
   isLoading = false;
   editingUser: User | null = null;
   isVisible = false;
+  selectedUser: User | null = null;
   
   // Phân trang
   pageSize = 10;
@@ -32,7 +33,7 @@ export class UserManagementComponent implements OnInit {
       username: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
       role: ['', [Validators.required]],
-      blocked: [false]
+      status: ['active']
     });
   }
 
@@ -42,40 +43,29 @@ export class UserManagementComponent implements OnInit {
 
   loadUsers(): void {
     this.isLoading = true;
-    const roles = ['admin', 'business', 'hotel', 'staff', 'customer'];
-    
-    Promise.all(roles.map(role => 
-      this.userService.getUsersByRole(role).toPromise()
-        .then((users: UserResponse[] | undefined) => {
-          if (!users) return [];
-          return users.map(user => ({
-            ...user,
-            _id: user.userId,
-            businessId: user.businessId,
-            hotelId: user.hotelId,
-            permissions: user.permissions,
-            lastLogin: user.loginHistory && user.loginHistory.length > 0 
-              ? user.loginHistory[user.loginHistory.length - 1].loginDate 
-              : undefined
-          }));
-        })
-    )).then(results => {
-      this.users = results.flat();
-      this.total = this.users.length;
-      this.isLoading = false;
-    }).catch(error => {
-      this.message.error('Có lỗi khi tải danh sách người dùng');
-      this.isLoading = false;
+    this.userService.getUsersByRole('guest').subscribe({
+      next: (users) => {
+        this.users = users;
+        this.total = users.length;
+      },
+      error: (error: any) => {
+        this.message.error(error.message || 'Lỗi khi tải danh sách người dùng');
+        this.isLoading = false;
+      },
+      complete: () => {
+        this.isLoading = false;
+      }
     });
   }
 
   showEditModal(user: User): void {
     this.editingUser = user;
+    this.selectedUser = user;
     this.userForm.patchValue({
       username: user.username,
       email: user.email,
       role: user.role,
-      blocked: user.blocked
+      status: user.status
     });
     this.isVisible = true;
   }
@@ -83,98 +73,98 @@ export class UserManagementComponent implements OnInit {
   handleCancel(): void {
     this.isVisible = false;
     this.editingUser = null;
-    this.userForm.reset();
+    this.selectedUser = null;
+    this.userForm.reset({ status: 'active' });
   }
 
   handleOk(): void {
     if (this.userForm.valid && this.editingUser) {
       this.isLoading = true;
+      const formValue = this.userForm.value;
       const updatedUser: Partial<User> = {
-        ...this.editingUser,
-        ...this.userForm.value
+        username: formValue.username,
+        email: formValue.email,
+        role: formValue.role,
       };
 
-      this.userService.updateUser(this.editingUser._id, updatedUser).subscribe(
-        (response: UserResponse) => {
-          const updatedUserData: User = {
-            ...response,
-            _id: response.userId,
-            businessId: response.businessId,
-            hotelId: response.hotelId,
-            permissions: response.permissions,
-            lastLogin: this.editingUser?.lastLogin
-          };
-          
+      this.userService.updateUser(this.editingUser._id, updatedUser).subscribe({
+        next: (responseUser) => {
           const index = this.users.findIndex(u => u._id === this.editingUser?._id);
           if (index !== -1) {
-            this.users[index] = updatedUserData;
+            this.users[index] = responseUser;
+            this.users = [...this.users];
           }
           this.message.success('Cập nhật người dùng thành công');
           this.isVisible = false;
-          this.editingUser = null;
-          this.userForm.reset();
+          this.handleCancel();
+        },
+        error: (error: any) => {
+          console.error('Error updating user:', error);
+          this.message.error(error.error?.message || error.message || 'Không thể cập nhật người dùng');
           this.isLoading = false;
         },
-        (error) => {
-          console.error('Error updating user:', error);
-          this.message.error('Không thể cập nhật người dùng');
+        complete: () => {
           this.isLoading = false;
         }
-      );
+      });
+    } else {
+      Object.values(this.userForm.controls).forEach(control => {
+        if (control.invalid) {
+          control.markAsDirty();
+          control.updateValueAndValidity({ onlySelf: true });
+        }
+      });
     }
   }
 
   deleteUser(user: User): void {
     this.modal.confirm({
       nzTitle: 'Xác nhận xóa',
-      nzContent: `Bạn có chắc chắn muốn xóa người dùng ${user.username}?`,
+      nzContent: `Bạn có chắc chắn muốn xóa người dùng ${user.username}? Hành động này sẽ đặt trạng thái người dùng thành 'deleted'.`,
       nzOkText: 'Xóa',
       nzOkType: 'primary',
       nzOkDanger: true,
       nzOnOk: () => {
         this.isLoading = true;
-        this.userService.deleteUser({ _id: user._id }).subscribe(
-          () => {
-            this.users = this.users.filter(u => u._id !== user._id);
-            this.message.success('Xóa người dùng thành công');
+        this.userService.updateUserStatus(user._id, 'deleted').subscribe({
+          next: (response) => {
+            const index = this.users.findIndex(u => u._id === user._id);
+            if (index !== -1) {
+                this.users.splice(index, 1);
+                this.total = this.users.length;
+                this.users = [...this.users];
+            }
+            this.message.success(response.message || 'Xóa người dùng thành công');
+          },
+          error: (error: any) => {
+            console.error('Error deleting user:', error);
+            this.message.error(error.error?.message || error.message || 'Không thể xóa người dùng');
             this.isLoading = false;
           },
-          (error) => {
-            console.error('Error deleting user:', error);
-            this.message.error('Không thể xóa người dùng');
+          complete: () => {
             this.isLoading = false;
           }
-        );
+        });
       }
     });
   }
 
-  toggleUserBlock(user: User): void {
-    this.isLoading = true;
-    this.userService.toggleUserBlock(user._id, !user.blocked).subscribe(
-      (response: UserResponse) => {
-        const updatedUserData: User = {
-          ...response,
-          _id: response.userId,
-          businessId: response.businessId,
-          hotelId: response.hotelId,
-          permissions: response.permissions,
-          lastLogin: user.lastLogin
-        };
-        
+  updateUserDisplayStatus(user: User, status: 'active' | 'inactive' | 'suspended'): void {
+    if (!user._id) return;
+
+    this.userService.updateUserStatus(user._id, status).subscribe({
+      next: (response) => {
         const index = this.users.findIndex(u => u._id === user._id);
         if (index !== -1) {
-          this.users[index] = updatedUserData;
+          this.users[index] = response.user;
+          this.users = [...this.users];
         }
-        this.message.success(`Đã ${updatedUserData.blocked ? 'khóa' : 'mở khóa'} người dùng thành công`);
-        this.isLoading = false;
+        this.message.success(response.message);
       },
-      (error) => {
-        console.error('Error toggling user block:', error);
-        this.message.error('Không thể thay đổi trạng thái khóa người dùng');
-        this.isLoading = false;
+      error: (error: any) => {
+        this.message.error(error.error?.message || error.message || 'Lỗi khi cập nhật trạng thái người dùng');
       }
-    );
+    });
   }
 
   onPageIndexChange(index: number): void {

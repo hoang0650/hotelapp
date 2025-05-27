@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Hotel } from '../interfaces/hotel';
+import { Hotel, HotelStatus } from '../interfaces/hotel';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 interface RevenueData {
   labels: string[];
@@ -20,24 +21,49 @@ export class HotelService {
 
   constructor(private http: HttpClient) { }
 
-  getHotels(): Observable<Hotel[]> {
-    return this.http.get<Hotel[]>(this.apiUrl);
+  getHotels(businessId?: string, status?: HotelStatus): Observable<Hotel[]> {
+    let params = new HttpParams();
+    if (businessId) {
+      params = params.set('businessId', businessId);
+    }
+    if (status) {
+      params = params.set('status', status);
+    }
+    return this.http.get<Hotel[]>(this.apiUrl, { params });
   }
 
   getHotelById(id: string): Observable<Hotel> {
     return this.http.get<Hotel>(`${this.apiUrl}/${id}`);
   }
 
-  createHotel(hotel: Hotel): Observable<Hotel> {
+  createHotel(hotel: Partial<Hotel>): Observable<Hotel> {
     return this.http.post<Hotel>(this.apiUrl, hotel);
   }
 
-  updateHotel(id: string, hotel: Hotel): Observable<Hotel> {
-    return this.http.put<Hotel>(`${this.apiUrl}/${id}`, hotel);
+  updateHotel(id: string, hotelUpdates: Partial<Hotel>): Observable<Hotel> {
+    return this.http.put<Hotel>(`${this.apiUrl}/${id}`, hotelUpdates);
   }
 
   deleteHotel(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  updateHotelStatus(id: string, status: HotelStatus): Observable<Hotel> {
+    return this.http.patch<{ message: string, hotel: Hotel }>(`${this.apiUrl}/${id}/status`, { status }).pipe(
+      map(response => response.hotel)
+    );
+  }
+
+  uploadHotelImages(id: string, images: string[]): Observable<{ message: string, images: string[] }> {
+    return this.http.post<{ message: string, images: string[] }>(`${this.apiUrl}/${id}/images`, { images });
+  }
+
+  deleteHotelImage(id: string, imageIndex: number): Observable<{ message: string, images: string[] }> {
+    return this.http.delete<{ message: string, images: string[] }>(`${this.apiUrl}/${id}/images/${imageIndex}`);
+  }
+
+  updateHotelSettings(id: string, settingsUpdate: Partial<Hotel['settings']>) : Observable<{ message: string, settings: Hotel['settings'] | undefined }>{
+    return this.http.patch<{ message: string, settings: Hotel['settings'] }>(`${this.apiUrl}/${id}/settings`, { settings: settingsUpdate });
   }
 
   // Lấy doanh thu khách sạn theo khoảng thời gian

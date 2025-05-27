@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { Business } from '../interfaces/business';
 import { AuthService } from './auth.service';
 
@@ -28,38 +28,32 @@ export class BusinessService {
     return this.http.get<Business>(`${this.apiUrl}/${id}`);
   }
 
-  // Lấy thông tin doanh nghiệp hiện tại
-  getBusinessInfo(): Observable<Business> {
+  // Lấy thông tin doanh nghiệp hiện tại của người dùng đang đăng nhập
+  getBusinessInfoOfCurrentUser(): Observable<Business> {
     const currentUser = this.authService.getCurrentUser();
-    // Nếu có userId, lấy doanh nghiệp theo ownerId
     if (currentUser && currentUser._id) {
       return this.http.get<Business>(`${this.apiUrl}/owner/${currentUser._id}`);
     }
-    // Nếu không có userId, trả về doanh nghiệp đầu tiên (tạm thời)
-    return this.http.get<Business>(`${this.apiUrl}/default`);
+    return new Observable<Business>(observer => {
+      observer.error('User not logged in or user ID not available.');
+    });
   }
 
   // Tạo doanh nghiệp mới
-  createBusiness(business: Business): Observable<Business> {
-    // Lấy thông tin người dùng hiện tại
-    const currentUser = this.authService.getCurrentUser();
-    
-    // Thêm ownerId vào business nếu có người dùng đăng nhập
-    if (currentUser && currentUser._id) {
-      business.ownerId = currentUser._id;
-    }
-    
+  createBusiness(business: Partial<Business>): Observable<Business> {
     return this.http.post<Business>(this.apiUrl, business);
   }
 
   // Cập nhật doanh nghiệp
-  updateBusiness(id: string, business: Business): Observable<Business> {
+  updateBusiness(id: string, business: Partial<Business>): Observable<Business> {
     return this.http.put<Business>(`${this.apiUrl}/${id}`, business);
   }
 
   // Cập nhật trạng thái doanh nghiệp
-  updateBusinessStatus(id: string, status: 'active' | 'inactive' | 'pending' | 'block' | 'reject' | 'unactive'): Observable<Business> {
-    return this.http.patch<Business>(`${this.apiUrl}/${id}/status`, { status });
+  updateBusinessStatus(id: string, status: 'pending' | 'active' | 'inactive' | 'suspended'): Observable<Business> {
+    return this.http.patch<{ message: string, business: Business }>(`${this.apiUrl}/${id}/status`, { status }).pipe(
+      map(response => response.business)
+    );
   }
 
   // Xoá doanh nghiệp
@@ -67,4 +61,8 @@ export class BusinessService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
+  // Method to update subscription (example, implement as needed)
+  updateSubscription(businessId: string, plan: string, contractYears: number, autoRenew: boolean): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${businessId}/subscription`, { plan, contractYears, autoRenew });
+  }
 }

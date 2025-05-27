@@ -1,15 +1,17 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { ProductService } from '../../services/product.service';
 import { Subscription } from 'rxjs';
 import { NzMarks } from 'ng-zorro-antd/slider';
 import { RoomsService } from '../../services/rooms.service';
 import { HotelService } from '../../services/hotel.service';
-import { Room, ShiftHandover } from '../../interfaces/rooms';
+import { Room, ShiftHandover, BookingHistory, RoomStatus, Event as RoomEvent, GuestInfo, OrderedService } from '../../interfaces/rooms';
+import { Hotel } from '../../interfaces/hotel';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TableComponent } from '../table/table.component';
 import { InvoiceService } from '../../services/invoice.service';
+import { User } from '../../interfaces/user';
 
 @Component({
   selector: 'app-room',
@@ -18,27 +20,33 @@ import { InvoiceService } from '../../services/invoice.service';
 })
 export class RoomComponent implements OnInit, OnDestroy {
   @ViewChild(TableComponent) tableComponent!: TableComponent;
+  @ViewChild('shiftHandoverContent') shiftHandoverContent!: TemplateRef<any>;
   
   rooms: Room[] = [];
-  roomTableData: any[] = [];
+  roomTableData: BookingHistory[] = [];
   selectedRoomId: string | null = null;
-  hotels: any[] = [];
+  hotels: Hotel[] = [];
   selectedHotelId: string | null = null;
-  floors: number[] = [];
-  selectedFloor: number | null = null;
+  floors: string[] = [];
+  selectedFloor: string | null = null;
   isLoading = false;
   
-  // Dữ liệu thống kê cho biểu đồ doanh thu
   totalPayment: number = 0;
   totalRoomCount: number = 0;
   chartLabels: string[] = [];
   chartRevenueData: number[] = [];
   chartPaymentData: number[] = [];
   
-  // Form cho giao ca
   shiftHandoverForm: FormGroup;
-  
   private roomDataUpdatedSubscription: Subscription;
+
+  roomStatusDisplayOptions: { value: RoomStatus, label: string, color: string }[] = [
+    { value: 'vacant', label: 'Trống', color: 'green' },
+    { value: 'occupied', label: 'Có khách', color: 'red' },
+    { value: 'cleaning', label: 'Đang dọn', color: 'blue' },
+    { value: 'dirty', label: 'Bẩn', color: 'orange' },
+    { value: 'maintenance', label: 'Bảo trì', color: 'purple' }
+  ];
 
   constructor(
     public productService: ProductService, 
@@ -50,22 +58,19 @@ export class RoomComponent implements OnInit, OnDestroy {
     private invoiceService: InvoiceService
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
-      this.loadRooms();
+      if (this.selectedHotelId) this.loadRooms();
     });
     
-    // Khởi tạo form giao ca
     this.shiftHandoverForm = this.fb.group({
       fromStaffId: ['', [Validators.required]],
       toStaffId: ['', [Validators.required]],
       cashAmount: [0, [Validators.required, Validators.min(0)]],
       notes: [''],
-      password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
   ngOnInit(): void {
     this.loadHotels();
-    this.loadRooms();
   }
 
   ngOnDestroy(): void {
@@ -74,172 +79,100 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Phương thức mở modal giao ca
-  openShiftHandoverModal(): void {
+  openShiftHandoverModal(contentTemplate: any): void {
     this.modalService.create({
       nzTitle: 'Giao ca',
-      nzContent: this.shiftHandoverModalContent(),
+      nzContent: contentTemplate,
       nzWidth: 600,
-      nzFooter: null,
+      nzFooter: [
+        {
+          label: 'Hủy',
+          onClick: () => this.modalService.closeAll()
+        },
+        {
+          label: 'Xác nhận giao ca',
+          type: 'primary',
+          disabled: () => this.shiftHandoverForm.invalid,
+          onClick: () => this.submitShiftHandover()
+        }
+      ],
       nzMaskClosable: false
     });
   }
   
-  // Template cho modal giao ca
-  shiftHandoverModalContent = (): string => {
-    return `
-      <form nz-form [formGroup]="shiftHandoverForm" (ngSubmit)="submitShiftHandover()">
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8" nzRequired>Nhân viên giao ca</nz-form-label>
-          <nz-form-control [nzSpan]="16" nzErrorTip="Vui lòng chọn nhân viên giao ca">
-            <input nz-input formControlName="fromStaffId" placeholder="Nhập ID nhân viên giao ca" />
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8" nzRequired>Nhân viên nhận ca</nz-form-label>
-          <nz-form-control [nzSpan]="16" nzErrorTip="Vui lòng chọn nhân viên nhận ca">
-            <input nz-input formControlName="toStaffId" placeholder="Nhập ID nhân viên nhận ca" />
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8" nzRequired>Số tiền mặt giao ca</nz-form-label>
-          <nz-form-control [nzSpan]="16" nzErrorTip="Vui lòng nhập số tiền">
-            <nz-input-number formControlName="cashAmount" [nzMin]="0" [nzStep]="10000" [nzFormatter]="formatterVND" [nzParser]="parserVND" style="width: 100%"></nz-input-number>
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Ghi chú</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <textarea nz-input formControlName="notes" rows="3" placeholder="Nhập ghi chú"></textarea>
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8" nzRequired>Xác nhận mật khẩu</nz-form-label>
-          <nz-form-control [nzSpan]="16" nzErrorTip="Vui lòng nhập mật khẩu">
-            <input nz-input formControlName="password" type="password" placeholder="Nhập mật khẩu xác nhận" />
-          </nz-form-control>
-        </nz-form-item>
-        
-        <div class="text-right">
-          <button nz-button nzType="primary" type="submit" [disabled]="shiftHandoverForm.invalid">
-            Xác nhận giao ca
-          </button>
-        </div>
-      </form>
-    `;
-  }
-  
-  // Phương thức định dạng tiền Việt Nam
-  formatterVND = (value: number): string => `${value} đ`;
-  parserVND = (value: string): string => value.replace(' đ', '');
-  
-  // Phương thức xử lý khi submit form giao ca
   submitShiftHandover(): void {
     if (this.shiftHandoverForm.invalid) {
       Object.values(this.shiftHandoverForm.controls).forEach(control => {
         if (control.invalid) {
           control.markAsDirty();
-          control.updateValueAndValidity();
+          control.updateValueAndValidity({ onlySelf: true });
         }
       });
+      this.message.warning('Vui lòng điền đầy đủ thông tin giao ca.');
       return;
     }
     
+    if (!this.selectedHotelId) {
+      this.message.error('Chưa chọn khách sạn để giao ca.');
+      return;
+    }
+
     this.isLoading = true;
-    
-    const handoverData: ShiftHandover = {
-      hotelId: this.selectedHotelId!,
-      fromStaffId: this.shiftHandoverForm.get('fromStaffId')?.value,
-      toStaffId: this.shiftHandoverForm.get('toStaffId')?.value,
+    const handoverData: Omit<ShiftHandover, 'id' | 'createdAt' | 'confirmedByPassword'> = {
+      hotelId: this.selectedHotelId,
+      fromStaffId: this.shiftHandoverForm.value.fromStaffId,
+      toStaffId: this.shiftHandoverForm.value.toStaffId,
       handoverTime: new Date(),
-      notes: this.shiftHandoverForm.get('notes')?.value,
-      cashAmount: this.shiftHandoverForm.get('cashAmount')?.value,
-      confirmedByPassword: true
+      notes: this.shiftHandoverForm.value.notes,
+      cashAmount: this.shiftHandoverForm.value.cashAmount,
     };
     
     this.roomsService.createShiftHandover(handoverData).subscribe(
       (response) => {
-        // Sau khi tạo giao ca thành công, xác nhận bằng mật khẩu
+        this.message.success('Yêu cầu giao ca đã được tạo. Vui lòng xác nhận bằng mật khẩu.');
+        this.isLoading = false;
+        this.modalService.closeAll(); 
         if (response && response.id) {
-          this.roomsService.confirmShiftHandover(
-            response.id, 
-            this.shiftHandoverForm.get('password')?.value
-          ).subscribe(
-            (confirmResponse) => {
-              if (confirmResponse.success) {
-                this.message.success('Giao ca thành công');
-              } else {
-                this.message.error(confirmResponse.message || 'Không thể xác nhận giao ca');
-              }
-              this.isLoading = false;
-              this.modalService.closeAll();
-            },
-            (error) => {
-              this.message.error('Lỗi xác nhận giao ca: ' + error.message);
-              this.isLoading = false;
-            }
-          );
+            this.message.success(`Giao ca (ID: ${response.id}) thành công!`);
         } else {
-          this.message.error('Không nhận được ID giao ca');
-          this.isLoading = false;
+            this.message.info('Giao ca đã được ghi nhận.');
         }
       },
       (error) => {
-        this.message.error('Lỗi tạo giao ca: ' + error.message);
+        this.message.error('Lỗi tạo giao ca: ' + (error.error?.message || error.message));
         this.isLoading = false;
       }
     );
   }
   
-  // Hiển thị lịch sử phòng
   showRoomHistory(): void {
     if (!this.selectedHotelId) {
       this.message.warning('Vui lòng chọn khách sạn');
       return;
     }
     
-    // Tải lịch sử phòng và hiện thị trong modal hoặc cập nhật component room-history
-    this.roomsService.getRoomHistory(
-      this.selectedHotelId,
-      'all',
-      1,
-      20
-    ).subscribe(
+    this.isLoading = true;
+    this.roomsService.getRoomHistory(this.selectedHotelId, 'all', 1, 100)
+    .subscribe(
       (data) => {
-        console.log('Lịch sử phòng:', data);
         this.roomTableData = data.history || [];
-        
-        // Cập nhật thống kê cho biểu đồ
         this.totalPayment = data.totalPayment || 0;
-        this.totalRoomCount = this.roomTableData.length;
-        
-        // Chuẩn bị dữ liệu cho biểu đồ
+        this.totalRoomCount = data.totalItems || 0;
         this.prepareChartData();
+        this.isLoading = false;
       },
       (error) => {
-        this.message.error('Lỗi tải lịch sử phòng: ' + error.message);
+        this.message.error('Lỗi tải lịch sử phòng: ' + (error.error?.message || error.message));
+        this.isLoading = false;
       }
     );
   }
   
-  // Chuẩn bị dữ liệu cho biểu đồ
   prepareChartData(): void {
-    // Tạo nhóm dữ liệu theo ngày
     const groupedData = this.groupDataByDate(this.roomTableData);
-    
-    // Sắp xếp các ngày tăng dần
-    const sortedDates = Object.keys(groupedData).sort((a, b) => {
-      return new Date(a).getTime() - new Date(b).getTime();
-    });
-    
-    // Giới hạn 7 ngày gần nhất nếu có nhiều hơn
+    const sortedDates = Object.keys(groupedData).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
     const recentDates = sortedDates.slice(-7);
     
-    // Chuẩn bị dữ liệu cho biểu đồ
     this.chartLabels = recentDates.map(date => {
       const d = new Date(date);
       return `${d.getDate()}/${d.getMonth() + 1}`;
@@ -249,54 +182,51 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.chartPaymentData = recentDates.map(date => groupedData[date].payment);
   }
   
-  // Phân nhóm dữ liệu theo ngày
-  groupDataByDate(data: any[]): { [key: string]: { revenue: number, payment: number, count: number } } {
+  groupDataByDate(data: BookingHistory[]): { [key: string]: { revenue: number, payment: number, count: number } } {
     const result: { [key: string]: { revenue: number, payment: number, count: number } } = {};
-    
     data.forEach(item => {
-      if (!item.checkOutTime && !item.date) return;
-      
-      // Lấy ngày từ checkOutTime hoặc date
-      const dateObj = new Date(item.checkOutTime || item.date);
-      const dateStr = dateObj.toISOString().split('T')[0]; // Format YYYY-MM-DD
+      const dateObj = new Date(item.date);
+      const dateStr = dateObj.toISOString().split('T')[0];
       
       if (!result[dateStr]) {
         result[dateStr] = { revenue: 0, payment: 0, count: 0 };
       }
-      
-      // Cộng dồn doanh thu và thanh toán
-      const amount = item.amount || item.totalAmount || 0;
-      result[dateStr].revenue += amount;
-      result[dateStr].payment += amount;
+      if (item.event === 'check-out' && item.totalAmount) {
+        result[dateStr].revenue += item.totalAmount; 
+        result[dateStr].payment += item.totalAmount;
+      }
       result[dateStr].count++;
     });
-    
     return result;
   }
 
   loadHotels(): void {
-    this.hotelService.getHotels().subscribe(
-      (data) => {
-        this.hotels = data;
-        if (data.length > 0) {
-          // Chọn khách sạn đầu tiên mặc định
-          this.selectedHotelId = data[0]._id;
-          this.onHotelChange(this.selectedHotelId);
-        }
-      },
-      (error) => console.error('Lỗi khi tải danh sách khách sạn:', error)
-    );
+    this.isLoading = true;
+    this.hotelService.getHotels().subscribe(data => {
+      this.hotels = data;
+      if (data && data.length > 0) {
+        this.selectedHotelId = data[0]._id!;
+        this.onHotelChange(this.selectedHotelId);
+      } else {
+        this.selectedHotelId = null;
+        this.rooms = [];
+        this.floors = [];
+      }
+      this.isLoading = false;
+    }, error => {
+      this.message.error('Lỗi khi tải danh sách khách sạn: ' + (error.error?.message || error.message));
+      this.isLoading = false;
+    });
   }
 
   loadRooms(): void {
-    this.isLoading = true;
-    const params: any = {};
-    
-    if (this.selectedHotelId) {
-      params.hotelId = this.selectedHotelId;
+    if (!this.selectedHotelId) {
+      this.rooms = [];
+      return;
     }
-    
-    if (this.selectedFloor !== null) {
+    this.isLoading = true;
+    const params: any = { hotelId: this.selectedHotelId };    
+    if (this.selectedFloor) {
       params.floor = this.selectedFloor;
     }
     
@@ -304,133 +234,104 @@ export class RoomComponent implements OnInit, OnDestroy {
       (data) => {
         this.rooms = data;
         this.isLoading = false;
-        // Cập nhật dữ liệu lịch sử phòng khi có thay đổi phòng
         this.showRoomHistory();
       },
       (error) => {
-        console.error('Lỗi khi tải danh sách phòng:', error);
+        this.message.error('Lỗi khi tải danh sách phòng: ' + (error.error?.message || error.message));
         this.isLoading = false;
       }
     );
   }
 
-  onHotelChange(hotelId: string): void {
+  onHotelChange(hotelId: string | null): void {
     this.selectedHotelId = hotelId;
-    this.selectedFloor = null; // Reset lựa chọn tầng khi đổi khách sạn
+    this.selectedFloor = null;
+    this.floors = [];
     
     if (hotelId) {
+      this.isLoading = true;
       this.roomsService.getHotelFloors(hotelId).subscribe(
         (data) => {
-          this.floors = data.floors;
+          this.floors = data.floors.map(f => String(f));
           this.loadRooms();
         },
-        (error) => console.error('Lỗi khi tải danh sách tầng:', error)
+        (error) => {
+          this.message.error('Lỗi khi tải danh sách tầng: ' + (error.error?.message || error.message));
+          this.isLoading = false;
+          this.loadRooms();
+        }
       );
     } else {
-      this.floors = [];
-      this.loadRooms();
+      this.rooms = [];
+      this.roomTableData = [];
     }
   }
 
-  onFloorChange(floor: number): void {
+  onFloorChange(floor: string | null): void {
     this.selectedFloor = floor;
     this.loadRooms();
   }
 
-  viewInvoice(item: any): void {
-    if (!item) {
-      this.message.warning('Không thể hiển thị hóa đơn: Thiếu thông tin');
+  viewInvoice(item: BookingHistory): void {
+    if (!item || !item.roomId) {
+      this.message.warning('Không thể hiển thị hóa đơn: Thiếu thông tin phòng.');
       return;
     }
-    
-    console.log('Hiển thị hóa đơn từ component phòng:', item.roomNumber);
-    
-    // Cập nhật thêm thông tin khách sạn nếu cần
-    if (this.selectedHotelId && !item.hotelId) {
-      item.hotelId = this.selectedHotelId;
-      
-      // Thêm tên khách sạn nếu có
-      const hotel = this.hotels.find(h => h._id === this.selectedHotelId);
-      if (hotel) {
-        item.businessName = hotel.name;
-        item.business_address = hotel.address;
-        item.phoneNumber = hotel.phoneNumber;
-      }
-    }
-    
-    // Đảm bảo có ngày
-    if (!item.date) {
-      item.date = new Date();
-    }
-    
-    // Sử dụng InvoiceService để hiển thị modal hóa đơn
-    this.invoiceService.showInvoiceModal(item);
+    const roomForInvoice = this.rooms.find(r => r._id === item.roomId);
+
+    const invoiceData = {
+        invoiceNumber: item._id || new Date().getTime().toString(),
+        date: item.date || new Date(),
+        customerName: item.customerName || 'Khách lẻ',
+        staffName: item.staffName || 'Nhân viên',
+        roomNumber: item.roomNumber || roomForInvoice?.roomNumber,
+        checkInTime: item.checkInTime || new Date(new Date(item.date).getTime() - 3600000),
+        checkOutTime: item.event === 'check-out' ? item.date : new Date(),
+        products: [
+            { name: `Tiền phòng ${item.roomNumber || roomForInvoice?.roomNumber}`, price: item.totalAmount || item.amount || 0, quantity: 1, totalPrice: item.totalAmount || item.amount || 0 }
+        ],
+        totalAmount: item.totalAmount || item.amount || 0,
+        paymentMethod: item.paymentMethod || 'cash',
+        hotelId: this.selectedHotelId ?? undefined,
+        businessName: this.selectedHotelId ? this.hotels.find(h => h._id === this.selectedHotelId)?.name : 'Khách sạn',
+    };
+    this.invoiceService.showInvoiceModal(invoiceData);
   }
 
-  //antd
+  getRoomStatusClass(status: RoomStatus | undefined): string {
+    if (!status) return 'inactive-room';
+    const option = this.roomStatusDisplayOptions.find(opt => opt.value === status);
+    return option ? `${option.value}-room` : 'inactive-room';
+  }
+
+  getRoomStatusLabelAndColor(status: RoomStatus | undefined): { label: string, color: string } {
+    if (!status) return { label: 'Không xác định', color: 'default' };
+    const option = this.roomStatusDisplayOptions.find(opt => opt.value === status);
+    return option ? { label: option.label, color: option.color } : { label: status, color: 'default' };
+  }
+
+  getHotelName(hotelId: string | undefined): string {
+    if (!hotelId) return '';
+    const hotel = this.hotels.find(h => h._id === hotelId);
+    return hotel ? hotel.name : '';
+  }
+
   hGutter = 16;
   vGutter = 16;
   count = 4;
-  marksHGutter: NzMarks = {
-    8: '8',
-    16: '16',
-    24: '24',
-    32: '32',
-    40: '40',
-    48: '48'
-  };
-  marksVGutter: NzMarks = {
-    8: '8',
-    16: '16',
-    24: '24',
-    32: '32',
-    40: '40',
-    48: '48'
-  };
-  marksCount: NzMarks = {
-    2: '2',
-    3: '3',
-    4: '4',
-    6: '6',
-    8: '8',
-    12: '12'
-  };
+  marksHGutter: NzMarks = { 8: '8', 16: '16', 24: '24', 32: '32', 40: '40', 48: '48' };
+  marksVGutter: NzMarks = { 8: '8', 16: '16', 24: '24', 32: '32', 40: '40', 48: '48' };
+  marksCount: NzMarks = { 2: '2', 3: '3', 4: '4', 6: '6', 8: '8', 12: '12' };
 
   reGenerateArray(count: number): void {
     this.count = count;
   }
 
-  getRoomStatusClass(roomStatus: string): string {
-    switch (roomStatus) {
-      case 'available':
-        return 'inactive-room';
-      case 'active':
-      case 'occupied':
-        return 'active-room';
-      case 'dirty':
-        return 'dirty-room';
-      case 'maintenance':
-        return 'maintenance-room';
-      case 'cleaning':
-        return 'cleaning-room';
-      default:
-        return 'inactive-room';
-    }
-  }
-
-  getHotelName(hotelId: string): string {
-    const hotel = this.hotels.find(h => h._id === hotelId);
-    return hotel ? hotel.name : '';
-  }
-
   switchValue = false;
 
-  onSelect(roomId: string): void {
-    this.selectedRoomId = roomId;
-  }
-
-  private loadData() {
-    this.productService.loadUpdatedData();
+  onSelectRoom(room: Room): void {
+    this.selectedRoomId = room._id;
+    console.log('Selected room:', room);
   }
 }
 

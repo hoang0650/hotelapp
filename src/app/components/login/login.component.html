@@ -4,19 +4,65 @@
       <div class="card">
         <div class="card-body">
           <h5 class="card-title text-center mb-4">Đăng nhập tài khoản</h5>
-          <form (ngSubmit)="login()">
-            <div class="form-floating mb-3">
-              <input type="email" class="form-control" id="email" placeholder="name@example.com" [(ngModel)]="email"
-                name="email" required>
-              <label for="email">Email</label>
+          <form nz-form [formGroup]="loginForm" class="login-form" (ngSubmit)="submitForm()">
+            <nz-form-item>
+              <nz-form-control nzErrorTip="Vui lòng nhập email!">
+                <nz-input-group nzPrefixIcon="user">
+                  <input type="email" nz-input formControlName="email" placeholder="Email" />
+                </nz-input-group>
+              </nz-form-control>
+            </nz-form-item>
+            
+            <nz-form-item>
+              <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu!">
+                <nz-input-group nzPrefixIcon="lock" [nzSuffix]="suffixTemplate">
+                  <input [type]="passwordVisible ? 'text' : 'password'" 
+                         nz-input 
+                         formControlName="password" 
+                         placeholder="Mật khẩu" />
+                  <span nz-icon 
+                        [nzType]="passwordVisible ? 'eye-invisible' : 'eye'"
+                        (click)="passwordVisible = !passwordVisible">
+                  </span>
+                </nz-input-group>
+              </nz-form-control>
+            </nz-form-item>
+
+            <ng-container *ngIf="loginForm.get('twoFactorCode')?.hasValidator(Validators.required)">
+              <nz-form-item>
+                <nz-form-control nzErrorTip="Vui lòng nhập mã xác thực!">
+                  <nz-input-group nzPrefixIcon="safety-certificate">
+                    <input type="text" 
+                           nz-input 
+                           formControlName="twoFactorCode" 
+                           placeholder="Mã xác thực hai yếu tố" />
+                  </nz-input-group>
+                </nz-form-control>
+              </nz-form-item>
+            </ng-container>
+
+            <div nz-row class="login-form-margin">
+              <div nz-col [nzSpan]="12">
+                <label nz-checkbox formControlName="remember">
+                  <span>Ghi nhớ đăng nhập</span>
+                </label>
+              </div>
+              <div nz-col [nzSpan]="12">
+                <a class="login-form-forgot" routerLink="/forgot-password">Quên mật khẩu?</a>
+              </div>
             </div>
-            <div class="form-floating mb-3">
-              <input type="password" class="form-control" id="password" placeholder="Password" [(ngModel)]="password"
-                name="password" required>
-              <label for="password">Mật khẩu</label>
-              <a href="#" class="link-primary float-end">Quên mật khẩu?</a>
+
+            <button nz-button 
+                    [nzType]="'primary'" 
+                    [nzLoading]="isLoading"
+                    class="login-form-button login-form-margin">
+              Đăng nhập
+            </button>
+            
+            <div nz-row class="login-form-margin">
+              <span>Chưa có tài khoản? </span>
+              <a routerLink="/signup">Đăng ký ngay!</a>
             </div>
-            <button type="submit" class="btn btn-lg btn-primary mt-3 w-100">Đăng nhập</button>
           </form>
           <div class=" social-login">
             <p>Or login with:</p>
@@ -28,7 +74,6 @@
             </button>
           </div>
           <hr>
-          <p class="text-center">Chưa có tài khoản đăng ký? <a [routerLink]="['/signup']">Tại đây</a></p>
           <p class="text-center">Bạn là doanh nghiệp? <a [routerLink]="['/business-signup']">Đăng ký tài khoản doanh nghiệp</a></p>
         </div>
       </div>

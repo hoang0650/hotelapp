@@ -12,3 +12,29 @@
 .social-btn i {
     margin-right: 10px;
 }
+
+.signup-form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.signup-form-margin {
+  margin-bottom: 16px;
+}
+
+.signup-form-button {
+  width: 100%;
+}
+
+[nz-form] {
+  max-width: 600px;
+}
+
+.login-area {
+  margin-top: 16px;
+  text-align: center;
+}
+
+nz-form-item {
+  margin-bottom: 16px;
+}

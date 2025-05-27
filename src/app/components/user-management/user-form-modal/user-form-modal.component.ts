@@ -2,7 +2,8 @@ import { Component, Input, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzModalRef } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { UserService, UserResponse } from '../../../services/user.service';
+import { UserService } from '../../../services/user.service';
+import { User } from '../../../interfaces/user';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -102,7 +103,7 @@ import { Observable } from 'rxjs';
   `]
 })
 export class UserFormModalComponent implements OnInit {
-  @Input() user?: UserResponse;
+  @Input() user?: User;
   @Input() isEdit = false;
   userForm!: FormGroup;
   passwordVisible = false;
@@ -119,9 +120,15 @@ export class UserFormModalComponent implements OnInit {
     this.userForm = this.fb.group({
       username: [this.user?.username || '', [Validators.required]],
       email: [this.user?.email || '', [Validators.required, Validators.email]],
-      password: [this.isEdit ? null : '', this.isEdit ? [] : [Validators.required, Validators.minLength(6)]],
+      password: ['', this.isEdit ? [] : [Validators.required, Validators.minLength(6)]],
       role: [this.user?.role || 'customer', [Validators.required]]
     });
+
+    if (this.isEdit && this.user) {
+      this.userForm.patchValue(this.user);
+      this.userForm.get('password')?.clearValidators();
+      this.userForm.get('password')?.updateValueAndValidity();
+    }
   }
 
   submitForm(): void {
@@ -129,15 +136,15 @@ export class UserFormModalComponent implements OnInit {
       this.isSubmitting = true;
       const formData = this.userForm.value;
       
-      let request: Observable<UserResponse>;
-      if (this.isEdit && this.user) {
-        request = this.userService.updateUser(this.user.userId, formData);
+      let request: Observable<User>;
+      if (this.isEdit && this.user && this.user._id) {
+        request = this.userService.updateUser(this.user._id, formData);
       } else {
         request = this.userService.signUp(formData);
       }
 
       request.subscribe({
-        next: (response: UserResponse) => {
+        next: (response: User) => {
           this.message.success(
             this.isEdit ? 'Cập nhật người dùng thành công!' : 'Thêm người dùng mới thành công!'
           );
@@ -145,6 +152,9 @@ export class UserFormModalComponent implements OnInit {
         },
         error: (err: { error?: { message?: string } }) => {
           this.message.error(err.error?.message || 'Có lỗi xảy ra, vui lòng thử lại!');
+          this.isSubmitting = false;
+        },
+        complete: () => {
           this.isSubmitting = false;
         }
       });

@@ -1,12 +1,21 @@
+export type ServiceCategory = 'room_service' | 'food' | 'beverage' | 'spa' | 'transport' | 'custom';
+
+export const ALL_SERVICE_CATEGORIES: ServiceCategory[] = [
+  'room_service', 'food', 'beverage', 'spa', 'transport', 'custom'
+];
+
 export interface Service {
   _id?: string;
   name: string;
   description: string;
   price: number;
-  category: string;
+  category: ServiceCategory;
   hotelId: string;
   image?: string;
-  isAvailable: boolean;
+  isActive: boolean;
+  currency?: string;
+  isCustom?: boolean;
+  metadata?: any;
   createdAt?: Date;
   updatedAt?: Date;
 }

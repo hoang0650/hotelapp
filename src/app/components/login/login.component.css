@@ -12,3 +12,29 @@
 .social-btn i {
       margin-right: 10px;
 }
+
+.login-form {
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.login-form-margin {
+  margin-bottom: 16px;
+}
+
+.login-form-button {
+  width: 100%;
+}
+
+.login-form-forgot {
+  float: right;
+}
+
+[nz-form] {
+  max-width: 600px;
+}
+
+.register-are {
+  margin-top: 16px;
+  text-align: center;
+}
