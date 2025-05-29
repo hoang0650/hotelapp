@@ -4,27 +4,27 @@ export interface User {
   _id: string;
   username: string;
   email: string;
-  password: string; // Ensure this matches backend expectations (e.g., not always present in responses)
-  role: string;
+  password?: string; // Optional vì không phải lúc nào cũng có trong response
+  phone?: string;
+  fullName?: string;
+  role: 'superadmin' | 'admin' | 'business' | 'hotel' | 'staff' | 'guest';
   status: 'active' | 'inactive' | 'suspended' | 'deleted';
+  avatar?: string;
+  lastLogin?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  twoFactorEnabled?: boolean;
   businessId?: string;
   hotelId?: string;
-  permissions?: string[];
-  lastLogin?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
   preferences?: {
-    theme?: string;
     language?: string;
+    theme?: string;
     notifications?: {
       email?: boolean;
+      sms?: boolean;
       push?: boolean;
     };
   };
-  // Add any other fields that are returned by the backend and needed by the frontend
-  // For example, if backend returns fullName, avatar, etc., they should be here.
-  fullName?: string;
-  avatar?: string;
-  phone?: string;
-  twoFactorEnabled?: boolean; // Added based on backend model
+  permissions?: Array<'view' | 'create' | 'edit' | 'delete' | 'manage_revenue'>;
+  metadata?: any;
 } 

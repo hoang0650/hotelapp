@@ -153,7 +153,7 @@ export class HotelManagementComponent implements OnInit {
   loadAvailableManagers(): void {
     this.userService.getUsersByRole('admin').subscribe(
       (data: User[]) => {
-        this.availableManagers = data.filter((u: User) => u.role === 'hotel' || u.role === 'admin' || u.role === 'business_owner'); 
+        this.availableManagers = data.filter((u: User) => this.canManageHotel(u)); 
       },
       (error: any) => {
         console.error('Error fetching users for managers:', error);
@@ -254,5 +254,9 @@ export class HotelManagementComponent implements OnInit {
         this.message.error(error.error?.message || 'Lỗi khi xóa khách sạn.');
       }
     );
+  }
+
+  canManageHotel(u: User): boolean {
+    return u.role === 'superadmin' || u.role === 'hotel' || u.role === 'admin' || u.role === 'business';
   }
 }

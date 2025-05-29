@@ -4,10 +4,6 @@ import { Observable, map, BehaviorSubject } from 'rxjs';
 import { User } from '../interfaces/user';
 import { environment } from '../../environments/environment';
 
-export interface BusinessUser extends User {
-  businessInfo: BusinessInfo;
-}
-
 export interface BusinessInfo {
   name: string;
   legalName: string;
@@ -26,7 +22,10 @@ export interface SignUpRequest {
   password: string;
   fullName?: string;
   phone?: string;
-  role?: string;
+}
+
+export interface BusinessSignUpRequest extends SignUpRequest {
+  businessInfo: BusinessInfo;
 }
 
 export interface LoginRequest {
@@ -39,6 +38,14 @@ export interface LoginResponse {
   message: string;
   token: string;
   user: User;
+  requireTwoFactor?: boolean;
+  userId?: string;
+}
+
+export interface ApiResponse<T = any> {
+  message: string;
+  data?: T;
+  error?: string;
 }
 
 @Injectable({
@@ -78,19 +85,27 @@ export class UserService {
     return !!this.currentUserSubject.value;
   }
 
+  getUserInfo(): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/info`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
   signUp(userData: SignUpRequest): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}/signup`, userData);
   }
 
-  signUpBusiness(userData: SignUpRequest & { businessInfo: BusinessInfo }): Observable<{user: User, business: any}> {
+  signUpBusiness(userData: BusinessSignUpRequest): Observable<{user: User, business: any}> {
     return this.http.post<{user: User, business: any}>(`${this.apiUrl}/business/signup`, userData);
   }
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials).pipe(
       map(response => {
-        localStorage.setItem('token', response.token);
-        this.currentUserSubject.next(response.user);
+        if (!response.requireTwoFactor) {
+          localStorage.setItem('token', response.token);
+          this.currentUserSubject.next(response.user);
+        }
         return response;
       })
     );
@@ -99,12 +114,6 @@ export class UserService {
   logout(): void {
     localStorage.removeItem('token');
     this.currentUserSubject.next(null);
-  }
-
-  getUserInfo(): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/info`, {
-      headers: this.getAuthHeaders()
-    });
   }
 
   getUsersByRole(role: string): Observable<User[]> {
@@ -119,14 +128,14 @@ export class UserService {
     });
   }
 
-  updateUserStatus(userId: string, status: 'active' | 'inactive' | 'suspended' | 'deleted'): Observable<{message: string, user: User}> {
-    return this.http.put<{message: string, user: User}>(`${this.apiUrl}/${userId}/status`, { status }, {
+  updateUserStatus(userId: string, status: User['status']): Observable<ApiResponse<User>> {
+    return this.http.put<ApiResponse<User>>(`${this.apiUrl}/${userId}/status`, { status }, {
       headers: this.getAuthHeaders()
     });
   }
 
-  changePassword(userId: string, currentPassword: string, newPassword: string): Observable<{message: string}> {
-    return this.http.put<{message: string}>(`${this.apiUrl}/${userId}/password`, {
+  changePassword(userId: string, currentPassword: string, newPassword: string): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(`${this.apiUrl}/${userId}/password`, {
       currentPassword,
       newPassword
     }, {
@@ -140,8 +149,8 @@ export class UserService {
     });
   }
 
-  updatePreferences(preferences: User['preferences']): Observable<{message: string, preferences: User['preferences']}> {
-    return this.http.put<{message: string, preferences: User['preferences']}>(`${this.apiUrl}/preferences`, preferences, {
+  updatePreferences(preferences: User['preferences']): Observable<ApiResponse<{preferences: User['preferences']}>> {
+    return this.http.put<ApiResponse<{preferences: User['preferences']}>>(`${this.apiUrl}/preferences`, preferences, {
       headers: this.getAuthHeaders()
     });
   }

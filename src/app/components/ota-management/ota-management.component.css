@@ -38,4 +38,93 @@
 .empty-state {
     text-align: center;
     padding: 20px;
+}
+
+.container {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header h2 {
+  margin: 0;
+}
+
+nz-card {
+  margin-bottom: 24px;
+}
+
+.guest-details {
+  margin-top: 4px;
+}
+
+.guest-details small {
+  display: block;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+:host ::ng-deep .ant-form-item {
+  margin-bottom: 16px;
+}
+
+:host ::ng-deep .ant-checkbox-wrapper {
+  margin-bottom: 8px;
+}
+
+.mt-4 {
+  margin-top: 24px;
+}
+
+button[nz-button] {
+  margin-right: 8px;
+}
+
+button[nz-button]:last-child {
+  margin-right: 0;
+}
+
+/* Thêm tooltip cho các button không có text */
+[nz-button][nz-tooltip] {
+  margin: 0 4px;
+}
+
+/* Style cho các icon trong button */
+[nz-icon] {
+  font-size: 16px;
+}
+
+/* Style cho status tags */
+nz-tag {
+  text-transform: capitalize;
+}
+
+/* Style cho form controls */
+nz-select {
+  width: 100%;
+}
+
+nz-input-number {
+  width: 100%;
+}
+
+/* Style cho modal content */
+:host ::ng-deep .ant-modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Style cho table cells */
+td {
+  vertical-align: top;
+}
+
+/* Style cho property info */
+.property-info p {
+  margin: 0;
+  line-height: 1.5;
 } 

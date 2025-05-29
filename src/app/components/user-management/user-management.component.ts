@@ -12,16 +12,32 @@ import { User } from '../../interfaces/user';
 })
 export class UserManagementComponent implements OnInit {
   users: User[] = [];
-  userForm: FormGroup;
   isLoading = false;
-  editingUser: User | null = null;
+  isModalVisible = false;
   isVisible = false;
+  userForm!: FormGroup;
   selectedUser: User | null = null;
-  
-  // Phân trang
+  modalTitle = '';
+  editingUser: User | null = null;
+  total = 0;
   pageSize = 10;
   pageIndex = 1;
-  total = 0;
+
+  readonly userRoles = [
+    { label: 'Super Admin', value: 'superadmin' },
+    { label: 'Admin', value: 'admin' },
+    { label: 'Business', value: 'business' },
+    { label: 'Hotel', value: 'hotel' },
+    { label: 'Staff', value: 'staff' },
+    { label: 'Guest', value: 'guest' }
+  ];
+
+  readonly userStatuses = [
+    { label: 'Hoạt động', value: 'active' },
+    { label: 'Không hoạt động', value: 'inactive' },
+    { label: 'Tạm khóa', value: 'suspended' },
+    { label: 'Đã xóa', value: 'deleted' }
+  ];
 
   constructor(
     private userService: UserService,
@@ -29,28 +45,164 @@ export class UserManagementComponent implements OnInit {
     private message: NzMessageService,
     private modal: NzModalService
   ) {
-    this.userForm = this.fb.group({
-      username: ['', [Validators.required]],
-      email: ['', [Validators.required, Validators.email]],
-      role: ['', [Validators.required]],
-      status: ['active']
-    });
+    this.initForm();
   }
 
   ngOnInit(): void {
     this.loadUsers();
   }
 
-  loadUsers(): void {
+  private initForm(): void {
+    this.userForm = this.fb.group({
+      username: ['', [Validators.required, Validators.minLength(3)]],
+      email: ['', [Validators.required, Validators.email]],
+      fullName: [''],
+      phone: [''],
+      role: ['guest', Validators.required],
+      status: ['active', Validators.required],
+      password: [''],
+      twoFactorEnabled: [false],
+      permissions: [[]],
+      preferences: this.fb.group({
+        language: ['en'],
+        theme: ['light'],
+        notifications: this.fb.group({
+          email: [true],
+          sms: [false],
+          push: [true]
+        })
+      })
+    });
+  }
+
+  loadUsers(role: string = 'guest'): void {
     this.isLoading = true;
-    this.userService.getUsersByRole('guest').subscribe({
+    this.userService.getUsersByRole(role).subscribe({
       next: (users) => {
         this.users = users;
         this.total = users.length;
-      },
-      error: (error: any) => {
-        this.message.error(error.message || 'Lỗi khi tải danh sách người dùng');
         this.isLoading = false;
+      },
+      error: (error) => {
+        this.message.error('Không thể tải danh sách người dùng');
+        this.isLoading = false;
+      }
+    });
+  }
+
+  onPageIndexChange(index: number): void {
+    this.pageIndex = index;
+    this.loadUsers();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.loadUsers();
+  }
+
+  showEditModal(user: User): void {
+    this.modalTitle = 'Chỉnh sửa người dùng';
+    this.selectedUser = user;
+    this.editingUser = user;
+    this.isVisible = true;
+    this.userForm.patchValue({
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      phone: user.phone,
+      role: user.role,
+      status: user.status,
+      twoFactorEnabled: user.twoFactorEnabled,
+      permissions: user.permissions,
+      preferences: user.preferences || {
+        language: 'en',
+        theme: 'light',
+        notifications: {
+          email: true,
+          sms: false,
+          push: true
+        }
+      }
+    });
+    this.userForm.get('password')?.clearValidators();
+    this.userForm.get('password')?.updateValueAndValidity();
+  }
+
+  handleOk(): void {
+    if (this.userForm.invalid) {
+      Object.values(this.userForm.controls).forEach(control => {
+        if (control.invalid) {
+          control.markAsTouched();
+          control.updateValueAndValidity({ onlySelf: true });
+        }
+      });
+      return;
+    }
+
+    const userData = this.userForm.value;
+    if (!userData.password) {
+      delete userData.password;
+    }
+
+    this.isLoading = true;
+    if (this.selectedUser) {
+      this.userService.updateUser(this.selectedUser._id, userData).subscribe({
+        next: (response) => {
+          this.message.success('Cập nhật người dùng thành công');
+          this.loadUsers(userData.role);
+          this.isVisible = false;
+        },
+        error: (error) => {
+          this.message.error(error.error?.message || 'Lỗi khi cập nhật người dùng');
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
+    } else {
+      this.userService.signUp(userData).subscribe({
+        next: (response) => {
+          this.message.success('Thêm người dùng mới thành công');
+          this.loadUsers(userData.role);
+          this.isVisible = false;
+        },
+        error: (error) => {
+          this.message.error(error.error?.message || 'Lỗi khi thêm người dùng');
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
+    }
+  }
+
+  handleCancel(): void {
+    this.isVisible = false;
+    this.selectedUser = null;
+    this.userForm.reset();
+  }
+
+  deleteUser(user: User): void {
+    this.modal.confirm({
+      nzTitle: 'Xác nhận xóa người dùng',
+      nzContent: `Bạn có chắc chắn muốn xóa người dùng ${user.username}?`,
+      nzOkText: 'Xóa',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzOnOk: () => this.updateUserDisplayStatus(user, 'deleted'),
+      nzCancelText: 'Hủy'
+    });
+  }
+
+  updateUserDisplayStatus(user: User, status: User['status']): void {
+    this.isLoading = true;
+    this.userService.updateUserStatus(user._id, status).subscribe({
+      next: (response) => {
+        this.message.success(response.message);
+        this.loadUsers(user.role);
+      },
+      error: (error) => {
+        this.message.error(error.error?.message || 'Lỗi khi thay đổi trạng thái người dùng');
       },
       complete: () => {
         this.isLoading = false;
@@ -58,120 +210,17 @@ export class UserManagementComponent implements OnInit {
     });
   }
 
-  showEditModal(user: User): void {
-    this.editingUser = user;
-    this.selectedUser = user;
-    this.userForm.patchValue({
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      status: user.status
-    });
-    this.isVisible = true;
-  }
-
-  handleCancel(): void {
-    this.isVisible = false;
-    this.editingUser = null;
-    this.selectedUser = null;
-    this.userForm.reset({ status: 'active' });
-  }
-
-  handleOk(): void {
-    if (this.userForm.valid && this.editingUser) {
-      this.isLoading = true;
-      const formValue = this.userForm.value;
-      const updatedUser: Partial<User> = {
-        username: formValue.username,
-        email: formValue.email,
-        role: formValue.role,
-      };
-
-      this.userService.updateUser(this.editingUser._id, updatedUser).subscribe({
-        next: (responseUser) => {
-          const index = this.users.findIndex(u => u._id === this.editingUser?._id);
-          if (index !== -1) {
-            this.users[index] = responseUser;
-            this.users = [...this.users];
-          }
-          this.message.success('Cập nhật người dùng thành công');
-          this.isVisible = false;
-          this.handleCancel();
-        },
-        error: (error: any) => {
-          console.error('Error updating user:', error);
-          this.message.error(error.error?.message || error.message || 'Không thể cập nhật người dùng');
-          this.isLoading = false;
-        },
-        complete: () => {
-          this.isLoading = false;
-        }
-      });
-    } else {
-      Object.values(this.userForm.controls).forEach(control => {
-        if (control.invalid) {
-          control.markAsDirty();
-          control.updateValueAndValidity({ onlySelf: true });
-        }
-      });
+  getStatusColor(status: string): string {
+    switch (status) {
+      case 'active': return 'success';
+      case 'inactive': return 'default';
+      case 'suspended': return 'warning';
+      case 'deleted': return 'error';
+      default: return '';
     }
   }
 
-  deleteUser(user: User): void {
-    this.modal.confirm({
-      nzTitle: 'Xác nhận xóa',
-      nzContent: `Bạn có chắc chắn muốn xóa người dùng ${user.username}? Hành động này sẽ đặt trạng thái người dùng thành 'deleted'.`,
-      nzOkText: 'Xóa',
-      nzOkType: 'primary',
-      nzOkDanger: true,
-      nzOnOk: () => {
-        this.isLoading = true;
-        this.userService.updateUserStatus(user._id, 'deleted').subscribe({
-          next: (response) => {
-            const index = this.users.findIndex(u => u._id === user._id);
-            if (index !== -1) {
-                this.users.splice(index, 1);
-                this.total = this.users.length;
-                this.users = [...this.users];
-            }
-            this.message.success(response.message || 'Xóa người dùng thành công');
-          },
-          error: (error: any) => {
-            console.error('Error deleting user:', error);
-            this.message.error(error.error?.message || error.message || 'Không thể xóa người dùng');
-            this.isLoading = false;
-          },
-          complete: () => {
-            this.isLoading = false;
-          }
-        });
-      }
-    });
-  }
-
-  updateUserDisplayStatus(user: User, status: 'active' | 'inactive' | 'suspended'): void {
-    if (!user._id) return;
-
-    this.userService.updateUserStatus(user._id, status).subscribe({
-      next: (response) => {
-        const index = this.users.findIndex(u => u._id === user._id);
-        if (index !== -1) {
-          this.users[index] = response.user;
-          this.users = [...this.users];
-        }
-        this.message.success(response.message);
-      },
-      error: (error: any) => {
-        this.message.error(error.error?.message || error.message || 'Lỗi khi cập nhật trạng thái người dùng');
-      }
-    });
-  }
-
-  onPageIndexChange(index: number): void {
-    this.pageIndex = index;
-  }
-
-  onPageSizeChange(size: number): void {
-    this.pageSize = size;
+  formatDate(date: string | Date): string {
+    return new Date(date).toLocaleString();
   }
 } 

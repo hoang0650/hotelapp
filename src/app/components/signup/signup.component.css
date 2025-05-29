@@ -13,28 +13,67 @@
     margin-right: 10px;
 }
 
-.signup-form {
-  max-width: 600px;
-  margin: 0 auto;
+.signup-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  padding: 20px;
 }
 
-.signup-form-margin {
-  margin-bottom: 16px;
-}
-
-.signup-form-button {
+.signup-card {
   width: 100%;
+  max-width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-[nz-form] {
-  max-width: 600px;
+.signup-form {
+  margin-top: 24px;
 }
 
-.login-area {
-  margin-top: 16px;
+.submit-btn {
+  width: 100%;
+  margin-top: 24px;
+}
+
+.login-link {
   text-align: center;
+  margin-top: 16px;
 }
 
-nz-form-item {
+:host ::ng-deep .ant-tabs-nav {
+  margin-bottom: 24px;
+}
+
+:host ::ng-deep .ant-form-item {
   margin-bottom: 16px;
+}
+
+:host ::ng-deep .ant-input-prefix {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+:host ::ng-deep .ant-input-group-addon {
+  background-color: transparent;
+}
+
+:host ::ng-deep .ant-input-affix-wrapper {
+  border-radius: 4px;
+}
+
+:host ::ng-deep .ant-input-affix-wrapper:hover,
+:host ::ng-deep .ant-input-affix-wrapper:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+:host ::ng-deep .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+:host ::ng-deep .ant-tabs-ink-bar {
+  background-color: #1890ff;
 }
