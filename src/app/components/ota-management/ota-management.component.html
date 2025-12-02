@@ -1,15 +1,47 @@
-<!-- Giao diện quản lý OTA sẽ được xây dựng ở đây -->
-<div class="container">
+<!-- OTA Management Component -->
+<div class="ota-management-container">
+  <!-- Header -->
   <div class="header">
     <h2>Quản lý tích hợp OTA</h2>
-    <button nz-button nzType="primary" (click)="showAddModal()">
-      <i nz-icon nzType="plus"></i>Thêm tích hợp OTA
-    </button>
+    <div class="header-actions">
+      <nz-button-group>
+        <button nz-button [nzType]="viewMode === 'list' ? 'primary' : 'default'" (click)="toggleView('list')">
+          <i nz-icon nzType="unordered-list"></i> Danh sách
+        </button>
+        <button nz-button [nzType]="viewMode === 'calendar' ? 'primary' : 'default'" (click)="toggleView('calendar')">
+          <i nz-icon nzType="calendar"></i> Calendar
+        </button>
+      </nz-button-group>
+      <button nz-button nzType="primary" (click)="showAddModal()">
+        <i nz-icon nzType="plus"></i> Thêm tích hợp OTA
+      </button>
+    </div>
   </div>
 
-  <!-- Danh sách tích hợp OTA -->
+  <!-- Filters -->
+  <nz-card class="filter-card">
+    <div class="filters">
+      <div class="filter-item">
+        <label>Lọc theo OTA:</label>
+        <nz-select [(ngModel)]="selectedProvider" (ngModelChange)="onProviderFilter($event)" style="width: 200px;">
+          <nz-option nzValue="all" nzLabel="Tất cả OTA"></nz-option>
+          <nz-option *ngFor="let provider of otaProviders" [nzValue]="provider" [nzLabel]="provider"></nz-option>
+        </nz-select>
+      </div>
+      <div class="filter-item">
+        <label>Khoảng thời gian:</label>
+        <nz-range-picker 
+          [(ngModel)]="startDate" 
+          (ngModelChange)="onDateRangeChange($event ? [$event, endDate!] : null)"
+          [nzShowTime]="false">
+        </nz-range-picker>
+      </div>
+    </div>
+  </nz-card>
+
+  <!-- OTA Integrations List -->
   <nz-card>
-    <nz-table #basicTable [nzData]="otaIntegrations" [nzLoading]="isLoading">
+    <nz-table #basicTable [nzData]="otaIntegrations" [nzLoading]="isLoading" nzBordered>
       <thead>
         <tr>
           <th>Nhà cung cấp</th>
@@ -21,94 +53,193 @@
       </thead>
       <tbody>
         <tr *ngFor="let integration of basicTable.data">
-          <td>{{ integration.provider }}</td>
+          <td>
+            <nz-tag [nzColor]="getProviderColor(integration.provider)">
+              {{ integration.provider }}
+            </nz-tag>
+          </td>
           <td>
             <nz-tag [nzColor]="getStatusColor(integration.status)">
-              {{ integration.status }}
+              {{ integration.status === 'active' ? 'Hoạt động' : 
+                 integration.status === 'inactive' ? 'Không hoạt động' : 
+                 integration.status === 'error' ? 'Lỗi' : 'Đang chờ' }}
             </nz-tag>
           </td>
           <td>{{ integration.lastSync ? formatDate(integration.lastSync) : 'Chưa đồng bộ' }}</td>
           <td>
             <div *ngIf="integration.propertyInfo">
-              <p>{{ integration.propertyInfo.name }}</p>
+              <strong>{{ integration.propertyInfo.name }}</strong>
               <p>{{ integration.propertyInfo.address?.city }}, {{ integration.propertyInfo.address?.country }}</p>
-              <p>{{ integration.propertyInfo.starRating }} sao</p>
+              <nz-rate [ngModel]="integration.propertyInfo.starRating" nzDisabled></nz-rate>
             </div>
-            <span *ngIf="!integration.propertyInfo">Chưa có thông tin</span>
+            <span *ngIf="!integration.propertyInfo" class="text-muted">Chưa có thông tin</span>
           </td>
           <td>
-            <button nz-button nzType="link" (click)="showEditModal(integration)"
-                    nz-tooltip="Chỉnh sửa tích hợp"
-                    aria-label="Chỉnh sửa tích hợp">
-              <i nz-icon nzType="edit"></i>
-            </button>
-            <button nz-button nzType="link" (click)="loginToBooking(integration)"
-                    [disabled]="integration.status === 'active'"
-                    nz-tooltip="Đăng nhập vào OTA"
-                    aria-label="Đăng nhập vào OTA">
-              <i nz-icon nzType="login"></i>
-            </button>
-            <button nz-button nzType="link" (click)="getBookings(integration)"
-                    [disabled]="integration.status !== 'active'"
-                    nz-tooltip="Xem đặt phòng"
-                    aria-label="Xem đặt phòng">
-              <i nz-icon nzType="calendar"></i>
-            </button>
-            <button nz-button nzType="link" (click)="syncData(integration)"
-                    [disabled]="integration.status !== 'active' || isSyncing"
-                    nz-tooltip="Đồng bộ dữ liệu"
-                    aria-label="Đồng bộ dữ liệu">
-              <i nz-icon nzType="sync" [nzSpin]="isSyncing"></i>
-            </button>
-            <button nz-button nzType="link" nzDanger (click)="deleteIntegration(integration)"
-                    nz-tooltip="Xóa tích hợp"
-                    aria-label="Xóa tích hợp">
-              <i nz-icon nzType="delete"></i>
-            </button>
+            <div class="action-buttons">
+              <button nz-button nzType="link" (click)="showEditModal(integration)"
+                      nz-tooltip="Chỉnh sửa">
+                <i nz-icon nzType="edit"></i>
+              </button>
+              <button nz-button nzType="link" (click)="loginToBooking(integration)"
+                      [disabled]="integration.status === 'active'"
+                      nz-tooltip="Đăng nhập">
+                <i nz-icon nzType="login"></i>
+              </button>
+              <button nz-button nzType="link" (click)="getBookings(integration)"
+                      [disabled]="integration.status !== 'active'"
+                      nz-tooltip="Xem đặt phòng">
+                <i nz-icon nzType="calendar"></i>
+              </button>
+              <button nz-button nzType="link" (click)="syncData(integration)"
+                      [disabled]="integration.status !== 'active' || isSyncing"
+                      nz-tooltip="Đồng bộ dữ liệu">
+                <i nz-icon nzType="sync" [nzSpin]="isSyncing"></i>
+              </button>
+              <button nz-button nzType="link" nzDanger (click)="deleteIntegration(integration)"
+                      nz-tooltip="Xóa">
+                <i nz-icon nzType="delete"></i>
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
     </nz-table>
   </nz-card>
 
-  <!-- Danh sách đặt phòng -->
-  <nz-card *ngIf="selectedIntegration && bookings.length > 0" class="mt-4">
-    <h3>Đặt phòng từ {{ selectedIntegration.provider }}</h3>
-    <nz-table #bookingsTable [nzData]="bookings" [nzLoading]="isBookingsLoading">
+  <!-- Provider Quick Actions -->
+  <nz-card class="provider-actions">
+    <h3>Lấy đặt phòng nhanh theo OTA</h3>
+    <div class="provider-buttons">
+      <button *ngFor="let provider of otaProviders" 
+              nz-button 
+              [style.backgroundColor]="getProviderColor(provider)"
+              [style.borderColor]="getProviderColor(provider)"
+              [style.color]="'white'"
+              (click)="getBookingsByProvider(provider, false)"
+              [nzLoading]="isBookingsLoading && selectedProvider === provider">
+        {{ provider }}
+      </button>
+      <button nz-button nzType="dashed" (click)="loadCalendarBookings()">
+        <i nz-icon nzType="calendar"></i> Tất cả (Calendar)
+      </button>
+    </div>
+  </nz-card>
+
+  <!-- Calendar Summary -->
+  <nz-card *ngIf="viewMode === 'calendar' && calendarSummary" class="calendar-summary">
+    <h3>Tổng quan đặt phòng OTA</h3>
+    <div class="summary-stats">
+      <nz-statistic nzTitle="Tổng số" [nzValue]="calendarSummary.total"></nz-statistic>
+      <nz-statistic *ngFor="let provider of otaProviders" 
+                    [nzTitle]="provider" 
+                    [nzValue]="calendarSummary.byProvider[provider]"
+                    [nzValueStyle]="{ color: getProviderColor(provider) }">
+      </nz-statistic>
+    </div>
+  </nz-card>
+
+  <!-- Bookings List -->
+  <nz-card *ngIf="bookings.length > 0" class="bookings-card">
+    <div class="bookings-header">
+      <h3>
+        Đặt phòng từ 
+        <nz-tag *ngIf="selectedProvider !== 'all'" [nzColor]="getProviderColor(selectedProvider)">
+          {{ selectedProvider }}
+        </nz-tag>
+        <span *ngIf="selectedProvider === 'all'">tất cả OTA</span>
+      </h3>
+      <button nz-button nzType="default" (click)="syncProviderBookings(selectedProvider)" 
+              [nzLoading]="isBookingsLoading" *ngIf="selectedProvider !== 'all'">
+        <i nz-icon nzType="sync"></i> Đồng bộ
+      </button>
+    </div>
+    
+    <nz-table #bookingsTable [nzData]="bookings" [nzLoading]="isBookingsLoading" nzBordered nzSize="small">
       <thead>
         <tr>
+          <th>OTA</th>
           <th>Mã đặt phòng</th>
           <th>Khách hàng</th>
-          <th>Ngày nhận phòng</th>
-          <th>Ngày trả phòng</th>
+          <th>Ngày nhận</th>
+          <th>Ngày trả</th>
           <th>Loại phòng</th>
-          <th>Tổng tiền</th>
+          <th>Thanh toán</th>
           <th>Trạng thái</th>
+          <th>Thao tác</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let booking of bookingsTable.data">
-          <td>{{ booking.otaBookingId }}</td>
           <td>
-            {{ booking.guestName }}
-            <div class="guest-details">
-              <small *ngIf="booking.guestDetails?.email">Email: {{ booking.guestDetails.email }}</small>
-              <small *ngIf="booking.guestDetails?.phone">SĐT: {{ booking.guestDetails.phone }}</small>
+            <nz-tag [nzColor]="getProviderColor(booking.otaProvider)">
+              {{ booking.otaProvider }}
+            </nz-tag>
+          </td>
+          <td>
+            <strong>{{ booking.otaBookingId }}</strong>
+            <br>
+            <small *ngIf="booking.otaConfirmationNumber">{{ booking.otaConfirmationNumber }}</small>
+          </td>
+          <td>
+            <div class="guest-info">
+              <strong>{{ booking.guestDetails?.name }}</strong>
+              <small *ngIf="booking.guestDetails?.email">
+                <br>{{ booking.guestDetails.email }}
+              </small>
+              <small *ngIf="booking.guestDetails?.phone">
+                <br>{{ booking.guestDetails.phone }}
+              </small>
             </div>
           </td>
           <td>{{ formatDate(booking.checkInDate) }}</td>
           <td>{{ formatDate(booking.checkOutDate) }}</td>
-          <td>{{ booking.roomTypeName }}</td>
-          <td>{{ booking.totalAmount }} {{ booking.currency }}</td>
           <td>
-            <nz-tag [nzColor]="booking.status === 'Confirmed' ? 'green' : 'red'">
-              {{ booking.status }}
+            {{ booking.roomDetails?.roomTypeName }}
+            <small *ngIf="booking.numberOfNights">
+              <br>({{ booking.numberOfNights }} đêm)
+            </small>
+          </td>
+          <td>
+            <strong>{{ formatCurrency(booking.pricing?.totalAmount || 0, booking.pricing?.currency) }}</strong>
+            <br>
+            <nz-tag [nzColor]="booking.paymentStatus === 'paid' ? 'green' : 'orange'">
+              {{ booking.paymentStatus === 'paid' ? 'Đã thanh toán' : 
+                 booking.paymentStatus === 'pending' ? 'Chờ thanh toán' : 
+                 booking.paymentStatus }}
             </nz-tag>
+          </td>
+          <td>
+            <nz-tag [nzColor]="getBookingStatusColor(booking.status)">
+              {{ getBookingStatusLabel(booking.status) }}
+            </nz-tag>
+          </td>
+          <td>
+            <button nz-button nzType="link" nz-tooltip="Xem chi tiết">
+              <i nz-icon nzType="eye"></i>
+            </button>
+            <button nz-button nzType="link" nz-tooltip="Assign vào phòng" 
+                    *ngIf="!booking.localRoomId"
+                    nz-dropdown [nzDropdownMenu]="roomMenu">
+              <i nz-icon nzType="login"></i>
+            </button>
+            <nz-dropdown-menu #roomMenu="nzDropdownMenu">
+              <ul nz-menu>
+                <li nz-menu-item *ngFor="let room of roomsForHotel" 
+                    (click)="assignBookingToRoom(booking, room._id)">
+                  Phòng {{ room.roomNumber }} - {{ room.type }}
+                </li>
+              </ul>
+            </nz-dropdown-menu>
           </td>
         </tr>
       </tbody>
     </nz-table>
   </nz-card>
+
+  <!-- Empty State -->
+  <nz-empty *ngIf="bookings.length === 0 && !isBookingsLoading && selectedProvider !== 'all'" 
+            nzNotFoundContent="Không có đặt phòng nào từ {{ selectedProvider }}">
+  </nz-empty>
 
   <!-- Modal thêm/sửa tích hợp -->
   <nz-modal
@@ -117,14 +248,15 @@
     (nzOnCancel)="handleModalCancel()"
     (nzOnOk)="handleModalOk()"
     [nzOkLoading]="isLoading"
+    [nzWidth]="700"
   >
     <ng-container *nzModalContent>
-      <form nz-form [formGroup]="integrationForm">
+      <form nz-form [formGroup]="integrationForm" nzLayout="vertical">
         <!-- Provider -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Nhà cung cấp</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng chọn nhà cung cấp">
-            <nz-select formControlName="provider">
+          <nz-form-label nzRequired>Nhà cung cấp OTA</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng chọn nhà cung cấp">
+            <nz-select formControlName="provider" nzPlaceHolder="Chọn nhà cung cấp">
               <nz-option *ngFor="let provider of otaProviders" [nzValue]="provider" [nzLabel]="provider">
               </nz-option>
             </nz-select>
@@ -132,88 +264,212 @@
         </nz-form-item>
 
         <!-- Credentials -->
+        <nz-divider nzText="Thông tin đăng nhập"></nz-divider>
         <div formGroupName="credentials">
-          <nz-form-item>
-            <nz-form-label [nzSpan]="6">Client ID</nz-form-label>
-            <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập Client ID">
-              <input nz-input formControlName="clientId" placeholder="Client ID" />
-            </nz-form-control>
-          </nz-form-item>
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Username</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="username" placeholder="Username" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Password</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="password" type="password" placeholder="Password" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
 
-          <nz-form-item>
-            <nz-form-label [nzSpan]="6">Client Secret</nz-form-label>
-            <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập Client Secret">
-              <input nz-input formControlName="clientSecret" type="password" placeholder="Client Secret" />
-            </nz-form-control>
-          </nz-form-item>
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Hotel ID</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="hotelId" placeholder="Hotel ID trên OTA" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Property ID</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="propertyId" placeholder="Property ID" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
 
-          <nz-form-item>
-            <nz-form-label [nzSpan]="6">Username</nz-form-label>
-            <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập username">
-              <input nz-input formControlName="username" placeholder="Username" />
-            </nz-form-control>
-          </nz-form-item>
+          <!-- Provider-specific fields -->
+          <nz-collapse *ngIf="integrationForm.get('provider')?.value">
+            <nz-collapse-panel nzHeader="Thông tin bổ sung cho {{ integrationForm.get('provider')?.value }}" nzActive>
+              
+              <!-- Agoda -->
+              <ng-container *ngIf="integrationForm.get('provider')?.value === 'Agoda'">
+                <div nz-row [nzGutter]="16">
+                  <div nz-col [nzSpan]="12">
+                    <nz-form-item>
+                      <nz-form-label>Agoda Partner ID</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="agodaPartnerId" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzSpan]="12">
+                    <nz-form-item>
+                      <nz-form-label>Agoda API Key</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="agodaApiKey" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+              </ng-container>
 
-          <nz-form-item>
-            <nz-form-label [nzSpan]="6">Password</nz-form-label>
-            <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập password">
-              <input nz-input formControlName="password" type="password" placeholder="Password" />
-            </nz-form-control>
-          </nz-form-item>
+              <!-- Traveloka -->
+              <ng-container *ngIf="integrationForm.get('provider')?.value === 'Traveloka'">
+                <div nz-row [nzGutter]="16">
+                  <div nz-col [nzSpan]="12">
+                    <nz-form-item>
+                      <nz-form-label>Client ID</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="travelokaClientId" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzSpan]="12">
+                    <nz-form-item>
+                      <nz-form-label>Client Secret</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="travelokaClientSecret" type="password" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+              </ng-container>
 
-          <nz-form-item>
-            <nz-form-label [nzSpan]="6">Hotel ID</nz-form-label>
-            <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập Hotel ID">
-              <input nz-input formControlName="hotelId" placeholder="Hotel ID" />
-            </nz-form-control>
-          </nz-form-item>
+              <!-- Trip.com -->
+              <ng-container *ngIf="integrationForm.get('provider')?.value === 'Trip.com'">
+                <div nz-row [nzGutter]="16">
+                  <div nz-col [nzSpan]="8">
+                    <nz-form-item>
+                      <nz-form-label>Client ID</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="tripClientId" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzSpan]="8">
+                    <nz-form-item>
+                      <nz-form-label>Client Secret</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="tripClientSecret" type="password" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzSpan]="8">
+                    <nz-form-item>
+                      <nz-form-label>Partner Code</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="tripPartnerCode" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+              </ng-container>
+
+              <!-- Expedia -->
+              <ng-container *ngIf="integrationForm.get('provider')?.value === 'Expedia'">
+                <div nz-row [nzGutter]="16">
+                  <div nz-col [nzSpan]="8">
+                    <nz-form-item>
+                      <nz-form-label>API Key</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="expediaApiKey" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzSpan]="8">
+                    <nz-form-item>
+                      <nz-form-label>Secret</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="expediaSecret" type="password" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzSpan]="8">
+                    <nz-form-item>
+                      <nz-form-label>Expedia Hotel ID</nz-form-label>
+                      <nz-form-control>
+                        <input nz-input formControlName="expediaHotelId" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+              </ng-container>
+            </nz-collapse-panel>
+          </nz-collapse>
         </div>
 
         <!-- Settings -->
+        <nz-divider nzText="Cài đặt"></nz-divider>
         <div formGroupName="settings">
-          <nz-form-item>
-            <nz-form-label [nzSpan]="6">Cài đặt</nz-form-label>
-            <nz-form-control [nzSpan]="18">
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzSpan]="12">
               <label nz-checkbox formControlName="autoAcceptBookings">
                 Tự động chấp nhận đặt phòng
               </label>
-              <br />
+            </div>
+            <div nz-col [nzSpan]="12">
               <label nz-checkbox formControlName="updateInventory">
                 Cập nhật tồn kho
               </label>
-              <br />
+            </div>
+          </div>
+          <div nz-row [nzGutter]="16" class="mt-2">
+            <div nz-col [nzSpan]="12">
               <label nz-checkbox formControlName="updatePrices">
                 Cập nhật giá
               </label>
-              <br />
+            </div>
+            <div nz-col [nzSpan]="12">
               <label nz-checkbox formControlName="updateAvailability">
                 Cập nhật tình trạng phòng
               </label>
-            </nz-form-control>
-          </nz-form-item>
+            </div>
+          </div>
 
-          <nz-form-item>
-            <nz-form-label [nzSpan]="6">Tiền tệ</nz-form-label>
-            <nz-form-control [nzSpan]="18">
-              <nz-select formControlName="currencyCode">
-                <nz-option nzValue="USD" nzLabel="USD"></nz-option>
-                <nz-option nzValue="VND" nzLabel="VND"></nz-option>
-                <nz-option nzValue="EUR" nzLabel="EUR"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
-
-          <nz-form-item>
-            <nz-form-label [nzSpan]="6">Ngôn ngữ</nz-form-label>
-            <nz-form-control [nzSpan]="18">
-              <nz-select formControlName="languageCode">
-                <nz-option nzValue="en" nzLabel="English"></nz-option>
-                <nz-option nzValue="vi" nzLabel="Tiếng Việt"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
+          <div nz-row [nzGutter]="16" class="mt-3">
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Tiền tệ</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="currencyCode">
+                    <nz-option nzValue="VND" nzLabel="VND - Việt Nam Đồng"></nz-option>
+                    <nz-option nzValue="USD" nzLabel="USD - US Dollar"></nz-option>
+                    <nz-option nzValue="EUR" nzLabel="EUR - Euro"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Ngôn ngữ</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="languageCode">
+                    <nz-option nzValue="vi" nzLabel="Tiếng Việt"></nz-option>
+                    <nz-option nzValue="en" nzLabel="English"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
         </div>
       </form>
     </ng-container>
   </nz-modal>
-</div> 
+</div>

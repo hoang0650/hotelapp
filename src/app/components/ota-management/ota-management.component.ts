@@ -3,9 +3,10 @@ import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { Observable, Subscription } from 'rxjs';
-import { OtaService, ApiResponse } from '../../services/ota.service';
+import { OtaService, ApiResponse, OtaBookingsResponse } from '../../services/ota.service';
 import { HotelService } from '../../services/hotel.service';
 import { RoomsService } from '../../services/rooms.service';
+import { AuthService } from '../../services/auth.service';
 import { 
     OtaIntegration, 
     OtaProvider, 
@@ -13,6 +14,9 @@ import {
     OtaIntegrationStatus, 
     OtaBooking,
     OtaRoomTypeMapping,
+    OtaCalendarEvent,
+    OtaCalendarResponse,
+    OTA_PROVIDER_COLORS
 } from '../../interfaces/ota-integration';
 import { Hotel } from '../../interfaces/hotel';
 import { Room } from '../../interfaces/rooms';
@@ -33,26 +37,41 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   hotels: Hotel[] = [];
   roomsForHotel: Room[] = [];
   selectedHotelForMapping: string | null = null;
+  currentHotelId: string | null = null;
 
   otaProviders: OtaProvider[] = [...ALL_OTA_PROVIDERS];
   otaStatuses: OtaIntegrationStatus[] = ['active', 'inactive', 'error'];
 
+  // Bookings
   bookings: OtaBooking[] = [];
+  calendarEvents: OtaCalendarEvent[] = [];
   selectedIntegration: OtaIntegration | null = null;
   isBookingsLoading = false;
   isSyncing = false;
+  selectedProvider: OtaProvider | 'all' = 'all';
 
   integrationForm!: FormGroup;
   modalTitle = '';
 
+  // Date filters
   startDate: Date | null = null;
   endDate: Date | null = null;
+
+  // View mode
+  viewMode: 'list' | 'calendar' = 'list';
+
+  // Calendar summary
+  calendarSummary: {
+    total: number;
+    byProvider: Record<OtaProvider, number>;
+  } | null = null;
 
   constructor(
     private fb: FormBuilder,
     private otaService: OtaService,
     private hotelService: HotelService,
     private roomsService: RoomsService,
+    private authService: AuthService,
     private message: NzMessageService,
     private modal: NzModalService
   ) {
@@ -72,7 +91,6 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         password: [''],
         hotelId: [''],
         propertyId: [''],
-        // Provider specific fields
         agodaPartnerId: [''],
         agodaApiKey: [''],
         travelokaClientId: [''],
@@ -89,8 +107,8 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         updateInventory: [true],
         updatePrices: [true],
         updateAvailability: [true],
-        currencyCode: ['USD'],
-        languageCode: ['en']
+        currencyCode: ['VND'],
+        languageCode: ['vi']
       }),
       mappings: this.fb.group({
         roomTypes: this.fb.array([])
@@ -100,24 +118,36 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.integrationForm = this.fb.group({
       provider: ['', Validators.required],
       credentials: this.fb.group({
-        clientId: ['', Validators.required],
-        clientSecret: ['', Validators.required],
-        username: ['', Validators.required],
-        password: ['', Validators.required],
-        hotelId: ['', Validators.required]
+        clientId: [''],
+        clientSecret: [''],
+        username: [''],
+        password: [''],
+        hotelId: [''],
+        propertyId: [''],
+        agodaPartnerId: [''],
+        agodaApiKey: [''],
+        travelokaClientId: [''],
+        travelokaClientSecret: [''],
+        tripClientId: [''],
+        tripClientSecret: [''],
+        tripPartnerCode: [''],
+        expediaApiKey: [''],
+        expediaSecret: [''],
+        expediaHotelId: ['']
       }),
       settings: this.fb.group({
         autoAcceptBookings: [false],
         updateInventory: [true],
         updatePrices: [true],
         updateAvailability: [true],
-        currencyCode: ['USD'],
-        languageCode: ['en']
+        currencyCode: ['VND'],
+        languageCode: ['vi']
       })
     });
   }
 
   ngOnInit(): void {
+    this.currentHotelId = this.authService.getHotelId();
     this.loadHotels();
     this.loadOtaIntegrations();
   }
@@ -130,6 +160,138 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     return this.otaForm.get('mappings.roomTypes') as FormArray;
   }
 
+  // ============ LOAD DATA ============
+
+  loadHotels(): void {
+    this.subscriptions.add(
+      this.hotelService.getHotels().subscribe(
+        (data: Hotel[]) => this.hotels = data,
+        (err: any) => this.message.error('Không thể tải danh sách khách sạn.')
+      )
+    );
+  }
+
+  loadOtaIntegrations(hotelId?: string): void {
+    this.isLoading = true;
+    const queryHotelId = hotelId || this.currentHotelId || undefined;
+    
+    this.subscriptions.add(
+      this.otaService.getOtaIntegrations(queryHotelId).subscribe(
+        (data: OtaIntegration[]) => {
+          this.otaIntegrations = data;
+          this.isLoading = false;
+        },
+        (error: any) => {
+          this.isLoading = false;
+          this.message.error('Lỗi khi tải danh sách cấu hình OTA.');
+          console.error(error);
+        }
+      )
+    );
+  }
+
+  // ============ API RIÊNG TỪNG OTA ============
+
+  /**
+   * Lấy bookings theo provider cụ thể
+   */
+  getBookingsByProvider(provider: OtaProvider, sync: boolean = false): void {
+    if (!this.currentHotelId) {
+      this.message.warning('Vui lòng chọn khách sạn');
+      return;
+    }
+
+    this.isBookingsLoading = true;
+    this.selectedProvider = provider;
+
+    this.subscriptions.add(
+      this.otaService.getBookingsByProvider(provider, this.currentHotelId, sync).subscribe(
+        (response: OtaBookingsResponse) => {
+          this.bookings = response.data || [];
+          this.isBookingsLoading = false;
+          this.message.success(`Đã lấy ${this.bookings.length} đặt phòng từ ${provider}`);
+        },
+        (error: any) => {
+          this.isBookingsLoading = false;
+          this.message.error(`Lỗi khi lấy đặt phòng từ ${provider}`);
+          console.error(error);
+        }
+      )
+    );
+  }
+
+  /**
+   * Lấy tất cả bookings cho calendar
+   */
+  loadCalendarBookings(): void {
+    if (!this.currentHotelId) {
+      this.message.warning('Vui lòng chọn khách sạn');
+      return;
+    }
+
+    this.isBookingsLoading = true;
+    this.viewMode = 'calendar';
+
+    this.subscriptions.add(
+      this.otaService.getAllOtaBookingsForCalendar(
+        this.currentHotelId,
+        this.startDate || undefined,
+        this.endDate || undefined
+      ).subscribe(
+        (response: OtaCalendarResponse) => {
+          this.calendarEvents = response.data || [];
+          this.calendarSummary = response.summary;
+          this.isBookingsLoading = false;
+          this.message.success(`Đã lấy ${this.calendarEvents.length} đặt phòng cho calendar`);
+        },
+        (error: any) => {
+          this.isBookingsLoading = false;
+          this.message.error('Lỗi khi lấy đặt phòng cho calendar');
+          console.error(error);
+        }
+      )
+    );
+  }
+
+  /**
+   * Sync bookings từ một provider cụ thể
+   */
+  syncProviderBookings(provider: OtaProvider): void {
+    this.getBookingsByProvider(provider, true);
+  }
+
+  // ============ ASSIGN BOOKING VÀO PHÒNG ============
+
+  /**
+   * Assign OTA booking vào phòng cụ thể
+   */
+  assignBookingToRoom(booking: OtaBooking, roomId: string): void {
+    if (!booking._id) {
+      this.message.error('Không tìm thấy booking ID');
+      return;
+    }
+
+    this.isLoading = true;
+    const staffId = this.authService.getUserId();
+
+    this.subscriptions.add(
+      this.otaService.assignOtaBookingToRoom(booking._id, roomId, staffId || undefined).subscribe(
+        (response: ApiResponse) => {
+          this.isLoading = false;
+          this.message.success('Đã assign booking vào phòng thành công');
+          this.loadCalendarBookings(); // Refresh
+        },
+        (error: any) => {
+          this.isLoading = false;
+          this.message.error(error.error?.message || 'Lỗi khi assign booking');
+          console.error(error);
+        }
+      )
+    );
+  }
+
+  // ============ MODAL HANDLERS ============
+
   addRoomTypeMapping(mapping?: OtaRoomTypeMapping): void {
     const mappingForm = this.fb.group({
       localRoomTypeId: [mapping?.localRoomTypeId || null, Validators.required],
@@ -141,15 +303,6 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
 
   removeRoomTypeMapping(index: number): void {
     this.roomTypeMappings.removeAt(index);
-  }
-
-  loadHotels(): void {
-    this.subscriptions.add(
-      this.hotelService.getHotels().subscribe(
-        (data: Hotel[]) => this.hotels = data,
-        (err: any) => this.message.error('Không thể tải danh sách khách sạn.')
-      )
-    );
   }
 
   onHotelSelectedForForm(hotelId: string | null): void {
@@ -170,23 +323,6 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadOtaIntegrations(hotelId?: string): void {
-    this.isLoading = true;
-    this.subscriptions.add(
-      this.otaService.getOtaIntegrations(hotelId).subscribe(
-        (data: OtaIntegration[]) => {
-          this.otaIntegrations = data;
-          this.isLoading = false;
-        },
-        (error: any) => {
-          this.isLoading = false;
-          this.message.error('Lỗi khi tải danh sách cấu hình OTA.');
-          console.error(error);
-        }
-      )
-    );
-  }
-
   openModal(integration?: OtaIntegration): void {
     this.isModalVisible = true;
     this.editId = null;
@@ -205,8 +341,15 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
       this.otaForm.reset({
         status: 'inactive',
         syncFrequency: 60,
-        credentials: { apiKey: '', apiSecret: '', username: '', password: '', hotelId: '', propertyId: '', agodaPartnerId: '', agodaApiKey: '', travelokaClientId: '', travelokaClientSecret: '', tripClientId: '', tripClientSecret: '', tripPartnerCode: '', expediaApiKey: '', expediaSecret: '', expediaHotelId: ''},
-        settings: { autoAcceptBookings: false, updateInventory: true, updatePrices: true, updateAvailability: true },
+        credentials: {},
+        settings: { 
+          autoAcceptBookings: false, 
+          updateInventory: true, 
+          updatePrices: true, 
+          updateAvailability: true,
+          currencyCode: 'VND',
+          languageCode: 'vi'
+        },
         mappings: { roomTypes: [] }
       });
     }
@@ -262,7 +405,17 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
 
   showAddModal(): void {
     this.modalTitle = 'Thêm tích hợp OTA mới';
-    this.integrationForm.reset();
+    this.integrationForm.reset({
+      settings: {
+        autoAcceptBookings: false,
+        updateInventory: true,
+        updatePrices: true,
+        updateAvailability: true,
+        currencyCode: 'VND',
+        languageCode: 'vi'
+      }
+    });
+    this.selectedIntegration = null;
     this.isModalVisible = true;
   }
 
@@ -270,36 +423,16 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.modalTitle = 'Chỉnh sửa tích hợp OTA';
     this.selectedIntegration = integration;
     
-    const credentials = {
-      username: integration.credentials?.username || '',
-      password: integration.credentials?.password || '',
-      hotelId: integration.credentials?.hotelId || '',
-      propertyId: integration.credentials?.propertyId || '',
-      apiKey: integration.credentials?.apiKey || '',
-      apiSecret: integration.credentials?.apiSecret || '',
-      // Provider specific fields
-      agodaPartnerId: integration.credentials?.agodaPartnerId || '',
-      agodaApiKey: integration.credentials?.agodaApiKey || '',
-      travelokaClientId: integration.credentials?.travelokaClientId || '',
-      travelokaClientSecret: integration.credentials?.travelokaClientSecret || '',
-      tripClientId: integration.credentials?.tripClientId || '',
-      tripClientSecret: integration.credentials?.tripClientSecret || '',
-      tripPartnerCode: integration.credentials?.tripPartnerCode || '',
-      expediaApiKey: integration.credentials?.expediaApiKey || '',
-      expediaSecret: integration.credentials?.expediaSecret || '',
-      expediaHotelId: integration.credentials?.expediaHotelId || ''
-    };
-    
     this.integrationForm.patchValue({
       provider: integration.provider,
-      credentials: credentials,
+      credentials: integration.credentials || {},
       settings: integration.settings || {
         autoAcceptBookings: false,
         updateInventory: true,
         updatePrices: true,
         updateAvailability: true,
-        currencyCode: 'USD',
-        languageCode: 'en'
+        currencyCode: 'VND',
+        languageCode: 'vi'
       }
     });
     
@@ -324,6 +457,11 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
             }
           });
       } else {
+        // Thêm hotelId nếu có
+        if (this.currentHotelId) {
+          formData.hotelId = this.currentHotelId;
+        }
+        
         this.otaService.createOtaIntegration(formData)
           .subscribe({
             next: (response) => {
@@ -374,35 +512,12 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ============ OTA OPERATIONS ============
+
   loginToBooking(integration: OtaIntegration): void {
     const credentials = {
-      username: integration.credentials?.username || '',
-      password: integration.credentials?.password || '',
-      apiKey: integration.credentials?.apiKey || '',
-      apiSecret: integration.credentials?.apiSecret || '',
-      provider: integration.provider,
-      ...(integration.provider === 'Booking.com' && {
-        accessToken: integration.credentials?.accessToken,
-        refreshToken: integration.credentials?.refreshToken
-      }),
-      ...(integration.provider === 'Agoda' && {
-        agodaPartnerId: integration.credentials?.agodaPartnerId,
-        agodaApiKey: integration.credentials?.agodaApiKey
-      }),
-      ...(integration.provider === 'Traveloka' && {
-        travelokaClientId: integration.credentials?.travelokaClientId,
-        travelokaClientSecret: integration.credentials?.travelokaClientSecret
-      }),
-      ...(integration.provider === 'Trip.com' && {
-        tripClientId: integration.credentials?.tripClientId,
-        tripClientSecret: integration.credentials?.tripClientSecret,
-        tripPartnerCode: integration.credentials?.tripPartnerCode
-      }),
-      ...(integration.provider === 'Expedia' && {
-        expediaApiKey: integration.credentials?.expediaApiKey,
-        expediaSecret: integration.credentials?.expediaSecret,
-        expediaHotelId: integration.credentials?.expediaHotelId
-      })
+      ...integration.credentials,
+      provider: integration.provider
     };
 
     this.otaService.loginOtaProvider(integration._id, integration.provider, credentials)
@@ -418,48 +533,90 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   }
 
   getBookings(integration: OtaIntegration): void {
-    this.isLoading = true;
-    this.otaService.getBookings(integration, {
-      startDate: this.startDate?.toISOString(),
-      endDate: this.endDate?.toISOString()
-    }).subscribe({
-      next: (bookings: OtaBooking[]) => {
-        this.bookings = bookings;
-        this.isLoading = false;
-      },
-      error: (error: any) => {
-        this.message.error(error.error?.message || 'Lỗi khi lấy danh sách đặt phòng');
-        this.isLoading = false;
-      }
-    });
+    this.selectedIntegration = integration;
+    this.getBookingsByProvider(integration.provider, false);
   }
 
   syncData(integration: OtaIntegration): void {
-    this.isLoading = true;
+    this.isSyncing = true;
     this.otaService.syncOtaData(integration._id)
       .subscribe({
         next: (response: ApiResponse) => {
           this.message.success('Đồng bộ dữ liệu thành công!');
           this.loadOtaIntegrations();
-          this.isLoading = false;
+          this.isSyncing = false;
         },
         error: (error: any) => {
           this.message.error(error.error?.message || 'Lỗi khi đồng bộ dữ liệu');
-          this.isLoading = false;
+          this.isSyncing = false;
         }
       });
   }
+
+  // ============ HELPER METHODS ============
 
   getStatusColor(status: string): string {
     switch (status) {
       case 'active': return 'green';
       case 'inactive': return 'gray';
       case 'error': return 'red';
-      default: return '';
+      case 'pending': return 'orange';
+      default: return 'default';
     }
   }
 
-  formatDate(date: string | Date): string {
-    return new Date(date).toLocaleString();
+  getBookingStatusColor(status: string): string {
+    return this.otaService.getStatusColor(status);
   }
-} 
+
+  getBookingStatusLabel(status: string): string {
+    return this.otaService.getStatusLabel(status);
+  }
+
+  getProviderColor(provider: OtaProvider): string {
+    return OTA_PROVIDER_COLORS[provider] || '#888888';
+  }
+
+  formatDate(date: string | Date): string {
+    return new Date(date).toLocaleString('vi-VN');
+  }
+
+  formatCurrency(amount: number, currency: string = 'VND'): string {
+    return this.otaService.formatCurrency(amount, currency);
+  }
+
+  // ============ VIEW TOGGLE ============
+
+  toggleView(mode: 'list' | 'calendar'): void {
+    this.viewMode = mode;
+    if (mode === 'calendar') {
+      this.loadCalendarBookings();
+    }
+  }
+
+  // ============ FILTER ============
+
+  onDateRangeChange(dates: [Date, Date] | null): void {
+    if (dates) {
+      this.startDate = dates[0];
+      this.endDate = dates[1];
+    } else {
+      this.startDate = null;
+      this.endDate = null;
+    }
+    
+    if (this.viewMode === 'calendar') {
+      this.loadCalendarBookings();
+    }
+  }
+
+  onProviderFilter(provider: OtaProvider | 'all'): void {
+    this.selectedProvider = provider;
+    
+    if (provider === 'all') {
+      this.loadCalendarBookings();
+    } else {
+      this.getBookingsByProvider(provider, false);
+    }
+  }
+}

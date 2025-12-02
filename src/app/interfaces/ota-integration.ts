@@ -1,10 +1,13 @@
-import { Hotel } from './hotel'; // Giả sử bạn đã có interface Hotel
-import { Room } from './rooms'; // Giả sử bạn đã có interface Room 
+import { Hotel } from './hotel';
+import { Room } from './rooms';
 
 export type OtaProvider = 'Booking.com' | 'Agoda' | 'Traveloka' | 'Trip.com' | 'Expedia';
 export const ALL_OTA_PROVIDERS: OtaProvider[] = ['Booking.com', 'Agoda', 'Traveloka', 'Trip.com', 'Expedia'];
 
 export type OtaIntegrationStatus = 'active' | 'inactive' | 'error' | 'pending';
+export type OtaBookingStatus = 'pending' | 'confirmed' | 'modified' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
+export type PaymentMethod = 'pay_at_property' | 'prepaid' | 'credit_card' | 'bank_transfer' | 'virtual_card' | 'other';
+export type PaymentStatus = 'pending' | 'partial' | 'paid' | 'refunded' | 'cancelled';
 
 export interface OtaCredentials {
     // Common credentials
@@ -44,16 +47,15 @@ export interface OtaSettings {
     updateAvailability: boolean;
     currencyCode: string;
     languageCode: string;
-    // New settings
-    autoSyncInterval: number; // in minutes
-    notificationEmail: string;
+    autoSyncInterval: number;
+    notificationEmail?: string;
     markupPercentage: number;
     minimumStay: number;
     maximumStay: number;
 }
 
 export interface CancellationPolicy {
-    type: string; // free, percentage, fixed
+    type: 'free' | 'percentage' | 'fixed';
     deadlineDays: number;
     penaltyAmount: number;
     penaltyPercentage?: number;
@@ -160,52 +162,222 @@ export interface OtaIntegration {
     metadata?: any;
 }
 
-export interface OtaBooking {
-    otaBookingId: string;
-    otaProvider: OtaProvider;
-    guestName: string;
-    checkInDate: Date;
-    checkOutDate: Date;
-    roomTypeName: string;
-    totalAmount: number;
-    currency: string;
-    status: string;
-    source: string;
-    numberOfGuests: {
+// ============ OTA BOOKING - CẬP NHẬT THEO BACKEND MỚI ============
+
+export interface OtaBookingGuestDetails {
+    name: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    nationality?: string;
+    idType?: string;
+    idNumber?: string;
+    address?: {
+        street?: string;
+        city?: string;
+        country?: string;
+        postalCode?: string;
+    };
+    specialRequests?: string;
+    numberOfGuests?: {
         adults: number;
         children: number;
         infants?: number;
     };
-    guestDetails: {
-        email?: string;
-        phone?: string;
-        nationality?: string;
-        specialRequests?: string[];
-        address?: string;
-        passportNumber?: string;
-    };
-    paymentDetails: {
-        method: string;
-        status: string;
-        totalPaid?: number;
-        commission?: number;
-        currency: string;
-        cardType?: string;
-        cardLastFourDigits?: string;
-    };
-    cancellationDetails?: {
-        cancelledAt?: Date;
-        reason?: string;
-        refundAmount?: number;
-        penaltyAmount?: number;
-        status: string;
-    };
-    roomDetails: {
-        roomTypeId: string;
-        ratePlanId: string;
-        quantity: number;
-        pricePerNight: number;
-        mealPlan?: string;
-        specialRequests?: string[];
+}
+
+export interface OtaBookingRoomDetails {
+    roomTypeId?: string;
+    roomTypeName: string;
+    roomCount: number;
+    bedType?: string;
+    mealPlan?: string;
+    amenities?: string[];
+    maxOccupancy?: number;
+}
+
+export interface OtaBookingPricing {
+    totalAmount: number;
+    currency: string;
+    basePrice?: number;
+    taxes?: number;
+    fees?: number;
+    discount?: number;
+    commission?: number;
+    netAmount?: number;
+    pricePerNight?: number;
+    extraCharges?: {
+        description: string;
+        amount: number;
     }[];
-} 
+}
+
+export interface OtaBookingPaymentDetails {
+    cardType?: string;
+    cardLast4?: string;
+    expiryDate?: string;
+    virtualCardNumber?: string;
+    virtualCardCvv?: string;
+    virtualCardExpiry?: string;
+    paidAmount?: number;
+    refundedAmount?: number;
+    paymentHistory?: {
+        amount: number;
+        date: Date;
+        method: string;
+        transactionId?: string;
+        note?: string;
+    }[];
+}
+
+export interface OtaBookingCancellationInfo {
+    cancelledAt?: Date;
+    cancelledBy?: string;
+    reason?: string;
+    penalty?: number;
+    refundAmount?: number;
+}
+
+export interface OtaBookingPolicies {
+    cancellationPolicy?: string;
+    cancellationDeadline?: Date;
+    prepaymentRequired?: boolean;
+    noShowPolicy?: string;
+    remarks?: string;
+}
+
+export interface OtaBookingSyncStatus {
+    lastSyncAt?: Date;
+    lastSyncStatus?: 'success' | 'failed' | 'pending';
+    lastSyncError?: string;
+    syncAttempts?: number;
+}
+
+export interface OtaBookingLog {
+    action: string;
+    timestamp: Date;
+    userId?: string;
+    staffId?: string;
+    details?: string;
+    previousValue?: any;
+    newValue?: any;
+}
+
+export interface OtaBooking {
+    _id?: string;
+    otaProvider: OtaProvider;
+    otaBookingId: string;
+    otaConfirmationNumber?: string;
+    
+    hotelId: string;
+    localBookingId?: string;
+    localRoomId?: string;
+    integrationId?: string;
+
+    guestDetails: OtaBookingGuestDetails;
+    roomDetails: OtaBookingRoomDetails;
+    
+    checkInDate: Date;
+    checkOutDate: Date;
+    checkInTime?: string;
+    checkOutTime?: string;
+    numberOfNights?: number;
+    
+    pricing: OtaBookingPricing;
+    paymentMethod: PaymentMethod;
+    paymentStatus: PaymentStatus;
+    paymentDetails?: OtaBookingPaymentDetails;
+    
+    status: OtaBookingStatus;
+    otaStatus?: string;
+    cancellationInfo?: OtaBookingCancellationInfo;
+    policies?: OtaBookingPolicies;
+    
+    syncStatus?: OtaBookingSyncStatus;
+    logs?: OtaBookingLog[];
+    
+    notes?: string;
+    internalNotes?: string;
+    rawData?: any;
+    
+    createdAt?: Date;
+    updatedAt?: Date;
+    metadata?: any;
+    
+    // Virtual fields cho calendar
+    summary?: {
+        bookingId: string;
+        guestName: string;
+        roomType: string;
+        checkIn: Date;
+        checkOut: Date;
+        totalAmount: number;
+        status: string;
+        provider: string;
+    };
+}
+
+// ============ CALENDAR DATA ============
+
+export interface OtaCalendarEvent {
+    id: string;
+    otaBookingId: string;
+    provider: OtaProvider;
+    title: string;
+    start: Date;
+    end: Date;
+    guestName: string;
+    guestPhone?: string;
+    guestEmail?: string;
+    roomType: string;
+    roomId?: string;
+    roomNumber?: string;
+    totalAmount: number;
+    currency: string;
+    paymentMethod: PaymentMethod;
+    paymentStatus: PaymentStatus;
+    status: OtaBookingStatus;
+    numberOfNights?: number;
+    numberOfGuests?: {
+        adults: number;
+        children: number;
+    };
+    color: string;
+    extendedProps?: {
+        otaProvider: OtaProvider;
+        confirmationNumber?: string;
+        specialRequests?: string;
+    };
+}
+
+export interface OtaCalendarResponse {
+    message: string;
+    data: OtaCalendarEvent[];
+    rooms: {
+        _id: string;
+        roomNumber: string;
+        floor: string;
+        type: string;
+    }[];
+    summary: {
+        total: number;
+        byProvider: {
+            'Booking.com': number;
+            'Agoda': number;
+            'Traveloka': number;
+            'Trip.com': number;
+            'Expedia': number;
+        };
+    };
+}
+
+// ============ OTA PROVIDER COLORS ============
+
+export const OTA_PROVIDER_COLORS: Record<OtaProvider, string> = {
+    'Booking.com': '#003580',
+    'Agoda': '#5391ff',
+    'Traveloka': '#0194f3',
+    'Trip.com': '#287dfa',
+    'Expedia': '#00355f'
+};

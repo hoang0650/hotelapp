@@ -1,0 +1,308 @@
+<div class="shift-handover-container">
+  <!-- Header -->
+  <div class="header">
+    <h2>Giao ca & Quản lý tiền</h2>
+    <div class="header-actions">
+      <button nz-button nzType="primary" (click)="openHandoverModal()">
+        <i nz-icon nzType="swap"></i> Giao ca
+      </button>
+      <button nz-button (click)="viewHistory()" *ngIf="canViewHistory">
+        <i nz-icon nzType="history"></i> Lịch sử giao ca
+      </button>
+    </div>
+  </div>
+
+  <!-- Current Shift Summary -->
+  <nz-card nzTitle="Thông tin ca hiện tại">
+    <div class="shift-summary">
+      <div class="summary-row">
+        <div class="summary-item">
+          <label>Số tiền ca trước:</label>
+          <span class="amount">{{ formatCurrency(previousShiftAmount) }}</span>
+        </div>
+        <div class="summary-item">
+          <label>Tiền mặt trong ca:</label>
+          <span class="amount positive">{{ formatCurrency(cashInShift) }}</span>
+        </div>
+        <div class="summary-item">
+          <label>Tiền giao quản lý:</label>
+          <span class="amount negative">{{ formatCurrency(managerHandoverAmount) }}</span>
+        </div>
+        <div class="summary-item highlight">
+          <label>Số tiền giao ca:</label>
+          <span class="amount">{{ formatCurrency(handoverAmount) }}</span>
+        </div>
+      </div>
+    </div>
+  </nz-card>
+
+  <!-- Revenue Overview -->
+  <nz-card nzTitle="Tổng quan doanh thu" *ngIf="revenueData" class="mt-4">
+    <div class="revenue-grid">
+      <nz-statistic nzTitle="Tiền mặt" [nzValue]="revenueData.cashTotal" 
+                    [nzValueStyle]="{ color: '#52c41a' }"
+                    [nzPrefix]="'₫'">
+      </nz-statistic>
+      <nz-statistic nzTitle="Chuyển khoản" [nzValue]="revenueData.bankTransferTotal"
+                    [nzValueStyle]="{ color: '#1890ff' }"
+                    [nzPrefix]="'₫'">
+      </nz-statistic>
+      <nz-statistic nzTitle="Cà thẻ" [nzValue]="revenueData.cardTotal"
+                    [nzValueStyle]="{ color: '#722ed1' }"
+                    [nzPrefix]="'₫'">
+      </nz-statistic>
+      <nz-statistic nzTitle="Chi phí" [nzValue]="revenueData.expenseTotal"
+                    [nzValueStyle]="{ color: '#f5222d' }"
+                    [nzPrefix]="'₫'">
+      </nz-statistic>
+      <nz-statistic nzTitle="Tổng doanh thu" [nzValue]="revenueData.totalRevenue"
+                    [nzValueStyle]="{ color: '#faad14', fontWeight: 'bold' }"
+                    [nzPrefix]="'₫'">
+      </nz-statistic>
+    </div>
+    <nz-divider></nz-divider>
+    <p class="formula-note">
+      <i nz-icon nzType="info-circle"></i>
+      <strong>Công thức:</strong> Tổng doanh thu = Tiền mặt + Chuyển khoản + Cà thẻ - Chi phí
+    </p>
+  </nz-card>
+
+  <!-- Handover Modal -->
+  <nz-modal [(nzVisible)]="isModalVisible" 
+            nzTitle="Giao ca"
+            (nzOnCancel)="closeModal()"
+            [nzWidth]="700"
+            [nzFooter]="modalFooter">
+    
+    <ng-container *nzModalContent>
+      <form nz-form [formGroup]="handoverForm" nzLayout="vertical">
+        
+        <!-- Chọn nhân viên nhận ca -->
+        <nz-form-item>
+          <nz-form-label nzRequired>Nhân viên nhận ca</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng chọn nhân viên">
+            <nz-select formControlName="toStaffId" nzPlaceHolder="Chọn nhân viên nhận ca" nzShowSearch>
+              <nz-option *ngFor="let staff of staffList" 
+                         [nzValue]="staff._id" 
+                         [nzLabel]="staff.personalInfo?.firstName + ' ' + staff.personalInfo?.lastName">
+              </nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Mật khẩu xác nhận -->
+        <nz-form-item>
+          <nz-form-label nzRequired>Mật khẩu nhân viên nhận ca</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu">
+            <nz-input-group [nzSuffix]="suffixTemplate">
+              <input nz-input formControlName="toUserPassword" 
+                     [type]="passwordVisible ? 'text' : 'password'" 
+                     placeholder="Nhập mật khẩu để xác nhận" />
+            </nz-input-group>
+            <ng-template #suffixTemplate>
+              <i nz-icon [nzType]="passwordVisible ? 'eye' : 'eye-invisible'" 
+                 (click)="passwordVisible = !passwordVisible"></i>
+            </ng-template>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-divider nzText="Thông tin tiền"></nz-divider>
+
+        <!-- Tiền giao ca -->
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Số tiền ca trước</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="previousShiftAmount" 
+                                 [nzMin]="0" 
+                                 [nzStep]="1000"
+                                 [nzFormatter]="currencyFormatter"
+                                 [nzParser]="currencyParser"
+                                 style="width: 100%">
+                </nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Tiền mặt trong ca</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="cashInShift" 
+                                 [nzMin]="0" 
+                                 [nzStep]="1000"
+                                 [nzFormatter]="currencyFormatter"
+                                 [nzParser]="currencyParser"
+                                 style="width: 100%">
+                </nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Tiền giao quản lý</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="managerHandoverAmount" 
+                                 [nzMin]="0" 
+                                 [nzStep]="1000"
+                                 [nzFormatter]="currencyFormatter"
+                                 [nzParser]="currencyParser"
+                                 style="width: 100%">
+                </nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <!-- Số tiền giao ca (tính tự động) -->
+        <nz-alert nzType="info" [nzMessage]="handoverAmountMessage" nzShowIcon></nz-alert>
+        <ng-template #handoverAmountMessage>
+          <strong>Số tiền giao ca:</strong> {{ formatCurrency(handoverAmount) }}
+          <br>
+          <small>(= Số tiền ca trước + Tiền mặt trong ca - Tiền giao quản lý)</small>
+        </ng-template>
+
+        <nz-divider nzText="Thông tin doanh thu (tham khảo)"></nz-divider>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Tiền mặt</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="cashAmount" 
+                                 [nzMin]="0" 
+                                 [nzStep]="1000"
+                                 style="width: 100%">
+                </nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Chuyển khoản</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="bankTransferAmount" 
+                                 [nzMin]="0" 
+                                 [nzStep]="1000"
+                                 style="width: 100%">
+                </nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Cà thẻ</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="cardPaymentAmount" 
+                                 [nzMin]="0" 
+                                 [nzStep]="1000"
+                                 style="width: 100%">
+                </nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Phiếu chi</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="expenseAmount" 
+                                 [nzMin]="0" 
+                                 [nzStep]="1000"
+                                 style="width: 100%">
+                </nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Phiếu thu</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="incomeAmount" 
+                                 [nzMin]="0" 
+                                 [nzStep]="1000"
+                                 style="width: 100%">
+                </nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <!-- Tổng doanh thu -->
+        <nz-alert nzType="success" [nzMessage]="revenueMessage" nzShowIcon></nz-alert>
+        <ng-template #revenueMessage>
+          <strong>Tổng doanh thu:</strong> {{ formatCurrency(getTotalRevenue()) }}
+          <br>
+          <small>(= Tiền mặt + Chuyển khoản + Cà thẻ - Phiếu chi)</small>
+        </ng-template>
+
+        <!-- Ghi chú -->
+        <nz-form-item class="mt-4">
+          <nz-form-label>Ghi chú</nz-form-label>
+          <nz-form-control>
+            <textarea nz-input formControlName="notes" 
+                      rows="3" 
+                      placeholder="Nhập ghi chú, vấn đề cần bàn giao...">
+            </textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+      </form>
+    </ng-container>
+
+    <ng-template #modalFooter>
+      <button nz-button (click)="closeModal()">Hủy</button>
+      <button nz-button nzType="primary" (click)="submitHandover()" [nzLoading]="isLoading">
+        <i nz-icon nzType="swap"></i> Xác nhận giao ca
+      </button>
+    </ng-template>
+  </nz-modal>
+
+  <!-- History Drawer -->
+  <nz-drawer
+    [nzVisible]="isHistoryVisible"
+    nzTitle="Lịch sử giao ca"
+    [nzWidth]="800"
+    (nzOnClose)="closeHistory()"
+  >
+    <ng-container *nzDrawerContent>
+      <nz-table #historyTable 
+                [nzData]="shiftHistory" 
+                [nzLoading]="isLoading"
+                [nzTotal]="totalItems"
+                [nzPageSize]="pageSize"
+                [nzPageIndex]="currentPage"
+                (nzPageIndexChange)="onPageChange($event)"
+                nzBordered
+                nzSize="small">
+        <thead>
+          <tr>
+            <th>Thời gian</th>
+            <th>Nhân viên giao</th>
+            <th>Nhân viên nhận</th>
+            <th>Số tiền giao ca</th>
+            <th>Tổng doanh thu</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let record of historyTable.data">
+            <td>{{ formatDate(record.handoverTime) }}</td>
+            <td>{{ record.fromStaffName || 'N/A' }}</td>
+            <td>{{ record.toStaffName || 'N/A' }}</td>
+            <td>{{ formatCurrency(record.handoverAmount) }}</td>
+            <td>{{ formatCurrency(record.totalRevenue) }}</td>
+            <td>
+              <nz-tag [nzColor]="getStatusColor(record.status)">
+                {{ getStatusLabel(record.status) }}
+              </nz-tag>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </ng-container>
+  </nz-drawer>
+</div>
+

@@ -1,0 +1,111 @@
+.shift-handover-container {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.shift-summary {
+  padding: 16px 0;
+}
+
+.summary-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  flex: 1;
+  min-width: 200px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.summary-item.highlight {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+}
+
+.summary-item label {
+  display: block;
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.summary-item .amount {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.summary-item .amount.positive {
+  color: #52c41a;
+}
+
+.summary-item .amount.negative {
+  color: #f5222d;
+}
+
+.revenue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.formula-note {
+  color: #666;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mt-4 {
+  margin-top: 24px;
+}
+
+/* Modal styles */
+::ng-deep .ant-input-number {
+  width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .summary-row {
+    flex-direction: column;
+  }
+  
+  .summary-item {
+    width: 100%;
+  }
+  
+  .revenue-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
