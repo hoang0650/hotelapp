@@ -1,49 +1,97 @@
 .user-management-container {
-  padding: 24px;
+  padding: 16px;
 }
 
 .header {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .header h2 {
   margin: 0;
-  color: rgba(0, 0, 0, 0.85);
-  font-weight: 500;
 }
 
-:host ::ng-deep {
-  /* Tùy chỉnh style cho table */
-  .ant-table-thead > tr > th {
-    background-color: #fafafa;
-    font-weight: 500;
-  }
+.header h2 i {
+  margin-right: 8px;
+}
 
-  /* Style cho form trong modal */
-  .ant-form-item {
-    margin-bottom: 16px;
-  }
+.filter-card {
+  background: #fafafa;
+}
 
-  .ant-form-item-label {
+.filter-card .ant-card-body {
+  padding: 16px;
+}
+
+.username {
+  display: inline-flex;
+  align-items: center;
+}
+
+.blocked-row {
+  background-color: #fff1f0 !important;
+  opacity: 0.8;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-muted {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.mb-3 {
+  margin-bottom: 12px;
+}
+
+.mr-2 {
+  margin-right: 8px;
+}
+
+.mr-1 {
+  margin-right: 4px;
+}
+
+.ml-2 {
+  margin-left: 8px;
+}
+
+nz-button-group button {
+  margin-right: 2px;
+}
+
+nz-button-group button:last-child {
+  margin-right: 0;
+}
+
+/* Modal form styling */
+nz-form-item {
+  margin-bottom: 16px;
+}
+
+/* Status badge styling */
+.ant-badge-status-text {
+  margin-left: 4px;
+}
+
+/* Avatar styling */
+nz-avatar {
+  vertical-align: middle;
+}
+
+/* Table row hover effect */
+tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .filter-card .ant-row > div {
+    margin-bottom: 8px;
+  }
+  
+  .text-right {
     text-align: left;
+    margin-top: 8px;
   }
-
-  /* Style cho các tag vai trò */
-  .ant-tag {
-    margin-right: 0;
-  }
-
-  /* Style cho badge trạng thái */
-  .ant-badge-status-text {
-    margin-right: 8px;
-  }
-
-  /* Style cho các nút thao tác */
-  .ant-btn-link {
-    padding: 0 4px;
-  }
-
-  .ant-divider-vertical {
-    margin: 0 8px;
-  }
-} 
+}

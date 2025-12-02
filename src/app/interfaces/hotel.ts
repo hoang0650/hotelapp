@@ -27,7 +27,7 @@ export interface HotelSettings {
   taxRate?: number;
 }
 
-export type HotelStatus = 'active' | 'inactive' | 'maintenance';
+export type HotelStatus = 'active' | 'inactive' | 'maintenance' | 'suspended';
 
 export interface Hotel {
   _id?: string; // Optional vì khi tạo mới chưa có

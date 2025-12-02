@@ -515,9 +515,17 @@ export class TableComponent implements OnInit, OnChanges {
   loadHistory(filterType: string = 'all'): void {
     if (!this.hotelId) return;
     
+    // Đảm bảo hotelId là string, không phải object
+    const hotelIdStr = typeof this.hotelId === 'object' ? (this.hotelId as any)?._id || String(this.hotelId) : this.hotelId;
+    
+    if (!hotelIdStr || hotelIdStr === '[object Object]') {
+      console.error('Invalid hotelId:', this.hotelId);
+      return;
+    }
+    
     this.settingValue.loading = true;
     
-    this.roomService.getRoomHistory(this.hotelId, filterType)
+    this.roomService.getRoomHistory(hotelIdStr, filterType)
       .subscribe({
         next: (response: any) => {
           if (response && response.history) {

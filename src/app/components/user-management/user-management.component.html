@@ -1,148 +1,335 @@
 <div class="user-management-container">
-  <!-- Header với tiêu đề -->
+  <!-- Header -->
   <div nz-row class="header" [nzGutter]="16" nzAlign="middle" nzJustify="space-between">
     <div nz-col>
-      <h2>Quản lý người dùng</h2>
+      <h2>
+        <i nz-icon nzType="team" nzTheme="outline"></i>
+        Quản lý người dùng
+      </h2>
+    </div>
+    <div nz-col>
+      <button nz-button nzType="primary" (click)="showCreateModal()" *ngIf="canCreateUser">
+        <i nz-icon nzType="user-add"></i>
+        Thêm người dùng
+      </button>
     </div>
   </div>
 
+  <!-- Thông báo phân quyền -->
+  <nz-alert 
+    *ngIf="isBusiness && !isAdmin" 
+    nzType="info" 
+    nzMessage="Bạn đang xem danh sách nhân viên thuộc doanh nghiệp của mình."
+    [nzCloseable]="true"
+    class="mb-3">
+  </nz-alert>
+  
+  <nz-alert 
+    *ngIf="isHotelManager && !isAdmin && !isBusiness" 
+    nzType="info" 
+    nzMessage="Bạn đang xem danh sách nhân viên thuộc khách sạn của mình."
+    [nzCloseable]="true"
+    class="mb-3">
+  </nz-alert>
+
+  <!-- Filters -->
+  <nz-card class="filter-card mb-3">
+    <div nz-row [nzGutter]="16" nzAlign="middle">
+      <div nz-col [nzXs]="24" [nzSm]="6">
+        <nz-input-group nzPrefixIcon="search">
+          <input nz-input 
+                 [(ngModel)]="searchText" 
+                 (ngModelChange)="onSearchChange()"
+                 placeholder="Tìm kiếm theo tên, email..." />
+        </nz-input-group>
+      </div>
+      <div nz-col [nzXs]="12" [nzSm]="5">
+        <nz-select [(ngModel)]="selectedRoleFilter" 
+                   (ngModelChange)="onRoleFilterChange($event)"
+                   nzPlaceHolder="Lọc theo vai trò"
+                   style="width: 100%;">
+          <nz-option nzValue="all" nzLabel="Tất cả vai trò"></nz-option>
+          <nz-option *ngFor="let role of manageableRoles" 
+                     [nzValue]="role.value" 
+                     [nzLabel]="role.label">
+          </nz-option>
+        </nz-select>
+      </div>
+      <div nz-col [nzXs]="12" [nzSm]="5">
+        <nz-select [(ngModel)]="selectedStatusFilter" 
+                   (ngModelChange)="onStatusFilterChange($event)"
+                   nzPlaceHolder="Lọc theo trạng thái"
+                   style="width: 100%;">
+          <nz-option nzValue="all" nzLabel="Tất cả trạng thái"></nz-option>
+          <nz-option *ngFor="let status of userStatuses" 
+                     [nzValue]="status.value" 
+                     [nzLabel]="status.label">
+          </nz-option>
+        </nz-select>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="4">
+        <button nz-button (click)="clearFilters()" nzType="default">
+          <i nz-icon nzType="clear"></i>
+          Xóa bộ lọc
+        </button>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="4" class="text-right">
+        <nz-statistic [nzValue]="total" nzTitle="Tổng số" [nzValueStyle]="{ fontSize: '16px' }"></nz-statistic>
+      </div>
+    </div>
+  </nz-card>
+
   <!-- Bảng danh sách users -->
   <nz-table
-    #basicTable
-    [nzData]="users"
+    #userTable
+    [nzData]="filteredUsers"
     [nzLoading]="isLoading"
     [nzTotal]="total"
     [nzPageSize]="pageSize"
     [nzPageIndex]="pageIndex"
+    [nzShowSizeChanger]="true"
+    [nzPageSizeOptions]="[10, 20, 50, 100]"
     (nzPageIndexChange)="onPageIndexChange($event)"
     (nzPageSizeChange)="onPageSizeChange($event)"
-    [nzScroll]="{ x: '1000px' }"
-  >
+    [nzScroll]="{ x: '1200px' }"
+    nzBordered>
     <thead>
       <tr>
         <th nzWidth="60px">STT</th>
         <th nzWidth="150px">Tên đăng nhập</th>
         <th nzWidth="200px">Email</th>
-        <th nzWidth="100px">Vai trò</th>
+        <th nzWidth="150px">Họ tên</th>
+        <th nzWidth="120px">Vai trò</th>
         <th nzWidth="120px">Trạng thái</th>
-        <th nzWidth="150px">Ngày tạo</th>
+        <th nzWidth="150px" *ngIf="isAdmin">Business/Hotel</th>
         <th nzWidth="150px">Đăng nhập cuối</th>
-        <th nzWidth="120px">Thao tác</th>
+        <th nzWidth="140px">Thao tác</th>
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let user of basicTable.data; let i = index">
-        <td>{{ i + 1 + (pageIndex - 1) * pageSize }}</td>
-        <td>{{ user.username }}</td>
-        <td>{{ user.email }}</td>
+      <tr *ngFor="let user of userTable.data; let i = index"
+          [class.blocked-row]="isCascadeBlocked(user)">
+        <td>{{ (pageIndex - 1) * pageSize + i + 1 }}</td>
         <td>
-          <nz-tag [nzColor]="
-            user.role === 'admin' ? 'red' : 
-            user.role === 'business' ? 'blue' :
-            user.role === 'hotel' ? 'purple' :
-            user.role === 'staff' ? 'orange' : 'green'
-          ">
-            {{ user.role | titlecase }}
+          <span class="username">
+            <nz-avatar [nzSize]="24" nzIcon="user" class="mr-2"></nz-avatar>
+            {{ user.username }}
+          </span>
+          <nz-tag *ngIf="user._id === currentUser?._id" nzColor="processing" class="ml-2">Bạn</nz-tag>
+        </td>
+        <td nzEllipsis>{{ user.email }}</td>
+        <td>{{ user.fullName || '-' }}</td>
+        <td>
+          <nz-tag [nzColor]="getRoleColor(user.role)">
+            {{ getRoleLabel(user.role) }}
           </nz-tag>
         </td>
         <td>
-          <nz-tag [nzColor]="user.status === 'active' ? 'success' : (user.status === 'suspended' ? 'error' : 'warning')">
-            {{ user.status === 'active' ? 'Hoạt động' : (user.status === 'suspended' ? 'Đã khóa' : 'Không hoạt động') }}
-          </nz-tag>
+          <nz-badge 
+            [nzStatus]="getStatusColor(user.status)" 
+            [nzText]="getStatusLabel(user.status)">
+          </nz-badge>
         </td>
-        <td>{{ user.createdAt | date:'short' }}</td>
-        <td>{{ user.lastLogin | date:'short' }}</td>
+        <td *ngIf="isAdmin">
+          <span *ngIf="user.businessId" nz-tooltip [nzTooltipTitle]="'Business ID: ' + user.businessId">
+            <i nz-icon nzType="bank" class="mr-1"></i>
+          </span>
+          <span *ngIf="user.hotelId" nz-tooltip [nzTooltipTitle]="'Hotel ID: ' + user.hotelId">
+            <i nz-icon nzType="home" class="mr-1"></i>
+          </span>
+          <span *ngIf="!user.businessId && !user.hotelId">-</span>
+        </td>
+        <td>{{ formatDate(user.lastLogin) }}</td>
         <td>
-          <a nz-button nzType="link" nzSize="small" (click)="showEditModal(user)">
-            <i nz-icon nzType="edit"></i>
-          </a>
-          <nz-divider nzType="vertical"></nz-divider>
-          <a 
-            nz-button 
-            nzType="link" 
-            nzDanger 
-            nzSize="small"
-            (click)="deleteUser(user)"
-          >
-            <i nz-icon nzType="delete"></i>
-          </a>
+          <nz-button-group>
+            <!-- Edit -->
+            <button nz-button nzType="default" nzSize="small" 
+                    (click)="showEditModal(user)"
+                    *ngIf="canManageUser(user)"
+                    nz-tooltip nzTooltipTitle="Chỉnh sửa">
+              <i nz-icon nzType="edit"></i>
+            </button>
+            
+            <!-- Block/Suspend -->
+            <button nz-button nzType="default" nzSize="small" nzDanger
+                    (click)="blockUser(user)"
+                    *ngIf="canBlockUser(user) && user.status !== 'suspended'"
+                    nz-tooltip nzTooltipTitle="Khóa tài khoản">
+              <i nz-icon nzType="lock"></i>
+            </button>
+            
+            <!-- Activate -->
+            <button nz-button nzType="primary" nzSize="small"
+                    (click)="activateUser(user)"
+                    *ngIf="canManageUser(user) && (user.status === 'suspended' || user.status === 'inactive')"
+                    nz-tooltip nzTooltipTitle="Kích hoạt lại">
+              <i nz-icon nzType="unlock"></i>
+            </button>
+            
+            <!-- Delete -->
+            <button nz-button nzType="text" nzSize="small" nzDanger
+                    (click)="deleteUser(user)"
+                    *ngIf="canDeleteUser(user)"
+                    nz-tooltip nzTooltipTitle="Xóa người dùng">
+              <i nz-icon nzType="delete"></i>
+            </button>
+          </nz-button-group>
+          
+          <!-- Không có quyền -->
+          <span *ngIf="!canManageUser(user)" class="text-muted">
+            <i nz-icon nzType="minus"></i>
+          </span>
         </td>
       </tr>
     </tbody>
   </nz-table>
 
-  <!-- Modal chỉnh sửa -->
+  <!-- Modal tạo/chỉnh sửa user -->
   <nz-modal
     [(nzVisible)]="isVisible"
-    [nzTitle]="editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng'"
+    [nzTitle]="editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'"
+    [nzWidth]="600"
     (nzOnCancel)="handleCancel()"
     (nzOnOk)="handleOk()"
     [nzOkLoading]="isLoading"
-  >
+    [nzOkDisabled]="userForm.invalid">
     <ng-container *nzModalContent>
-      <form nz-form [formGroup]="userForm">
+      <form nz-form [formGroup]="userForm" nzLayout="vertical">
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Tên đăng nhập</nz-form-label>
+              <nz-form-control nzErrorTip="Tên đăng nhập tối thiểu 3 ký tự">
+                <input nz-input formControlName="username" placeholder="Nhập tên đăng nhập" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Email</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
+                <input nz-input formControlName="email" placeholder="Nhập email" type="email" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Họ và tên</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="fullName" placeholder="Nhập họ và tên" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Số điện thoại</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Vai trò</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng chọn vai trò">
+                <nz-select formControlName="role" nzPlaceHolder="Chọn vai trò">
+                  <nz-option *ngFor="let role of manageableRoles" 
+                             [nzValue]="role.value" 
+                             [nzLabel]="role.label">
+                  </nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>Trạng thái</nz-form-label>
+              <nz-form-control>
+                <nz-select formControlName="status" nzPlaceHolder="Chọn trạng thái">
+                  <nz-option *ngFor="let status of userStatuses" 
+                             [nzValue]="status.value" 
+                             [nzLabel]="status.label"
+                             [nzDisabled]="status.value === 'deleted'">
+                  </nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tên đăng nhập</nz-form-label>
-          <nz-form-control [nzSpan]="14" nzErrorTip="Vui lòng nhập tên đăng nhập!">
-            <input nz-input formControlName="username" placeholder="Nhập tên đăng nhập" />
+          <nz-form-label [nzRequired]="!editingUser">
+            Mật khẩu
+            <span *ngIf="editingUser" class="text-muted ml-2">(để trống nếu không đổi)</span>
+          </nz-form-label>
+          <nz-form-control [nzErrorTip]="editingUser ? '' : 'Mật khẩu tối thiểu 6 ký tự'">
+            <nz-input-group [nzSuffix]="passwordSuffix">
+              <input nz-input 
+                     formControlName="password" 
+                     [type]="passwordVisible ? 'text' : 'password'"
+                     placeholder="Nhập mật khẩu" />
+            </nz-input-group>
+            <ng-template #passwordSuffix>
+              <i nz-icon 
+                 [nzType]="passwordVisible ? 'eye-invisible' : 'eye'" 
+                 (click)="passwordVisible = !passwordVisible"
+                 style="cursor: pointer;"></i>
+            </ng-template>
           </nz-form-control>
         </nz-form-item>
 
+        <!-- Business/Hotel ID - Chỉ hiển thị cho Admin -->
+        <div *ngIf="isAdmin" nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Business ID</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="businessId" placeholder="ID của Business" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>Hotel ID</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="hotelId" placeholder="ID của Hotel" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <!-- Two Factor Auth -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Email</nz-form-label>
-          <nz-form-control [nzSpan]="14" nzErrorTip="Vui lòng nhập email hợp lệ!">
-            <input nz-input formControlName="email" placeholder="Nhập email" />
+          <nz-form-control>
+            <label nz-checkbox formControlName="twoFactorEnabled">
+              <span>Bật xác thực hai yếu tố (2FA)</span>
+            </label>
           </nz-form-control>
         </nz-form-item>
 
-        <nz-form-item>
-          <nz-form-label [nzSpan]="6">Vai trò</nz-form-label>
-          <nz-form-control [nzSpan]="14" nzErrorTip="Vui lòng chọn vai trò!">
-            <nz-select formControlName="role">
-              <nz-option nzValue="admin" nzLabel="Admin"></nz-option>
-              <nz-option nzValue="business" nzLabel="Business"></nz-option>
-              <nz-option nzValue="hotel" nzLabel="Hotel"></nz-option>
-              <nz-option nzValue="staff" nzLabel="Staff"></nz-option>
-              <nz-option nzValue="customer" nzLabel="Customer"></nz-option>
-            </nz-select>
-          </nz-form-control>
-        </nz-form-item>
+        <!-- Cascade blocking warning -->
+        <nz-alert 
+          *ngIf="userForm.get('role')?.value === 'business' && userForm.get('status')?.value === 'suspended'"
+          nzType="warning"
+          nzShowIcon
+          nzMessage="Cảnh báo"
+          nzDescription="Khi khóa tài khoản Business, tất cả khách sạn và nhân viên thuộc business này sẽ bị tạm ngưng hoạt động.">
+        </nz-alert>
 
-        <nz-form-item>
-          <nz-form-label [nzSpan]="6">Trạng thái</nz-form-label>
-          <nz-form-control [nzSpan]="14">
-            <nz-button-group>
-              <button nz-button 
-                      nz-dropdown 
-                      [nzDropdownMenu]="menu" 
-                      nzPlacement="bottomRight">
-                <span>Trạng thái</span>
-                <i nz-icon nzType="down"></i>
-              </button>
-            </nz-button-group>
-            <nz-dropdown-menu #menu="nzDropdownMenu">
-              <ul nz-menu>
-                <li nz-menu-item (click)="updateUserDisplayStatus(selectedUser!, 'active')" 
-                    *ngIf="selectedUser?.status !== 'active'">
-                  <i nz-icon nzType="check-circle" nzTheme="outline"></i> Kích hoạt
-                </li>
-                <li nz-menu-item (click)="updateUserDisplayStatus(selectedUser!, 'inactive')" 
-                    *ngIf="selectedUser?.status !== 'inactive'">
-                  <i nz-icon nzType="minus-circle" nzTheme="outline"></i> Vô hiệu hóa
-                </li>
-                <li nz-menu-item (click)="updateUserDisplayStatus(selectedUser!, 'suspended')" 
-                    *ngIf="selectedUser?.status !== 'suspended'">
-                  <i nz-icon nzType="pause-circle" nzTheme="outline"></i> Đình chỉ
-                </li>
-                <li nz-menu-item nzDanger (click)="deleteUser(selectedUser!)" 
-                    *ngIf="selectedUser?.status !== 'deleted'">
-                  <i nz-icon nzType="delete" nzTheme="outline"></i> Xóa người dùng
-                </li>
-              </ul>
-            </nz-dropdown-menu>
-          </nz-form-control>
-        </nz-form-item>
+        <nz-alert 
+          *ngIf="userForm.get('role')?.value === 'hotel' && userForm.get('status')?.value === 'suspended'"
+          nzType="warning"
+          nzShowIcon
+          nzMessage="Cảnh báo"
+          nzDescription="Khi khóa tài khoản Hotel Manager, tất cả nhân viên thuộc hotel này sẽ bị tạm ngưng hoạt động.">
+        </nz-alert>
       </form>
     </ng-container>
   </nz-modal>
-</div> 
+</div>

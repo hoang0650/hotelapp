@@ -231,21 +231,20 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
   // Tải toàn bộ lịch sử (không phân trang ở đây nữa)
   loadRoomHistory() {
     this.isLoading = true;
-    const params: any = {};
-    if (this.roomId) {
-      params.roomId = this.roomId;
-    }
+    
+    // Đảm bảo hotelId là string hợp lệ
+    let hotelIdStr: string | undefined;
     if (this.hotelId) {
-      params.hotelId = this.hotelId;
+      hotelIdStr = typeof this.hotelId === 'object' ? (this.hotelId as any)?._id || String(this.hotelId) : this.hotelId;
+      if (hotelIdStr === '[object Object]') {
+        console.error('Invalid hotelId:', this.hotelId);
+        this.isLoading = false;
+        return;
+      }
     }
 
-    // Thay đổi: Lấy hết lịch sử nếu có thể, hoặc cần API hỗ trợ lấy theo khoảng thời gian
-    // Giả sử API getRoomHistory có thể trả về toàn bộ hoặc cần sửa đổi
-    // Tạm thời vẫn dùng phân trang nhưng lấy một lượng lớn để tính toán chart
-    params.page = 1;
-    params.limit = 1000; // Lấy nhiều bản ghi để tính toán chart
-
-    this.roomsService.getRoomHistory(params).subscribe({
+    // Gọi API với params đúng format (hotelId, filterType, page, limit)
+    this.roomsService.getRoomHistory(hotelIdStr, 'all', 1, 1000).subscribe({
       next: (data: { history: ExtendedBookingHistory[]; totalPages: number; currentPage: number; totalPayment: number; }) => {
         console.log('API Response:', data);
         // Xử lý và chuẩn hóa dữ liệu gốc - BỎ BỘ LỌC checkout

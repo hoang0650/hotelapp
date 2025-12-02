@@ -1,50 +1,94 @@
-.nz-form-item {
-    display: flex;
+.table-container {
+  overflow-x: auto;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.header-section h2 {
+  margin: 0;
+}
+
+.editable-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.editable-row:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.blocked-row {
+  opacity: 0.7;
+  background-color: rgba(255, 0, 0, 0.03);
+}
+
+.blocked-row:hover {
+  background-color: rgba(255, 0, 0, 0.05);
+}
+
+.hotel-name {
+  font-weight: 500;
+}
+
+.mt-3 {
+  margin-top: 1rem;
+}
+
+.mt-4 {
+  margin-top: 1.5rem;
+}
+
+.mb-3 {
+  margin-bottom: 1rem;
+}
+
+.mb-4 {
+  margin-bottom: 1.5rem;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
+}
+
+nz-button-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+nz-form-item {
+  margin-bottom: 16px;
+}
+
+nz-card + nz-card {
+  margin-top: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-section {
     flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
   
-  .nz-form-label {
-    margin-bottom: 8px;
+  nz-button-group {
+    flex-wrap: wrap;
   }
-  
-  .nz-form-control {
-    flex: 1;
-  }
-  
-  @media (max-width: 767px) {
-    .nz-form-item {
-      margin-bottom: 12px;
-    }
-  
-    .nz-form-label, .nz-form-control input {
-      font-size: 14px;
-    }
-  
-    button {
-      width: 100%;
-      font-size: 14px;
-    }
-  }
+}
 
-  .editable-cell {
-    position: relative;
-    padding: 5px 12px;
-    cursor: pointer;
-  }
-  
-  .editable-row:hover .editable-cell {
-    border: 1px solid #d9d9d9;
-    border-radius: 4px;
-    padding: 4px 11px;
-  }
+/* Drawer styles */
+nz-descriptions-item {
+  padding: 8px 0;
+}
 
-  .table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch; /* Cải thiện hiệu suất cuộn trên thiết bị cảm ứng */
-  }
-  
-  /* Điều chỉnh kiểu dáng bảng để phù hợp với các màn hình nhỏ */
-  .nz-table {
-    min-width: 600px; /* Kích thước tối thiểu của bảng */
-  }
-  
+/* Rating alignment */
+nz-rate {
+  display: inline-block;
+  vertical-align: middle;
+}

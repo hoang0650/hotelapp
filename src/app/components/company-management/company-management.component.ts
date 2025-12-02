@@ -4,12 +4,12 @@ import { BusinessService } from '../../services/business.service';
 import { Business, BusinessAddress, BusinessContactInfo } from '../../interfaces/business';
 import { Hotel } from '../../interfaces/hotel';
 import { HotelService } from '../../services/hotel.service';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, PermissionRules } from '../../services/auth.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { UserService } from '../../services/user.service';
 import { User } from '../../interfaces/user';
 
-// Define BusinessStatus type here, before it's used in statusOptions
 const businessStatusesList = ['pending', 'active', 'inactive', 'suspended'] as const;
 type BusinessStatus = typeof businessStatusesList[number];
 
@@ -24,11 +24,12 @@ export class CompanyManagementComponent implements OnInit {
   selectedBusiness: Business | null = null;
   availableHotels: Hotel[] = [];
   isLoading = false;
-  isAdmin = false;
   editId: string | null = null;
   selectedViewBusiness: Business | null = null;
-  
-  // Use the globally defined BusinessStatus type
+  currentUser: User | null = null;
+  permissions: PermissionRules | null = null;
+
+  // Trạng thái hiển thị
   statusOptions: { value: BusinessStatus, label: string }[] = [
     { value: 'pending', label: 'Chờ duyệt' },
     { value: 'active', label: 'Hoạt động' },
@@ -36,7 +37,6 @@ export class CompanyManagementComponent implements OnInit {
     { value: 'suspended', label: 'Bị đình chỉ' }
   ];
 
-  // Make businessStatusesList available to the component instance if needed, e.g., for template
   readonly businessStatuses = businessStatusesList;
 
   constructor(
@@ -45,6 +45,7 @@ export class CompanyManagementComponent implements OnInit {
     private fb: FormBuilder,
     private authService: AuthService,
     private message: NzMessageService,
+    private modal: NzModalService,
     private userService: UserService
   ) { 
     this.businessForm = this.fb.group({
@@ -69,22 +70,143 @@ export class CompanyManagementComponent implements OnInit {
   }
 
   ngOnInit(): void { 
-    this.userService.getUserInfo().subscribe(
-      (user: User) => {
-        this.isAdmin = user && (user.role === 'admin' || user.role === 'superadmin');
-        this.loadBusinesses();
-        this.loadHotels();
-      },
-      (error: any) => {
-        console.error('Error getting user info:', error);
-        this.message.error('Không thể xác thực người dùng, một số chức năng có thể bị hạn chế.');
-        this.loadBusinesses();
-        this.loadHotels();
-      }
-    );
+    this.currentUser = this.authService.getCurrentUser();
+    this.permissions = this.authService.getPermissionRules();
+    this.loadBusinesses();
+    this.loadHotels();
   }
 
+  // ============ KIỂM TRA QUYỀN ============
+
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.authService.isSuperAdmin();
+  }
+
+  get isBusiness(): boolean {
+    return this.authService.isBusiness();
+  }
+
+  get canManageBusinesses(): boolean {
+    return this.permissions?.canManageBusinesses || false;
+  }
+
+  get canCreateBusiness(): boolean {
+    // Chỉ admin mới có thể tạo business mới
+    return this.isAdmin;
+  }
+
+  get canEditBusiness(): boolean {
+    // Admin có thể sửa tất cả, business chỉ sửa của mình
+    return this.isAdmin || this.isBusiness;
+  }
+
+  /**
+   * Kiểm tra có thể quản lý business cụ thể không
+   */
+  canManage(businessId?: string): boolean {
+    if (!businessId) return false;
+    if (!this.currentUser) return false;
+    
+    // Admin có quyền quản lý tất cả
+    if (this.isAdmin) return true;
+    
+    // Business chỉ quản lý được business của mình
+    if (this.isBusiness) {
+      return this.currentUser.businessId === businessId;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Kiểm tra có thể block business không
+   * - Admin không thể bị block
+   * - Chỉ admin mới có quyền block
+   */
+  canBlockBusiness(business: Business): boolean {
+    if (!this.isAdmin) return false;
+    // Không thể block business đang active của admin
+    return true;
+  }
+
+  // ============ LOAD DATA ============
+
+  loadHotels(): void {
+    this.isLoading = true;
+    this.hotelService.getHotels().subscribe({
+      next: (data) => {
+        if (this.isAdmin) {
+          this.availableHotels = data;
+        } else if (this.isBusiness && this.currentUser?.businessId) {
+          // Business chỉ thấy hotels thuộc business của mình
+          const businessHotelIds = this.getBusinessHotelIds();
+          this.availableHotels = data.filter(hotel => 
+            hotel._id && businessHotelIds.includes(hotel._id)
+          );
+        } else {
+          this.availableHotels = [];
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error fetching hotels:', error);
+        this.message.error('Không thể tải danh sách khách sạn');
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private getBusinessHotelIds(): string[] {
+    const userBusiness = this.businesses.find(b => b._id === this.currentUser?.businessId);
+    if (!userBusiness || !userBusiness.hotels) return [];
+    
+    return userBusiness.hotels
+      .map(h => typeof h === 'string' ? h : (h as Hotel)._id)
+      .filter((id): id is string => id !== undefined);
+  }
+
+  loadBusinesses(): void {
+    this.isLoading = true;
+    this.businessService.getBusinesses().subscribe({
+      next: (data: Business[]) => {
+        if (this.isAdmin) {
+          // Admin thấy tất cả businesses
+          this.businesses = data;
+        } else if (this.isBusiness && this.currentUser?.businessId) {
+          // Business chỉ thấy business của mình
+          this.businesses = data.filter(business => 
+            business._id === this.currentUser?.businessId
+          );
+        } else {
+          this.businesses = [];
+        }
+        
+        // Reload hotels sau khi load businesses (để filter đúng)
+        if (!this.isAdmin) {
+          this.loadHotels();
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error fetching businesses:', error);
+        this.message.error(error.message || 'Không thể tải danh sách doanh nghiệp');
+        this.isLoading = false;
+      }
+    });
+  }
+
+  // ============ FORM ACTIONS ============
+
   startEdit(businessId: string): void {
+    if (!this.canManage(businessId)) {
+      this.message.warning('Bạn không có quyền chỉnh sửa doanh nghiệp này');
+      return;
+    }
+
     this.editId = businessId;
     const businessToEdit = this.businesses.find(b => b._id === businessId);
     if (businessToEdit) {
@@ -105,7 +227,9 @@ export class CompanyManagementComponent implements OnInit {
           email: this.selectedBusiness.contactInfo?.email,
           website: this.selectedBusiness.contactInfo?.website
         },
-        hotels: Array.isArray(this.selectedBusiness.hotels) ? this.selectedBusiness.hotels.map(h => typeof h === 'string' ? h : (h as Hotel)._id) : [],
+        hotels: Array.isArray(this.selectedBusiness.hotels) 
+          ? this.selectedBusiness.hotels.map(h => typeof h === 'string' ? h : (h as Hotel)._id) 
+          : [],
         status: this.selectedBusiness.status || 'pending'
       });
     }
@@ -124,113 +248,43 @@ export class CompanyManagementComponent implements OnInit {
       hotels: []
     });
   }
- 
-  loadHotels(): void {
-    this.isLoading = true;
-    this.hotelService.getHotels().subscribe(
-      data => {
-        if (this.isAdmin) {
-          this.availableHotels = data;
-        } else {
-          const currentUserId = this.authService.getCurrentUser()?._id;
-          if (currentUserId) {
-            const ownerBusinesses = this.businesses.filter(b => 
-              b.ownerId === currentUserId || 
-              (typeof b.ownerId === 'object' && b.ownerId?._id === currentUserId)
-            );
-
-            if (this.selectedBusiness && 
-                (this.selectedBusiness.ownerId === currentUserId || 
-                 (typeof this.selectedBusiness.ownerId === 'object' && this.selectedBusiness.ownerId?._id === currentUserId))) {
-              
-              const selectedBusinessHotelIds = (this.selectedBusiness.hotels || [])
-                .map(h => typeof h === 'string' ? h : (h as Hotel)._id)
-                .filter(id => id !== undefined) as string[]; // Lọc undefined và ép kiểu
-
-              this.availableHotels = data.filter(hotel => 
-                hotel._id && selectedBusinessHotelIds.includes(hotel._id)
-              );
-
-            } else if (ownerBusinesses.length > 0) {
-              const ownedHotelIds = ownerBusinesses.reduce((acc, curr) => {
-                const hotelIdsForCurrentBusiness = (curr.hotels || [])
-                  .map(h => typeof h === 'string' ? h : (h as Hotel)._id)
-                  .filter(id => id !== undefined) as string[]; // Lọc undefined và ép kiểu
-                return acc.concat(hotelIdsForCurrentBusiness);
-              }, [] as string[]);
-              
-              this.availableHotels = data.filter(hotel => 
-                hotel._id && ownedHotelIds.includes(hotel._id)
-              );
-            } else {
-              this.availableHotels = []; 
-            }
-          } else {
-            this.availableHotels = [];
-          }
-        }
-        this.isLoading = false;
-      },
-      (error: any) => {
-        console.error('Error fetching hotels:', error);
-        this.message.error('Không thể tải danh sách khách sạn');
-        this.isLoading = false;
-      }
-    );
-  }
-  
-  loadBusinesses(): void {
-    this.isLoading = true;
-    this.businessService.getBusinesses().subscribe(
-      (data: Business[]) => {
-        if (this.isAdmin) {
-          this.businesses = data;
-        } else {
-          const currentUser = this.authService.getCurrentUser();
-          if (currentUser && currentUser._id) {
-            this.businesses = data.filter(business => business.ownerId === currentUser._id || (typeof business.ownerId === 'object' && business.ownerId?._id === currentUser._id) );
-          } else {
-            this.businesses = [];
-          }
-        }
-        // After businesses are loaded, reload hotels to apply filtering based on loaded businesses if necessary
-        // This ensures hotel list is correct for non-admin users if their view depends on their businesses.
-        if (!this.isAdmin) {
-            this.loadHotels(); 
-        }
-        this.isLoading = false;
-      },
-      (error: any) => {
-        console.error('Error fetching businesses:', error);
-        this.message.error(error.message || 'Không thể tải danh sách doanh nghiệp');
-        this.isLoading = false;
-      }
-    );
-  }
 
   createBusiness(): void {
+    if (!this.canCreateBusiness) {
+      this.message.error('Bạn không có quyền tạo doanh nghiệp mới');
+      return;
+    }
+
     if (this.businessForm.invalid) {
       this.markFormGroupTouched(this.businessForm);
       this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
       return;
     }
-    this.isLoading = true;
-    const businessData: Partial<Business> = this.businessForm.value;
 
-    this.businessService.createBusiness(businessData).subscribe(
-      (createdBusiness: Business) => {
-        this.businesses.push(createdBusiness);
-        this.businesses = [...this.businesses];
+    this.isLoading = true;
+    const businessData: Partial<Business> = {
+      ...this.businessForm.value,
+      ownerId: this.currentUser?._id // Thêm ownerId từ user hiện tại
+    };
+
+    console.log('Creating business with data:', businessData);
+    console.log('Current user:', this.currentUser);
+
+    this.businessService.createBusiness(businessData).subscribe({
+      next: (createdBusiness: Business) => {
+        this.businesses = [...this.businesses, createdBusiness];
         this.stopEdit();
         this.message.success('Đã tạo doanh nghiệp thành công');
         this.isLoading = false;
       },
-      (error: any) => {
+      error: (error) => {
         console.error('Error creating business:', error);
-        this.message.error(error.error?.message || error.message || 'Không thể tạo doanh nghiệp');
+        // Hiển thị lỗi chi tiết hơn
+        const errorMessage = error.error?.message || error.statusText || error.message || 'Không thể tạo doanh nghiệp';
+        this.message.error(errorMessage);
         this.isLoading = false;
       }
-    );
+    });
   }
 
   updateBusiness(): void {
@@ -238,6 +292,12 @@ export class CompanyManagementComponent implements OnInit {
       this.message.error('Không có doanh nghiệp nào được chọn để cập nhật.');
       return;
     }
+
+    if (!this.canManage(this.editId)) {
+      this.message.error('Bạn không có quyền cập nhật doanh nghiệp này');
+      return;
+    }
+
     if (this.businessForm.invalid) {
       this.markFormGroupTouched(this.businessForm);
       this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
@@ -247,17 +307,17 @@ export class CompanyManagementComponent implements OnInit {
     this.isLoading = true;
     const businessDataValue = this.businessForm.value;
     const updatedBusinessData: Partial<Business> = {
-        name: businessDataValue.name,
-        legalName: businessDataValue.legalName,
-        taxId: businessDataValue.taxId,
-        address: businessDataValue.address as BusinessAddress,
-        contactInfo: businessDataValue.contactInfo as BusinessContactInfo,
-        hotels: businessDataValue.hotels,
-        status: businessDataValue.status
+      name: businessDataValue.name,
+      legalName: businessDataValue.legalName,
+      taxId: businessDataValue.taxId,
+      address: businessDataValue.address as BusinessAddress,
+      contactInfo: businessDataValue.contactInfo as BusinessContactInfo,
+      hotels: businessDataValue.hotels,
+      status: this.isAdmin ? businessDataValue.status : undefined // Chỉ admin mới có thể thay đổi status
     };
 
-    this.businessService.updateBusiness(this.editId, updatedBusinessData).subscribe(
-      (updatedBusiness: Business) => {
+    this.businessService.updateBusiness(this.editId, updatedBusinessData).subscribe({
+      next: (updatedBusiness: Business) => {
         const index = this.businesses.findIndex(b => b._id === this.editId);
         if (index !== -1) {
           this.businesses[index] = updatedBusiness;
@@ -267,40 +327,126 @@ export class CompanyManagementComponent implements OnInit {
         this.message.success('Đã cập nhật doanh nghiệp thành công');
         this.isLoading = false;
       },
-      (error: any) => {
+      error: (error) => {
         console.error('Error updating business:', error);
-        this.message.error(error.error?.message || error.message ||'Không thể cập nhật doanh nghiệp');
+        this.message.error(error.error?.message || error.message || 'Không thể cập nhật doanh nghiệp');
         this.isLoading = false;
       }
-    );
+    });
   }
 
   deleteBusiness(id: string): void {
-    this.businessService.deleteBusiness(id).subscribe(
-      () => {
-        this.businesses = this.businesses.filter(b => b._id !== id);
-        this.businesses = [...this.businesses];
-        this.message.success('Đã xóa doanh nghiệp thành công');
-        if (this.selectedBusiness?._id === id) {
-          this.stopEdit();
+    if (!this.isAdmin) {
+      this.message.error('Chỉ admin mới có quyền xóa doanh nghiệp');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: 'Xác nhận xóa doanh nghiệp',
+      nzContent: 'Bạn có chắc chắn muốn xóa doanh nghiệp này? Hành động này sẽ ảnh hưởng đến tất cả khách sạn và nhân viên thuộc doanh nghiệp.',
+      nzOkText: 'Xóa',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.businessService.deleteBusiness(id).subscribe({
+          next: () => {
+            this.businesses = this.businesses.filter(b => b._id !== id);
+            this.message.success('Đã xóa doanh nghiệp thành công');
+            if (this.selectedBusiness?._id === id) {
+              this.stopEdit();
+            }
+            if (this.selectedViewBusiness?._id === id) {
+              this.closeBusinessDetails();
+            }
+          },
+          error: (error) => {
+            console.error('Error deleting business:', error);
+            this.message.error(error.error?.message || error.message || 'Không thể xóa doanh nghiệp');
+          }
+        });
+      },
+      nzCancelText: 'Hủy'
+    });
+  }
+
+  // ============ STATUS MANAGEMENT ============
+
+  /**
+   * Block/Suspend business - cascade ảnh hưởng tất cả cấp dưới
+   */
+  blockBusiness(businessId: string): void {
+    if (!this.isAdmin) {
+      this.message.error('Chỉ admin mới có quyền đình chỉ doanh nghiệp');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: 'Xác nhận đình chỉ doanh nghiệp',
+      nzContent: `<b style="color: red;">Cảnh báo:</b> Khi đình chỉ doanh nghiệp, tất cả khách sạn, phòng và nhân viên thuộc doanh nghiệp này sẽ không thể hoạt động.`,
+      nzOkText: 'Đình chỉ',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.updateBusinessStatusLogic(businessId, 'suspended', 'Doanh nghiệp và tất cả cấp dưới đã bị đình chỉ.');
+      },
+      nzCancelText: 'Hủy'
+    });
+  }
+
+  updateBusinessStatusLogic(businessId: string, status: BusinessStatus, successMessage: string): void {
+    if (!this.isAdmin) {
+      this.message.error('Bạn không có quyền thay đổi trạng thái doanh nghiệp');
+      return;
+    }
+
+    this.isLoading = true;
+    this.businessService.updateBusinessStatus(businessId, status).subscribe({
+      next: (updatedBusiness: Business) => {
+        const index = this.businesses.findIndex(b => b._id === businessId);
+        if (index !== -1) {
+          this.businesses[index] = updatedBusiness;
+          this.businesses = [...this.businesses];
+        }
+        this.message.success(successMessage || `Trạng thái doanh nghiệp được cập nhật thành ${this.getStatusLabel(status)}`);
+        this.isLoading = false;
+        
+        if (this.selectedViewBusiness?._id === businessId) {
+          this.selectedViewBusiness = { ...this.selectedViewBusiness, status };
+        }
+        if (this.editId === businessId) {
+          this.businessForm.get('status')?.setValue(status);
         }
       },
-      (error: any) => {
-        console.error('Error deleting business:', error);
-        this.message.error(error.error?.message || error.message || 'Không thể xóa doanh nghiệp');
+      error: (error) => {
+        console.error('Error updating business status:', error);
+        this.message.error(error.error?.message || error.message || 'Không thể cập nhật trạng thái doanh nghiệp');
+        this.isLoading = false;
       }
-    );
+    });
+  }
+
+  // ============ VIEW HELPERS ============
+
+  viewBusinessDetails(business: Business): void {
+    if (!this.canManage(business._id)) {
+      // Vẫn cho xem chi tiết nhưng không cho thao tác
+    }
+    this.selectedViewBusiness = business;
+  }
+
+  closeBusinessDetails(): void {
+    this.selectedViewBusiness = null;
   }
 
   getHotelArray(business: Business): Hotel[] {
     if (business.hotels && Array.isArray(business.hotels)) {
-        return business.hotels.map(hotelOrId => {
-            if (typeof hotelOrId === 'object' && hotelOrId !== null && (hotelOrId as Hotel).name) {
-                return hotelOrId as Hotel;
-            } 
-            const foundHotel = this.availableHotels.find(h => h._id === hotelOrId);
-            return foundHotel || ({ _id: hotelOrId as string, name: 'Khách sạn không rõ (ID: ' + hotelOrId + ')' } as unknown as Hotel); 
-        });
+      return business.hotels.map(hotelOrId => {
+        if (typeof hotelOrId === 'object' && hotelOrId !== null && (hotelOrId as Hotel).name) {
+          return hotelOrId as Hotel;
+        } 
+        const foundHotel = this.availableHotels.find(h => h._id === hotelOrId);
+        return foundHotel || ({ _id: hotelOrId as string, name: 'Khách sạn không rõ (ID: ' + hotelOrId + ')' } as unknown as Hotel); 
+      });
     }
     return [];
   }
@@ -313,64 +459,30 @@ export class CompanyManagementComponent implements OnInit {
     return hotelIdOrObject.name; 
   }
 
-  canManage(businessId?: string): boolean {
-    if (!businessId) return false;
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) return false;
-    if (this.isAdmin) return true;
-    const business = this.businesses.find(b => b._id === businessId);
-    return !!business && (business.ownerId === currentUser._id || (typeof business.ownerId === 'object' && business.ownerId?._id === currentUser._id));
-  }
-
-  viewBusinessDetails(business: Business): void {
-    this.selectedViewBusiness = business;
-  }
-
-  closeBusinessDetails(): void {
-    this.selectedViewBusiness = null;
-  }
-
-  approveBusiness(businessId: string): void {
-    this.updateBusinessStatusLogic(businessId, 'active', 'Doanh nghiệp đã được duyệt.');
-  }
-
-  rejectBusiness(businessId: string): void {
-    this.updateBusinessStatusLogic(businessId, 'inactive', 'Doanh nghiệp đã bị từ chối.'); 
-  }
-
   getStatusLabel(statusValue?: BusinessStatus): string {
     if (!statusValue) return 'Không xác định';
     const option = this.statusOptions.find(opt => opt.value === statusValue);
     return option ? option.label : statusValue;
   }
 
-  updateBusinessStatusLogic(businessId: string, status: BusinessStatus, successMessage: string): void {
-    this.isLoading = true;
-    this.businessService.updateBusinessStatus(businessId, status).subscribe(
-      (updatedBusiness: Business) => {
-        const index = this.businesses.findIndex(b => b._id === businessId);
-        if (index !== -1) {
-          this.businesses[index] = updatedBusiness;
-          this.businesses = [...this.businesses];
-        }
-        this.message.success(successMessage || `Trạng thái doanh nghiệp được cập nhật thành ${this.getStatusLabel(status)}`);
-        this.isLoading = false;
-        if (this.selectedViewBusiness?._id === businessId) {
-          this.selectedViewBusiness.status = status;
-        }
-        if (this.editId === businessId && this.businessForm.get('status')) {
-          this.businessForm.get('status')?.setValue(status);
-        }
-      },
-      (error: any) => {
-        console.error('Error updating business status:', error);
-        this.message.error(error.error?.message || error.message || 'Không thể cập nhật trạng thái doanh nghiệp');
-        this.isLoading = false;
-      }
-    );
+  getStatusColor(status?: BusinessStatus): string {
+    switch (status) {
+      case 'active': return 'green';
+      case 'pending': return 'gold';
+      case 'inactive': return 'orange';
+      case 'suspended': return 'red';
+      default: return 'blue';
+    }
   }
 
-  private markFormGroupTouched(formGroup: FormGroup) {
+  /**
+   * Kiểm tra business có bị cascade block không
+   */
+  isCascadeBlocked(business: Business): boolean {
+    return business.status === 'suspended' || business.status === 'inactive';
+  }
+
+  private markFormGroupTouched(formGroup: FormGroup): void {
     Object.values(formGroup.controls).forEach(control => {
       control.markAsTouched();
       control.markAsDirty();

@@ -45,8 +45,12 @@
               <nz-form-label nzRequired>Danh mục</nz-form-label>
               <nz-form-control nzErrorTip="Vui lòng chọn danh mục">
                 <nz-select formControlName="category" nzPlaceHolder="Chọn danh mục" nzAllowClear>
-                  <nz-option *ngFor="let category of categories" [nzValue]="category" [nzLabel]="category"></nz-option>
-                  <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+                  <nz-option nzValue="room_service" nzLabel="Dịch vụ phòng"></nz-option>
+                  <nz-option nzValue="food" nzLabel="Đồ ăn"></nz-option>
+                  <nz-option nzValue="beverage" nzLabel="Đồ uống"></nz-option>
+                  <nz-option nzValue="spa" nzLabel="Spa/Massage"></nz-option>
+                  <nz-option nzValue="transport" nzLabel="Di chuyển"></nz-option>
+                  <nz-option nzValue="custom" nzLabel="Khác"></nz-option>
                 </nz-select>
               </nz-form-control>
             </nz-form-item>
@@ -86,9 +90,37 @@
           </nz-form-control>
         </nz-form-item>
 
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-label>Đơn vị tiền tệ</nz-form-label>
+              <nz-form-control>
+                <nz-select formControlName="currency" nzPlaceHolder="Chọn đơn vị">
+                  <nz-option nzValue="VND" nzLabel="VND - Việt Nam Đồng"></nz-option>
+                  <nz-option nzValue="USD" nzLabel="USD - Đô la Mỹ"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-control>
+                <label nz-checkbox formControlName="isAvailable">Có sẵn</label>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="8">
+            <nz-form-item>
+              <nz-form-control>
+                <label nz-checkbox formControlName="isActive">Hoạt động</label>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
         <nz-form-item>
           <nz-form-control>
-            <label nz-checkbox formControlName="isAvailable">Có sẵn</label>
+            <label nz-checkbox formControlName="isCustom">Dịch vụ tùy chỉnh</label>
           </nz-form-control>
         </nz-form-item>
 

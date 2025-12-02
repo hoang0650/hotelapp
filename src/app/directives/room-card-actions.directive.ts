@@ -54,18 +54,22 @@ export class RoomCardActionsDirective implements OnInit, OnDestroy {
   }
   
   private determineModalType(room: Room): string {
-    switch(room.roomStatus) {
-      case 'available':
+    // Sử dụng room.status theo interface Room mới
+    const status = room.status;
+    
+    switch(status) {
+      case 'vacant':
         return 'checkin';
       case 'occupied':
-      case 'active':
         return 'checkout';
       case 'cleaning':
+      case 'dirty':
         return 'cleaning';
       case 'maintenance':
         return 'maintenance';
       default:
-        return 'details';
+        console.warn(`Unknown room status: ${status}`);
+        return 'info';
     }
   }
   

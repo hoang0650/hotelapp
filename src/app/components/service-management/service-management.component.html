@@ -1,6 +1,28 @@
 <div class="container">
   <nz-card>
-    <h2 class="mb-4">Quản Lý Dịch Vụ</h2>
+    <div class="header-section">
+      <h2 class="mb-4">
+        <i nz-icon nzType="coffee" nzTheme="outline"></i>
+        Quản Lý Dịch Vụ
+      </h2>
+    </div>
+
+    <!-- Thông báo phân quyền -->
+    <nz-alert 
+      *ngIf="isBusiness && !isAdmin" 
+      nzType="info" 
+      nzMessage="Bạn đang xem danh sách dịch vụ của các khách sạn thuộc doanh nghiệp mình."
+      [nzCloseable]="true"
+      class="mb-3">
+    </nz-alert>
+    
+    <nz-alert 
+      *ngIf="isHotelManager && !isAdmin && !isBusiness" 
+      nzType="info" 
+      nzMessage="Bạn đang xem danh sách dịch vụ của khách sạn mình."
+      [nzCloseable]="true"
+      class="mb-3">
+    </nz-alert>
 
     <!-- Bộ lọc -->
     <div nz-row [nzGutter]="16" class="mb-4 filter-section">
@@ -66,15 +88,23 @@
                 </td>
                 <td>{{ service.isCustom ? 'Có' : 'Không' }}</td>
                 <td>
-                  <button nz-button nzType="primary" nzShape="circle" (click)="startEdit(service._id!)" title="Sửa">
-                    <i nz-icon nzType="edit"></i>
-                  </button>
-                  <nz-divider nzType="vertical"></nz-divider>
-                  <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa?" (nzOnConfirm)="deleteService(service._id!)" title="Xóa dịch vụ">
-                    <button nz-button nzType="primary" nzDanger nzShape="circle" title="Xóa dịch vụ">
+                  <nz-button-group>
+                    <button nz-button nzSize="small" nzType="primary" 
+                            (click)="startEdit(service._id!)" 
+                            *ngIf="canManage(service)"
+                            nz-tooltip nzTooltipTitle="Chỉnh sửa">
+                      <i nz-icon nzType="edit"></i>
+                    </button>
+                    <button nz-button nzSize="small" nzType="text" nzDanger
+                            *ngIf="canDelete(service)"
+                            nz-popconfirm 
+                            nzPopconfirmTitle="Bạn có chắc muốn xóa?" 
+                            (nzOnConfirm)="deleteService(service._id!)"
+                            nz-tooltip nzTooltipTitle="Xóa">
                       <i nz-icon nzType="delete"></i>
                     </button>
-                  </a>
+                  </nz-button-group>
+                  <span *ngIf="!canManage(service)" class="text-muted">-</span>
                 </td>
               </tr>
             </tbody>
@@ -84,15 +114,19 @@
     </div>
 
     <!-- Form thêm/sửa dịch vụ -->
-    <div class="mt-4">
-      <h3>{{ editId ? 'Cập nhật dịch vụ' : 'Thêm dịch vụ mới' }}</h3>
+    <div class="mt-4" *ngIf="canCreateService || editId">
+      <nz-divider></nz-divider>
+      <h3>
+        <i nz-icon [nzType]="editId ? 'edit' : 'plus-circle'" nzTheme="outline"></i>
+        {{ editId ? 'Cập nhật dịch vụ' : 'Thêm dịch vụ mới' }}
+      </h3>
       <form nz-form [formGroup]="serviceForm" (ngSubmit)="submitForm()">
         <nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
               <nz-form-label nzRequired>Khách sạn</nz-form-label>
               <nz-form-control nzErrorTip="Vui lòng chọn khách sạn">
-                <nz-select formControlName="hotelId" (ngModelChange)="onHotelChange($event)" nzPlaceHolder="Chọn khách sạn">
+                <nz-select formControlName="hotelId" nzPlaceHolder="Chọn khách sạn" [nzDisabled]="isHotelManager">
                   <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="getHotelName(hotel._id!)"></nz-option>
                 </nz-select>
               </nz-form-control>

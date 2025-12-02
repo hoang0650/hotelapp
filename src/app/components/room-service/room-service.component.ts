@@ -42,9 +42,12 @@ export class RoomServiceComponent implements OnInit {
       name: ['', [Validators.required]],
       description: [''],
       price: [0, [Validators.required, Validators.min(0)]],
-      category: ['', [Validators.required]],
+      category: ['custom', [Validators.required]],
       image: [''],
-      isAvailable: [true]
+      isAvailable: [true],
+      isActive: [true],
+      isCustom: [false],
+      currency: ['VND']
     });
   }
 
@@ -103,8 +106,15 @@ export class RoomServiceComponent implements OnInit {
     this.isEditing = false;
     this.editingServiceId = null;
     this.serviceForm.reset({
+      name: '',
+      description: '',
+      price: 0,
+      category: 'custom',
+      image: '',
       isAvailable: true,
-      price: 0
+      isActive: true,
+      isCustom: false,
+      currency: 'VND'
     });
     this.isServiceFormVisible = true;
   }
@@ -116,9 +126,12 @@ export class RoomServiceComponent implements OnInit {
       name: service.name,
       description: service.description || '',
       price: service.price,
-      category: service.category,
+      category: service.category || 'custom',
       image: service.image || '',
-      isAvailable: service.isAvailable
+      isAvailable: service.isAvailable ?? true,
+      isActive: service.isActive ?? true,
+      isCustom: service.isCustom ?? false,
+      currency: service.currency || 'VND'
     });
     this.isServiceFormVisible = true;
   }

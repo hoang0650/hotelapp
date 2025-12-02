@@ -120,10 +120,11 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Hiển thị modal nhận phòng
   showCheckinModal(): void {
-    if (this.room.status !== 'vacant') {
+    const status = this.room.status;
+    if (status !== 'vacant') {
       this.modalService.info({
         nzTitle: 'Thông báo',
-        nzContent: 'Chỉ có thể nhận phòng khi phòng đang trống.',
+        nzContent: `Chỉ có thể nhận phòng khi phòng đang trống. Trạng thái hiện tại: ${this.getStatusLabel(status)}`,
         nzOkText: 'Đóng'
       });
       return;
@@ -170,12 +171,25 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     });
   }
 
+  // Helper: Lấy label cho trạng thái phòng
+  getStatusLabel(status: string): string {
+    const labels: {[key: string]: string} = {
+      'vacant': 'Trống',
+      'occupied': 'Đang sử dụng',
+      'dirty': 'Cần dọn dẹp',
+      'cleaning': 'Đang dọn dẹp', 
+      'maintenance': 'Bảo trì'
+    };
+    return labels[status] || status;
+  }
+
   // Hiển thị modal chuyển phòng
   showTransferModal(): void {
-    if (this.room.status !== 'occupied') {
+    const status = this.room.status;
+    if (status !== 'occupied') {
       this.modalService.info({
         nzTitle: 'Thông báo',
-        nzContent: 'Chỉ có thể chuyển phòng khi phòng đang có khách.',
+        nzContent: `Chỉ có thể chuyển phòng khi phòng đang có khách. Trạng thái hiện tại: ${this.getStatusLabel(status)}`,
         nzOkText: 'Đóng'
       });
       return;
@@ -296,15 +310,12 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     let availableStatuses = [
       { value: 'vacant', label: 'Trống' },
       { value: 'dirty', label: 'Cần dọn dẹp' },
+      { value: 'cleaning', label: 'Đang dọn dẹp' },
       { value: 'maintenance', label: 'Bảo trì' }
     ];
     
     // Nếu đang ở trạng thái occupied, chỉ cho phép giữ nguyên
     if (currentStatus === 'occupied') {
-      availableStatuses = [
-        { value: 'occupied', label: 'Đang sử dụng' }
-      ];
-      
       this.modalService.info({
         nzTitle: 'Thông báo',
         nzContent: 'Phòng đang có khách sử dụng. Để thay đổi trạng thái, vui lòng thực hiện trả phòng trước.',
@@ -438,45 +449,55 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     this.modalRef = modal;
   }
 
-  handleLabel(): string{
-    switch (this.room.status) {
+  handleLabel(): string {
+    const status = this.room.status;
+    switch (status) {
       case 'vacant':
         return 'Nhận Phòng';
       case 'occupied':
         return 'Trả Phòng';
       case 'dirty':
+      case 'cleaning':
         return 'Dọn Dẹp';
+      case 'maintenance':
+        return 'Bảo Trì';
       default:
-        return 'Nhận Phòng'; // Handle any other cases or return a default class
+        return 'Xem Chi Tiết';
     }
   }
 
   // Xác định loại modal dựa trên trạng thái phòng
   getModalType(): string {
-    switch (this.room.status) {
+    const status = this.room.status;
+    
+    switch (status) {
       case 'vacant':
         return 'checkin';
       case 'occupied':
         return 'checkout';
       case 'dirty':
-      case 'maintenance': // Trả về 'cleaning' cho cả maintenance
+      case 'cleaning':
+      case 'maintenance':
         return 'cleaning'; 
       default:
-        console.warn(`Trạng thái phòng không xác định: ${this.room.status}. Mở modal thông tin mặc định.`);
-        return 'info'; // 'info' chưa được xử lý trong template, cân nhắc thêm hoặc trả về null/error
+        console.warn(`Trạng thái phòng không xác định: ${status}. Mở modal thông tin mặc định.`);
+        return 'info';
     }
   }
 
   // Xác định tiêu đề modal dựa trên trạng thái phòng
   getModalTitle(): string {
-    switch (this.room.status) {
+    const status = this.room.status;
+    switch (status) {
       case 'vacant':
         return 'Nhận Phòng';
       case 'occupied':
         return 'Trả Phòng';
       case 'dirty':
-      case 'maintenance': // Cập nhật tiêu đề cho maintenance
+      case 'cleaning':
         return 'Dọn Dẹp/Sẵn Sàng'; 
+      case 'maintenance':
+        return 'Bảo Trì';
       default:
         return 'Thông Tin Phòng';
     }
@@ -492,8 +513,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     const lastEvent = this.room.events && this.room.events.length > 0 
       ? this.room.events[this.room.events.length - 1] 
       : null;
+    
+    const status = this.room.status;
   
-    if (this.room.status === 'vacant') {
+    if (status === 'vacant') {
       
       // Room is available, perform check-in
       this.newRoom = {
@@ -519,7 +542,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           this.modalRef?.close();
         }
       );
-    } else if (this.room.status === 'occupied' && lastEvent && lastEvent.type === 'checkin') {
+    } else if (status === 'occupied' && lastEvent && lastEvent.type === 'checkin') {
       // Room is active and last event is check-in, perform check-out    
       const updatedLastEvent = {
         ...lastEvent,
@@ -556,7 +579,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           this.modalRef?.close();
         }
       );
-    } else if(this.room.status === 'dirty' && lastEvent && lastEvent.type === 'checkout'){
+    } else if((status === 'dirty' || status === 'cleaning') && lastEvent && lastEvent.type === 'checkout'){
       this.newRoom = {
         status: 'vacant',
       };

@@ -126,10 +126,19 @@
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
             <nz-form-label nzRequired>Tầng</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng chọn tầng">
-               <nz-select formControlName="floor" nzPlaceHolder="Chọn tầng" [nzDisabled]="!selectedHotelId || floors.length === 0">
-                <nz-option *ngFor="let floor_opt of floors" [nzValue]="floor_opt" [nzLabel]="'Tầng ' + floor_opt"></nz-option>
-              </nz-select>
+            <nz-form-control nzErrorTip="Vui lòng nhập số tầng">
+              <nz-input-number 
+                formControlName="floor" 
+                [nzMin]="0" 
+                [nzMax]="100" 
+                [nzStep]="1"
+                nzPlaceHolder="Nhập số tầng"
+                class="w-100"
+                [nzDisabled]="!selectedHotelId">
+              </nz-input-number>
+              <span class="floor-hint" *ngIf="floors.length > 0">
+                Các tầng đã có: {{ floors.join(', ') }}
+              </span>
             </nz-form-control>
           </nz-form-item>
         </div>
@@ -333,6 +342,12 @@
     padding: 16px;
     border-radius: 4px;
     border: 1px solid #f0f0f0;
+  }
+  .floor-hint {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
   }
   @media (max-width: 576px) {
     nz-form-item {

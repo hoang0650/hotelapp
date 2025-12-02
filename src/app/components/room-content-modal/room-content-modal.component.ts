@@ -32,13 +32,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   checkInForm!: FormGroup;
   servicesForm!: FormGroup;
   checkOutForm!: FormGroup;
-  services: any[] = [
-    { id: '1', name: 'Nước ngọt', price: 15000 },
-    { id: '2', name: 'Bia', price: 20000 },
-    { id: '3', name: 'Bò húc', price: 25000 },
-    { id: '4', name: 'Snack', price: 10000 },
-    { id: '5', name: 'Mì ăn liền', price: 12000 }
-  ];
+  services: any[] = []; // Load từ API
   selectedServices: OrderedService[] = [];
   paymentMethods = [
     { value: 'cash', label: 'Tiền mặt' },
@@ -121,6 +115,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Load danh sách dịch vụ từ API
+    this.loadServicesFromAPI();
+    
     // Lấy thông tin phiên phòng nếu có
     if (this.roomData && this.roomData._id) {
       // Lắng nghe thay đổi phiên
@@ -141,6 +138,40 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
     this.calculateTotalPrice();
     this.loadBusinessInfo();
+  }
+  
+  // Load dịch vụ từ API
+  loadServicesFromAPI(): void {
+    if (this.roomData?.hotelId) {
+      this.serviceService.getAvailableServicesForModal(this.roomData.hotelId).subscribe({
+        next: (response) => {
+          if (response?.data?.services) {
+            this.services = response.data.services.map((s: any) => ({
+              id: s._id,
+              name: s.name,
+              price: s.price,
+              category: s.category,
+              description: s.description
+            }));
+          }
+        },
+        error: (error) => {
+          console.error('Lỗi khi tải danh sách dịch vụ:', error);
+          // Fallback nếu API lỗi
+          this.serviceService.getServices(this.roomData.hotelId).subscribe({
+            next: (data) => {
+              this.services = data.map((s: any) => ({
+                id: s._id,
+                name: s.name,
+                price: s.price,
+                category: s.category
+              }));
+            },
+            error: (err) => console.error('Fallback cũng lỗi:', err)
+          });
+        }
+      });
+    }
   }
   
   ngOnDestroy(): void {

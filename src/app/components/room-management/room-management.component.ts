@@ -37,7 +37,7 @@ export class RoomManagementComponent implements OnInit {
     this.roomForm = this.fb.group({
       hotelId: [null, Validators.required],
       roomNumber: ['', Validators.required],
-      floor: ['', Validators.required],
+      floor: [1, [Validators.required, Validators.min(0)]],
       type: ['', Validators.required],
       status: ['vacant' as Room['status'], Validators.required],
       
@@ -100,7 +100,7 @@ export class RoomManagementComponent implements OnInit {
     this.selectedHotelId = hotelId;
     this.floors = [];
     this.rooms = [];
-    this.roomForm.get('floor')?.reset('');
+    this.roomForm.get('floor')?.reset(1);
 
     if (hotelId) {
       this.loadRooms(hotelId);
@@ -110,7 +110,7 @@ export class RoomManagementComponent implements OnInit {
         },
         error => {
           console.error('Lỗi khi tải danh sách tầng:', error);
-          this.message.error('Không thể tải danh sách tầng');
+          // Không cần báo lỗi vì người dùng có thể nhập tầng mới
         }
       );
     }
@@ -127,7 +127,7 @@ export class RoomManagementComponent implements OnInit {
       this.roomForm.patchValue({
         hotelId: roomToEdit.hotelId,
         roomNumber: roomToEdit.roomNumber,
-        floor: String(roomToEdit.floor),
+        floor: Number(roomToEdit.floor) || 1,
         type: roomToEdit.type,
         status: roomToEdit.status,
         capacity: {
@@ -159,7 +159,7 @@ export class RoomManagementComponent implements OnInit {
     this.roomForm.reset({
       hotelId: this.selectedHotelId,
       status: 'vacant',
-      floor: '',
+      floor: 1,
       capacity: { adults: 2, children: 0 },
       amenities: [],
       images: [],
@@ -245,7 +245,7 @@ export class RoomManagementComponent implements OnInit {
           this.roomForm.reset({
             hotelId: this.selectedHotelId,
             status: 'vacant',
-            floor: '',
+            floor: 1,
             capacity: { adults: 2, children: 0 },
             amenities: [],
             images: [],
@@ -253,6 +253,14 @@ export class RoomManagementComponent implements OnInit {
             firstHourRate: 0,
             additionalHourRate: 0
           });
+          // Reload floors để cập nhật danh sách tầng mới
+          if (this.selectedHotelId) {
+            this.roomService.getHotelFloors(this.selectedHotelId).subscribe(
+              data => {
+                this.floors = data.floors.map(f => String(f));
+              }
+            );
+          }
         },
         error => {
           console.error('Lỗi khi tạo phòng:', error);
@@ -278,9 +286,9 @@ export class RoomManagementComponent implements OnInit {
     );
   }
 
-  filterRoomsByFloor(floor: string | null): void {
+  filterRoomsByFloor(floor: number | string | null): void {
     if (this.selectedHotelId) {
-      if (floor && floor !== '') {
+      if (floor !== null && floor !== '') {
         this.roomService.getRoomsByFloor(this.selectedHotelId, Number(floor)).subscribe(
           data => {
             this.rooms = data;

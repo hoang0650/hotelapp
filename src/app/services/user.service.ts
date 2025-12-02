@@ -122,6 +122,33 @@ export class UserService {
     });
   }
 
+  /**
+   * Lấy tất cả users (chỉ admin)
+   */
+  getAllUsers(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /**
+   * Lấy users theo business ID
+   */
+  getUsersByBusiness(businessId: string): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}/business/${businessId}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /**
+   * Lấy users theo hotel ID
+   */
+  getUsersByHotel(hotelId: string): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}/hotel/${hotelId}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
   updateUser(userId: string, userData: Partial<User>): Observable<User> {
     return this.http.put<User>(`${this.apiUrl}/${userId}`, userData, {
       headers: this.getAuthHeaders()

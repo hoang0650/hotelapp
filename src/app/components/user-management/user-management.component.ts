@@ -3,7 +3,11 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { UserService } from '../../services/user.service';
+import { AuthService, PermissionRules } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
+
+type UserRole = 'superadmin' | 'admin' | 'business' | 'hotel' | 'staff' | 'guest';
+type UserStatus = 'active' | 'inactive' | 'suspended' | 'deleted';
 
 @Component({
   selector: 'app-user-management',
@@ -12,35 +16,49 @@ import { User } from '../../interfaces/user';
 })
 export class UserManagementComponent implements OnInit {
   users: User[] = [];
+  filteredUsers: User[] = [];
   isLoading = false;
-  isModalVisible = false;
   isVisible = false;
   userForm!: FormGroup;
   selectedUser: User | null = null;
-  modalTitle = '';
   editingUser: User | null = null;
+  currentUser: User | null = null;
+  permissions: PermissionRules | null = null;
+  
+  // Pagination
   total = 0;
   pageSize = 10;
   pageIndex = 1;
+  
+  // Filters
+  selectedRoleFilter: UserRole | 'all' = 'all';
+  selectedStatusFilter: UserStatus | 'all' = 'all';
+  searchText = '';
+  passwordVisible = false;
 
-  readonly userRoles = [
+  // Role và Status options
+  readonly userRoles: { label: string; value: UserRole }[] = [
     { label: 'Super Admin', value: 'superadmin' },
     { label: 'Admin', value: 'admin' },
     { label: 'Business', value: 'business' },
-    { label: 'Hotel', value: 'hotel' },
+    { label: 'Hotel Manager', value: 'hotel' },
     { label: 'Staff', value: 'staff' },
     { label: 'Guest', value: 'guest' }
   ];
 
-  readonly userStatuses = [
+  readonly userStatuses: { label: string; value: UserStatus }[] = [
     { label: 'Hoạt động', value: 'active' },
     { label: 'Không hoạt động', value: 'inactive' },
     { label: 'Tạm khóa', value: 'suspended' },
     { label: 'Đã xóa', value: 'deleted' }
   ];
 
+  // Roles mà user hiện tại có thể quản lý
+  manageableRoles: { label: string; value: UserRole }[] = [];
+
   constructor(
     private userService: UserService,
+    private authService: AuthService,
     private fb: FormBuilder,
     private message: NzMessageService,
     private modal: NzModalService
@@ -49,8 +67,115 @@ export class UserManagementComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
+    this.permissions = this.authService.getPermissionRules();
+    this.setupManageableRoles();
     this.loadUsers();
   }
+
+  // ============ QUYỀN HẠN ============
+
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.authService.isSuperAdmin();
+  }
+
+  get isBusiness(): boolean {
+    return this.authService.isBusiness();
+  }
+
+  get isHotelManager(): boolean {
+    return this.authService.isHotelManager();
+  }
+
+  get canManageUsers(): boolean {
+    return this.permissions?.canManageStaff || this.permissions?.canManageAll || false;
+  }
+
+  get canCreateUser(): boolean {
+    // Chỉ admin mới có thể tạo user mới (trừ guest)
+    return this.isAdmin;
+  }
+
+  /**
+   * Setup roles mà user hiện tại có thể quản lý
+   * - Superadmin: tất cả roles
+   * - Admin: tất cả trừ superadmin
+   * - Business: chỉ hotel, staff thuộc business
+   * - Hotel: chỉ staff thuộc hotel
+   */
+  private setupManageableRoles(): void {
+    if (this.isSuperAdmin) {
+      this.manageableRoles = this.userRoles;
+    } else if (this.isAdmin) {
+      this.manageableRoles = this.userRoles.filter(r => r.value !== 'superadmin');
+    } else if (this.isBusiness) {
+      this.manageableRoles = this.userRoles.filter(r => 
+        r.value === 'hotel' || r.value === 'staff'
+      );
+    } else if (this.isHotelManager) {
+      this.manageableRoles = this.userRoles.filter(r => r.value === 'staff');
+    } else {
+      this.manageableRoles = [];
+    }
+  }
+
+  /**
+   * Kiểm tra có thể quản lý user cụ thể không
+   */
+  canManageUser(user: User): boolean {
+    if (!this.currentUser) return false;
+    
+    // Không thể tự quản lý chính mình
+    if (user._id === this.currentUser._id) return false;
+    
+    // Superadmin quản lý tất cả
+    if (this.isSuperAdmin) return true;
+    
+    // Admin không thể quản lý superadmin
+    if (this.isAdmin) {
+      return user.role !== 'superadmin';
+    }
+    
+    // Business chỉ quản lý user thuộc business của mình
+    if (this.isBusiness) {
+      return (user.role === 'hotel' || user.role === 'staff') && 
+             user.businessId === this.currentUser.businessId;
+    }
+    
+    // Hotel manager chỉ quản lý staff thuộc hotel
+    if (this.isHotelManager) {
+      return user.role === 'staff' && user.hotelId === this.currentUser.hotelId;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Kiểm tra có thể block user không
+   * - Admin/Superadmin không thể bị block
+   */
+  canBlockUser(user: User): boolean {
+    if (!this.canManageUser(user)) return false;
+    
+    // Không thể block admin hoặc superadmin
+    return user.role !== 'admin' && user.role !== 'superadmin';
+  }
+
+  /**
+   * Kiểm tra có thể xóa user không
+   */
+  canDeleteUser(user: User): boolean {
+    if (!this.isAdmin) return false;
+    
+    // Không thể xóa superadmin
+    return user.role !== 'superadmin';
+  }
+
+  // ============ FORM ============
 
   private initForm(): void {
     this.userForm = this.fb.group({
@@ -58,13 +183,15 @@ export class UserManagementComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       fullName: [''],
       phone: [''],
-      role: ['guest', Validators.required],
+      role: ['staff', Validators.required],
       status: ['active', Validators.required],
       password: [''],
       twoFactorEnabled: [false],
+      businessId: [''],
+      hotelId: [''],
       permissions: [[]],
       preferences: this.fb.group({
-        language: ['en'],
+        language: ['vi'],
         theme: ['light'],
         notifications: this.fb.group({
           email: [true],
@@ -75,36 +202,159 @@ export class UserManagementComponent implements OnInit {
     });
   }
 
-  loadUsers(role: string = 'guest'): void {
+  // ============ LOAD DATA ============
+
+  loadUsers(): void {
     this.isLoading = true;
-    this.userService.getUsersByRole(role).subscribe({
-      next: (users) => {
-        this.users = users;
-        this.total = users.length;
-        this.isLoading = false;
-      },
-      error: (error) => {
-        this.message.error('Không thể tải danh sách người dùng');
-        this.isLoading = false;
-      }
-    });
+    
+    // Xác định role để load dựa trên quyền của user hiện tại
+    if (this.isAdmin) {
+      // Admin load tất cả users
+      this.userService.getAllUsers().subscribe({
+        next: (users) => this.handleUsersLoaded(users),
+        error: (error) => this.handleError('Không thể tải danh sách người dùng', error)
+      });
+    } else if (this.isBusiness && this.currentUser?.businessId) {
+      // Business chỉ load users thuộc business
+      this.userService.getUsersByBusiness(this.currentUser.businessId).subscribe({
+        next: (users) => this.handleUsersLoaded(users),
+        error: (error) => this.handleError('Không thể tải danh sách người dùng', error)
+      });
+    } else if (this.isHotelManager && this.currentUser?.hotelId) {
+      // Hotel manager chỉ load staff thuộc hotel
+      this.userService.getUsersByHotel(this.currentUser.hotelId).subscribe({
+        next: (users) => this.handleUsersLoaded(users),
+        error: (error) => this.handleError('Không thể tải danh sách người dùng', error)
+      });
+    } else {
+      this.users = [];
+      this.filteredUsers = [];
+      this.isLoading = false;
+    }
   }
+
+  private handleUsersLoaded(users: User[]): void {
+    this.users = users;
+    this.applyFilters();
+    this.isLoading = false;
+  }
+
+  private handleError(message: string, error: any): void {
+    console.error(message, error);
+    this.message.error(message);
+    this.isLoading = false;
+  }
+
+  // ============ FILTERS ============
+
+  applyFilters(): void {
+    let result = [...this.users];
+    
+    // Filter by role
+    if (this.selectedRoleFilter !== 'all') {
+      result = result.filter(u => u.role === this.selectedRoleFilter);
+    }
+    
+    // Filter by status
+    if (this.selectedStatusFilter !== 'all') {
+      result = result.filter(u => u.status === this.selectedStatusFilter);
+    }
+    
+    // Search by username or email
+    if (this.searchText.trim()) {
+      const search = this.searchText.toLowerCase().trim();
+      result = result.filter(u => 
+        u.username.toLowerCase().includes(search) ||
+        u.email.toLowerCase().includes(search) ||
+        (u.fullName && u.fullName.toLowerCase().includes(search))
+      );
+    }
+    
+    this.filteredUsers = result;
+    this.total = result.length;
+  }
+
+  onRoleFilterChange(role: UserRole | 'all'): void {
+    this.selectedRoleFilter = role;
+    this.pageIndex = 1;
+    this.applyFilters();
+  }
+
+  onStatusFilterChange(status: UserStatus | 'all'): void {
+    this.selectedStatusFilter = status;
+    this.pageIndex = 1;
+    this.applyFilters();
+  }
+
+  onSearchChange(): void {
+    this.pageIndex = 1;
+    this.applyFilters();
+  }
+
+  clearFilters(): void {
+    this.selectedRoleFilter = 'all';
+    this.selectedStatusFilter = 'all';
+    this.searchText = '';
+    this.applyFilters();
+  }
+
+  // ============ PAGINATION ============
 
   onPageIndexChange(index: number): void {
     this.pageIndex = index;
-    this.loadUsers();
   }
 
   onPageSizeChange(size: number): void {
     this.pageSize = size;
-    this.loadUsers();
+    this.pageIndex = 1;
+  }
+
+  // ============ MODAL ============
+
+  showCreateModal(): void {
+    if (!this.canCreateUser) {
+      this.message.warning('Bạn không có quyền tạo người dùng mới');
+      return;
+    }
+    
+    this.editingUser = null;
+    this.selectedUser = null;
+    this.isVisible = true;
+    this.userForm.reset({
+      role: 'staff',
+      status: 'active',
+      twoFactorEnabled: false,
+      preferences: {
+        language: 'vi',
+        theme: 'light',
+        notifications: { email: true, sms: false, push: true }
+      }
+    });
+    this.userForm.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
+    this.userForm.get('password')?.updateValueAndValidity();
+    
+    // Auto-set businessId/hotelId cho business/hotel user
+    if (this.isBusiness && this.currentUser?.businessId) {
+      this.userForm.patchValue({ businessId: this.currentUser.businessId });
+    }
+    if (this.isHotelManager && this.currentUser?.hotelId) {
+      this.userForm.patchValue({ 
+        hotelId: this.currentUser.hotelId,
+        businessId: this.currentUser.businessId
+      });
+    }
   }
 
   showEditModal(user: User): void {
-    this.modalTitle = 'Chỉnh sửa người dùng';
-    this.selectedUser = user;
+    if (!this.canManageUser(user)) {
+      this.message.warning('Bạn không có quyền chỉnh sửa người dùng này');
+      return;
+    }
+    
     this.editingUser = user;
+    this.selectedUser = user;
     this.isVisible = true;
+    
     this.userForm.patchValue({
       username: user.username,
       email: user.email,
@@ -113,17 +363,17 @@ export class UserManagementComponent implements OnInit {
       role: user.role,
       status: user.status,
       twoFactorEnabled: user.twoFactorEnabled,
-      permissions: user.permissions,
+      businessId: user.businessId,
+      hotelId: user.hotelId,
+      permissions: user.permissions || [],
       preferences: user.preferences || {
-        language: 'en',
+        language: 'vi',
         theme: 'light',
-        notifications: {
-          email: true,
-          sms: false,
-          push: true
-        }
+        notifications: { email: true, sms: false, push: true }
       }
     });
+    
+    // Password không bắt buộc khi edit
     this.userForm.get('password')?.clearValidators();
     this.userForm.get('password')?.updateValueAndValidity();
   }
@@ -139,37 +389,56 @@ export class UserManagementComponent implements OnInit {
       return;
     }
 
-    const userData = this.userForm.value;
+    const formValue = this.userForm.value;
+    
+    // Lọc bỏ các giá trị null/undefined/empty string
+    const userData: any = {};
+    Object.keys(formValue).forEach(key => {
+      const value = formValue[key];
+      if (value !== null && value !== undefined && value !== '') {
+        userData[key] = value;
+      }
+    });
+    
+    // Xóa password nếu rỗng (khi edit)
     if (!userData.password) {
       delete userData.password;
     }
+    
+    // Xóa permissions nếu là array rỗng
+    if (Array.isArray(userData.permissions) && userData.permissions.length === 0) {
+      delete userData.permissions;
+    }
+
+    console.log('Sending user data:', userData);
 
     this.isLoading = true;
+    
     if (this.selectedUser) {
+      // Update
       this.userService.updateUser(this.selectedUser._id, userData).subscribe({
-        next: (response) => {
+        next: () => {
           this.message.success('Cập nhật người dùng thành công');
-          this.loadUsers(userData.role);
-          this.isVisible = false;
+          this.loadUsers();
+          this.handleCancel();
         },
         error: (error) => {
+          console.error('Update user error:', error);
           this.message.error(error.error?.message || 'Lỗi khi cập nhật người dùng');
-        },
-        complete: () => {
           this.isLoading = false;
         }
       });
     } else {
+      // Create
       this.userService.signUp(userData).subscribe({
-        next: (response) => {
+        next: () => {
           this.message.success('Thêm người dùng mới thành công');
-          this.loadUsers(userData.role);
-          this.isVisible = false;
+          this.loadUsers();
+          this.handleCancel();
         },
         error: (error) => {
+          console.error('Create user error:', error);
           this.message.error(error.error?.message || 'Lỗi khi thêm người dùng');
-        },
-        complete: () => {
           this.isLoading = false;
         }
       });
@@ -179,48 +448,136 @@ export class UserManagementComponent implements OnInit {
   handleCancel(): void {
     this.isVisible = false;
     this.selectedUser = null;
+    this.editingUser = null;
     this.userForm.reset();
+    this.isLoading = false;
   }
 
-  deleteUser(user: User): void {
+  // ============ USER ACTIONS ============
+
+  /**
+   * Block user - cascade ảnh hưởng nếu là business/hotel
+   */
+  blockUser(user: User): void {
+    if (!this.canBlockUser(user)) {
+      this.message.error('Bạn không có quyền khóa tài khoản này');
+      return;
+    }
+
+    const cascadeWarning = user.role === 'business' 
+      ? 'Tất cả khách sạn và nhân viên thuộc business này sẽ bị tạm ngưng hoạt động.'
+      : user.role === 'hotel'
+        ? 'Tất cả nhân viên thuộc hotel này sẽ bị tạm ngưng hoạt động.'
+        : '';
+
     this.modal.confirm({
-      nzTitle: 'Xác nhận xóa người dùng',
-      nzContent: `Bạn có chắc chắn muốn xóa người dùng ${user.username}?`,
-      nzOkText: 'Xóa',
+      nzTitle: 'Xác nhận khóa tài khoản',
+      nzContent: `Bạn có chắc chắn muốn khóa tài khoản ${user.username}?<br/><span style="color: red;">${cascadeWarning}</span>`,
+      nzOkText: 'Khóa',
       nzOkType: 'primary',
       nzOkDanger: true,
-      nzOnOk: () => this.updateUserDisplayStatus(user, 'deleted'),
+      nzOnOk: () => this.updateUserStatus(user, 'suspended'),
       nzCancelText: 'Hủy'
     });
   }
 
-  updateUserDisplayStatus(user: User, status: User['status']): void {
+  /**
+   * Kích hoạt lại user
+   */
+  activateUser(user: User): void {
+    if (!this.canManageUser(user)) {
+      this.message.error('Bạn không có quyền thao tác với tài khoản này');
+      return;
+    }
+
+    this.updateUserStatus(user, 'active');
+  }
+
+  /**
+   * Xóa user
+   */
+  deleteUser(user: User): void {
+    if (!this.canDeleteUser(user)) {
+      this.message.error('Bạn không có quyền xóa tài khoản này');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: 'Xác nhận xóa người dùng',
+      nzContent: `Bạn có chắc chắn muốn xóa người dùng <b>${user.username}</b>?`,
+      nzOkText: 'Xóa',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzOnOk: () => this.updateUserStatus(user, 'deleted'),
+      nzCancelText: 'Hủy'
+    });
+  }
+
+  updateUserStatus(user: User, status: UserStatus): void {
     this.isLoading = true;
     this.userService.updateUserStatus(user._id, status).subscribe({
       next: (response) => {
-        this.message.success(response.message);
-        this.loadUsers(user.role);
+        const statusLabels: Record<UserStatus, string> = {
+          'active': 'kích hoạt',
+          'inactive': 'vô hiệu hóa',
+          'suspended': 'khóa',
+          'deleted': 'xóa'
+        };
+        this.message.success(`Đã ${statusLabels[status]} tài khoản ${user.username}`);
+        this.loadUsers();
       },
       error: (error) => {
         this.message.error(error.error?.message || 'Lỗi khi thay đổi trạng thái người dùng');
-      },
-      complete: () => {
         this.isLoading = false;
       }
     });
   }
 
-  getStatusColor(status: string): string {
-    switch (status) {
-      case 'active': return 'success';
-      case 'inactive': return 'default';
-      case 'suspended': return 'warning';
-      case 'deleted': return 'error';
-      default: return '';
-    }
+  // ============ HELPERS ============
+
+  getRoleLabel(role: UserRole): string {
+    const found = this.userRoles.find(r => r.value === role);
+    return found ? found.label : role;
   }
 
-  formatDate(date: string | Date): string {
-    return new Date(date).toLocaleString();
+  getRoleColor(role: UserRole): string {
+    const colors: Record<UserRole, string> = {
+      'superadmin': 'magenta',
+      'admin': 'red',
+      'business': 'blue',
+      'hotel': 'purple',
+      'staff': 'orange',
+      'guest': 'green'
+    };
+    return colors[role] || 'default';
   }
-} 
+
+  getStatusLabel(status: UserStatus): string {
+    const found = this.userStatuses.find(s => s.value === status);
+    return found ? found.label : status;
+  }
+
+  getStatusColor(status: UserStatus): string {
+    const colors: Record<UserStatus, string> = {
+      'active': 'success',
+      'inactive': 'default',
+      'suspended': 'warning',
+      'deleted': 'error'
+    };
+    return colors[status] || 'default';
+  }
+
+  formatDate(date: string | Date | undefined): string {
+    if (!date) return '-';
+    return new Date(date).toLocaleString('vi-VN');
+  }
+
+  /**
+   * Kiểm tra user có bị cascade block không
+   */
+  isCascadeBlocked(user: User): boolean {
+    // Logic này sẽ được xử lý ở backend
+    // Frontend chỉ hiển thị trạng thái
+    return user.status === 'suspended' || user.status === 'inactive';
+  }
+}

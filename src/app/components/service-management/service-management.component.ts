@@ -4,7 +4,8 @@ import { Service, ServiceCategory, ALL_SERVICE_CATEGORIES } from '../../interfac
 import { ServiceService } from '../../services/service.service';
 import { HotelService } from '../../services/hotel.service';
 import { Hotel } from '../../interfaces/hotel';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, PermissionRules } from '../../services/auth.service';
+import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { forkJoin } from 'rxjs';
@@ -22,6 +23,8 @@ export class ServiceManagementComponent implements OnInit {
   selectedService: Service | null = null;
   selectedHotelId: string | null = null;
   categories: string[] = [];
+  currentUser: User | null = null;
+  permissions: PermissionRules | null = null;
 
   // Sử dụng ALL_SERVICE_CATEGORIES cho dropdown
   serviceCategoryOptions = ALL_SERVICE_CATEGORIES.map(cat => ({ label: this.getCategoryLabel(cat), value: cat }));
@@ -36,10 +39,10 @@ export class ServiceManagementComponent implements OnInit {
 
   // Thêm lại các thuộc tính bị thiếu
   isLoading = false;
-  imageUrl: string | ArrayBuffer | null = ''; // Kiểu cho imageUrl có thể là string hoặc ArrayBuffer
+  imageUrl: string | ArrayBuffer | null = '';
   fileList: NzUploadFile[] = [];
-  uploadUrl = 'https://api.cloudinary.com/v1_1/dxtigizsi/image/upload'; // Cần kiểm tra lại URL này
-  cloudinaryPreset = 'ys0fssyu'; // Và preset này
+  uploadUrl = 'https://api.cloudinary.com/v1_1/dxtigizsi/image/upload';
+  cloudinaryPreset = 'ys0fssyu';
 
   constructor(
     private fb: FormBuilder,
@@ -62,7 +65,53 @@ export class ServiceManagementComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
+    this.permissions = this.authService.getPermissionRules();
     this.loadHotels();
+  }
+
+  // ============ KIỂM TRA QUYỀN ============
+
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.authService.isSuperAdmin();
+  }
+
+  get isBusiness(): boolean {
+    return this.authService.isBusiness();
+  }
+
+  get isHotelManager(): boolean {
+    return this.authService.isHotelManager();
+  }
+
+  get canCreateService(): boolean {
+    return this.isAdmin || this.isBusiness || this.isHotelManager;
+  }
+
+  canManage(service: Service): boolean {
+    if (!this.currentUser) return false;
+    if (this.isAdmin) return true;
+    
+    // Business chỉ quản lý dịch vụ của hotels thuộc business mình
+    if (this.isBusiness) {
+      const hotel = this.hotels.find(h => h._id === service.hotelId);
+      return !!hotel && hotel.businessId === this.currentUser.businessId;
+    }
+    
+    // Hotel manager chỉ quản lý dịch vụ của hotel mình
+    if (this.isHotelManager) {
+      return service.hotelId === this.currentUser.hotelId;
+    }
+    
+    return false;
+  }
+
+  canDelete(service: Service): boolean {
+    return this.canManage(service);
   }
 
   getCategoryLabel(category: ServiceCategory): string {
@@ -78,30 +127,49 @@ export class ServiceManagementComponent implements OnInit {
   }
 
   loadServices(hotelId?: string): void {
-    const params: any = {};
-    if (hotelId) params.hotelId = hotelId;
-
-    this.serviceService.getServices(hotelId).subscribe(
-      data => {
+    this.isLoading = true;
+    this.serviceService.getServices(hotelId).subscribe({
+      next: (data) => {
         this.services = data;
+        this.isLoading = false;
       },
-      error => {
+      error: (error) => {
         console.error('Lỗi khi tải danh sách dịch vụ:', error);
         this.message.error('Không thể tải danh sách dịch vụ.');
+        this.isLoading = false;
       }
-    );
+    });
   }
 
   loadHotels(): void {
-    this.hotelService.getHotels().subscribe(
-      data => {
-        this.hotels = data;
+    this.hotelService.getHotels().subscribe({
+      next: (data) => {
+        if (this.isAdmin) {
+          this.hotels = data.filter(h => h.status === 'active');
+        } else if (this.isBusiness && this.currentUser?.businessId) {
+          this.hotels = data.filter(h => 
+            h.businessId === this.currentUser?.businessId && h.status === 'active'
+          );
+        } else if (this.isHotelManager && this.currentUser?.hotelId) {
+          this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
+        } else {
+          this.hotels = [];
+        }
+        
+        // Auto-select hotel for hotel manager (chỉ có 1 hotel)
+        if (this.isHotelManager && this.hotels.length === 1 && !this.selectedHotelId) {
+          const hotelId = this.hotels[0]._id!;
+          this.selectedHotelId = hotelId;
+          this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
+          this.loadServices(hotelId);
+          this.loadServiceCategories(hotelId);
+        }
       },
-      error => {
+      error: (error) => {
         console.error('Lỗi khi tải danh sách khách sạn:', error);
         this.message.error('Không thể tải danh sách khách sạn.');
       }
-    );
+    });
   }
 
   loadServiceCategories(hotelId: string): void {
@@ -116,10 +184,20 @@ export class ServiceManagementComponent implements OnInit {
     );
   }
 
-  onHotelChange(hotelId: string | null): void {
+  onHotelChange(hotelId: string | null, fromFilter: boolean = true): void {
+    // Tránh request trùng lặp nếu hotelId không thay đổi
+    if (hotelId === this.selectedHotelId) {
+      return;
+    }
+    
     this.selectedHotelId = hotelId;
     this.services = [];
-    this.serviceForm.get('hotelId')?.setValue(hotelId);
+    
+    // Chỉ sync form nếu thay đổi từ bộ lọc
+    if (fromFilter) {
+      this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
+    }
+    
     if (hotelId) {
       this.loadServices(hotelId);
       this.loadServiceCategories(hotelId);
@@ -127,6 +205,11 @@ export class ServiceManagementComponent implements OnInit {
       this.categories = [];
       this.serviceCategoryOptions = ALL_SERVICE_CATEGORIES.map(cat => ({ label: this.getCategoryLabel(cat), value: cat }));
     }
+  }
+  
+  // Handler riêng cho form khi chọn hotel
+  onFormHotelChange(hotelId: string | null): void {
+    this.onHotelChange(hotelId, false);
   }
 
   startEdit(id: string): void {

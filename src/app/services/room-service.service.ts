@@ -12,6 +12,9 @@ export interface RoomService {
   hotelId: string;
   image?: string;
   isAvailable: boolean;
+  isActive: boolean;
+  isCustom: boolean;
+  currency: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
