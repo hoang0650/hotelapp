@@ -59,6 +59,37 @@ export class TableComponent implements OnInit, OnChanges {
   // Bộ lọc
   currentFilterType = 'checkout'; // Giá trị mặc định là checkout
   
+  // Getter để lọc chỉ các bản ghi đã thanh toán (loại trừ dọn dẹp, bảo trì, check-in)
+  get paidData(): any[] {
+    if (!this.listOfData) return [];
+    return this.listOfData.filter(item => {
+      // Loại trừ các event không liên quan đến thanh toán
+      const excludedEvents = [
+        'cleaning', 'clean', 'maintenance', 'check-in', 'checkin', 
+        'service', 'transfer'
+      ];
+      
+      const eventType = (item.event || item.type || '').toLowerCase();
+      
+      // Nếu là event bị loại trừ thì không hiển thị
+      if (excludedEvents.includes(eventType)) return false;
+      
+      // Loại trừ nếu không có checkOutTime (chưa checkout)
+      if (!item.checkOutTime && !item.checkoutTime) return false;
+      
+      // Kiểm tra trạng thái thanh toán
+      const isPaid = item.paymentStatus === 'paid' || 
+                     item.payment?.status === 'paid' ||
+                     item.payment?.paymentStatus === 'paid';
+      
+      // Kiểm tra event checkout
+      const isCheckout = eventType === 'check-out' || eventType === 'checkout';
+      
+      // Chỉ lấy các bản ghi đã thanh toán HOẶC là checkout (có checkOutTime)
+      return isPaid || isCheckout;
+    });
+  }
+  
   searchText: string = '';
   exported: boolean = false;
   switchValue = false;
@@ -140,8 +171,11 @@ export class TableComponent implements OnInit, OnChanges {
 
   paymentMethodOptions = [
     { value: 'cash', label: 'Tiền mặt', color: 'green' },
-    { value: 'card', label: 'Thẻ tín dụng', color: 'blue' },
-    { value: 'transfer', label: 'Chuyển khoản', color: 'purple' }
+    { value: 'card', label: 'Thẻ ngân hàng', color: 'blue' },
+    { value: 'transfer', label: 'Chuyển khoản', color: 'purple' },
+    { value: 'banking', label: 'Chuyển khoản', color: 'purple' },
+    { value: 'qr', label: 'Quét mã QR', color: 'cyan' },
+    { value: 'visa', label: 'Visa/Mastercard', color: 'magenta' }
   ];
 
   paymentStatusOptions = [
@@ -231,14 +265,23 @@ export class TableComponent implements OnInit, OnChanges {
       return;
     }
     
-    console.log('Hiển thị hóa đơn cho phòng:', item.roomNumber);
+    console.log('=== Xem hóa đơn ===');
+    console.log('Phòng:', item.roomNumber);
+    console.log('Khách hàng:', item.customerName || item.guestInfo?.name);
+    console.log('SĐT:', item.customerPhone || item.guestInfo?.phone);
+    console.log('Thời gian nhận:', item.checkInTime || item.checkinTime);
+    console.log('Thời gian trả:', item.checkOutTime || item.checkoutTime);
+    console.log('Tiền phòng:', item.roomTotal);
+    console.log('Tiền dịch vụ:', item.servicesTotal);
+    console.log('Phụ thu:', item.additionalCharges);
+    console.log('Giảm giá:', item.discount);
+    console.log('Đặt trước:', item.advancePayment);
+    console.log('Tổng tiền:', item.totalAmount || item.amount);
+    console.log('Hình thức TT:', item.paymentMethod);
+    console.log('Dịch vụ:', item.services);
+    console.log('Full data:', item);
     
-    if (!item.id) {
-      item.id = this.defaultShiftId;
-    }
-    
-    this.invoiceService.showInvoiceModal(item);
-    
+    // Emit event để parent component (room-history) xử lý modal
     this.onViewInvoice.emit(item);
   }
 
@@ -262,8 +305,9 @@ export class TableComponent implements OnInit, OnChanges {
   }
   
   calculateTotalPayment(): void {
-    this.totalPayment = this.listOfData.reduce((sum, current) => {
-      const amount = current?.amount || current?.payment?.amount || 0;
+    // Tính tổng tiền chỉ từ các bản ghi đã thanh toán
+    this.totalPayment = this.paidData.reduce((sum, current) => {
+      const amount = current?.totalAmount || current?.amount || current?.payment?.amount || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0);
   }
@@ -272,34 +316,93 @@ export class TableComponent implements OnInit, OnChanges {
     this.exported = true;
 
     try {
-      const data = this.listOfData.map(item => {
+      // Chỉ xuất các bản ghi đã thanh toán
+      const data = this.paidData.map(item => {
+        // Lấy thông tin khách hàng
+        const customerName = item.customerName || item.guestInfo?.name || 'Khách lẻ';
+        const customerPhone = item.customerPhone || item.guestInfo?.phone || '';
+        const customerIdNumber = item.customerIdNumber || item.guestInfo?.idNumber || '';
+        
+        // Lấy thời gian
+        const checkInTime = item.checkInTime || item.checkinTime;
+        const checkOutTime = item.checkOutTime || item.checkoutTime;
+        
+        // Tính thời gian lưu trú
+        let duration = '';
+        if (checkInTime && checkOutTime) {
+          const diffMs = new Date(checkOutTime).getTime() - new Date(checkInTime).getTime();
+          const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+          const days = Math.floor(diffHours / 24);
+          const hours = diffHours % 24;
+          duration = days > 0 ? `${days} ngày ${hours} giờ` : `${diffHours} giờ`;
+        }
+        
+        // Lấy danh sách dịch vụ
+        let servicesList = '';
+        if (item.services && Array.isArray(item.services) && item.services.length > 0) {
+          servicesList = item.services.map((s: any) => 
+            `${s.serviceName || s.name} x${s.quantity || 1}`
+          ).join(', ');
+        }
+        
+        // Lấy hình thức thanh toán
+        const paymentMethod = this.getPaymentMethodLabel(item.paymentMethod || 'cash');
+        
         return {
-          'Phòng': item.roomNumber,
-          'Khách hàng': item.customerName || 'Khách lẻ',
-          'Nhận phòng': item.checkinTime ? new Date(item.checkinTime).toLocaleString() : '',
-          'Trả phòng': item.checkoutTime ? new Date(item.checkoutTime).toLocaleString() : '',
-          'Trạng thái thanh toán': this.getPaymentStatusText(item.payment?.status),
-          'Số tiền thanh toán': item.amount || item.payment?.amount || 0,
+          'Phòng': item.roomNumber || '',
+          'Khách hàng': customerName,
+          'SĐT': customerPhone,
+          'CCCD/CMND': customerIdNumber,
+          'Nhận phòng': checkInTime ? this.formatDateTime(checkInTime) : '',
+          'Trả phòng': checkOutTime ? this.formatDateTime(checkOutTime) : '',
+          'Thời gian lưu trú': duration,
+          'Tiền phòng': item.roomTotal || 0,
+          'Dịch vụ': servicesList,
+          'Tiền dịch vụ': item.servicesTotal || 0,
+          'Phụ thu': item.additionalCharges || 0,
+          'Khuyến mãi': item.discount || 0,
+          'Đặt trước': item.advancePayment || 0,
+          'Tổng tiền': item.totalAmount || item.amount || 0,
+          'Hình thức TT': paymentMethod,
+          'Trạng thái': 'Đã thanh toán',
           'Ghi chú': item.notes || ''
         };
       });
 
       const worksheet = XLSX.utils.json_to_sheet(data);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Danh sách phòng');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Lịch sử đã thanh toán');
 
+      // Thiết lập độ rộng cột
       const columnWidths = [
-        { wch: 10 },
-        { wch: 25 },
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 15 },
-        { wch: 30 }
+        { wch: 8 },   // Phòng
+        { wch: 20 },  // Khách hàng
+        { wch: 12 },  // SĐT
+        { wch: 15 },  // CCCD
+        { wch: 18 },  // Nhận phòng
+        { wch: 18 },  // Trả phòng
+        { wch: 15 },  // Thời gian lưu trú
+        { wch: 12 },  // Tiền phòng
+        { wch: 25 },  // Dịch vụ
+        { wch: 12 },  // Tiền dịch vụ
+        { wch: 10 },  // Phụ thu
+        { wch: 10 },  // Khuyến mãi
+        { wch: 10 },  // Đặt trước
+        { wch: 12 },  // Tổng tiền
+        { wch: 12 },  // Hình thức TT
+        { wch: 12 },  // Trạng thái
+        { wch: 25 }   // Ghi chú
       ];
       worksheet['!cols'] = columnWidths;
 
-      XLSX.writeFile(workbook, `danh_sach_phong_${new Date().toISOString().split('T')[0]}.xlsx`);
+      // Tạo tên file với ngày
+      const fileName = `lich_su_thanh_toan_${format(new Date(), 'dd-MM-yyyy_HH-mm')}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      
+      this.message.success(`Đã xuất file ${fileName}`);
+    } catch (error) {
+      console.error('Lỗi xuất Excel:', error);
+      this.message.error('Lỗi khi xuất file Excel');
     } finally {
       setTimeout(() => {
         this.exported = false;
@@ -499,10 +602,9 @@ export class TableComponent implements OnInit, OnChanges {
 
   // Tính tổng số tiền
   getTotalAmount(): number {
-    if (!this.listOfData) return 0;
-    
-    return this.listOfData.reduce((total, item) => {
-      const amount = item.amount || item.payment?.amount || item.totalAmount || 0;
+    // Chỉ tính tổng từ các bản ghi đã thanh toán
+    return this.paidData.reduce((total, item) => {
+      const amount = item.totalAmount || item.amount || item.payment?.amount || 0;
       return total + (typeof amount === 'number' ? amount : 0);
     }, 0);
   }

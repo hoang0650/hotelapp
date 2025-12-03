@@ -333,6 +333,94 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.selectedRoomId = room._id;
     console.log('Selected room:', room);
   }
+
+  // Lấy thông tin checkin của phòng đang có khách
+  getRoomCheckinInfo(room: Room): { 
+    guestName: string; 
+    checkinTime: Date | null; 
+    roomPrice: number; 
+    advancePayment: number; 
+    remainingAmount: number;
+    rateType: string;
+    rateTypeLabel: string;
+  } | null {
+    if (room.status !== 'occupied' || !room.events || room.events.length === 0) {
+      return null;
+    }
+
+    // Tìm event checkin cuối cùng
+    const checkinEvents = room.events.filter(e => e.type === 'checkin');
+    if (checkinEvents.length === 0) return null;
+    
+    const lastCheckin = checkinEvents[checkinEvents.length - 1];
+    const checkinTime = lastCheckin.checkinTime ? new Date(lastCheckin.checkinTime) : null;
+    const rateType = lastCheckin.rateType || 'hourly';
+    
+    // Lấy label cho loại giá
+    const rateTypeLabels: {[key: string]: string} = {
+      'hourly': 'Theo giờ',
+      'daily': 'Ngày đêm',
+      'nightly': 'Qua đêm'
+    };
+    const rateTypeLabel = rateTypeLabels[rateType] || 'Theo giờ';
+    
+    // Tính tiền phòng dựa trên thời gian
+    let roomPrice = 0;
+    if (checkinTime) {
+      const now = new Date();
+      const durationInHours = Math.ceil((now.getTime() - checkinTime.getTime()) / (1000 * 60 * 60));
+      const durationInDays = Math.ceil(durationInHours / 24);
+      
+      // Lấy giá từ room pricing
+      const hourlyRate = room.pricing?.hourly || room.firstHourRate || 0;
+      const dailyRate = room.pricing?.daily || 0;
+      const nightlyRate = room.pricing?.nightly || 0;
+      
+      switch (rateType) {
+        case 'hourly':
+          if (room.firstHourRate && room.additionalHourRate) {
+            roomPrice = room.firstHourRate;
+            if (durationInHours > 1) {
+              roomPrice += (durationInHours - 1) * room.additionalHourRate;
+            }
+            if (durationInHours > 6 && dailyRate > 0) {
+              roomPrice = dailyRate;
+            }
+          } else {
+            roomPrice = hourlyRate * durationInHours;
+            if (durationInHours > 6 && dailyRate > 0 && roomPrice > dailyRate) {
+              roomPrice = dailyRate;
+            }
+          }
+          break;
+        case 'daily':
+          roomPrice = dailyRate * durationInDays;
+          break;
+        case 'nightly':
+          roomPrice = nightlyRate;
+          if (durationInDays > 1) {
+            roomPrice += (durationInDays - 1) * dailyRate;
+          }
+          break;
+        default:
+          roomPrice = hourlyRate * durationInHours;
+      }
+    }
+    
+    const advancePayment = lastCheckin.advancePayment || 0;
+    // Cho phép giá trị âm (khi đặt trước nhiều hơn tiền phòng)
+    const remainingAmount = roomPrice - advancePayment;
+    
+    return {
+      guestName: lastCheckin.guestInfo?.name || 'Khách lẻ',
+      checkinTime: checkinTime,
+      roomPrice: Math.round(roomPrice),
+      advancePayment: advancePayment,
+      remainingAmount: Math.round(remainingAmount),
+      rateType: rateType,
+      rateTypeLabel: rateTypeLabel
+    };
+  }
 }
 
 

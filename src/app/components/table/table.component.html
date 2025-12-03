@@ -80,16 +80,13 @@
 </div>
 
 <div class="status-summary nz-card" *ngIf="settingValue.totalPayment">
-  <nz-statistic [nzValue]="countByStatus('paid')" nzTitle="Đã thanh toán" [nzValueStyle]="{ color: '#52c41a' }"></nz-statistic>
-  <nz-statistic [nzValue]="countByStatus('pending')" nzTitle="Chờ thanh toán" [nzValueStyle]="{ color: '#faad14' }"></nz-statistic>
-  <nz-statistic [nzValue]="countByStatus('cancelled')" nzTitle="Đã hủy" [nzValueStyle]="{ color: '#f5222d' }"></nz-statistic>
-  <nz-statistic [nzValue]="listOfData.length" nzTitle="Tổng phòng" [nzValueStyle]="{ color: '#1890ff' }"></nz-statistic>
+  <nz-statistic [nzValue]="paidData.length" nzTitle="Đã thanh toán" [nzValueStyle]="{ color: '#52c41a' }"></nz-statistic>
   <nz-statistic [nzValue]="totalPayment" nzTitle="Tổng tiền" [nzSuffix]="'đ'" [nzValueStyle]="{ color: '#722ed1' }"></nz-statistic>
 </div>
 
 <nz-table
   #basicTable
-  [nzData]="listOfData | filter:searchText:['roomNumber', 'customerName']"
+  [nzData]="paidData | filter:searchText:['roomNumber', 'customerName']"
   [nzBordered]="settingValue.bordered"
   [nzLoading]="settingValue.loading"
   [nzPaginationType]="settingValue.paginationType"
@@ -103,7 +100,7 @@
   [nzScroll]="{ x: scrollX, y: scrollY }"
   (nzCurrentPageDataChange)="currentPageDataChange($event)"
   [nzFooter]="settingValue.footer ? footerTemplate : null"
-  [nzTitle]="settingValue.title ? 'Danh sách phòng' : null"
+  [nzTitle]="settingValue.title ? 'Lịch sử đã thanh toán' : null"
 >
   <ng-template #totalTemplate let-total let-range="range">
     Hiển thị {{ range[0] }}-{{ range[1] }} của {{ total }} mục
@@ -130,13 +127,14 @@
         [nzWidth]="'60px'"
         [nzLeft]="fixedColumn">
       </th>
-      <th [nzWidth]="'100px'" [nzLeft]="fixedColumn">Phòng</th>
-      <th [nzWidth]="'150px'">Khách hàng</th>
-      <th [nzWidth]="'180px'">Thời gian</th>
-      <th [nzWidth]="'120px'">Trạng thái</th>
+      <th [nzWidth]="'80px'" [nzLeft]="fixedColumn">Phòng</th>
+      <th [nzWidth]="'180px'">Khách hàng</th>
+      <th [nzWidth]="'200px'">Thời gian</th>
+      <th [nzWidth]="'200px'">Chi tiết</th>
       <th [nzWidth]="'130px'">Hình thức</th>
-      <th [nzWidth]="'150px'">Số tiền</th>
-      <th [nzWidth]="'120px'" [nzRight]="fixedColumn">Thao tác</th>
+      <th [nzWidth]="'150px'">Tổng tiền</th>
+      <th [nzWidth]="'150px'">Ghi chú</th>
+      <th [nzWidth]="'100px'" [nzRight]="fixedColumn">Thao tác</th>
     </tr>
   </thead>
   <tbody>
@@ -159,28 +157,76 @@
           </button>
         </td>
         <td [nzLeft]="fixedColumn">
-          <a>{{ data.roomNumber }}</a>
-        </td>
-        <td>{{ data.customerName || 'Khách lẻ' }}</td>
-        <td>
-           <div>Nhận: {{ formatDateTime(data.checkInTime) }}</div>
-           <div>Trả: {{ formatDateTime(data.checkOutTime) }}</div>
-           <div class="time-duration" *ngIf="data.checkInTime && data.checkOutTime">
-             ({{ calculateDuration(data.checkInTime, data.checkOutTime) }})
-           </div>
+          <a><strong>{{ data.roomNumber }}</strong></a>
         </td>
         <td>
-          <nz-tag [nzColor]="getPaymentStatusColor((data.amount > 0 || data.totalAmount > 0) ? 'paid' : data.paymentStatus)">
-            {{ getPaymentStatusText((data.amount > 0 || data.totalAmount > 0) ? 'paid' : data.paymentStatus) }}
-          </nz-tag>
+          <div class="customer-info">
+            <div class="customer-name">
+              <i nz-icon nzType="user" nzTheme="outline"></i>
+              {{ data.customerName || data.guestInfo?.name || 'Khách lẻ' }}
+            </div>
+            <div class="customer-phone" *ngIf="data.customerPhone || data.guestInfo?.phone">
+              <i nz-icon nzType="phone" nzTheme="outline"></i>
+              {{ data.customerPhone || data.guestInfo?.phone }}
+            </div>
+            <div class="customer-id" *ngIf="data.guestInfo?.idNumber">
+              <i nz-icon nzType="idcard" nzTheme="outline"></i>
+              {{ data.guestInfo?.idNumber }}
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="time-info">
+            <div class="checkin-time">
+              <span class="time-label">Nhận:</span> 
+              {{ formatDateTime(data.checkInTime || data.checkinTime) }}
+            </div>
+            <div class="checkout-time">
+              <span class="time-label">Trả:</span> 
+              {{ formatDateTime(data.checkOutTime || data.checkoutTime || data.date) }}
+            </div>
+            <div class="duration" *ngIf="(data.checkInTime || data.checkinTime) && (data.checkOutTime || data.checkoutTime || data.date)">
+              <nz-tag nzColor="blue">
+                {{ calculateDuration(data.checkInTime || data.checkinTime, data.checkOutTime || data.checkoutTime || data.date) }}
+              </nz-tag>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="detail-info">
+            <div class="room-total" *ngIf="data.roomTotal > 0">
+              Phòng: {{ data.roomTotal | currency:'VND':'symbol-narrow':'1.0-0' }}
+            </div>
+            <div class="service-total" *ngIf="data.servicesTotal > 0">
+              DV: {{ data.servicesTotal | currency:'VND':'symbol-narrow':'1.0-0' }}
+            </div>
+            <div class="additional" *ngIf="data.additionalCharges > 0">
+              <span style="color: #fa8c16">+Phụ thu: {{ data.additionalCharges | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="discount" *ngIf="data.discount > 0">
+              <span style="color: #52c41a">-KM: {{ data.discount | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="advance" *ngIf="data.advancePayment > 0">
+              <span style="color: #1890ff">Đặt trước: {{ data.advancePayment | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+          </div>
         </td>
         <td>
           <nz-tag [nzColor]="getPaymentMethodColor(data.paymentMethod || 'cash')">
             {{ getPaymentMethodLabel(data.paymentMethod || 'cash') }}
           </nz-tag>
+          <div style="margin-top: 4px;">
+            <nz-tag [nzColor]="'success'">Đã thanh toán</nz-tag>
+          </div>
         </td>
         <td>
-          {{ (data.amount || data.totalAmount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+          <strong style="color: #722ed1">{{ (data.totalAmount || data.amount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</strong>
+        </td>
+        <td>
+          <div class="notes-cell" [nz-tooltip]="data.notes" *ngIf="data.notes">
+            {{ data.notes | slice:0:20 }}{{ data.notes?.length > 20 ? '...' : '' }}
+          </div>
+          <span *ngIf="!data.notes" style="color: #999">--</span>
         </td>
         <td [nzRight]="fixedColumn">
           <div class="action-buttons">
@@ -198,39 +244,80 @@
         </td>
       </tr>
       <tr *ngIf="data.expand">
-        <td [attr.colspan]="(settingValue.checkbox && settingValue.expandable) ? 9 : ((settingValue.checkbox || settingValue.expandable) ? 8 : 7)">
+        <td [attr.colspan]="(settingValue.checkbox && settingValue.expandable) ? 10 : ((settingValue.checkbox || settingValue.expandable) ? 9 : 8)">
           <div class="expanded-row">
-            <nz-card [nzTitle]="'Thông tin chi tiết phòng ' + data.roomNumber" [nzBordered]="false">
-              <nz-descriptions [nzBordered]="true" [nzSize]="'small'">
-                <nz-descriptions-item nzTitle="Loại phòng" [nzSpan]="1">
-                  {{ data.roomType || 'Không xác định' }}
+            <nz-card [nzTitle]="'Chi tiết hóa đơn phòng ' + data.roomNumber" [nzBordered]="false">
+              <nz-descriptions [nzBordered]="true" [nzSize]="'small'" [nzColumn]="3">
+                <!-- Thông tin khách hàng -->
+                <nz-descriptions-item nzTitle="Khách hàng" [nzSpan]="1">
+                  <strong>{{ data.customerName || data.guestInfo?.name || 'Khách lẻ' }}</strong>
                 </nz-descriptions-item>
-                <nz-descriptions-item nzTitle="Số điện thoại" [nzSpan]="2">
-                  {{ data.customerPhone || 'Không có' }}
+                <nz-descriptions-item nzTitle="Số điện thoại" [nzSpan]="1">
+                  {{ data.customerPhone || data.guestInfo?.phone || 'Không có' }}
                 </nz-descriptions-item>
-                <nz-descriptions-item nzTitle="Thời gian ở" [nzSpan]="3">
-                  <ng-container *ngIf="data.checkInTime && data.checkOutTime">
-                    Từ: {{ formatDateTime(data.checkInTime, true) }} <br>
-                    Đến: {{ formatDateTime(data.checkOutTime, true) }} <br>
-                    ({{ calculateDuration(data.checkInTime, data.checkOutTime) }})
-                  </ng-container>
-                  <ng-container *ngIf="!data.checkInTime || !data.checkOutTime">
-                    Không có thông tin thời gian
-                  </ng-container>
+                <nz-descriptions-item nzTitle="CCCD/CMND" [nzSpan]="1">
+                  {{ data.guestInfo?.idNumber || 'Không có' }}
                 </nz-descriptions-item>
-                <nz-descriptions-item nzTitle="Số tiền" [nzSpan]="3">
-                  {{ (data.amount || data.totalAmount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                
+                <!-- Thông tin thời gian -->
+                <nz-descriptions-item nzTitle="Thời gian nhận phòng" [nzSpan]="1">
+                  {{ formatDateTime(data.checkInTime || data.checkinTime, true) || 'N/A' }}
                 </nz-descriptions-item>
-                <nz-descriptions-item nzTitle="Thanh toán" [nzSpan]="3">
-                  <nz-tag [nzColor]="getPaymentStatusColor((data.amount > 0 || data.totalAmount > 0) ? 'paid' : data.paymentStatus)">
-                    {{ getPaymentStatusText((data.amount > 0 || data.totalAmount > 0) ? 'paid' : data.paymentStatus) }}
+                <nz-descriptions-item nzTitle="Thời gian trả phòng" [nzSpan]="1">
+                  {{ formatDateTime(data.checkOutTime || data.checkoutTime || data.date, true) || 'N/A' }}
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Thời gian lưu trú" [nzSpan]="1">
+                  <nz-tag nzColor="blue" *ngIf="(data.checkInTime || data.checkinTime) && (data.checkOutTime || data.checkoutTime)">
+                    {{ calculateDuration(data.checkInTime || data.checkinTime, data.checkOutTime || data.checkoutTime || data.date) }}
                   </nz-tag>
-                  <span class="payment-method">
-                    <nz-tag [nzColor]="getPaymentMethodColor(data.paymentMethod || 'cash')">
-                      {{ getPaymentMethodLabel(data.paymentMethod || 'cash') }}
-                    </nz-tag>
-                  </span>
+                  <span *ngIf="!(data.checkInTime || data.checkinTime) || !(data.checkOutTime || data.checkoutTime)">N/A</span>
                 </nz-descriptions-item>
+                
+                <!-- Chi tiết thanh toán -->
+                <nz-descriptions-item nzTitle="Tiền phòng" [nzSpan]="1">
+                  {{ (data.roomTotal || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Tiền dịch vụ" [nzSpan]="1">
+                  {{ (data.servicesTotal || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Phụ thu" [nzSpan]="1">
+                  <span style="color: #fa8c16">+{{ (data.additionalCharges || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+                </nz-descriptions-item>
+                
+                <nz-descriptions-item nzTitle="Khuyến mãi" [nzSpan]="1">
+                  <span style="color: #52c41a">-{{ (data.discount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Đặt trước" [nzSpan]="1">
+                  <span style="color: #1890ff">{{ (data.advancePayment || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Tổng thanh toán" [nzSpan]="1">
+                  <strong style="color: #722ed1; font-size: 16px">{{ (data.totalAmount || data.amount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</strong>
+                </nz-descriptions-item>
+                
+                <!-- Hình thức thanh toán -->
+                <nz-descriptions-item nzTitle="Hình thức thanh toán" [nzSpan]="1">
+                  <nz-tag [nzColor]="getPaymentMethodColor(data.paymentMethod || 'cash')">
+                    {{ getPaymentMethodLabel(data.paymentMethod || 'cash') }}
+                  </nz-tag>
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Trạng thái" [nzSpan]="1">
+                  <nz-tag nzColor="success">Đã thanh toán</nz-tag>
+                </nz-descriptions-item>
+                <nz-descriptions-item nzTitle="Số hóa đơn" [nzSpan]="1">
+                  {{ data.invoiceNumber || data._id || 'N/A' }}
+                </nz-descriptions-item>
+                
+                <!-- Dịch vụ đã sử dụng -->
+                <nz-descriptions-item nzTitle="Dịch vụ đã sử dụng" [nzSpan]="3" *ngIf="data.services && data.services.length > 0">
+                  <div class="services-list">
+                    <nz-tag *ngFor="let service of data.services" nzColor="cyan">
+                      {{ service.serviceName || service.name }} x{{ service.quantity || 1 }} 
+                      ({{ (service.price || 0) | currency:'VND':'symbol-narrow':'1.0-0' }})
+                    </nz-tag>
+                  </div>
+                </nz-descriptions-item>
+                
+                <!-- Ghi chú -->
                 <nz-descriptions-item nzTitle="Ghi chú" [nzSpan]="3">
                   {{ data.notes || 'Không có ghi chú' }}
                 </nz-descriptions-item>

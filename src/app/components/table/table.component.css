@@ -7,3 +7,97 @@ form nz-form-item {
     overflow-x: auto;
     display: block;
 }
+
+/* Customer info styles */
+.customer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.customer-name {
+    font-weight: 500;
+    color: #1890ff;
+}
+
+.customer-phone, .customer-id {
+    font-size: 12px;
+    color: #666;
+}
+
+.customer-info i {
+    margin-right: 4px;
+    color: #999;
+}
+
+/* Time info styles */
+.time-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.time-label {
+    font-weight: 500;
+    color: #666;
+    font-size: 12px;
+}
+
+.checkin-time, .checkout-time {
+    font-size: 13px;
+}
+
+.duration {
+    margin-top: 4px;
+}
+
+/* Detail info styles */
+.detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+}
+
+.room-total {
+    font-weight: 500;
+}
+
+.service-total {
+    color: #13c2c2;
+}
+
+/* Notes cell styles */
+.notes-cell {
+    font-size: 12px;
+    color: #666;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* Services list in expanded row */
+.services-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Expanded row styles */
+.expanded-row {
+    padding: 16px;
+    background-color: #fafafa;
+}
+
+.expanded-row nz-card {
+    background: white;
+}
+
+/* Action buttons */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}

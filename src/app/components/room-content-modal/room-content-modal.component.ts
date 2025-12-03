@@ -229,7 +229,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         const lastCheckinEvent = checkinEvents.length > 0 ? checkinEvents[0] : null;
         
         // Nếu có event check-in và phòng đang có khách
-        if (lastCheckinEvent && (this.roomData.roomStatus === 'active' || this.roomData.roomStatus === 'occupied')) {
+        if (lastCheckinEvent && this.roomData.status === 'occupied') {
           this.listData = [lastCheckinEvent];
           
           // Kiểm tra xem đã có phiên chưa
@@ -240,7 +240,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             const sessionData: RoomSession = {
               roomId: this.roomData._id,
               roomNumber: this.roomData.roomNumber,
-              roomType: this.roomData.roomType,
+              roomType: this.roomData.type,
               hotelId: this.roomData.hotelId,
               checkinTime: new Date(lastCheckinEvent.checkinTime),
               guestInfo: lastCheckinEvent.guestInfo,
@@ -433,45 +433,25 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const checkInTime = new Date(lastCheckIn.checkinTime);
     const checkOutTime = new Date();
     const durationInHours = Math.ceil((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60));
+    const durationInDays = Math.ceil(durationInHours / 24);
     
     // Log thông tin tính toán thời gian
     console.log(`Check-in time: ${checkInTime.toISOString()}`);
     console.log(`Check-out time: ${checkOutTime.toISOString()}`);
     console.log(`Duration in hours: ${durationInHours}`);
     
-    // Xác định loại giá
-    let roomPrice = 0;
+    // Xác định loại giá và tính tiền phòng
     const rateType = lastCheckIn.rateType || 'hourly';
-    
-    if (rateType === 'hourly') {
-      if (this.roomData.firstHourRate && this.roomData.additionalHourRate) {
-        roomPrice = this.roomData.firstHourRate;
-        if (durationInHours > 1) {
-          roomPrice += (durationInHours - 1) * this.roomData.additionalHourRate;
-        }
-        
-        // Nếu số giờ vượt quá 6 giờ, chuyển sang tính theo ngày
-        if (durationInHours > 6) {
-          roomPrice = this.roomData.dailyRate;
-        }
-      } else {
-        roomPrice = this.roomData.hourlyRate * durationInHours;
-      }
-    } else if (rateType === 'daily') {
-      const days = Math.ceil(durationInHours / 24);
-      roomPrice = this.roomData.dailyRate * days;
-    } else if (rateType === 'nightly') {
-      roomPrice = this.roomData.nightlyRate;
-    }
+    const roomPrice = this.calculateRoomTotalByRateType(durationInHours, durationInDays, rateType);
     
     console.log(`Room price (${rateType}): ${roomPrice}`);
     
     // Tính tổng tiền dịch vụ
     const serviceTotal = this.selectedServices.reduce((total, service) => {
       // Sử dụng totalPrice nếu có, nếu không thì tính từ price và quantity
-      const serviceTotal = service.totalPrice !== undefined ? 
+      const serviceAmount = service.totalPrice !== undefined ? 
         service.totalPrice : (service.price * service.quantity);
-      return total + serviceTotal;
+      return total + serviceAmount;
     }, 0);
     console.log(`Service total: ${serviceTotal}`);
     
@@ -493,8 +473,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   // Xử lý check-in
   processCheckIn(): void {
     // Kiểm tra trạng thái phòng
-    if (this.roomData.roomStatus !== 'available') {
-      this.message.error(`Phòng ${this.roomData.roomNumber} không sẵn sàng để nhận phòng (Trạng thái hiện tại: ${this.roomData.roomStatus}).`);
+    if (this.roomData.status !== 'vacant') {
+      this.message.error(`Phòng ${this.roomData.roomNumber} không sẵn sàng để nhận phòng (Trạng thái hiện tại: ${this.getStatusLabel(this.roomData.status)}).`);
       this.isLoading = false;
       return;
     }
@@ -526,7 +506,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       };
 
     const newRoom = {
-      roomStatus: 'occupied',
+      status: 'occupied',
       events: [
         ...this.roomData.events || [],
         checkinEventData
@@ -542,7 +522,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           const sessionData: RoomSession = {
             roomId: this.roomData._id,
             roomNumber: this.roomData.roomNumber,
-            roomType: this.roomData.roomType,
+            roomType: this.roomData.type,
             hotelId: this.roomData.hotelId,
             checkinTime: checkinEventData.checkinTime,
             guestInfo: checkinEventData.guestInfo,
@@ -584,8 +564,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   // Xử lý checkout
   processCheckOut(): void {
     // Kiểm tra trạng thái phòng
-    if (this.roomData.roomStatus !== 'occupied' && this.roomData.roomStatus !== 'active') {
-      this.message.error(`Phòng ${this.roomData.roomNumber} hiện không có khách để trả phòng (Trạng thái: ${this.roomData.roomStatus}).`);
+    if (this.roomData.status !== 'occupied') {
+      this.message.error(`Phòng ${this.roomData.roomNumber} hiện không có khách để trả phòng (Trạng thái: ${this.getStatusLabel(this.roomData.status)}).`);
       this.isLoading = false;
       return;
     }
@@ -607,8 +587,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const durationInHours = this.calculateDurationInHours(checkInTime, currentTime);
     const durationInDays = Math.ceil(durationInHours / 24);
     
-    // Tính tổng tiền phòng
-    const roomTotal = this.calculateRoomTotal(durationInHours, this.roomData.hourlyRate || 0);
+    // Tính tổng tiền phòng dựa trên loại giá (rateType) từ session
+    const rateType = session.rateType || 'hourly';
+    const roomTotal = this.calculateRoomTotalByRateType(durationInHours, durationInDays, rateType);
     
     // Tính tổng tiền dịch vụ
     const servicesTotal = this.calculateServicesTotal();
@@ -625,7 +606,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     // Chuẩn bị dữ liệu checkout
     const checkoutData = {
-      roomStatus: 'dirty',
+      status: 'dirty',
       paymentStatus: 'paid',
       checkoutTime: currentTime,
       totalAmount: grandTotal,
@@ -648,11 +629,32 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       ]
     };
     
+    // Tạo danh sách products cho hóa đơn
+    const products: any[] = [];
+    
+    // Thêm tiền phòng vào products
+    products.push({
+      name: `Tiền phòng ${this.roomData.roomNumber}`,
+      price: roomTotal,
+      quantity: 1
+    });
+    
+    // Thêm các dịch vụ vào products
+    if (this.selectedServices && this.selectedServices.length > 0) {
+      this.selectedServices.forEach(service => {
+        products.push({
+          name: service.serviceName,
+          price: service.price,
+          quantity: service.quantity || 1
+        });
+      });
+    }
+    
     // Tạo dữ liệu hóa đơn
     const invoiceData = {
       roomId: this.roomData._id,
       roomNumber: this.roomData.roomNumber,
-      roomType: this.roomData.roomType,
+      roomType: this.roomData.type,
       hotelId: this.roomData.hotelId,
       invoiceNumber: 'INV-' + Date.now(),
       date: new Date(),
@@ -667,8 +669,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         hours: durationInHours,
         days: durationInDays
       },
-      roomPrice: this.roomData.hourlyRate || 0,
+      roomPrice: roomTotal,
       roomTotal: roomTotal,
+      products: products,
       services: this.selectedServices.map(service => ({
         name: service.serviceName,
         price: service.price,
@@ -678,6 +681,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       servicesTotal: servicesTotal,
       additionalCharges: additionalCharges,
       discount: discount,
+      totalAmount: grandTotal,
       grandTotal: grandTotal,
       advancePayment: session.advancePayment || 0,
       remainingAmount: remainingAmount,
@@ -747,6 +751,62 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return total;
   }
 
+  // Tính tiền phòng dựa trên loại giá
+  calculateRoomTotalByRateType(durationInHours: number, durationInDays: number, rateType: string): number {
+    if (!this.roomData) return 0;
+    
+    const hourlyRate = this.roomData.pricing?.hourly || this.roomData.firstHourRate || 0;
+    const dailyRate = this.roomData.pricing?.daily || 0;
+    const nightlyRate = this.roomData.pricing?.nightly || 0;
+    const additionalHourRate = this.roomData.additionalHourRate || (hourlyRate * 0.8);
+    
+    let total = 0;
+    
+    switch (rateType) {
+      case 'hourly':
+        // Tính theo giờ
+        if (this.roomData.firstHourRate && this.roomData.additionalHourRate) {
+          // Có giá giờ đầu và giờ tiếp theo
+          total = this.roomData.firstHourRate;
+          if (durationInHours > 1) {
+            total += (durationInHours - 1) * this.roomData.additionalHourRate;
+          }
+          // Nếu vượt quá 6 giờ, chuyển sang giá ngày
+          if (durationInHours > 6 && dailyRate > 0) {
+            total = dailyRate;
+          }
+        } else {
+          // Tính theo giá hourly từ pricing
+          total = hourlyRate * durationInHours;
+          // Nếu vượt quá 6 giờ và có giá ngày, dùng giá ngày
+          if (durationInHours > 6 && dailyRate > 0 && (hourlyRate * durationInHours) > dailyRate) {
+            total = dailyRate;
+          }
+        }
+        break;
+        
+      case 'daily':
+        // Tính theo ngày
+        total = dailyRate * durationInDays;
+        break;
+        
+      case 'nightly':
+        // Tính theo đêm
+        total = nightlyRate;
+        // Nếu nhiều hơn 1 đêm
+        if (durationInDays > 1) {
+          total += (durationInDays - 1) * dailyRate;
+        }
+        break;
+        
+      default:
+        // Mặc định tính theo giờ
+        total = hourlyRate * durationInHours;
+    }
+    
+    return Math.max(0, Math.round(total));
+  }
+
   calculateServicesTotal(): number {
     // Tính tổng tiền dịch vụ từ danh sách dịch vụ đã chọn
     return this.selectedServices.reduce((total, service) => {
@@ -760,8 +820,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   // Xử lý dọn phòng
   cleanRoom(): void {
     // Kiểm tra trạng thái phòng
-    if (this.roomData.roomStatus !== 'dirty' && this.roomData.roomStatus !== 'maintenance') {
-      this.message.error(`Phòng ${this.roomData.roomNumber} không ở trạng thái cần dọn dẹp hoặc bảo trì (Trạng thái: ${this.roomData.roomStatus}).`);
+    if (this.roomData.status !== 'dirty' && this.roomData.status !== 'maintenance' && this.roomData.status !== 'cleaning') {
+      this.message.error(`Phòng ${this.roomData.roomNumber} không ở trạng thái cần dọn dẹp hoặc bảo trì (Trạng thái: ${this.getStatusLabel(this.roomData.status)}).`);
       this.isLoading = false;
       return;
     }
@@ -769,13 +829,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     
     const newRoom = {
-      roomStatus: 'available',
+      status: 'vacant',
       events: [
         ...this.roomData.events || [],
         {
           type: 'maintenance', // Sử dụng giá trị 'maintenance' thay vì 'maintenance_completed'
           completedTime: new Date(),
-          notes: this.roomData.roomStatus === 'maintenance' ? 'Đã hoàn thành bảo trì' : 'Đã dọn dẹp phòng'
+          notes: this.roomData.status === 'maintenance' ? 'Đã hoàn thành bảo trì' : 'Đã dọn dẹp phòng'
         }
       ]
     };
@@ -784,7 +844,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       .subscribe(
         (room) => {
           let successMessage = 'Đã cập nhật trạng thái phòng thành "Sẵn sàng"';
-          if (this.roomData.roomStatus === 'maintenance') {
+          if (this.roomData.status === 'maintenance') {
             successMessage = 'Đã hoàn thành bảo trì và cập nhật trạng thái phòng thành "Sẵn sàng"';
           }
           this.message.success(successMessage);
@@ -822,32 +882,21 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
   // Thêm getter cho tiền phòng
   get roomPriceTotal(): number {
-    const lastCheckIn = this.listData && this.listData.length > 0 ? this.listData[0] : null;
-    if (!lastCheckIn || !this.roomData) return 0;
+    try {
+      const lastCheckIn = this.listData && this.listData.length > 0 ? this.listData[0] : null;
+      if (!lastCheckIn || !this.roomData || !lastCheckIn.checkinTime) return 0;
 
-    const checkInTime = new Date(lastCheckIn.checkinTime);
-    const checkOutTime = new Date(); // Hoặc thời gian checkout thực tế nếu có
-    const durationInHours = Math.ceil((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60));
-    const rateType = lastCheckIn.rateType || 'hourly';
+      const checkInTime = new Date(lastCheckIn.checkinTime);
+      const checkOutTime = new Date(); // Hoặc thời gian checkout thực tế nếu có
+      const durationInHours = Math.ceil((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60));
+      const durationInDays = Math.ceil(durationInHours / 24);
+      const rateType = lastCheckIn.rateType || 'hourly';
 
-    let price = 0;
-    if (rateType === 'hourly') {
-      if (this.roomData.firstHourRate && this.roomData.additionalHourRate) {
-        price = this.roomData.firstHourRate;
-        if (durationInHours > 1) {
-          price += (durationInHours - 1) * this.roomData.additionalHourRate;
-        }
-        if (durationInHours > 6) price = this.roomData.dailyRate; // Chuyển sang giá ngày
-      } else {
-        price = (this.roomData.hourlyRate || 0) * durationInHours;
-      }
-    } else if (rateType === 'daily') {
-      const days = Math.ceil(durationInHours / 24);
-      price = (this.roomData.dailyRate || 0) * days;
-    } else if (rateType === 'nightly') {
-      price = this.roomData.nightlyRate || 0;
+      return this.calculateRoomTotalByRateType(durationInHours, durationInDays, rateType);
+    } catch (error) {
+      console.error('Error calculating room price:', error);
+      return 0;
     }
-    return price;
   }
 
   // Thêm getter cho tiền dịch vụ
@@ -926,6 +975,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   // Hàm public để đóng modal từ template
   closeModal(): void {
     this.modalRef.destroy();
+  }
+
+  // Helper: Lấy label cho trạng thái phòng
+  getStatusLabel(status: string): string {
+    const labels: {[key: string]: string} = {
+      'vacant': 'Trống',
+      'occupied': 'Đang sử dụng',
+      'dirty': 'Cần dọn dẹp',
+      'cleaning': 'Đang dọn dẹp',
+      'maintenance': 'Bảo trì'
+    };
+    return labels[status] || status;
   }
 
   createCheckOutForm(): void {

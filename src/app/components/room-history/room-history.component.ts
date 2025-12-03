@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, OnChanges, SimpleChanges, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { RoomsService } from '../../services/rooms.service';
+import { HotelService } from '../../services/hotel.service';
 import { BookingHistory } from '../../interfaces/rooms';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { InvoiceComponent } from '../invoice/invoice.component';
@@ -7,6 +8,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 // Mở rộng BookingHistory để thêm các trường cần thiết cho hiển thị
 export interface ExtendedBookingHistory extends BookingHistory {
@@ -21,11 +23,30 @@ export interface ExtendedBookingHistory extends BookingHistory {
     name?: string;
     phone?: string;
     email?: string;
+    idNumber?: string;
+    address?: string;
   };
   notes?: string;
   checkinTime?: Date; // Thêm để tương thích với dữ liệu từ API
   checkoutTime?: Date; // Thêm để tương thích với dữ liệu từ API
   amount?: number; // Đảm bảo có trường amount để tính toán
+  // Thêm các trường liên quan đến dịch vụ và hóa đơn
+  invoiceNumber?: string;
+  services?: Array<{
+    serviceId?: string;
+    serviceName?: string;
+    name?: string;
+    price?: number;
+    quantity?: number;
+    totalPrice?: number;
+  }>;
+  servicesTotal?: number;
+  roomTotal?: number;
+  advancePayment?: number;
+  // Thêm các trường mới
+  roomType?: string;
+  rateType?: string;
+  hotelId?: string;
 }
 
 @Component({
@@ -108,9 +129,13 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
   
   // Subscription để quản lý unsubscribe
   private roomDataSubscription: Subscription | null = null;
+  
+  // Thông tin khách sạn để hiển thị trên hóa đơn
+  hotelInfo: any = null;
 
   constructor(
     private roomsService: RoomsService,
+    private hotelService: HotelService,
     private modalService: NzModalService,
     private message: NzMessageService,
     private router: Router,
@@ -121,6 +146,7 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
   ngOnInit(): void {
     this.initSettingForm();
     this.loadRoomHistory(); // Tải toàn bộ lịch sử ban đầu
+    this.loadHotelInfo(); // Tải thông tin khách sạn
     
     // Đăng ký lắng nghe sự kiện cập nhật dữ liệu phòng
     this.roomDataSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
@@ -137,6 +163,27 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['hotelId'] || changes['roomId']) {
       this.loadRoomHistory(); // Tải lại nếu input thay đổi
+    }
+    if (changes['hotelId']) {
+      this.loadHotelInfo(); // Tải lại thông tin khách sạn khi hotelId thay đổi
+    }
+  }
+  
+  // Tải thông tin khách sạn
+  private loadHotelInfo(): void {
+    if (this.hotelId) {
+      const hotelIdStr = typeof this.hotelId === 'object' ? (this.hotelId as any)?._id : this.hotelId;
+      if (hotelIdStr && hotelIdStr !== '[object Object]') {
+        this.hotelService.getHotelById(hotelIdStr).pipe(take(1)).subscribe({
+          next: (hotel: any) => {
+            this.hotelInfo = hotel;
+            console.log('Loaded hotel info:', this.hotelInfo);
+          },
+          error: (err) => {
+            console.error('Error loading hotel info:', err);
+          }
+        });
+      }
     }
   }
   
@@ -247,22 +294,78 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
     this.roomsService.getRoomHistory(hotelIdStr, 'all', 1, 1000).subscribe({
       next: (data: { history: ExtendedBookingHistory[]; totalPages: number; currentPage: number; totalPayment: number; }) => {
         console.log('API Response:', data);
-        // Xử lý và chuẩn hóa dữ liệu gốc - BỎ BỘ LỌC checkout
-        // this.historyList = data.history.filter((item: any) => item.event === 'checkout').map((item: any) => {
-        this.historyList = data.history.map((item: any) => { // <-- Bỏ .filter() ở đây
-          const checkInTime = item.checkInTime || item.checkinTime;
-          const checkOutTime = item.checkOutTime || item.checkoutTime;
-          return {
-            ...item,
-            customerName: this.getCustomerName(item),
-            checkInTime: checkInTime ? new Date(checkInTime) : undefined,
-            checkOutTime: checkOutTime ? new Date(checkOutTime) : undefined,
-            paymentMethod: this.getPaymentMethod(item),
-            guestInfo: item.guestInfo || {},
-            amount: item.amount || item.totalAmount || 0 
-          };
-        });
-        console.log('Processed History List (No checkout filter):', this.historyList); // Log lại sau khi bỏ filter
+        // Lọc chỉ lấy các bản ghi đã thanh toán (check-out hoặc paymentStatus = paid)
+        this.historyList = data.history
+          .filter((item: any) => item.event === 'check-out' || item.paymentStatus === 'paid')
+          .map((item: any) => {
+            // Tìm thời gian nhận phòng từ nhiều nguồn
+            let checkInTime = item.checkInTime || item.checkinTime;
+            let checkOutTime = item.checkOutTime || item.checkoutTime || item.date;
+            let paymentMethod = item.paymentMethod;
+            let guestInfo = item.guestInfo || {};
+            let additionalCharges = item.additionalCharges || 0;
+            let discount = item.discount || 0;
+            let advancePayment = item.advancePayment || 0;
+            
+            // Nếu có events, lấy thông tin từ event checkin và checkout
+            if (item.events && Array.isArray(item.events)) {
+              const checkinEvent = item.events.find((e: any) => e.type === 'checkin');
+              const checkoutEvent = item.events.find((e: any) => e.type === 'checkout');
+              
+              if (checkinEvent) {
+                checkInTime = checkInTime || checkinEvent.checkinTime;
+                guestInfo = checkinEvent.guestInfo || guestInfo;
+                paymentMethod = paymentMethod || checkinEvent.paymentMethod;
+                advancePayment = advancePayment || checkinEvent.advancePayment || 0;
+                additionalCharges = additionalCharges || checkinEvent.additionalCharges || 0;
+                discount = discount || checkinEvent.discount || 0;
+              }
+              
+              if (checkoutEvent) {
+                checkOutTime = checkOutTime || checkoutEvent.checkoutTime;
+                paymentMethod = paymentMethod || checkoutEvent.paymentMethod;
+              }
+            }
+            
+            // Xử lý dữ liệu dịch vụ
+            let services: any[] = [];
+            let servicesTotal = 0;
+            
+            if (item.services && Array.isArray(item.services)) {
+              services = item.services;
+              servicesTotal = services.reduce((sum: number, s: any) => {
+                return sum + (s.totalPrice || (s.price || 0) * (s.quantity || 1));
+              }, 0);
+            } else if (item.serviceDetails?.amount) {
+              servicesTotal = item.serviceDetails.amount;
+            }
+            
+            return {
+              ...item,
+              customerName: this.getCustomerName(item),
+              checkInTime: checkInTime ? new Date(checkInTime) : undefined,
+              checkOutTime: checkOutTime ? new Date(checkOutTime) : undefined,
+              paymentMethod: paymentMethod || 'cash',
+              guestInfo: {
+                name: guestInfo.name || item.customerName,
+                phone: guestInfo.phone || item.customerPhone,
+                email: guestInfo.email || '',
+                idNumber: guestInfo.idNumber || '',
+                address: guestInfo.address || ''
+              },
+              amount: item.amount || item.totalAmount || 0,
+              services: services,
+              servicesTotal: item.servicesTotal || servicesTotal,
+              roomTotal: item.roomTotal || 0,
+              advancePayment: advancePayment,
+              additionalCharges: additionalCharges,
+              discount: discount,
+              invoiceNumber: item.invoiceNumber || undefined,
+              roomType: item.roomType || '',
+              rateType: item.rateType || 'hourly'
+            };
+          });
+        console.log('Processed History List (Paid/Checkout only):', this.historyList);
 
         // Lấy tổng số trang và trang hiện tại từ API
         this.totalPages = data.totalPages;
@@ -427,7 +530,11 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   private getPaymentMethod(item: any): string {
-    return item.paymentMethod || 'N/A';
+    // Ưu tiên lấy từ các nguồn khác nhau
+    return item.paymentMethod || 
+           item.payment?.method || 
+           item.paymentDetails?.paymentMethod ||
+           'cash';
   }
 
   // Xác định màu sắc theo loại sự kiện
@@ -476,12 +583,208 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
 
   // Hàm xử lý sự kiện từ app-table
   viewInvoiceFromTable(historyItem: any): void {
-    if (historyItem && historyItem._id) {
-      this.viewInvoice(historyItem._id);
+    console.log('=== viewInvoiceFromTable được gọi ===');
+    console.log('historyItem received:', historyItem);
+    
+    if (historyItem) {
+      // Tạo dữ liệu hóa đơn từ history item
+      this.showInvoiceFromHistoryItem(historyItem);
     } else {
-      this.message.error('Không tìm thấy thông tin ID để xem hóa đơn.');
+      this.message.error('Không tìm thấy thông tin để xem hóa đơn.');
       console.error('Invalid history item passed to viewInvoiceFromTable:', historyItem);
     }
+  }
+
+  // Tạo và hiển thị hóa đơn từ history item
+  private showInvoiceFromHistoryItem(historyItem: ExtendedBookingHistory): void {
+    console.log('=== showInvoiceFromHistoryItem ===');
+    console.log('Input historyItem:', historyItem);
+    
+    // Tạo products array từ dữ liệu history
+    const products: any[] = [];
+    
+    // Lấy các giá trị từ historyItem
+    const totalAmount = historyItem.totalAmount || historyItem.amount || 0;
+    const additionalCharges = historyItem.additionalCharges || 0;
+    const discount = historyItem.discount || 0;
+    const advancePayment = historyItem.advancePayment || 0;
+    
+    // Lấy tiền phòng trực tiếp từ historyItem.roomTotal
+    let roomAmount = historyItem.roomTotal || 0;
+    
+    // Xử lý dịch vụ
+    let servicesTotal = historyItem.servicesTotal || 0;
+    const services: any[] = [];
+    
+    // Nếu có services array, lấy chi tiết
+    if (historyItem.services && Array.isArray(historyItem.services) && historyItem.services.length > 0) {
+      historyItem.services.forEach(service => {
+        const serviceName = service.serviceName || service.name || 'Dịch vụ';
+        const servicePrice = service.price || 0;
+        const serviceQuantity = service.quantity || 1;
+        const serviceTotal = service.totalPrice || (servicePrice * serviceQuantity);
+        
+        services.push({
+          name: serviceName,
+          price: servicePrice,
+          quantity: serviceQuantity,
+          totalPrice: serviceTotal
+        });
+      });
+      
+      // Tính lại servicesTotal từ services array nếu chưa có
+      if (!servicesTotal) {
+        servicesTotal = services.reduce((sum, s) => sum + (s.totalPrice || 0), 0);
+      }
+    } else if (historyItem.serviceDetails?.amount) {
+      // Fallback: lấy từ serviceDetails
+      servicesTotal = historyItem.serviceDetails.amount;
+      services.push({
+        name: 'Dịch vụ',
+        price: servicesTotal,
+        quantity: 1,
+        totalPrice: servicesTotal
+      });
+    } else if (servicesTotal > 0 && services.length === 0) {
+      // Nếu có servicesTotal nhưng không có chi tiết services
+      services.push({
+        name: 'Dịch vụ sử dụng',
+        price: servicesTotal,
+        quantity: 1,
+        totalPrice: servicesTotal
+      });
+    }
+    
+    // Nếu không có roomTotal, tính từ totalAmount
+    if (!roomAmount && totalAmount > 0) {
+      roomAmount = totalAmount - servicesTotal - additionalCharges + discount;
+    }
+    
+    console.log('Calculated values:', {
+      roomAmount,
+      servicesTotal,
+      additionalCharges,
+      discount,
+      advancePayment,
+      totalAmount
+    });
+    
+    // Thêm tiền phòng vào products
+    products.push({
+      name: `Tiền phòng ${historyItem.roomNumber || ''}`,
+      price: Math.max(0, roomAmount),
+      quantity: 1
+    });
+    
+    // Thêm dịch vụ vào products
+    services.forEach(service => {
+      products.push({
+        name: service.name,
+        price: service.price,
+        quantity: service.quantity
+      });
+    });
+    
+    // Thêm phụ thu vào products nếu có
+    if (additionalCharges > 0) {
+      products.push({
+        name: 'Phụ thu',
+        price: additionalCharges,
+        quantity: 1
+      });
+    }
+    
+    console.log('Products array:', products);
+    console.log('Services array:', services);
+    
+    // Tính toán thời gian lưu trú
+    const checkInTime = historyItem.checkInTime || historyItem.checkinTime;
+    const checkOutTime = historyItem.checkOutTime || historyItem.checkoutTime || historyItem.date;
+    let durationHours = 0;
+    let durationDays = 0;
+    
+    if (checkInTime && checkOutTime) {
+      const checkIn = new Date(checkInTime);
+      const checkOut = new Date(checkOutTime);
+      durationHours = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60));
+      durationDays = Math.ceil(durationHours / 24);
+    }
+    
+    // Tạo số hóa đơn format chuẩn
+    const checkOutDate = checkOutTime ? new Date(checkOutTime) : new Date();
+    const invoiceNumber = historyItem.invoiceNumber || `INV-${checkOutDate.getTime()}`;
+    
+    // Lấy thông tin khách hàng từ guestInfo
+    const guestInfo = historyItem.guestInfo || {};
+    
+    const invoiceData = {
+      // Số hóa đơn và ngày
+      invoiceNumber: invoiceNumber,
+      date: checkOutTime || new Date(),
+      
+      // Thông tin khách sạn
+      businessName: this.hotelInfo?.name || 'Khách sạn',
+      business_address: this.hotelInfo?.address || '',
+      phoneNumber: this.hotelInfo?.phone || this.hotelInfo?.phoneNumber || '',
+      
+      // Thông tin khách hàng
+      customerName: historyItem.customerName || guestInfo.name || 'Khách lẻ',
+      customerPhone: historyItem.customerPhone || guestInfo.phone || '',
+      customerEmail: guestInfo.email || '',
+      customerIdNumber: guestInfo.idNumber || '',
+      customerAddress: guestInfo.address || '',
+      guestInfo: guestInfo,
+      
+      // Thông tin nhân viên
+      staffName: historyItem.staffName || 'Nhân viên',
+      
+      // Thông tin phòng
+      roomNumber: historyItem.roomNumber || 'N/A',
+      roomType: historyItem.roomType || 'Phòng thường',
+      rateType: historyItem.rateType || 'hourly',
+      hotelId: this.hotelId || historyItem.hotelId,
+      
+      // Thời gian
+      checkInTime: checkInTime,
+      checkOutTime: checkOutTime,
+      duration: {
+        hours: durationHours,
+        days: durationDays
+      },
+      
+      // Sản phẩm và dịch vụ
+      products: products,
+      services: services,
+      
+      // Chi tiết thanh toán
+      roomTotal: Math.max(0, roomAmount),
+      servicesTotal: servicesTotal,
+      additionalCharges: additionalCharges,
+      discount: discount,
+      advancePayment: advancePayment,
+      totalAmount: totalAmount,
+      
+      // Còn lại phải trả
+      remainingAmount: totalAmount - advancePayment,
+      
+      // Hình thức thanh toán
+      paymentMethod: historyItem.paymentMethod || 'cash',
+      paymentStatus: 'paid',
+      
+      // Ghi chú
+      notes: historyItem.notes || ''
+    };
+    
+    console.log('=== Final invoiceData ===');
+    console.log('invoiceData:', invoiceData);
+    console.log('products:', invoiceData.products);
+    console.log('roomTotal:', invoiceData.roomTotal);
+    console.log('servicesTotal:', invoiceData.servicesTotal);
+    console.log('additionalCharges:', invoiceData.additionalCharges);
+    console.log('discount:', invoiceData.discount);
+    console.log('totalAmount:', invoiceData.totalAmount);
+    
+    this.showInvoiceModal(invoiceData);
   }
 
   // Hàm xem hóa đơn gốc (được gọi bởi viewInvoiceFromTable)
@@ -528,7 +831,8 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
     
     const methodMap: {[key: string]: string} = {
       'cash': 'Tiền mặt',
-      'card': 'Thẻ tín dụng',
+      'card': 'Thẻ ngân hàng',
+      'transfer': 'Chuyển khoản',
       'banking': 'Chuyển khoản',
       'qr': 'Quét mã QR',
       'visa': 'Visa/Mastercard'

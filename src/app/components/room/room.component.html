@@ -111,7 +111,38 @@
             <div class="room-number">{{ room.roomNumber }}</div>
             <div class="room-floor">Tầng {{ room.floor }}</div>
             <div class="room-type">{{ room.type }}</div>
-            <div class="room-status">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
+            <!-- Hiển thị loại giá thay vì trạng thái khi phòng có khách -->
+            <ng-container *ngIf="room.status === 'occupied' && getRoomCheckinInfo(room) as checkinInfo; else normalStatus">
+              <div class="room-status rate-type">
+                <nz-tag [nzColor]="checkinInfo.rateType === 'hourly' ? 'blue' : checkinInfo.rateType === 'nightly' ? 'purple' : 'orange'">
+                  {{ checkinInfo.rateTypeLabel }}
+                </nz-tag>
+              </div>
+              
+              <!-- Hiển thị thông tin thêm khi phòng có khách -->
+              <div class="room-extra-info">
+                <div class="guest-name" *ngIf="checkinInfo.guestName">
+                  <i nz-icon nzType="user" nzTheme="outline"></i> {{ checkinInfo.guestName }}
+                </div>
+                <div class="checkin-time" *ngIf="checkinInfo.checkinTime">
+                  <i nz-icon nzType="clock-circle" nzTheme="outline"></i> {{ checkinInfo.checkinTime | date:'HH:mm' }}
+                </div>
+                <div class="room-price" *ngIf="checkinInfo.roomPrice > 0">
+                  <span class="price-label">Tiền phòng:</span> {{ checkinInfo.roomPrice | number }} đ
+                </div>
+                <div class="advance-payment" *ngIf="checkinInfo.advancePayment > 0">
+                  <span class="price-label">Đặt trước:</span> {{ checkinInfo.advancePayment | number }} đ
+                </div>
+                <div class="remaining-amount" [class.negative]="checkinInfo.remainingAmount < 0">
+                  <span class="price-label">Còn lại:</span> 
+                  <span *ngIf="checkinInfo.remainingAmount >= 0">{{ checkinInfo.remainingAmount | number }} đ</span>
+                  <span *ngIf="checkinInfo.remainingAmount < 0" class="refund">-{{ (-checkinInfo.remainingAmount) | number }} đ (hoàn)</span>
+                </div>
+              </div>
+            </ng-container>
+            <ng-template #normalStatus>
+              <div class="room-status">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
+            </ng-template>
           </div>
         </div>
       </div>
@@ -216,12 +247,12 @@
   }
   
   .room-item {
-    height: 120px;
-    padding: 16px;
+    min-height: 120px;
+    padding: 12px;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     cursor: pointer;
     transition: all 0.3s;
@@ -235,23 +266,82 @@
   }
   
   .room-number {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: bold;
   }
   
   .room-floor {
-    font-size: 12px;
-    margin-top: 4px;
+    font-size: 11px;
+    margin-top: 2px;
   }
   
   .room-type {
-    font-size: 14px;
-    margin-top: 4px;
+    font-size: 12px;
+    margin-top: 2px;
   }
   
   .room-status {
-    font-size: 12px;
-    margin-top: 4px;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  
+  /* Thông tin thêm khi phòng có khách */
+  .room-extra-info {
+    width: 100%;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.4);
+    font-size: 10px;
+    text-align: left;
+  }
+  
+  .room-extra-info .guest-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .room-extra-info .checkin-time {
+    margin-bottom: 2px;
+    opacity: 0.9;
+  }
+  
+  .room-extra-info .room-price,
+  .room-extra-info .advance-payment,
+  .room-extra-info .remaining-amount {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1px;
+  }
+  
+  .room-extra-info .price-label {
+    opacity: 0.85;
+  }
+  
+  .room-extra-info .remaining-amount {
+    font-weight: bold;
+    color: #ffeb3b;
+  }
+  
+  .room-extra-info .remaining-amount.negative {
+    color: #4caf50;
+  }
+  
+  .room-extra-info .remaining-amount .refund {
+    color: #4caf50;
+    font-style: italic;
+  }
+  
+  .room-status.rate-type {
+    margin-top: 2px;
+  }
+  
+  .room-status.rate-type nz-tag {
+    font-size: 10px;
+    padding: 0 4px;
+    line-height: 16px;
   }
   
   .inactive-room {
@@ -259,9 +349,20 @@
     color: white;
   }
   
+  .vacant-room {
+    background-color: #52c41a;
+    color: white;
+  }
+  
   .active-room {
     background-color: #f5222d;
     color: white;
+  }
+  
+  .occupied-room {
+    background-color: #f5222d;
+    color: white;
+    min-height: 180px;
   }
   
   .dirty-room {

@@ -95,7 +95,10 @@ export interface Event {
   guestInfo?: GuestInfo; 
   selectedServices?: OrderedService[]; 
   paymentMethod?: 'cash' | 'card' | 'transfer'; 
+  rateType?: 'hourly' | 'daily' | 'nightly'; // Loại giá
   advancePayment?: number; 
+  additionalCharges?: number;
+  discount?: number;
   notes?: string; 
   totalPrice?: number;
   // For transfer events

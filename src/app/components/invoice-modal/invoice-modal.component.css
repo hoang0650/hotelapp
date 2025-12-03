@@ -13,8 +13,16 @@
   text-align: left;
 }
 
+.left-section p {
+  margin-bottom: 4px;
+}
+
 .right-section {
   text-align: right;
+}
+
+.right-section p {
+  margin-bottom: 4px;
 }
 
 .title-section {
@@ -22,6 +30,13 @@
   margin-bottom: 20px;
   border-bottom: 2px solid #000;
   padding-bottom: 10px;
+}
+
+.title-section h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
 }
 
 .customer-info {
@@ -33,6 +48,7 @@
   background-color: #f9f9f9;
   border-radius: 4px;
   margin-bottom: 20px;
+  border: 1px solid #e8e8e8;
 }
 
 .info-row {
@@ -41,12 +57,25 @@
   margin-bottom: 10px;
 }
 
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
 .info-item {
   width: 48%;
   display: flex;
   justify-content: space-between;
   border-bottom: 1px dashed #e8e8e8;
   padding-bottom: 8px;
+}
+
+.info-item span:first-child {
+  color: #666;
+}
+
+.info-item span:last-child {
+  color: #333;
+  font-weight: 500;
 }
 
 .invoice-table {
@@ -61,9 +90,51 @@
   text-align: right;
 }
 
+.subtotal-row {
+  background-color: #fafafa;
+}
+
+.charge-row {
+  background-color: #fff7e6;
+}
+
+.discount-row {
+  background-color: #f6ffed;
+}
+
 .total-row {
   background-color: #e6f7ff;
   font-weight: bold;
+}
+
+.advance-row {
+  background-color: #e6f7ff;
+}
+
+.remaining-row {
+  background-color: #fff1f0;
+}
+
+.services-detail {
+  margin: 20px 0;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.services-detail h4 {
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.services-detail ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.services-detail li {
+  margin-bottom: 4px;
+  color: #666;
 }
 
 .notes {
@@ -76,9 +147,37 @@
 .thank-you {
   text-align: center;
   margin: 30px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  border-radius: 8px;
+}
+
+.thank-you p {
+  margin-bottom: 8px;
+}
+
+.thank-you p:first-child {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.print-date {
+  font-size: 12px;
+  color: #999;
+  margin-top: 10px !important;
 }
 
 @media (max-width: 768px) {
+  .header-container {
+    flex-direction: column;
+  }
+  
+  .right-section {
+    text-align: left;
+    margin-top: 15px;
+  }
+  
   .info-row {
     flex-direction: column;
   }
@@ -103,4 +202,18 @@
   .invoice-container {
     padding: 0;
   }
-} 
+  
+  .info-card {
+    background-color: #f9f9f9 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .total-row,
+  .subtotal-row,
+  .charge-row,
+  .discount-row {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -110,22 +110,36 @@ export class InvoiceComponent implements OnInit {
   constructor(
     @Inject(NZ_MODAL_DATA) private data: { invoiceData: InvoiceData, businessInfo: any }
   ) {
-    this.invoiceData = data.invoiceData || {
+    console.log('=== InvoiceComponent Constructor ===');
+    console.log('Raw data received:', this.data);
+    console.log('data.invoiceData:', this.data?.invoiceData);
+    
+    this.invoiceData = this.data?.invoiceData || {
       invoiceNumber: '',
       date: new Date(),
       products: [],
       services: [],
-      totalAmount: 0 // Giá trị này có thể sẽ bị ghi đè
+      totalAmount: 0
     };
-    this.businessInfo = data.businessInfo;
+    this.businessInfo = this.data?.businessInfo;
+    
+    console.log('Assigned invoiceData:', this.invoiceData);
+    console.log('Products from data:', this.invoiceData.products);
   }
 
   ngOnInit(): void {
-    console.log('Invoice data received via NZ_MODAL_DATA:', this.invoiceData);
-    console.log('Business info received via NZ_MODAL_DATA:', this.businessInfo);
+    console.log('=== InvoiceComponent ngOnInit ===');
+    console.log('invoiceData at ngOnInit:', this.invoiceData);
+    console.log('invoiceData.products:', this.invoiceData.products);
+    console.log('invoiceData.roomTotal:', this.invoiceData.roomTotal);
+    console.log('invoiceData.servicesTotal:', this.invoiceData['servicesTotal']);
+    console.log('invoiceData.additionalCharges:', this.invoiceData.additionalCharges);
+    console.log('invoiceData.discount:', this.invoiceData.discount);
+    console.log('invoiceData.totalAmount:', this.invoiceData.totalAmount);
     
     // Đảm bảo rằng products luôn là một mảng
     if (!this.invoiceData.products || !Array.isArray(this.invoiceData.products)) {
+      console.log('Products is not array, initializing empty array');
       this.invoiceData.products = [];
     }
     
@@ -143,22 +157,15 @@ export class InvoiceComponent implements OnInit {
       paymentStatus: this.invoiceData.paymentStatus || 'paid'
     };
     
+    console.log('Products after processing:', this.invoiceData.products);
+    
     // Tính toán các giá trị
     this.subtotal = this.calculateSubtotal();
     this.serviceTotal = this.calculateServiceTotal();
     this.calculateFinalTotal();
     
-    // Tự động thêm dịch vụ vào danh sách sản phẩm nếu chưa có
-    if (this.invoiceData.services && this.invoiceData.services.length > 0 && 
-        this.invoiceData.products.length === 1) {
-      this.invoiceData.services.forEach(service => {
-        this.invoiceData.products.push({
-          name: service.name,
-          price: service.price,
-          quantity: service.quantity
-        });
-      });
-    }
+    // KHÔNG tự động thêm dịch vụ nữa vì đã được thêm từ room-history
+    // (Loại bỏ logic tự động thêm services vào products để tránh trùng lặp)
     
     // Tính tổng thời gian lưu trú nếu chưa có
     if (!this.invoiceData.duration && this.invoiceData.checkInTime && this.invoiceData.checkOutTime) {
@@ -171,9 +178,12 @@ export class InvoiceComponent implements OnInit {
         days: Math.ceil(durationInHours / 24)
       };
     }
-    console.log('Calculated Subtotal:', this.subtotal);
-    console.log('Calculated Service Total:', this.serviceTotal);
-    console.log('Calculated Final Total:', this.finalTotalAmount);
+    
+    console.log('=== Final Calculated Values ===');
+    console.log('Subtotal (products):', this.subtotal);
+    console.log('Service Total:', this.serviceTotal);
+    console.log('Final Total:', this.finalTotalAmount);
+    console.log('Final Products:', this.invoiceData.products);
   }
   
   // Tính tổng tiền hàng (chỉ products)
@@ -207,7 +217,13 @@ export class InvoiceComponent implements OnInit {
   
   // Tính tổng tiền cuối cùng
   calculateFinalTotal(): void {
-      // Bắt đầu với tổng sản phẩm và dịch vụ
+    // Nếu có totalAmount từ dữ liệu, sử dụng nó
+    if (this.invoiceData.totalAmount && this.invoiceData.totalAmount > 0) {
+      // Trừ tiền đã trả trước nếu có
+      const advancePayment = this.invoiceData.advancePayment || 0;
+      this.finalTotalAmount = this.invoiceData.totalAmount - advancePayment;
+    } else {
+      // Tính từ subtotal nếu không có totalAmount
       let currentTotal = this.subtotal + this.serviceTotal;
       
       // Cộng phụ thu
@@ -219,8 +235,11 @@ export class InvoiceComponent implements OnInit {
       // Trừ tiền trả trước
       currentTotal -= this.invoiceData.advancePayment || 0;
       
-      // Đảm bảo không âm
-      this.finalTotalAmount = Math.max(0, currentTotal);
+      this.finalTotalAmount = currentTotal;
+    }
+    
+    // Đảm bảo không âm
+    this.finalTotalAmount = Math.max(0, this.finalTotalAmount);
   }
 
   // Định dạng tiền tệ
@@ -229,12 +248,24 @@ export class InvoiceComponent implements OnInit {
     return amount.toLocaleString('vi-VN') + ' đ';
   }
 
+  // Lấy nhãn hình thức tính
+  getRateTypeLabel(rateType: string | undefined): string {
+    if (!rateType) return 'Theo giờ';
+    const rateTypes: { [key: string]: string } = {
+      'hourly': 'Theo giờ',
+      'daily': 'Ngày đêm',
+      'nightly': 'Qua đêm'
+    };
+    return rateTypes[rateType.toLowerCase()] || rateType;
+  }
+
   // Lấy nhãn phương thức thanh toán
   getPaymentMethodLabel(method: string | undefined): string {
     if (!method) return 'Tiền mặt';
     const paymentMethods: { [key: string]: string } = {
       'cash': 'Tiền mặt',
       'card': 'Thẻ tín dụng',
+      'transfer': 'Chuyển khoản',
       'banking': 'Chuyển khoản',
       'qr': 'QR Code',
       'visa': 'Thẻ VISA',
