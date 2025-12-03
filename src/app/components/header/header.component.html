@@ -57,23 +57,29 @@
       <li *ngIf="!isLoggedIn" class="nav-item">
         <a class="nav-link" [routerLink]="['/login']" aria-current="page">Log in</a>
       </li>
-      <li *ngIf="isLoggedIn" class="nav-item">
-        <a class="nav-link" aria-current="page">
-          <img src="https://mdbcdn.b-cdn.net/img/new/avatars/2.webp" class="rounded-circle" style="width: 32px;"
+      <li *ngIf="isLoggedIn" class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle d-flex align-items-center" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <img src="https://mdbcdn.b-cdn.net/img/new/avatars/2.webp" class="rounded-circle me-2" style="width: 32px; height: 32px;"
           alt="Avatar" />
+          <div class="d-flex flex-column align-items-start" style="line-height: 1.2;">
+            <span class="fw-bold" style="font-size: 14px;">{{ displayName }}</span>
+            <small class="text-white-50" style="font-size: 11px;">{{ userRole }}</small>
+          </div>
         </a>
-      </li>
-      <li>
-        <a *ngIf="isLoggedIn" class="nav-link" aria-current="page">
-          {{currentUser?.email}}
-        </a>
-
-      </li>
-
-      <li *ngIf="isLoggedIn" class="nav-item">
-        <a class="nav-link" aria-current="page" (click)="logout()">
-          Đăng xuất
-        </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+          <li>
+            <div class="dropdown-header">
+              <strong>{{ displayName }}</strong>
+              <br><small class="text-muted">{{ currentUser?.email }}</small>
+              <br><span class="badge bg-primary mt-1">{{ userRole }}</span>
+            </div>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person me-2"></i>Hồ sơ cá nhân</a></li>
+          <li><a class="dropdown-item" routerLink="/settings"><i class="bi bi-gear me-2"></i>Cài đặt</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item text-danger" (click)="logout()" style="cursor: pointer;"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
+        </ul>
       </li>
     </ul>
   </div>

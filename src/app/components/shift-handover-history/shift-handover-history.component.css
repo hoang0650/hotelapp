@@ -1,0 +1,23 @@
+.shift-handover-history-container {
+  padding: 16px;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.text-danger {
+  color: #ff4d4f;
+}
+
+.text-success {
+  color: #52c41a;
+}
+
+.text-primary {
+  color: #1890ff;
+}
+

@@ -1,49 +1,100 @@
-.nz-form-item {
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header h2 {
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.staff-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.staff-details {
   display: flex;
   flex-direction: column;
 }
 
-.nz-form-label {
-  margin-bottom: 8px;
+.staff-details strong {
+  font-size: 14px;
 }
 
-.nz-form-control {
-  flex: 1;
+.staff-details small {
+  color: #999;
+  font-size: 12px;
 }
 
-@media (max-width: 767px) {
-  .nz-form-item {
-    margin-bottom: 12px;
-  }
-
-  .nz-form-label, .nz-form-control input {
-    font-size: 14px;
-  }
-
-  button {
-    width: 100%;
-    font-size: 14px;
-  }
+.text-muted {
+  color: #999;
 }
 
-.editable-cell {
-  position: relative;
-  padding: 5px 12px;
-  cursor: pointer;
+.schedule-item {
+  background: #fafafa;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
 }
 
-.editable-row:hover .editable-cell {
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  padding: 4px 11px;
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
 }
 
-.table-container {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch; /* Cải thiện hiệu suất cuộn trên thiết bị cảm ứng */
+::ng-deep .ant-drawer-body {
+  padding: 24px;
 }
 
-/* Điều chỉnh kiểu dáng bảng để phù hợp với các màn hình nhỏ */
-.nz-table {
-  min-width: 600px; /* Kích thước tối thiểu của bảng */
+::ng-deep .ant-collapse {
+  margin-top: 16px;
+  background: #fafafa;
+}
+
+::ng-deep .ant-divider-horizontal.ant-divider-with-text {
+  margin: 24px 0 16px;
+}
+
+::ng-deep .nz-time-picker {
+  width: 100%;
+}
+
+.user-option {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-option strong {
+  font-size: 14px;
+}
+
+.user-option small {
+  font-size: 12px;
+  color: #999;
+}
+
+.text-warning {
+  color: #faad14;
+}
+
+small.text-muted {
+  display: block;
+  margin-top: 4px;
+}
+
+.text-info {
+  color: #1890ff;
+  display: block;
+  margin-top: 4px;
 }

@@ -74,6 +74,10 @@
             <span>Đang sử dụng</span>
           </span>
           <span class="legend-item">
+            <span class="status-dot booked"></span>
+            <span>Đã đặt trước</span>
+          </span>
+          <span class="legend-item">
             <span class="status-dot dirty"></span>
             <span>Cần dọn dẹp</span>
           </span>
@@ -380,6 +384,11 @@
     color: white;
   }
   
+  .booked-room {
+    background-color: #2f54eb;
+    color: white;
+  }
+  
   .empty-state {
     padding: 32px 0;
   }
@@ -417,6 +426,10 @@
   
   .status-dot.maintenance {
     background-color: #722ed1;
+  }
+  
+  .status-dot.booked {
+    background-color: #2f54eb;
   }
   
   /* Responsive styles */

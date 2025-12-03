@@ -40,11 +40,14 @@ export class ShiftHandoverService {
 
   /**
    * Tạo giao ca mới
-   * Khi nhân viên bấm giao ca:
-   * 1. Chọn nhân viên nhận ca
-   * 2. Nhập mật khẩu xác nhận
-   * 3. Lưu lịch sử giao ca
-   * 4. Login vào tài khoản được giao ca
+   * POST /shift-handover
+   * Body: {
+   *   hotelId, fromStaffId, toStaffId, toUserPassword,
+   *   previousShiftAmount, cashInShift, managerHandoverAmount,
+   *   cashAmount, bankTransferAmount, cardPaymentAmount,
+   *   expenseAmount, incomeAmount, roomHistory, invoices,
+   *   expenses, incomes, serviceOrders, notes, pendingIssues
+   * }
    */
   createShiftHandover(handoverData: ShiftHandoverCreateRequest): Observable<ShiftHandoverResponse> {
     return this.http.post<ShiftHandoverResponse>(`${this.apiUrl}`, handoverData).pipe(
@@ -52,7 +55,14 @@ export class ShiftHandoverService {
         // Nếu giao ca thành công và có thông tin login, cập nhật auth
         if (response.login?.token) {
           localStorage.setItem('token', response.login.token);
-          // AuthService sẽ tự cập nhật user từ token mới
+          // Lưu thông tin user mới
+          if (response.login.user) {
+            localStorage.setItem('user', JSON.stringify(response.login.user));
+          }
+          if (response.login.staff) {
+            localStorage.setItem('staff', JSON.stringify(response.login.staff));
+            localStorage.setItem('staffId', response.login.staff._id);
+          }
         }
       })
     );
@@ -62,7 +72,7 @@ export class ShiftHandoverService {
 
   /**
    * Giao tiền cho quản lý
-   * Công thức: Số tiền thực nhận trong ca = Số tiền ca trước + Tiền mặt trong ca - Tiền giao quản lý
+   * POST /shift-handover/manager
    */
   createManagerHandover(data: {
     hotelId: string;
@@ -78,7 +88,8 @@ export class ShiftHandoverService {
 
   /**
    * Lấy lịch sử giao ca
-   * CHỈ admin hoặc business được quyền xem
+   * GET /shift-handover/history
+   * Params: hotelId, staffId, startDate, endDate, page, limit
    */
   getShiftHandoverHistory(params: {
     hotelId?: string;
@@ -114,6 +125,7 @@ export class ShiftHandoverService {
 
   /**
    * Lấy chi tiết một lần giao ca
+   * GET /shift-handover/history/:id
    */
   getShiftHandoverById(id: string): Observable<{ message: string; data: ShiftHandover }> {
     return this.http.get<{ message: string; data: ShiftHandover }>(`${this.apiUrl}/history/${id}`);
@@ -123,6 +135,7 @@ export class ShiftHandoverService {
 
   /**
    * Thống kê giao ca theo khách sạn
+   * GET /shift-handover/stats
    */
   getShiftHandoverStats(params: {
     hotelId?: string;
@@ -147,8 +160,9 @@ export class ShiftHandoverService {
   // ============ TÍNH TOÁN DOANH THU ============
 
   /**
-   * Tính doanh thu khách sạn theo công thức:
-   * Tổng doanh thu = Tiền mặt + Chuyển khoản + Cà thẻ - Tiền chi = Phiếu thu - Phiếu chi
+   * Tính doanh thu khách sạn
+   * GET /shift-handover/revenue
+   * Công thức: Tổng doanh thu = Tiền mặt + Chuyển khoản + Cà thẻ - Tiền chi
    */
   calculateRevenue(params: {
     hotelId: string;
@@ -171,6 +185,7 @@ export class ShiftHandoverService {
 
   /**
    * Lấy số tiền từ ca trước để tính cho ca hiện tại
+   * GET /shift-handover/previous-amount
    */
   getPreviousShiftAmount(hotelId: string, staffId?: string): Observable<PreviousShiftAmountResponse> {
     let httpParams = new HttpParams().set('hotelId', hotelId);

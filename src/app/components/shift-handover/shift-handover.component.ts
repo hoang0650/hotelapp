@@ -34,6 +34,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
   isLoading = false;
   isModalVisible = false;
   isHistoryVisible = false;
+  passwordVisible = false;
   
   // Current shift data
   previousShiftAmount = 0;
@@ -378,5 +379,9 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
   formatDate(date: Date | string): string {
     return new Date(date).toLocaleString('vi-VN');
   }
+
+  // Currency formatter and parser for nz-input-number
+  currencyFormatter = (value: number): string => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  currencyParser = (value: string): string => value.replace(/,/g, '');
 }
 

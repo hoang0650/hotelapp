@@ -12,6 +12,11 @@ import { format } from 'date-fns';
 import { finalize, catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { InvoiceService } from '../../services/invoice.service';
+import { StaffService } from '../../services/staff.service';
+import { ShiftHandoverService } from '../../services/shift-handover.service';
+import { AuthService } from '../../services/auth.service';
+import { UserService } from '../../services/user.service';
+import { Staff, getStaffFullName } from '../../interfaces/staff';
 
 type TableScroll = 'unset' | 'scroll' | 'fixed';
 
@@ -106,6 +111,23 @@ export class TableComponent implements OnInit, OnChanges {
   handoverMessageType: 'error' | 'success' | 'warning' | 'info' = 'info';
   defaultShiftId = '8bacd72a-f6a0-461b-be9f-f3924c7cb640';
   
+  // Staff list for shift handover
+  staffList: Staff[] = [];
+  currentStaffId: string = '';
+  previousShiftAmount: number = 0;
+  isLoadingStaff = false;
+  passwordVisible = false;
+  
+  // Giao tiền quản lý
+  isManagerHandoverModalVisible = false;
+  managerHandoverForm!: FormGroup;
+  isSubmittingManagerHandover = false;
+  managerList: Staff[] = []; // Danh sách quản lý
+  managerPasswordVisible = false;
+  
+  // Lịch sử giao ca
+  isShiftHandoverHistoryVisible = false;
+  
   scrollX: string | null = null;
   scrollY: string | null = null;
 
@@ -189,6 +211,10 @@ export class TableComponent implements OnInit, OnChanges {
     private fb: NonNullableFormBuilder, 
     private productService: ProductService, 
     private roomService: RoomsService,
+    private staffService: StaffService,
+    private shiftHandoverService: ShiftHandoverService,
+    private authService: AuthService,
+    private userService: UserService,
     private message: NzMessageService,
     private http: HttpClient,
     private invoiceService: InvoiceService
@@ -210,6 +236,7 @@ export class TableComponent implements OnInit, OnChanges {
     });
     
     this.initShiftHandoverForm();
+    this.initManagerHandoverForm();
     this.setScrollSize();
     this.calculateTotalPayment();
 
@@ -306,10 +333,17 @@ export class TableComponent implements OnInit, OnChanges {
   
   calculateTotalPayment(): void {
     // Tính tổng tiền chỉ từ các bản ghi đã thanh toán
-    this.totalPayment = this.paidData.reduce((sum, current) => {
+    let baseTotal = this.paidData.reduce((sum, current) => {
       const amount = current?.totalAmount || current?.amount || current?.payment?.amount || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0);
+    
+    // Trừ đi tiền giao quản lý và tiền chi (nếu có) từ form giao ca
+    const managerHandoverAmount = this.shiftHandoverForm?.get('managerHandoverAmount')?.value || 0;
+    const expenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
+    
+    // Tổng tiền = tổng tiền ban đầu - tiền giao quản lý - tiền chi
+    this.totalPayment = Math.max(0, baseTotal - managerHandoverAmount - expenseAmount);
   }
   
   exportToExcel(): void {
@@ -458,32 +492,132 @@ export class TableComponent implements OnInit, OnChanges {
   
   initShiftHandoverForm(): void {
     this.shiftHandoverForm = this.fb.group({
-      handoverEmployee: ['', Validators.required],
-      receivingEmployee: ['', Validators.required],
-      handoverTime: [new Date(), Validators.required],
-      amount: [0, [Validators.required, Validators.min(0)]],
-      paymentMethod: ['cash', Validators.required],
+      fromStaffId: ['', Validators.required],
+      toStaffId: ['', Validators.required],
+      toUserPassword: ['', Validators.required],
+      previousShiftAmount: [0],
+      cashInShift: [0, [Validators.required, Validators.min(0)]],
+      managerHandoverAmount: [0],
+      cashAmount: [0],
+      bankTransferAmount: [0],
+      cardPaymentAmount: [0],
+      expenseAmount: [0],
+      incomeAmount: [0],
       notes: [''],
       shiftId: [this.defaultShiftId]
     });
 
-    this.shiftHandoverForm.get('amount')?.valueChanges.subscribe(value => {
-      if (value > 0) {
-        this.handoverMessage = 'Đã thanh toán đầy đủ';
-        this.handoverMessageType = 'success';
+    // Tính số tiền giao ca = Số tiền ca trước + Tiền mặt trong ca - Tiền giao quản lý
+    this.shiftHandoverForm.valueChanges.subscribe(values => {
+      const handoverAmount = (values.previousShiftAmount || 0) + (values.cashInShift || 0) - (values.managerHandoverAmount || 0);
+      const totalRevenue = (values.cashAmount || 0) + (values.bankTransferAmount || 0) + (values.cardPaymentAmount || 0) - (values.expenseAmount || 0);
+      
+      if (handoverAmount >= 0) {
+        this.handoverMessage = `Số tiền giao ca: ${this.formatterVND(handoverAmount)} đ | Tổng doanh thu: ${this.formatterVND(totalRevenue)} đ`;
+        this.handoverMessageType = handoverAmount > 0 ? 'success' : 'info';
       } else {
-        this.handoverMessage = 'Chờ thanh toán';
+        this.handoverMessage = `Số tiền giao ca: ${this.formatterVND(handoverAmount)} đ (âm)`;
         this.handoverMessageType = 'warning';
       }
     });
+  }
+  
+  // Load danh sách nhân viên cho giao ca
+  loadStaffList(): void {
+    if (!this.hotelId) return;
+    
+    this.isLoadingStaff = true;
+    this.staffService.getStaffByHotel(this.hotelId).subscribe(
+      (staffs) => {
+        this.staffList = staffs;
+        this.isLoadingStaff = false;
+        
+        // Tìm staff ID của user hiện tại
+        const currentUserId = this.authService.getUserId();
+        
+        // Thử lấy từ localStorage trước
+        const savedStaffId = localStorage.getItem('staffId');
+        if (savedStaffId && savedStaffId.trim()) {
+          const savedStaff = staffs.find(s => s._id === savedStaffId);
+          if (savedStaff) {
+            this.currentStaffId = savedStaffId.trim();
+            this.shiftHandoverForm.patchValue({ fromStaffId: this.currentStaffId });
+            return;
+          }
+        }
+        
+        // Nếu không có trong localStorage, tìm theo userId
+        const currentStaff = staffs.find(s => s.userId === currentUserId);
+        if (currentStaff && currentStaff._id) {
+          this.currentStaffId = currentStaff._id.trim();
+          this.shiftHandoverForm.patchValue({ fromStaffId: this.currentStaffId });
+          // Lưu vào localStorage để dùng sau
+          localStorage.setItem('staffId', this.currentStaffId);
+        } else {
+          console.warn('Không tìm thấy staff ID cho user hiện tại');
+          this.currentStaffId = '';
+        }
+      },
+      (error) => {
+        console.error('Error loading staff list:', error);
+        this.isLoadingStaff = false;
+        this.message.error('Không thể tải danh sách nhân viên');
+      }
+    );
+  }
+  
+  // Load số tiền ca trước
+  loadPreviousShiftAmount(): void {
+    if (!this.hotelId) return;
+    
+    this.shiftHandoverService.getPreviousShiftAmount(this.hotelId).subscribe(
+      (response) => {
+        this.previousShiftAmount = response.data.previousShiftAmount;
+        this.shiftHandoverForm.patchValue({ previousShiftAmount: this.previousShiftAmount });
+      },
+      (error) => {
+        console.error('Error loading previous shift amount:', error);
+      }
+    );
+  }
+  
+  // Helper để lấy tên nhân viên
+  getStaffName(staff: Staff): string {
+    return getStaffFullName(staff);
+  }
+  
+  // Lọc danh sách nhân viên nhận ca (không bao gồm nhân viên đang giao)
+  getReceivingStaffList(): Staff[] {
+    const fromStaffId = this.shiftHandoverForm.get('fromStaffId')?.value;
+    return this.staffList.filter(s => s._id !== fromStaffId);
   }
   
   openShiftHandoverModal(): void {
     this.isShiftHandoverModalVisible = true;
     this.handoverMessage = '';
     
+    // Load staff list và previous shift amount
+    this.loadStaffList();
+    this.loadPreviousShiftAmount();
+    
+    // Tính tổng doanh thu từ paidData (CHỈ tính từ thanh toán trong ca, KHÔNG cộng thêm tiền ca trước)
+    const totalCash = this.paidData
+      .filter(item => item.paymentMethod === 'cash')
+      .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+    const totalBankTransfer = this.paidData
+      .filter(item => ['transfer', 'bank_transfer', 'banking'].includes(item.paymentMethod))
+      .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+    const totalCard = this.paidData
+      .filter(item => ['card', 'credit_card', 'visa'].includes(item.paymentMethod))
+      .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+    
+    // Tiền mặt trong ca = CHỈ tiền mặt thu được trong ca (KHÔNG cộng thêm previousShiftAmount)
     this.shiftHandoverForm.patchValue({
-      shiftId: this.defaultShiftId
+      shiftId: this.defaultShiftId,
+      cashAmount: totalCash,              // Tiền mặt thu được trong ca
+      bankTransferAmount: totalBankTransfer,
+      cardPaymentAmount: totalCard,
+      cashInShift: totalCash              // Tiền mặt trong ca = chỉ tiền mặt thu được (không cộng tiền ca trước)
     });
   }
   
@@ -499,23 +633,70 @@ export class TableComponent implements OnInit, OnChanges {
         control.markAsDirty();
         control.updateValueAndValidity();
       });
+      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
     this.isSubmitting = true;
 
     const formData = this.shiftHandoverForm.value;
-    const paymentStatus = formData.amount > 0 ? 'paid' : 'pending';
+    
+    // Tính số tiền giao ca
+    const handoverAmount = (formData.previousShiftAmount || 0) + (formData.cashInShift || 0) - (formData.managerHandoverAmount || 0);
+    
+    // Tính tổng doanh thu
+    const totalRevenue = (formData.cashAmount || 0) + (formData.bankTransferAmount || 0) + (formData.cardPaymentAmount || 0) - (formData.expenseAmount || 0);
+    
+    // Tạo roomHistory từ paidData
+    const roomHistory = this.paidData.map(item => ({
+      roomId: item.roomId || item._id,
+      roomNumber: item.roomNumber,
+      bookingId: item.bookingId,
+      action: 'check_out',
+      guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
+      amount: item.totalAmount || item.amount || 0,
+      paymentMethod: item.paymentMethod || 'cash',
+      timestamp: item.checkOutTime || item.checkoutTime || new Date(),
+      notes: item.notes || ''
+    }));
+    
+    // Tạo invoices từ paidData
+    const invoices = this.paidData.map(item => ({
+      invoiceNumber: item.invoiceNumber,
+      bookingId: item.bookingId,
+      roomId: item.roomId,
+      roomNumber: item.roomNumber,
+      guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
+      amount: item.totalAmount || item.amount || 0,
+      paymentMethod: item.paymentMethod || 'cash',
+      type: 'room',
+      timestamp: item.checkOutTime || item.checkoutTime || new Date()
+    }));
     
     const handoverData = {
-      ...formData,
-      id: formData.shiftId,
-      paymentStatus: paymentStatus,
-      handoverTime: format(new Date(formData.handoverTime), 'yyyy-MM-dd HH:mm:ss'),
-      createdAt: format(new Date(), 'yyyy-MM-dd HH:mm:ss')
+      hotelId: this.hotelId,
+      fromStaffId: formData.fromStaffId,
+      toStaffId: formData.toStaffId,
+      toUserPassword: formData.toUserPassword,
+      previousShiftAmount: formData.previousShiftAmount || 0,
+      cashInShift: formData.cashInShift || 0,
+      managerHandoverAmount: formData.managerHandoverAmount || 0,
+      cashAmount: formData.cashAmount || 0,
+      bankTransferAmount: formData.bankTransferAmount || 0,
+      cardPaymentAmount: formData.cardPaymentAmount || 0,
+      expenseAmount: formData.expenseAmount || 0,
+      incomeAmount: formData.incomeAmount || 0,
+      roomHistory: roomHistory,
+      invoices: invoices,
+      expenses: [],
+      incomes: [],
+      serviceOrders: [],
+      notes: formData.notes || '',
+      pendingIssues: [],
+      shiftStartTime: new Date()
     };
 
-    console.log('Đang gửi dữ liệu giao ca với ID:', handoverData.id);
+    console.log('Đang gửi dữ liệu giao ca:', handoverData);
 
     this.sendShiftHandoverData(handoverData);
   }
@@ -525,21 +706,22 @@ export class TableComponent implements OnInit, OnChanges {
       data.hotelId = this.hotelId;
     }
     
-    const apiUrl = `${environment.apiUrl}/api/shift-handovers`;
+    // Sử dụng API endpoint đúng từ backend
+    const apiUrl = `http://localhost:3000/shift-handover`;
     
     this.http.post(apiUrl, data).pipe(
       catchError((error: HttpErrorResponse) => {
         let errorMessage = 'Có lỗi xảy ra khi gửi dữ liệu giao ca';
         
-        if (error.error instanceof ErrorEvent) {
-          // Lỗi client-side
+        if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.error instanceof ErrorEvent) {
           errorMessage = `Lỗi: ${error.error.message}`;
         } else {
-          // Lỗi server-side
           errorMessage = `Mã lỗi: ${error.status}, Thông báo: ${error.message}`;
         }
         
-        this.handoverMessage = 'Có lỗi xảy ra khi gửi dữ liệu giao ca!';
+        this.handoverMessage = errorMessage;
         this.handoverMessageType = 'error';
         this.message.error(errorMessage);
         console.error('Lỗi khi gửi dữ liệu giao ca:', error);
@@ -551,17 +733,38 @@ export class TableComponent implements OnInit, OnChanges {
       })
     ).subscribe(
       (response: any) => {
-        if (data.amount > 0) {
-          this.handoverMessage = 'Giao ca thành công. Số tiền đã được bàn giao.';
-          this.handoverMessageType = 'success';
-          this.message.success('Giao ca thành công');
-        } else {
-          this.handoverMessage = 'Giao ca thành công. Chưa có tiền được bàn giao.';
-          this.handoverMessageType = 'info';
-          this.message.info('Giao ca thành công');
-        }
+        this.handoverMessage = response.message || 'Giao ca thành công!';
+        this.handoverMessageType = 'success';
+        this.message.success('Giao ca thành công');
         
         console.log('Đã gửi dữ liệu giao ca:', response);
+        
+        // Nếu có thông tin login mới, cập nhật localStorage và services
+        if (response.login?.token) {
+          localStorage.setItem('token', response.login.token);
+          
+          if (response.login.user) {
+            localStorage.setItem('user', JSON.stringify(response.login.user));
+            // Cập nhật AuthService
+            this.authService.loginFromShiftHandover(response.login.token, response.login.user);
+            // Cập nhật UserService để header tự động refresh
+            this.userService.setCurrentUser(response.login.user);
+          }
+          
+          if (response.login.staff) {
+            localStorage.setItem('staff', JSON.stringify(response.login.staff));
+            localStorage.setItem('staffId', response.login.staff._id);
+            this.currentStaffId = response.login.staff._id;
+          }
+          
+          const displayName = response.login.user?.fullName || response.login.user?.username || 'nhân viên mới';
+          this.message.success(`Đã đăng nhập với tài khoản: ${displayName}`);
+        }
+        
+        // Xóa lịch sử thanh toán hiện tại sau khi giao ca thành công
+        this.listOfData = [];
+        this.totalPayment = 0;
+        this.calculateTotalPayment();
         
         this.loadDataAfterHandover();
         
@@ -574,7 +777,7 @@ export class TableComponent implements OnInit, OnChanges {
   
   loadDataAfterHandover(): void {
     if (this.hotelId) {
-      const apiUrl = `${environment.apiUrl}/api/hotels/${this.hotelId}/rooms`;
+      const apiUrl = `http://localhost:3000/rooms?hotelId=${this.hotelId}`;
       
       this.http.get(apiUrl).pipe(
         catchError((error: HttpErrorResponse) => {
@@ -600,13 +803,232 @@ export class TableComponent implements OnInit, OnChanges {
   formatterVND = (value: number): string => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   parserVND = (value: string): string => value.replace(/\$\s?|(,*)/g, '');
 
+  // ============ GIAO TIỀN QUẢN LÝ ============
+  
+  initManagerHandoverForm(): void {
+    this.managerHandoverForm = this.fb.group({
+      managerUsername: ['', [Validators.required, Validators.minLength(3)]],
+      managerPassword: ['', Validators.required],
+      managerHandoverAmount: [0, [Validators.required, Validators.min(0)]],
+      notes: ['']
+    });
+  }
+  
+  openManagerHandoverModal(): void {
+    this.isManagerHandoverModalVisible = true;
+    this.managerPasswordVisible = false;
+    
+    // Đảm bảo currentStaffId đã được set
+    if (!this.currentStaffId || !this.currentStaffId.trim()) {
+      // Thử lấy từ localStorage
+      const savedStaffId = localStorage.getItem('staffId');
+      if (savedStaffId && savedStaffId.trim()) {
+        this.currentStaffId = savedStaffId.trim();
+      } else {
+        // Load lại staff list để lấy currentStaffId
+        this.loadStaffList();
+      }
+    }
+    
+    // Reset form với giá trị mặc định
+    this.managerHandoverForm.patchValue({
+      managerUsername: '',
+      managerPassword: '',
+      managerHandoverAmount: 0,
+      notes: ''
+    });
+  }
+  
+  loadManagerList(): void {
+    if (!this.hotelId) return;
+    
+    // Lọc ra những nhân viên có chức vụ quản lý
+    this.managerList = this.staffList.filter(staff => {
+      const position = staff.employmentInfo?.position?.toLowerCase() || '';
+      return position.includes('manager') || 
+             position.includes('quản lý') || 
+             position.includes('giám đốc') ||
+             position.includes('chủ') ||
+             position === 'hotel';
+    });
+    
+    // Nếu không có ai có chức vụ quản lý, lấy tất cả staff (để user có thể chọn)
+    if (this.managerList.length === 0) {
+      this.managerList = [...this.staffList];
+    }
+  }
+  
+  getManagerName(managerId: string | undefined): string {
+    if (!managerId) return '';
+    const manager = this.staffList.find(s => s._id === managerId);
+    if (!manager) return '';
+    return getStaffFullName(manager);
+  }
+  
+  closeManagerHandoverModal(): void {
+    this.isManagerHandoverModalVisible = false;
+    this.managerHandoverForm.reset();
+    this.managerPasswordVisible = false;
+  }
+  
+  // Tính tiền mặt thực thu trong ca
+  getActualCashInShift(): number {
+    return this.paidData
+      .filter(item => item.paymentMethod === 'cash')
+      .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+  }
+  
+  // Tính tiền mặt sau khi giao quản lý
+  getCashAfterManagerHandover(): number {
+    const managerAmount = this.managerHandoverForm?.get('managerHandoverAmount')?.value || 0;
+    return this.getActualCashInShift() + this.previousShiftAmount - managerAmount;
+  }
+  
+  submitManagerHandover(): void {
+    if (this.managerHandoverForm.invalid) {
+      Object.values(this.managerHandoverForm.controls).forEach(control => {
+        control.markAsDirty();
+        control.updateValueAndValidity();
+      });
+      this.message.warning('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+    
+    const formData = this.managerHandoverForm.value;
+    
+    // Kiểm tra các trường bắt buộc
+    if (!formData.managerUsername || !formData.managerUsername.trim()) {
+      this.message.error('Vui lòng nhập tài khoản quản lý (username hoặc email)');
+      return;
+    }
+    
+    if (!formData.managerPassword || !formData.managerPassword.trim()) {
+      this.message.error('Vui lòng nhập mật khẩu quản lý');
+      return;
+    }
+    
+    if (!this.currentStaffId || !this.currentStaffId.trim()) {
+      this.message.error('Không tìm thấy thông tin nhân viên hiện tại. Vui lòng đăng nhập lại.');
+      return;
+    }
+    
+    if (!this.hotelId) {
+      this.message.error('Không tìm thấy thông tin khách sạn');
+      return;
+    }
+    
+    this.isSubmittingManagerHandover = true;
+    
+    const managerAmount = formData.managerHandoverAmount || 0;
+    const actualCash = this.getActualCashInShift();
+    const cashAfterHandover = actualCash + this.previousShiftAmount - managerAmount;
+    
+    // Gửi lên server để xác thực mật khẩu và lưu lịch sử
+    const managerHandoverData = {
+      hotelId: this.hotelId,
+      fromStaffId: this.currentStaffId.trim(),
+      managerUsername: formData.managerUsername.trim(), // Username hoặc email của quản lý
+      managerPassword: formData.managerPassword.trim(),
+      amount: managerAmount,
+      cashBeforeHandover: actualCash + this.previousShiftAmount,
+      cashAfterHandover: cashAfterHandover,
+      notes: formData.notes || '',
+      timestamp: new Date()
+    };
+    
+    console.log('Giao tiền quản lý:', managerHandoverData);
+    
+    // Gọi API để xác thực và lưu
+    this.http.post(`http://localhost:3000/shift-handover/manager`, managerHandoverData).pipe(
+      catchError((error: HttpErrorResponse) => {
+        let errorMessage = 'Có lỗi xảy ra khi giao tiền quản lý';
+        
+        if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.status === 401) {
+          errorMessage = 'Mật khẩu quản lý không đúng';
+        }
+        
+        this.message.error(errorMessage);
+        console.error('Lỗi giao tiền quản lý:', error);
+        return throwError(errorMessage);
+      }),
+      finalize(() => {
+        this.isSubmittingManagerHandover = false;
+      })
+    ).subscribe(
+      (response: any) => {
+        // Cập nhật shiftHandoverForm với giá trị mới
+        // Đảm bảo cập nhật đúng thứ tự để trigger valueChanges
+        this.shiftHandoverForm.patchValue({
+          managerHandoverAmount: managerAmount,
+          cashAmount: cashAfterHandover,
+          cashInShift: actualCash
+        }, { emitEvent: true }); // emitEvent: true để trigger valueChanges subscription
+        
+        // Đảm bảo các control được mark as dirty để trigger validation và update
+        this.shiftHandoverForm.get('managerHandoverAmount')?.markAsDirty();
+        this.shiftHandoverForm.get('cashAmount')?.markAsDirty();
+        this.shiftHandoverForm.get('cashInShift')?.markAsDirty();
+        
+        // Trigger lại valueChanges để cập nhật alert ngay lập tức
+        const currentValues = this.shiftHandoverForm.value;
+        const handoverAmount = (currentValues.previousShiftAmount || 0) + (currentValues.cashInShift || 0) - (currentValues.managerHandoverAmount || 0);
+        const totalRevenue = (currentValues.cashAmount || 0) + (currentValues.bankTransferAmount || 0) + (currentValues.cardPaymentAmount || 0) - (currentValues.expenseAmount || 0);
+        
+        if (handoverAmount >= 0) {
+          this.handoverMessage = `Số tiền giao ca: ${this.formatterVND(handoverAmount)} đ | Tổng doanh thu: ${this.formatterVND(totalRevenue)} đ`;
+          this.handoverMessageType = handoverAmount > 0 ? 'success' : 'info';
+        } else {
+          this.handoverMessage = `Số tiền giao ca: ${this.formatterVND(handoverAmount)} đ (âm)`;
+          this.handoverMessageType = 'warning';
+        }
+        
+        const managerName = response.managerInfo?.name || formData.managerUsername || 'quản lý';
+        this.message.success(`Đã giao ${this.formatterVND(managerAmount)} đ cho ${managerName}. Tiền mặt còn lại: ${this.formatterVND(cashAfterHandover)} đ`);
+        
+        // Đóng modal
+        this.closeManagerHandoverModal();
+        
+        // Cập nhật tổng tiền hiển thị (tự động trừ đi tiền giao quản lý và tiền chi)
+        this.calculateTotalPayment();
+        
+        // Log để debug
+        console.log('Đã cập nhật form giao ca sau khi giao tiền quản lý:', {
+          managerHandoverAmount: managerAmount,
+          cashAmount: cashAfterHandover,
+          cashInShift: actualCash,
+          previousShiftAmount: this.shiftHandoverForm.get('previousShiftAmount')?.value,
+          handoverAmount: handoverAmount,
+          totalRevenue: totalRevenue
+        });
+      }
+    );
+  }
+
   // Tính tổng số tiền
   getTotalAmount(): number {
-    // Chỉ tính tổng từ các bản ghi đã thanh toán
-    return this.paidData.reduce((total, item) => {
+    // Tính tổng từ các bản ghi đã thanh toán
+    let baseTotal = this.paidData.reduce((total, item) => {
       const amount = item.totalAmount || item.amount || item.payment?.amount || 0;
       return total + (typeof amount === 'number' ? amount : 0);
     }, 0);
+    
+    // Trừ đi tiền giao quản lý và tiền chi (nếu có) từ form giao ca
+    const managerHandoverAmount = this.shiftHandoverForm?.get('managerHandoverAmount')?.value || 0;
+    const expenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
+    
+    // Tổng tiền = tổng tiền ban đầu - tiền giao quản lý - tiền chi
+    return Math.max(0, baseTotal - managerHandoverAmount - expenseAmount);
+  }
+  
+  // Mở modal lịch sử giao ca
+  openShiftHandoverHistory(): void {
+    this.isShiftHandoverHistoryVisible = true;
+  }
+  
+  closeShiftHandoverHistory(): void {
+    this.isShiftHandoverHistoryVisible = false;
   }
 
   onFilterChange(filterType: string): void {

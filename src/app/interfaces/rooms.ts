@@ -43,7 +43,8 @@ export interface Room {
   capacity?: RoomCapacity; // Thay thế maxcount
   amenities?: string[]; // Mới
   images?: string[]; // Đổi từ imageurls
-  status: 'vacant' | 'occupied' | 'cleaning' | 'dirty' | 'maintenance'; // Đổi từ roomStatus và cập nhật enum
+  status: 'vacant' | 'occupied' | 'cleaning' | 'dirty' | 'maintenance' | 'booked'; // Đổi từ roomStatus và cập nhật enum
+  guestStatus?: 'in' | 'out'; // Trạng thái khách (ở trong/ra ngoài)
   
   pricing?: RoomPricing; // Cấu trúc giá mới
   // Giữ lại các trường này nếu cần cho logic tính giá phức tạp ở client hoặc khi chưa có priceConfigId
@@ -81,11 +82,11 @@ export interface Room {
 }
 
 // Định nghĩa type cho RoomStatus để có thể export và sử dụng ở component khác
-export type RoomStatus = 'vacant' | 'occupied' | 'cleaning' | 'dirty' | 'maintenance';
+export type RoomStatus = 'vacant' | 'occupied' | 'cleaning' | 'dirty' | 'maintenance' | 'booked';
 
 // Interface cho sự kiện trên phòng (checkin, checkout, note...)
 export interface Event {
-  type: 'checkin' | 'checkout' | 'notpay' | 'maintenance' | 'service_order' | 'transfer'; // Thêm transfer
+  type: 'checkin' | 'checkout' | 'notpay' | 'maintenance' | 'service_order' | 'transfer' | 'booking' | 'cancel_booking' | 'guest_out' | 'guest_return';
   checkinTime?: Date; 
   checkoutTime?: Date; 
   payment?: number; 
@@ -130,7 +131,7 @@ export interface OrderedService {
 // Interface cho lịch sử đặt phòng (một mục trong mảng Room.bookingHistory)
 export interface BookingHistory {
   _id?: string; 
-  event: 'check-in' | 'check-out' | 'payment' | 'maintenance' | 'cleaning' | 'service' | 'transfer'; // Thêm 'transfer'
+  event: 'check-in' | 'check-out' | 'payment' | 'maintenance' | 'cleaning' | 'service' | 'transfer' | 'booking' | 'cancel_booking';
   date: Date; 
   bookingId?: string; 
   userId?: string; 

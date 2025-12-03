@@ -105,6 +105,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import vi from '@angular/common/locales/vi';
 import { AuthInterceptor } from './auth.interceptor'; // Import AuthInterceptor
 import { OtaManagementComponent } from './components/ota-management/ota-management.component'; // Import OtaManagementComponent
+import { ShiftHandoverHistoryComponent } from './components/shift-handover-history/shift-handover-history.component';
 
 registerLocaleData(vi);
 
@@ -156,7 +157,8 @@ registerLocaleData(vi);
         NlToBrPipe,
         AiChatboxComponent,
         PricingComponent,
-        OtaManagementComponent // Thêm OtaManagementComponent vào declarations
+        OtaManagementComponent, // Thêm OtaManagementComponent vào declarations
+        ShiftHandoverHistoryComponent
     ],
     bootstrap: [AppComponent],
     imports: [

@@ -1,143 +1,76 @@
-<div class="container">
-  <nz-card nzTitle="Lịch Sử Giao Dịch Ngân Hàng (SePay)">
-    <!-- SEPAY LOGIN FORM -->
-    <div *ngIf="!isLoggedIn" class="sepay-login-form mb-4">
-      <form nz-form [formGroup]="sepayLoginForm" (ngSubmit)="handleSepayLogin()">
-        <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzFor="sepayUsername">Tên đăng nhập SePay</nz-form-label>
-          <nz-form-control [nzSpan]="14" nzErrorTip="Vui lòng nhập tên đăng nhập!">
-            <input nz-input id="sepayUsername" formControlName="username" placeholder="Tên đăng nhập SePay" />
-          </nz-form-control>
-        </nz-form-item>
-        <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzFor="sepayPassword">Mật khẩu SePay</nz-form-label>
-          <nz-form-control [nzSpan]="14" nzErrorTip="Vui lòng nhập mật khẩu!">
-            <input nz-input type="password" id="sepayPassword" formControlName="password" placeholder="Mật khẩu SePay" />
-          </nz-form-control>
-        </nz-form-item>
-        <nz-form-item>
-          <nz-form-control [nzSpan]="14" [nzOffset]="6">
-            <button nz-button nzType="primary" [nzLoading]="isLoading" type="submit">Đăng nhập SePay</button>
-          </nz-form-control>
-        </nz-form-item>
-      </form>
-    </div>
-    <!-- END SEPAY LOGIN FORM -->
+<div class="bank-transfer-history-container">
+  <p>Lịch sử giao dịch SePay</p>
 
-    <ng-container *ngIf="isLoggedIn">
-      <div class="mb-2">
-        <span>Đã đăng nhập SePay.</span>
-        <button nz-button nzType="link" (click)="handleSepayLogout()" class="ml-2">Đăng xuất</button>
+  <nz-alert 
+    *ngIf="errorMessage" 
+    nzType="error" 
+    [nzMessage]="errorMessage" 
+    nzShowIcon 
+    class="error-alert"
+    [nzDescription]="'Tài liệu tham khảo: https://docs.sepay.vn/'"
+  >
+    <ng-container *nzAlertContent>
+      <div>
+        <p>{{ errorMessage }}</p>
+        <p style="margin-top: 8px; font-size: 12px; color: #666;">
+          Tài liệu tham khảo: 
+          <a href="https://docs.sepay.vn/" target="_blank" rel="noopener noreferrer">https://docs.sepay.vn/</a>
+        </p>
       </div>
-
-      <!-- FILTER FORM -->
-      <form nz-form [formGroup]="filterForm" (ngSubmit)="onFilterSubmit()" class="filter-form mb-4">
-        <div nz-row [nzGutter]="16">
-          <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
-            <nz-form-item>
-              <nz-form-label>Khoảng ngày</nz-form-label>
-              <nz-form-control>
-                <nz-range-picker formControlName="dateRange" class="w-100"></nz-range-picker>
-              </nz-form-control>
-            </nz-form-item>
-          </div>
-          <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
-            <nz-form-item>
-              <nz-form-label>Trạng thái GD</nz-form-label>
-              <nz-form-control>
-                <nz-select formControlName="status" nzPlaceHolder="Chọn trạng thái" nzAllowClear class="w-100">
-                  <nz-option *ngFor="let opt of transactionStatusOptions" [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
-                </nz-select>
-              </nz-form-control>
-            </nz-form-item>
-          </div>
-          <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
-            <nz-form-item>
-              <nz-form-label>Tên ngân hàng</nz-form-label>
-              <nz-form-control>
-                <input nz-input formControlName="bankName" placeholder="Nhập tên ngân hàng" />
-              </nz-form-control>
-            </nz-form-item>
-          </div>
-          <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="16">
-            <nz-form-item>
-              <nz-form-label>Từ khóa tìm kiếm</nz-form-label>
-              <nz-form-control>
-                <input nz-input formControlName="search" placeholder="Nội dung, mã GD, số TK..." />
-              </nz-form-control>
-            </nz-form-item>
-          </div>
-          <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" class="text-right">
-            <nz-form-item>
-              <nz-form-label style="visibility: hidden;">Actions</nz-form-label>
-              <nz-form-control>
-                <button nz-button nzType="primary" type="submit" [nzLoading]="isLoading">Tìm kiếm</button>
-                <button nz-button type="button" (click)="filterForm.reset({ status: '' }); onFilterSubmit()" class="ml-2">Đặt lại</button>
-              </nz-form-control>
-            </nz-form-item>
-          </div>
-        </div>
-      </form>
-      <!-- END FILTER FORM -->
-
-      <!-- TRANSACTIONS TABLE -->
-      <nz-table
-        #transactionsTable
-        [nzData]="transactions"
-        [nzLoading]="isLoading"
-        [nzFrontPagination]="false"
-        [nzTotal]="totalTransactions"
-        [(nzPageIndex)]="currentPage"
-        [(nzPageSize)]="pageSize"
-        (nzPageIndexChange)="onPageIndexChange($event)"
-        (nzPageSizeChange)="onPageSizeChange($event)"
-        nzBordered
-        nzSize="small"
-        [nzScroll]="{ x: '1200px' }"
-      >
-        <thead>
-          <tr>
-            <th nzWidth="180px">Ngày GD</th>
-            <th nzWidth="150px">Ngân hàng</th>
-            <th>Nội dung</th>
-            <th nzWidth="120px" nzAlign="right">Số tiền</th>
-            <th nzWidth="120px">Số TK</th>
-            <th nzWidth="150px">Mã tham chiếu</th>
-            <th nzWidth="100px">Trạng thái</th>
-            <th nzWidth="80px" nzAlign="center">Chi tiết</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of transactionsTable.data">
-            <td>{{ item.transaction_date | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
-            <td>{{ item.bank_brand_name }}</td>
-            <td>{{ item.transaction_content }}</td>
-            <td nzAlign="right">{{ item.amount | currency:'VND':'symbol':'1.0-0' }}</td>
-            <td>{{ item.account_number }}</td>
-            <td>{{ item.reference_number }}</td>
-            <td>
-              <nz-tag *ngIf="item.status" [nzColor]="item.status === 'completed' ? 'green' : (item.status === 'pending' ? 'blue' : 'red')">
-                {{ item.status }}
-              </nz-tag>
-            </td>
-            <td nzAlign="center">
-              <button nz-button nzType="link" (click)="viewDetails(item)" nz-tooltip nzTooltipTitle="Xem chi tiết" aria-label="Xem chi tiết giao dịch">
-                <i nz-icon nzType="eye"></i>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </nz-table>
-      <div *ngIf="!isLoading && transactions.length === 0" class="empty-state mt-3">
-         <nz-empty nzNotFoundContent="Không có giao dịch nào phù hợp."></nz-empty>
-      </div>
-      <!-- END TRANSACTIONS TABLE -->
     </ng-container>
-    <!-- END LOGGED IN CONTENT -->
+  </nz-alert>
 
-    <div *ngIf="!isLoggedIn && !isLoading" class="empty-state mt-3">
-      <nz-empty nzNotFoundContent="Vui lòng đăng nhập SePay để xem lịch sử giao dịch."></nz-empty>
+  <div *ngIf="isLoading" class="loading-spinner">
+    <nz-spin nzSimple [nzSize]="'large'"></nz-spin>
+    <p>Đang tải dữ liệu...</p>
+  </div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+    <nz-table 
+      #sepayTable 
+      [nzData]="transactions" 
+      [nzLoading]="isLoading"
+      [nzPageSize]="pageSize"
+      [nzPageIndex]="pageIndex"
+      [nzTotal]="totalTransactions" 
+      (nzPageIndexChange)="onPageIndexChange($event)"
+      (nzPageSizeChange)="onPageSizeChange($event)"
+      nzShowSizeChanger
+      nzShowQuickJumper
+      [nzFrontPagination]="false" 
+      nzBordered
+      nzSize="middle"
+    >
+      <thead>
+        <tr>
+          <th 
+            *ngFor="let column of listOfColumns" 
+            [nzSortOrder]="column.sortOrder"
+            [nzSortFn]="column.sortFn"
+            [nzSortDirections]="column.sortDirections"
+            [nzFilterMultiple]="column.filterMultiple"
+            [nzFilters]="column.listOfFilter || []"
+            [nzFilterFn]="column.filterFn || true"
+          >
+            {{ column.name }}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let data of sepayTable.data">
+          <td>{{ data.id }}</td>
+          <td>{{ data.bank_brand_name }}</td>
+          <td>{{ data.account_number }}</td>
+          <td>{{ data.transaction_date | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+          <td class="amount-out">{{ data.amount_out | number:'1.0-0' }} VND</td>
+          <td class="amount-in">{{ data.amount_in | number:'1.0-0' }} VND</td>
+          <td>{{ data.transaction_content }}</td>
+          <td>{{ data.reference_number }}</td>
+        </tr>
+      </tbody>
+    </nz-table>
+    <div *ngIf="!isLoading && transactions.length === 0 && !errorMessage" class="no-data-message">
+      <nz-empty nzNotFoundContent="Không có dữ liệu giao dịch cho khoảng thời gian đã chọn."></nz-empty>
     </div>
-
-  </nz-card>
-</div>
+  </div>
+</div> 

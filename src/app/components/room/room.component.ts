@@ -45,7 +45,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     { value: 'occupied', label: 'Có khách', color: 'red' },
     { value: 'cleaning', label: 'Đang dọn', color: 'blue' },
     { value: 'dirty', label: 'Bẩn', color: 'orange' },
-    { value: 'maintenance', label: 'Bảo trì', color: 'purple' }
+    { value: 'maintenance', label: 'Bảo trì', color: 'purple' },
+    { value: 'booked', label: 'Đã đặt', color: 'geekblue' }
   ];
 
   constructor(

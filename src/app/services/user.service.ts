@@ -181,4 +181,18 @@ export class UserService {
       headers: this.getAuthHeaders()
     });
   }
+
+  /**
+   * Cập nhật current user (dùng sau khi giao ca)
+   */
+  setCurrentUser(user: User): void {
+    this.currentUserSubject.next(user);
+  }
+
+  /**
+   * Refresh current user từ token mới
+   */
+  refreshCurrentUser(): void {
+    this.checkAuthStatus();
+  }
 }

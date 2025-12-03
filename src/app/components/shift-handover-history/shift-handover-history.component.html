@@ -1,0 +1,166 @@
+<div class="shift-handover-history-container">
+  <nz-card nzTitle="Lịch sử giao ca">
+    <!-- Filters -->
+    <div class="filters" style="margin-bottom: 16px;">
+      <nz-date-picker
+        [(ngModel)]="startDate"
+        nzFormat="dd/MM/yyyy"
+        nzPlaceHolder="Từ ngày"
+        style="margin-right: 8px; width: 150px;"
+      ></nz-date-picker>
+      <nz-date-picker
+        [(ngModel)]="endDate"
+        nzFormat="dd/MM/yyyy"
+        nzPlaceHolder="Đến ngày"
+        style="margin-right: 16px; width: 150px;"
+      ></nz-date-picker>
+      <button nz-button nzType="primary" (click)="onFilterChange()">
+        <i nz-icon nzType="search"></i> Tìm kiếm
+      </button>
+      <button nz-button (click)="resetFilters()" style="margin-left: 8px;">
+        <i nz-icon nzType="reload"></i> Làm mới
+      </button>
+    </div>
+    
+    <!-- Table -->
+    <nz-table
+      #historyTable
+      [nzData]="shiftHistory"
+      [nzLoading]="isLoading"
+      [nzTotal]="totalItems"
+      [nzPageSize]="pageSize"
+      [nzPageIndex]="currentPage"
+      (nzPageIndexChange)="onPageChange($event)"
+      nzBordered
+      nzSize="small"
+    >
+      <thead>
+        <tr>
+          <th>Thời gian</th>
+          <th>Nhân viên giao</th>
+          <th>Nhân viên nhận</th>
+          <th>Tiền ca trước</th>
+          <th>Tiền mặt trong ca</th>
+          <th>Tiền giao QL</th>
+          <th>Số tiền giao ca</th>
+          <th>Tổng doanh thu</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let record of historyTable.data">
+          <td>{{ formatDate(record.handoverTime) }}</td>
+          <td>{{ getStaffName(record.fromStaffId) }}</td>
+          <td>{{ getStaffName(record.toStaffId) }}</td>
+          <td>{{ formatCurrency(record.previousShiftAmount || 0) }}</td>
+          <td>{{ formatCurrency(record.cashInShift || 0) }}</td>
+          <td>{{ formatCurrency(record.managerHandoverAmount || 0) }}</td>
+          <td><strong>{{ formatCurrency(record.handoverAmount || 0) }}</strong></td>
+          <td>{{ formatCurrency(record.totalRevenue || 0) }}</td>
+          <td>
+            <nz-tag [nzColor]="getStatusColor(record.status)">
+              {{ getStatusLabel(record.status) }}
+            </nz-tag>
+          </td>
+          <td>
+            <button nz-button nzType="link" nzSize="small" (click)="viewDetail(record)">
+              <i nz-icon nzType="eye"></i> Chi tiết
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </nz-table>
+  </nz-card>
+  
+  <!-- Detail Modal -->
+  <nz-modal
+    [(nzVisible)]="isDetailModalVisible"
+    nzTitle="Chi tiết giao ca"
+    [nzWidth]="800"
+    (nzOnCancel)="closeDetailModal()"
+    [nzFooter]="null"
+  >
+    <ng-container *nzModalContent>
+      <div *ngIf="selectedRecord">
+        <nz-descriptions nzBordered [nzColumn]="{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }">
+          <nz-descriptions-item nzTitle="Thời gian giao ca">
+            {{ formatDate(selectedRecord.handoverTime) }}
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Nhân viên giao">
+            {{ getStaffName(selectedRecord.fromStaffId) }}
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Nhân viên nhận">
+            {{ getStaffName(selectedRecord.toStaffId) }}
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Trạng thái">
+            <nz-tag [nzColor]="getStatusColor(selectedRecord.status)">
+              {{ getStatusLabel(selectedRecord.status) }}
+            </nz-tag>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Tiền ca trước">
+            <strong>{{ formatCurrency(selectedRecord.previousShiftAmount || 0) }}</strong>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Tiền mặt trong ca">
+            <strong>{{ formatCurrency(selectedRecord.cashInShift || 0) }}</strong>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Tiền giao quản lý">
+            <strong class="text-danger">{{ formatCurrency(selectedRecord.managerHandoverAmount || 0) }}</strong>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Số tiền giao ca">
+            <strong class="text-success">{{ formatCurrency(selectedRecord.handoverAmount || 0) }}</strong>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Tiền mặt">
+            {{ formatCurrency(selectedRecord.cashAmount || 0) }}
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Chuyển khoản">
+            {{ formatCurrency(selectedRecord.bankTransferAmount || 0) }}
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Cà thẻ">
+            {{ formatCurrency(selectedRecord.cardPaymentAmount || 0) }}
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Phiếu chi">
+            {{ formatCurrency(selectedRecord.expenseAmount || 0) }}
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Tổng doanh thu">
+            <strong class="text-primary">{{ formatCurrency(selectedRecord.totalRevenue || 0) }}</strong>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Ghi chú" [nzSpan]="2">
+            {{ selectedRecord.notes || 'Không có' }}
+          </nz-descriptions-item>
+        </nz-descriptions>
+        
+        <!-- Room History -->
+        <nz-divider nzText="Lịch sử phòng trong ca" *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"></nz-divider>
+        <nz-table
+          *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"
+          [nzData]="selectedRecord.roomHistory"
+          nzSize="small"
+          nzBordered
+        >
+          <thead>
+            <tr>
+              <th>Phòng</th>
+              <th>Hành động</th>
+              <th>Khách</th>
+              <th>Số tiền</th>
+              <th>Hình thức TT</th>
+              <th>Thời gian</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let room of selectedRecord.roomHistory">
+              <td>{{ room.roomNumber }}</td>
+              <td>{{ room.action }}</td>
+              <td>{{ room.guestName }}</td>
+              <td>{{ formatCurrency(room.amount || 0) }}</td>
+              <td>{{ room.paymentMethod }}</td>
+              <td>{{ formatDate(room.timestamp) }}</td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>
+

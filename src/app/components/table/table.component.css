@@ -101,3 +101,35 @@ form nz-form-item {
     justify-content: center;
     gap: 8px;
 }
+
+/* Shift handover modal styles */
+.total-amount {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.text-success {
+    color: #52c41a !important;
+}
+
+.text-muted {
+    color: #999;
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+.text-info {
+    color: #1890ff;
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+.summary-stats {
+    margin-top: 16px;
+}
+
+.ml-2 {
+    margin-left: 8px;
+}

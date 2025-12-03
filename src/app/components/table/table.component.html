@@ -46,9 +46,17 @@
       <i nz-icon nzType="file-excel"></i>
       <span>Xuất Excel</span>
     </button>
+    <button nz-button nzType="default" nzDanger (click)="openManagerHandoverModal()" nz-tooltip nzTooltipTitle="Giao tiền quản lý" aria-label="Giao tiền quản lý">
+      <i nz-icon nzType="dollar"></i>
+      <span>Giao tiền QL</span>
+    </button>
     <button nz-button nzType="primary" nzDanger (click)="openShiftHandoverModal()" nz-tooltip nzTooltipTitle="Giao ca" aria-label="Giao ca">
       <i nz-icon nzType="sync"></i>
       <span>Giao ca</span>
+    </button>
+    <button nz-button nzType="default" (click)="openShiftHandoverHistory()" nz-tooltip nzTooltipTitle="Lịch sử giao ca" aria-label="Lịch sử giao ca">
+      <i nz-icon nzType="history"></i>
+      <span>Lịch sử giao ca</span>
     </button>
     
     <!-- Nút lọc dữ liệu -->
@@ -333,135 +341,287 @@
 <!-- Modal giao ca, giao tiền -->
 <nz-modal
   [(nzVisible)]="isShiftHandoverModalVisible"
-  [nzTitle]="modalTitle"
-  [nzWidth]="600"
-  (nzOnCancel)="isShiftHandoverModalVisible = false"
+  nzTitle="Giao ca - Giao tiền quản lý"
+  [nzWidth]="700"
+  (nzOnCancel)="closeShiftHandoverModal()"
   [nzFooter]="modalFooter"
 >
-  <ng-template #modalTitle>
-    <div class="modal-title">
-      <span nz-icon nzType="swap" nzTheme="outline"></span>
-      <span class="ml-2">Giao ca - Giao tiền quản lý</span>
+  <ng-container *nzModalContent>
+    <form nz-form [formGroup]="shiftHandoverForm" (ngSubmit)="submitShiftHandover()" nzLayout="vertical">
+    <div nz-row [nzGutter]="16">
+      <!-- Nhân viên giao ca -->
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Nhân viên giao ca</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng chọn nhân viên giao ca!">
+            <nz-select 
+              formControlName="fromStaffId" 
+              nzPlaceHolder="Chọn nhân viên giao ca"
+              nzShowSearch
+              [nzLoading]="isLoadingStaff">
+              <nz-option 
+                *ngFor="let staff of staffList" 
+                [nzValue]="staff._id" 
+                [nzLabel]="getStaffName(staff)">
+              </nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <!-- Nhân viên nhận ca -->
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Nhân viên nhận ca</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng chọn nhân viên nhận ca!">
+            <nz-select 
+              formControlName="toStaffId" 
+              nzPlaceHolder="Chọn nhân viên nhận ca"
+              nzShowSearch
+              [nzLoading]="isLoadingStaff">
+              <nz-option 
+                *ngFor="let staff of getReceivingStaffList()" 
+                [nzValue]="staff._id" 
+                [nzLabel]="getStaffName(staff)">
+              </nz-option>
+            </nz-select>
+            <small class="text-muted" *ngIf="getReceivingStaffList().length === 0 && !isLoadingStaff">
+              Không có nhân viên khác để nhận ca
+            </small>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
     </div>
-  </ng-template>
 
-  <form nz-form [formGroup]="shiftHandoverForm" (ngSubmit)="submitShiftHandover()">
-    <!-- ID giao ca -->
+    <!-- Mật khẩu xác nhận -->
     <nz-form-item>
-      <nz-form-label [nzSpan]="6">Mã giao ca</nz-form-label>
-      <nz-form-control [nzSpan]="18">
-        <input nz-input formControlName="shiftId" readonly style="background-color: #f5f5f5" aria-label="Mã giao ca" />
-      </nz-form-control>
-    </nz-form-item>
-    
-    <!-- Nhân viên giao ca -->
-    <nz-form-item>
-      <nz-form-label [nzSpan]="6" nzRequired>Nhân viên giao ca</nz-form-label>
-      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập tên nhân viên giao ca!">
-        <input nz-input formControlName="handoverEmployee" placeholder="Nhập tên nhân viên giao ca" />
-      </nz-form-control>
-    </nz-form-item>
-
-    <!-- Nhân viên nhận ca -->
-    <nz-form-item>
-      <nz-form-label [nzSpan]="6" nzRequired>Nhân viên nhận ca</nz-form-label>
-      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập tên nhân viên nhận ca!">
-        <input nz-input formControlName="receivingEmployee" placeholder="Nhập tên nhân viên nhận ca" />
-      </nz-form-control>
-    </nz-form-item>
-
-    <!-- Thời gian giao ca -->
-    <nz-form-item>
-      <nz-form-label [nzSpan]="6" nzRequired>Thời gian giao ca</nz-form-label>
-      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng chọn thời gian giao ca!">
-        <nz-date-picker 
-          formControlName="handoverTime" 
-          [nzShowTime]="{ nzFormat: 'HH:mm' }" 
-          nzFormat="dd/MM/yyyy HH:mm"
-          [nzPlaceHolder]="'Chọn ngày và giờ'"
-          style="width: 100%"
-        ></nz-date-picker>
-      </nz-form-control>
-    </nz-form-item>
-
-    <!-- Số tiền giao ca -->
-    <nz-form-item>
-      <nz-form-label [nzSpan]="6" nzRequired>Số tiền giao ca</nz-form-label>
-      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập số tiền giao ca!">
-        <nz-input-group [nzPrefix]="prefixTemplate">
+      <nz-form-label nzRequired>Mật khẩu xác nhận (của nhân viên nhận ca)</nz-form-label>
+      <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu nhân viên nhận!">
+        <nz-input-group [nzSuffix]="passwordSuffixTpl">
           <input 
-            nz-input
-            formControlName="amount"
-            type="number"
-            min="0"
-            placeholder="Nhập số tiền giao ca"
-          />
-          <ng-template #prefixTemplate><span>VND</span></ng-template>
+            nz-input 
+            [type]="passwordVisible ? 'text' : 'password'" 
+            formControlName="toUserPassword" 
+            placeholder="Nhập mật khẩu của nhân viên nhận ca để xác nhận" />
         </nz-input-group>
+        <ng-template #passwordSuffixTpl>
+          <span 
+            nz-icon 
+            [nzType]="passwordVisible ? 'eye' : 'eye-invisible'" 
+            (click)="passwordVisible = !passwordVisible"
+            style="cursor: pointer;">
+          </span>
+        </ng-template>
       </nz-form-control>
     </nz-form-item>
 
-    <!-- Hình thức thanh toán -->
-    <nz-form-item>
-      <nz-form-label [nzSpan]="6" nzRequired>Hình thức thanh toán</nz-form-label>
-      <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng chọn hình thức thanh toán!">
-        <nz-radio-group formControlName="paymentMethod">
-          <label nz-radio-button nzValue="cash">
-            <span nz-icon nzType="dollar" nzTheme="outline"></span> Tiền mặt
-          </label>
-          <label nz-radio-button nzValue="transfer">
-            <span nz-icon nzType="bank" nzTheme="outline"></span> Chuyển khoản
-          </label>
-          <label nz-radio-button nzValue="card">
-            <span nz-icon nzType="credit-card" nzTheme="outline"></span> Thẻ tín dụng
-          </label>
-        </nz-radio-group>
-      </nz-form-control>
-    </nz-form-item>
+    <nz-divider nzText="Thông tin tiền giao ca"></nz-divider>
 
-    <!-- Trạng thái thanh toán -->
-    <nz-form-item *ngIf="handoverMessage">
-      <nz-form-label [nzSpan]="6">Trạng thái</nz-form-label>
-      <nz-form-control [nzSpan]="18">
-        <nz-alert
-          [nzType]="handoverMessageType"
-          [nzMessage]="handoverMessage"
-          nzShowIcon
-        ></nz-alert>
-      </nz-form-control>
-    </nz-form-item>
+    <div nz-row [nzGutter]="16">
+      <!-- Số tiền ca trước -->
+      <div nz-col [nzSpan]="8">
+        <nz-form-item>
+          <nz-form-label>Tiền ca trước</nz-form-label>
+          <nz-form-control>
+            <nz-input-number
+              formControlName="previousShiftAmount"
+              [nzMin]="0"
+              [nzStep]="10000"
+              [nzFormatter]="formatterVND"
+              [nzParser]="parserVND"
+              [nzDisabled]="true"
+              style="width: 100%"
+            ></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <!-- Tiền mặt trong ca -->
+      <div nz-col [nzSpan]="8">
+        <nz-form-item>
+          <nz-form-label nzRequired>Tiền mặt trong ca</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng nhập tiền mặt!">
+            <nz-input-number
+              formControlName="cashInShift"
+              [nzMin]="0"
+              [nzStep]="10000"
+              [nzFormatter]="formatterVND"
+              [nzParser]="parserVND"
+              [nzDisabled]="true"
+              style="width: 100%"
+            ></nz-input-number>
+            <small class="text-muted">Tự động tính từ tiền mặt thu được trong ca</small>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <!-- Tiền giao quản lý -->
+      <div nz-col [nzSpan]="8">
+        <nz-form-item>
+          <nz-form-label>Tiền giao quản lý</nz-form-label>
+          <nz-form-control>
+            <nz-input-number
+              formControlName="managerHandoverAmount"
+              [nzMin]="0"
+              [nzStep]="10000"
+              [nzFormatter]="formatterVND"
+              [nzParser]="parserVND"
+              [nzDisabled]="true"
+              style="width: 100%"
+            ></nz-input-number>
+            <small class="text-muted">Cập nhật qua nút "Giao tiền QL"</small>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+
+    <!-- Trạng thái / Số tiền giao ca -->
+    <nz-alert 
+      *ngIf="handoverMessage"
+      [nzType]="handoverMessageType"
+      [nzMessage]="handoverMessage"
+      nzShowIcon
+      style="margin-bottom: 16px;">
+    </nz-alert>
+    
+    <!-- Hiển thị số tiền giao ca và tổng doanh thu -->
+    <nz-alert
+      nzType="success"
+      nzShowIcon
+      style="margin-bottom: 16px;"
+    >
+      <ng-template #nzMessage>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>
+            <strong>Số tiền giao ca:</strong> 
+            {{ formatterVND((shiftHandoverForm.get('previousShiftAmount')?.value || 0) + (shiftHandoverForm.get('cashInShift')?.value || 0) - (shiftHandoverForm.get('managerHandoverAmount')?.value || 0)) }} đ
+          </span>
+          <span style="margin-left: 16px;">
+            <strong>|</strong>
+          </span>
+          <span style="margin-left: 16px;">
+            <strong>Tổng doanh thu:</strong> 
+            {{ formatterVND((shiftHandoverForm.get('cashAmount')?.value || 0) + (shiftHandoverForm.get('bankTransferAmount')?.value || 0) + (shiftHandoverForm.get('cardPaymentAmount')?.value || 0) - (shiftHandoverForm.get('expenseAmount')?.value || 0)) }} đ
+          </span>
+        </div>
+      </ng-template>
+    </nz-alert>
+
+    <nz-divider nzText="Thông tin doanh thu (tham khảo)"></nz-divider>
+
+    <div nz-row [nzGutter]="16">
+      <div nz-col [nzSpan]="8">
+        <nz-form-item>
+          <nz-form-label>Tiền mặt</nz-form-label>
+          <nz-form-control>
+            <nz-input-number 
+              formControlName="cashAmount" 
+              [nzMin]="0" 
+              [nzStep]="10000" 
+              [nzDisabled]="true"
+              style="width: 100%"
+            ></nz-input-number>
+            <small class="text-muted">Tự động tính từ thanh toán tiền mặt</small>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzSpan]="8">
+        <nz-form-item>
+          <nz-form-label>Chuyển khoản</nz-form-label>
+          <nz-form-control>
+            <nz-input-number 
+              formControlName="bankTransferAmount" 
+              [nzMin]="0" 
+              [nzStep]="10000" 
+              [nzDisabled]="true"
+              style="width: 100%"
+            ></nz-input-number>
+            <small class="text-muted">Tự động tính từ thanh toán chuyển khoản</small>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzSpan]="8">
+        <nz-form-item>
+          <nz-form-label>Cà thẻ</nz-form-label>
+          <nz-form-control>
+            <nz-input-number 
+              formControlName="cardPaymentAmount" 
+              [nzMin]="0" 
+              [nzStep]="10000" 
+              [nzDisabled]="true"
+              style="width: 100%"
+            ></nz-input-number>
+            <small class="text-muted">Tự động tính từ thanh toán cà thẻ</small>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+
+    <div nz-row [nzGutter]="16">
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label>Phiếu chi</nz-form-label>
+          <nz-form-control>
+            <nz-input-number 
+              formControlName="expenseAmount" 
+              [nzMin]="0" 
+              [nzStep]="10000" 
+              [nzDisabled]="true"
+              style="width: 100%"
+            ></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label>Phiếu thu</nz-form-label>
+          <nz-form-control>
+            <nz-input-number 
+              formControlName="incomeAmount" 
+              [nzMin]="0" 
+              [nzStep]="10000" 
+              [nzDisabled]="true"
+              style="width: 100%"
+            ></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
 
     <!-- Ghi chú giao ca -->
     <nz-form-item>
-      <nz-form-label [nzSpan]="6">Ghi chú</nz-form-label>
-      <nz-form-control [nzSpan]="18">
+      <nz-form-label>Ghi chú / Vấn đề cần bàn giao</nz-form-label>
+      <nz-form-control>
         <textarea
           nz-input
           formControlName="notes"
-          rows="3"
-          placeholder="Nhập ghi chú giao ca (nếu có)"
+          rows="2"
+          placeholder="Nhập ghi chú giao ca, vấn đề cần bàn giao..."
         ></textarea>
       </nz-form-control>
     </nz-form-item>
 
-    <!-- Thống kê tổng quan -->
-    <nz-divider></nz-divider>
+    <!-- Thống kê tổng quan trong ca -->
+    <nz-divider nzText="Thống kê trong ca"></nz-divider>
     <div class="summary-stats">
-      <nz-descriptions nzTitle="Thống kê thanh toán" nzBordered [nzColumn]="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }">
-        <nz-descriptions-item nzTitle="Đã thanh toán">
-          <nz-tag nzColor="success">{{countByStatus('paid')}} giao dịch</nz-tag>
+      <nz-descriptions nzBordered [nzColumn]="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }">
+        <nz-descriptions-item nzTitle="Số phòng checkout">
+          <nz-tag nzColor="blue">{{ paidData.length }} phòng</nz-tag>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Chờ thanh toán">
-          <nz-tag nzColor="warning">{{countByStatus('pending')}} giao dịch</nz-tag>
+        <nz-descriptions-item nzTitle="Tổng tiền thu">
+          <span class="total-amount text-success">{{ formatterVND(getTotalAmount()) }} đ</span>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Hủy/Hoàn tiền">
-          <div class="multi-stats">
-            <nz-tag nzColor="error">{{countByStatus('cancelled')}} hủy</nz-tag>
-            <nz-tag nzColor="cyan">{{countByStatus('refunded')}} hoàn</nz-tag>
-          </div>
+        <nz-descriptions-item nzTitle="Tiền mặt">
+          <span>{{ formatterVND(shiftHandoverForm.get('cashAmount')?.value || 0) }} đ</span>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Tổng tiền" [nzSpan]="2">
-          <span class="total-amount">{{formatterVND(getTotalAmount())}} VND</span>
+        <nz-descriptions-item nzTitle="Chuyển khoản">
+          <span>{{ formatterVND(shiftHandoverForm.get('bankTransferAmount')?.value || 0) }} đ</span>
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Cà thẻ">
+          <span>{{ formatterVND(shiftHandoverForm.get('cardPaymentAmount')?.value || 0) }} đ</span>
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Tiền ca trước">
+          <span>{{ formatterVND(previousShiftAmount) }} đ</span>
         </nz-descriptions-item>
       </nz-descriptions>
     </div>
@@ -469,9 +629,10 @@
     <!-- Hiển thị tiến trình -->
     <nz-spin *ngIf="isSubmitting" nzTip="Đang xử lý giao ca..."></nz-spin>
   </form>
+  </ng-container>
 
   <ng-template #modalFooter>
-    <button nz-button nzType="default" (click)="isShiftHandoverModalVisible = false" [disabled]="isSubmitting">
+    <button nz-button nzType="default" (click)="closeShiftHandoverModal()" [disabled]="isSubmitting">
       Hủy
     </button>
     <button 
@@ -482,6 +643,149 @@
       [disabled]="isSubmitting || shiftHandoverForm.invalid"
     >
       Xác nhận giao ca
+    </button>
+  </ng-template>
+</nz-modal>
+
+<!-- Modal Giao tiền quản lý -->
+<nz-modal
+  [(nzVisible)]="isManagerHandoverModalVisible"
+  [nzTitle]="managerModalTitle"
+  [nzFooter]="managerModalFooter"
+  [nzWidth]="550"
+  (nzOnCancel)="closeManagerHandoverModal()"
+>
+  <ng-template #managerModalTitle>
+    <div class="modal-title">
+      <i nz-icon nzType="dollar" nzTheme="outline" style="color: #faad14; margin-right: 8px;"></i>
+      <span>Giao tiền quản lý</span>
+    </div>
+  </ng-template>
+
+  <ng-container *nzModalContent>
+    <form nz-form [formGroup]="managerHandoverForm" nzLayout="vertical">
+      
+      <!-- Thông tin tiền mặt -->
+      <nz-alert
+        nzType="info"
+        [nzMessage]="cashInfoMessage"
+        nzShowIcon
+        style="margin-bottom: 16px;"
+      >
+        <ng-template #cashInfoMessage>
+          <div>
+            <p style="margin: 0;"><strong>Tiền mặt ca trước:</strong> {{ formatterVND(previousShiftAmount) }} đ</p>
+            <p style="margin: 4px 0;"><strong>Tiền mặt thực thu trong ca:</strong> {{ formatterVND(getActualCashInShift()) }} đ</p>
+            <p style="margin: 0; font-size: 16px; color: #1890ff;"><strong>Tổng tiền mặt hiện có:</strong> {{ formatterVND(previousShiftAmount + getActualCashInShift()) }} đ</p>
+          </div>
+        </ng-template>
+      </nz-alert>
+      
+      <nz-divider nzText="Thông tin quản lý nhận tiền" nzOrientation="left"></nz-divider>
+      
+      <!-- Tài khoản quản lý -->
+      <nz-form-item>
+        <nz-form-label nzRequired>Tài khoản quản lý</nz-form-label>
+        <nz-form-control nzErrorTip="Vui lòng nhập tài khoản quản lý (username hoặc email)">
+          <input
+            nz-input
+            formControlName="managerUsername"
+            placeholder="Nhập username hoặc email của quản lý"
+            style="width: 100%"
+          />
+          <small class="text-muted">Nhập username hoặc email của quản lý để xác thực</small>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <!-- Mật khẩu quản lý -->
+      <nz-form-item>
+        <nz-form-label nzRequired>Mật khẩu quản lý</nz-form-label>
+        <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu quản lý">
+          <nz-input-group [nzSuffix]="managerPasswordSuffix">
+            <input
+              nz-input
+              formControlName="managerPassword"
+              [type]="managerPasswordVisible ? 'text' : 'password'"
+              placeholder="Nhập mật khẩu quản lý để xác nhận"
+            />
+          </nz-input-group>
+          <ng-template #managerPasswordSuffix>
+            <span
+              nz-icon
+              [nzType]="managerPasswordVisible ? 'eye' : 'eye-invisible'"
+              (click)="managerPasswordVisible = !managerPasswordVisible"
+              style="cursor: pointer;"
+            ></span>
+          </ng-template>
+          <small class="text-muted">Quản lý cần nhập mật khẩu để xác nhận nhận tiền</small>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-divider nzText="Số tiền giao" nzOrientation="left"></nz-divider>
+      
+      <!-- Số tiền giao quản lý -->
+      <nz-form-item>
+        <nz-form-label nzRequired>Số tiền giao quản lý</nz-form-label>
+        <nz-form-control nzErrorTip="Vui lòng nhập số tiền">
+          <nz-input-number
+            formControlName="managerHandoverAmount"
+            [nzMin]="0"
+            [nzMax]="previousShiftAmount + getActualCashInShift()"
+            [nzStep]="50000"
+            [nzFormatter]="formatterVND"
+            [nzParser]="parserVND"
+            style="width: 100%"
+            nzPlaceHolder="Nhập số tiền giao quản lý"
+          ></nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <!-- Tiền mặt còn lại sau khi giao -->
+      <nz-alert
+        [nzType]="getCashAfterManagerHandover() >= 0 ? 'success' : 'error'"
+        nzShowIcon
+        style="margin-bottom: 16px;"
+      >
+        <ng-template #nzMessage>
+          <span style="font-size: 16px;">
+            <strong>Tiền mặt còn lại:</strong> 
+            <span [style.color]="getCashAfterManagerHandover() >= 0 ? '#52c41a' : '#ff4d4f'">
+              {{ formatterVND(getCashAfterManagerHandover()) }} đ
+            </span>
+          </span>
+        </ng-template>
+      </nz-alert>
+      
+      <!-- Ghi chú -->
+      <nz-form-item>
+        <nz-form-label>Ghi chú</nz-form-label>
+        <nz-form-control>
+          <textarea
+            nz-input
+            formControlName="notes"
+            rows="2"
+            placeholder="Nhập ghi chú (không bắt buộc)..."
+          ></textarea>
+        </nz-form-control>
+      </nz-form-item>
+      
+    </form>
+  </ng-container>
+
+  <ng-template #managerModalFooter>
+    <button nz-button nzType="default" (click)="closeManagerHandoverModal()" [disabled]="isSubmittingManagerHandover">
+      Hủy
+    </button>
+    <button 
+      nz-button 
+      nzType="primary" 
+      nzDanger
+      [nzLoading]="isSubmittingManagerHandover" 
+      (click)="submitManagerHandover()"
+      [disabled]="isSubmittingManagerHandover || managerHandoverForm.invalid || getCashAfterManagerHandover() < 0"
+    >
+      <i nz-icon nzType="dollar"></i>
+      Xác nhận giao tiền
     </button>
   </ng-template>
 </nz-modal>
@@ -630,3 +934,15 @@
     margin-top: 16px;
   }
 </style>
+
+<!-- Modal/Drawer Lịch sử giao ca -->
+<nz-drawer
+  [(nzVisible)]="isShiftHandoverHistoryVisible"
+  [nzTitle]="'Lịch sử giao ca'"
+  [nzWidth]="1200"
+  (nzOnClose)="closeShiftHandoverHistory()"
+>
+  <ng-container *nzDrawerContent>
+    <app-shift-handover-history></app-shift-handover-history>
+  </ng-container>
+</nz-drawer>

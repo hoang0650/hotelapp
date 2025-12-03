@@ -48,71 +48,638 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Hiển thị menu ngữ cảnh khi nhấp chuột phải
   showContextMenu(event: MouseEvent): void {
-    // Tạo và hiển thị menu tùy chọn
+    const status = this.room.status;
+    const isOccupied = status === 'occupied';
+    const isVacant = status === 'vacant';
+    const isDirty = status === 'dirty' || status === 'cleaning';
+    const isBooked = status === 'booked';
+    
+    // Tính toán vị trí hiển thị menu
+    const menuX = event.clientX;
+    const menuY = event.clientY;
+    
+    // Tạo và hiển thị menu tùy chọn - Bootstrap Style
     const contextMenuModalRef = this.modalService.create({
       nzTitle: `Phòng ${this.room.roomNumber} - Tùy chọn`,
       nzContent: `
-        <div class="room-context-menu">
-          <button class="context-menu-btn" id="checkin-btn">Nhận phòng</button>
-          <button class="context-menu-btn" id="transfer-btn">Chuyển phòng</button>
-          <button class="context-menu-btn" id="status-btn">Cập nhật trạng thái</button>
+        <div class="list-group list-group-flush">
+          ${isOccupied ? `
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="checkout-btn">
+              <span class="badge bg-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              </span>
+              <span class="flex-grow-1">Trả phòng</span>
+              <span class="badge bg-success-subtle text-success">Checkout</span>
+            </a>
+            <div class="list-group-item bg-light py-1 px-3">
+              <small class="text-muted fw-semibold text-uppercase">Thông tin</small>
+            </div>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="guest-info-btn">
+              <span class="badge bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              </span>
+              <span class="flex-grow-1">Thông tin khách</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="service-btn">
+              <span class="badge bg-info rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-9-5l1.1-2h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1v2h2l3.6 7.59L3.62 17H19v-2H7v-2z"/></svg>
+              </span>
+              <span class="flex-grow-1">Cập nhật dịch vụ</span>
+            </a>
+            <div class="list-group-item bg-light py-1 px-3">
+              <small class="text-muted fw-semibold text-uppercase">Thao tác</small>
+            </div>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="transfer-btn">
+              <span class="badge bg-warning text-dark rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+              </span>
+              <span class="flex-grow-1">Đổi phòng</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="guest-out-btn">
+              <span class="badge bg-secondary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5a2 2 0 00-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z"/></svg>
+              </span>
+              <span class="flex-grow-1">Khách ra ngoài</span>
+              <span class="text-muted">›</span>
+            </a>
+          ` : ''}
+          
+          ${isVacant ? `
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="checkin-btn">
+              <span class="badge bg-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+              </span>
+              <span class="flex-grow-1">Nhận phòng</span>
+              <span class="badge bg-success-subtle text-success">Check-in</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="booking-btn">
+              <span class="badge bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+              </span>
+              <span class="flex-grow-1">Đặt phòng</span>
+            </a>
+          ` : ''}
+          
+          ${isBooked ? `
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="checkin-btn">
+              <span class="badge bg-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+              </span>
+              <span class="flex-grow-1">Nhận phòng (đã đặt)</span>
+              <span class="badge bg-success-subtle text-success">Check-in</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="guest-info-btn">
+              <span class="badge bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              </span>
+              <span class="flex-grow-1">Thông tin đặt phòng</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center text-danger" id="cancel-booking-btn">
+              <span class="badge bg-danger rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </span>
+              <span class="flex-grow-1">Hủy đặt phòng</span>
+            </a>
+          ` : ''}
+          
+          ${isDirty ? `
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="clean-btn">
+              <span class="badge bg-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              </span>
+              <span class="flex-grow-1">Đã dọn xong</span>
+              <span class="badge bg-success">✓</span>
+            </a>
+          ` : ''}
+          
+          <div class="list-group-item bg-light py-1 px-3">
+            <small class="text-muted fw-semibold text-uppercase">Trạng thái</small>
+          </div>
+          <a class="list-group-item list-group-item-action d-flex align-items-center" id="dirty-btn">
+            <span class="badge bg-warning text-dark rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z"/><circle cx="12" cy="12" r="4"/></svg>
+            </span>
+            <span class="flex-grow-1">Báo bẩn</span>
+          </a>
+          <a class="list-group-item list-group-item-action d-flex align-items-center" id="maintenance-btn">
+            <span class="badge bg-secondary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1a6 6 0 00-1.5-6.9 6 6 0 00-7.4-1.3L9 6 6 9 1.6 4.7A6 6 0 002.9 12.1a6 6 0 006.9 1.5l9.1 9.1a1 1 0 001.4 0l2.3-2.3a1 1 0 00.1-1.4z"/></svg>
+            </span>
+            <span class="flex-grow-1">Sửa phòng</span>
+          </a>
         </div>
         <style>
-          .room-context-menu {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+          .context-menu-modal .ant-modal-content {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0,0,0,0.1);
+            overflow: hidden;
           }
-          .context-menu-btn {
-            padding: 10px;
-            text-align: left;
-            background-color: #f5f5f5;
-            border: 1px solid #e8e8e8;
-            border-radius: 4px;
+          .context-menu-modal .ant-modal-header {
+            padding: 0.75rem 1rem;
+            background: #212529;
+            border-bottom: none;
+          }
+          .context-menu-modal .ant-modal-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #fff;
+            text-align: center;
+          }
+          .context-menu-modal .ant-modal-close {
+            top: 0.5rem;
+            right: 0.5rem;
+          }
+          .context-menu-modal .ant-modal-close-x {
+            width: 1.5rem;
+            height: 1.5rem;
+            line-height: 1.5rem;
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.75);
+            border-radius: 0.25rem;
+          }
+          .context-menu-modal .ant-modal-close:hover .ant-modal-close-x {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+          }
+          .context-menu-modal .ant-modal-body {
+            padding: 0 !important;
+            background: #fff;
+          }
+          .list-group { margin: 0; }
+          .list-group-item {
+            padding: 0.625rem 1rem;
+            border-left: 0;
+            border-right: 0;
+            border-color: #f0f0f0;
+            font-size: 0.875rem;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.15s ease-in-out;
           }
-          .context-menu-btn:hover {
-            background-color: #1890ff;
-            color: white;
+          .list-group-item:first-child { border-top: 0; }
+          .list-group-item:last-child { border-bottom: 0; }
+          .list-group-item-action:hover {
+            background-color: #f8f9fa;
+            color: #0d6efd;
           }
+          .list-group-item-action:active {
+            background-color: #e9ecef;
+          }
+          .badge {
+            font-weight: 500;
+          }
+          .bg-success-subtle { background-color: #d1e7dd !important; }
+          .me-3 { margin-right: 0.75rem !important; }
+          .flex-grow-1 { flex-grow: 1 !important; }
+          .d-flex { display: flex !important; }
+          .align-items-center { align-items: center !important; }
+          .justify-content-center { justify-content: center !important; }
+          .fw-semibold { font-weight: 600 !important; }
+          .text-uppercase { text-transform: uppercase !important; }
+          .bg-light { background-color: #f8f9fa !important; }
+          .py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+          .px-3 { padding-left: 1rem !important; padding-right: 1rem !important; }
+          .rounded-circle { border-radius: 50% !important; }
+          .bg-success { background-color: #198754 !important; color: #fff; }
+          .bg-primary { background-color: #0d6efd !important; color: #fff; }
+          .bg-info { background-color: #0dcaf0 !important; color: #000; }
+          .bg-warning { background-color: #ffc107 !important; }
+          .bg-danger { background-color: #dc3545 !important; color: #fff; }
+          .bg-secondary { background-color: #6c757d !important; color: #fff; }
+          .text-success { color: #198754 !important; }
+          .text-danger { color: #dc3545 !important; }
+          .text-muted { color: #6c757d !important; }
+          .text-dark { color: #212529 !important; }
         </style>
       `,
       nzFooter: null,
       nzMaskClosable: true,
       nzClosable: true,
-      nzWidth: 300,
-      nzStyle: { position: 'fixed', left: `${event.clientX}px`, top: `${event.clientY}px` }
+      nzMask: true,
+      nzMaskStyle: { backgroundColor: 'rgba(0,0,0,0.25)' },
+      nzWidth: 280,
+      nzBodyStyle: { padding: '0' },
+      nzClassName: 'context-menu-modal',
+      nzStyle: { 
+        position: 'fixed',
+        top: `${menuY}px`,
+        left: `${menuX}px`,
+        margin: '0',
+        padding: '0'
+      },
+      nzZIndex: 99999
     });
 
     // Đăng ký các sự kiện cho các nút trong menu
     contextMenuModalRef.afterOpen.subscribe(() => {
-      const modalElement = document.getElementsByClassName('ant-modal')[0] as HTMLElement;
-      
-      // Nút nhận phòng
-      const checkinBtn = modalElement.querySelector('#checkin-btn');
-      if (checkinBtn) {
-        checkinBtn.addEventListener('click', () => {
-          contextMenuModalRef.close();
-          this.showCheckinModal();
+      // Sử dụng setTimeout để đảm bảo DOM đã render
+      setTimeout(() => {
+        // Tìm tất cả modal đang mở và lấy modal cuối cùng (context menu)
+        const allModals = document.querySelectorAll('.ant-modal');
+        const modalElement = allModals[allModals.length - 1] as HTMLElement;
+        
+        if (!modalElement) {
+          console.error('Không tìm thấy modal element');
+          return;
+        }
+        
+        // Hàm helper để gắn event listener
+        const attachClickEvent = (selector: string, handler: () => void) => {
+          const btn = modalElement.querySelector(selector);
+          if (btn) {
+            btn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              contextMenuModalRef.close();
+              handler();
+            });
+          }
+        };
+        
+        // Gắn event cho các nút
+        attachClickEvent('#checkout-btn', () => this.showModal(this.room, 'checkout'));
+        attachClickEvent('#guest-info-btn', () => this.showGuestInfoModal());
+        attachClickEvent('#service-btn', () => this.showServiceModal());
+        attachClickEvent('#transfer-btn', () => this.showTransferModal());
+        attachClickEvent('#checkin-btn', () => this.showCheckinModal());
+        attachClickEvent('#booking-btn', () => this.showBookingModal());
+        attachClickEvent('#clean-btn', () => this.markRoomAsClean());
+        attachClickEvent('#dirty-btn', () => this.markRoomAsDirty());
+        attachClickEvent('#maintenance-btn', () => this.markRoomAsMaintenance());
+        attachClickEvent('#guest-out-btn', () => this.showGuestOutModal());
+        attachClickEvent('#cancel-booking-btn', () => this.cancelBooking());
+      }, 100);
+    });
+  }
+  
+  // Hiển thị modal khách ra ngoài
+  showGuestOutModal(): void {
+    this.modalService.confirm({
+      nzTitle: `Khách ra ngoài - Phòng ${this.room.roomNumber}`,
+      nzContent: `
+        <div style="margin-bottom: 16px;">
+          <p>Xác nhận khách tạm thời ra ngoài. Phòng vẫn được giữ và tính phí.</p>
+          <input type="text" id="guestOutNote" placeholder="Ghi chú (không bắt buộc)" 
+            style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+        </div>
+      `,
+      nzOkText: 'Xác nhận',
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        const noteInput = document.getElementById('guestOutNote') as HTMLInputElement;
+        const note = noteInput ? noteInput.value : '';
+        
+        this.roomsService.guestOut(this.room._id, note)
+          .pipe(take(1))
+          .subscribe({
+            next: () => {
+              this.modalService.success({
+                nzTitle: 'Thành công',
+                nzContent: `Đã ghi nhận khách phòng ${this.room.roomNumber} tạm ra ngoài.`,
+                nzOkText: 'Đóng'
+              });
+              this.roomsService.notifyRoomDataUpdated();
+            },
+            error: (err) => {
+              this.modalService.error({
+                nzTitle: 'Lỗi',
+                nzContent: err.error?.message || 'Không thể cập nhật trạng thái.',
+                nzOkText: 'Đóng'
+              });
+            }
+          });
+      }
+    });
+  }
+  
+  // Hủy đặt phòng
+  cancelBooking(): void {
+    this.modalService.confirm({
+      nzTitle: 'Xác nhận hủy đặt phòng',
+      nzContent: `
+        <div style="margin-bottom: 16px;">
+          <p>Bạn có chắc chắn muốn hủy đặt phòng ${this.room.roomNumber}?</p>
+          <input type="text" id="cancelReason" placeholder="Lý do hủy (không bắt buộc)" 
+            style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+        </div>
+      `,
+      nzOkText: 'Hủy đặt phòng',
+      nzOkDanger: true,
+      nzCancelText: 'Không',
+      nzOnOk: () => {
+        const reasonInput = document.getElementById('cancelReason') as HTMLInputElement;
+        const reason = reasonInput ? reasonInput.value : 'Hủy từ context menu';
+        
+        this.roomsService.cancelBooking(this.room._id, reason)
+          .pipe(take(1))
+          .subscribe({
+            next: () => {
+              // Xóa dữ liệu đặt phòng khỏi localStorage
+              localStorage.removeItem(`booking_${this.room._id}`);
+              
+              this.modalService.success({
+                nzTitle: 'Thành công',
+                nzContent: 'Đã hủy đặt phòng thành công.',
+                nzOkText: 'Đóng'
+              });
+              this.roomsService.notifyRoomDataUpdated();
+            },
+            error: (err) => {
+              this.modalService.error({
+                nzTitle: 'Lỗi',
+                nzContent: err.error?.message || 'Không thể hủy đặt phòng.',
+                nzOkText: 'Đóng'
+              });
+            }
+          });
+      }
+    });
+  }
+  
+  // Hiển thị modal thông tin khách
+  showGuestInfoModal(): void {
+    // Lấy từ room.events nếu có
+    let guestInfo: any = {};
+    let checkinTime: Date | null = null;
+    let rateType: string = '';
+    let advancePayment: number = 0;
+    
+    if (this.room.events && this.room.events.length > 0) {
+      const checkinEvents = this.room.events.filter(e => e.type === 'checkin');
+      if (checkinEvents.length > 0) {
+        const lastCheckin = checkinEvents[checkinEvents.length - 1];
+        guestInfo = lastCheckin.guestInfo || {};
+        checkinTime = lastCheckin.checkinTime ? new Date(lastCheckin.checkinTime) : null;
+        rateType = lastCheckin.rateType || '';
+        advancePayment = lastCheckin.advancePayment || 0;
+      }
+    }
+    
+    // Fallback: lấy từ localStorage
+    if (!guestInfo.name) {
+      const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
+      if (savedCheckinData) {
+        try {
+          const checkinData = JSON.parse(savedCheckinData);
+          guestInfo = checkinData.guestInfo || {};
+          checkinTime = checkinData.checkinTime ? new Date(checkinData.checkinTime) : null;
+          rateType = checkinData.rateType || '';
+          advancePayment = checkinData.advancePayment || 0;
+        } catch (e) {
+          console.error('Error parsing checkin data:', e);
+        }
+      }
+    }
+    
+    const rateTypeLabels: {[key: string]: string} = {
+      'hourly': 'Theo giờ',
+      'daily': 'Ngày đêm',
+      'nightly': 'Qua đêm'
+    };
+    
+    const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+    const formatDateTime = (date: Date | null) => date ? 
+      `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}` 
+      : 'Chưa có';
+    
+    this.modalService.info({
+      nzTitle: `Thông tin khách - Phòng ${this.room.roomNumber}`,
+      nzContent: `
+        <div style="line-height: 1.8; font-size: 14px;">
+          <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+            <p style="margin: 0;"><strong>👤 Tên khách:</strong> ${guestInfo.name || 'Chưa có thông tin'}</p>
+          </div>
+          <p><strong>📞 Số điện thoại:</strong> ${guestInfo.phone || 'Chưa có'}</p>
+          <p><strong>🪪 CCCD/CMND:</strong> ${guestInfo.idNumber || 'Chưa có'}</p>
+          <p><strong>📧 Email:</strong> ${guestInfo.email || 'Chưa có'}</p>
+          <p><strong>📍 Địa chỉ:</strong> ${guestInfo.address || 'Chưa có'}</p>
+          <hr style="border: none; border-top: 1px dashed #d9d9d9; margin: 12px 0;" />
+          <p><strong>🕐 Nhận phòng:</strong> ${formatDateTime(checkinTime)}</p>
+          <p><strong>💰 Loại giá:</strong> ${rateTypeLabels[rateType] || 'Chưa xác định'}</p>
+          <p><strong>💵 Đặt trước:</strong> ${advancePayment > 0 ? formatCurrency(advancePayment) : 'Không'}</p>
+        </div>
+      `,
+      nzOkText: 'Đóng',
+      nzWidth: 450
+    });
+  }
+  
+  // Hiển thị modal cập nhật dịch vụ
+  showServiceModal(): void {
+    // Mở modal checkout để cập nhật dịch vụ
+    this.showModal(this.room, 'checkout');
+  }
+  
+  // Hiển thị modal đặt phòng trước
+  showBookingModal(): void {
+    let bookingModalRef: NzModalRef | null = null;
+    bookingModalRef = this.modalService.create({
+      nzTitle: `Đặt phòng ${this.room.roomNumber}`,
+      nzContent: `
+        <form id="bookingForm">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Tên khách <span style="color: red;">*</span></label>
+            <input type="text" id="bookingGuestName" placeholder="Nhập tên khách" required
+              style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Số điện thoại</label>
+            <input type="tel" id="bookingGuestPhone" placeholder="Nhập số điện thoại"
+              style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">CCCD/CMND</label>
+            <input type="text" id="bookingGuestId" placeholder="Nhập số CCCD/CMND"
+              style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+          </div>
+          <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 4px; font-weight: 500;">Ngày đến <span style="color: red;">*</span></label>
+              <input type="datetime-local" id="bookingCheckIn" required
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+            </div>
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 4px; font-weight: 500;">Ngày đi (dự kiến)</label>
+              <input type="datetime-local" id="bookingCheckOut"
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 4px; font-weight: 500;">Loại giá <span style="color: red;">*</span></label>
+              <select id="bookingRateType" required
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;">
+                <option value="hourly">Theo giờ</option>
+                <option value="daily">Ngày đêm</option>
+                <option value="nightly">Qua đêm</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label style="display: block; margin-bottom: 4px; font-weight: 500;">Tiền đặt trước</label>
+              <input type="number" id="bookingAdvancePayment" placeholder="0" min="0"
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+            </div>
+          </div>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Ghi chú</label>
+            <textarea id="bookingNotes" placeholder="Ghi chú thêm..."
+              style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; min-height: 60px;"></textarea>
+          </div>
+        </form>
+      `,
+      nzFooter: [
+        {
+          label: 'Hủy',
+          onClick: () => bookingModalRef?.close()
+        },
+        {
+          label: 'Đặt phòng',
+          type: 'primary',
+          onClick: () => {
+            const nameInput = document.getElementById('bookingGuestName') as HTMLInputElement;
+            const phoneInput = document.getElementById('bookingGuestPhone') as HTMLInputElement;
+            const idInput = document.getElementById('bookingGuestId') as HTMLInputElement;
+            const checkInInput = document.getElementById('bookingCheckIn') as HTMLInputElement;
+            const checkOutInput = document.getElementById('bookingCheckOut') as HTMLInputElement;
+            const rateTypeSelect = document.getElementById('bookingRateType') as HTMLSelectElement;
+            const advanceInput = document.getElementById('bookingAdvancePayment') as HTMLInputElement;
+            const notesInput = document.getElementById('bookingNotes') as HTMLTextAreaElement;
+            
+            if (!nameInput.value || !checkInInput.value) {
+              this.modalService.warning({
+                nzTitle: 'Thiếu thông tin',
+                nzContent: 'Vui lòng nhập tên khách và ngày đến.',
+                nzOkText: 'Đóng'
+              });
+              return;
+            }
+            
+            const bookingData = {
+              roomId: this.room._id,
+              hotelId: this.room.hotelId,
+              guestInfo: {
+                name: nameInput.value,
+                phone: phoneInput.value || '',
+                idNumber: idInput.value || ''
+              },
+              checkInDate: new Date(checkInInput.value),
+              checkOutDate: checkOutInput.value ? new Date(checkOutInput.value) : undefined,
+              rateType: rateTypeSelect.value as 'hourly' | 'daily' | 'nightly',
+              advancePayment: parseFloat(advanceInput.value) || 0,
+              notes: notesInput.value || ''
+            };
+            
+            // Lưu vào localStorage để hiển thị
+            localStorage.setItem(`booking_${this.room._id}`, JSON.stringify(bookingData));
+            
+            this.roomsService.createBooking(bookingData)
+              .pipe(take(1))
+              .subscribe({
+                next: () => {
+                  bookingModalRef?.close();
+                  this.modalService.success({
+                    nzTitle: 'Thành công',
+                    nzContent: `Đã đặt phòng ${this.room.roomNumber} thành công.`,
+                    nzOkText: 'Đóng'
+                  });
+                  this.roomsService.notifyRoomDataUpdated();
+                },
+                error: (err) => {
+                  this.modalService.error({
+                    nzTitle: 'Lỗi',
+                    nzContent: err.error?.message || 'Không thể đặt phòng.',
+                    nzOkText: 'Đóng'
+                  });
+                }
+              });
+          }
+        }
+      ],
+      nzWidth: 500,
+      nzMaskClosable: false
+    });
+    
+    // Set default check-in date to now
+    setTimeout(() => {
+      const checkInInput = document.getElementById('bookingCheckIn') as HTMLInputElement;
+      if (checkInInput) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        checkInInput.value = now.toISOString().slice(0, 16);
+      }
+    }, 100);
+  }
+  
+  // Đánh dấu phòng đã dọn xong
+  markRoomAsClean(): void {
+    this.roomsService.cleanRoom(this.room._id, { status: 'vacant' })
+      .pipe(take(1))
+      .subscribe({
+        next: () => {
+          this.modalService.success({
+            nzTitle: 'Thành công',
+            nzContent: `Phòng ${this.room.roomNumber} đã sẵn sàng đón khách.`,
+            nzOkText: 'Đóng'
+          });
+          this.roomsService.notifyRoomDataUpdated();
+        },
+        error: (err) => {
+          this.modalService.error({
+            nzTitle: 'Lỗi',
+            nzContent: err.error?.error || 'Không thể cập nhật trạng thái phòng.',
+            nzOkText: 'Đóng'
+          });
+        }
+      });
+  }
+  
+  // Đánh dấu phòng bẩn
+  markRoomAsDirty(): void {
+    this.roomsService.updateRoomStatus(
+      this.room._id,
+      'dirty',
+      localStorage.getItem('staffId') || 'unknown',
+      'Báo bẩn từ menu'
+    ).pipe(take(1)).subscribe({
+      next: () => {
+        this.modalService.success({
+          nzTitle: 'Thành công',
+          nzContent: `Đã báo phòng ${this.room.roomNumber} cần dọn dẹp.`,
+          nzOkText: 'Đóng'
+        });
+        this.roomsService.notifyRoomDataUpdated();
+      },
+      error: (err) => {
+        this.modalService.error({
+          nzTitle: 'Lỗi',
+          nzContent: err.error?.error || 'Không thể cập nhật trạng thái phòng.',
+          nzOkText: 'Đóng'
         });
       }
-      
-      // Nút chuyển phòng
-      const transferBtn = modalElement.querySelector('#transfer-btn');
-      if (transferBtn) {
-        transferBtn.addEventListener('click', () => {
-          contextMenuModalRef.close();
-          this.showTransferModal();
+    });
+  }
+  
+  // Đánh dấu phòng cần sửa
+  markRoomAsMaintenance(): void {
+    this.roomsService.updateRoomStatus(
+      this.room._id,
+      'maintenance',
+      localStorage.getItem('staffId') || 'unknown',
+      'Báo sửa phòng từ menu'
+    ).pipe(take(1)).subscribe({
+      next: () => {
+        this.modalService.success({
+          nzTitle: 'Thành công',
+          nzContent: `Đã báo phòng ${this.room.roomNumber} cần bảo trì.`,
+          nzOkText: 'Đóng'
         });
-      }
-      
-      // Nút cập nhật trạng thái
-      const statusBtn = modalElement.querySelector('#status-btn');
-      if (statusBtn) {
-        statusBtn.addEventListener('click', () => {
-          contextMenuModalRef.close();
-          this.showStatusUpdateModal();
+        this.roomsService.notifyRoomDataUpdated();
+      },
+      error: (err) => {
+        this.modalService.error({
+          nzTitle: 'Lỗi',
+          nzContent: err.error?.error || 'Không thể cập nhật trạng thái phòng.',
+          nzOkText: 'Đóng'
         });
       }
     });
@@ -260,11 +827,12 @@ export class ModalControlDirective implements OnInit, OnDestroy {
                 const transferNote = modalElement.querySelector('#transfer-note') as HTMLTextAreaElement;
                 
                 if (targetRoomSelect && targetRoomSelect.value) {
+                  const notes = transferNote?.value || 'Chuyển phòng';
                   this.roomsService.transferRoom(
                     this.room._id,
                     targetRoomSelect.value,
                     localStorage.getItem('staffId') || 'unknown',
-                    transferNote?.value || ''
+                    notes
                   ).pipe(
                     take(1),
                     takeUntil(this.destroy$)

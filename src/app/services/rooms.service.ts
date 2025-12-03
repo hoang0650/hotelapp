@@ -103,7 +103,7 @@ export class RoomsService {
   }
 
   // Chuyển phòng
-  transferRoom(sourceRoomId: string, targetRoomId: string, staffId: string, note: string): Observable<{
+  transferRoom(sourceRoomId: string, targetRoomId: string, staffId: string, notes: string): Observable<{
     sourceRoom: Room,
     targetRoom: Room,
     message: string
@@ -116,7 +116,7 @@ export class RoomsService {
       sourceRoomId,
       targetRoomId,
       staffId,
-      note
+      notes
     });
   }
 
@@ -179,6 +179,41 @@ export class RoomsService {
   // Tạo hóa đơn khi check-out
   createInvoice(roomId: string, invoiceData: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/${roomId}/invoice`, invoiceData);
+  }
+
+  // Đặt phòng trước (Booking/Reservation)
+  createBooking(bookingData: {
+    roomId: string;
+    hotelId: string;
+    guestInfo: {
+      name: string;
+      phone?: string;
+      email?: string;
+      idNumber?: string;
+      address?: string;
+    };
+    checkInDate: Date;
+    checkOutDate?: Date;
+    rateType: 'hourly' | 'daily' | 'nightly';
+    notes?: string;
+    advancePayment?: number;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/booking`, bookingData);
+  }
+
+  // Hủy đặt phòng
+  cancelBooking(roomId: string, reason: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/booking/cancel/${roomId}`, { reason });
+  }
+
+  // Khách tạm ra ngoài
+  guestOut(roomId: string, note?: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${roomId}/guest-out`, { note });
+  }
+
+  // Khách quay lại
+  guestReturn(roomId: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${roomId}/guest-return`, {});
   }
 
   // Giao ca
