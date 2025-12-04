@@ -264,6 +264,21 @@
       </nz-form-item>
     </form>
     
+    <nz-divider nzText="Cách tính tiền phòng"></nz-divider>
+    
+    <form nz-form [formGroup]="checkOutForm">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Hình thức tính tiền</nz-form-label>
+        <nz-form-control [nzSpan]="16">
+          <nz-radio-group formControlName="rateType">
+            <label nz-radio-button nzValue="hourly">Theo giờ</label>
+            <label nz-radio-button nzValue="daily">Theo ngày</label>
+            <label nz-radio-button nzValue="nightly">Qua đêm</label>
+          </nz-radio-group>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+    
     <div class="mb-3">
       <nz-descriptions nzTitle="Thông tin phòng" nzBordered [nzColumn]="1">
         <nz-descriptions-item nzTitle="Loại phòng">{{ roomData.type }}</nz-descriptions-item>

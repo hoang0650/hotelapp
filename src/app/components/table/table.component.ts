@@ -306,6 +306,11 @@ export class TableComponent implements OnInit, OnChanges {
       return;
     }
     
+    // Đảm bảo item có hotelId - lấy từ item hoặc localStorage
+    if (!item.hotelId) {
+      item.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+    }
+    
     // Lấy thông tin để tìm invoice từ database
     const roomId = item.roomId || item._id;
     const checkOutTime = item.checkOutTime || item.checkoutTime || item.date;
@@ -341,6 +346,12 @@ export class TableComponent implements OnInit, OnChanges {
         this.settingValue.loading = false;
         if (response && response.data) {
           const invoiceData = this.mapInvoiceToInvoiceData(response.data);
+          // Đảm bảo hotelId có trong invoiceData (nếu không có từ database)
+          if (!invoiceData.hotelId) {
+            invoiceData.hotelId = this.hotelId || 
+                                  localStorage.getItem('selectedHotelId') || 
+                                  localStorage.getItem('hotelId') || '';
+          }
           this.showInvoiceModal(invoiceData);
         } else {
           this.message.error('Không tìm thấy hóa đơn trong database');
@@ -358,6 +369,13 @@ export class TableComponent implements OnInit, OnChanges {
   loadInvoiceByRoomAndDate(roomId: string, checkOutTime: any, fallbackItem: any): void {
     this.settingValue.loading = true;
     
+    // Đảm bảo fallbackItem có hotelId
+    if (fallbackItem && !fallbackItem.hotelId) {
+      fallbackItem.hotelId = this.hotelId || 
+                             localStorage.getItem('selectedHotelId') || 
+                             localStorage.getItem('hotelId') || '';
+    }
+    
     // Tìm invoice theo roomId và checkOutTime (trong khoảng thời gian gần)
     const checkOutDate = new Date(checkOutTime);
     const startDate = new Date(checkOutDate);
@@ -365,12 +383,24 @@ export class TableComponent implements OnInit, OnChanges {
     const endDate = new Date(checkOutDate);
     endDate.setHours(23, 59, 59, 999);
     
-    this.invoiceService.getInvoices({
+    // Lấy hotelId từ fallbackItem hoặc từ component
+    const hotelId = fallbackItem?.hotelId || this.hotelId || 
+                    localStorage.getItem('selectedHotelId') || 
+                    localStorage.getItem('hotelId');
+    
+    const queryParams: any = {
       roomId: roomId,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       limit: 10
-    }).subscribe({
+    };
+    
+    // Thêm hotelId vào query nếu có
+    if (hotelId) {
+      queryParams.hotelId = hotelId;
+    }
+    
+    this.invoiceService.getInvoices(queryParams).subscribe({
       next: (response: any) => {
         this.settingValue.loading = false;
         
@@ -390,6 +420,13 @@ export class TableComponent implements OnInit, OnChanges {
           
           if (matchedInvoice) {
             const invoiceData = this.mapInvoiceToInvoiceData(matchedInvoice);
+            // Đảm bảo hotelId có trong invoiceData (nếu không có từ database)
+            if (!invoiceData.hotelId) {
+              invoiceData.hotelId = fallbackItem?.hotelId || 
+                                    this.hotelId || 
+                                    localStorage.getItem('selectedHotelId') || 
+                                    localStorage.getItem('hotelId') || '';
+            }
             this.showInvoiceModal(invoiceData);
           } else {
             // Fallback về dữ liệu từ item
@@ -427,13 +464,28 @@ export class TableComponent implements OnInit, OnChanges {
       return parts.join(', ') || '';
     };
     
+    // Xử lý hotelId - có thể là object {_id: ...} hoặc string
+    let hotelId = '';
+    if (invoice.hotelId) {
+      if (typeof invoice.hotelId === 'object' && invoice.hotelId._id) {
+        hotelId = invoice.hotelId._id;
+      } else if (typeof invoice.hotelId === 'string') {
+        hotelId = invoice.hotelId;
+      }
+    }
+    
+    // Nếu không có hotelId từ invoice, thử lấy từ localStorage
+    if (!hotelId) {
+      hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+    }
+    
     return {
       _id: invoice._id,
       invoiceNumber: invoice.invoiceNumber,
       date: invoice.issuedDate || invoice.createdAt,
-      businessName: invoice.businessInfo?.name || invoice.businessInfo?.legalName || '',
-      business_address: formatBusinessAddress(invoice.businessInfo?.address) || '',
-      phoneNumber: invoice.businessInfo?.contactInfo?.phone || '',
+      businessName: invoice.hotelInfo?.name || invoice.hotelId?.name || invoice.businessInfo?.name || invoice.businessInfo?.legalName || '',
+      business_address: formatBusinessAddress(invoice.hotelInfo?.address) || formatBusinessAddress(invoice.hotelId?.address) || formatBusinessAddress(invoice.businessInfo?.address) || '',
+      phoneNumber: invoice.hotelInfo?.contactInfo?.phone || invoice.hotelId?.contactInfo?.phone || invoice.businessInfo?.contactInfo?.phone || '',
       staffName: invoice.staffName || '',
       customerName: invoice.customerName || invoice.guestDetails?.name || '',
       customerPhone: invoice.customerPhone || invoice.guestDetails?.phone || '',
@@ -454,7 +506,7 @@ export class TableComponent implements OnInit, OnChanges {
       paymentStatus: invoice.paymentStatus || 'paid',
       notes: invoice.notes || '',
       guestDetails: invoice.guestDetails || invoice.guestInfo || {},
-      hotelId: invoice.hotelId?._id || invoice.hotelId || '',
+      hotelId: hotelId, // Đảm bảo hotelId luôn là string
       rateType: invoice.rateType || 'hourly',
       businessInfo: invoice.businessInfo || null // Truyền businessInfo đầy đủ để component có thể sử dụng
     };
@@ -476,50 +528,67 @@ export class TableComponent implements OnInit, OnChanges {
     }
   }
   
-  // Load business info cho invoice
+  // Load thông tin khách sạn cho invoice
   private async loadBusinessInfoForInvoice(invoiceData: any): Promise<any> {
     try {
-      const hotelId = invoiceData.hotelId || invoiceData['hotelId'];
+      // Thử lấy hotelId từ nhiều nguồn
+      let hotelId = invoiceData.hotelId || invoiceData['hotelId'];
+      
+      // Nếu không có, thử lấy từ localStorage
       if (!hotelId) {
+        hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+        invoiceData.hotelId = hotelId; // Cập nhật lại vào invoiceData
+      }
+      
+      if (!hotelId) {
+        console.warn('Không có hotelId để load thông tin khách sạn');
         return invoiceData;
       }
       
-      const hotel = await this.hotelService.getHotelById(hotelId).pipe(take(1)).toPromise();
-      if (!hotel || !(hotel as any).businessId) {
+      const hotel = await this.hotelService.getHotelInfo(hotelId).pipe(take(1)).toPromise();
+      if (!hotel) {
+        console.warn('Không tìm thấy thông tin khách sạn');
         return invoiceData;
       }
       
-      const business = await this.businessService.getBusinessById((hotel as any).businessId).pipe(take(1)).toPromise();
-      if (business) {
-        // Format địa chỉ
-        const formatAddress = (address: any): string => {
-          if (!address) return '';
-          if (typeof address === 'string') return address;
-          const parts = [];
-          if (address.street) parts.push(address.street);
-          if (address.city) parts.push(address.city);
-          if (address.state) parts.push(address.state);
-          if (address.postalCode) parts.push(address.postalCode);
-          if (address.country) parts.push(address.country);
-          return parts.join(', ') || '';
-        };
-        
-        // Cập nhật invoiceData với business info
-        invoiceData.businessInfo = business;
-        invoiceData.businessName = business.name || business.legalName || 'Khách sạn';
-        invoiceData.business_address = formatAddress(business.address);
-        invoiceData.phoneNumber = business.contactInfo?.phone || '';
+      // Format địa chỉ
+      const formatAddress = (address: any): string => {
+        if (!address) return '';
+        if (typeof address === 'string') return address;
+        const parts = [];
+        if (address.street) parts.push(address.street);
+        if (address.city) parts.push(address.city);
+        if (address.state) parts.push(address.state);
+        if (address.postalCode) parts.push(address.postalCode);
+        if (address.country) parts.push(address.country);
+        return parts.join(', ') || '';
+      };
+      
+      // Cập nhật invoiceData với thông tin khách sạn
+      invoiceData.hotelInfo = hotel;
+      invoiceData.businessName = hotel.name || 'Khách sạn';
+      invoiceData.business_address = formatAddress(hotel.address);
+      invoiceData.phoneNumber = hotel.contactInfo?.phone || '';
+      
+      // Giữ lại businessInfo để tương thích (nếu có)
+      if (hotel.businessId && typeof hotel.businessId === 'object') {
+        invoiceData.businessInfo = hotel.businessId;
       }
       
       return invoiceData;
     } catch (error) {
-      console.error('Error loading business info:', error);
+      console.error('Error loading hotel info:', error);
       return invoiceData;
     }
   }
   
   // Tạo modal hóa đơn
   private createInvoiceModal(invoiceData: any): void {
+    // Đảm bảo hotelId luôn có trong invoiceData
+    if (!invoiceData.hotelId) {
+      invoiceData.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+    }
+    
     this.modalService.create({
       nzTitle: 'Hóa Đơn Thanh Toán',
       nzContent: InvoiceComponent,

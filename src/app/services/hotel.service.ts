@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Hotel, HotelStatus } from '../interfaces/hotel';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
 interface RevenueData {
   labels: string[];
@@ -36,6 +36,36 @@ export class HotelService {
 
   getHotelById(id: string): Observable<Hotel> {
     return this.http.get<Hotel>(`${this.apiUrl}/${id}`);
+  }
+
+  // Helper method để lấy thông tin hotel với error handling
+  getHotelInfo(hotelId: string | null | undefined): Observable<Hotel | null> {
+    if (!hotelId) {
+      return of(null);
+    }
+    
+    return this.http.get<Hotel>(`${this.apiUrl}/${hotelId}`).pipe(
+      map((hotel: Hotel) => hotel),
+      catchError((error: any) => {
+        console.error('Error fetching hotel info:', error);
+        return of(null);
+      })
+    );
+  }
+
+  // Helper method để extract businessId từ hotel object (xử lý cả populated và non-populated)
+  extractBusinessId(hotel: any): string | null {
+    if (!hotel || !hotel.businessId) {
+      return null;
+    }
+    
+    if (typeof hotel.businessId === 'object' && hotel.businessId._id) {
+      return hotel.businessId._id;
+    } else if (typeof hotel.businessId === 'string') {
+      return hotel.businessId;
+    }
+    
+    return null;
   }
 
   createHotel(hotel: Partial<Hotel>): Observable<Hotel> {

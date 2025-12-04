@@ -75,7 +75,8 @@ interface InvoiceData {
 })
 export class InvoiceComponent implements OnInit {
   invoiceData: InvoiceData;
-  businessInfo: any;
+  businessInfo: any; // Giữ lại để tương thích
+  hotelInfo: any; // Thông tin khách sạn
   isLoading: boolean = false;
   
   today: Date = new Date();
@@ -194,18 +195,18 @@ export class InvoiceComponent implements OnInit {
     this.loadBusinessInfo();
   }
   
-  // Load thông tin doanh nghiệp từ database
+  // Load thông tin khách sạn từ database
   loadBusinessInfo(): void {
-    // Nếu đã có businessInfo từ data, sử dụng luôn
-    if (this.businessInfo && this.businessInfo.name) {
-      this.updateInvoiceDataWithBusinessInfo(this.businessInfo);
+    // Nếu đã có hotelInfo từ data, sử dụng luôn
+    if (this.hotelInfo && this.hotelInfo.name) {
+      this.updateInvoiceDataWithHotelInfo(this.hotelInfo);
       return;
     }
     
-    // Nếu invoiceData có businessInfo (từ database), sử dụng luôn
-    if (this.invoiceData['businessInfo'] && this.invoiceData['businessInfo'].name) {
-      this.businessInfo = this.invoiceData['businessInfo'];
-      this.updateInvoiceDataWithBusinessInfo(this.invoiceData['businessInfo']);
+    // Nếu invoiceData có hotelInfo (từ database), sử dụng luôn
+    if (this.invoiceData['hotelInfo'] && this.invoiceData['hotelInfo'].name) {
+      this.hotelInfo = this.invoiceData['hotelInfo'];
+      this.updateInvoiceDataWithHotelInfo(this.invoiceData['hotelInfo']);
       return;
     }
     
@@ -214,36 +215,42 @@ export class InvoiceComponent implements OnInit {
       return;
     }
     
-    // Lấy business info từ hotelId
-    const hotelId = this.invoiceData['hotelId'] || (this.invoiceData as any).hotelId;
+    // Lấy thông tin khách sạn từ hotelId
+    // Thử lấy hotelId từ nhiều nguồn
+    let hotelId = this.invoiceData['hotelId'] || (this.invoiceData as any).hotelId;
+    
+    // Nếu không có trong invoiceData, thử lấy từ localStorage
     if (!hotelId) {
-      console.warn('Không có hotelId để lấy thông tin doanh nghiệp');
+      hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId');
+    }
+    
+    // Nếu vẫn không có, thử lấy từ roomId nếu có
+    if (!hotelId && this.invoiceData['roomId']) {
+      // Có thể gọi API để lấy hotelId từ roomId, nhưng tạm thời bỏ qua
+      console.warn('Không có hotelId, sẽ thử lấy từ roomId nếu cần');
+    }
+    
+    if (!hotelId) {
+      console.warn('Không có hotelId để lấy thông tin khách sạn. InvoiceData:', this.invoiceData);
+      // Không return, vẫn tiếp tục với thông tin có sẵn
       return;
     }
     
     this.isLoading = true;
-    this.hotelService.getHotelById(hotelId).pipe(take(1)).subscribe({
+    this.hotelService.getHotelInfo(hotelId).pipe(take(1)).subscribe({
       next: (hotel: any) => {
-        if (hotel && hotel.businessId) {
-          // Lấy business info từ businessId
-          this.businessService.getBusinessById(hotel.businessId).pipe(take(1)).subscribe({
-            next: (business: any) => {
-              this.businessInfo = business;
-              this.updateInvoiceDataWithBusinessInfo(business);
-              this.isLoading = false;
-            },
-            error: (err) => {
-              console.error('Error loading business info:', err);
-              // Fallback: sử dụng thông tin từ hotel
-              this.updateInvoiceDataWithHotelInfo(hotel);
-              this.isLoading = false;
-            }
-          });
-        } else {
-          // Fallback: sử dụng thông tin từ hotel
-          this.updateInvoiceDataWithHotelInfo(hotel);
+        if (!hotel) {
+          console.warn('Không tìm thấy thông tin khách sạn');
           this.isLoading = false;
+          return;
         }
+        
+        // Lưu thông tin hotel
+        this.hotelInfo = hotel;
+        
+        // Cập nhật invoiceData với thông tin khách sạn
+        this.updateInvoiceDataWithHotelInfo(hotel);
+        this.isLoading = false;
       },
       error: (err) => {
         console.error('Error loading hotel info:', err);
@@ -262,11 +269,20 @@ export class InvoiceComponent implements OnInit {
     this.businessInfo = business;
   }
   
-  // Cập nhật invoiceData với thông tin hotel (fallback)
+  // Cập nhật invoiceData với thông tin khách sạn (method chính)
   updateInvoiceDataWithHotelInfo(hotel: any): void {
+    // Lưu thông tin hotel
+    this.hotelInfo = hotel;
+    
+    // Cập nhật invoiceData với thông tin khách sạn
     this.invoiceData.businessName = hotel.name || 'Khách sạn';
     this.invoiceData.business_address = this.formatBusinessAddress(hotel.address);
-    this.invoiceData.phoneNumber = hotel.contactInfo?.phone || hotel.phoneNumber || '';
+    this.invoiceData.phoneNumber = hotel.contactInfo?.phone || '';
+    
+    // Giữ lại businessInfo để tương thích (nếu có)
+    if (hotel.businessId && typeof hotel.businessId === 'object') {
+      this.businessInfo = hotel.businessId;
+    }
   }
   
   // Format địa chỉ business

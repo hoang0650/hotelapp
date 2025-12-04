@@ -85,6 +85,10 @@ export class RoomComponent implements OnInit, OnDestroy {
       if (this.selectedHotelId && !this.isModalOpen) {
         // Quick reload: chỉ reload rooms, không reload bookings và history
         this.loadRooms(true);
+        // Reload lịch sử thanh toán sau khi có thay đổi (ví dụ: checkout)
+        setTimeout(() => {
+          this.showRoomHistory();
+        }, 300); // Đợi một chút để đảm bảo backend đã cập nhật xong
       }
     });
     

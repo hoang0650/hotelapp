@@ -1810,6 +1810,13 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Tạo modal hóa đơn
   private createInvoiceModal(invoiceData: any): void {
+    // Đảm bảo hotelId luôn có trong invoiceData
+    if (!invoiceData.hotelId) {
+      invoiceData.hotelId = this.room?.hotelId || 
+                            localStorage.getItem('selectedHotelId') || 
+                            localStorage.getItem('hotelId');
+    }
+    
     // Lưu hóa đơn vào database trước khi hiển thị
     this.saveInvoiceToDatabase(invoiceData).then((savedInvoice) => {
       // Cập nhật invoiceData với thông tin từ database nếu có
@@ -1818,7 +1825,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           ...invoiceData,
           _id: savedInvoice.data._id,
           invoiceNumber: savedInvoice.data.invoiceNumber || invoiceData.invoiceNumber,
-          businessInfo: savedInvoice.data.businessInfo || invoiceData.businessInfo
+          businessInfo: savedInvoice.data.businessInfo || invoiceData.businessInfo,
+          hotelId: savedInvoice.data.hotelId || invoiceData.hotelId // Đảm bảo hotelId không bị mất
         };
       }
       
@@ -1836,6 +1844,12 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       });
     }).catch((error) => {
       console.error('Lỗi khi lưu hóa đơn:', error);
+      // Đảm bảo hotelId vẫn có trong invoiceData khi lưu thất bại
+      if (!invoiceData.hotelId) {
+        invoiceData.hotelId = this.room?.hotelId || 
+                              localStorage.getItem('selectedHotelId') || 
+                              localStorage.getItem('hotelId');
+      }
       // Vẫn hiển thị modal ngay cả khi lưu thất bại
       this.modalService.create({
         nzTitle: 'Hóa Đơn Thanh Toán',
