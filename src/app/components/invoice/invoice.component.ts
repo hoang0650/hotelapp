@@ -1,5 +1,8 @@
 import { Component, Input, OnInit, Inject } from '@angular/core';
 import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
+import { HotelService } from '../../services/hotel.service';
+import { BusinessService } from '../../services/business.service';
+import { take } from 'rxjs/operators';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
 declare global {
@@ -108,7 +111,9 @@ export class InvoiceComponent implements OnInit {
   }
 
   constructor(
-    @Inject(NZ_MODAL_DATA) private data: { invoiceData: InvoiceData, businessInfo: any }
+    @Inject(NZ_MODAL_DATA) private data: { invoiceData: InvoiceData, businessInfo: any },
+    private hotelService: HotelService,
+    private businessService: BusinessService
   ) {
     console.log('=== InvoiceComponent Constructor ===');
     console.log('Raw data received:', this.data);
@@ -184,6 +189,102 @@ export class InvoiceComponent implements OnInit {
     console.log('Service Total:', this.serviceTotal);
     console.log('Final Total:', this.finalTotalAmount);
     console.log('Final Products:', this.invoiceData.products);
+    
+    // Load business info nếu chưa có
+    this.loadBusinessInfo();
+  }
+  
+  // Load thông tin doanh nghiệp từ database
+  loadBusinessInfo(): void {
+    // Nếu đã có businessInfo từ data, sử dụng luôn
+    if (this.businessInfo && this.businessInfo.name) {
+      this.updateInvoiceDataWithBusinessInfo(this.businessInfo);
+      return;
+    }
+    
+    // Nếu invoiceData có businessInfo (từ database), sử dụng luôn
+    if (this.invoiceData['businessInfo'] && this.invoiceData['businessInfo'].name) {
+      this.businessInfo = this.invoiceData['businessInfo'];
+      this.updateInvoiceDataWithBusinessInfo(this.invoiceData['businessInfo']);
+      return;
+    }
+    
+    // Nếu đã có businessName và business_address, không cần load
+    if (this.invoiceData.businessName && this.invoiceData.businessName !== 'Khách sạn') {
+      return;
+    }
+    
+    // Lấy business info từ hotelId
+    const hotelId = this.invoiceData['hotelId'] || (this.invoiceData as any).hotelId;
+    if (!hotelId) {
+      console.warn('Không có hotelId để lấy thông tin doanh nghiệp');
+      return;
+    }
+    
+    this.isLoading = true;
+    this.hotelService.getHotelById(hotelId).pipe(take(1)).subscribe({
+      next: (hotel: any) => {
+        if (hotel && hotel.businessId) {
+          // Lấy business info từ businessId
+          this.businessService.getBusinessById(hotel.businessId).pipe(take(1)).subscribe({
+            next: (business: any) => {
+              this.businessInfo = business;
+              this.updateInvoiceDataWithBusinessInfo(business);
+              this.isLoading = false;
+            },
+            error: (err) => {
+              console.error('Error loading business info:', err);
+              // Fallback: sử dụng thông tin từ hotel
+              this.updateInvoiceDataWithHotelInfo(hotel);
+              this.isLoading = false;
+            }
+          });
+        } else {
+          // Fallback: sử dụng thông tin từ hotel
+          this.updateInvoiceDataWithHotelInfo(hotel);
+          this.isLoading = false;
+        }
+      },
+      error: (err) => {
+        console.error('Error loading hotel info:', err);
+        this.isLoading = false;
+      }
+    });
+  }
+  
+  // Cập nhật invoiceData với thông tin business
+  updateInvoiceDataWithBusinessInfo(business: any): void {
+    this.invoiceData.businessName = business.name || business.legalName || 'Khách sạn';
+    this.invoiceData.business_address = this.formatBusinessAddress(business.address);
+    this.invoiceData.phoneNumber = business.contactInfo?.phone || business.phoneNumber || '';
+    
+    // Lưu businessInfo đầy đủ
+    this.businessInfo = business;
+  }
+  
+  // Cập nhật invoiceData với thông tin hotel (fallback)
+  updateInvoiceDataWithHotelInfo(hotel: any): void {
+    this.invoiceData.businessName = hotel.name || 'Khách sạn';
+    this.invoiceData.business_address = this.formatBusinessAddress(hotel.address);
+    this.invoiceData.phoneNumber = hotel.contactInfo?.phone || hotel.phoneNumber || '';
+  }
+  
+  // Format địa chỉ business
+  formatBusinessAddress(address: any): string {
+    if (!address) return '';
+    
+    if (typeof address === 'string') {
+      return address;
+    }
+    
+    const parts = [];
+    if (address.street) parts.push(address.street);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.postalCode) parts.push(address.postalCode);
+    if (address.country) parts.push(address.country);
+    
+    return parts.join(', ') || '';
   }
   
   // Tính tổng tiền hàng (chỉ products)

@@ -1,8 +1,14 @@
 <div class="calendar-container">
-  <header class="calendar-header">
-    <button (click)="prevMonth()">&#9664;</button>
-    <span>{{ getDisplayMonth() }} {{ currentYear }}</span>
-    <button (click)="nextMonth()">&#9654;</button>
+  <header class="calendar-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button (click)="prevMonth()">&#9664;</button>
+      <span>{{ getDisplayMonth() }} {{ currentYear }}</span>
+      <button (click)="nextMonth()">&#9654;</button>
+    </div>
+    <button nz-button nzType="default" nzSize="small" (click)="loadAllBookings()" [nzLoading]="isLoading">
+      <i nz-icon nzType="reload" nzTheme="outline"></i>
+      Làm mới
+    </button>
   </header>
   <div class="calendar-grid">
     <div class="day-header" *ngFor="let day of daysOfWeek">{{ day }}</div>
@@ -15,38 +21,97 @@
     >
       <div class="date">{{ date.getDate() }}</div>
       <div class="booking-info" *ngFor="let booking of getBookingsForDate(date)">
-        <div class="booking-timeline">
+        <div class="booking-timeline" [title]="booking.roomNumber ? 'Phòng ' + booking.roomNumber : ''">
           {{ booking.startTime }} - {{ booking.endTime }}
         </div>
-        <div class="booking-user">
-          {{ booking.userName }}
+        <div class="booking-user" [title]="booking.guestInfo?.phone || ''">
+          {{ booking.userName || booking.guestInfo?.name || 'Khách đặt trước' }}
         </div>
+        <div class="booking-room" *ngIf="booking.roomNumber">
+          Phòng {{ booking.roomNumber }}
+        </div>
+      </div>
+      <div class="add-booking-btn" *ngIf="!getBookingsForDate(date).length" (click)="selectDate(date); $event.stopPropagation()" title="Đặt phòng">
+        <i nz-icon nzType="plus" nzTheme="outline"></i>
       </div>
     </div>
   </div>
 </div>
 <br>
-<div class="booking-info" *ngIf="selectedDate">
-  <nz-timeline>
-    <nz-timeline-item *ngFor="let booking of bookings" [nzColor]="'gold'">
-      <nz-card>
-        <div class="card-header">
-          <nz-card-meta
-            [nzTitle]="booking.userName"
-            [nzDescription]="selectedDate | date: 'fullDate'">
-          </nz-card-meta>
-          <div class="card-status">
-            <button nz-button nzShape="round" nzType="default" (click)="showModal()">Sửa</button>
-            <span [ngClass]="{'status-booked': booking.status === 'Booked', 'status-cancelled': booking.status === 'Cancelled'}">{{ booking.status }}</span>
+<!-- Lịch sử đặt phòng -->
+<div class="booking-history-section" style="margin-top: 24px;">
+  <h3 style="margin-bottom: 16px; font-size: 18px; font-weight: 600;">Lịch sử đặt phòng</h3>
+  <nz-table 
+    [nzData]="allBookings" 
+    [nzPageSize]="10" 
+    [nzShowPagination]="true"
+    [nzLoading]="isLoading"
+    nzSize="small"
+    [nzScroll]="{ x: '100%' }">
+    <thead>
+      <tr>
+        <th nzWidth="120px">Phòng Khách</th>
+        <th nzWidth="180px">Ngày đến</th>
+        <th nzWidth="180px">Ngày đi</th>
+        <th nzWidth="120px">Trạng thái</th>
+        <th nzWidth="100px">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let booking of allBookings">
+        <td>
+          <div>
+            <strong>{{ booking.roomNumber || 'N/A' }}</strong>
           </div>
-        </div>
-        <nz-collapse>
-          <nz-collapse-panel nzHeader="Chi tiết" *ngIf="booking.startTime || booking.endTime">
-            <p><strong>Từ ngày:</strong> {{ booking.startTime }}</p>
-            <p><strong>Đến ngày:</strong> {{ booking.endTime }}</p>
-          </nz-collapse-panel>
-        </nz-collapse>
-      </nz-card>
-    </nz-timeline-item>
-  </nz-timeline>
+          <div style="color: #666; font-size: 12px;">
+            {{ booking.userName || booking.guestInfo?.name || 'Khách đặt trước' }}
+          </div>
+        </td>
+        <td>{{ formatDateTime(booking.checkInDate) }}</td>
+        <td>{{ formatDateTime(booking.checkOutDate) }}</td>
+        <td>
+          <nz-tag [nzColor]="booking.status === 'checked_in' ? 'blue' : booking.status === 'booked' ? 'green' : booking.status === 'cancelled' ? 'red' : 'default'">
+            {{ booking.status === 'checked_in' ? 'Đã nhận phòng' : booking.status === 'booked' ? 'Đã đặt' : booking.status === 'cancelled' ? 'Đã hủy' : 'Đặt trước' }}
+          </nz-tag>
+        </td>
+        <td>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <!-- Nút Nhận phòng - hiển thị cho booking có thể check-in -->
+            <button 
+              nz-button 
+              nzType="primary" 
+              nzSize="small" 
+              (click)="checkinBooking(booking)" 
+              *ngIf="booking.roomId && booking.status !== 'cancelled' && booking.status !== 'checked_in'"
+              [nzLoading]="isCheckingIn"
+              [disabled]="isLoading"
+              title="Nhận phòng cho khách đặt trước">
+              Nhận phòng
+            </button>
+            <!-- Nút Hủy - hiển thị cho booking chưa bị hủy và chưa check-in -->
+            <button 
+              nz-button 
+              nzType="link" 
+              nzDanger 
+              nzSize="small" 
+              (click)="cancelBooking(booking)" 
+              *ngIf="booking.status !== 'cancelled' && booking.status !== 'checked_in' && booking.roomId"
+              [nzLoading]="isLoading"
+              [disabled]="isCheckingIn">
+              Hủy
+            </button>
+            <!-- Trạng thái đã hủy -->
+            <span *ngIf="booking.status === 'cancelled'" style="color: #999; font-size: 12px;">Đã hủy</span>
+            <!-- Trạng thái đã nhận phòng -->
+            <span *ngIf="booking.status === 'checked_in'" style="color: #52c41a; font-size: 12px;">Đã nhận phòng</span>
+          </div>
+        </td>
+      </tr>
+      <tr *ngIf="allBookings.length === 0 && !isLoading">
+        <td colspan="5" style="text-align: center; padding: 40px;">
+          <nz-empty [nzNotFoundContent]="'Chưa có đặt phòng nào'" [nzNotFoundImage]="'simple'"></nz-empty>
+        </td>
+      </tr>
+    </tbody>
+  </nz-table>
 </div>

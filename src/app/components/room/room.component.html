@@ -26,7 +26,7 @@
               (ngModelChange)="onFloorChange($event)"
               class="w-100"
               nzAllowClear>
-              <nz-option *ngFor="let floor of floors" [nzValue]="floor" [nzLabel]="'Tầng ' + floor"></nz-option>
+              <nz-option *ngFor="let floor of floors" [nzValue]="floor" [nzLabel]="getFloorDisplayName(floor)"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
@@ -90,11 +90,25 @@
     </div>
   </div>
 
-  <!-- Banner Đặt trước -->
-  <div class="advance-payment-banner" *ngIf="selectedHotelId && rooms.length > 0">
+  <!-- Banner Thống kê phòng -->
+  <div class="room-stats-banner" *ngIf="selectedHotelId && rooms.length > 0">
     <div class="banner-content">
-      <span class="banner-label">Đặt trước :</span>
-      <span class="banner-amount">{{ getTotalAdvancePayment() | number }} VNĐ</span>
+      <div class="stat-item">
+        <span class="stat-label">Trống:</span>
+        <span class="stat-value vacant">{{ getVacantRoomCount() }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Đang ở:</span>
+        <span class="stat-value occupied">{{ getOccupiedRoomCount() }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Đang bẩn:</span>
+        <span class="stat-value dirty">{{ getDirtyRoomCount() }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Sửa chữa:</span>
+        <span class="stat-value maintenance">{{ getMaintenanceRoomCount() }}</span>
+      </div>
     </div>
   </div>
 
@@ -104,7 +118,7 @@
       <!-- Lặp qua từng tầng -->
       <div class="floor-section" *ngFor="let floor of getSortedFloors()">
         <div class="floor-header">
-          <h3 class="floor-title">Tầng {{ floor }}</h3>
+          <h3 class="floor-title">{{ getFloorDisplayName(floor) }}</h3>
         </div>
         
         <div class="floor-rooms">
@@ -122,8 +136,7 @@
                 class="room-item" 
                 [ngClass]="getRoomStatusClass(room.status)"
                 appModalControl 
-                [room]="room"
-                (click)="onRoomClick(room, $event)">
+                [room]="room">
                 
                 <!-- Icon phòng -->
                 <div class="room-icon">
@@ -138,6 +151,28 @@
                 
                 <!-- Trạng thái phòng -->
                 <div class="room-status-label">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
+                
+                <!-- Thông tin booking cho phòng đã đặt -->
+                <ng-container *ngIf="room.status === 'booked' && getRoomBookingInfo(room) as bookingInfo">
+                  <div class="room-details">
+                    <div class="detail-row">
+                      <span class="detail-label">Khách đặt:</span>
+                      <span class="detail-value highlight">{{ bookingInfo.guestName }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Ngày đến:</span>
+                      <span class="detail-value">{{ bookingInfo.checkInDate }}</span>
+                    </div>
+                    <div class="detail-row" *ngIf="bookingInfo.checkOutDate">
+                      <span class="detail-label">Ngày đi:</span>
+                      <span class="detail-value">{{ bookingInfo.checkOutDate }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Hình thức:</span>
+                      <span class="detail-value">{{ bookingInfo.rateTypeLabel }}</span>
+                    </div>
+                  </div>
+                </ng-container>
                 
                 <!-- Thông tin chi tiết cho phòng đang có khách -->
                 <ng-container *ngIf="room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
@@ -158,7 +193,7 @@
                       <span class="detail-label">Tổng tiền:</span>
                       <span class="detail-value highlight">{{ displayInfo.totalAmount | number }} VNĐ</span>
                     </div>
-                    <div class="detail-row">
+                    <div class="detail-row" *ngIf="displayInfo.advancePayment > 0">
                       <span class="detail-label">Đặt trước:</span>
                       <span class="detail-value highlight">{{ displayInfo.advancePayment | number }} VNĐ</span>
                     </div>
@@ -204,19 +239,39 @@
   
   <!-- Biểu đồ doanh thu -->
   <div class="section-container mt-4" *ngIf="selectedHotelId">
-    <div class="section-header">
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
       <h3>Doanh thu khách sạn {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}</h3>
+      <button nz-button nzType="primary" (click)="openExpenseModal()">
+        <i nz-icon nzType="plus" nzTheme="outline"></i>
+        Tạo phiếu chi
+      </button>
     </div>
     <app-revenue-chart
       [hotelId]="selectedHotelId"
       [labels]="chartLabels"
       [revenueData]="chartRevenueData"
       [paymentData]="chartPaymentData"
-      [totalRevenue]="totalPayment"
-      [totalPayment]="totalPayment">
+      [expenseData]="chartExpenseData"
+      [totalRevenue]="totalRevenue"
+      [totalPayment]="totalPayment"
+      [totalExpense]="totalExpense"
+      [selectedPeriod]="selectedPeriod"
+      (periodChange)="onPeriodChange($event)">
     </app-revenue-chart>
   </div>
   
+  <!-- Calendar đặt phòng -->
+  <div class="section-container mt-4" *ngIf="selectedHotelId">
+    <div class="section-header">
+      <h3>Lịch đặt phòng {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}</h3>
+    </div>
+    <app-calendar 
+      #calendarComponent
+      [hotelId]="selectedHotelId"
+      (bookingSelected)="onCalendarDateSelected($event)">
+    </app-calendar>
+  </div>
+
   <!-- Bảng lịch sử phòng -->
   <div class="section-container mt-4" *ngIf="selectedHotelId">
     <div class="section-header">
@@ -229,6 +284,139 @@
     </app-table>
   </div>
 </div>
+
+<!-- Modal phiếu chi -->
+<nz-modal
+  [(nzVisible)]="isExpenseModalVisible"
+  nzTitle="Quản lý phiếu chi"
+  [nzWidth]="900"
+  (nzOnCancel)="isExpenseModalVisible = false"
+  [nzFooter]="null">
+  <div *nzModalContent>
+    <!-- Form tạo phiếu chi -->
+    <nz-card nzTitle="Tạo phiếu chi mới" style="margin-bottom: 16px;">
+      <form [formGroup]="expenseForm" (ngSubmit)="submitExpense()">
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Số tiền</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập số tiền lớn hơn 0">
+            <nz-input-number
+              formControlName="amount"
+              [nzMin]="1"
+              [nzStep]="1000"
+              [nzFormatter]="formatNumber"
+              style="width: 100%">
+            </nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Phương thức thanh toán</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-select formControlName="method" style="width: 100%">
+              <nz-option nzValue="cash" nzLabel="Tiền mặt"></nz-option>
+              <nz-option nzValue="bank_transfer" nzLabel="Chuyển khoản"></nz-option>
+              <nz-option nzValue="card" nzLabel="Thẻ"></nz-option>
+              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Danh mục</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-select formControlName="expenseCategory" style="width: 100%">
+              <nz-option nzValue="supplies" nzLabel="Vật tư"></nz-option>
+              <nz-option nzValue="utilities" nzLabel="Tiện ích (điện, nước)"></nz-option>
+              <nz-option nzValue="salary" nzLabel="Lương"></nz-option>
+              <nz-option nzValue="maintenance" nzLabel="Bảo trì"></nz-option>
+              <nz-option nzValue="marketing" nzLabel="Marketing"></nz-option>
+              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Mô tả</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập mô tả">
+            <input nz-input formControlName="description" placeholder="Nhập mô tả chi tiết">
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Người nhận</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <input nz-input formControlName="recipient" placeholder="Tên người nhận (nếu có)">
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Ghi chú</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <textarea nz-input formControlName="notes" rows="3" placeholder="Ghi chú thêm (nếu có)"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-control [nzOffset]="6" [nzSpan]="18">
+            <button nz-button nzType="primary" [nzLoading]="expenseLoading" type="submit">
+              Tạo phiếu chi
+            </button>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </nz-card>
+
+    <!-- Danh sách phiếu chi -->
+    <nz-card nzTitle="Danh sách phiếu chi">
+      <nz-table
+        #expenseTable
+        [nzData]="expenseList"
+        [nzLoading]="expenseLoading"
+        [nzPageSize]="10"
+        nzShowSizeChanger
+        [nzTotal]="expenseList.length">
+        <thead>
+          <tr>
+            <th>Ngày</th>
+            <th>Mô tả</th>
+            <th>Danh mục</th>
+            <th>Số tiền</th>
+            <th>Phương thức</th>
+            <th>Người nhận</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let expense of expenseTable.data">
+            <td>{{ expense.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ expense.description }}</td>
+            <td>
+              <nz-tag [nzColor]="'blue'">
+                {{ expense.expenseCategory === 'supplies' ? 'Vật tư' :
+                   expense.expenseCategory === 'utilities' ? 'Tiện ích' :
+                   expense.expenseCategory === 'salary' ? 'Lương' :
+                   expense.expenseCategory === 'maintenance' ? 'Bảo trì' :
+                   expense.expenseCategory === 'marketing' ? 'Marketing' : 'Khác' }}
+              </nz-tag>
+            </td>
+            <td>{{ expense.amount | number:'1.0-0' }} đ</td>
+            <td>
+              {{ expense.method === 'cash' ? 'Tiền mặt' :
+                 expense.method === 'bank_transfer' ? 'Chuyển khoản' :
+                 expense.method === 'card' ? 'Thẻ' : 'Khác' }}
+            </td>
+            <td>{{ expense.details?.recipient || '-' }}</td>
+            <td>
+              <button nz-button nzType="link" nzDanger (click)="deleteExpense(expense._id!)" [disabled]="expense.shiftHandoverId">
+                Xóa
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </nz-card>
+  </div>
+</nz-modal>
 
 <style>
   .room-container {

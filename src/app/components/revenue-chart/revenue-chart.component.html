@@ -22,13 +22,13 @@
         </div>
       </div>
       
-      <div class="summary-card payment">
+      <div class="summary-card expense">
         <div class="summary-icon">
-          <i nz-icon nzType="wallet" nzTheme="outline"></i>
+          <i nz-icon nzType="minus-circle" nzTheme="outline"></i>
         </div>
         <div class="summary-content">
-          <div class="summary-label">Tổng thanh toán</div>
-          <div class="summary-value">{{ formatCurrency(totalPayment) }}</div>
+          <div class="summary-label">Tổng chi</div>
+          <div class="summary-value">{{ formatCurrency(totalExpense) }}</div>
         </div>
       </div>
     </div>
@@ -46,7 +46,7 @@
     <nz-alert
       nzType="info"
       nzMessage="Thông tin biểu đồ"
-      [nzDescription]="'Biểu đồ hiển thị doanh thu theo ' + getPeriodTitle(selectedPeriod).toLowerCase() + '. Tổng cộng: ' + formatCurrency(totalRevenue) + ''"
+      [nzDescription]="'Biểu đồ hiển thị tổng thu và tổng chi theo ' + getPeriodTitle(selectedPeriod).toLowerCase() + '. Tổng thu: ' + formatCurrency(totalRevenue) + ', Tổng chi: ' + formatCurrency(totalExpense) + ''"
       nzShowIcon
     ></nz-alert>
   </div>
@@ -104,8 +104,8 @@
     border-left: 4px solid #1890ff;
   }
   
-  .summary-card.payment {
-    border-left: 4px solid #52c41a;
+  .summary-card.expense {
+    border-left: 4px solid #ff4d4f;
   }
   
   .summary-icon {
@@ -123,9 +123,9 @@
     background-color: rgba(24, 144, 255, 0.1);
   }
   
-  .payment .summary-icon {
-    color: #52c41a;
-    background-color: rgba(82, 196, 26, 0.1);
+  .expense .summary-icon {
+    color: #ff4d4f;
+    background-color: rgba(255, 77, 79, 0.1);
   }
   
   .summary-content {

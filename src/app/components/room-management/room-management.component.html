@@ -192,14 +192,16 @@
                         <nz-form-label>Giá giờ đầu</nz-form-label>
                         <nz-form-control>
                             <nz-input-number formControlName="hourly" [nzMin]="0" [nzStep]="10000" class="w-100" nzPlaceHolder="Nếu có PriceConfig sẽ tự điền"></nz-input-number>
+                            <div class="form-hint">Giá cho giờ đầu tiên (ví dụ: 250,000đ)</div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
                     <nz-form-item>
-                        <nz-form-label>Giá giờ thêm (cũ)</nz-form-label>
+                        <nz-form-label>Giá giờ tiếp theo</nz-form-label>
                         <nz-form-control>
-                            <nz-input-number formControlName="additionalHourRate" [nzMin]="0" [nzStep]="10000" class="w-100" nzPlaceHolder="Hỗ trợ giá cũ"></nz-input-number>
+                            <nz-input-number formControlName="additionalHourRate" [nzMin]="0" [nzStep]="10000" class="w-100" nzPlaceHolder="Giá mỗi giờ tiếp theo"></nz-input-number>
+                            <div class="form-hint">Giá cho mỗi giờ tiếp theo (ví dụ: 50,000đ). Sau giờ thứ 2, quá 15 phút mới tính thêm.</div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -208,6 +210,7 @@
                         <nz-form-label>Giá giờ đầu (cũ)</nz-form-label>
                         <nz-form-control>
                             <nz-input-number formControlName="firstHourRate" [nzMin]="0" [nzStep]="10000" class="w-100" nzPlaceHolder="Hỗ trợ giá cũ"></nz-input-number>
+                            <div class="form-hint">Giá giờ đầu (để tương thích với hệ thống cũ)</div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -259,8 +262,64 @@
                 <nz-form-label>ID Cấu hình giá</nz-form-label>
                 <nz-form-control>
                     <input nz-input formControlName="priceConfigId" placeholder="ID của cấu hình giá (nếu có)" />
+                    <div class="form-hint">
+                        <small>
+                            <strong>Lưu ý:</strong> Nếu sử dụng PriceConfig, các cấu hình bên dưới sẽ bị ghi đè bởi PriceConfig.
+                        </small>
+                    </div>
                 </nz-form-control>
             </nz-form-item>
+        </div>
+
+        <!-- Cấu hình tính giá -->
+        <div formGroupName="priceSettings" nz-col [nzSpan]="24">
+            <h4 class="mt-3 mb-2">Cấu hình tính giá</h4>
+            <div nz-row [nzGutter]="16">
+                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+                    <nz-form-item>
+                        <nz-form-label>Giờ bắt đầu tính qua đêm</nz-form-label>
+                        <nz-form-control>
+                            <input 
+                                nz-input 
+                                type="time" 
+                                formControlName="nightlyStartTime" 
+                                class="w-100"
+                                placeholder="22:00" />
+                            <div class="form-hint">Giờ bắt đầu tính giá qua đêm (ví dụ: 22:00)</div>
+                        </nz-form-control>
+                    </nz-form-item>
+                </div>
+                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+                    <nz-form-item>
+                        <nz-form-label>Số giờ tự động chuyển sang qua đêm</nz-form-label>
+                        <nz-form-control>
+                            <nz-input-number 
+                                formControlName="autoNightlyHours" 
+                                [nzMin]="1" 
+                                [nzMax]="24"
+                                [nzStep]="1" 
+                                class="w-100" 
+                                nzPlaceHolder="8" />
+                            <div class="form-hint">Số giờ tự động chuyển sang tính qua đêm (ví dụ: 8 giờ)</div>
+                        </nz-form-control>
+                    </nz-form-item>
+                </div>
+                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+                    <nz-form-item>
+                        <nz-form-label>Thời gian miễn phí (phút)</nz-form-label>
+                        <nz-form-control>
+                            <nz-input-number 
+                                formControlName="gracePeriodMinutes" 
+                                [nzMin]="0" 
+                                [nzMax]="60"
+                                [nzStep]="5" 
+                                class="w-100" 
+                                nzPlaceHolder="15" />
+                            <div class="form-hint">Thời gian miễn phí sau giờ thứ 2 (ví dụ: 15 phút). Quá thời gian này sẽ tính thêm 1 giờ.</div>
+                        </nz-form-control>
+                    </nz-form-item>
+                </div>
+            </div>
         </div>
 
         <div nz-col [nzSpan]="24">
@@ -348,6 +407,16 @@
     font-size: 12px;
     color: #888;
     margin-top: 4px;
+  }
+  .form-hint {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .form-hint small {
+    color: #666;
   }
   @media (max-width: 576px) {
     nz-form-item {

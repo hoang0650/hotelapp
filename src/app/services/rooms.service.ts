@@ -202,8 +202,28 @@ export class RoomsService {
   }
 
   // Hủy đặt phòng
-  cancelBooking(roomId: string, reason: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/booking/cancel/${roomId}`, { reason });
+  cancelBooking(roomId: string, reason: string, bookingId?: string, checkInDate?: Date): Observable<any> {
+    const body: any = { reason };
+    if (bookingId) body.bookingId = bookingId;
+    if (checkInDate) body.checkInDate = checkInDate;
+    return this.http.post<any>(`${this.apiUrl}/booking/cancel/${roomId}`, body);
+  }
+
+  // Lấy danh sách bookings
+  getBookings(params?: {
+    roomId?: string;
+    hotelId?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.roomId) httpParams = httpParams.set('roomId', params.roomId);
+      if (params.hotelId) httpParams = httpParams.set('hotelId', params.hotelId);
+      if (params.startDate) httpParams = httpParams.set('startDate', params.startDate);
+      if (params.endDate) httpParams = httpParams.set('endDate', params.endDate);
+    }
+    return this.http.get<any>(`${this.apiUrl}/bookings`, { params: httpParams });
   }
 
   // Khách tạm ra ngoài
@@ -219,6 +239,14 @@ export class RoomsService {
   // Giao ca
   createShiftHandover(handoverData: ShiftHandover): Observable<ShiftHandover> {
     return this.http.post<ShiftHandover>(`${this.apiUrl}/shift-handover`, handoverData);
+  }
+
+  // Cập nhật thông tin khách và tiền đặt trước
+  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${roomId}/checkin-info`, {
+      guestInfo,
+      advancePayment
+    });
   }
 
   // Xác nhận giao ca bằng mật khẩu

@@ -106,6 +106,7 @@ import vi from '@angular/common/locales/vi';
 import { AuthInterceptor } from './auth.interceptor'; // Import AuthInterceptor
 import { OtaManagementComponent } from './components/ota-management/ota-management.component'; // Import OtaManagementComponent
 import { ShiftHandoverHistoryComponent } from './components/shift-handover-history/shift-handover-history.component';
+import { BookingModalComponent } from './components/booking-modal/booking-modal.component';
 
 registerLocaleData(vi);
 
@@ -158,7 +159,8 @@ registerLocaleData(vi);
         AiChatboxComponent,
         PricingComponent,
         OtaManagementComponent, // Thêm OtaManagementComponent vào declarations
-        ShiftHandoverHistoryComponent
+        ShiftHandoverHistoryComponent,
+        BookingModalComponent
     ],
     bootstrap: [AppComponent],
     imports: [

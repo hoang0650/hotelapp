@@ -8,8 +8,10 @@ interface RevenueData {
   labels: string[];
   revenueData: number[];
   paymentData: number[];
+  expenseData?: number[];
   totalRevenue: number;
   totalPayment: number;
+  totalExpense?: number;
 }
 
 @Injectable({
@@ -72,6 +74,26 @@ export class HotelService {
       .set('period', period);
     
     return this.http.get<RevenueData>(`${this.apiUrl}/${hotelId}/revenue`, { params });
+  }
+
+  // Lấy doanh thu khách sạn theo period từ shift-handover API
+  getHotelRevenueByPeriod(hotelId: string, period: 'day' | 'week' | 'month' = 'day'): Observable<RevenueData> {
+    const apiUrl = 'http://localhost:3000/shift-handover/revenue/period';
+    const params = new HttpParams()
+      .set('hotelId', hotelId)
+      .set('period', period);
+    
+    return this.http.get<{ labels: string[], revenueData: number[], paymentData: number[], expenseData?: number[], totalRevenue: number, totalPayment: number, totalExpense?: number }>(apiUrl, { params }).pipe(
+      map(response => ({
+        labels: response.labels,
+        revenueData: response.revenueData,
+        paymentData: response.paymentData,
+        expenseData: response.expenseData || [],
+        totalRevenue: response.totalRevenue,
+        totalPayment: response.totalPayment,
+        totalExpense: response.totalExpense || 0
+      }))
+    );
   }
 
   // API chưa tồn tại, tạm thời sử dụng dữ liệu giả lập

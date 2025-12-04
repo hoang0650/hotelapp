@@ -1,10 +1,12 @@
 import { Directive, HostListener, Input, OnInit, OnDestroy } from '@angular/core';
 import { NzModalService, NzModalRef } from 'ng-zorro-antd/modal';
 import { RoomsService } from '../services/rooms.service';
+import { InvoiceService } from '../services/invoice.service';
 import { take, takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { RoomContentModalComponent } from '../components/room-content-modal/room-content-modal.component';
 import { InvoiceComponent } from '../components/invoice/invoice.component';
+import { BookingModalComponent } from '../components/booking-modal/booking-modal.component';
 import { Room } from '../interfaces/rooms';
 
 @Directive({
@@ -15,10 +17,14 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   @Input() room!: Room; // Phòng được truyền vào directive
   private destroy$ = new Subject<void>();
   private modalRef: NzModalRef | null = null;
+  private contextMenuModalRef: NzModalRef | null = null;
+  private isModalOpening = false; // Flag để tránh mở modal nhiều lần
+  private clickEventHandlers: Map<string, (e: Event) => void> = new Map(); // Lưu handlers để có thể remove
   newRoom: any;
   constructor(
     private modalService: NzModalService,
-    private roomsService: RoomsService
+    private roomsService: RoomsService,
+    private invoiceService: InvoiceService
   ) {}
 
   ngOnInit(): void {
@@ -30,9 +36,16 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  @HostListener('click') 
-  onClick(): void {
-    if (this.room) {
+  @HostListener('click', ['$event']) 
+  onClick(event: MouseEvent): void {
+    // Kiểm tra xem click có phải từ button trong context menu không
+    const target = event.target as HTMLElement;
+    if (target.closest('.ant-modal') || target.closest('.list-group-item')) {
+      // Nếu click vào modal hoặc button trong context menu, không xử lý
+      return;
+    }
+    
+    if (this.room && !this.isModalOpening && !this.modalRef) {
       const modalType = this.getModalType();
       this.showModal(this.room, modalType);
     }
@@ -59,7 +72,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     const menuY = event.clientY;
     
     // Tạo và hiển thị menu tùy chọn - Bootstrap Style
-    const contextMenuModalRef = this.modalService.create({
+    this.contextMenuModalRef = this.modalService.create({
       nzTitle: `Phòng ${this.room.roomNumber} - Tùy chọn`,
       nzContent: `
         <div class="list-group list-group-flush">
@@ -79,6 +92,12 @@ export class ModalControlDirective implements OnInit, OnDestroy {
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
               </span>
               <span class="flex-grow-1">Thông tin khách</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" id="save-guest-info-btn">
+              <span class="badge bg-info rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+              </span>
+              <span class="flex-grow-1">Lưu thông tin khách</span>
             </a>
             <a class="list-group-item list-group-item-action d-flex align-items-center" id="service-btn">
               <span class="badge bg-info rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
@@ -271,7 +290,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     });
 
     // Đăng ký các sự kiện cho các nút trong menu
-    contextMenuModalRef.afterOpen.subscribe(() => {
+    this.contextMenuModalRef.afterOpen.subscribe(() => {
       // Sử dụng setTimeout để đảm bảo DOM đã render
       setTimeout(() => {
         // Tìm tất cả modal đang mở và lấy modal cuối cùng (context menu)
@@ -287,18 +306,40 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         const attachClickEvent = (selector: string, handler: () => void) => {
           const btn = modalElement.querySelector(selector);
           if (btn) {
-            btn.addEventListener('click', (e) => {
+            // Remove event listener cũ nếu có
+            const oldHandler = this.clickEventHandlers.get(selector);
+            if (oldHandler) {
+              btn.removeEventListener('click', oldHandler);
+            }
+            
+            // Tạo handler mới
+            const newHandler = (e: Event) => {
               e.preventDefault();
               e.stopPropagation();
-              contextMenuModalRef.close();
-              handler();
-            });
+              e.stopImmediatePropagation(); // Ngăn các handler khác
+              
+              // Đóng context menu trước
+              if (this.contextMenuModalRef) {
+                this.contextMenuModalRef.close();
+                this.contextMenuModalRef = null;
+              }
+              
+              // Đợi một chút để đảm bảo context menu đã đóng
+              setTimeout(() => {
+                handler();
+              }, 100);
+            };
+            
+            // Lưu handler để có thể remove sau
+            this.clickEventHandlers.set(selector, newHandler);
+            btn.addEventListener('click', newHandler, { once: true }); // once: true để chỉ chạy 1 lần
           }
         };
         
         // Gắn event cho các nút
         attachClickEvent('#checkout-btn', () => this.showModal(this.room, 'checkout'));
         attachClickEvent('#guest-info-btn', () => this.showGuestInfoModal());
+        attachClickEvent('#save-guest-info-btn', () => this.showSaveGuestInfoModal());
         attachClickEvent('#service-btn', () => this.showServiceModal());
         attachClickEvent('#transfer-btn', () => this.showTransferModal());
         attachClickEvent('#checkin-btn', () => this.showCheckinModal());
@@ -464,6 +505,166 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     });
   }
   
+  // Hiển thị modal lưu thông tin khách
+  showSaveGuestInfoModal(): void {
+    // Lấy thông tin khách hiện tại từ room.events hoặc localStorage
+    let guestInfo: any = {};
+    let advancePayment: number = 0;
+    
+    if (this.room.events && this.room.events.length > 0) {
+      const checkinEvents = this.room.events.filter((e: any) => e.type === 'checkin');
+      if (checkinEvents.length > 0) {
+        const lastCheckin = checkinEvents[checkinEvents.length - 1];
+        guestInfo = lastCheckin.guestInfo || {};
+        advancePayment = lastCheckin.advancePayment || 0;
+      }
+    }
+    
+    // Fallback: lấy từ localStorage
+    if (!guestInfo.name || guestInfo.name === 'Khách lẻ') {
+      const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
+      if (savedCheckinData) {
+        try {
+          const checkinData = JSON.parse(savedCheckinData);
+          guestInfo = checkinData.guestInfo || {};
+          advancePayment = checkinData.advancePayment || 0;
+        } catch (e) {
+          console.error('Error parsing checkin data:', e);
+        }
+      }
+    }
+    
+    this.modalService.create({
+      nzTitle: `Lưu thông tin khách - Phòng ${this.room.roomNumber}`,
+      nzContent: `
+        <div style="margin-bottom: 16px;">
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Tên khách:</label>
+            <input type="text" id="guest-name" value="${guestInfo.name || 'Khách lẻ'}" 
+              placeholder="Nhập tên khách (mặc định: Khách lẻ)"
+              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Số điện thoại:</label>
+            <input type="text" id="guest-phone" value="${guestInfo.phone || ''}" 
+              placeholder="Nhập số điện thoại"
+              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">CCCD/CMND:</label>
+            <input type="text" id="guest-id" value="${guestInfo.idNumber || ''}" 
+              placeholder="Nhập số CCCD/CMND"
+              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Email:</label>
+            <input type="email" id="guest-email" value="${guestInfo.email || ''}" 
+              placeholder="Nhập email"
+              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Địa chỉ:</label>
+            <input type="text" id="guest-address" value="${guestInfo.address || ''}" 
+              placeholder="Nhập địa chỉ"
+              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Tiền đặt trước:</label>
+            <input type="number" id="advance-payment" value="${advancePayment || 0}" 
+              placeholder="Nhập số tiền đặt trước"
+              min="0"
+              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+          </div>
+        </div>
+      `,
+      nzOkText: 'Lưu',
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        const nameInput = document.getElementById('guest-name') as HTMLInputElement;
+        const phoneInput = document.getElementById('guest-phone') as HTMLInputElement;
+        const idInput = document.getElementById('guest-id') as HTMLInputElement;
+        const emailInput = document.getElementById('guest-email') as HTMLInputElement;
+        const addressInput = document.getElementById('guest-address') as HTMLInputElement;
+        const advanceInput = document.getElementById('advance-payment') as HTMLInputElement;
+        
+        const updatedGuestInfo = {
+          name: (nameInput?.value || 'Khách lẻ').trim(),
+          phone: phoneInput?.value || '',
+          idNumber: idInput?.value || '',
+          email: emailInput?.value || '',
+          address: addressInput?.value || ''
+        };
+        
+        const updatedAdvancePayment = advanceInput ? parseFloat(advanceInput.value) || 0 : 0;
+        
+        // Lấy thông tin check-in hiện tại
+        const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
+        let checkinData: any = {
+          roomId: this.room._id,
+          roomNumber: this.room.roomNumber,
+          checkinTime: new Date(),
+          guestInfo: updatedGuestInfo,
+          advancePayment: updatedAdvancePayment
+        };
+        
+        if (savedCheckinData) {
+          try {
+            const existingData = JSON.parse(savedCheckinData);
+            checkinData = {
+              ...existingData,
+              guestInfo: updatedGuestInfo,
+              advancePayment: updatedAdvancePayment
+            };
+          } catch (e) {
+            console.error('Error parsing existing checkin data:', e);
+          }
+        }
+        
+        // Lưu vào localStorage
+        localStorage.setItem(`checkin_${this.room._id}`, JSON.stringify(checkinData));
+        
+        // Cập nhật vào room.events nếu có event checkin
+        if (this.room.events && this.room.events.length > 0) {
+          const checkinEvents = this.room.events.filter((e: any) => e.type === 'checkin');
+          if (checkinEvents.length > 0) {
+            // Cập nhật event checkin với thông tin mới qua API
+            this.roomsService.updateRoomCheckinInfo(
+              this.room._id,
+              updatedGuestInfo,
+              updatedAdvancePayment
+            ).pipe(take(1)).subscribe({
+              next: () => {
+                this.modalService.success({
+                  nzTitle: 'Thành công',
+                  nzContent: 'Đã lưu thông tin khách và tiền đặt trước.',
+                  nzOkText: 'Đóng'
+                });
+                this.roomsService.notifyRoomDataUpdated();
+              },
+              error: (err) => {
+                // Nếu API không có, vẫn báo thành công vì đã lưu vào localStorage
+                this.modalService.success({
+                  nzTitle: 'Thành công',
+                  nzContent: 'Đã lưu thông tin khách và tiền đặt trước vào bộ nhớ tạm.',
+                  nzOkText: 'Đóng'
+                });
+                this.roomsService.notifyRoomDataUpdated();
+              }
+            });
+            return;
+          }
+        }
+        
+        // Nếu không có event checkin, chỉ lưu vào localStorage
+        this.modalService.success({
+          nzTitle: 'Thành công',
+          nzContent: 'Đã lưu thông tin khách và tiền đặt trước vào bộ nhớ tạm.',
+          nzOkText: 'Đóng'
+        });
+      }
+    });
+  }
+  
   // Hiển thị modal cập nhật dịch vụ
   showServiceModal(): void {
     // Mở modal checkout để cập nhật dịch vụ
@@ -475,139 +676,47 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     let bookingModalRef: NzModalRef | null = null;
     bookingModalRef = this.modalService.create({
       nzTitle: `Đặt phòng ${this.room.roomNumber}`,
-      nzContent: `
-        <form id="bookingForm">
-          <div style="margin-bottom: 16px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Tên khách <span style="color: red;">*</span></label>
-            <input type="text" id="bookingGuestName" placeholder="Nhập tên khách" required
-              style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-          </div>
-          <div style="margin-bottom: 16px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Số điện thoại</label>
-            <input type="tel" id="bookingGuestPhone" placeholder="Nhập số điện thoại"
-              style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-          </div>
-          <div style="margin-bottom: 16px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">CCCD/CMND</label>
-            <input type="text" id="bookingGuestId" placeholder="Nhập số CCCD/CMND"
-              style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-          </div>
-          <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-            <div style="flex: 1;">
-              <label style="display: block; margin-bottom: 4px; font-weight: 500;">Ngày đến <span style="color: red;">*</span></label>
-              <input type="datetime-local" id="bookingCheckIn" required
-                style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-            </div>
-            <div style="flex: 1;">
-              <label style="display: block; margin-bottom: 4px; font-weight: 500;">Ngày đi (dự kiến)</label>
-              <input type="datetime-local" id="bookingCheckOut"
-                style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-            </div>
-          </div>
-          <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-            <div style="flex: 1;">
-              <label style="display: block; margin-bottom: 4px; font-weight: 500;">Loại giá <span style="color: red;">*</span></label>
-              <select id="bookingRateType" required
-                style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;">
-                <option value="hourly">Theo giờ</option>
-                <option value="daily">Ngày đêm</option>
-                <option value="nightly">Qua đêm</option>
-              </select>
-            </div>
-            <div style="flex: 1;">
-              <label style="display: block; margin-bottom: 4px; font-weight: 500;">Tiền đặt trước</label>
-              <input type="number" id="bookingAdvancePayment" placeholder="0" min="0"
-                style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-            </div>
-          </div>
-          <div style="margin-bottom: 16px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Ghi chú</label>
-            <textarea id="bookingNotes" placeholder="Ghi chú thêm..."
-              style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; min-height: 60px;"></textarea>
-          </div>
-        </form>
-      `,
+      nzContent: BookingModalComponent,
+      nzData: {
+        selectedDate: new Date(),
+        hotelId: this.room.hotelId,
+        roomId: this.room._id,
+        rooms: [this.room] // Chỉ hiển thị phòng hiện tại
+      },
       nzFooter: [
         {
           label: 'Hủy',
           onClick: () => bookingModalRef?.close()
         },
         {
+          label: 'Xuất PDF xác nhận',
+          onClick: () => {
+            const instance = bookingModalRef?.getContentComponent() as BookingModalComponent;
+            if (instance) {
+              instance.exportConfirmationPDF();
+            }
+          }
+        },
+        {
           label: 'Đặt phòng',
           type: 'primary',
           onClick: () => {
-            const nameInput = document.getElementById('bookingGuestName') as HTMLInputElement;
-            const phoneInput = document.getElementById('bookingGuestPhone') as HTMLInputElement;
-            const idInput = document.getElementById('bookingGuestId') as HTMLInputElement;
-            const checkInInput = document.getElementById('bookingCheckIn') as HTMLInputElement;
-            const checkOutInput = document.getElementById('bookingCheckOut') as HTMLInputElement;
-            const rateTypeSelect = document.getElementById('bookingRateType') as HTMLSelectElement;
-            const advanceInput = document.getElementById('bookingAdvancePayment') as HTMLInputElement;
-            const notesInput = document.getElementById('bookingNotes') as HTMLTextAreaElement;
-            
-            if (!nameInput.value || !checkInInput.value) {
-              this.modalService.warning({
-                nzTitle: 'Thiếu thông tin',
-                nzContent: 'Vui lòng nhập tên khách và ngày đến.',
-                nzOkText: 'Đóng'
-              });
-              return;
+            const instance = bookingModalRef?.getContentComponent() as BookingModalComponent;
+            if (instance) {
+              instance.onSubmit();
             }
-            
-            const bookingData = {
-              roomId: this.room._id,
-              hotelId: this.room.hotelId,
-              guestInfo: {
-                name: nameInput.value,
-                phone: phoneInput.value || '',
-                idNumber: idInput.value || ''
-              },
-              checkInDate: new Date(checkInInput.value),
-              checkOutDate: checkOutInput.value ? new Date(checkOutInput.value) : undefined,
-              rateType: rateTypeSelect.value as 'hourly' | 'daily' | 'nightly',
-              advancePayment: parseFloat(advanceInput.value) || 0,
-              notes: notesInput.value || ''
-            };
-            
-            // Lưu vào localStorage để hiển thị
-            localStorage.setItem(`booking_${this.room._id}`, JSON.stringify(bookingData));
-            
-            this.roomsService.createBooking(bookingData)
-              .pipe(take(1))
-              .subscribe({
-                next: () => {
-                  bookingModalRef?.close();
-                  this.modalService.success({
-                    nzTitle: 'Thành công',
-                    nzContent: `Đã đặt phòng ${this.room.roomNumber} thành công.`,
-                    nzOkText: 'Đóng'
-                  });
-                  this.roomsService.notifyRoomDataUpdated();
-                },
-                error: (err) => {
-                  this.modalService.error({
-                    nzTitle: 'Lỗi',
-                    nzContent: err.error?.message || 'Không thể đặt phòng.',
-                    nzOkText: 'Đóng'
-                  });
-                }
-              });
           }
         }
       ],
-      nzWidth: 500,
+      nzWidth: 800,
       nzMaskClosable: false
     });
     
-    // Set default check-in date to now
-    setTimeout(() => {
-      const checkInInput = document.getElementById('bookingCheckIn') as HTMLInputElement;
-      if (checkInInput) {
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        checkInInput.value = now.toISOString().slice(0, 16);
+    bookingModalRef.afterClose.subscribe((result) => {
+      if (result?.success) {
+        this.roomsService.notifyRoomDataUpdated();
       }
-    }, 100);
+    });
   }
   
   // Đánh dấu phòng đã dọn xong
@@ -622,6 +731,11 @@ export class ModalControlDirective implements OnInit, OnDestroy {
             nzOkText: 'Đóng'
           });
           this.roomsService.notifyRoomDataUpdated();
+          // Đảm bảo đóng context menu nếu còn mở
+          if (this.contextMenuModalRef) {
+            this.contextMenuModalRef.close();
+            this.contextMenuModalRef = null;
+          }
         },
         error: (err) => {
           this.modalService.error({
@@ -687,6 +801,12 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Hiển thị modal nhận phòng
   showCheckinModal(): void {
+    // Kiểm tra xem modal đã được mở chưa
+    if (this.isModalOpening || this.modalRef) {
+      console.log('Modal đang được mở, bỏ qua yêu cầu mở modal mới');
+      return;
+    }
+    
     const status = this.room.status;
     if (status !== 'vacant') {
       this.modalService.info({
@@ -695,6 +815,14 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         nzOkText: 'Đóng'
       });
       return;
+    }
+    
+    this.isModalOpening = true;
+    
+    // Đóng context menu nếu đang mở
+    if (this.contextMenuModalRef) {
+      this.contextMenuModalRef.close();
+      this.contextMenuModalRef = null;
     }
     
     this.modalRef = this.modalService.create({
@@ -715,6 +843,11 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       take(1),
       takeUntil(this.destroy$)
     ).subscribe((result: any) => {
+      // Reset flag trước
+      this.isModalOpening = false;
+      const closedModalRef = this.modalRef;
+      this.modalRef = null;
+      
       // Lưu thông tin checkin để sử dụng khi checkout nếu có kết quả trả về
       if (result && result.checkinInfo) {
         // Lưu thông tin vào localStorage hoặc service
@@ -734,7 +867,13 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         localStorage.setItem(`checkin_${this.room._id}`, JSON.stringify(checkinData));
       }
       
-      this.roomsService.notifyRoomDataUpdated();
+      // Delay notify để tránh trigger mở modal lại
+      setTimeout(() => {
+        // Chỉ notify nếu modal đã thực sự đóng và không có modal mới được mở
+        if (!this.modalRef && closedModalRef) {
+          this.roomsService.notifyRoomDataUpdated();
+        }
+      }, 200);
     });
   }
 
@@ -1001,20 +1140,102 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   showModal(room: Room, type: string): void {
     console.log(`Hiển thị modal với type: ${type} cho phòng ${room.roomNumber}`);
     
-    const modal = this.modalService.create({
-      nzTitle: `Phòng ${room.roomNumber}`,
-      nzContent: RoomContentModalComponent,
-      nzFooter: null,
-      nzMaskClosable: false,
-      nzClassName: 'room-detail-modal',
-      nzWidth: 700,
-      nzData: {
-        roomData: room,
-        modalType: type
+    // Kiểm tra xem modal đang được mở không
+    if (this.isModalOpening) {
+      console.log('Modal đang được mở, bỏ qua yêu cầu mở modal mới');
+      return;
+    }
+    
+    // Đóng context menu nếu đang mở
+    if (this.contextMenuModalRef) {
+      this.contextMenuModalRef.close();
+      this.contextMenuModalRef = null;
+    }
+    
+    // Đóng modal cũ nếu còn mở
+    if (this.modalRef) {
+      this.modalRef.close();
+      this.modalRef = null;
+    }
+    
+    this.isModalOpening = true;
+    
+    // Reload room từ backend để đảm bảo dữ liệu mới nhất
+    this.roomsService.getRoomById(room._id).subscribe({
+      next: (updatedRoom) => {
+        this.modalRef = this.modalService.create({
+          nzTitle: `Phòng ${updatedRoom.roomNumber}`,
+          nzContent: RoomContentModalComponent,
+          nzFooter: null,
+          nzMaskClosable: false,
+          nzClassName: 'room-detail-modal',
+          nzWidth: 700,
+          nzData: {
+            roomData: updatedRoom,
+            modalType: type
+          }
+        });
+
+        // Đảm bảo modal được đóng sau khi hoàn tất
+        if (this.modalRef) {
+          this.modalRef.afterClose.pipe(
+            take(1),
+            takeUntil(this.destroy$)
+          ).subscribe(() => {
+            // Reset flag trước
+            this.isModalOpening = false;
+            const closedModalRef = this.modalRef;
+            this.modalRef = null;
+            
+            // Delay notify để tránh trigger mở modal lại
+            setTimeout(() => {
+              // Chỉ notify nếu modal đã thực sự đóng và không có modal mới được mở
+              if (!this.modalRef && closedModalRef) {
+                this.roomsService.notifyRoomDataUpdated();
+              }
+            }, 200);
+          });
+        }
+      },
+      error: (err) => {
+        this.isModalOpening = false;
+        console.error('Error reloading room before opening modal:', err);
+        // Fallback: sử dụng room data đã có
+        this.modalRef = this.modalService.create({
+          nzTitle: `Phòng ${room.roomNumber}`,
+          nzContent: RoomContentModalComponent,
+          nzFooter: null,
+          nzMaskClosable: false,
+          nzClassName: 'room-detail-modal',
+          nzWidth: 700,
+          nzData: {
+            roomData: room,
+            modalType: type
+          }
+        });
+
+        // Đảm bảo modal được đóng sau khi hoàn tất
+        if (this.modalRef) {
+          this.modalRef.afterClose.pipe(
+            take(1),
+            takeUntil(this.destroy$)
+          ).subscribe(() => {
+            // Reset flag trước
+            this.isModalOpening = false;
+            const closedModalRef = this.modalRef;
+            this.modalRef = null;
+            
+            // Delay notify để tránh trigger mở modal lại
+            setTimeout(() => {
+              // Chỉ notify nếu modal đã thực sự đóng và không có modal mới được mở
+              if (!this.modalRef && closedModalRef) {
+                this.roomsService.notifyRoomDataUpdated();
+              }
+            }, 200);
+          });
+        }
       }
     });
-
-    this.modalRef = modal;
   }
 
   handleLabel(): string {
@@ -1589,16 +1810,88 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Tạo modal hóa đơn
   private createInvoiceModal(invoiceData: any): void {
-    this.modalService.create({
-      nzTitle: 'Hóa Đơn Thanh Toán',
-      nzContent: InvoiceComponent,
-      nzData: {
-        invoiceData: invoiceData
-      },
-      nzWidth: 800,
-      nzFooter: null,
-      nzMaskClosable: false,
-      nzClassName: 'invoice-modal'
+    // Lưu hóa đơn vào database trước khi hiển thị
+    this.saveInvoiceToDatabase(invoiceData).then((savedInvoice) => {
+      // Cập nhật invoiceData với thông tin từ database nếu có
+      if (savedInvoice && savedInvoice.data) {
+        invoiceData = {
+          ...invoiceData,
+          _id: savedInvoice.data._id,
+          invoiceNumber: savedInvoice.data.invoiceNumber || invoiceData.invoiceNumber,
+          businessInfo: savedInvoice.data.businessInfo || invoiceData.businessInfo
+        };
+      }
+      
+      // Hiển thị modal hóa đơn
+      this.modalService.create({
+        nzTitle: 'Hóa Đơn Thanh Toán',
+        nzContent: InvoiceComponent,
+        nzData: {
+          invoiceData: invoiceData
+        },
+        nzWidth: 800,
+        nzFooter: null,
+        nzMaskClosable: false,
+        nzClassName: 'invoice-modal'
+      });
+    }).catch((error) => {
+      console.error('Lỗi khi lưu hóa đơn:', error);
+      // Vẫn hiển thị modal ngay cả khi lưu thất bại
+      this.modalService.create({
+        nzTitle: 'Hóa Đơn Thanh Toán',
+        nzContent: InvoiceComponent,
+        nzData: {
+          invoiceData: invoiceData
+        },
+        nzWidth: 800,
+        nzFooter: null,
+        nzMaskClosable: false,
+        nzClassName: 'invoice-modal'
+      });
     });
+  }
+  
+  // Lưu hóa đơn vào database
+  private async saveInvoiceToDatabase(invoiceData: any): Promise<any> {
+    try {
+      // Chuẩn bị dữ liệu để gửi lên server
+      const invoicePayload = {
+        invoiceNumber: invoiceData.invoiceNumber,
+        hotelId: invoiceData.hotelId || this.room?.hotelId,
+        roomId: this.room?._id,
+        roomNumber: invoiceData.roomNumber || this.room?.roomNumber,
+        roomType: invoiceData.roomType || this.room?.type,
+        bookingId: invoiceData.bookingId || '',
+        customerName: invoiceData.customerName || invoiceData.guestDetails?.name || 'Khách lẻ',
+        customerPhone: invoiceData.customerPhone || invoiceData.guestDetails?.phone || '',
+        customerEmail: invoiceData.customerEmail || invoiceData.guestDetails?.email || '',
+        guestDetails: invoiceData.guestDetails || invoiceData.guestInfo || {},
+        staffId: invoiceData.staffId || localStorage.getItem('staffId') || '',
+        staffName: invoiceData.staffName || localStorage.getItem('staffName') || 'Nhân viên',
+        checkInTime: invoiceData.checkInTime || invoiceData.checkInDate,
+        checkOutTime: invoiceData.checkOutTime || invoiceData.checkOutDate || new Date(),
+        duration: invoiceData.duration || { hours: 0, days: 0 },
+        rateType: invoiceData.rateType || 'hourly',
+        products: invoiceData.products || [],
+        roomAmount: invoiceData.roomAmount || invoiceData.amount || 0,
+        serviceAmount: invoiceData.serviceAmount || 0,
+        additionalCharges: invoiceData.additionalCharges || 0,
+        discount: invoiceData.discount || 0,
+        advancePayment: invoiceData.advancePayment || 0,
+        totalAmount: invoiceData.totalAmount || invoiceData.amount || 0,
+        paymentMethod: invoiceData.paymentMethod || 'cash',
+        paymentStatus: invoiceData.paymentStatus || 'paid',
+        notes: invoiceData.notes || '',
+        status: 'issued',
+        date: invoiceData.date || new Date(),
+        metadata: invoiceData.metadata || {}
+      };
+      
+      // Gọi API để lưu hóa đơn
+      return await this.invoiceService.createInvoice(invoicePayload).pipe(take(1)).toPromise();
+    } catch (error) {
+      console.error('Error saving invoice to database:', error);
+      throw error;
+    }
   }
 }

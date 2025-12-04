@@ -84,3 +84,115 @@
         font-size: 10px; /* Giảm kích thước chữ cho màn hình nhỏ */
     }
 }
+
+/* Banner thống kê phòng */
+.room-stats-banner {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+    border: 1px solid #f0f0f0;
+}
+
+.banner-content {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 32px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    min-width: 100px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #595959;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 36px;
+    font-weight: 700;
+    min-width: 50px;
+    text-align: center;
+    padding: 12px 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-value:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-value.vacant {
+    background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+    color: #ffffff;
+    border: 2px solid #52c41a;
+}
+
+.stat-value.occupied {
+    background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+    color: #ffffff;
+    border: 2px solid #ff4d4f;
+}
+
+.stat-value.dirty {
+    background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
+    color: #ffffff;
+    border: 2px solid #faad14;
+}
+
+.stat-value.maintenance {
+    background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
+    color: #ffffff;
+    border: 2px solid #722ed1;
+}
+
+@media (max-width: 768px) {
+    .room-stats-banner {
+        padding: 16px 20px;
+    }
+    
+    .banner-content {
+        gap: 20px;
+    }
+    
+    .stat-item {
+        min-width: 80px;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+    }
+    
+    .stat-value {
+        font-size: 28px;
+        padding: 10px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .banner-content {
+        gap: 16px;
+    }
+    
+    .stat-item {
+        min-width: 70px;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+        padding: 8px 12px;
+    }
+}

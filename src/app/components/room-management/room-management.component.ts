@@ -60,6 +60,12 @@ export class RoomManagementComponent implements OnInit {
       additionalHourRate: [0, Validators.min(0)],
 
       priceConfigId: [null],
+      // Cấu hình tính giá
+      priceSettings: this.fb.group({
+        nightlyStartTime: ['22:00'], // Giờ bắt đầu tính qua đêm (HH:mm)
+        autoNightlyHours: [8, [Validators.min(1)]], // Số giờ tự động chuyển sang qua đêm
+        gracePeriodMinutes: [15, [Validators.min(0), Validators.max(60)]] // Thời gian miễn phí sau giờ thứ 2 (phút)
+      }),
       description: [''],
       notes: ['']
     });
@@ -147,6 +153,11 @@ export class RoomManagementComponent implements OnInit {
         firstHourRate: roomToEdit.firstHourRate || roomToEdit.pricing?.hourly || 0,
         additionalHourRate: roomToEdit.additionalHourRate || 0,
         priceConfigId: roomToEdit.priceConfigId,
+        priceSettings: {
+          nightlyStartTime: (roomToEdit as any).priceSettings?.nightlyStartTime || '22:00',
+          autoNightlyHours: (roomToEdit as any).priceSettings?.autoNightlyHours || 8,
+          gracePeriodMinutes: (roomToEdit as any).priceSettings?.gracePeriodMinutes || 15
+        },
         description: roomToEdit.description,
         notes: roomToEdit.notes
       });
@@ -165,7 +176,12 @@ export class RoomManagementComponent implements OnInit {
       images: [],
       pricing: { hourly: 0, daily: 0, nightly: 0, weekly: 0, monthly: 0, currency: 'VND' },
       firstHourRate: 0,
-      additionalHourRate: 0
+      additionalHourRate: 0,
+      priceSettings: {
+        nightlyStartTime: '22:00',
+        autoNightlyHours: 8,
+        gracePeriodMinutes: 15
+      }
     });
   }
 
@@ -214,6 +230,11 @@ export class RoomManagementComponent implements OnInit {
       firstHourRate: Number(formValue.firstHourRate),
       additionalHourRate: Number(formValue.additionalHourRate),
       priceConfigId: formValue.priceConfigId,
+      priceSettings: formValue.priceSettings ? {
+        nightlyStartTime: formValue.priceSettings.nightlyStartTime || '22:00',
+        autoNightlyHours: Number(formValue.priceSettings.autoNightlyHours) || 8,
+        gracePeriodMinutes: Number(formValue.priceSettings.gracePeriodMinutes) || 15
+      } : undefined,
       description: formValue.description,
       notes: formValue.notes
     };

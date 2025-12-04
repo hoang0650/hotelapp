@@ -63,6 +63,14 @@ export interface Room {
   services?: string[]; // Danh sách ID dịch vụ
   events?: Event[]; // Giữ lại, được cập nhật từ controller
   bookingHistory?: BookingHistory[];
+  currentBooking?: {
+    guestInfo?: GuestInfo;
+    checkInDate?: Date;
+    checkOutDate?: Date;
+    rateType?: 'hourly' | 'daily' | 'nightly';
+    advancePayment?: number;
+    notes?: string;
+  };
   
   revenue?: RoomRevenue; // Mới
   
@@ -88,7 +96,8 @@ export type RoomStatus = 'vacant' | 'occupied' | 'cleaning' | 'dirty' | 'mainten
 export interface Event {
   type: 'checkin' | 'checkout' | 'notpay' | 'maintenance' | 'service_order' | 'transfer' | 'booking' | 'cancel_booking' | 'guest_out' | 'guest_return';
   checkinTime?: Date; 
-  checkoutTime?: Date; 
+  checkoutTime?: Date;
+  expectedCheckoutTime?: Date; // Thời gian checkout dự kiến cho booking 
   payment?: number; 
   userId?: string; 
   staffId?: string; 

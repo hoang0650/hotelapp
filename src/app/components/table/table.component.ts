@@ -17,6 +17,11 @@ import { ShiftHandoverService } from '../../services/shift-handover.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { Staff, getStaffFullName } from '../../interfaces/staff';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { InvoiceComponent } from '../invoice/invoice.component';
+import { HotelService } from '../../services/hotel.service';
+import { BusinessService } from '../../services/business.service';
+import { take } from 'rxjs/operators';
 
 type TableScroll = 'unset' | 'scroll' | 'fixed';
 
@@ -64,20 +69,26 @@ export class TableComponent implements OnInit, OnChanges {
   // Bộ lọc
   currentFilterType = 'checkout'; // Giá trị mặc định là checkout
   
-  // Getter để lọc chỉ các bản ghi đã thanh toán (loại trừ dọn dẹp, bảo trì, check-in)
+  // Getter để lọc chỉ các bản ghi đã thanh toán (loại trừ dọn dẹp, bảo trì, check-in, booking)
   get paidData(): any[] {
     if (!this.listOfData) return [];
     return this.listOfData.filter(item => {
       // Loại trừ các event không liên quan đến thanh toán
       const excludedEvents = [
         'cleaning', 'clean', 'maintenance', 'check-in', 'checkin', 
-        'service', 'transfer'
+        'service', 'transfer', 'booking', 'checked_in', 'cancel_booking'
       ];
       
       const eventType = (item.event || item.type || '').toLowerCase();
       
       // Nếu là event bị loại trừ thì không hiển thị
       if (excludedEvents.includes(eventType)) return false;
+      
+      // Loại trừ các booking (đặt trước) - kiểm tra status hoặc type
+      if (item.status === 'booked' || item.status === 'pending' || 
+          item.bookingStatus === 'booked' || item.bookingStatus === 'pending') {
+        return false;
+      }
       
       // Loại trừ nếu không có checkOutTime (chưa checkout)
       if (!item.checkOutTime && !item.checkoutTime) return false;
@@ -217,7 +228,10 @@ export class TableComponent implements OnInit, OnChanges {
     private userService: UserService,
     private message: NzMessageService,
     private http: HttpClient,
-    private invoiceService: InvoiceService
+    private invoiceService: InvoiceService,
+    private modalService: NzModalService,
+    private hotelService: HotelService,
+    private businessService: BusinessService
   ) {}
 
   ngOnInit(): void {
@@ -292,24 +306,232 @@ export class TableComponent implements OnInit, OnChanges {
       return;
     }
     
-    console.log('=== Xem hóa đơn ===');
-    console.log('Phòng:', item.roomNumber);
-    console.log('Khách hàng:', item.customerName || item.guestInfo?.name);
-    console.log('SĐT:', item.customerPhone || item.guestInfo?.phone);
-    console.log('Thời gian nhận:', item.checkInTime || item.checkinTime);
-    console.log('Thời gian trả:', item.checkOutTime || item.checkoutTime);
-    console.log('Tiền phòng:', item.roomTotal);
-    console.log('Tiền dịch vụ:', item.servicesTotal);
-    console.log('Phụ thu:', item.additionalCharges);
-    console.log('Giảm giá:', item.discount);
-    console.log('Đặt trước:', item.advancePayment);
-    console.log('Tổng tiền:', item.totalAmount || item.amount);
-    console.log('Hình thức TT:', item.paymentMethod);
-    console.log('Dịch vụ:', item.services);
-    console.log('Full data:', item);
+    // Lấy thông tin để tìm invoice từ database
+    const roomId = item.roomId || item._id;
+    const checkOutTime = item.checkOutTime || item.checkoutTime || item.date;
+    const invoiceId = item.invoiceId || item.invoice?._id;
     
-    // Emit event để parent component (room-history) xử lý modal
-    this.onViewInvoice.emit(item);
+    if (!roomId && !invoiceId) {
+      this.message.warning('Không thể tìm hóa đơn: Thiếu thông tin phòng hoặc ID hóa đơn');
+      return;
+    }
+    
+    // Nếu có invoiceId, lấy trực tiếp từ database
+    if (invoiceId) {
+      this.loadInvoiceById(invoiceId);
+      return;
+    }
+    
+    // Nếu không có invoiceId, tìm invoice theo roomId và checkOutTime
+    if (roomId && checkOutTime) {
+      this.loadInvoiceByRoomAndDate(roomId, checkOutTime, item);
+      return;
+    }
+    
+    // Fallback: sử dụng dữ liệu từ item (nếu không tìm thấy trong database)
+    this.message.warning('Không tìm thấy hóa đơn trong database. Hiển thị từ dữ liệu hiện tại.');
+    this.showInvoiceModal(item);
+  }
+  
+  // Lấy hóa đơn theo ID
+  loadInvoiceById(invoiceId: string): void {
+    this.settingValue.loading = true;
+    this.invoiceService.getInvoiceByIdNew(invoiceId).subscribe({
+      next: (response: any) => {
+        this.settingValue.loading = false;
+        if (response && response.data) {
+          const invoiceData = this.mapInvoiceToInvoiceData(response.data);
+          this.showInvoiceModal(invoiceData);
+        } else {
+          this.message.error('Không tìm thấy hóa đơn trong database');
+        }
+      },
+      error: (error: any) => {
+        this.settingValue.loading = false;
+        console.error('Error loading invoice:', error);
+        this.message.error('Lỗi khi tải hóa đơn: ' + (error.error?.message || error.message));
+      }
+    });
+  }
+  
+  // Lấy hóa đơn theo roomId và checkOutTime
+  loadInvoiceByRoomAndDate(roomId: string, checkOutTime: any, fallbackItem: any): void {
+    this.settingValue.loading = true;
+    
+    // Tìm invoice theo roomId và checkOutTime (trong khoảng thời gian gần)
+    const checkOutDate = new Date(checkOutTime);
+    const startDate = new Date(checkOutDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(checkOutDate);
+    endDate.setHours(23, 59, 59, 999);
+    
+    this.invoiceService.getInvoices({
+      roomId: roomId,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      limit: 10
+    }).subscribe({
+      next: (response: any) => {
+        this.settingValue.loading = false;
+        
+        if (response && response.data && response.data.length > 0) {
+          // Tìm invoice có checkOutTime gần nhất với checkOutTime của item
+          let matchedInvoice = response.data.find((inv: any) => {
+            const invCheckOut = new Date(inv.checkOutTime);
+            const itemCheckOut = new Date(checkOutTime);
+            // So sánh trong vòng 1 phút (để tránh lệch thời gian)
+            return Math.abs(invCheckOut.getTime() - itemCheckOut.getTime()) < 60000;
+          });
+          
+          // Nếu không tìm thấy chính xác, lấy invoice đầu tiên (mới nhất)
+          if (!matchedInvoice && response.data.length > 0) {
+            matchedInvoice = response.data[0];
+          }
+          
+          if (matchedInvoice) {
+            const invoiceData = this.mapInvoiceToInvoiceData(matchedInvoice);
+            this.showInvoiceModal(invoiceData);
+          } else {
+            // Fallback về dữ liệu từ item
+            this.message.warning('Không tìm thấy hóa đơn chính xác. Hiển thị từ dữ liệu hiện tại.');
+            this.showInvoiceModal(fallbackItem);
+          }
+        } else {
+          // Fallback về dữ liệu từ item
+          this.message.warning('Không tìm thấy hóa đơn trong database. Hiển thị từ dữ liệu hiện tại.');
+          this.showInvoiceModal(fallbackItem);
+        }
+      },
+      error: (error: any) => {
+        this.settingValue.loading = false;
+        console.error('Error loading invoice:', error);
+        // Fallback về dữ liệu từ item
+        this.message.warning('Lỗi khi tải hóa đơn. Hiển thị từ dữ liệu hiện tại.');
+        this.showInvoiceModal(fallbackItem);
+      }
+    });
+  }
+  
+  // Map invoice từ database sang format InvoiceData
+  mapInvoiceToInvoiceData(invoice: any): any {
+    // Format địa chỉ business
+    const formatBusinessAddress = (address: any): string => {
+      if (!address) return '';
+      if (typeof address === 'string') return address;
+      const parts = [];
+      if (address.street) parts.push(address.street);
+      if (address.city) parts.push(address.city);
+      if (address.state) parts.push(address.state);
+      if (address.postalCode) parts.push(address.postalCode);
+      if (address.country) parts.push(address.country);
+      return parts.join(', ') || '';
+    };
+    
+    return {
+      _id: invoice._id,
+      invoiceNumber: invoice.invoiceNumber,
+      date: invoice.issuedDate || invoice.createdAt,
+      businessName: invoice.businessInfo?.name || invoice.businessInfo?.legalName || '',
+      business_address: formatBusinessAddress(invoice.businessInfo?.address) || '',
+      phoneNumber: invoice.businessInfo?.contactInfo?.phone || '',
+      staffName: invoice.staffName || '',
+      customerName: invoice.customerName || invoice.guestDetails?.name || '',
+      customerPhone: invoice.customerPhone || invoice.guestDetails?.phone || '',
+      customerEmail: invoice.customerEmail || invoice.guestDetails?.email || '',
+      roomNumber: invoice.roomNumber || '',
+      roomType: invoice.roomType || '',
+      checkInTime: invoice.checkInTime,
+      checkOutTime: invoice.checkOutTime,
+      duration: invoice.duration || { hours: 0, days: 0 },
+      products: invoice.products || [],
+      roomAmount: invoice.roomAmount || 0,
+      serviceAmount: invoice.serviceAmount || 0,
+      additionalCharges: invoice.additionalCharges || 0,
+      discount: invoice.discount || 0,
+      advancePayment: invoice.advancePayment || 0,
+      totalAmount: invoice.totalAmount || 0,
+      paymentMethod: invoice.paymentMethod || 'cash',
+      paymentStatus: invoice.paymentStatus || 'paid',
+      notes: invoice.notes || '',
+      guestDetails: invoice.guestDetails || invoice.guestInfo || {},
+      hotelId: invoice.hotelId?._id || invoice.hotelId || '',
+      rateType: invoice.rateType || 'hourly',
+      businessInfo: invoice.businessInfo || null // Truyền businessInfo đầy đủ để component có thể sử dụng
+    };
+  }
+  
+  // Hiển thị modal hóa đơn
+  showInvoiceModal(invoiceData: any): void {
+    // Đảm bảo có businessInfo trước khi hiển thị
+    if (!invoiceData.businessInfo && invoiceData.hotelId) {
+      // Load business info từ hotelId
+      this.loadBusinessInfoForInvoice(invoiceData).then((updatedInvoiceData) => {
+        this.createInvoiceModal(updatedInvoiceData);
+      }).catch(() => {
+        // Vẫn hiển thị modal ngay cả khi không load được business info
+        this.createInvoiceModal(invoiceData);
+      });
+    } else {
+      this.createInvoiceModal(invoiceData);
+    }
+  }
+  
+  // Load business info cho invoice
+  private async loadBusinessInfoForInvoice(invoiceData: any): Promise<any> {
+    try {
+      const hotelId = invoiceData.hotelId || invoiceData['hotelId'];
+      if (!hotelId) {
+        return invoiceData;
+      }
+      
+      const hotel = await this.hotelService.getHotelById(hotelId).pipe(take(1)).toPromise();
+      if (!hotel || !(hotel as any).businessId) {
+        return invoiceData;
+      }
+      
+      const business = await this.businessService.getBusinessById((hotel as any).businessId).pipe(take(1)).toPromise();
+      if (business) {
+        // Format địa chỉ
+        const formatAddress = (address: any): string => {
+          if (!address) return '';
+          if (typeof address === 'string') return address;
+          const parts = [];
+          if (address.street) parts.push(address.street);
+          if (address.city) parts.push(address.city);
+          if (address.state) parts.push(address.state);
+          if (address.postalCode) parts.push(address.postalCode);
+          if (address.country) parts.push(address.country);
+          return parts.join(', ') || '';
+        };
+        
+        // Cập nhật invoiceData với business info
+        invoiceData.businessInfo = business;
+        invoiceData.businessName = business.name || business.legalName || 'Khách sạn';
+        invoiceData.business_address = formatAddress(business.address);
+        invoiceData.phoneNumber = business.contactInfo?.phone || '';
+      }
+      
+      return invoiceData;
+    } catch (error) {
+      console.error('Error loading business info:', error);
+      return invoiceData;
+    }
+  }
+  
+  // Tạo modal hóa đơn
+  private createInvoiceModal(invoiceData: any): void {
+    this.modalService.create({
+      nzTitle: 'Hóa Đơn Thanh Toán',
+      nzContent: InvoiceComponent,
+      nzData: {
+        invoiceData: invoiceData,
+        businessInfo: invoiceData.businessInfo || null
+      },
+      nzWidth: 800,
+      nzFooter: null,
+      nzMaskClosable: false,
+      nzClassName: 'invoice-modal'
+    });
   }
 
   currentPageDataChange(listOfCurrentPageData: readonly any[]): void {

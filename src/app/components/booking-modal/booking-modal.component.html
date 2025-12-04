@@ -1,0 +1,152 @@
+<form [formGroup]="bookingForm" (ngSubmit)="onSubmit()">
+  <nz-spin [nzSpinning]="isLoading">
+    <div nz-row [nzGutter]="16">
+      <!-- Chọn phòng -->
+      <div nz-col [nzSpan]="24">
+        <nz-form-item>
+          <nz-form-label nzRequired>Chọn phòng</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng chọn phòng">
+            <nz-select 
+              formControlName="roomId" 
+              nzPlaceHolder="Chọn phòng"
+              [nzLoading]="isLoading"
+              nzShowSearch
+              (nzSearch)="filterAvailableRooms()">
+              <nz-option 
+                *ngFor="let room of availableRooms" 
+                [nzValue]="room._id" 
+                [nzLabel]="'Phòng ' + room.roomNumber + ' - ' + room.type + ' - ' + (room.floor || 'N/A') + ' (' + getRoomStatusLabel(room) + ')'">
+              </nz-option>
+            </nz-select>
+            <div class="form-hint" *ngIf="availableRooms.length === 0">
+              Không có phòng khả dụng cho thời gian đã chọn.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <!-- Thông tin khách hàng -->
+      <div nz-col [nzSpan]="24">
+        <h4 style="margin-top: 16px; margin-bottom: 8px;">Thông tin khách hàng</h4>
+      </div>
+
+      <div nz-col [nzSpan]="24">
+        <nz-form-item>
+          <nz-form-label nzRequired>Tên khách hàng</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng nhập tên khách hàng">
+            <input nz-input formControlName="guestName" placeholder="Nhập tên khách hàng" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label>Số điện thoại</nz-form-label>
+          <nz-form-control>
+            <input nz-input formControlName="guestPhone" placeholder="Nhập số điện thoại" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label>Email</nz-form-label>
+          <nz-form-control>
+            <input nz-input type="email" formControlName="guestEmail" placeholder="Nhập email" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div nz-col [nzSpan]="24">
+        <nz-form-item>
+          <nz-form-label>CCCD/CMND</nz-form-label>
+          <nz-form-control>
+            <input nz-input formControlName="guestIdNumber" placeholder="Nhập số CCCD/CMND" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <!-- Thời gian -->
+      <div nz-col [nzSpan]="24">
+        <h4 style="margin-top: 16px; margin-bottom: 8px;">Thời gian</h4>
+      </div>
+
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Ngày nhận phòng</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng chọn ngày nhận phòng">
+            <input 
+              nz-input 
+              type="datetime-local" 
+              formControlName="checkInDate" 
+              placeholder="Chọn ngày nhận phòng" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label>Ngày trả phòng (dự kiến)</nz-form-label>
+          <nz-form-control>
+            <input 
+              nz-input 
+              type="datetime-local" 
+              formControlName="checkOutDate" 
+              placeholder="Chọn ngày trả phòng" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <!-- Hình thức và thanh toán -->
+      <div nz-col [nzSpan]="24">
+        <h4 style="margin-top: 16px; margin-bottom: 8px;">Hình thức và thanh toán</h4>
+      </div>
+
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Loại giá</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng chọn loại giá">
+            <nz-select formControlName="rateType" nzPlaceHolder="Chọn loại giá">
+              <nz-option nzValue="hourly" nzLabel="Theo giờ"></nz-option>
+              <nz-option nzValue="daily" nzLabel="Ngày đêm"></nz-option>
+              <nz-option nzValue="nightly" nzLabel="Qua đêm"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label>Tiền đặt trước</nz-form-label>
+          <nz-form-control>
+            <nz-input-number 
+              formControlName="advancePayment" 
+              [nzMin]="0" 
+              [nzStep]="10000"
+              [nzFormatter]="formatNumber"
+              [nzParser]="parseNumber"
+              style="width: 100%"
+              nzPlaceHolder="Nhập số tiền đặt trước">
+            </nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <!-- Ghi chú -->
+      <div nz-col [nzSpan]="24">
+        <nz-form-item>
+          <nz-form-label>Ghi chú</nz-form-label>
+          <nz-form-control>
+            <textarea 
+              nz-input 
+              formControlName="notes" 
+              rows="3" 
+              placeholder="Ghi chú thêm (nếu có)">
+            </textarea>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+  </nz-spin>
+</form>
+

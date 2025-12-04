@@ -166,9 +166,56 @@ export class InvoiceService {
     return this.http.delete(`${this.apiUrl}/invoice/${invoiceId}`);
   }
 
-  // Tạo hóa đơn mới
+  // Tạo hóa đơn mới (API mới)
   createInvoice(invoiceData: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/invoice`, invoiceData);
+    return this.http.post(`${this.apiUrl}/invoices`, invoiceData);
+  }
+  
+  // Lấy danh sách hóa đơn (API mới)
+  getInvoices(params?: {
+    hotelId?: string;
+    roomId?: string;
+    customerId?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+    paymentStatus?: string;
+    page?: number;
+    limit?: number;
+  }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.hotelId) httpParams = httpParams.set('hotelId', params.hotelId);
+      if (params.roomId) httpParams = httpParams.set('roomId', params.roomId);
+      if (params.customerId) httpParams = httpParams.set('customerId', params.customerId);
+      if (params.startDate) httpParams = httpParams.set('startDate', params.startDate);
+      if (params.endDate) httpParams = httpParams.set('endDate', params.endDate);
+      if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.paymentStatus) httpParams = httpParams.set('paymentStatus', params.paymentStatus);
+      if (params.page) httpParams = httpParams.set('page', params.page.toString());
+      if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
+    }
+    return this.http.get(`${this.apiUrl}/invoices`, { params: httpParams });
+  }
+  
+  // Lấy chi tiết hóa đơn (API mới)
+  getInvoiceByIdNew(id: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/invoices/${id}`);
+  }
+  
+  // Lấy thống kê hóa đơn (API mới)
+  getInvoiceStats(params?: {
+    hotelId?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.hotelId) httpParams = httpParams.set('hotelId', params.hotelId);
+      if (params.startDate) httpParams = httpParams.set('startDate', params.startDate);
+      if (params.endDate) httpParams = httpParams.set('endDate', params.endDate);
+    }
+    return this.http.get(`${this.apiUrl}/invoices/stats`, { params: httpParams });
   }
 
   // Cập nhật hóa đơn
