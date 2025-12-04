@@ -132,48 +132,216 @@ export class RevenueChartComponent implements OnInit, OnChanges {
   updateChart(): void {
     const title = `Tổng Thu và Tổng Chi ${this.getHotelTitle()}`;
     
+    // Đảm bảo expenseData có cùng độ dài với revenueData và không có giá trị âm
+    const processedExpenseData = this.expenseData.length > 0 
+      ? this.expenseData.map(val => Math.abs(val || 0))
+      : new Array(this.revenueData.length).fill(0);
+    
+    // Đảm bảo revenueData không có giá trị âm
+    const processedRevenueData = this.revenueData.map(val => Math.abs(val || 0));
+    
+    // Tính toán min và max cho yAxis để hiển thị đẹp hơn
+    const allValues = [...processedRevenueData, ...processedExpenseData];
+    const maxValue = Math.max(...allValues, 0);
+    const minValue = Math.min(...allValues, 0);
+    const yAxisMax = maxValue > 0 ? maxValue * 1.2 : 100000; // Thêm 20% padding
+    
     this.chartOptions = {
-      chart: { type: 'column' },
-      title: { text: title },
+      chart: { 
+        type: 'column',
+        backgroundColor: 'transparent',
+        spacing: [20, 20, 20, 20],
+        animation: {
+          duration: 1000
+        }
+      },
+      title: { 
+        text: title,
+        style: {
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#262626'
+        },
+        align: 'left',
+        margin: 30
+      },
       xAxis: { 
         categories: this.labels,
-        title: { text: this.getPeriodTitle(this.selectedPeriod) }
-      },
-      yAxis: { 
-        title: { text: 'Số Tiền (VNĐ)' },
+        title: { 
+          text: this.getPeriodTitle(this.selectedPeriod),
+          style: {
+            fontSize: '14px',
+            color: '#595959'
+          }
+        },
+        gridLineColor: '#f0f0f0',
+        lineColor: '#d9d9d9',
+        tickColor: '#d9d9d9',
         labels: {
-          formatter: function() {
-            return Highcharts.numberFormat(this.value as number, 0, ',', '.') + ' đ';
+          style: {
+            fontSize: '12px',
+            color: '#8c8c8c'
           }
         }
       },
+      yAxis: { 
+        title: { 
+          text: 'Số Tiền (VNĐ)',
+          style: {
+            fontSize: '14px',
+            color: '#595959'
+          }
+        },
+        min: 0,
+        max: yAxisMax,
+        labels: {
+          formatter: function() {
+            const value = this.value as number;
+            if (value >= 1000000) {
+              return (value / 1000000).toFixed(1) + 'M đ';
+            } else if (value >= 1000) {
+              return (value / 1000).toFixed(0) + 'K đ';
+            }
+            return Highcharts.numberFormat(value, 0, ',', '.') + ' đ';
+          },
+          style: {
+            fontSize: '12px',
+            color: '#8c8c8c'
+          }
+        },
+        gridLineColor: '#f0f0f0',
+        lineColor: '#d9d9d9'
+      },
       tooltip: {
         shared: true,
-        valueDecimals: 0,
-        valuePrefix: '',
-        valueSuffix: ' đ',
-        pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b> đ<br/>'
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#d9d9d9',
+        borderRadius: 8,
+        shadow: {
+          color: 'rgba(0, 0, 0, 0.1)',
+          offsetX: 0,
+          offsetY: 2,
+          opacity: 0.1,
+          width: 4
+        },
+        style: {
+          fontSize: '13px',
+          color: '#262626'
+        },
+        useHTML: true,
+        formatter: function() {
+          let tooltip = '<div style="padding: 8px 0;">';
+          tooltip += '<div style="font-weight: 600; margin-bottom: 8px; color: #262626; font-size: 14px;">' + this.x + '</div>';
+          
+          this.points?.forEach((point: any) => {
+            const value = Math.abs(point.y || 0);
+            const formattedValue = Highcharts.numberFormat(value, 0, ',', '.');
+            const color = point.color;
+            const icon = point.series.name === 'Tổng Thu' ? '▲' : '▼';
+            
+            tooltip += `<div style="display: flex; align-items: center; margin-bottom: 6px;">
+              <span style="display: inline-block; width: 12px; height: 12px; background-color: ${color}; border-radius: 2px; margin-right: 8px;"></span>
+              <span style="color: #595959; margin-right: 8px;">${point.series.name}:</span>
+              <span style="font-weight: 600; color: ${color}; font-size: 14px;">${icon} ${formattedValue} đ</span>
+            </div>`;
+          });
+          
+          // Tính tổng lợi nhuận nếu có cả thu và chi
+          if (this.points && this.points.length === 2) {
+            const revenue = Math.abs(this.points[0].y || 0);
+            const expense = Math.abs(this.points[1].y || 0);
+            const profit = revenue - expense;
+            const profitColor = profit >= 0 ? '#52c41a' : '#ff4d4f';
+            const profitIcon = profit >= 0 ? '✓' : '✗';
+            const formattedProfit = Highcharts.numberFormat(Math.abs(profit), 0, ',', '.');
+            
+            tooltip += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0f0f0; display: flex; align-items: center;">
+              <span style="color: #595959; margin-right: 8px; font-weight: 500;">Lợi nhuận:</span>
+              <span style="font-weight: 600; color: ${profitColor}; font-size: 14px;">${profitIcon} ${formattedProfit} đ</span>
+            </div>`;
+          }
+          
+          tooltip += '</div>';
+          return tooltip;
+        }
       },
       plotOptions: {
-        line: {
+        column: {
+          borderRadius: 6,
+          borderWidth: 0,
+          groupPadding: 0.15,
+          pointPadding: 0.1,
           dataLabels: {
             enabled: false
           },
-          enableMouseTracking: true
+          animation: {
+            duration: 1000
+          },
+          states: {
+            hover: {
+              brightness: 0.1,
+              borderColor: 'transparent'
+            }
+          }
         }
+      },
+      legend: {
+        enabled: true,
+        align: 'right',
+        verticalAlign: 'top',
+        layout: 'horizontal',
+        itemStyle: {
+          fontSize: '13px',
+          color: '#595959',
+          fontWeight: '400'
+        },
+        itemHoverStyle: {
+          color: '#262626'
+        },
+        symbolRadius: 4,
+        symbolPadding: 10,
+        itemMarginBottom: 8
       },
       series: [
         {
           name: 'Tổng Thu',
-          data: this.revenueData,
+          data: processedRevenueData,
           type: 'column',
-          color: '#1890ff'
+          color: {
+            linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+            stops: [
+              [0, '#40a9ff'],
+              [1, '#1890ff']
+            ]
+          },
+          borderColor: '#1890ff',
+          shadow: {
+            color: 'rgba(24, 144, 255, 0.2)',
+            offsetX: 0,
+            offsetY: 2,
+            opacity: 0.2,
+            width: 3
+          }
         },
         {
           name: 'Tổng Chi',
-          data: this.expenseData.length > 0 ? this.expenseData : new Array(this.revenueData.length).fill(0),
+          data: processedExpenseData,
           type: 'column',
-          color: '#ff4d4f'
+          color: {
+            linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+            stops: [
+              [0, '#ff7875'],
+              [1, '#ff4d4f']
+            ]
+          },
+          borderColor: '#ff4d4f',
+          shadow: {
+            color: 'rgba(255, 77, 79, 0.2)',
+            offsetX: 0,
+            offsetY: 2,
+            opacity: 0.2,
+            width: 3
+          }
         }
       ],
       accessibility: {
@@ -181,6 +349,25 @@ export class RevenueChartComponent implements OnInit, OnChanges {
       },
       credits: {
         enabled: false
+      },
+      responsive: {
+        rules: [{
+          condition: {
+            maxWidth: 768
+          },
+          chartOptions: {
+            legend: {
+              align: 'center',
+              verticalAlign: 'bottom',
+              layout: 'horizontal'
+            },
+            title: {
+              style: {
+                fontSize: '16px'
+              }
+            }
+          }
+        }]
       }
     };
   }
