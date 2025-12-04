@@ -90,63 +90,104 @@
     </div>
   </div>
 
-  <!-- Hiển thị lưới phòng -->
-  <div class="section-container room-grid mt-3">
+  <!-- Banner Đặt trước -->
+  <div class="advance-payment-banner" *ngIf="selectedHotelId && rooms.length > 0">
+    <div class="banner-content">
+      <span class="banner-label">Đặt trước :</span>
+      <span class="banner-amount">{{ getTotalAdvancePayment() | number }} VNĐ</span>
+    </div>
+  </div>
+
+  <!-- Hiển thị phòng theo từng tầng -->
+  <div class="rooms-by-floor-container" *ngIf="selectedHotelId">
     <nz-spin [nzSpinning]="isLoading">
-      <div class="section-header" *ngIf="selectedFloor !== null">
-        <h3>Danh sách phòng - Tầng {{ selectedFloor }}</h3>
-      </div>
-      
-      <!-- Lưới phòng -->
-      <div nz-row [nzGutter]="[hGutter, vGutter]">
-        <div 
-          nz-col 
-          [nzXs]="24" 
-          [nzSm]="12" 
-          [nzMd]="24 / (count > 6 ? 6 : count)" 
-          [nzLg]="24 / count" 
-          *ngFor="let room of rooms"
-          class="room-col">
-          <div 
-            class="room-item" 
-            [ngClass]="getRoomStatusClass(room.status)"
-            appModalControl 
-            [room]="room">
-            <div class="room-number">{{ room.roomNumber }}</div>
-            <div class="room-floor">Tầng {{ room.floor }}</div>
-            <div class="room-type">{{ room.type }}</div>
-            <!-- Hiển thị loại giá thay vì trạng thái khi phòng có khách -->
-            <ng-container *ngIf="room.status === 'occupied' && getRoomCheckinInfo(room) as checkinInfo; else normalStatus">
-              <div class="room-status rate-type">
-                <nz-tag [nzColor]="checkinInfo.rateType === 'hourly' ? 'blue' : checkinInfo.rateType === 'nightly' ? 'purple' : 'orange'">
-                  {{ checkinInfo.rateTypeLabel }}
-                </nz-tag>
+      <!-- Lặp qua từng tầng -->
+      <div class="floor-section" *ngFor="let floor of getSortedFloors()">
+        <div class="floor-header">
+          <h3 class="floor-title">Tầng {{ floor }}</h3>
+        </div>
+        
+        <div class="floor-rooms">
+          <div nz-row [nzGutter]="[hGutter, vGutter]">
+            <div 
+              nz-col 
+              [nzXs]="24" 
+              [nzSm]="12" 
+              [nzMd]="8" 
+              [nzLg]="6" 
+              [nzXl]="4"
+              *ngFor="let room of getRoomsByFloor()[floor]"
+              class="room-col">
+              <div 
+                class="room-item" 
+                [ngClass]="getRoomStatusClass(room.status)"
+                appModalControl 
+                [room]="room"
+                (click)="onRoomClick(room, $event)">
+                
+                <!-- Icon phòng -->
+                <div class="room-icon">
+                  <i nz-icon nzType="home" nzTheme="outline"></i>
+                </div>
+                
+                <!-- Số phòng -->
+                <div class="room-number">{{ room.roomNumber }}</div>
+                
+                <!-- Loại phòng -->
+                <div class="room-type">{{ room.type }}</div>
+                
+                <!-- Trạng thái phòng -->
+                <div class="room-status-label">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
+                
+                <!-- Thông tin chi tiết cho phòng đang có khách -->
+                <ng-container *ngIf="room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
+                  <div class="room-details">
+                    <div class="detail-row">
+                      <span class="detail-label">Nhận phòng:</span>
+                      <span class="detail-value highlight">{{ displayInfo.checkinTime }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Khách hàng:</span>
+                      <span class="detail-value">{{ displayInfo.customerName }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Hình thức:</span>
+                      <span class="detail-value">{{ displayInfo.rateTypeLabel }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Tổng tiền:</span>
+                      <span class="detail-value highlight">{{ displayInfo.totalAmount | number }} VNĐ</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Đặt trước:</span>
+                      <span class="detail-value highlight">{{ displayInfo.advancePayment | number }} VNĐ</span>
+                    </div>
+                    <div class="detail-row" *ngIf="displayInfo.remainingAmount !== 0">
+                      <span class="detail-label">Còn thu:</span>
+                      <span class="detail-value highlight">{{ displayInfo.remainingAmount | number }} VNĐ</span>
+                    </div>
+                  </div>
+                </ng-container>
+                
+                <!-- Thông tin cho phòng đang dọn -->
+                <ng-container *ngIf="room.status === 'cleaning'">
+                  <div class="room-details">
+                    <div class="detail-row center">
+                      <span class="detail-value">Phòng đang dọn...</span>
+                    </div>
+                  </div>
+                </ng-container>
+                
+                <!-- Thông tin cho phòng bẩn -->
+                <ng-container *ngIf="room.status === 'dirty'">
+                  <div class="room-details">
+                    <div class="detail-row center">
+                      <span class="detail-value">Phòng bẩn</span>
+                    </div>
+                  </div>
+                </ng-container>
               </div>
-              
-              <!-- Hiển thị thông tin thêm khi phòng có khách -->
-              <div class="room-extra-info">
-                <div class="guest-name" *ngIf="checkinInfo.guestName">
-                  <i nz-icon nzType="user" nzTheme="outline"></i> {{ checkinInfo.guestName }}
-                </div>
-                <div class="checkin-time" *ngIf="checkinInfo.checkinTime">
-                  <i nz-icon nzType="clock-circle" nzTheme="outline"></i> {{ checkinInfo.checkinTime | date:'HH:mm' }}
-                </div>
-                <div class="room-price" *ngIf="checkinInfo.roomPrice > 0">
-                  <span class="price-label">Tiền phòng:</span> {{ checkinInfo.roomPrice | number }} đ
-                </div>
-                <div class="advance-payment" *ngIf="checkinInfo.advancePayment > 0">
-                  <span class="price-label">Đặt trước:</span> {{ checkinInfo.advancePayment | number }} đ
-                </div>
-                <div class="remaining-amount" [class.negative]="checkinInfo.remainingAmount < 0">
-                  <span class="price-label">Còn lại:</span> 
-                  <span *ngIf="checkinInfo.remainingAmount >= 0">{{ checkinInfo.remainingAmount | number }} đ</span>
-                  <span *ngIf="checkinInfo.remainingAmount < 0" class="refund">-{{ (-checkinInfo.remainingAmount) | number }} đ (hoàn)</span>
-                </div>
-              </div>
-            </ng-container>
-            <ng-template #normalStatus>
-              <div class="room-status">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
-            </ng-template>
+            </div>
           </div>
         </div>
       </div>
@@ -192,6 +233,8 @@
 <style>
   .room-container {
     padding: 16px;
+    background-color: #fff;
+    min-height: 100vh;
   }
   
   .page-header {
@@ -222,6 +265,61 @@
     color: rgba(0, 0, 0, 0.85);
   }
   
+  /* Banner Đặt trước */
+  .advance-payment-banner {
+    background: linear-gradient(135deg, #8b0000 0%, #a00000 100%);
+    padding: 16px 24px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(139, 0, 0, 0.4);
+  }
+  
+  .banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  
+  .banner-label {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+  }
+  
+  .banner-amount {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Container cho phòng theo tầng */
+  .rooms-by-floor-container {
+    background-color: #fff;
+  }
+  
+  /* Section cho mỗi tầng */
+  .floor-section {
+    margin-bottom: 32px;
+  }
+  
+  .floor-header {
+    margin-bottom: 16px;
+    padding: 12px 0;
+  }
+  
+  .floor-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+  }
+  
+  .floor-rooms {
+    padding: 0;
+  }
+  
   .w-100 {
     width: 100%;
   }
@@ -247,145 +345,150 @@
   }
   
   .action-buttons {
-    margin-top: 28px; /* Căn chỉnh theo label và control */
+    margin-top: 28px;
   }
   
+  /* Room Item Styling */
   .room-item {
-    min-height: 120px;
-    padding: 12px;
-    border-radius: 8px;
+    min-height: 200px;
+    padding: 16px;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    align-items: center;
+    align-items: flex-start;
     cursor: pointer;
     transition: all 0.3s;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .room-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
   }
   
   .room-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+  }
+  
+  .room-icon {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 32px;
+    opacity: 0.3;
   }
   
   .room-number {
-    font-size: 22px;
-    font-weight: bold;
-  }
-  
-  .room-floor {
-    font-size: 11px;
-    margin-top: 2px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   }
   
   .room-type {
-    font-size: 12px;
-    margin-top: 2px;
-  }
-  
-  .room-status {
-    font-size: 11px;
-    margin-top: 2px;
-  }
-  
-  /* Thông tin thêm khi phòng có khách */
-  .room-extra-info {
-    width: 100%;
-    margin-top: 6px;
-    padding-top: 6px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.4);
-    font-size: 10px;
-    text-align: left;
-  }
-  
-  .room-extra-info .guest-name {
-    font-weight: 500;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .room-extra-info .checkin-time {
-    margin-bottom: 2px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 8px;
     opacity: 0.9;
   }
   
-  .room-extra-info .room-price,
-  .room-extra-info .advance-payment,
-  .room-extra-info .remaining-amount {
+  .room-status-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    margin-bottom: 12px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+  }
+  
+  /* Room Details */
+  .room-details {
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.3);
+  }
+  
+  .detail-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 1px;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 12px;
   }
   
-  .room-extra-info .price-label {
-    opacity: 0.85;
+  .detail-row.center {
+    justify-content: center;
   }
   
-  .room-extra-info .remaining-amount {
-    font-weight: bold;
-    color: #ffeb3b;
+  .detail-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
   }
   
-  .room-extra-info .remaining-amount.negative {
-    color: #4caf50;
+  .detail-value {
+    color: #fff;
+    font-weight: 600;
+    text-align: right;
   }
   
-  .room-extra-info .remaining-amount .refund {
-    color: #4caf50;
-    font-style: italic;
+  .detail-value.highlight {
+    color: #ffd700;
+    font-weight: 700;
+    font-size: 13px;
   }
   
-  .room-status.rate-type {
-    margin-top: 2px;
-  }
-  
-  .room-status.rate-type nz-tag {
-    font-size: 10px;
-    padding: 0 4px;
-    line-height: 16px;
-  }
-  
-  .inactive-room {
-    background-color: #52c41a;
+  /* Room Status Colors */
+  .occupied-room {
+    background: linear-gradient(135deg, #8b0000 0%, #a00000 100%);
     color: white;
   }
   
   .vacant-room {
-    background-color: #52c41a;
+    background: linear-gradient(135deg, #2d5016 0%, #3d7016 100%);
     color: white;
-  }
-  
-  .active-room {
-    background-color: #f5222d;
-    color: white;
-  }
-  
-  .occupied-room {
-    background-color: #f5222d;
-    color: white;
-    min-height: 180px;
   }
   
   .dirty-room {
-    background-color: #fa8c16;
+    background: linear-gradient(135deg, #d4af37 0%, #f4cf37 100%);
+    color: #000;
+  }
+  
+  .dirty-room .detail-value {
+    color: #000;
+  }
+  
+  .cleaning-room {
+    background: linear-gradient(135deg, #4a5568 0%, #5a6578 100%);
     color: white;
   }
   
   .maintenance-room {
-    background-color: #722ed1;
-    color: white;
-  }
-  
-  .cleaning-room {
-    background-color: #1890ff;
+    background: linear-gradient(135deg, #5a2d7a 0%, #6a3d8a 100%);
     color: white;
   }
   
   .booked-room {
-    background-color: #2f54eb;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2e4a6f 100%);
+    color: white;
+  }
+  
+  .inactive-room {
+    background: linear-gradient(135deg, #2d5016 0%, #3d7016 100%);
     color: white;
   }
   
@@ -403,6 +506,7 @@
     display: flex;
     align-items: center;
     font-size: 12px;
+    color: rgba(0, 0, 0, 0.85);
   }
   
   .status-dot {
@@ -435,11 +539,20 @@
   /* Responsive styles */
   @media (max-width: 575px) {
     .room-item {
-      height: 100px;
+      min-height: 160px;
+      padding: 12px;
     }
     
     .room-number {
-      font-size: 20px;
+      font-size: 24px;
+    }
+    
+    .room-type {
+      font-size: 14px;
+    }
+    
+    .detail-row {
+      font-size: 11px;
     }
     
     .legend {
@@ -450,6 +563,14 @@
     .action-buttons {
       text-align: left;
       margin-top: 16px;
+    }
+    
+    .banner-label {
+      font-size: 16px;
+    }
+    
+    .banner-amount {
+      font-size: 18px;
     }
   }
 </style>

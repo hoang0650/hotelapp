@@ -12,6 +12,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { TableComponent } from '../table/table.component';
 import { InvoiceService } from '../../services/invoice.service';
 import { User } from '../../interfaces/user';
+import { RoomContentModalComponent } from '../room-content-modal/room-content-modal.component';
 
 @Component({
   selector: 'app-room',
@@ -226,10 +227,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       return;
     }
     this.isLoading = true;
-    const params: any = { hotelId: this.selectedHotelId };    
-    if (this.selectedFloor) {
-      params.floor = this.selectedFloor;
-    }
+    // Load tất cả phòng, không filter theo tầng để hiển thị tất cả các tầng
+    const params: any = { hotelId: this.selectedHotelId };
     
     this.roomsService.getRooms(params).subscribe(
       (data) => {
@@ -332,7 +331,139 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   onSelectRoom(room: Room): void {
     this.selectedRoomId = room._id;
-    console.log('Selected room:', room);
+  }
+
+  onRoomClick(room: Room, event: MouseEvent): void {
+    if (!room || !room._id) {
+      return;
+    }
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Xác định loại modal dựa trên trạng thái
+    let modalType = 'info';
+    switch (room.status) {
+      case 'vacant':
+        modalType = 'checkin';
+        break;
+      case 'occupied':
+        modalType = 'checkout';
+        break;
+      case 'dirty':
+      case 'cleaning':
+      case 'maintenance':
+        modalType = 'cleaning';
+        break;
+      default:
+        modalType = 'info';
+    }
+    
+    try {
+      // Mở modal trực tiếp
+      const modalRef = this.modalService.create({
+        nzTitle: `Phòng ${room.roomNumber}`,
+        nzContent: RoomContentModalComponent,
+        nzFooter: null,
+        nzMaskClosable: false,
+        nzClassName: 'room-detail-modal',
+        nzWidth: 700,
+        nzData: {
+          roomData: room,
+          modalType: modalType
+        }
+      });
+      
+      modalRef.afterClose.subscribe((result) => {
+        this.roomsService.notifyRoomDataUpdated();
+      });
+    } catch (error) {
+      console.error('Error creating modal:', error);
+      this.message.error('Không thể mở modal. Vui lòng thử lại.');
+    }
+  }
+
+  // Tính tổng tiền đặt trước từ tất cả các phòng đang có khách
+  getTotalAdvancePayment(): number {
+    let total = 0;
+    this.rooms.forEach(room => {
+      if (room.status === 'occupied') {
+        const checkinInfo = this.getRoomCheckinInfo(room);
+        if (checkinInfo && checkinInfo.advancePayment > 0) {
+          total += checkinInfo.advancePayment;
+        }
+      }
+    });
+    return total;
+  }
+
+  // Nhóm phòng theo tầng
+  getRoomsByFloor(): { [floor: string]: Room[] } {
+    const grouped: { [floor: string]: Room[] } = {};
+    this.rooms.forEach(room => {
+      const floor = room.floor || '0';
+      if (!grouped[floor]) {
+        grouped[floor] = [];
+      }
+      grouped[floor].push(room);
+    });
+    // Sắp xếp các tầng
+    const sortedFloors = Object.keys(grouped).sort((a, b) => {
+      const numA = parseInt(a) || 0;
+      const numB = parseInt(b) || 0;
+      return numA - numB;
+    });
+    const sortedGrouped: { [floor: string]: Room[] } = {};
+    sortedFloors.forEach(floor => {
+      sortedGrouped[floor] = grouped[floor];
+    });
+    return sortedGrouped;
+  }
+
+  // Lấy danh sách tầng đã sắp xếp
+  getSortedFloors(): string[] {
+    const floors = new Set<string>();
+    this.rooms.forEach(room => {
+      if (room.floor) {
+        floors.add(room.floor);
+      }
+    });
+    return Array.from(floors).sort((a, b) => {
+      const numA = parseInt(a) || 0;
+      const numB = parseInt(b) || 0;
+      return numA - numB;
+    });
+  }
+
+  // Lấy thông tin chi tiết của phòng để hiển thị (giống hình)
+  getRoomDisplayInfo(room: Room): {
+    checkinTime: string;
+    customerName: string;
+    rateTypeLabel: string;
+    totalAmount: number;
+    advancePayment: number;
+    remainingAmount: number;
+  } | null {
+    if (room.status !== 'occupied') {
+      return null;
+    }
+    const checkinInfo = this.getRoomCheckinInfo(room);
+    if (!checkinInfo) {
+      return null;
+    }
+    
+    const checkinTimeStr = checkinInfo.checkinTime 
+      ? `${checkinInfo.checkinTime.getHours().toString().padStart(2, '0')}:${checkinInfo.checkinTime.getMinutes().toString().padStart(2, '0')} ${checkinInfo.checkinTime.getDate().toString().padStart(2, '0')}/${(checkinInfo.checkinTime.getMonth() + 1).toString().padStart(2, '0')}/${checkinInfo.checkinTime.getFullYear()}`
+      : '';
+    
+    return {
+      checkinTime: checkinTimeStr,
+      customerName: checkinInfo.guestName,
+      rateTypeLabel: checkinInfo.rateTypeLabel,
+      totalAmount: checkinInfo.roomPrice,
+      advancePayment: checkinInfo.advancePayment,
+      remainingAmount: checkinInfo.remainingAmount
+    };
   }
 
   // Lấy thông tin checkin của phòng đang có khách
