@@ -52,6 +52,11 @@ export class RoomComponent implements OnInit, OnDestroy {
   chartExpenseData: number[] = []; // Dữ liệu chi cho biểu đồ
   selectedPeriod: 'day' | 'week' | 'month' = 'day'; // Khoảng thời gian cho biểu đồ
   
+  // Collapse panel states
+  isRevenuePanelActive = true; // Mở mặc định
+  isCalendarPanelActive = false;
+  isHistoryPanelActive = false;
+  
   // Phiếu chi
   isExpenseModalVisible = false;
   expenseForm: FormGroup;
@@ -111,6 +116,32 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadHotels();
+  }
+
+  // Collapse panel change handlers
+  onRevenuePanelChange(active: boolean): void {
+    this.isRevenuePanelActive = active;
+  }
+  
+  onCalendarPanelChange(active: boolean): void {
+    this.isCalendarPanelActive = active;
+  }
+  
+  onHistoryPanelChange(active: boolean): void {
+    this.isHistoryPanelActive = active;
+  }
+  
+  // Expand/Collapse all functions
+  expandAllCollapse(): void {
+    this.isRevenuePanelActive = true;
+    this.isCalendarPanelActive = true;
+    this.isHistoryPanelActive = true;
+  }
+  
+  collapseAllCollapse(): void {
+    this.isRevenuePanelActive = false;
+    this.isCalendarPanelActive = false;
+    this.isHistoryPanelActive = false;
   }
 
   ngOnDestroy(): void {
@@ -687,6 +718,11 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Đếm số lượng phòng sửa chữa
   getMaintenanceRoomCount(): number {
     return this.rooms.filter(room => room.status === 'maintenance').length;
+  }
+
+  // Đếm số lượng phòng đã đặt
+  getBookedRoomCount(): number {
+    return this.rooms.filter(room => room.status === 'booked').length;
   }
 
   // Nhóm phòng theo tầng (có filter theo selectedFloor nếu có)

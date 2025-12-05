@@ -57,7 +57,7 @@
           <td>{{ formatCurrency(record.cashInShift || 0) }}</td>
           <td>{{ formatCurrency(record.managerHandoverAmount || 0) }}</td>
           <td><strong>{{ formatCurrency(record.handoverAmount || 0) }}</strong></td>
-          <td>{{ formatCurrency(record.totalRevenue || 0) }}</td>
+          <td>{{ formatCurrency(getTotalRevenue(record)) }}</td>
           <td>
             <nz-tag [nzColor]="getStatusColor(record.status)">
               {{ getStatusLabel(record.status) }}
@@ -123,12 +123,50 @@
             {{ formatCurrency(selectedRecord.expenseAmount || 0) }}
           </nz-descriptions-item>
           <nz-descriptions-item nzTitle="Tổng doanh thu">
-            <strong class="text-primary">{{ formatCurrency(selectedRecord.totalRevenue || 0) }}</strong>
+            <strong class="text-primary">{{ formatCurrency(getTotalRevenue(selectedRecord)) }}</strong>
           </nz-descriptions-item>
           <nz-descriptions-item nzTitle="Ghi chú" [nzSpan]="2">
             {{ selectedRecord.notes || 'Không có' }}
           </nz-descriptions-item>
         </nz-descriptions>
+        
+        <!-- Expenses (Phiếu chi) -->
+        <nz-divider nzText="Phiếu chi trong ca" *ngIf="selectedRecord.expenses && selectedRecord.expenses.length > 0"></nz-divider>
+        <nz-table
+          *ngIf="selectedRecord.expenses && selectedRecord.expenses.length > 0"
+          [nzData]="selectedRecord.expenses"
+          nzSize="small"
+          nzBordered
+        >
+          <thead>
+            <tr>
+              <th>Mô tả</th>
+              <th>Danh mục</th>
+              <th>Người nhận</th>
+              <th>Số tiền</th>
+              <th>Hình thức TT</th>
+              <th>Thời gian</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let expense of selectedRecord.expenses">
+              <td>{{ expense.description || 'Phiếu chi' }}</td>
+              <td>
+                <nz-tag [nzColor]="getExpenseCategoryColor(expense.category)">
+                  {{ getExpenseCategoryLabel(expense.category) }}
+                </nz-tag>
+              </td>
+              <td>{{ expense.recipient || 'N/A' }}</td>
+              <td><strong class="text-danger">{{ formatCurrency(expense.amount || 0) }}</strong></td>
+              <td>
+                <nz-tag [nzColor]="expense.method === 'cash' ? 'red' : expense.method === 'bank_transfer' ? 'blue' : 'green'">
+                  {{ expense.method === 'cash' ? 'Tiền mặt' : expense.method === 'bank_transfer' ? 'Chuyển khoản' : 'Thẻ' }}
+                </nz-tag>
+              </td>
+              <td>{{ formatDate(expense.timestamp) }}</td>
+            </tr>
+          </tbody>
+        </nz-table>
         
         <!-- Room History -->
         <nz-divider nzText="Lịch sử phòng trong ca" *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"></nz-divider>

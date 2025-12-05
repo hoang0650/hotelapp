@@ -29,7 +29,7 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.userService.isLoggedIn) {
-      this.router.navigate(['/dashboard']);
+      this.router.navigate(['/admin/room']);
     }
   }
 
@@ -70,7 +70,7 @@ export class LoginComponent implements OnInit {
           this.message.info('Vui lòng nhập mã xác thực hai yếu tố');
         } else {
           this.message.success('Đăng nhập thành công!');
-          this.router.navigate(['/dashboard']);
+          this.router.navigate(['/admin/room']);
         }
       },
       error: (error) => {

@@ -39,6 +39,7 @@ export interface ShiftExpense {
     amount: number;
     category?: string;
     recipient?: string;
+    method?: 'cash' | 'bank_transfer' | 'card'; // Phương thức thanh toán
     approvedBy?: string;
     timestamp: Date;
 }

@@ -109,6 +109,10 @@
         <span class="stat-label">Sửa chữa:</span>
         <span class="stat-value maintenance">{{ getMaintenanceRoomCount() }}</span>
       </div>
+      <div class="stat-item">
+        <span class="stat-label">Đã đặt:</span>
+        <span class="stat-value booked">{{ getBookedRoomCount() }}</span>
+      </div>
     </div>
   </div>
 
@@ -237,52 +241,87 @@
     </nz-spin>
   </div>
   
-  <!-- Biểu đồ doanh thu -->
-  <div class="section-container mt-4" *ngIf="selectedHotelId">
-    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
-      <h3>Doanh thu khách sạn {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}</h3>
-      <button nz-button nzType="primary" (click)="openExpenseModal()">
-        <i nz-icon nzType="plus" nzTheme="outline"></i>
-        Tạo phiếu chi
+  <!-- Collapse Sections -->
+  <div class="collapse-container mt-4" *ngIf="selectedHotelId">
+    <div class="collapse-actions mb-2">
+      <button nz-button nzType="link" nzSize="small" (click)="expandAllCollapse()">
+        <i nz-icon nzType="down" nzTheme="outline"></i>
+        Mở tất cả
+      </button>
+      <button nz-button nzType="link" nzSize="small" (click)="collapseAllCollapse()">
+        <i nz-icon nzType="up" nzTheme="outline"></i>
+        Đóng tất cả
       </button>
     </div>
-    <app-revenue-chart
-      [hotelId]="selectedHotelId"
-      [labels]="chartLabels"
-      [revenueData]="chartRevenueData"
-      [paymentData]="chartPaymentData"
-      [expenseData]="chartExpenseData"
-      [totalRevenue]="totalRevenue"
-      [totalPayment]="totalPayment"
-      [totalExpense]="totalExpense"
-      [selectedPeriod]="selectedPeriod"
-      (periodChange)="onPeriodChange($event)">
-    </app-revenue-chart>
+    <nz-collapse [nzBordered]="false">
+      <!-- Biểu đồ doanh thu -->
+      <nz-collapse-panel 
+        nzHeader="Doanh thu khách sạn {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}"
+        [nzActive]="isRevenuePanelActive"
+        [nzShowArrow]="true"
+        [nzExtra]="revenueExtra"
+        (nzActiveChange)="onRevenuePanelChange($event)">
+        <div class="collapse-content">
+          <app-revenue-chart
+            [hotelId]="selectedHotelId"
+            [labels]="chartLabels"
+            [revenueData]="chartRevenueData"
+            [paymentData]="chartPaymentData"
+            [expenseData]="chartExpenseData"
+            [totalRevenue]="totalRevenue"
+            [totalPayment]="totalPayment"
+            [totalExpense]="totalExpense"
+            [selectedPeriod]="selectedPeriod"
+            (periodChange)="onPeriodChange($event)">
+          </app-revenue-chart>
+        </div>
+      </nz-collapse-panel>
+      
+      <!-- Calendar đặt phòng -->
+      <nz-collapse-panel 
+        nzHeader="Lịch đặt phòng {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}"
+        [nzActive]="isCalendarPanelActive"
+        [nzShowArrow]="true"
+        (nzActiveChange)="onCalendarPanelChange($event)">
+        <div class="collapse-content">
+          <app-calendar 
+            #calendarComponent
+            [hotelId]="selectedHotelId"
+            (bookingSelected)="onCalendarDateSelected($event)">
+          </app-calendar>
+        </div>
+      </nz-collapse-panel>
+
+      <!-- Bảng lịch sử phòng -->
+      <nz-collapse-panel 
+        nzHeader="Lịch sử phòng {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}"
+        [nzActive]="isHistoryPanelActive"
+        [nzShowArrow]="true"
+        (nzActiveChange)="onHistoryPanelChange($event)">
+        <div class="collapse-content">
+          <app-table 
+            [listOfData]="roomTableData" 
+            [hotelId]="selectedHotelId"
+            [totalExpense]="totalExpense"
+            (onViewInvoice)="viewInvoice($event)">
+          </app-table>
+        </div>
+      </nz-collapse-panel>
+    </nz-collapse>
   </div>
   
-  <!-- Calendar đặt phòng -->
-  <div class="section-container mt-4" *ngIf="selectedHotelId">
-    <div class="section-header">
-      <h3>Lịch đặt phòng {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}</h3>
-    </div>
-    <app-calendar 
-      #calendarComponent
-      [hotelId]="selectedHotelId"
-      (bookingSelected)="onCalendarDateSelected($event)">
-    </app-calendar>
-  </div>
-
-  <!-- Bảng lịch sử phòng -->
-  <div class="section-container mt-4" *ngIf="selectedHotelId">
-    <div class="section-header">
-      <h3>Lịch sử phòng {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}</h3>
-    </div>
-    <app-table 
-      [listOfData]="roomTableData" 
-      [hotelId]="selectedHotelId"
-      (onViewInvoice)="viewInvoice($event)">
-    </app-table>
-  </div>
+  <!-- Template cho extra button trong revenue panel -->
+  <ng-template #revenueExtra>
+    <button 
+      nz-button 
+      nzType="primary" 
+      nzSize="small"
+      (click)="openExpenseModal(); $event.stopPropagation()"
+      title="Tạo phiếu chi">
+      <i nz-icon nzType="plus" nzTheme="outline"></i>
+      Tạo phiếu chi
+    </button>
+  </ng-template>
 </div>
 
 <!-- Modal phiếu chi -->
@@ -451,6 +490,71 @@
     font-size: 18px;
     font-weight: 500;
     color: rgba(0, 0, 0, 0.85);
+  }
+  
+  /* Collapse Container */
+  .collapse-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+    overflow: hidden;
+    padding: 16px;
+  }
+  
+  .collapse-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 12px;
+  }
+  
+  .mb-2 {
+    margin-bottom: 8px;
+  }
+  
+  .collapse-container ::ng-deep .ant-collapse {
+    background-color: transparent;
+    border: none;
+  }
+  
+  .collapse-container ::ng-deep .ant-collapse-item {
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .collapse-container ::ng-deep .ant-collapse-item:last-child {
+    border-bottom: none;
+  }
+  
+  .collapse-container ::ng-deep .ant-collapse-header {
+    padding: 16px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.85);
+    background-color: #fafafa;
+    transition: all 0.3s;
+  }
+  
+  .collapse-container ::ng-deep .ant-collapse-header:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .collapse-container ::ng-deep .ant-collapse-item-active .ant-collapse-header {
+    background-color: #f0f7ff;
+    color: #1890ff;
+  }
+  
+  .collapse-container ::ng-deep .ant-collapse-content {
+    border-top: none;
+  }
+  
+  .collapse-container ::ng-deep .ant-collapse-content-box {
+    padding: 20px;
+  }
+  
+  .collapse-content {
+    padding: 0;
   }
   
   /* Banner Đặt trước */

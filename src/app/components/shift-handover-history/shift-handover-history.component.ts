@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subscription } from 'rxjs';
 import { ShiftHandoverService } from '../../services/shift-handover.service';
@@ -14,7 +14,9 @@ import { format } from 'date-fns';
   templateUrl: './shift-handover-history.component.html',
   styleUrls: ['./shift-handover-history.component.css']
 })
-export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy {
+export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChanges {
+  @Input() hotelId: string | null = null;
+  
   private subscriptions = new Subscription();
   
   // Data
@@ -22,7 +24,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy {
   isLoading = false;
   
   // Filters
-  hotelId: string | null = null;
+  private _hotelId: string | null = null;
   startDate: Date | null = null;
   endDate: Date | null = null;
   dateRange: [Date, Date] | null = null;
@@ -43,8 +45,32 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy {
   ) {}
   
   ngOnInit(): void {
-    this.hotelId = this.authService.getHotelId();
-    this.loadShiftHistory();
+    // Khởi tạo _hotelId từ @Input hoặc authService
+    this._hotelId = this.hotelId || this.authService.getHotelId();
+    
+    // Load dữ liệu nếu đã có hotelId
+    if (this._hotelId) {
+      this.loadShiftHistory();
+    }
+  }
+  
+  ngOnChanges(changes: SimpleChanges): void {
+    // Khi hotelId thay đổi từ @Input, cập nhật và reload
+    if (changes['hotelId']) {
+      const newHotelId = changes['hotelId'].currentValue || this.authService.getHotelId();
+      
+      // Chỉ reload nếu hotelId thực sự thay đổi và có giá trị
+      if (newHotelId && newHotelId !== this._hotelId) {
+        this._hotelId = newHotelId;
+        this.currentPage = 1;
+        this.loadShiftHistory();
+      } else if (newHotelId && !this._hotelId) {
+        // Nếu lần đầu có giá trị từ @Input
+        this._hotelId = newHotelId;
+        this.currentPage = 1;
+        this.loadShiftHistory();
+      }
+    }
   }
   
   ngOnDestroy(): void {
@@ -52,15 +78,19 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy {
   }
   
   loadShiftHistory(): void {
-    if (!this.hotelId) {
+    // Sử dụng _hotelId hoặc hotelId hoặc lấy từ authService
+    const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
+    
+    if (!currentHotelId) {
       this.message.warning('Không tìm thấy thông tin khách sạn');
+      this.isLoading = false;
       return;
     }
     
     this.isLoading = true;
     
     const params: any = {
-      hotelId: this.hotelId,
+      hotelId: currentHotelId,
       page: this.currentPage,
       limit: this.pageSize
     };
@@ -154,6 +184,39 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy {
       'cancelled': 'Đã hủy'
     };
     return labelMap[status] || status;
+  }
+  
+  getExpenseCategoryLabel(category: string | undefined): string {
+    if (!category) return 'Khác';
+    const labelMap: Record<string, string> = {
+      'supplies': 'Vật tư',
+      'utilities': 'Tiện ích',
+      'salary': 'Lương',
+      'maintenance': 'Bảo trì',
+      'marketing': 'Marketing',
+      'other': 'Khác'
+    };
+    return labelMap[category] || category || 'Khác';
+  }
+  
+  getExpenseCategoryColor(category: string | undefined): string {
+    if (!category) return 'default';
+    const colorMap: Record<string, string> = {
+      'supplies': 'orange',
+      'utilities': 'blue',
+      'salary': 'purple',
+      'maintenance': 'cyan',
+      'marketing': 'green',
+      'other': 'default'
+    };
+    return colorMap[category] || 'default';
+  }
+
+  // Tính tổng doanh thu = Tiền giao quản lý + Phiếu chi
+  getTotalRevenue(record: ShiftHandover): number {
+    const managerHandoverAmount = record.managerHandoverAmount || 0;
+    const expenseAmount = record.expenseAmount || 0;
+    return managerHandoverAmount + expenseAmount;
   }
 }
 

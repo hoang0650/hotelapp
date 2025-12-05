@@ -501,7 +501,7 @@
           </span>
           <span style="margin-left: 16px;">
             <strong>Tổng doanh thu:</strong> 
-            {{ formatterVND((shiftHandoverForm.get('cashAmount')?.value || 0) + (shiftHandoverForm.get('bankTransferAmount')?.value || 0) + (shiftHandoverForm.get('cardPaymentAmount')?.value || 0) - (shiftHandoverForm.get('expenseAmount')?.value || 0)) }} đ
+            {{ formatterVND((shiftHandoverForm.get('managerHandoverAmount')?.value || 0) + (shiftHandoverForm.get('expenseAmount')?.value || 0)) }} đ
           </span>
         </div>
       </ng-template>
@@ -943,6 +943,6 @@
   (nzOnClose)="closeShiftHandoverHistory()"
 >
   <ng-container *nzDrawerContent>
-    <app-shift-handover-history></app-shift-handover-history>
+    <app-shift-handover-history [hotelId]="hotelId"></app-shift-handover-history>
   </ng-container>
 </nz-drawer>

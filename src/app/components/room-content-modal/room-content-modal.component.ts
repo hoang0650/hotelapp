@@ -903,24 +903,28 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         // Tính theo giờ
         if (this.roomData.firstHourRate && this.roomData.additionalHourRate) {
           // Có giá giờ đầu và giờ tiếp theo
+          // Bắt đầu với giá giờ đầu
           total = this.roomData.firstHourRate;
           
-          // Tính giá cho các giờ tiếp theo với grace period
-          if (durationInHours >= 1) {
-            let billableHours = durationInHours - 1; // Số giờ tính phí (trừ giờ đầu)
+          // Tính số giờ tiếp theo cần tính phí
+          // Giờ đầu đã tính rồi, nên chỉ tính từ giờ thứ 2 trở đi
+          if (durationInHours > 1) {
+            // Số giờ tiếp theo = tổng giờ - 1 (trừ giờ đầu)
+            let additionalHours = durationInHours - 1;
             
-            // Nếu có thời gian dư sau giờ thứ 2
-            if (durationInHours >= 2 && remainingMinutes > gracePeriodMinutes) {
-              // Quá grace period, tính thêm 1 giờ
-              billableHours += 1;
-            } else if (durationInHours === 1 && remainingMinutes > gracePeriodMinutes) {
-              // Nếu chỉ có 1 giờ nhưng quá 15 phút, tính thêm 1 giờ
-              billableHours = 1;
+            // Xử lý grace period: nếu có thời gian dư (remainingMinutes) và vượt quá grace period
+            // thì tính thêm 1 giờ nữa
+            if (remainingMinutes > gracePeriodMinutes) {
+              additionalHours += 1;
             }
             
-            if (billableHours > 0) {
-              total += billableHours * this.roomData.additionalHourRate;
+            // Tính tiền cho các giờ tiếp theo
+            if (additionalHours > 0) {
+              total += additionalHours * this.roomData.additionalHourRate;
             }
+          } else if (durationInHours === 1 && remainingMinutes > gracePeriodMinutes) {
+            // Trường hợp đặc biệt: chỉ có 1 giờ nhưng quá grace period, tính thêm 1 giờ tiếp theo
+            total += 1 * this.roomData.additionalHourRate;
           }
           
           // Nếu vượt quá 6 giờ, chuyển sang giá ngày

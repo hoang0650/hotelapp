@@ -15,6 +15,12 @@ export interface Expense {
   status?: 'pending' | 'completed' | 'failed' | 'cancelled' | 'approved' | 'rejected';
   createdAt?: Date;
   updatedAt?: Date;
+  details?: {
+    recipient?: string;
+    [key: string]: any;
+  };
+  approvedBy?: string;
+  processedAt?: Date;
 }
 
 export interface ExpenseResponse {

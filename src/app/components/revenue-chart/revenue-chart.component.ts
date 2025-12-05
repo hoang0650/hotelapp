@@ -1,6 +1,8 @@
 import { Component, OnInit, Input, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import * as Highcharts from 'highcharts';
 import { HotelService } from '../../services/hotel.service';
+import { ShiftHandoverService } from '../../services/shift-handover.service';
+import { format, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns';
 
 @Component({
   selector: 'app-revenue-chart',
@@ -24,7 +26,10 @@ export class RevenueChartComponent implements OnInit, OnChanges {
   
   public isLoading = false;
 
-  constructor(private hotelService: HotelService) {}
+  constructor(
+    private hotelService: HotelService,
+    private shiftHandoverService: ShiftHandoverService
+  ) {}
 
   ngOnInit(): void {
     this.loadHotelRevenue();
@@ -71,62 +76,168 @@ export class RevenueChartComponent implements OnInit, OnChanges {
     
     this.isLoading = true;
     
-    // Sử dụng API thật từ backend
-    this.hotelService.getHotelRevenueByPeriod(this.hotelId, this.selectedPeriod).subscribe({
-      next: (data) => {
-        this.labels = data.labels;
-        this.revenueData = data.revenueData;
-        this.paymentData = data.paymentData;
-        this.expenseData = data.expenseData || [];
+    // Tính toán khoảng thời gian dựa trên period
+    const now = new Date();
+    let startDate: Date;
+    let endDate = now;
+    
+    switch (this.selectedPeriod) {
+      case 'day':
+        startDate = subDays(now, 6); // 7 ngày gần nhất
+        break;
+      case 'week':
+        startDate = subWeeks(now, 3); // 4 tuần gần nhất
+        break;
+      case 'month':
+        startDate = subMonths(now, 11); // 12 tháng gần nhất
+        break;
+      default:
+        startDate = subDays(now, 6);
+    }
+    
+    // Lấy dữ liệu từ shift handover history
+    this.shiftHandoverService.getShiftHandoverHistory({
+      hotelId: this.hotelId,
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: format(endDate, 'yyyy-MM-dd'),
+      page: 1,
+      limit: 1000 // Lấy tối đa 1000 records
+    }).subscribe({
+      next: (response) => {
+        const shiftHandovers = response.data || [];
         
-        // Chỉ cập nhật totalRevenue, totalPayment và totalExpense nếu không được truyền từ bên ngoài
-        if (this.totalRevenue === 0 || !this.totalRevenue) {
-          this.totalRevenue = data.totalRevenue;
-        }
-        if (this.totalPayment === 0 || !this.totalPayment) {
-          this.totalPayment = data.totalPayment;
-        }
-        if (this.totalExpense === 0 || !this.totalExpense) {
-          this.totalExpense = data.totalExpense || 0;
-        }
+        // Nhóm dữ liệu theo period và tính toán
+        const groupedData = this.groupShiftHandoversByPeriod(shiftHandovers, this.selectedPeriod);
+        
+        this.labels = groupedData.labels;
+        this.revenueData = groupedData.revenueData;
+        this.expenseData = groupedData.expenseData;
+        this.paymentData = groupedData.paymentData;
+        
+        // Tính tổng: Tổng doanh thu = Tiền giao quản lý + Phiếu chi
+        this.totalRevenue = shiftHandovers.reduce((sum, record) => {
+          const managerHandoverAmount = record.managerHandoverAmount || 0;
+          const expenseAmount = record.expenseAmount || 0;
+          return sum + (managerHandoverAmount + expenseAmount);
+        }, 0);
+        
+        // Tổng chi = tổng expenseAmount
+        this.totalExpense = shiftHandovers.reduce((sum, record) => {
+          return sum + (record.expenseAmount || 0);
+        }, 0);
+        
+        // Tổng thanh toán = tổng tiền từ room history
+        this.totalPayment = shiftHandovers.reduce((sum, record) => {
+          return sum + (record.totalRoomRevenue || 0);
+        }, 0);
         
         this.updateChart();
         this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error loading hotel revenue:', error);
-        // Fallback về mock data nếu API lỗi
-        if (this.hotelId) {
-          this.hotelService.getHotelRevenueMock(this.hotelId, this.selectedPeriod).subscribe({
-            next: (mockData) => {
-              this.labels = mockData.labels;
-              this.revenueData = mockData.revenueData;
-              this.paymentData = mockData.paymentData;
-              this.expenseData = mockData.expenseData || [];
-              
-              if (this.totalRevenue === 0 || !this.totalRevenue) {
-                this.totalRevenue = mockData.totalRevenue;
-              }
-              if (this.totalPayment === 0 || !this.totalPayment) {
-                this.totalPayment = mockData.totalPayment;
-              }
-              if (this.totalExpense === 0 || !this.totalExpense) {
-                this.totalExpense = mockData.totalExpense || 0;
-              }
-              
-              this.updateChart();
-              this.isLoading = false;
-            },
-            error: (mockError) => {
-              console.error('Error loading mock revenue:', mockError);
-              this.isLoading = false;
+        console.error('Error loading shift handover history:', error);
+        // Fallback về API cũ nếu lỗi
+        this.hotelService.getHotelRevenueByPeriod(this.hotelId!, this.selectedPeriod).subscribe({
+          next: (data) => {
+            this.labels = data.labels;
+            this.revenueData = data.revenueData;
+            this.paymentData = data.paymentData;
+            this.expenseData = data.expenseData || [];
+            
+            if (this.totalRevenue === 0 || !this.totalRevenue) {
+              this.totalRevenue = data.totalRevenue;
             }
-          });
-        } else {
-          this.isLoading = false;
-        }
+            if (this.totalPayment === 0 || !this.totalPayment) {
+              this.totalPayment = data.totalPayment;
+            }
+            if (this.totalExpense === 0 || !this.totalExpense) {
+              this.totalExpense = data.totalExpense || 0;
+            }
+            
+            this.updateChart();
+            this.isLoading = false;
+          },
+          error: (fallbackError) => {
+            console.error('Error loading fallback revenue:', fallbackError);
+            this.isLoading = false;
+          }
+        });
       }
     });
+  }
+  
+  // Nhóm dữ liệu shift handover theo period
+  private groupShiftHandoversByPeriod(
+    shiftHandovers: any[], 
+    period: 'day' | 'week' | 'month'
+  ): { labels: string[], revenueData: number[], expenseData: number[], paymentData: number[] } {
+    const grouped: { [key: string]: { revenue: number, expense: number, payment: number } } = {};
+    
+    shiftHandovers.forEach(record => {
+      const handoverTime = new Date(record.handoverTime);
+      let key: string;
+      
+      switch (period) {
+        case 'day':
+          key = format(handoverTime, 'yyyy-MM-dd');
+          break;
+        case 'week':
+          key = format(startOfWeek(handoverTime, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+          break;
+        case 'month':
+          key = format(startOfMonth(handoverTime), 'yyyy-MM');
+          break;
+        default:
+          key = format(handoverTime, 'yyyy-MM-dd');
+      }
+      
+      if (!grouped[key]) {
+        grouped[key] = { revenue: 0, expense: 0, payment: 0 };
+      }
+      
+      // Tổng doanh thu = Tiền giao quản lý + Phiếu chi
+      const managerHandoverAmount = record.managerHandoverAmount || 0;
+      const expenseAmount = record.expenseAmount || 0;
+      grouped[key].revenue += (managerHandoverAmount + expenseAmount);
+      grouped[key].expense += expenseAmount;
+      grouped[key].payment += (record.totalRoomRevenue || 0);
+    });
+    
+    // Sắp xếp keys và tạo arrays
+    const sortedKeys = Object.keys(grouped).sort();
+    const labels: string[] = [];
+    const revenueData: number[] = [];
+    const expenseData: number[] = [];
+    const paymentData: number[] = [];
+    
+    sortedKeys.forEach(key => {
+      // Format label
+      let label: string;
+      if (period === 'day' || period === 'week') {
+        const parts = key.split('-');
+        if (parts.length === 3) {
+          label = `${parts[2]}/${parts[1]}`;
+        } else {
+          label = key;
+        }
+      } else if (period === 'month') {
+        const parts = key.split('-');
+        if (parts.length === 2) {
+          label = `${parts[1]}/${parts[0]}`;
+        } else {
+          label = key;
+        }
+      } else {
+        label = key;
+      }
+      
+      labels.push(label);
+      revenueData.push(grouped[key].revenue);
+      expenseData.push(grouped[key].expense);
+      paymentData.push(grouped[key].payment);
+    });
+    
+    return { labels, revenueData, expenseData, paymentData };
   }
 
   updateChart(): void {
