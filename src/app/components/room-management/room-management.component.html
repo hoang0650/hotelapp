@@ -425,6 +425,79 @@
             </div>
         </div>
 
+        <!-- Phụ thu cho thuê theo ngày và qua đêm -->
+        <div formGroupName="priceSettings" nz-col [nzSpan]="24">
+            <h4 class="mt-3 mb-2">Phụ thu check-in sớm và check-out trễ</h4>
+            <div nz-row [nzGutter]="16">
+                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12">
+                    <h5 style="margin-bottom: 12px; color: #1890ff;">Thuê theo ngày (Daily)</h5>
+                    <div nz-row [nzGutter]="16">
+                        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12">
+                            <nz-form-item>
+                                <nz-form-label>Phụ thu check-in sớm (đ/giờ)</nz-form-label>
+                                <nz-form-control>
+                                    <nz-input-number 
+                                        formControlName="dailyEarlyCheckinSurcharge" 
+                                        [nzMin]="0" 
+                                        [nzStep]="10000" 
+                                        class="w-100" 
+                                        nzPlaceHolder="0"></nz-input-number>
+                                    <div class="form-hint">Phụ thu tính theo giờ khi khách check-in sớm hơn giờ quy định (ví dụ: 50,000đ/giờ)</div>
+                                </nz-form-control>
+                            </nz-form-item>
+                        </div>
+                        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12">
+                            <nz-form-item>
+                                <nz-form-label>Phí check-out trễ (đ/giờ)</nz-form-label>
+                                <nz-form-control>
+                                    <nz-input-number 
+                                        formControlName="dailyLateCheckoutFee" 
+                                        [nzMin]="0" 
+                                        [nzStep]="10000" 
+                                        class="w-100" 
+                                        nzPlaceHolder="0"></nz-input-number>
+                                    <div class="form-hint">Phí tính theo giờ khi khách check-out trễ hơn giờ quy định (ví dụ: 50,000đ/giờ)</div>
+                                </nz-form-control>
+                            </nz-form-item>
+                        </div>
+                    </div>
+                </div>
+                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12">
+                    <h5 style="margin-bottom: 12px; color: #ff4d4f;">Thuê qua đêm (Nightly)</h5>
+                    <div nz-row [nzGutter]="16">
+                        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12">
+                            <nz-form-item>
+                                <nz-form-label>Phụ thu check-in sớm (đ/giờ)</nz-form-label>
+                                <nz-form-control>
+                                    <nz-input-number 
+                                        formControlName="nightlyEarlyCheckinSurcharge" 
+                                        [nzMin]="0" 
+                                        [nzStep]="10000" 
+                                        class="w-100" 
+                                        nzPlaceHolder="0"></nz-input-number>
+                                    <div class="form-hint">Phụ thu tính theo giờ khi khách check-in sớm hơn giờ quy định (ví dụ: 50,000đ/giờ)</div>
+                                </nz-form-control>
+                            </nz-form-item>
+                        </div>
+                        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12">
+                            <nz-form-item>
+                                <nz-form-label>Phụ thu check-out trễ (đ/giờ)</nz-form-label>
+                                <nz-form-control>
+                                    <nz-input-number 
+                                        formControlName="nightlyLateCheckoutSurcharge" 
+                                        [nzMin]="0" 
+                                        [nzStep]="10000" 
+                                        class="w-100" 
+                                        nzPlaceHolder="0"></nz-input-number>
+                                    <div class="form-hint">Phụ thu tính theo giờ khi khách check-out trễ hơn giờ quy định (ví dụ: 50,000đ/giờ)</div>
+                                </nz-form-control>
+                            </nz-form-item>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div nz-col [nzSpan]="24">
           <nz-form-item>
             <nz-form-label>Tiện nghi</nz-form-label>

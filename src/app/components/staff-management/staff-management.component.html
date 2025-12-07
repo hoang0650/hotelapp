@@ -90,6 +90,10 @@
               <i nz-icon nzType="edit"></i>
             </button>
             <nz-divider nzType="vertical"></nz-divider>
+            <button nz-button nzShape="circle" nzType="primary" (click)="openSalaryModal(staff)" nz-tooltip nzTooltipTitle="Tính lương">
+              <i nz-icon nzType="dollar"></i>
+            </button>
+            <nz-divider nzType="vertical"></nz-divider>
             <button nz-button nzShape="circle" nzType="default" nzDanger (click)="deleteStaff(staff)" nz-tooltip nzTooltipTitle="Xóa">
               <i nz-icon nzType="delete"></i>
             </button>
@@ -381,6 +385,69 @@
               </div>
             </div>
 
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzSpan]="6">
+                <nz-form-item>
+                  <nz-form-label>Phụ cấp</nz-form-label>
+                  <nz-form-control>
+                    <nz-input-number 
+                      formControlName="allowance" 
+                      [nzMin]="0" 
+                      [nzStep]="100000" 
+                      [nzFormatter]="formatterVND"
+                      [nzParser]="parserVND"
+                      style="width: 100%">
+                    </nz-input-number>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzSpan]="6">
+                <nz-form-item>
+                  <nz-form-label>Bảo hiểm</nz-form-label>
+                  <nz-form-control>
+                    <nz-input-number 
+                      formControlName="insurance" 
+                      [nzMin]="0" 
+                      [nzStep]="100000" 
+                      [nzFormatter]="formatterVND"
+                      [nzParser]="parserVND"
+                      style="width: 100%">
+                    </nz-input-number>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzSpan]="6">
+                <nz-form-item>
+                  <nz-form-label>Phạt</nz-form-label>
+                  <nz-form-control>
+                    <nz-input-number 
+                      formControlName="penalty" 
+                      [nzMin]="0" 
+                      [nzStep]="100000" 
+                      [nzFormatter]="formatterVND"
+                      [nzParser]="parserVND"
+                      style="width: 100%">
+                    </nz-input-number>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzSpan]="6">
+                <nz-form-item>
+                  <nz-form-label>Thưởng</nz-form-label>
+                  <nz-form-control>
+                    <nz-input-number 
+                      formControlName="bonus" 
+                      [nzMin]="0" 
+                      [nzStep]="100000" 
+                      [nzFormatter]="formatterVND"
+                      [nzParser]="parserVND"
+                      style="width: 100%">
+                    </nz-input-number>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+
             <nz-collapse>
               <nz-collapse-panel nzHeader="Thông tin ngân hàng" [nzActive]="false">
                 <div formGroupName="bankAccount">
@@ -496,5 +563,215 @@
         </form>
       </ng-container>
     </nz-drawer>
+
+    <!-- Modal tính lương -->
+    <nz-modal
+      [(nzVisible)]="isSalaryModalVisible"
+      nzTitle="Tính lương nhân viên"
+      [nzWidth]="800"
+      (nzOnCancel)="closeSalaryModal()"
+      [nzFooter]="null"
+    >
+      <ng-container *nzModalContent>
+        <div *ngIf="selectedStaffForSalary">
+          <div class="staff-info-header" style="margin-bottom: 20px; padding: 16px; background: #f5f5f5; border-radius: 8px;">
+            <h3>{{ getFullName(selectedStaffForSalary) }}</h3>
+            <p style="margin: 0; color: #666;">
+              <strong>Chức vụ:</strong> {{ getPositionLabel(selectedStaffForSalary.employmentInfo?.position || 'other') }} | 
+              <strong>Lương cơ bản:</strong> {{ formatCurrency(selectedStaffForSalary.employmentInfo?.salary || 0) }} | 
+              <strong>Ngày bắt đầu:</strong> {{ selectedStaffForSalary.employmentInfo?.startDate | date:'dd/MM/yyyy' }}
+            </p>
+          </div>
+
+          <form nz-form [formGroup]="salaryCalculationForm" nzLayout="vertical" *ngIf="salaryCalculationForm">
+            <nz-form-item>
+              <nz-form-label>Ngày tính lương</nz-form-label>
+              <nz-form-control>
+                <nz-date-picker 
+                  formControlName="calculationDate" 
+                  nzFormat="dd/MM/yyyy" 
+                  style="width: 100%">
+                </nz-date-picker>
+                <div class="form-hint">Ngày tính lương (mặc định: hôm nay). Hệ thống sẽ tự động tính ngày cơ sở dựa trên lịch sử tính lương trước đó.</div>
+              </nz-form-control>
+            </nz-form-item>
+
+            <nz-divider nzText="Các khoản điều chỉnh"></nz-divider>
+
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzSpan]="12">
+                <nz-form-item>
+                  <nz-form-label>Phụ cấp</nz-form-label>
+                  <nz-form-control>
+                    <nz-input-number 
+                      formControlName="allowance" 
+                      [nzMin]="0" 
+                      [nzStep]="100000" 
+                      [nzFormatter]="formatterVND"
+                      [nzParser]="parserVND"
+                      style="width: 100%">
+                    </nz-input-number>
+                    <div class="form-hint">Khoản phụ cấp (nếu có)</div>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzSpan]="12">
+                <nz-form-item>
+                  <nz-form-label>Bảo hiểm</nz-form-label>
+                  <nz-form-control>
+                    <nz-input-number 
+                      formControlName="insurance" 
+                      [nzMin]="0" 
+                      [nzStep]="100000" 
+                      [nzFormatter]="formatterVND"
+                      [nzParser]="parserVND"
+                      style="width: 100%">
+                    </nz-input-number>
+                    <div class="form-hint">Khoản bảo hiểm (sẽ bị trừ)</div>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzSpan]="12">
+                <nz-form-item>
+                  <nz-form-label>Phạt</nz-form-label>
+                  <nz-form-control>
+                    <nz-input-number 
+                      formControlName="penalty" 
+                      [nzMin]="0" 
+                      [nzStep]="100000" 
+                      [nzFormatter]="formatterVND"
+                      [nzParser]="parserVND"
+                      style="width: 100%">
+                    </nz-input-number>
+                    <div class="form-hint">Khoản phạt (sẽ bị trừ)</div>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzSpan]="12">
+                <nz-form-item>
+                  <nz-form-label>Thưởng</nz-form-label>
+                  <nz-form-control>
+                    <nz-input-number 
+                      formControlName="bonus" 
+                      [nzMin]="0" 
+                      [nzStep]="100000" 
+                      [nzFormatter]="formatterVND"
+                      [nzParser]="parserVND"
+                      style="width: 100%">
+                    </nz-input-number>
+                    <div class="form-hint">Khoản thưởng (sẽ được cộng)</div>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+
+            <div class="form-actions" style="margin-top: 24px;">
+              <button nz-button type="button" (click)="closeSalaryModal()">Hủy</button>
+              <button nz-button nzType="primary" (click)="calculateSalary()" [nzLoading]="isLoading">
+                <i nz-icon nzType="calculator"></i> Tính lương
+              </button>
+            </div>
+          </form>
+
+          <!-- Kết quả tính lương -->
+          <div *ngIf="salaryCalculationResult" style="margin-top: 24px; padding: 16px; background: #f0f9ff; border-radius: 8px; border: 1px solid #91d5ff;">
+            <h4 style="margin-bottom: 16px; color: #1890ff;">
+              <i nz-icon nzType="check-circle" style="color: #52c41a;"></i> Kết quả tính lương
+            </h4>
+            <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 4px; border-left: 4px solid #1890ff;">
+              <div class="salary-breakdown-item" style="border-bottom: none;">
+                <span class="label"><strong>Ngày cơ sở (ngày đầu làm việc):</strong></span>
+                <span class="value" style="color: #1890ff;">{{ formatDate(salaryCalculationResult.breakdown?.baseDate) }}</span>
+              </div>
+              <div class="salary-breakdown-item" style="border-bottom: none;">
+                <span class="label"><strong>Ngày tính lương (thời điểm tính):</strong></span>
+                <span class="value" style="color: #52c41a;">{{ formatDate(salaryCalculationResult.breakdown?.calculationDate) }}</span>
+              </div>
+              <div class="salary-breakdown-item" style="border-bottom: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e8e8e8;">
+                <span class="label"><strong>Khoảng thời gian tính lương:</strong></span>
+                <span class="value" style="font-weight: 600;">
+                  {{ formatDate(salaryCalculationResult.breakdown?.baseDate) }} 
+                  <i nz-icon nzType="arrow-right" style="margin: 0 8px;"></i>
+                  {{ formatDate(salaryCalculationResult.breakdown?.calculationDate) }}
+                </span>
+              </div>
+            </div>
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzSpan]="12">
+                <div class="salary-breakdown-item">
+                  <span class="label">Số ngày làm việc:</span>
+                  <span class="value">{{ salaryCalculationResult.breakdown?.daysWorked || 0 }} ngày</span>
+                </div>
+                <div class="salary-breakdown-item">
+                  <span class="label">Lương cơ bản (theo ngày):</span>
+                  <span class="value">{{ formatCurrency(salaryCalculationResult.breakdown?.baseSalary || 0) }}</span>
+                </div>
+                <div class="salary-breakdown-item" style="color: #52c41a;">
+                  <span class="label">Phụ cấp:</span>
+                  <span class="value">+ {{ formatCurrency(salaryCalculationResult.breakdown?.allowance || 0) }}</span>
+                </div>
+                <div class="salary-breakdown-item" style="color: #52c41a;">
+                  <span class="label">Thưởng:</span>
+                  <span class="value">+ {{ formatCurrency(salaryCalculationResult.breakdown?.bonus || 0) }}</span>
+                </div>
+              </div>
+              <div nz-col [nzSpan]="12">
+                <div class="salary-breakdown-item" style="color: #ff4d4f;">
+                  <span class="label">Bảo hiểm:</span>
+                  <span class="value">- {{ formatCurrency(salaryCalculationResult.breakdown?.insurance || 0) }}</span>
+                </div>
+                <div class="salary-breakdown-item" style="color: #ff4d4f;">
+                  <span class="label">Phạt:</span>
+                  <span class="value">- {{ formatCurrency(salaryCalculationResult.breakdown?.penalty || 0) }}</span>
+                </div>
+                <div class="salary-breakdown-item" style="margin-top: 16px; padding-top: 16px; border-top: 2px solid #1890ff;">
+                  <span class="label" style="font-size: 16px; font-weight: 600;">Tổng cộng thêm:</span>
+                  <span class="value" style="font-size: 16px; font-weight: 600; color: #52c41a;">
+                    + {{ formatCurrency(salaryCalculationResult.breakdown?.totalAdditions || 0) }}
+                  </span>
+                </div>
+                <div class="salary-breakdown-item">
+                  <span class="label" style="font-size: 16px; font-weight: 600;">Tổng cộng trừ:</span>
+                  <span class="value" style="font-size: 16px; font-weight: 600; color: #ff4d4f;">
+                    - {{ formatCurrency(salaryCalculationResult.breakdown?.totalDeductions || 0) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="salary-breakdown-item" style="margin-top: 16px; padding: 16px; background: white; border-radius: 8px; border: 2px solid #1890ff;">
+              <span class="label" style="font-size: 18px; font-weight: 700;">Lương thực nhận:</span>
+              <span class="value" style="font-size: 20px; font-weight: 700; color: #1890ff;">
+                {{ formatCurrency(salaryCalculationResult.breakdown?.netSalary || 0) }}
+              </span>
+            </div>
+            <div style="margin-top: 16px; padding: 12px; background: #fff7e6; border-radius: 4px; border-left: 4px solid #faad14;">
+              <small>
+                <i nz-icon nzType="info-circle" style="color: #faad14;"></i>
+                <strong>Lưu ý:</strong> Đây chỉ là kết quả tính lương, chưa được lưu vào payroll. 
+                Vui lòng bấm nút "Đã thanh toán" để lưu vào lịch sử payroll và đánh dấu đã thanh toán.
+                <br>
+                Lương thực nhận = (Lương cơ bản theo ngày) + Phụ cấp + Thưởng - Bảo hiểm - Phạt.
+                <br>
+                <strong>Ngày cơ sở:</strong> 
+                <ul style="margin: 4px 0; padding-left: 20px;">
+                  <li>Lần đầu tính lương: Ngày cơ sở = Ngày bắt đầu làm việc</li>
+                  <li>Đã tính lương trước đó và số ngày < 30: Ngày cơ sở = Ngày sau lần tính lương trước</li>
+                  <li>Đã tính lương trước đó và số ngày >= 30: Ngày cơ sở = Ngày bắt đầu làm việc của tháng tính lương (ví dụ: bắt đầu làm 4/11, tính lương tháng 12 sẽ lấy 4/12 làm ngày cơ sở)</li>
+                </ul>
+              </small>
+            </div>
+            <div class="form-actions" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #d9d9d9;">
+              <button nz-button type="button" (click)="closeSalaryModal()">Đóng</button>
+              <button nz-button nzType="primary" nzDanger (click)="paySalary()" [nzLoading]="isLoading">
+                <i nz-icon nzType="dollar"></i> Đã thanh toán
+              </button>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </nz-modal>
   </nz-spin>
 </nz-card>

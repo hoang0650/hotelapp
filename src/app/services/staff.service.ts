@@ -41,4 +41,29 @@ export class StaffService {
   deleteStaff(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
+
+  // Tính lương cho nhân viên (chỉ tính, không lưu)
+  calculateSalary(staffId: string, data: {
+    calculationDate?: Date;
+    allowance?: number;
+    insurance?: number;
+    penalty?: number;
+    bonus?: number;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/${staffId}/calculate-salary`, data);
+  }
+
+  // Lưu lương vào payroll và đánh dấu đã thanh toán
+  paySalary(staffId: string, data: {
+    calculationDate: Date;
+    baseDate: Date;
+    allowance?: number;
+    insurance?: number;
+    penalty?: number;
+    bonus?: number;
+    paymentDate?: Date;
+    paymentReference?: string;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/${staffId}/pay-salary`, data);
+  }
 }

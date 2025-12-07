@@ -68,7 +68,13 @@ export class RoomManagementComponent implements OnInit {
         dailyEndTime: ['22:00'], // Giờ kết thúc tính theo ngày (HH:mm)
         autoNightlyHours: [8, [Validators.min(1)]], // Số giờ tự động chuyển sang qua đêm
         gracePeriodMinutes: [15, [Validators.min(0), Validators.max(60)]], // Thời gian miễn phí sau giờ thứ 2 (phút)
-        timezone: ['UTC+7'] // Múi giờ (UTC+7 cho Việt Nam)
+        timezone: ['UTC+7'], // Múi giờ (UTC+7 cho Việt Nam)
+        // Phụ thu cho daily rates
+        dailyEarlyCheckinSurcharge: [0, [Validators.min(0)]], // Phụ thu check-in sớm cho thuê theo ngày (số tiền/giờ)
+        dailyLateCheckoutFee: [0, [Validators.min(0)]], // Phí trả phòng muộn cho thuê theo ngày (số tiền/giờ)
+        // Phụ thu cho nightly rates
+        nightlyEarlyCheckinSurcharge: [0, [Validators.min(0)]], // Phụ thu check-in sớm cho thuê qua đêm (số tiền/giờ)
+        nightlyLateCheckoutSurcharge: [0, [Validators.min(0)]] // Phụ thu check-out trễ cho thuê qua đêm (số tiền/giờ)
       }),
       description: [''],
       notes: ['']
@@ -205,7 +211,11 @@ export class RoomManagementComponent implements OnInit {
               dailyEndTime: (fullRoom as any).priceSettings?.dailyEndTime || '22:00',
               autoNightlyHours: (fullRoom as any).priceSettings?.autoNightlyHours || 8,
               gracePeriodMinutes: (fullRoom as any).priceSettings?.gracePeriodMinutes || 15,
-              timezone: (fullRoom as any).priceSettings?.timezone || 'UTC+7'
+              timezone: (fullRoom as any).priceSettings?.timezone || 'UTC+7',
+              dailyEarlyCheckinSurcharge: (fullRoom as any).priceSettings?.dailyEarlyCheckinSurcharge || 0,
+              dailyLateCheckoutFee: (fullRoom as any).priceSettings?.dailyLateCheckoutFee || 0,
+              nightlyEarlyCheckinSurcharge: (fullRoom as any).priceSettings?.nightlyEarlyCheckinSurcharge || 0,
+              nightlyLateCheckoutSurcharge: (fullRoom as any).priceSettings?.nightlyLateCheckoutSurcharge || 0
             },
             description: fullRoom.description,
             notes: fullRoom.notes
@@ -256,7 +266,11 @@ export class RoomManagementComponent implements OnInit {
               dailyEndTime: (roomToEdit as any).priceSettings?.dailyEndTime || '22:00',
               autoNightlyHours: (roomToEdit as any).priceSettings?.autoNightlyHours || 8,
               gracePeriodMinutes: (roomToEdit as any).priceSettings?.gracePeriodMinutes || 15,
-              timezone: (roomToEdit as any).priceSettings?.timezone || 'UTC+7'
+              timezone: (roomToEdit as any).priceSettings?.timezone || 'UTC+7',
+              dailyEarlyCheckinSurcharge: (roomToEdit as any).priceSettings?.dailyEarlyCheckinSurcharge || 0,
+              dailyLateCheckoutFee: (roomToEdit as any).priceSettings?.dailyLateCheckoutFee || 0,
+              nightlyEarlyCheckinSurcharge: (roomToEdit as any).priceSettings?.nightlyEarlyCheckinSurcharge || 0,
+              nightlyLateCheckoutSurcharge: (roomToEdit as any).priceSettings?.nightlyLateCheckoutSurcharge || 0
             },
             description: roomToEdit.description,
             notes: roomToEdit.notes
@@ -297,7 +311,11 @@ export class RoomManagementComponent implements OnInit {
         dailyEndTime: '22:00',
         autoNightlyHours: 8,
         gracePeriodMinutes: 15,
-        timezone: 'UTC+7'
+        timezone: 'UTC+7',
+        dailyEarlyCheckinSurcharge: 0,
+        dailyLateCheckoutFee: 0,
+        nightlyEarlyCheckinSurcharge: 0,
+        nightlyLateCheckoutSurcharge: 0
       }
     });
     
@@ -348,7 +366,11 @@ export class RoomManagementComponent implements OnInit {
         dailyEndTime: formValue.priceSettings.dailyEndTime || '22:00',
         autoNightlyHours: Number(formValue.priceSettings.autoNightlyHours) || 8,
         gracePeriodMinutes: Number(formValue.priceSettings.gracePeriodMinutes) || 15,
-        timezone: formValue.priceSettings.timezone || 'UTC+7'
+        timezone: formValue.priceSettings.timezone || 'UTC+7',
+        dailyEarlyCheckinSurcharge: Number(formValue.priceSettings.dailyEarlyCheckinSurcharge) || 0,
+        dailyLateCheckoutFee: Number(formValue.priceSettings.dailyLateCheckoutFee) || 0,
+        nightlyEarlyCheckinSurcharge: Number(formValue.priceSettings.nightlyEarlyCheckinSurcharge) || 0,
+        nightlyLateCheckoutSurcharge: Number(formValue.priceSettings.nightlyLateCheckoutSurcharge) || 0
       } : undefined,
       description: formValue.description,
       notes: formValue.notes

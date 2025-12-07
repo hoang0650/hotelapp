@@ -77,6 +77,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     private modal: NzModalService
   ) {
     this.initForm();
+    this.initSalaryForm();
   }
 
   ngOnInit(): void {
@@ -133,6 +134,10 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
         endDate: [null],
         status: ['active', Validators.required],
         salary: [0],
+        allowance: [0], // Phụ cấp
+        insurance: [0], // Bảo hiểm
+        penalty: [0], // Phạt
+        bonus: [0], // Thưởng
         bankAccount: this.fb.group({
           bankName: [''],
           accountNumber: [''],
@@ -173,6 +178,10 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
         endDate: null,
         status: 'active',
         salary: 0,
+        allowance: 0,
+        insurance: 0,
+        penalty: 0,
+        bonus: 0,
         bankAccount: { bankName: '', accountNumber: '', accountName: '' },
         taxId: ''
       },
@@ -336,7 +345,13 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       hotelId: staff.hotelId,
       personalInfo: staff.personalInfo || {},
       contactInfo: staff.contactInfo || {},
-      employmentInfo: staff.employmentInfo || {},
+      employmentInfo: {
+        ...staff.employmentInfo,
+        allowance: staff.employmentInfo?.allowance || 0,
+        insurance: staff.employmentInfo?.insurance || 0,
+        penalty: staff.employmentInfo?.penalty || 0,
+        bonus: staff.employmentInfo?.bonus || 0
+      },
       permissions: staff.permissions || ['view'],
       notes: staff.notes || ''
     });
@@ -478,5 +493,185 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     } else {
       this.createStaff();
     }
+  }
+
+  // ============ TÍNH LƯƠNG ============
+  
+  isSalaryModalVisible = false;
+  selectedStaffForSalary: Staff | null = null;
+  salaryCalculationForm!: FormGroup;
+  salaryCalculationResult: any = null;
+
+  initSalaryForm(): void {
+    this.salaryCalculationForm = this.fb.group({
+      calculationDate: [new Date()],
+      allowance: [0, [Validators.min(0)]],
+      insurance: [0, [Validators.min(0)]],
+      penalty: [0, [Validators.min(0)]],
+      bonus: [0, [Validators.min(0)]]
+    });
+  }
+
+  openSalaryModal(staff: Staff): void {
+    this.selectedStaffForSalary = staff;
+    this.salaryCalculationResult = null;
+    
+    // Khởi tạo form nếu chưa có
+    if (!this.salaryCalculationForm) {
+      this.initSalaryForm();
+    }
+    
+    // Set giá trị mặc định từ staff
+    this.salaryCalculationForm.patchValue({
+      calculationDate: new Date(),
+      allowance: staff.employmentInfo?.allowance || 0,
+      insurance: staff.employmentInfo?.insurance || 0,
+      penalty: staff.employmentInfo?.penalty || 0,
+      bonus: staff.employmentInfo?.bonus || 0
+    });
+    
+    this.isSalaryModalVisible = true;
+  }
+
+  closeSalaryModal(): void {
+    this.isSalaryModalVisible = false;
+    this.selectedStaffForSalary = null;
+    this.salaryCalculationResult = null;
+  }
+
+  calculateSalary(): void {
+    if (!this.selectedStaffForSalary || !this.selectedStaffForSalary._id) {
+      this.message.error('Không tìm thấy thông tin nhân viên');
+      return;
+    }
+
+    if (this.salaryCalculationForm.invalid) {
+      this.message.warning('Vui lòng kiểm tra lại thông tin');
+      return;
+    }
+
+    this.isLoading = true;
+    const formValue = this.salaryCalculationForm.value;
+
+    const calculationData = {
+      calculationDate: formValue.calculationDate,
+      allowance: formValue.allowance || 0,
+      insurance: formValue.insurance || 0,
+      penalty: formValue.penalty || 0,
+      bonus: formValue.bonus || 0
+    };
+
+    this.subscriptions.add(
+      this.staffService.calculateSalary(this.selectedStaffForSalary._id, calculationData).subscribe(
+        (response) => {
+          // Parse dates từ backend để đảm bảo hiển thị đúng
+          if (response.data && response.data.breakdown) {
+            const breakdown = response.data.breakdown;
+            // Parse baseDate và calculationDate từ string hoặc Date object
+            if (breakdown.baseDate) {
+              breakdown.baseDate = this.parseDate(breakdown.baseDate) || breakdown.baseDate;
+            }
+            if (breakdown.calculationDate) {
+              breakdown.calculationDate = this.parseDate(breakdown.calculationDate) || breakdown.calculationDate;
+            }
+          }
+          this.salaryCalculationResult = response.data;
+          this.message.success('Tính lương thành công!');
+          this.isLoading = false;
+          // KHÔNG reload staff vì chưa lưu vào payroll
+        },
+        (error) => {
+          this.message.error('Lỗi khi tính lương: ' + (error.error?.message || error.message));
+          this.isLoading = false;
+        }
+      )
+    );
+  }
+
+  paySalary(): void {
+    if (!this.selectedStaffForSalary || !this.selectedStaffForSalary._id || !this.salaryCalculationResult) {
+      this.message.error('Vui lòng tính lương trước');
+      return;
+    }
+
+    const staffId = this.selectedStaffForSalary._id;
+    if (!staffId) {
+      this.message.error('Không tìm thấy ID nhân viên');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: 'Xác nhận thanh toán',
+      nzContent: `Bạn có chắc muốn lưu lương và đánh dấu đã thanh toán cho nhân viên <b>${this.getFullName(this.selectedStaffForSalary)}</b>?`,
+      nzOkText: 'Xác nhận',
+      nzOkType: 'primary',
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        this.isLoading = true;
+        const breakdown = this.salaryCalculationResult.breakdown;
+
+        // Sử dụng baseDate và calculationDate từ breakdown (kết quả tính lương)
+        // KHÔNG dùng từ form vì form có thể đã thay đổi
+        const payData = {
+          calculationDate: breakdown.calculationDate, // Ngày tính lương từ kết quả
+          baseDate: breakdown.baseDate, // Ngày cơ sở từ kết quả
+          allowance: breakdown.allowance,
+          insurance: breakdown.insurance,
+          penalty: breakdown.penalty,
+          bonus: breakdown.bonus,
+          paymentDate: new Date(),
+          paymentReference: ''
+        };
+
+        this.subscriptions.add(
+          this.staffService.paySalary(staffId, payData).subscribe(
+            (response) => {
+              this.message.success('Đã lưu lương và đánh dấu đã thanh toán thành công!');
+              this.isLoading = false;
+              // Reload danh sách staff để cập nhật payroll
+              this.loadStaff();
+              // Đóng modal
+              this.closeSalaryModal();
+            },
+            (error) => {
+              this.message.error('Lỗi khi lưu lương: ' + (error.error?.message || error.message));
+              this.isLoading = false;
+            }
+          )
+        );
+      }
+    });
+  }
+
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
+  }
+
+  // Helper để parse date từ backend (có thể là string hoặc Date object)
+  parseDate(date: any): Date | null {
+    if (!date) return null;
+    if (date instanceof Date) {
+      // Nếu đã là Date object, tạo mới để tránh mutation
+      return new Date(date.getTime());
+    }
+    if (typeof date === 'string') {
+      const parsed = new Date(date);
+      // Kiểm tra xem date có hợp lệ không
+      if (isNaN(parsed.getTime())) return null;
+      return parsed;
+    }
+    return null;
+  }
+
+  // Helper để format date hiển thị
+  formatDate(date: any): string {
+    const parsedDate = this.parseDate(date);
+    if (!parsedDate || isNaN(parsedDate.getTime())) return '-';
+    
+    // Format theo định dạng dd/MM/yyyy
+    const day = String(parsedDate.getDate()).padStart(2, '0');
+    const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+    const year = parsedDate.getFullYear();
+    return `${day}/${month}/${year}`;
   }
 }

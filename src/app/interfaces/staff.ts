@@ -46,6 +46,10 @@ export interface StaffEmploymentInfo {
   endDate?: Date;
   status: 'active' | 'on_leave' | 'terminated';
   salary?: number;
+  allowance?: number; // Phụ cấp
+  insurance?: number; // Bảo hiểm
+  penalty?: number; // Phạt
+  bonus?: number; // Thưởng
   bankAccount?: BankAccount;
   taxId?: string;
 }
@@ -82,6 +86,11 @@ export interface StaffPayroll {
     endDate: Date;
   };
   baseSalary: number;
+  daysWorked?: number; // Số ngày thực làm
+  allowance?: number; // Phụ cấp
+  insurance?: number; // Bảo hiểm
+  penalty?: number; // Phạt
+  bonus?: number; // Thưởng
   overtime?: number;
   bonuses?: number;
   deductions?: number;
@@ -89,6 +98,7 @@ export interface StaffPayroll {
   paymentDate?: Date;
   paymentStatus: 'pending' | 'paid';
   paymentReference?: string;
+  calculatedAt?: Date; // Thời gian tính lương
 }
 
 export type StaffPermission = 'view' | 'create' | 'edit' | 'delete' | 'manage_rooms' | 'manage_bookings';
