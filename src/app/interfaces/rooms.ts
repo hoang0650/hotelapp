@@ -124,6 +124,7 @@ export interface GuestInfo {
   phone?: string;
   email?: string;
   address?: string;
+  guestSource?: 'walkin' | 'booking' | 'agoda' | 'traveloka' | 'expedia' | 'trip' | 'g2j' | 'other' | string; // Nguồn khách hàng
 }
 
 // Dịch vụ đã đặt trong một ServiceOrder (cũng dùng trong Event)

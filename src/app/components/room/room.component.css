@@ -45,6 +45,65 @@
     /* or any style for available rooms */
 }
 
+/* Guest source label styles */
+.room-guest-source-label {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.source-blue {
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+}
+
+.source-green {
+  background-color: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.source-orange {
+  background-color: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+.source-purple {
+  background-color: #f9f0ff;
+  color: #722ed1;
+  border: 1px solid #d3adf7;
+}
+
+.source-cyan {
+  background-color: #e6fffb;
+  color: #13c2c2;
+  border: 1px solid #87e8de;
+}
+
+.source-magenta {
+  background-color: #fff0f6;
+  color: #eb2f96;
+  border: 1px solid #ffadd2;
+}
+
+.source-gold {
+  background-color: #fffbe6;
+  color: #faad14;
+  border: 1px solid #ffe58f;
+}
+
+.source-default {
+  background-color: #f5f5f5;
+  color: #595959;
+  border: 1px solid #d9d9d9;
+}
+
 /* Đảm bảo không có khoảng cách không mong muốn */
 .slider-container {
     margin-bottom: 16px;

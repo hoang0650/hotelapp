@@ -156,6 +156,13 @@
                 <!-- Trạng thái phòng -->
                 <div class="room-status-label">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
                 
+                <!-- Nguồn khách (chỉ hiển thị khi phòng đang có khách) -->
+                <ng-container *ngIf="room.status === 'occupied'">
+                  <div class="room-guest-source-label" [ngClass]="'source-' + getGuestSourceLabelAndColor(getRoomGuestSource(room)).color">
+                    {{ getGuestSourceLabelAndColor(getRoomGuestSource(room)).label }}
+                  </div>
+                </ng-container>
+                
                 <!-- Thông tin booking cho phòng đã đặt -->
                 <ng-container *ngIf="room.status === 'booked' && getRoomBookingInfo(room) as bookingInfo">
                   <div class="room-details">

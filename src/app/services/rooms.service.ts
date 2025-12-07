@@ -32,8 +32,40 @@ export class RoomsService {
     return this.http.get<Room[]>(this.apiUrl, { params: httpParams });
   }
 
-  getRoomById(id: string): Observable<Room> {
-    return this.http.get<Room>(`${this.apiUrl}/${id}`);
+  getRoomById(id: string, options?: { limit?: number, includeOldEvents?: boolean }): Observable<Room> {
+    let httpParams = new HttpParams();
+    
+    if (options) {
+      if (options.limit) {
+        httpParams = httpParams.set('limit', options.limit.toString());
+      }
+      if (options.includeOldEvents) {
+        httpParams = httpParams.set('includeOldEvents', 'true');
+      }
+    }
+    
+    return this.http.get<Room>(`${this.apiUrl}/${id}`, { params: httpParams });
+  }
+
+  // Lấy events riêng từ RoomEvent collection (mới)
+  getRoomEvents(roomId: string, options?: {
+    limit?: number;
+    skip?: number;
+    type?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Observable<Event[]> {
+    let httpParams = new HttpParams();
+    
+    if (options) {
+      if (options.limit) httpParams = httpParams.set('limit', options.limit.toString());
+      if (options.skip) httpParams = httpParams.set('skip', options.skip.toString());
+      if (options.type) httpParams = httpParams.set('type', options.type);
+      if (options.startDate) httpParams = httpParams.set('startDate', options.startDate);
+      if (options.endDate) httpParams = httpParams.set('endDate', options.endDate);
+    }
+    
+    return this.http.get<Event[]>(`${this.apiUrl}/${roomId}/events`, { params: httpParams });
   }
 
   getAvailableRooms(params: { hotelId: string, checkInDate?: string, checkOutDate?: string, floor?: number }): Observable<Room[]> {

@@ -192,7 +192,13 @@
                     <nz-form-item>
                         <nz-form-label>Giá giờ đầu (cũ)</nz-form-label>
                         <nz-form-control>
-                            <nz-input-number formControlName="firstHourRate" [nzMin]="0" [nzStep]="10000" class="w-100" nzPlaceHolder="Hỗ trợ giá cũ"></nz-input-number>
+                            <nz-input-number 
+                                formControlName="firstHourRate" 
+                                [nzMin]="0" 
+                                [nzStep]="10000" 
+                                class="w-100" 
+                                [nzDisabled]="hasPriceConfig"
+                                nzPlaceHolder="Hỗ trợ giá cũ"></nz-input-number>
                             <div class="form-hint">Giá giờ đầu (để tương thích với hệ thống cũ)</div>
                         </nz-form-control>
                     </nz-form-item>
@@ -201,7 +207,13 @@
                     <nz-form-item>
                         <nz-form-label>Giá giờ tiếp theo</nz-form-label>
                         <nz-form-control>
-                            <nz-input-number formControlName="additionalHourRate" [nzMin]="0" [nzStep]="10000" class="w-100" nzPlaceHolder="Giá mỗi giờ tiếp theo"></nz-input-number>
+                            <nz-input-number 
+                                formControlName="additionalHourRate" 
+                                [nzMin]="0" 
+                                [nzStep]="10000" 
+                                class="w-100" 
+                                [nzDisabled]="hasPriceConfig"
+                                nzPlaceHolder="Giá mỗi giờ tiếp theo"></nz-input-number>
                             <div class="form-hint">Giá cho mỗi giờ tiếp theo (ví dụ: 50,000đ). Sau giờ thứ 2, quá 15 phút mới tính thêm.</div>
                         </nz-form-control>
                     </nz-form-item>
@@ -210,13 +222,24 @@
         </div>
 
         <div formGroupName="pricing" nz-col [nzSpan]="24">
-            <h4 class="mt-3 mb-2">Cấu hình giá ({{ roomForm.get('pricing.currency')!.value }})</h4>
+            <h4 class="mt-3 mb-2">
+                Cấu hình giá ({{ roomForm.get('pricing.currency')!.value }})
+                <span *ngIf="hasPriceConfig" style="color: #1890ff; font-size: 12px; margin-left: 8px;">
+                    (Đang sử dụng PriceConfig - các trường bên dưới bị vô hiệu hóa)
+                </span>
+            </h4>
             <div nz-row [nzGutter]="16">
                 <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
                     <nz-form-item>
                         <nz-form-label>Giá giờ đầu</nz-form-label>
                         <nz-form-control>
-                            <nz-input-number formControlName="hourly" [nzMin]="0" [nzStep]="10000" class="w-100" nzPlaceHolder="Nếu có PriceConfig sẽ tự điền"></nz-input-number>
+                            <nz-input-number 
+                                formControlName="hourly" 
+                                [nzMin]="0" 
+                                [nzStep]="10000" 
+                                class="w-100" 
+                                [nzDisabled]="hasPriceConfig"
+                                nzPlaceHolder="Nếu có PriceConfig sẽ tự điền"></nz-input-number>
                             <div class="form-hint">Giá cho giờ đầu tiên (ví dụ: 250,000đ)</div>
                         </nz-form-control>
                     </nz-form-item>
@@ -225,7 +248,12 @@
                     <nz-form-item>
                         <nz-form-label nzRequired>Giá theo ngày</nz-form-label>
                         <nz-form-control nzErrorTip="Vui lòng nhập giá theo ngày">
-                            <nz-input-number formControlName="daily" [nzMin]="0" [nzStep]="50000" class="w-100"></nz-input-number>
+                            <nz-input-number 
+                                formControlName="daily" 
+                                [nzMin]="0" 
+                                [nzStep]="50000" 
+                                class="w-100"
+                                [nzDisabled]="hasPriceConfig"></nz-input-number>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -233,7 +261,12 @@
                     <nz-form-item>
                         <nz-form-label nzRequired>Giá qua đêm</nz-form-label>
                         <nz-form-control nzErrorTip="Vui lòng nhập giá qua đêm">
-                            <nz-input-number formControlName="nightly" [nzMin]="0" [nzStep]="50000" class="w-100"></nz-input-number>
+                            <nz-input-number 
+                                formControlName="nightly" 
+                                [nzMin]="0" 
+                                [nzStep]="50000" 
+                                class="w-100"
+                                [nzDisabled]="hasPriceConfig"></nz-input-number>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -266,12 +299,17 @@
 
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-                <nz-form-label>ID Cấu hình giá</nz-form-label>
+                <nz-form-label>ID Cấu hình giá (PriceConfig)</nz-form-label>
                 <nz-form-control>
                     <input nz-input formControlName="priceConfigId" placeholder="ID của cấu hình giá (nếu có)" />
                     <div class="form-hint">
                         <small>
-                            <strong>Lưu ý:</strong> Nếu sử dụng PriceConfig, các cấu hình bên dưới sẽ bị ghi đè bởi PriceConfig.
+                            <strong>⚠️ Lưu ý quan trọng:</strong> Nếu có PriceConfig ID, hệ thống sẽ <strong>ưu tiên sử dụng giá từ PriceConfig</strong> và tự động ghi đè các cấu hình giá bên dưới. Các trường giá sẽ bị vô hiệu hóa.
+                        </small>
+                    </div>
+                    <div *ngIf="hasPriceConfig" class="form-hint" style="color: #1890ff; margin-top: 8px;">
+                        <small>
+                            <strong>ℹ️ Đang sử dụng PriceConfig:</strong> Giá sẽ được lấy tự động từ PriceConfig khi tính toán.
                         </small>
                     </div>
                 </nz-form-control>
@@ -365,6 +403,22 @@
                                 class="w-100" 
                                 nzPlaceHolder="15" />
                             <div class="form-hint">Thời gian miễn phí sau giờ thứ 2 (ví dụ: 15 phút). Quá thời gian này sẽ tính thêm 1 giờ.</div>
+                        </nz-form-control>
+                    </nz-form-item>
+                </div>
+                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+                    <nz-form-item>
+                        <nz-form-label>Múi giờ</nz-form-label>
+                        <nz-form-control>
+                            <nz-select formControlName="timezone" nzPlaceHolder="Chọn múi giờ" class="w-100">
+                                <nz-option nzValue="UTC+7" nzLabel="UTC+7 (Việt Nam)"></nz-option>
+                                <nz-option nzValue="UTC+8" nzLabel="UTC+8 (Singapore, Malaysia)"></nz-option>
+                                <nz-option nzValue="UTC+9" nzLabel="UTC+9 (Nhật Bản, Hàn Quốc)"></nz-option>
+                                <nz-option nzValue="UTC+0" nzLabel="UTC+0 (GMT)"></nz-option>
+                                <nz-option nzValue="UTC-5" nzLabel="UTC-5 (EST)"></nz-option>
+                                <nz-option nzValue="UTC-8" nzLabel="UTC-8 (PST)"></nz-option>
+                            </nz-select>
+                            <div class="form-hint">Múi giờ để tính toán thời gian check-in/check-out (mặc định: UTC+7 cho Việt Nam)</div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>

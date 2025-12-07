@@ -1086,10 +1086,18 @@ export class TableComponent implements OnInit, OnChanges {
       bookingId: item.bookingId,
       action: 'check_out',
       guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
+      guestSource: item.guestInfo?.guestSource || item.guestSource || 'walkin', // Thêm nguồn khách
       amount: item.totalAmount || item.amount || 0,
       paymentMethod: item.paymentMethod || 'cash',
       timestamp: item.checkOutTime || item.checkoutTime || new Date(),
-      notes: item.notes || ''
+      notes: item.notes || '',
+      // Các trường bổ sung
+      roomTotal: item.roomTotal || 0,
+      additionalCharges: item.additionalCharges || 0,
+      discount: item.discount || 0,
+      serviceAmount: item.servicesTotal || item.serviceDetails?.amount || 0,
+      advancePayment: item.advancePayment || 0,
+      checkinTime: item.checkInTime || item.checkinTime || null
     }));
     
     // Tạo invoices từ paidData
@@ -1506,11 +1514,19 @@ export class TableComponent implements OnInit, OnChanges {
       bookingId: item.bookingId,
       action: 'check_out',
       guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
+      guestSource: item.guestInfo?.guestSource || item.guestSource || 'walkin', // Thêm nguồn khách
       amount: item.totalAmount || item.amount || 0,
       paymentMethod: item.paymentMethod || 'cash',
       timestamp: item.checkOutTime || item.checkoutTime || new Date(),
       notes: item.notes || '',
-      invoiceNumber: item.invoiceNumber || null
+      invoiceNumber: item.invoiceNumber || null,
+      // Các trường bổ sung
+      roomTotal: item.roomTotal || 0,
+      additionalCharges: item.additionalCharges || 0,
+      discount: item.discount || 0,
+      serviceAmount: item.servicesTotal || item.serviceDetails?.amount || 0,
+      advancePayment: item.advancePayment || 0,
+      checkinTime: item.checkInTime || item.checkinTime || null
     }));
     
     // Tính tổng tiền chuyển khoản và cà thẻ từ paidData

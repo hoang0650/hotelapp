@@ -35,7 +35,7 @@
             </div>
             <div class="info-item">
               <span><strong>Khách hàng:</strong></span>
-              <span>{{ invoiceData.customerName || invoiceData['guestInfo']?.name || 'Khách lẻ' }}</span>
+              <span>{{ getCustomerName() }}</span>
             </div>
           </div>
           <div class="info-row">
@@ -75,7 +75,7 @@
           <div class="info-row">
             <div class="info-item">
               <span><strong>SĐT khách hàng:</strong></span>
-              <span>{{ invoiceData.customerPhone || invoiceData['guestInfo']?.phone || 'Không có thông tin' }}</span>
+              <span>{{ getCustomerPhone() }}</span>
             </div>
             <div class="info-item">
               <span><strong>CCCD/CMND:</strong></span>

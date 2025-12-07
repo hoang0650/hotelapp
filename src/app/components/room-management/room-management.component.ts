@@ -67,15 +67,46 @@ export class RoomManagementComponent implements OnInit {
         dailyStartTime: ['06:00'], // Giờ bắt đầu tính theo ngày (HH:mm)
         dailyEndTime: ['22:00'], // Giờ kết thúc tính theo ngày (HH:mm)
         autoNightlyHours: [8, [Validators.min(1)]], // Số giờ tự động chuyển sang qua đêm
-        gracePeriodMinutes: [15, [Validators.min(0), Validators.max(60)]] // Thời gian miễn phí sau giờ thứ 2 (phút)
+        gracePeriodMinutes: [15, [Validators.min(0), Validators.max(60)]], // Thời gian miễn phí sau giờ thứ 2 (phút)
+        timezone: ['UTC+7'] // Múi giờ (UTC+7 cho Việt Nam)
       }),
       description: [''],
       notes: ['']
     });
   }
 
+  priceConfigId: string | null = null;
+  hasPriceConfig: boolean = false;
+
   ngOnInit(): void {
     this.loadHotels();
+    
+    // Lắng nghe thay đổi priceConfigId để disable/enable các field giá
+    this.roomForm.get('priceConfigId')?.valueChanges.subscribe((priceConfigId) => {
+      this.priceConfigId = priceConfigId;
+      this.hasPriceConfig = !!priceConfigId && priceConfigId !== '';
+      this.updatePriceFieldsDisabledState();
+    });
+  }
+
+  // Cập nhật trạng thái disable của các field giá
+  updatePriceFieldsDisabledState(): void {
+    const isDisabled = this.hasPriceConfig;
+    
+    // Disable các field giá khi có priceConfig
+    if (isDisabled) {
+      this.roomForm.get('pricing.hourly')?.disable();
+      this.roomForm.get('pricing.daily')?.disable();
+      this.roomForm.get('pricing.nightly')?.disable();
+      this.roomForm.get('firstHourRate')?.disable();
+      this.roomForm.get('additionalHourRate')?.disable();
+    } else {
+      this.roomForm.get('pricing.hourly')?.enable();
+      this.roomForm.get('pricing.daily')?.enable();
+      this.roomForm.get('pricing.nightly')?.enable();
+      this.roomForm.get('firstHourRate')?.enable();
+      this.roomForm.get('additionalHourRate')?.enable();
+    }
   }
 
   loadRooms(hotelId?: string): void {
@@ -134,7 +165,7 @@ export class RoomManagementComponent implements OnInit {
       this.onHotelChange(this.selectedHotelId);
       
       // Load đầy đủ thông tin phòng từ API để đảm bảo có đầy đủ dữ liệu
-      this.roomService.getRoomById(id).subscribe(
+      this.roomService.getRoomById(id, { limit: 1000 }).subscribe(
         (fullRoom: Room) => {
           this.selectedRoom = fullRoom;
           this.roomForm.patchValue({
@@ -173,11 +204,19 @@ export class RoomManagementComponent implements OnInit {
               dailyStartTime: (fullRoom as any).priceSettings?.dailyStartTime || '06:00',
               dailyEndTime: (fullRoom as any).priceSettings?.dailyEndTime || '22:00',
               autoNightlyHours: (fullRoom as any).priceSettings?.autoNightlyHours || 8,
-              gracePeriodMinutes: (fullRoom as any).priceSettings?.gracePeriodMinutes || 15
+              gracePeriodMinutes: (fullRoom as any).priceSettings?.gracePeriodMinutes || 15,
+              timezone: (fullRoom as any).priceSettings?.timezone || 'UTC+7'
             },
             description: fullRoom.description,
             notes: fullRoom.notes
           });
+          
+          // Cập nhật trạng thái disable sau khi load dữ liệu
+          setTimeout(() => {
+            this.priceConfigId = fullRoom.priceConfigId || null;
+            this.hasPriceConfig = !!fullRoom.priceConfigId && fullRoom.priceConfigId !== '';
+            this.updatePriceFieldsDisabledState();
+          }, 0);
         },
         error => {
           console.error('Error loading room details:', error);
@@ -216,11 +255,19 @@ export class RoomManagementComponent implements OnInit {
               dailyStartTime: (roomToEdit as any).priceSettings?.dailyStartTime || '06:00',
               dailyEndTime: (roomToEdit as any).priceSettings?.dailyEndTime || '22:00',
               autoNightlyHours: (roomToEdit as any).priceSettings?.autoNightlyHours || 8,
-              gracePeriodMinutes: (roomToEdit as any).priceSettings?.gracePeriodMinutes || 15
+              gracePeriodMinutes: (roomToEdit as any).priceSettings?.gracePeriodMinutes || 15,
+              timezone: (roomToEdit as any).priceSettings?.timezone || 'UTC+7'
             },
             description: roomToEdit.description,
             notes: roomToEdit.notes
           });
+          
+          // Cập nhật trạng thái disable sau khi load dữ liệu (fallback)
+          setTimeout(() => {
+            this.priceConfigId = roomToEdit.priceConfigId || null;
+            this.hasPriceConfig = !!roomToEdit.priceConfigId && roomToEdit.priceConfigId !== '';
+            this.updatePriceFieldsDisabledState();
+          }, 0);
         }
       );
     }
@@ -229,6 +276,9 @@ export class RoomManagementComponent implements OnInit {
   stopEdit(): void {
     this.editId = null;
     this.selectedRoom = null;
+    this.priceConfigId = null;
+    this.hasPriceConfig = false;
+    
     this.roomForm.reset({
       hotelId: this.selectedHotelId,
       status: 'vacant',
@@ -239,15 +289,20 @@ export class RoomManagementComponent implements OnInit {
       pricing: { hourly: 0, daily: 0, nightly: 0, weekly: 0, monthly: 0, currency: 'VND' },
       firstHourRate: 0,
       additionalHourRate: null, // Reset về null thay vì 0
+      priceConfigId: null,
       priceSettings: {
         nightlyStartTime: '22:00',
         nightlyEndTime: '06:00',
         dailyStartTime: '06:00',
         dailyEndTime: '22:00',
         autoNightlyHours: 8,
-        gracePeriodMinutes: 15
+        gracePeriodMinutes: 15,
+        timezone: 'UTC+7'
       }
     });
+    
+    // Enable lại tất cả các field giá sau khi reset
+    this.updatePriceFieldsDisabledState();
   }
 
   submitForm(): void {
@@ -271,6 +326,8 @@ export class RoomManagementComponent implements OnInit {
     }
 
     const formValue = this.roomForm.value;
+    const hasPriceConfig = formValue.priceConfigId && formValue.priceConfigId !== '';
+    
     const roomData: any = {
       hotelId: formValue.hotelId,
       roomNumber: String(formValue.roomNumber),
@@ -283,40 +340,48 @@ export class RoomManagementComponent implements OnInit {
       },
       amenities: formValue.amenities || [],
       images: formValue.images || [],
-      pricing: {
-        hourly: Number(formValue.pricing?.hourly) || 0,
-        daily: Number(formValue.pricing?.daily) || 0,
-        nightly: Number(formValue.pricing?.nightly) || 0,
-        weekly: Number(formValue.pricing?.weekly) || 0,
-        monthly: Number(formValue.pricing?.monthly) || 0,
-        currency: formValue.pricing?.currency || 'VND'
-      },
-      priceConfigId: formValue.priceConfigId && formValue.priceConfigId !== '' ? formValue.priceConfigId : null,
+      priceConfigId: hasPriceConfig ? formValue.priceConfigId : null,
       priceSettings: formValue.priceSettings ? {
         nightlyStartTime: formValue.priceSettings.nightlyStartTime || '22:00',
         nightlyEndTime: formValue.priceSettings.nightlyEndTime || '06:00',
         dailyStartTime: formValue.priceSettings.dailyStartTime || '06:00',
         dailyEndTime: formValue.priceSettings.dailyEndTime || '22:00',
         autoNightlyHours: Number(formValue.priceSettings.autoNightlyHours) || 8,
-        gracePeriodMinutes: Number(formValue.priceSettings.gracePeriodMinutes) || 15
+        gracePeriodMinutes: Number(formValue.priceSettings.gracePeriodMinutes) || 15,
+        timezone: formValue.priceSettings.timezone || 'UTC+7'
       } : undefined,
       description: formValue.description,
       notes: formValue.notes
     };
     
-    // Chỉ thêm firstHourRate nếu có giá trị
-    if (formValue.firstHourRate !== null && formValue.firstHourRate !== undefined && formValue.firstHourRate !== '') {
-      roomData.firstHourRate = Number(formValue.firstHourRate) || 0;
-    }
-    
-    // Chỉ thêm additionalHourRate nếu người dùng đã nhập giá trị (kể cả 0)
-    // Nếu null hoặc undefined, không gửi lên để giữ nguyên giá trị trong database
-    if (formValue.additionalHourRate !== null && formValue.additionalHourRate !== undefined && formValue.additionalHourRate !== '') {
-      const value = Number(formValue.additionalHourRate);
-      // Chỉ gửi nếu là số hợp lệ (kể cả 0)
-      if (!isNaN(value)) {
-        roomData.additionalHourRate = value;
+    // ========== NẾU CÓ priceConfigId: KHÔNG GỬI GIÁ LÊN (backend sẽ tự động lấy từ priceConfig) ==========
+    if (!hasPriceConfig) {
+      // Chỉ gửi pricing nếu KHÔNG có priceConfig
+      roomData.pricing = {
+        hourly: Number(formValue.pricing?.hourly) || 0,
+        daily: Number(formValue.pricing?.daily) || 0,
+        nightly: Number(formValue.pricing?.nightly) || 0,
+        weekly: Number(formValue.pricing?.weekly) || 0,
+        monthly: Number(formValue.pricing?.monthly) || 0,
+        currency: formValue.pricing?.currency || 'VND'
+      };
+      
+      // Chỉ thêm firstHourRate nếu có giá trị
+      if (formValue.firstHourRate !== null && formValue.firstHourRate !== undefined && formValue.firstHourRate !== '') {
+        roomData.firstHourRate = Number(formValue.firstHourRate) || 0;
       }
+      
+      // Chỉ thêm additionalHourRate nếu người dùng đã nhập giá trị (kể cả 0)
+      if (formValue.additionalHourRate !== null && formValue.additionalHourRate !== undefined && formValue.additionalHourRate !== '') {
+        const value = Number(formValue.additionalHourRate);
+        if (!isNaN(value)) {
+          roomData.additionalHourRate = value;
+        }
+      }
+    } else {
+      // Nếu có priceConfigId, backend sẽ tự động lấy giá từ priceConfig
+      // Không cần gửi pricing, firstHourRate, additionalHourRate
+      console.log('Có priceConfigId, backend sẽ tự động lấy giá từ PriceConfig');
     }
 
     if (this.editId && this.selectedRoom) {

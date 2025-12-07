@@ -8,6 +8,7 @@ import {
   ShiftHandoverHistoryResponse
 } from '../../interfaces/shift-handover';
 import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-shift-handover-history',
@@ -24,7 +25,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   isLoading = false;
   
   // Filters
-  private _hotelId: string | null = null;
+  _hotelId: string | null = null; // Public để template có thể truy cập
   startDate: Date | null = null;
   endDate: Date | null = null;
   dateRange: [Date, Date] | null = null;
@@ -217,6 +218,308 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     const managerHandoverAmount = record.managerHandoverAmount || 0;
     const expenseAmount = record.expenseAmount || 0;
     return managerHandoverAmount + expenseAmount;
+  }
+
+  // Helper methods để lấy các giá trị từ room history
+  getRoomTotal(room: any): number {
+    return room.roomTotal || 0;
+  }
+
+  getAdditionalCharges(room: any): number {
+    return room.additionalCharges || 0;
+  }
+
+  getDiscount(room: any): number {
+    return room.discount || 0;
+  }
+
+  getServiceAmount(room: any): number {
+    return room.serviceAmount || room.serviceTotal || 0;
+  }
+
+  getAdvancePayment(room: any): number {
+    return room.advancePayment || 0;
+  }
+
+  getCheckinTime(room: any): Date | null {
+    const checkinTime = room.checkinTime || room.checkInTime;
+    return checkinTime ? new Date(checkinTime) : null;
+  }
+
+  // Lấy tên khách từ nhiều nguồn
+  getGuestSourceLabel(room: any): string {
+    const source = room.guestSource || room.guestInfo?.guestSource || 'walkin';
+    const sourceMap: { [key: string]: string } = {
+      'walkin': 'Walk-in',
+      'booking': 'Booking',
+      'agoda': 'Agoda',
+      'traveloka': 'Traveloka',
+      'expedia': 'Expedia',
+      'trip': 'Trip.com',
+      'g2j': 'G2J',
+      'other': 'Khác'
+    };
+    return sourceMap[source] || source;
+  }
+
+  getGuestName(room: any): string {
+    // Ưu tiên: guestName từ roomHistory
+    if (room.guestName) {
+      return room.guestName;
+    }
+    
+    // Nếu có bookingId được populate
+    if (room.bookingId && typeof room.bookingId === 'object') {
+      const booking = room.bookingId;
+      if (booking.guestInfo?.name) {
+        return booking.guestInfo.name;
+      }
+      if (booking.customerName) {
+        return booking.customerName;
+      }
+      if (booking.guestName) {
+        return booking.guestName;
+      }
+    }
+    
+    // Nếu có roomId được populate
+    if (room.roomId && typeof room.roomId === 'object') {
+      const roomData = room.roomId;
+      if (roomData.currentBooking?.guestInfo?.name) {
+        return roomData.currentBooking.guestInfo.name;
+      }
+    }
+    
+    // Fallback
+    return 'Khách lẻ';
+  }
+
+  // Xuất Excel lịch sử giao ca
+  exportShiftHandoverHistory(): void {
+    const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
+    
+    if (!currentHotelId) {
+      this.message.warning('Không tìm thấy thông tin khách sạn');
+      return;
+    }
+
+    this.isLoading = true;
+    
+    // Load tất cả dữ liệu (không phân trang)
+    const params: any = {
+      hotelId: currentHotelId,
+      page: 1,
+      limit: 10000 // Lấy tối đa 10000 records
+    };
+    
+    if (this.startDate) {
+      params.startDate = format(this.startDate, 'yyyy-MM-dd');
+    }
+    
+    if (this.endDate) {
+      params.endDate = format(this.endDate, 'yyyy-MM-dd');
+    }
+
+    this.subscriptions.add(
+      this.shiftHandoverService.getShiftHandoverHistory(params).subscribe({
+        next: (response: ShiftHandoverHistoryResponse) => {
+          const allRecords = response.data || [];
+          
+          if (allRecords.length === 0) {
+            this.message.warning('Không có dữ liệu để xuất Excel');
+            this.isLoading = false;
+            return;
+          }
+
+          // Chuẩn bị dữ liệu cho Excel
+          const excelData = allRecords.map(record => ({
+            'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+            'Nhân viên giao': this.getStaffName(record.fromStaffId),
+            'Nhân viên nhận': this.getStaffName(record.toStaffId),
+            'Tiền ca trước': record.previousShiftAmount || 0,
+            'Tiền mặt trong ca': record.cashInShift || 0,
+            'Tiền giao quản lý': record.managerHandoverAmount || 0,
+            'Số tiền giao ca': record.handoverAmount || 0,
+            'Tiền mặt': record.cashAmount || 0,
+            'Chuyển khoản': record.bankTransferAmount || 0,
+            'Cà thẻ': record.cardPaymentAmount || 0,
+            'Phiếu chi': record.expenseAmount || 0,
+            'Tổng doanh thu': this.getTotalRevenue(record),
+            'Tổng tiền phòng': record.totalRoomRevenue || 0,
+            'Trạng thái': this.getStatusLabel(record.status),
+            'Ghi chú': record.notes || ''
+          }));
+
+          // Tạo worksheet
+          const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(excelData);
+          const workbook: XLSX.WorkBook = { 
+            Sheets: { 'Lịch sử giao ca': worksheet }, 
+            SheetNames: ['Lịch sử giao ca'] 
+          };
+
+          // Tạo tên file
+          const dateStr = format(new Date(), 'ddMMyyyy_HHmmss');
+          const fileName = `Lich_su_giao_ca_${dateStr}`;
+
+          // Xuất file
+          XLSX.writeFile(workbook, `${fileName}.xlsx`);
+          this.message.success(`Đã xuất ${allRecords.length} bản ghi ra file Excel`);
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error exporting shift handover history:', error);
+          this.message.error('Không thể xuất dữ liệu ra Excel');
+          this.isLoading = false;
+        }
+      })
+    );
+  }
+
+  // Xuất Excel tổng doanh thu và phiếu chi (gộp tất cả lịch sử phòng và phiếu chi)
+  exportRevenueAndExpense(): void {
+    const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
+    
+    if (!currentHotelId) {
+      this.message.warning('Không tìm thấy thông tin khách sạn');
+      return;
+    }
+
+    this.isLoading = true;
+    
+    // Load tất cả dữ liệu (không phân trang)
+    const params: any = {
+      hotelId: currentHotelId,
+      page: 1,
+      limit: 10000 // Lấy tối đa 10000 records
+    };
+    
+    if (this.startDate) {
+      params.startDate = format(this.startDate, 'yyyy-MM-dd');
+    }
+    
+    if (this.endDate) {
+      params.endDate = format(this.endDate, 'yyyy-MM-dd');
+    }
+
+    this.subscriptions.add(
+      this.shiftHandoverService.getShiftHandoverHistory(params).subscribe({
+        next: (response: ShiftHandoverHistoryResponse) => {
+          const allRecords = response.data || [];
+          
+          if (allRecords.length === 0) {
+            this.message.warning('Không có dữ liệu để xuất Excel');
+            this.isLoading = false;
+            return;
+          }
+
+          // Gộp tất cả lịch sử phòng từ tất cả các ca
+          const allRoomHistory: any[] = [];
+          const allExpenses: any[] = [];
+
+          allRecords.forEach(record => {
+            // Thêm lịch sử phòng
+            if (record.roomHistory && Array.isArray(record.roomHistory)) {
+              record.roomHistory.forEach(room => {
+                // Lấy các giá trị từ room object, nếu không có thì để 0
+                const roomTotal = (room as any).roomTotal || 0;
+                const additionalCharges = (room as any).additionalCharges || 0;
+                const discount = (room as any).discount || 0;
+                const serviceAmount = (room as any).serviceAmount || (room as any).serviceTotal || 0;
+                const advancePayment = (room as any).advancePayment || 0;
+                const checkinTime = (room as any).checkinTime || (room as any).checkInTime || null;
+                
+                allRoomHistory.push({
+                  'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+                  'Phòng': room.roomNumber || '',
+                  'Tên khách': this.getGuestName(room),
+                  'Nguồn': this.getGuestSourceLabel(room),
+                  'Hành động': room.action || '',
+                  'Tiền phòng': roomTotal,
+                  'Phụ thu': additionalCharges,
+                  'Khuyến mãi': discount,
+                  'Tiền dịch vụ': serviceAmount,
+                  'Tiền đặt trước': advancePayment,
+                  'Số tiền': room.amount || 0,
+                  'Hình thức thanh toán': room.paymentMethod === 'cash' ? 'Tiền mặt' : 
+                  room.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : 
+                  room.paymentMethod === 'card' ? 'Thẻ' : 'Khác',
+                  'Nhận phòng': checkinTime ? format(new Date(checkinTime), 'dd/MM/yyyy HH:mm') : '',
+                  'Trả phòng': format(new Date(room.timestamp), 'dd/MM/yyyy HH:mm'),
+                  'Ghi chú': room.notes || ''
+                });
+              });
+            }
+
+            // Thêm phiếu chi
+            if (record.expenses && Array.isArray(record.expenses)) {
+              record.expenses.forEach(expense => {
+                allExpenses.push({
+                  'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+                  'Mô tả': expense.description || 'Phiếu chi',
+                  'Danh mục': this.getExpenseCategoryLabel(expense.category),
+                  'Người nhận': expense.recipient || '',
+                  'Số tiền': expense.amount || 0,
+                  'Hình thức thanh toán': expense.method === 'cash' ? 'Tiền mặt' : 
+                                          expense.method === 'bank_transfer' ? 'Chuyển khoản' : 
+                                          expense.method === 'card' ? 'Thẻ' : 'Khác',
+                  'Thời gian': format(new Date(expense.timestamp), 'dd/MM/yyyy HH:mm'),
+                  'Người duyệt': expense.approvedBy || ''
+                });
+              });
+            }
+          });
+
+          // Tạo workbook với nhiều sheets
+          const workbook: XLSX.WorkBook = {
+            Sheets: {},
+            SheetNames: []
+          };
+
+          // Sheet 1: Tổng hợp doanh thu
+          const summaryData = [{
+            'Tổng số ca': allRecords.length,
+            'Tổng tiền ca trước': allRecords.reduce((sum, r) => sum + (r.previousShiftAmount || 0), 0),
+            'Tổng tiền mặt trong ca': allRecords.reduce((sum, r) => sum + (r.cashInShift || 0), 0),
+            'Tổng tiền giao quản lý': allRecords.reduce((sum, r) => sum + (r.managerHandoverAmount || 0), 0),
+            'Tổng số tiền giao ca': allRecords.reduce((sum, r) => sum + (r.handoverAmount || 0), 0),
+            'Tổng tiền mặt': allRecords.reduce((sum, r) => sum + (r.cashAmount || 0), 0),
+            'Tổng chuyển khoản': allRecords.reduce((sum, r) => sum + (r.bankTransferAmount || 0), 0),
+            'Tổng cà thẻ': allRecords.reduce((sum, r) => sum + (r.cardPaymentAmount || 0), 0),
+            'Tổng phiếu chi': allRecords.reduce((sum, r) => sum + (r.expenseAmount || 0), 0),
+            'Tổng doanh thu': allRecords.reduce((sum, r) => sum + this.getTotalRevenue(r), 0),
+            'Tổng tiền phòng': allRecords.reduce((sum, r) => sum + (r.totalRoomRevenue || 0), 0)
+          }];
+          workbook.Sheets['Tổng hợp'] = XLSX.utils.json_to_sheet(summaryData);
+          workbook.SheetNames.push('Tổng hợp');
+
+          // Sheet 2: Lịch sử phòng
+          if (allRoomHistory.length > 0) {
+            workbook.Sheets['Lịch sử phòng'] = XLSX.utils.json_to_sheet(allRoomHistory);
+            workbook.SheetNames.push('Lịch sử phòng');
+          }
+
+          // Sheet 3: Phiếu chi
+          if (allExpenses.length > 0) {
+            workbook.Sheets['Phiếu chi'] = XLSX.utils.json_to_sheet(allExpenses);
+            workbook.SheetNames.push('Phiếu chi');
+          }
+
+          // Tạo tên file
+          const dateStr = format(new Date(), 'ddMMyyyy_HHmmss');
+          const fileName = `Tong_doanh_thu_va_phiếu_chi_${dateStr}`;
+
+          // Xuất file
+          XLSX.writeFile(workbook, `${fileName}.xlsx`);
+          this.message.success(`Đã xuất dữ liệu: ${allRoomHistory.length} lịch sử phòng, ${allExpenses.length} phiếu chi`);
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error exporting revenue and expense:', error);
+          this.message.error('Không thể xuất dữ liệu ra Excel');
+          this.isLoading = false;
+        }
+      })
+    );
   }
 }
 

@@ -143,6 +143,9 @@ export class InvoiceComponent implements OnInit {
     console.log('invoiceData.discount:', this.invoiceData.discount);
     console.log('invoiceData.totalAmount:', this.invoiceData.totalAmount);
     
+    // Lấy thông tin khách hàng từ nhiều nguồn
+    this.loadCustomerInfo();
+    
     // Đảm bảo rằng products luôn là một mảng
     if (!this.invoiceData.products || !Array.isArray(this.invoiceData.products)) {
       console.log('Products is not array, initializing empty array');
@@ -193,6 +196,89 @@ export class InvoiceComponent implements OnInit {
     
     // Load business info nếu chưa có
     this.loadBusinessInfo();
+  }
+  
+  // Lấy thông tin khách hàng từ nhiều nguồn
+  loadCustomerInfo(): void {
+    let customerName = 'Khách lẻ';
+    let customerPhone = '';
+    let customerEmail = '';
+    
+    // Ưu tiên 1: Từ invoiceData.customerName (đã được frontend xử lý)
+    if (this.invoiceData.customerName && this.invoiceData.customerName !== 'Khách lẻ') {
+      customerName = this.invoiceData.customerName;
+      customerPhone = this.invoiceData.customerPhone || '';
+      customerEmail = this.invoiceData.customerEmail || '';
+    }
+    
+    // Ưu tiên 2: Từ invoiceData.guestInfo
+    if ((!customerName || customerName === 'Khách lẻ') && this.invoiceData.guestInfo) {
+      if (this.invoiceData.guestInfo.name && this.invoiceData.guestInfo.name !== 'Khách lẻ') {
+        customerName = this.invoiceData.guestInfo.name;
+        customerPhone = this.invoiceData.guestInfo.phone || customerPhone;
+        customerEmail = this.invoiceData.guestInfo.email || customerEmail;
+      }
+    }
+    
+    // Ưu tiên 3: Từ invoiceData.guestDetails
+    if ((!customerName || customerName === 'Khách lẻ') && this.invoiceData['guestDetails']) {
+      const guestDetails = this.invoiceData['guestDetails'];
+      if (guestDetails.name && guestDetails.name !== 'Khách lẻ') {
+        customerName = guestDetails.name;
+        customerPhone = guestDetails.phone || customerPhone;
+        customerEmail = guestDetails.email || customerEmail;
+      }
+    }
+    
+    // Ưu tiên 4: Từ bookingId nếu được populate (có thể cần fetch thêm)
+    if ((!customerName || customerName === 'Khách lẻ') && this.invoiceData['bookingId']) {
+      const bookingId = this.invoiceData['bookingId'];
+      // Nếu bookingId là object (đã được populate)
+      if (typeof bookingId === 'object' && bookingId !== null) {
+        if (bookingId.guestInfo?.name && bookingId.guestInfo.name !== 'Khách lẻ') {
+          customerName = bookingId.guestInfo.name;
+          customerPhone = bookingId.guestInfo.phone || customerPhone;
+          customerEmail = bookingId.guestInfo.email || customerEmail;
+        } else if (bookingId.guestDetails?.name && bookingId.guestDetails.name !== 'Khách lẻ') {
+          customerName = bookingId.guestDetails.name;
+          customerPhone = bookingId.guestDetails.phone || customerPhone;
+          customerEmail = bookingId.guestDetails.email || customerEmail;
+        } else if (bookingId.guestName && bookingId.guestName !== 'Khách lẻ') {
+          customerName = bookingId.guestName;
+        } else if (bookingId.customerName && bookingId.customerName !== 'Khách lẻ') {
+          customerName = bookingId.customerName;
+        }
+      }
+    }
+    
+    // Cập nhật invoiceData với thông tin đã tìm được
+    this.invoiceData.customerName = customerName;
+    if (customerPhone) {
+      this.invoiceData.customerPhone = customerPhone;
+    }
+    if (customerEmail) {
+      this.invoiceData.customerEmail = customerEmail;
+    }
+    
+    // Đảm bảo guestInfo có đầy đủ thông tin
+    if (!this.invoiceData.guestInfo) {
+      this.invoiceData.guestInfo = {};
+    }
+    if (!this.invoiceData.guestInfo.name || this.invoiceData.guestInfo.name === 'Khách lẻ') {
+      this.invoiceData.guestInfo.name = customerName;
+    }
+    if (!this.invoiceData.guestInfo.phone && customerPhone) {
+      this.invoiceData.guestInfo.phone = customerPhone;
+    }
+    if (!this.invoiceData.guestInfo.email && customerEmail) {
+      this.invoiceData.guestInfo.email = customerEmail;
+    }
+    
+    console.log('Customer info loaded:', {
+      customerName,
+      customerPhone,
+      customerEmail
+    });
   }
   
   // Load thông tin khách sạn từ database
@@ -405,6 +491,105 @@ export class InvoiceComponent implements OnInit {
     return statusLabels[status.toLowerCase()] || status;
   }
   
+  // Lấy tên khách hàng từ nhiều nguồn
+  getCustomerName(): string {
+    // Ưu tiên customerName đã được xử lý
+    if (this.invoiceData.customerName && this.invoiceData.customerName !== 'Khách lẻ') {
+      return this.invoiceData.customerName;
+    }
+    
+    // Fallback: guestInfo
+    if (this.invoiceData.guestInfo?.name && this.invoiceData.guestInfo.name !== 'Khách lẻ') {
+      return this.invoiceData.guestInfo.name;
+    }
+    
+    // Fallback: guestDetails
+    if (this.invoiceData['guestDetails']?.name && this.invoiceData['guestDetails'].name !== 'Khách lẻ') {
+      return this.invoiceData['guestDetails'].name;
+    }
+    
+    // Fallback: bookingId nếu được populate
+    if (this.invoiceData['bookingId'] && typeof this.invoiceData['bookingId'] === 'object') {
+      const booking = this.invoiceData['bookingId'];
+      if (booking.guestInfo?.name && booking.guestInfo.name !== 'Khách lẻ') {
+        return booking.guestInfo.name;
+      }
+      if (booking.guestDetails?.name && booking.guestDetails.name !== 'Khách lẻ') {
+        return booking.guestDetails.name;
+      }
+      if (booking.guestName && booking.guestName !== 'Khách lẻ') {
+        return booking.guestName;
+      }
+      if (booking.customerName && booking.customerName !== 'Khách lẻ') {
+        return booking.customerName;
+      }
+    }
+    
+    return 'Khách lẻ';
+  }
+  
+  // Lấy số điện thoại khách hàng từ nhiều nguồn
+  getCustomerPhone(): string {
+    // Ưu tiên customerPhone đã được xử lý
+    if (this.invoiceData.customerPhone) {
+      return this.invoiceData.customerPhone;
+    }
+    
+    // Fallback: guestInfo
+    if (this.invoiceData.guestInfo?.phone) {
+      return this.invoiceData.guestInfo.phone;
+    }
+    
+    // Fallback: guestDetails
+    if (this.invoiceData['guestDetails']?.phone) {
+      return this.invoiceData['guestDetails'].phone;
+    }
+    
+    // Fallback: bookingId nếu được populate
+    if (this.invoiceData['bookingId'] && typeof this.invoiceData['bookingId'] === 'object') {
+      const booking = this.invoiceData['bookingId'];
+      if (booking.guestInfo?.phone) {
+        return booking.guestInfo.phone;
+      }
+      if (booking.guestDetails?.phone) {
+        return booking.guestDetails.phone;
+      }
+    }
+    
+    return 'Không có thông tin';
+  }
+  
+  // Lấy email khách hàng từ nhiều nguồn
+  getCustomerEmail(): string {
+    // Ưu tiên customerEmail đã được xử lý
+    if (this.invoiceData.customerEmail) {
+      return this.invoiceData.customerEmail;
+    }
+    
+    // Fallback: guestInfo
+    if (this.invoiceData.guestInfo?.email) {
+      return this.invoiceData.guestInfo.email;
+    }
+    
+    // Fallback: guestDetails
+    if (this.invoiceData['guestDetails']?.email) {
+      return this.invoiceData['guestDetails'].email;
+    }
+    
+    // Fallback: bookingId nếu được populate
+    if (this.invoiceData['bookingId'] && typeof this.invoiceData['bookingId'] === 'object') {
+      const booking = this.invoiceData['bookingId'];
+      if (booking.guestInfo?.email) {
+        return booking.guestInfo.email;
+      }
+      if (booking.guestDetails?.email) {
+        return booking.guestDetails.email;
+      }
+    }
+    
+    return 'N/A';
+  }
+  
   // Lấy màu sắc cho phương thức thanh toán
   getPaymentMethodColor(method: string | undefined): string {
     if (!method) return 'green';
@@ -473,8 +658,8 @@ export class InvoiceComponent implements OnInit {
               { text: `Thời gian lưu trú: ${this.durationText}` }
             ],
             [
-              { text: `Khách hàng: ${this.invoiceData?.customerName || 'Khách lẻ'}` },
-              { text: `SĐT: ${this.invoiceData?.customerPhone || 'N/A'}` },
+              { text: `Khách hàng: ${this.getCustomerName()}` },
+              { text: `SĐT: ${this.getCustomerPhone()}` },
               { text: `Thanh toán: ${this.getPaymentMethodLabel(this.invoiceData?.paymentMethod || '')}` },
               { text: `Ngày đi: ${new Date(this.invoiceData?.checkOutTime || 0).toLocaleString('vi-VN')}` }
             ]
@@ -618,9 +803,9 @@ export class InvoiceComponent implements OnInit {
         {
           text: [
             { text: 'Thông tin khách hàng:', style: 'subheader' },
-            `\nTên khách hàng: ${this.invoiceData.customerName || this.invoiceData.guestInfo?.name || 'Khách lẻ'}`,
-            `\nSố điện thoại: ${this.invoiceData.customerPhone || this.invoiceData.guestInfo?.phone || 'N/A'}`,
-            `\nEmail: ${this.invoiceData.customerEmail || this.invoiceData.guestInfo?.email || 'N/A'}`
+            `\nTên khách hàng: ${this.getCustomerName()}`,
+            `\nSố điện thoại: ${this.getCustomerPhone()}`,
+            `\nEmail: ${this.getCustomerEmail()}`
           ],
           margin: [0, 10, 0, 10]
         },
@@ -705,7 +890,7 @@ export class InvoiceComponent implements OnInit {
   // Gửi hóa đơn qua email
   sendInvoiceEmail(): void {
     const pdfDocGenerator = window.pdfMake.createPdf(this.getDocumentDefinition());
-    const customerEmail = this.invoiceData.customerEmail || this.invoiceData.guestInfo?.email;
+    const customerEmail = this.getCustomerEmail();
     if (!customerEmail) {
         alert('Không tìm thấy địa chỉ email của khách hàng.');
         return;

@@ -20,6 +20,24 @@
       <button nz-button (click)="resetFilters()" style="margin-left: 8px;">
         <i nz-icon nzType="reload"></i> Làm mới
       </button>
+      <button 
+        nz-button 
+        nzType="default" 
+        (click)="exportShiftHandoverHistory()" 
+        [nzLoading]="isLoading"
+        style="margin-left: 8px;"
+        title="Xuất Excel lịch sử giao ca">
+        <i nz-icon nzType="file-excel"></i> Xuất Excel lịch sử giao ca
+      </button>
+      <button 
+        nz-button 
+        nzType="default" 
+        (click)="exportRevenueAndExpense()" 
+        [nzLoading]="isLoading"
+        style="margin-left: 8px;"
+        title="Xuất Excel tổng doanh thu và phiếu chi">
+        <i nz-icon nzType="file-excel"></i> Xuất Excel doanh thu & phiếu chi
+      </button>
     </div>
     
     <!-- Table -->
@@ -170,33 +188,61 @@
         
         <!-- Room History -->
         <nz-divider nzText="Lịch sử phòng trong ca" *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"></nz-divider>
-        <nz-table
-          *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"
-          [nzData]="selectedRecord.roomHistory"
-          nzSize="small"
-          nzBordered
-        >
-          <thead>
-            <tr>
-              <th>Phòng</th>
-              <th>Hành động</th>
-              <th>Khách</th>
-              <th>Số tiền</th>
-              <th>Hình thức TT</th>
-              <th>Thời gian</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let room of selectedRecord.roomHistory">
-              <td>{{ room.roomNumber }}</td>
-              <td>{{ room.action }}</td>
-              <td>{{ room.guestName }}</td>
-              <td>{{ formatCurrency(room.amount || 0) }}</td>
-              <td>{{ room.paymentMethod }}</td>
-              <td>{{ formatDate(room.timestamp) }}</td>
-            </tr>
-          </tbody>
-        </nz-table>
+        <div class="table-responsive-wrapper">
+          <nz-table
+            *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"
+            [nzData]="selectedRecord.roomHistory"
+            nzSize="small"
+            nzBordered
+            [nzScroll]="{ x: '1200px' }"
+            class="responsive-table"
+          >
+            <thead>
+              <tr>
+                <th nzWidth="80px">Phòng</th>
+                <th nzWidth="100px">Hành động</th>
+                <th nzWidth="120px">Khách</th>
+                <th nzWidth="100px">Nguồn</th>
+                <th nzWidth="100px">Tiền phòng</th>
+                <th nzWidth="100px">Phụ thu</th>
+                <th nzWidth="100px">Khuyến mãi</th>
+                <th nzWidth="100px">Tiền dịch vụ</th>
+                <th nzWidth="100px">Tiền đặt trước</th>
+                <th nzWidth="120px"><strong>Số tiền</strong></th>
+                <th nzWidth="100px">Hình thức TT</th>
+                <th nzWidth="140px">Nhận phòng</th>
+                <th nzWidth="140px">Trả phòng</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let room of selectedRecord.roomHistory">
+                <td>{{ room.roomNumber }}</td>
+                <td>{{ room.action }}</td>
+                <td class="text-ellipsis">
+                  <span [nz-tooltip]="getGuestName(room)" nzTooltipPlacement="top">{{ getGuestName(room) }}</span>
+                </td>
+                <td>{{ getGuestSourceLabel(room) }}</td>
+                <td class="text-right">{{ formatCurrency(getRoomTotal(room)) }}</td>
+                <td class="text-right">{{ formatCurrency(getAdditionalCharges(room)) }}</td>
+                <td class="text-right">{{ formatCurrency(getDiscount(room)) }}</td>
+                <td class="text-right">{{ formatCurrency(getServiceAmount(room)) }}</td>
+                <td class="text-right">{{ formatCurrency(getAdvancePayment(room)) }}</td>
+                <td class="text-right"><strong>{{ formatCurrency(room.amount || 0) }}</strong></td>
+                <td>{{ room.paymentMethod === 'cash' ? 'Tiền mặt' : room.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : room.paymentMethod === 'card' ? 'Thẻ' : 'Khác' }}</td>
+                <td class="text-ellipsis">
+                  <span [nz-tooltip]="getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : 'N/A'" nzTooltipPlacement="top">
+                    {{ getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : 'N/A' }}
+                  </span>
+                </td>
+                <td class="text-ellipsis">
+                  <span [nz-tooltip]="formatDate(room.timestamp)" nzTooltipPlacement="top">
+                    {{ formatDate(room.timestamp) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </nz-table>
+        </div>
       </div>
     </ng-container>
   </nz-modal>

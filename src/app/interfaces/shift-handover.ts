@@ -16,6 +16,12 @@ export interface ShiftRoomHistory {
     paymentMethod: PaymentMethodType;
     timestamp: Date;
     notes?: string;
+    // Các trường bổ sung cho chi tiết
+    roomTotal?: number;        // Tiền phòng
+    additionalCharges?: number; // Phụ thu
+    discount?: number;          // Khuyến mãi
+    serviceAmount?: number;     // Tiền dịch vụ
+    advancePayment?: number;    // Tiền đặt trước
 }
 
 // Hóa đơn trong ca
