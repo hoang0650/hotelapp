@@ -685,9 +685,13 @@ export class TableComponent implements OnInit, OnChanges {
         // Lấy hình thức thanh toán
         const paymentMethod = this.getPaymentMethodLabel(item.paymentMethod || 'cash');
         
+        // Lấy nguồn khách
+        const guestSource = this.getGuestSourceLabel(item.guestInfo?.guestSource || item.guestSource || 'walkin');
+        
         return {
           'Phòng': item.roomNumber || '',
           'Khách hàng': customerName,
+          'Nguồn': guestSource,
           'SĐT': customerPhone,
           'CCCD/CMND': customerIdNumber,
           'Nhận phòng': checkInTime ? this.formatDateTime(checkInTime) : '',
@@ -714,6 +718,7 @@ export class TableComponent implements OnInit, OnChanges {
       const columnWidths = [
         { wch: 8 },   // Phòng
         { wch: 20 },  // Khách hàng
+        { wch: 12 },  // Nguồn
         { wch: 12 },  // SĐT
         { wch: 15 },  // CCCD
         { wch: 18 },  // Nhận phòng
@@ -755,6 +760,42 @@ export class TableComponent implements OnInit, OnChanges {
   getPaymentMethodColor(method: string): string {
     const found = this.paymentMethodOptions.find(option => option.value === method);
     return found ? found.color : 'green';
+  }
+
+  // Lấy label cho nguồn khách
+  getGuestSourceLabel(guestSource: string | undefined): string {
+    if (!guestSource) return 'Walk-in';
+    
+    const sourceMap: { [key: string]: string } = {
+      'walkin': 'Walk-in',
+      'booking': 'Booking',
+      'agoda': 'Agoda',
+      'traveloka': 'Traveloka',
+      'expedia': 'Expedia',
+      'trip': 'Trip.com',
+      'g2j': 'G2J',
+      'other': 'Khác'
+    };
+    
+    return sourceMap[guestSource] || guestSource;
+  }
+
+  // Lấy màu cho nguồn khách
+  getGuestSourceColor(guestSource: string | undefined): string {
+    if (!guestSource) return 'default';
+    
+    const colorMap: { [key: string]: string } = {
+      'walkin': 'blue',
+      'booking': 'green',
+      'agoda': 'orange',
+      'traveloka': 'purple',
+      'expedia': 'cyan',
+      'trip': 'magenta',
+      'g2j': 'gold',
+      'other': 'default'
+    };
+    
+    return colorMap[guestSource] || 'default';
   }
 
   formatDateTime(date: Date | string, onlyDate = false): string {
@@ -1080,25 +1121,42 @@ export class TableComponent implements OnInit, OnChanges {
     const totalRevenue = (formData.managerHandoverAmount || 0) + (formData.expenseAmount || 0);
     
     // Tạo roomHistory từ paidData
-    const roomHistory = this.paidData.map(item => ({
-      roomId: item.roomId || item._id,
-      roomNumber: item.roomNumber,
-      bookingId: item.bookingId,
-      action: 'check_out',
-      guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
-      guestSource: item.guestInfo?.guestSource || item.guestSource || 'walkin', // Thêm nguồn khách
-      amount: item.totalAmount || item.amount || 0,
-      paymentMethod: item.paymentMethod || 'cash',
-      timestamp: item.checkOutTime || item.checkoutTime || new Date(),
-      notes: item.notes || '',
-      // Các trường bổ sung
-      roomTotal: item.roomTotal || 0,
-      additionalCharges: item.additionalCharges || 0,
-      discount: item.discount || 0,
-      serviceAmount: item.servicesTotal || item.serviceDetails?.amount || 0,
-      advancePayment: item.advancePayment || 0,
-      checkinTime: item.checkInTime || item.checkinTime || null
-    }));
+    const roomHistory = this.paidData.map(item => {
+      // Lấy guestSource từ nhiều nguồn theo thứ tự ưu tiên
+      let guestSource = 'walkin';
+      if (item.guestSource) {
+        guestSource = item.guestSource;
+      } else if (item.guestInfo?.guestSource) {
+        guestSource = item.guestInfo.guestSource;
+      } else if (item.event?.guestInfo?.guestSource) {
+        guestSource = item.event.guestInfo.guestSource;
+      } else if (item.bookingId && typeof item.bookingId === 'object') {
+        guestSource = item.bookingId.guestSource || 
+                     item.bookingId.guestInfo?.guestSource || 
+                     item.bookingId.guestDetails?.guestSource || 
+                     'walkin';
+      }
+      
+      return {
+        roomId: item.roomId || item._id,
+        roomNumber: item.roomNumber,
+        bookingId: item.bookingId,
+        action: 'check_out',
+        guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
+        guestSource: guestSource, // Lấy từ nhiều nguồn
+        amount: item.totalAmount || item.amount || 0,
+        paymentMethod: item.paymentMethod || 'cash',
+        timestamp: item.checkOutTime || item.checkoutTime || new Date(),
+        notes: item.notes || '',
+        // Các trường bổ sung
+        roomTotal: item.roomTotal || 0,
+        additionalCharges: item.additionalCharges || 0,
+        discount: item.discount || 0,
+        serviceAmount: item.servicesTotal || item.serviceDetails?.amount || 0,
+        advancePayment: item.advancePayment || 0,
+        checkinTime: item.checkInTime || item.checkinTime || null
+      };
+    });
     
     // Tạo invoices từ paidData
     const invoices = this.paidData.map(item => ({
@@ -1508,26 +1566,78 @@ export class TableComponent implements OnInit, OnChanges {
     const totalExpenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
     
     // Lấy lịch sử phòng hiện tại trước khi xóa
-    const roomHistory = this.paidData.map(item => ({
-      roomId: item.roomId || item._id,
-      roomNumber: item.roomNumber,
-      bookingId: item.bookingId,
-      action: 'check_out',
-      guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
-      guestSource: item.guestInfo?.guestSource || item.guestSource || 'walkin', // Thêm nguồn khách
-      amount: item.totalAmount || item.amount || 0,
-      paymentMethod: item.paymentMethod || 'cash',
-      timestamp: item.checkOutTime || item.checkoutTime || new Date(),
-      notes: item.notes || '',
-      invoiceNumber: item.invoiceNumber || null,
-      // Các trường bổ sung
-      roomTotal: item.roomTotal || 0,
-      additionalCharges: item.additionalCharges || 0,
-      discount: item.discount || 0,
-      serviceAmount: item.servicesTotal || item.serviceDetails?.amount || 0,
-      advancePayment: item.advancePayment || 0,
-      checkinTime: item.checkInTime || item.checkinTime || null
-    }));
+    const roomHistory = this.paidData.map(item => {
+      // Lấy guestSource từ nhiều nguồn theo thứ tự ưu tiên
+      let guestSource = 'walkin';
+      
+      // Debug: Log để kiểm tra dữ liệu
+      console.log('Processing item for manager handover:', {
+        roomNumber: item.roomNumber,
+        guestSource: item.guestSource,
+        guestInfo: item.guestInfo,
+        event: item.event,
+        bookingId: item.bookingId
+      });
+      
+      // Ưu tiên 1: Từ item.guestSource (trực tiếp)
+      if (item.guestSource) {
+        guestSource = item.guestSource;
+      }
+      // Ưu tiên 2: Từ item.guestInfo?.guestSource
+      else if (item.guestInfo?.guestSource) {
+        guestSource = item.guestInfo.guestSource;
+      }
+      // Ưu tiên 3: Từ item.event?.guestInfo?.guestSource (nếu có event)
+      else if (item.event?.guestInfo?.guestSource) {
+        guestSource = item.event.guestInfo.guestSource;
+      }
+      // Ưu tiên 4: Từ item.bookingId (nếu là object)
+      else if (item.bookingId && typeof item.bookingId === 'object') {
+        guestSource = item.bookingId.guestSource || 
+                     item.bookingId.guestInfo?.guestSource || 
+                     item.bookingId.guestDetails?.guestSource || 
+                     'walkin';
+      }
+      // Ưu tiên 5: Từ item.bookingId (nếu là string, cần populate)
+      else if (item.bookingId && typeof item.bookingId === 'string') {
+        // Không thể populate ở đây, giữ nguyên 'walkin'
+        guestSource = 'walkin';
+      }
+      
+      console.log('Final guestSource for room:', item.roomNumber, '=', guestSource);
+      
+      return {
+        roomId: item.roomId || item._id,
+        roomNumber: item.roomNumber,
+        bookingId: item.bookingId,
+        action: 'check_out',
+        guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
+        guestSource: guestSource, // Lấy từ nhiều nguồn
+        amount: item.totalAmount || item.amount || 0,
+        paymentMethod: item.paymentMethod || 'cash',
+        timestamp: item.checkOutTime || item.checkoutTime || new Date(),
+        notes: item.notes || '',
+        invoiceNumber: item.invoiceNumber || null,
+        // Các trường bổ sung
+        roomTotal: item.roomTotal || 0,
+        additionalCharges: item.additionalCharges || 0,
+        discount: item.discount || 0,
+        serviceAmount: item.servicesTotal || item.serviceDetails?.amount || 0,
+        advancePayment: item.advancePayment || 0,
+        checkinTime: item.checkInTime || item.checkinTime || null,
+        // Thêm guestInfo đầy đủ để backend có thể lấy từ nhiều nguồn
+        guestInfo: item.guestInfo || null,
+        // Thêm event nếu có
+        event: item.event || null
+      };
+    });
+    
+    // Log roomHistory để debug
+    console.log('RoomHistory for manager handover:', roomHistory.map(r => ({
+      roomNumber: r.roomNumber,
+      guestName: r.guestName,
+      guestSource: r.guestSource
+    })));
     
     // Tính tổng tiền chuyển khoản và cà thẻ từ paidData
     const totalBankTransfer = this.paidData.reduce((sum, item) => {
@@ -1865,7 +1975,13 @@ export class TableComponent implements OnInit, OnChanges {
         next: (response: any) => {
           if (response && response.history) {
             this.listOfData = response.history;
-            this.calculateTotalPayment();
+            // Tính lại tổng tiền sau khi cập nhật dữ liệu
+            // Sử dụng setTimeout để đảm bảo Angular detect change và cập nhật UI
+            setTimeout(() => {
+              this.calculateTotalPayment();
+              // Log để debug
+              console.log('Reloaded data - paidData.length:', this.paidData.length, 'totalPayment:', this.totalPayment);
+            }, 0);
           }
           this.settingValue.loading = false;
         },
@@ -1873,6 +1989,8 @@ export class TableComponent implements OnInit, OnChanges {
           console.error('Error loading history:', error);
           this.message.error('Không thể tải lịch sử phòng');
           this.settingValue.loading = false;
+          // Vẫn tính lại tổng tiền ngay cả khi có lỗi (với dữ liệu hiện tại)
+          this.calculateTotalPayment();
         }
       });
   }

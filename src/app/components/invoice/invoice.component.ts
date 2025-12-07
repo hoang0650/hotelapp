@@ -55,16 +55,23 @@ interface InvoiceData {
   advancePayment?: number;
   totalAmount: number;
   roomTotal?: number;
+  roomAmount?: number; // Tương thích với tên khác
   paymentMethod?: string;
   paymentStatus?: string;
   duration?: Duration;
   notes?: string;
   staffId?: string;
+  rateType?: string; // Loại giá: hourly, daily, nightly
   guestInfo?: {
     name?: string;
     phone?: string;
     email?: string;
+    idNumber?: string;
+    address?: string;
+    guestSource?: string; // Nguồn khách: walkin, booking, agoda, etc.
   };
+  guestSource?: string; // Nguồn khách (có thể ở ngoài guestInfo)
+  servicesTotal?: number; // Tổng tiền dịch vụ
   [key: string]: any; // Cho phép có các trường khác
 }
 
@@ -142,6 +149,20 @@ export class InvoiceComponent implements OnInit {
     console.log('invoiceData.additionalCharges:', this.invoiceData.additionalCharges);
     console.log('invoiceData.discount:', this.invoiceData.discount);
     console.log('invoiceData.totalAmount:', this.invoiceData.totalAmount);
+    console.log('invoiceData.rateType:', this.invoiceData.rateType);
+    console.log('invoiceData.guestSource:', this.invoiceData.guestSource);
+    console.log('invoiceData.guestInfo:', this.invoiceData.guestInfo);
+    
+    // Parse Date objects từ ISO strings nếu cần
+    if (this.invoiceData.checkInTime && typeof this.invoiceData.checkInTime === 'string') {
+      this.invoiceData.checkInTime = new Date(this.invoiceData.checkInTime);
+    }
+    if (this.invoiceData.checkOutTime && typeof this.invoiceData.checkOutTime === 'string') {
+      this.invoiceData.checkOutTime = new Date(this.invoiceData.checkOutTime);
+    }
+    if (this.invoiceData.date && typeof this.invoiceData.date === 'string') {
+      this.invoiceData.date = new Date(this.invoiceData.date);
+    }
     
     // Lấy thông tin khách hàng từ nhiều nguồn
     this.loadCustomerInfo();
@@ -163,7 +184,9 @@ export class InvoiceComponent implements OnInit {
       additionalCharges: this.invoiceData.additionalCharges || 0,
       discount: this.invoiceData.discount || 0,
       advancePayment: this.invoiceData.advancePayment || 0,
-      paymentStatus: this.invoiceData.paymentStatus || 'paid'
+      paymentStatus: this.invoiceData.paymentStatus || 'paid',
+      rateType: this.invoiceData.rateType || 'hourly', // Đảm bảo có rateType
+      guestSource: this.invoiceData.guestSource || this.invoiceData.guestInfo?.guestSource || 'walkin' // Đảm bảo có guestSource
     };
     
     console.log('Products after processing:', this.invoiceData.products);
@@ -178,14 +201,22 @@ export class InvoiceComponent implements OnInit {
     
     // Tính tổng thời gian lưu trú nếu chưa có
     if (!this.invoiceData.duration && this.invoiceData.checkInTime && this.invoiceData.checkOutTime) {
-      const checkInTime = new Date(this.invoiceData.checkInTime);
-      const checkOutTime = new Date(this.invoiceData.checkOutTime);
-      const durationInHours = Math.ceil((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60));
+      const checkInTime = this.invoiceData.checkInTime instanceof Date 
+        ? this.invoiceData.checkInTime 
+        : new Date(this.invoiceData.checkInTime);
+      const checkOutTime = this.invoiceData.checkOutTime instanceof Date 
+        ? this.invoiceData.checkOutTime 
+        : new Date(this.invoiceData.checkOutTime);
       
-      this.invoiceData.duration = {
-        hours: durationInHours,
-        days: Math.ceil(durationInHours / 24)
-      };
+      // Kiểm tra Date hợp lệ
+      if (!isNaN(checkInTime.getTime()) && !isNaN(checkOutTime.getTime())) {
+        const durationInHours = Math.ceil((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60));
+        
+        this.invoiceData.duration = {
+          hours: durationInHours,
+          days: Math.ceil(durationInHours / 24)
+        };
+      }
     }
     
     console.log('=== Final Calculated Values ===');
@@ -193,6 +224,8 @@ export class InvoiceComponent implements OnInit {
     console.log('Service Total:', this.serviceTotal);
     console.log('Final Total:', this.finalTotalAmount);
     console.log('Final Products:', this.invoiceData.products);
+    console.log('RateType:', this.invoiceData.rateType);
+    console.log('GuestSource:', this.invoiceData.guestSource);
     
     // Load business info nếu chưa có
     this.loadBusinessInfo();
@@ -460,6 +493,42 @@ export class InvoiceComponent implements OnInit {
       'nightly': 'Qua đêm'
     };
     return rateTypes[rateType.toLowerCase()] || rateType;
+  }
+
+  // Lấy label cho nguồn khách
+  getGuestSourceLabel(guestSource: string | undefined): string {
+    if (!guestSource) return 'Walk-in';
+    
+    const sourceMap: { [key: string]: string } = {
+      'walkin': 'Walk-in',
+      'booking': 'Booking',
+      'agoda': 'Agoda',
+      'traveloka': 'Traveloka',
+      'expedia': 'Expedia',
+      'trip': 'Trip.com',
+      'g2j': 'G2J',
+      'other': 'Khác'
+    };
+    
+    return sourceMap[guestSource] || guestSource;
+  }
+
+  // Lấy màu cho nguồn khách
+  getGuestSourceColor(guestSource: string | undefined): string {
+    if (!guestSource) return 'default';
+    
+    const colorMap: { [key: string]: string } = {
+      'walkin': 'blue',
+      'booking': 'green',
+      'agoda': 'orange',
+      'traveloka': 'purple',
+      'expedia': 'cyan',
+      'trip': 'magenta',
+      'g2j': 'gold',
+      'other': 'default'
+    };
+    
+    return colorMap[guestSource] || 'default';
   }
 
   // Lấy nhãn phương thức thanh toán

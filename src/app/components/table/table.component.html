@@ -137,6 +137,7 @@
       </th>
       <th [nzWidth]="'80px'" [nzLeft]="fixedColumn">Phòng</th>
       <th [nzWidth]="'180px'">Khách hàng</th>
+      <th [nzWidth]="'100px'">Nguồn</th>
       <th [nzWidth]="'200px'">Thời gian</th>
       <th [nzWidth]="'200px'">Chi tiết</th>
       <th [nzWidth]="'130px'">Hình thức</th>
@@ -182,6 +183,11 @@
               {{ data.guestInfo?.idNumber }}
             </div>
           </div>
+        </td>
+        <td>
+          <nz-tag [nzColor]="getGuestSourceColor(data.guestInfo?.guestSource || data.guestSource || 'walkin')">
+            {{ getGuestSourceLabel(data.guestInfo?.guestSource || data.guestSource || 'walkin') }}
+          </nz-tag>
         </td>
         <td>
           <div class="time-info">

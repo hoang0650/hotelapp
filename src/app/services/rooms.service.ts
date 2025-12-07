@@ -32,7 +32,7 @@ export class RoomsService {
     return this.http.get<Room[]>(this.apiUrl, { params: httpParams });
   }
 
-  getRoomById(id: string, options?: { limit?: number, includeOldEvents?: boolean }): Observable<Room> {
+  getRoomById(id: string, options?: { limit?: number, includeOldEvents?: boolean, excludeCheckedOut?: boolean }): Observable<Room> {
     let httpParams = new HttpParams();
     
     if (options) {
@@ -41,6 +41,10 @@ export class RoomsService {
       }
       if (options.includeOldEvents) {
         httpParams = httpParams.set('includeOldEvents', 'true');
+      }
+      // Thêm option excludeCheckedOut để chỉ lấy check-in events chưa checkout
+      if (options.excludeCheckedOut !== undefined) {
+        httpParams = httpParams.set('excludeCheckedOut', options.excludeCheckedOut.toString());
       }
     }
     
@@ -274,11 +278,16 @@ export class RoomsService {
   }
 
   // Cập nhật thông tin khách và tiền đặt trước
-  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number): Observable<any> {
-    return this.http.patch<any>(`${this.apiUrl}/${roomId}/checkin-info`, {
+  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number, rateType?: string): Observable<any> {
+    const body: any = {
       guestInfo,
       advancePayment
-    });
+    };
+    // Thêm rateType nếu có
+    if (rateType) {
+      body.rateType = rateType;
+    }
+    return this.http.patch<any>(`${this.apiUrl}/${roomId}/checkin-info`, body);
   }
 
   // Xác nhận giao ca bằng mật khẩu

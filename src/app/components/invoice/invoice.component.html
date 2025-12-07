@@ -79,17 +79,31 @@
             </div>
             <div class="info-item">
               <span><strong>CCCD/CMND:</strong></span>
-              <span>{{ invoiceData['customerIdNumber'] || invoiceData['guestDetails']?.['idNumber'] || 'Không có' }}</span>
+              <span>{{ invoiceData['customerIdNumber'] || invoiceData.guestInfo?.idNumber || invoiceData['guestDetails']?.['idNumber'] || 'Không có' }}</span>
             </div>
           </div>
           <div class="info-row">
             <div class="info-item">
+              <span><strong>Nguồn khách:</strong></span>
+              <span>
+                <nz-tag [nzColor]="getGuestSourceColor(invoiceData.guestSource || invoiceData.guestInfo?.guestSource || 'walkin')">
+                  {{ getGuestSourceLabel(invoiceData.guestSource || invoiceData.guestInfo?.guestSource || 'walkin') }}
+                </nz-tag>
+              </span>
+            </div>
+            <div class="info-item">
               <span><strong>Loại phòng:</strong></span>
               <span>{{ invoiceData['roomType'] || 'Phòng thường' }}</span>
             </div>
+          </div>
+          <div class="info-row">
             <div class="info-item">
               <span><strong>Hình thức tính:</strong></span>
               <span>{{ getRateTypeLabel(invoiceData['rateType']) }}</span>
+            </div>
+            <div class="info-item">
+              <span><strong>Địa chỉ:</strong></span>
+              <span>{{ invoiceData.guestInfo?.address || invoiceData['customerAddress'] || 'Không có' }}</span>
             </div>
           </div>
         </div>

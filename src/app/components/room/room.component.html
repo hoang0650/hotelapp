@@ -153,8 +153,15 @@
                 <!-- Loại phòng -->
                 <div class="room-type">{{ room.type }}</div>
                 
-                <!-- Trạng thái phòng -->
-                <div class="room-status-label">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
+                <!-- Hình thức (chỉ hiển thị khi phòng đang có khách) -->
+                <ng-container *ngIf="room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
+                  <div class="room-status-label">{{ displayInfo.rateTypeLabel }}</div>
+                </ng-container>
+                
+                <!-- Trạng thái phòng (hiển thị khi không phải occupied) -->
+                <ng-container *ngIf="room.status !== 'occupied'">
+                  <div class="room-status-label">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
+                </ng-container>
                 
                 <!-- Nguồn khách (chỉ hiển thị khi phòng đang có khách) -->
                 <ng-container *ngIf="room.status === 'occupied'">
@@ -195,10 +202,6 @@
                     <div class="detail-row">
                       <span class="detail-label">Khách hàng:</span>
                       <span class="detail-value">{{ displayInfo.customerName }}</span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="detail-label">Hình thức:</span>
-                      <span class="detail-value">{{ displayInfo.rateTypeLabel }}</span>
                     </div>
                     <div class="detail-row">
                       <span class="detail-label">Tổng tiền:</span>

@@ -38,6 +38,60 @@
         title="Xuất Excel tổng doanh thu và phiếu chi">
         <i nz-icon nzType="file-excel"></i> Xuất Excel doanh thu & phiếu chi
       </button>
+      
+      <!-- Dropdown xuất Excel doanh thu -->
+      <button nz-button nzType="default" nz-dropdown [nzDropdownMenu]="revenueMenu" style="margin-left: 8px;">
+        <i nz-icon nzType="file-excel"></i> Xuất Excel doanh thu <i nz-icon nzType="down"></i>
+      </button>
+      <nz-dropdown-menu #revenueMenu="nzDropdownMenu">
+        <ul nz-menu>
+          <li nz-menu-item (click)="exportRevenueByMonth()">
+            <i nz-icon nzType="calendar"></i> Theo tháng
+          </li>
+          <li nz-menu-item (click)="exportRevenueByQuarter()">
+            <i nz-icon nzType="calendar"></i> Theo quý
+          </li>
+          <li nz-menu-item (click)="exportRevenueByYear()">
+            <i nz-icon nzType="calendar"></i> Theo năm
+          </li>
+        </ul>
+      </nz-dropdown-menu>
+      
+      <!-- Dropdown xuất Excel phiếu chi -->
+      <button nz-button nzType="default" nz-dropdown [nzDropdownMenu]="expenseMenu" style="margin-left: 8px;">
+        <i nz-icon nzType="file-excel"></i> Xuất Excel phiếu chi <i nz-icon nzType="down"></i>
+      </button>
+      <nz-dropdown-menu #expenseMenu="nzDropdownMenu">
+        <ul nz-menu>
+          <li nz-menu-item (click)="exportExpenseByMonth()">
+            <i nz-icon nzType="calendar"></i> Theo tháng
+          </li>
+          <li nz-menu-item (click)="exportExpenseByQuarter()">
+            <i nz-icon nzType="calendar"></i> Theo quý
+          </li>
+          <li nz-menu-item (click)="exportExpenseByYear()">
+            <i nz-icon nzType="calendar"></i> Theo năm
+          </li>
+        </ul>
+      </nz-dropdown-menu>
+      
+      <!-- Dropdown xuất Excel tổng hợp (doanh thu + phiếu chi) -->
+      <button nz-button nzType="primary" nz-dropdown [nzDropdownMenu]="combinedMenu" style="margin-left: 8px;">
+        <i nz-icon nzType="file-excel"></i> Xuất Excel tổng hợp <i nz-icon nzType="down"></i>
+      </button>
+      <nz-dropdown-menu #combinedMenu="nzDropdownMenu">
+        <ul nz-menu>
+          <li nz-menu-item (click)="exportCombinedByMonth()">
+            <i nz-icon nzType="calendar"></i> Theo tháng
+          </li>
+          <li nz-menu-item (click)="exportCombinedByQuarter()">
+            <i nz-icon nzType="calendar"></i> Theo quý
+          </li>
+          <li nz-menu-item (click)="exportCombinedByYear()">
+            <i nz-icon nzType="calendar"></i> Theo năm
+          </li>
+        </ul>
+      </nz-dropdown-menu>
     </div>
     
     <!-- Table -->
@@ -221,7 +275,11 @@
                 <td class="text-ellipsis">
                   <span [nz-tooltip]="getGuestName(room)" nzTooltipPlacement="top">{{ getGuestName(room) }}</span>
                 </td>
-                <td>{{ getGuestSourceLabel(room) }}</td>
+                <td>
+                  <nz-tag [nzColor]="getGuestSourceColor(room)">
+                    {{ getGuestSourceLabel(room) }}
+                  </nz-tag>
+                </td>
                 <td class="text-right">{{ formatCurrency(getRoomTotal(room)) }}</td>
                 <td class="text-right">{{ formatCurrency(getAdditionalCharges(room)) }}</td>
                 <td class="text-right">{{ formatCurrency(getDiscount(room)) }}</td>

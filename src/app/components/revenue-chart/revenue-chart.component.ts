@@ -114,22 +114,28 @@ export class RevenueChartComponent implements OnInit, OnChanges {
         this.expenseData = groupedData.expenseData;
         this.paymentData = groupedData.paymentData;
         
-        // Tính tổng: Tổng doanh thu = Tiền giao quản lý + Phiếu chi
+        // Tính tổng doanh thu từ roomHistory (tổng tiền từ các phòng đã checkout)
         this.totalRevenue = shiftHandovers.reduce((sum, record) => {
-          const managerHandoverAmount = record.managerHandoverAmount || 0;
-          const expenseAmount = record.expenseAmount || 0;
-          return sum + (managerHandoverAmount + expenseAmount);
+          if (record.roomHistory && Array.isArray(record.roomHistory)) {
+            return sum + record.roomHistory.reduce((roomSum: number, room: any) => {
+              return roomSum + (room.amount || 0);
+            }, 0);
+          }
+          return sum;
         }, 0);
         
-        // Tổng chi = tổng expenseAmount
+        // Tổng chi = tổng expenseAmount từ expenses
         this.totalExpense = shiftHandovers.reduce((sum, record) => {
+          if (record.expenses && Array.isArray(record.expenses)) {
+            return sum + record.expenses.reduce((expenseSum: number, expense: any) => {
+              return expenseSum + (expense.amount || 0);
+            }, 0);
+          }
           return sum + (record.expenseAmount || 0);
         }, 0);
         
-        // Tổng thanh toán = tổng tiền từ room history
-        this.totalPayment = shiftHandovers.reduce((sum, record) => {
-          return sum + (record.totalRoomRevenue || 0);
-        }, 0);
+        // Tổng thanh toán = tổng tiền từ room history (giống totalRevenue)
+        this.totalPayment = this.totalRevenue;
         
         this.updateChart();
         this.isLoading = false;
@@ -174,33 +180,108 @@ export class RevenueChartComponent implements OnInit, OnChanges {
     const grouped: { [key: string]: { revenue: number, expense: number, payment: number } } = {};
     
     shiftHandovers.forEach(record => {
-      const handoverTime = new Date(record.handoverTime);
-      let key: string;
-      
-      switch (period) {
-        case 'day':
-          key = format(handoverTime, 'yyyy-MM-dd');
-          break;
-        case 'week':
-          key = format(startOfWeek(handoverTime, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-          break;
-        case 'month':
-          key = format(startOfMonth(handoverTime), 'yyyy-MM');
-          break;
-        default:
-          key = format(handoverTime, 'yyyy-MM-dd');
+      // Tính doanh thu từ roomHistory (tổng tiền từ các phòng đã checkout)
+      let roomRevenue = 0;
+      if (record.roomHistory && Array.isArray(record.roomHistory)) {
+        roomRevenue = record.roomHistory.reduce((sum: number, room: any) => {
+          return sum + (room.amount || 0);
+        }, 0);
       }
       
-      if (!grouped[key]) {
-        grouped[key] = { revenue: 0, expense: 0, payment: 0 };
+      // Tính chi phí từ expenses
+      let expenseAmount = 0;
+      if (record.expenses && Array.isArray(record.expenses)) {
+        expenseAmount = record.expenses.reduce((sum: number, expense: any) => {
+          return sum + (expense.amount || 0);
+        }, 0);
+      } else {
+        expenseAmount = record.expenseAmount || 0;
       }
       
-      // Tổng doanh thu = Tiền giao quản lý + Phiếu chi
-      const managerHandoverAmount = record.managerHandoverAmount || 0;
-      const expenseAmount = record.expenseAmount || 0;
-      grouped[key].revenue += (managerHandoverAmount + expenseAmount);
-      grouped[key].expense += expenseAmount;
-      grouped[key].payment += (record.totalRoomRevenue || 0);
+      // Xác định key theo period dựa trên thời gian của từng room/expense
+      // Nếu có roomHistory, lấy thời gian từ room.timestamp
+      // Nếu không có, lấy từ record.handoverTime
+      
+      // Xử lý roomHistory
+      if (record.roomHistory && Array.isArray(record.roomHistory)) {
+        record.roomHistory.forEach((room: any) => {
+          const roomDate = room.timestamp ? new Date(room.timestamp) : new Date(record.handoverTime);
+          let key: string;
+          
+          switch (period) {
+            case 'day':
+              key = format(roomDate, 'yyyy-MM-dd');
+              break;
+            case 'week':
+              key = format(startOfWeek(roomDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+              break;
+            case 'month':
+              key = format(startOfMonth(roomDate), 'yyyy-MM');
+              break;
+            default:
+              key = format(roomDate, 'yyyy-MM-dd');
+          }
+          
+          if (!grouped[key]) {
+            grouped[key] = { revenue: 0, expense: 0, payment: 0 };
+          }
+          
+          grouped[key].revenue += (room.amount || 0);
+          grouped[key].payment += (room.amount || 0);
+        });
+      }
+      
+      // Xử lý expenses
+      if (record.expenses && Array.isArray(record.expenses)) {
+        record.expenses.forEach((expense: any) => {
+          const expenseDate = expense.timestamp ? new Date(expense.timestamp) : new Date(record.handoverTime);
+          let key: string;
+          
+          switch (period) {
+            case 'day':
+              key = format(expenseDate, 'yyyy-MM-dd');
+              break;
+            case 'week':
+              key = format(startOfWeek(expenseDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+              break;
+            case 'month':
+              key = format(startOfMonth(expenseDate), 'yyyy-MM');
+              break;
+            default:
+              key = format(expenseDate, 'yyyy-MM-dd');
+          }
+          
+          if (!grouped[key]) {
+            grouped[key] = { revenue: 0, expense: 0, payment: 0 };
+          }
+          
+          grouped[key].expense += (expense.amount || 0);
+        });
+      } else if (expenseAmount > 0) {
+        // Nếu không có expenses array nhưng có expenseAmount, dùng handoverTime
+        const handoverTime = new Date(record.handoverTime);
+        let key: string;
+        
+        switch (period) {
+          case 'day':
+            key = format(handoverTime, 'yyyy-MM-dd');
+            break;
+          case 'week':
+            key = format(startOfWeek(handoverTime, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            break;
+          case 'month':
+            key = format(startOfMonth(handoverTime), 'yyyy-MM');
+            break;
+          default:
+            key = format(handoverTime, 'yyyy-MM-dd');
+        }
+        
+        if (!grouped[key]) {
+          grouped[key] = { revenue: 0, expense: 0, payment: 0 };
+        }
+        
+        grouped[key].expense += expenseAmount;
+      }
     });
     
     // Sắp xếp keys và tạo arrays

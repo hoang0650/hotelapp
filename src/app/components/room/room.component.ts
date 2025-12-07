@@ -932,11 +932,14 @@ export class RoomComponent implements OnInit, OnDestroy {
       ? `${checkinInfo.checkinTime.getHours().toString().padStart(2, '0')}:${checkinInfo.checkinTime.getMinutes().toString().padStart(2, '0')} ${checkinInfo.checkinTime.getDate().toString().padStart(2, '0')}/${(checkinInfo.checkinTime.getMonth() + 1).toString().padStart(2, '0')}/${checkinInfo.checkinTime.getFullYear()}`
       : '';
     
+    // Tổng tiền = tiền phòng + tiền dịch vụ + phụ thu
+    const totalAmount = checkinInfo.roomPrice + checkinInfo.serviceAmount + checkinInfo.additionalCharges;
+    
     return {
       checkinTime: checkinTimeStr,
       customerName: checkinInfo.guestName,
       rateTypeLabel: checkinInfo.rateTypeLabel,
-      totalAmount: checkinInfo.roomPrice,
+      totalAmount: totalAmount,
       advancePayment: checkinInfo.advancePayment,
       remainingAmount: checkinInfo.remainingAmount,
       guestSource: checkinInfo.guestSource || 'walkin'
@@ -987,6 +990,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     guestName: string; 
     checkinTime: Date | null; 
     roomPrice: number; 
+    serviceAmount: number;
+    additionalCharges: number;
     advancePayment: number; 
     remainingAmount: number;
     rateType: string;
@@ -1002,9 +1007,35 @@ export class RoomComponent implements OnInit, OnDestroy {
       return null;
     }
 
-    // Tìm event checkin cuối cùng (sắp xếp theo thời gian để lấy mới nhất)
+    // Tìm event checkin cuối cùng CHƯA CHECKOUT (sắp xếp theo thời gian để lấy mới nhất)
+    // Lọc các event check-in chưa có checkout tương ứng
+    if (!room.events || room.events.length === 0) {
+      return null;
+    }
+    
     const checkinEvents = room.events
-      .filter(e => e.type === 'checkin')
+      .filter(e => {
+        if (e.type !== 'checkin') return false;
+        
+        // Kiểm tra xem có event checkout nào tương ứng với checkin này không
+        const hasCheckout = room.events?.some((checkoutEvent: any) => {
+          if (checkoutEvent.type !== 'checkout') return false;
+          
+          // So sánh checkinTime: chuyển về Date object và so sánh timestamp
+          const checkoutCheckinTime = checkoutEvent.checkinTime ? new Date(checkoutEvent.checkinTime).getTime() : null;
+          const eventCheckinTime = e.checkinTime ? new Date(e.checkinTime).getTime() : null;
+          
+          // Nếu có checkinTime và khớp chính xác (trong vòng 1 giây để tránh lỗi làm tròn)
+          if (checkoutCheckinTime && eventCheckinTime) {
+            return Math.abs(checkoutCheckinTime - eventCheckinTime) < 1000; // Trong vòng 1 giây
+          }
+          
+          return false;
+        }) || false;
+        
+        // Chỉ lấy event check-in chưa có checkout
+        return !hasCheckout;
+      })
       .sort((a, b) => {
         const timeA = a.checkinTime ? new Date(a.checkinTime).getTime() : 0;
         const timeB = b.checkinTime ? new Date(b.checkinTime).getTime() : 0;
@@ -1013,7 +1044,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     
     if (checkinEvents.length === 0) return null;
     
-    const lastCheckin = checkinEvents[0]; // Lấy event mới nhất
+    const lastCheckin = checkinEvents[0]; // Lấy event mới nhất chưa checkout
     const checkinTime = lastCheckin.checkinTime ? new Date(lastCheckin.checkinTime) : null;
     const rateType = lastCheckin.rateType || 'hourly';
     
@@ -1102,16 +1133,39 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Cho phép giá trị âm (khi đặt trước nhiều hơn tiền phòng)
-    const remainingAmount = roomPrice - advancePayment;
-    
     // Lấy nguồn khách từ event
     const guestSource = lastCheckin.guestInfo?.guestSource || 'walkin';
+    
+    // Tính tiền dịch vụ từ selectedServices
+    let serviceAmount = 0;
+    if (lastCheckin.selectedServices && Array.isArray(lastCheckin.selectedServices)) {
+      serviceAmount = lastCheckin.selectedServices.reduce((sum: number, service: any) => {
+        const quantity = service.quantity || 1;
+        const price = service.price || service.unitPrice || 0;
+        return sum + (quantity * price);
+      }, 0);
+    }
+    
+    // Lấy phụ thu từ event
+    let additionalCharges = 0;
+    if (lastCheckin.additionalCharges !== undefined && lastCheckin.additionalCharges !== null) {
+      additionalCharges = typeof lastCheckin.additionalCharges === 'number' 
+        ? lastCheckin.additionalCharges 
+        : Number(lastCheckin.additionalCharges) || 0;
+    }
+    
+    // Tính tổng tiền = tiền phòng + tiền dịch vụ + phụ thu
+    const totalAmount = roomPrice + serviceAmount + additionalCharges;
+    
+    // Cho phép giá trị âm (khi đặt trước nhiều hơn tổng tiền)
+    const remainingAmount = totalAmount - advancePayment;
     
     return {
       guestName: guestName,
       checkinTime: checkinTime,
       roomPrice: Math.round(roomPrice),
+      serviceAmount: Math.round(serviceAmount),
+      additionalCharges: Math.round(additionalCharges),
       advancePayment: advancePayment,
       remainingAmount: Math.round(remainingAmount),
       rateType: rateType,
