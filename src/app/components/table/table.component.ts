@@ -508,6 +508,13 @@ export class TableComponent implements OnInit, OnChanges {
       checkOutTime: invoice.checkOutTime,
       duration: invoice.duration || { hours: 0, days: 0 },
       products: invoice.products || [],
+      // Xử lý services: đảm bảo mỗi service có trường 'name'
+      services: (invoice.services || []).map((service: any) => ({
+        name: service.serviceName || service.name || 'Dịch vụ',
+        price: service.price || 0,
+        quantity: service.quantity || 1,
+        totalPrice: service.totalPrice || (service.price || 0) * (service.quantity || 1)
+      })),
       roomAmount: invoice.roomAmount || 0,
       serviceAmount: invoice.serviceAmount || 0,
       additionalCharges: invoice.additionalCharges || 0,
@@ -524,12 +531,32 @@ export class TableComponent implements OnInit, OnChanges {
     };
   }
   
+  // Helper function để normalize services (đảm bảo mỗi service có trường 'name')
+  private normalizeServices(services: any[]): any[] {
+    if (!services || !Array.isArray(services)) return [];
+    return services.map((service: any) => ({
+      name: service.serviceName || service.name || 'Dịch vụ',
+      price: service.price || 0,
+      quantity: service.quantity || 1,
+      totalPrice: service.totalPrice || (service.price || 0) * (service.quantity || 1)
+    }));
+  }
+
   // Hiển thị modal hóa đơn
   showInvoiceModal(invoiceData: any): void {
+    // Normalize services nếu có
+    if (invoiceData.services) {
+      invoiceData.services = this.normalizeServices(invoiceData.services);
+    }
+    
     // Đảm bảo có businessInfo trước khi hiển thị
     if (!invoiceData.businessInfo && invoiceData.hotelId) {
       // Load business info từ hotelId
       this.loadBusinessInfoForInvoice(invoiceData).then((updatedInvoiceData) => {
+        // Normalize services lại sau khi load business info
+        if (updatedInvoiceData.services) {
+          updatedInvoiceData.services = this.normalizeServices(updatedInvoiceData.services);
+        }
         this.createInvoiceModal(updatedInvoiceData);
       }).catch(() => {
         // Vẫn hiển thị modal ngay cả khi không load được business info
@@ -645,8 +672,8 @@ export class TableComponent implements OnInit, OnChanges {
     const managerHandoverAmount = this.shiftHandoverForm?.get('managerHandoverAmount')?.value || 0;
     const expenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
     
-    // Tổng tiền = tổng tiền ban đầu - tiền giao quản lý - tiền chi
-    this.totalPayment = Math.max(0, baseTotal - managerHandoverAmount - expenseAmount);
+    // Tổng tiền = tổng tiền ban đầu - tiền giao quản lý
+    this.totalPayment = Math.max(0, baseTotal - managerHandoverAmount);
   }
   
   exportToExcel(): void {

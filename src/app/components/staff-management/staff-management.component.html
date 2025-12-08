@@ -14,6 +14,37 @@
       <button nz-button nzType="primary" (click)="showAddForm()" [disabled]="!selectedHotelId">
         <i nz-icon nzType="plus"></i> Thêm nhân viên
       </button>
+      
+      <nz-divider nzType="vertical"></nz-divider>
+      
+      <!-- Nút xuất tổng hợp -->
+      <button nz-button nzType="default" nz-dropdown [nzDropdownMenu]="exportSummaryMenu" [disabled]="!selectedHotelId" style="margin-left: 8px;">
+        <i nz-icon nzType="file-excel"></i> Xuất tổng hợp thanh toán
+        <i nz-icon nzType="down"></i>
+      </button>
+      <nz-dropdown-menu #exportSummaryMenu="nzDropdownMenu">
+        <ul nz-menu nzSelectable style="width: 250px;">
+          <li nz-menu-item (click)="openExportSummaryModal('month', 'excel')">
+            <i nz-icon nzType="file-excel"></i> Xuất Excel theo tháng
+          </li>
+          <li nz-menu-item (click)="openExportSummaryModal('quarter', 'excel')">
+            <i nz-icon nzType="file-excel"></i> Xuất Excel theo quý
+          </li>
+          <li nz-menu-item (click)="openExportSummaryModal('year', 'excel')">
+            <i nz-icon nzType="file-excel"></i> Xuất Excel theo năm
+          </li>
+          <li nz-menu-divider></li>
+          <li nz-menu-item (click)="openExportSummaryModal('month', 'pdf')">
+            <i nz-icon nzType="file-pdf"></i> Xuất PDF theo tháng
+          </li>
+          <li nz-menu-item (click)="openExportSummaryModal('quarter', 'pdf')">
+            <i nz-icon nzType="file-pdf"></i> Xuất PDF theo quý
+          </li>
+          <li nz-menu-item (click)="openExportSummaryModal('year', 'pdf')">
+            <i nz-icon nzType="file-pdf"></i> Xuất PDF theo năm
+          </li>
+        </ul>
+      </nz-dropdown-menu>
     </div>
   </div>
 
@@ -92,6 +123,10 @@
             <nz-divider nzType="vertical"></nz-divider>
             <button nz-button nzShape="circle" nzType="primary" (click)="openSalaryModal(staff)" nz-tooltip nzTooltipTitle="Tính lương">
               <i nz-icon nzType="dollar"></i>
+            </button>
+            <nz-divider nzType="vertical"></nz-divider>
+            <button nz-button nzShape="circle" nzType="default" (click)="openPayrollHistoryModal(staff)" nz-tooltip nzTooltipTitle="Lịch sử lương">
+              <i nz-icon nzType="history"></i>
             </button>
             <nz-divider nzType="vertical"></nz-divider>
             <button nz-button nzShape="circle" nzType="default" nzDanger (click)="deleteStaff(staff)" nz-tooltip nzTooltipTitle="Xóa">
@@ -668,6 +703,25 @@
               </div>
             </div>
 
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzSpan]="12">
+                <nz-form-item>
+                  <nz-form-label>Ứng lương</nz-form-label>
+                  <nz-form-control>
+                    <nz-input-number 
+                      formControlName="advancePayment" 
+                      [nzMin]="0" 
+                      [nzStep]="100000" 
+                      [nzFormatter]="formatterVND"
+                      [nzParser]="parserVND"
+                      style="width: 100%">
+                    </nz-input-number>
+                    <div class="form-hint">Khoản ứng lương (sẽ bị trừ)</div>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+
             <div class="form-actions" style="margin-top: 24px;">
               <button nz-button type="button" (click)="closeSalaryModal()">Hủy</button>
               <button nz-button nzType="primary" (click)="calculateSalary()" [nzLoading]="isLoading">
@@ -676,76 +730,104 @@
             </div>
           </form>
 
-          <!-- Kết quả tính lương -->
-          <div *ngIf="salaryCalculationResult" style="margin-top: 24px; padding: 16px; background: #f0f9ff; border-radius: 8px; border: 1px solid #91d5ff;">
-            <h4 style="margin-bottom: 16px; color: #1890ff;">
-              <i nz-icon nzType="check-circle" style="color: #52c41a;"></i> Kết quả tính lương
-            </h4>
-            <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 4px; border-left: 4px solid #1890ff;">
-              <div class="salary-breakdown-item" style="border-bottom: none;">
-                <span class="label"><strong>Ngày cơ sở (ngày đầu làm việc):</strong></span>
-                <span class="value" style="color: #1890ff;">{{ formatDate(salaryCalculationResult.breakdown?.baseDate) }}</span>
+          <!-- Kết quả tính lương - Phiếu tính lương -->
+          <div *ngIf="salaryCalculationResult" style="margin-top: 24px; padding: 24px; background: white; border-radius: 8px; border: 1px solid #d9d9d9; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <!-- Header với logo và tên công ty -->
+            <div style="text-align: center; margin-bottom: 20px;">
+              <div *ngIf="businessLogo" style="margin-bottom: 10px;">
+                <img [src]="businessLogo" alt="Logo" style="max-height: 60px; max-width: 120px;">
               </div>
-              <div class="salary-breakdown-item" style="border-bottom: none;">
-                <span class="label"><strong>Ngày tính lương (thời điểm tính):</strong></span>
-                <span class="value" style="color: #52c41a;">{{ formatDate(salaryCalculationResult.breakdown?.calculationDate) }}</span>
+              <h2 style="margin: 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">
+                {{ (businessInfo?.name || 'Khách sạn').toUpperCase() }}
+              </h2>
+            </div>
+
+            <!-- Tiêu đề phiếu tính lương -->
+            <h1 style="text-align: center; font-size: 20px; font-weight: bold; margin: 20px 0 30px 0; text-transform: uppercase;">
+              PHIẾU TÍNH LƯƠNG {{ getSalaryPeriod() }}
+            </h1>
+            <!-- Thông tin nhân viên và lương -->
+            <div style="margin-bottom: 30px;">
+              <div style="margin-bottom: 15px;">
+                <strong>Họ Và Tên:</strong> 
+                <span style="font-weight: bold; text-transform: uppercase;">
+                  {{ getFullName(selectedStaffForSalary!) }}
+                </span>
               </div>
-              <div class="salary-breakdown-item" style="border-bottom: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e8e8e8;">
-                <span class="label"><strong>Khoảng thời gian tính lương:</strong></span>
-                <span class="value" style="font-weight: 600;">
-                  {{ formatDate(salaryCalculationResult.breakdown?.baseDate) }} 
-                  <i nz-icon nzType="arrow-right" style="margin: 0 8px;"></i>
-                  {{ formatDate(salaryCalculationResult.breakdown?.calculationDate) }}
+
+              <div style="margin-bottom: 15px;">
+                <strong>Chức vụ:</strong> 
+                <span style="font-weight: bold;">
+                  {{ getPositionLabel(selectedStaffForSalary?.employmentInfo?.position || '') }}
+                </span>
+              </div>
+              
+              <div style="margin-bottom: 15px;">
+                <strong>Lương Cơ Bản:</strong> 
+                <span style="font-weight: bold;">
+                  THÁNG = {{ formatCurrencyK(selectedStaffForSalary?.employmentInfo?.salary || 0) }}
+                </span>
+              </div>
+
+              <div style="margin-bottom: 15px;">
+                <strong>Số ngày làm việc thực tế:</strong> 
+                <span style="font-weight: bold;">
+                  {{ salaryCalculationResult.breakdown?.daysWorked || 0 }} ngày
+                </span>
+              </div>
+
+              <div style="margin-bottom: 15px;">
+                <strong>Ngày bắt đầu làm việc:</strong> 
+                <span style="font-weight: bold;">
+                  {{ formatDate(selectedStaffForSalary?.employmentInfo?.startDate) }}
+                </span>
+              </div>
+
+              <div style="margin-bottom: 15px;">
+                <strong>PHỤ CẤP:</strong>
+                <div style="margin-left: 20px; margin-top: 5px;">
+                  <div *ngIf="salaryCalculationResult.breakdown?.allowance > 0" style="margin-bottom: 5px;">
+                    {{ formatCurrencyK(salaryCalculationResult.breakdown.allowance) }} PHỤ CẤP
+                  </div>
+                  <div *ngIf="salaryCalculationResult.breakdown?.bonus > 0" style="margin-bottom: 5px;">
+                    {{ formatCurrencyK(salaryCalculationResult.breakdown.bonus) }} THƯỞNG
+                  </div>
+                  <div *ngIf="salaryCalculationResult.breakdown?.allowance === 0 && salaryCalculationResult.breakdown?.bonus === 0">
+                    Không có
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 15px;">
+                <strong>PHẠT:</strong> 
+                <span style="color: #ff4d4f; font-weight: bold;">
+                  {{ formatCurrencyK(salaryCalculationResult.breakdown?.penalty || 0) }}
+                </span>
+              </div>
+
+              <div style="margin-bottom: 15px;">
+                <strong>ỨNG LƯƠNG:</strong> 
+                <span style="color: #ff4d4f; font-weight: bold;">
+                  {{ formatCurrencyK(salaryCalculationResult.breakdown?.advancePayment || 0) }}
+                </span>
+              </div>
+
+              <div style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 4px;">
+                <strong style="font-size: 16px;">Lương Nhận:</strong> 
+                <span style="font-size: 18px; font-weight: bold; color: #1890ff;">
+                  {{ formatCurrency(salaryCalculationResult.breakdown?.netSalary || 0) }}
                 </span>
               </div>
             </div>
-            <div nz-row [nzGutter]="16">
-              <div nz-col [nzSpan]="12">
-                <div class="salary-breakdown-item">
-                  <span class="label">Số ngày làm việc:</span>
-                  <span class="value">{{ salaryCalculationResult.breakdown?.daysWorked || 0 }} ngày</span>
-                </div>
-                <div class="salary-breakdown-item">
-                  <span class="label">Lương cơ bản (theo ngày):</span>
-                  <span class="value">{{ formatCurrency(salaryCalculationResult.breakdown?.baseSalary || 0) }}</span>
-                </div>
-                <div class="salary-breakdown-item" style="color: #52c41a;">
-                  <span class="label">Phụ cấp:</span>
-                  <span class="value">+ {{ formatCurrency(salaryCalculationResult.breakdown?.allowance || 0) }}</span>
-                </div>
-                <div class="salary-breakdown-item" style="color: #52c41a;">
-                  <span class="label">Thưởng:</span>
-                  <span class="value">+ {{ formatCurrency(salaryCalculationResult.breakdown?.bonus || 0) }}</span>
-                </div>
+
+            <!-- Phần ký -->
+            <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+              <div>
+                <div style="margin-bottom: 50px; font-weight: bold;">NGƯỜI LẬP PHIẾU</div>
               </div>
-              <div nz-col [nzSpan]="12">
-                <div class="salary-breakdown-item" style="color: #ff4d4f;">
-                  <span class="label">Bảo hiểm:</span>
-                  <span class="value">- {{ formatCurrency(salaryCalculationResult.breakdown?.insurance || 0) }}</span>
-                </div>
-                <div class="salary-breakdown-item" style="color: #ff4d4f;">
-                  <span class="label">Phạt:</span>
-                  <span class="value">- {{ formatCurrency(salaryCalculationResult.breakdown?.penalty || 0) }}</span>
-                </div>
-                <div class="salary-breakdown-item" style="margin-top: 16px; padding-top: 16px; border-top: 2px solid #1890ff;">
-                  <span class="label" style="font-size: 16px; font-weight: 600;">Tổng cộng thêm:</span>
-                  <span class="value" style="font-size: 16px; font-weight: 600; color: #52c41a;">
-                    + {{ formatCurrency(salaryCalculationResult.breakdown?.totalAdditions || 0) }}
-                  </span>
-                </div>
-                <div class="salary-breakdown-item">
-                  <span class="label" style="font-size: 16px; font-weight: 600;">Tổng cộng trừ:</span>
-                  <span class="value" style="font-size: 16px; font-weight: 600; color: #ff4d4f;">
-                    - {{ formatCurrency(salaryCalculationResult.breakdown?.totalDeductions || 0) }}
-                  </span>
-                </div>
+              <div style="text-align: right;">
+                <div style="margin-bottom: 50px; font-weight: bold;">GIÁM ĐỐC</div>
               </div>
-            </div>
-            <div class="salary-breakdown-item" style="margin-top: 16px; padding: 16px; background: white; border-radius: 8px; border: 2px solid #1890ff;">
-              <span class="label" style="font-size: 18px; font-weight: 700;">Lương thực nhận:</span>
-              <span class="value" style="font-size: 20px; font-weight: 700; color: #1890ff;">
-                {{ formatCurrency(salaryCalculationResult.breakdown?.netSalary || 0) }}
-              </span>
             </div>
             <div style="margin-top: 16px; padding: 12px; background: #fff7e6; border-radius: 4px; border-left: 4px solid #faad14;">
               <small>
@@ -763,12 +845,220 @@
                 </ul>
               </small>
             </div>
-            <div class="form-actions" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #d9d9d9;">
-              <button nz-button type="button" (click)="closeSalaryModal()">Đóng</button>
-              <button nz-button nzType="primary" nzDanger (click)="paySalary()" [nzLoading]="isLoading">
-                <i nz-icon nzType="dollar"></i> Đã thanh toán
+            <!-- Nút xuất file và thanh toán -->
+            <div class="form-actions" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #d9d9d9; display: flex; gap: 8px; justify-content: space-between;">
+              <div>
+                <button nz-button type="button" (click)="closeSalaryModal()">Đóng</button>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button nz-button nzType="default" (click)="exportSalaryPDF()" [nzLoading]="isLoading">
+                  <i nz-icon nzType="file-pdf"></i> Xuất PDF
+                </button>
+                <button nz-button nzType="default" (click)="exportSalaryExcel()" [nzLoading]="isLoading">
+                  <i nz-icon nzType="file-excel"></i> Xuất Excel
+                </button>
+                <button nz-button nzType="primary" nzDanger (click)="paySalary()" [nzLoading]="isLoading">
+                  <i nz-icon nzType="dollar"></i> Đã thanh toán
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </nz-modal>
+
+    <!-- Modal Lịch sử Payroll -->
+    <nz-modal
+      [(nzVisible)]="isPayrollHistoryModalVisible"
+      [nzTitle]="'Lịch sử lương - ' + (selectedStaffForPayrollHistory ? getFullName(selectedStaffForPayrollHistory) : '')"
+      [nzWidth]="1200"
+      (nzOnCancel)="closePayrollHistoryModal()"
+      [nzFooter]="null"
+    >
+      <ng-container *nzModalContent>
+        <div *ngIf="selectedStaffForPayrollHistory">
+          <!-- Filter -->
+          <div style="margin-bottom: 16px; padding: 16px; background: #f5f5f5; border-radius: 4px;">
+            <nz-row [nzGutter]="16">
+              <nz-col [nzSpan]="6">
+                <nz-form-item>
+                  <nz-form-label>Loại filter</nz-form-label>
+                  <nz-form-control>
+                    <nz-select [(ngModel)]="payrollFilterType" (ngModelChange)="onPayrollFilterChange()">
+                      <nz-option nzValue="month" nzLabel="Theo tháng"></nz-option>
+                      <nz-option nzValue="quarter" nzLabel="Theo quý"></nz-option>
+                      <nz-option nzValue="year" nzLabel="Theo năm"></nz-option>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </nz-col>
+              <nz-col [nzSpan]="6" *ngIf="payrollFilterType === 'month'">
+                <nz-form-item>
+                  <nz-form-label>Tháng</nz-form-label>
+                  <nz-form-control>
+                    <nz-select [(ngModel)]="payrollFilterMonth" (ngModelChange)="onPayrollFilterChange()">
+                      <nz-option *ngFor="let month of getMonths()" [nzValue]="month" [nzLabel]="'Tháng ' + month"></nz-option>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </nz-col>
+              <nz-col [nzSpan]="6" *ngIf="payrollFilterType === 'quarter'">
+                <nz-form-item>
+                  <nz-form-label>Quý</nz-form-label>
+                  <nz-form-control>
+                    <nz-select [(ngModel)]="payrollFilterQuarter" (ngModelChange)="onPayrollFilterChange()">
+                      <nz-option *ngFor="let quarter of getQuarters()" [nzValue]="quarter" [nzLabel]="'Quý ' + quarter"></nz-option>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </nz-col>
+              <nz-col [nzSpan]="6">
+                <nz-form-item>
+                  <nz-form-label>Năm</nz-form-label>
+                  <nz-form-control>
+                    <nz-select [(ngModel)]="payrollFilterYear" (ngModelChange)="onPayrollFilterChange()">
+                      <nz-option *ngFor="let year of getYears()" [nzValue]="year" [nzLabel]="'Năm ' + year"></nz-option>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </nz-col>
+            </nz-row>
+            <div style="margin-top: 12px;">
+              <button nz-button nzType="default" (click)="exportPayrollHistoryPDF()" style="margin-right: 8px;">
+                <i nz-icon nzType="file-pdf"></i> Xuất PDF
+              </button>
+              <button nz-button nzType="primary" (click)="exportPayrollHistoryExcel()">
+                <i nz-icon nzType="file-excel"></i> Xuất Excel
               </button>
             </div>
+          </div>
+
+          <!-- Bảng lịch sử payroll -->
+          <div style="overflow-x: auto; width: 100%;">
+            <nz-table
+              #payrollTable
+              [nzData]="payrollHistory"
+              [nzBordered]="true"
+              [nzShowPagination]="true"
+              [nzPageSize]="10"
+              nzSize="small"
+              [nzScroll]="{ x: '1200px' }"
+            >
+            <thead>
+              <tr>
+                <th>STT</th>
+                <th>Kỳ lương</th>
+                <th>Ngày bắt đầu</th>
+                <th>Ngày kết thúc</th>
+                <th>Số ngày làm việc</th>
+                <th>Lương cơ bản</th>
+                <th>Phụ cấp</th>
+                <th>Thưởng</th>
+                <th>Bảo hiểm</th>
+                <th>Phạt</th>
+                <th>Ứng lương</th>
+                <th>Lương thực nhận</th>
+                <th>Ngày thanh toán</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let payroll of payrollTable.data; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>
+                  {{ formatDate(payroll.period?.startDate) }} - {{ formatDate(payroll.period?.endDate) }}
+                </td>
+                <td>{{ formatDate(payroll.period?.startDate) }}</td>
+                <td>{{ formatDate(payroll.period?.endDate) }}</td>
+                <td>{{ payroll.daysWorked || 0 }} ngày</td>
+                <td>{{ formatCurrency(payroll.baseSalary || 0) }}</td>
+                <td>{{ formatCurrency(payroll.allowance || 0) }}</td>
+                <td>{{ formatCurrency(payroll.bonus || 0) }}</td>
+                <td>{{ formatCurrency(payroll.insurance || 0) }}</td>
+                <td>{{ formatCurrency(payroll.penalty || 0) }}</td>
+                <td>{{ formatCurrency(payroll.advancePayment || 0) }}</td>
+                <td><strong>{{ formatCurrency(payroll.netSalary || 0) }}</strong></td>
+                <td>{{ formatDate(payroll.paymentDate) }}</td>
+                <td>
+                  <nz-tag [nzColor]="payroll.paymentStatus === 'paid' ? 'success' : 'default'">
+                    {{ payroll.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán' }}
+                  </nz-tag>
+                </td>
+              </tr>
+            </tbody>
+          </nz-table>
+          </div>
+
+          <nz-empty *ngIf="payrollHistory.length === 0" nzNotFoundContent="Không có dữ liệu lương cho khoảng thời gian đã chọn"></nz-empty>
+        </div>
+      </ng-container>
+    </nz-modal>
+
+    <!-- Modal xuất tổng hợp thanh toán -->
+    <nz-modal
+      [(nzVisible)]="isExportSummaryModalVisible"
+      nzTitle="Xuất tổng hợp thanh toán"
+      (nzOnCancel)="closeExportSummaryModal()"
+      [nzFooter]="null"
+      nzWidth="600px"
+    >
+      <ng-container *nzModalContent>
+        <div style="padding: 20px;">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6">Loại bộ lọc:</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <nz-radio-group [(ngModel)]="exportSummaryFilterType" (ngModelChange)="onExportSummaryFilterChange()">
+                <label nz-radio nzValue="month">Theo tháng</label>
+                <label nz-radio nzValue="quarter">Theo quý</label>
+                <label nz-radio nzValue="year">Theo năm</label>
+              </nz-radio-group>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item *ngIf="exportSummaryFilterType === 'month'">
+            <nz-form-label [nzSpan]="6">Tháng:</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <nz-select [(ngModel)]="exportSummaryFilterMonth" style="width: 100%;">
+                <nz-option *ngFor="let month of getMonths()" [nzValue]="month" [nzLabel]="'Tháng ' + month"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item *ngIf="exportSummaryFilterType === 'quarter'">
+            <nz-form-label [nzSpan]="6">Quý:</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <nz-select [(ngModel)]="exportSummaryFilterQuarter" style="width: 100%;">
+                <nz-option *ngFor="let quarter of getQuarters()" [nzValue]="quarter" [nzLabel]="'Quý ' + quarter"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6">Năm:</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <nz-select [(ngModel)]="exportSummaryFilterYear" style="width: 100%;">
+                <nz-option *ngFor="let year of getYears()" [nzValue]="year" [nzLabel]="year.toString()"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6">Định dạng:</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <nz-tag [nzColor]="exportSummaryFormat === 'excel' ? 'green' : 'red'">
+                {{ exportSummaryFormat === 'excel' ? 'Excel' : 'PDF' }}
+              </nz-tag>
+            </nz-form-control>
+          </nz-form-item>
+
+          <div style="text-align: right; margin-top: 20px;">
+            <button nz-button (click)="closeExportSummaryModal()" style="margin-right: 8px;">
+              Hủy
+            </button>
+            <button nz-button nzType="primary" (click)="loadAllStaffPayrollSummary()" [nzLoading]="isLoading">
+              <i nz-icon [nzType]="exportSummaryFormat === 'excel' ? 'file-excel' : 'file-pdf'"></i>
+              Xuất {{ exportSummaryFormat === 'excel' ? 'Excel' : 'PDF' }}
+            </button>
           </div>
         </div>
       </ng-container>

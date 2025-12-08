@@ -1,0 +1,52 @@
+<div class="transfer-form">
+  <div style="margin-bottom: 16px; padding: 12px; background-color: #f0f0f0; border-radius: 4px;">
+    <strong>Phòng nguồn:</strong> {{ sourceRoom.roomNumber }} - {{ sourceRoom.type || 'N/A' }}<br>
+    <small class="text-muted">Trạng thái: {{ getStatusLabel(sourceRoom.status) }}</small>
+  </div>
+
+  <nz-alert 
+    nzType="info" 
+    nzMessage="Lưu ý khi chuyển phòng"
+    [nzDescription]="'Giá phòng sẽ được tính lại theo phòng đích. Thông tin khách, dịch vụ, phụ thu và khuyến mãi sẽ được giữ nguyên.'"
+    nzShowIcon
+    style="margin-bottom: 16px;">
+  </nz-alert>
+
+  <form nz-form [formGroup]="transferForm" nzLayout="vertical">
+    <nz-form-item>
+      <nz-form-label nzRequired>Chọn phòng đích</nz-form-label>
+      <nz-form-control nzErrorTip="Vui lòng chọn phòng đích">
+        <nz-select formControlName="targetRoomId" nzPlaceHolder="-- Chọn phòng --" style="width: 100%;">
+          <nz-option 
+            *ngFor="let room of availableRooms" 
+            [nzValue]="room._id" 
+            [nzLabel]="room.roomNumber + ' - ' + (room.type || 'N/A') + ' (Tầng ' + (room.floor || 'N/A') + ')'">
+          </nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label>Ghi chú</nz-form-label>
+      <nz-form-control>
+        <textarea 
+          nz-input 
+          formControlName="notes" 
+          rows="3" 
+          placeholder="Nhập lý do chuyển phòng (không bắt buộc)..."
+          style="width: 100%; resize: vertical;">
+        </textarea>
+      </nz-form-control>
+    </nz-form-item>
+  </form>
+
+  <div style="text-align: right; margin-top: 16px;">
+    <button nz-button (click)="onCancel()" style="margin-right: 8px;">
+      Hủy
+    </button>
+    <button nz-button nzType="primary" (click)="onSubmit()" [nzLoading]="isLoading">
+      Xác nhận chuyển phòng
+    </button>
+  </div>
+</div>
+

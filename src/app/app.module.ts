@@ -75,6 +75,7 @@ import { NotfoundComponent } from './components/notfound/notfound.component';
 import { RoomContentModalComponent } from './components/room-content-modal/room-content-modal.component';
 import { InvoiceComponent } from './components/invoice/invoice.component';
 import { RoomContextMenuComponent } from './components/room-context-menu/room-context-menu.component';
+import { TransferRoomModalComponent } from './components/transfer-room-modal/transfer-room-modal.component';
 import { CompanyManagementComponent } from './components/company-management/company-management.component';
 import { HotelManagementComponent } from './components/hotel-management/hotel-management.component';
 import { RoomManagementComponent } from './components/room-management/room-management.component';
@@ -134,6 +135,7 @@ registerLocaleData(vi);
         RoomContentModalComponent,
         InvoiceComponent,
         RoomContextMenuComponent,
+        TransferRoomModalComponent,
         CompanyManagementComponent,
         HotelManagementComponent,
         RoomManagementComponent,

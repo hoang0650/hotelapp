@@ -2,7 +2,9 @@ import { Component, OnInit, Input, OnChanges, SimpleChanges, Output, EventEmitte
 import * as Highcharts from 'highcharts';
 import { HotelService } from '../../services/hotel.service';
 import { ShiftHandoverService } from '../../services/shift-handover.service';
+import { TransactionService } from '../../services/transaction.service';
 import { format, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-revenue-chart',
@@ -28,7 +30,8 @@ export class RevenueChartComponent implements OnInit, OnChanges {
 
   constructor(
     private hotelService: HotelService,
-    private shiftHandoverService: ShiftHandoverService
+    private shiftHandoverService: ShiftHandoverService,
+    private transactionService: TransactionService
   ) {}
 
   ngOnInit(): void {
@@ -95,27 +98,37 @@ export class RevenueChartComponent implements OnInit, OnChanges {
         startDate = subDays(now, 6);
     }
     
-    // Lấy dữ liệu từ shift handover history
-    this.shiftHandoverService.getShiftHandoverHistory({
-      hotelId: this.hotelId,
-      startDate: format(startDate, 'yyyy-MM-dd'),
-      endDate: format(endDate, 'yyyy-MM-dd'),
-      page: 1,
-      limit: 1000 // Lấy tối đa 1000 records
+    // Lấy dữ liệu từ shift handover history và incomes
+    forkJoin({
+      shiftHandovers: this.shiftHandoverService.getShiftHandoverHistory({
+        hotelId: this.hotelId,
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd'),
+        page: 1,
+        limit: 1000 // Lấy tối đa 1000 records
+      }),
+      incomes: this.transactionService.getIncomes({
+        hotelId: this.hotelId,
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd'),
+        page: 1,
+        limit: 1000 // Lấy tối đa 1000 records
+      })
     }).subscribe({
       next: (response) => {
-        const shiftHandovers = response.data || [];
+        const shiftHandovers = response.shiftHandovers.data || [];
+        const incomes = response.incomes.data || [];
         
         // Nhóm dữ liệu theo period và tính toán
-        const groupedData = this.groupShiftHandoversByPeriod(shiftHandovers, this.selectedPeriod);
+        const groupedData = this.groupShiftHandoversByPeriod(shiftHandovers, this.selectedPeriod, incomes);
         
         this.labels = groupedData.labels;
         this.revenueData = groupedData.revenueData;
         this.expenseData = groupedData.expenseData;
         this.paymentData = groupedData.paymentData;
         
-        // Tính tổng doanh thu từ roomHistory (tổng tiền từ các phòng đã checkout)
-        this.totalRevenue = shiftHandovers.reduce((sum, record) => {
+        // Tính tổng tiền phòng từ roomHistory (tổng tiền từ các phòng đã checkout)
+        const totalRoomRevenue = shiftHandovers.reduce((sum, record) => {
           if (record.roomHistory && Array.isArray(record.roomHistory)) {
             return sum + record.roomHistory.reduce((roomSum: number, room: any) => {
               return roomSum + (room.amount || 0);
@@ -123,6 +136,14 @@ export class RevenueChartComponent implements OnInit, OnChanges {
           }
           return sum;
         }, 0);
+        
+        // Tính tổng phiếu thu
+        const totalIncome = incomes.reduce((sum: number, income: any) => {
+          return sum + (income.amount || 0);
+        }, 0);
+        
+        // Tổng doanh thu = tổng tiền phòng + phiếu thu
+        this.totalRevenue = totalRoomRevenue + totalIncome;
         
         // Tổng chi = tổng expenseAmount từ expenses
         this.totalExpense = shiftHandovers.reduce((sum, record) => {
@@ -134,8 +155,8 @@ export class RevenueChartComponent implements OnInit, OnChanges {
           return sum + (record.expenseAmount || 0);
         }, 0);
         
-        // Tổng thanh toán = tổng tiền từ room history (giống totalRevenue)
-        this.totalPayment = this.totalRevenue;
+        // Tổng thanh toán = tổng tiền từ room history (giống totalRoomRevenue)
+        this.totalPayment = totalRoomRevenue;
         
         this.updateChart();
         this.isLoading = false;
@@ -175,7 +196,8 @@ export class RevenueChartComponent implements OnInit, OnChanges {
   // Nhóm dữ liệu shift handover theo period
   private groupShiftHandoversByPeriod(
     shiftHandovers: any[], 
-    period: 'day' | 'week' | 'month'
+    period: 'day' | 'week' | 'month',
+    incomes: any[] = []
   ): { labels: string[], revenueData: number[], expenseData: number[], paymentData: number[] } {
     const grouped: { [key: string]: { revenue: number, expense: number, payment: number } } = {};
     
@@ -283,6 +305,35 @@ export class RevenueChartComponent implements OnInit, OnChanges {
         grouped[key].expense += expenseAmount;
       }
     });
+    
+    // Xử lý incomes (phiếu thu)
+    if (incomes && Array.isArray(incomes)) {
+      incomes.forEach((income: any) => {
+        const incomeDate = income.createdAt ? new Date(income.createdAt) : new Date();
+        let key: string;
+        
+        switch (period) {
+          case 'day':
+            key = format(incomeDate, 'yyyy-MM-dd');
+            break;
+          case 'week':
+            key = format(startOfWeek(incomeDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            break;
+          case 'month':
+            key = format(startOfMonth(incomeDate), 'yyyy-MM');
+            break;
+          default:
+            key = format(incomeDate, 'yyyy-MM-dd');
+        }
+        
+        if (!grouped[key]) {
+          grouped[key] = { revenue: 0, expense: 0, payment: 0 };
+        }
+        
+        // Thêm income vào revenue (tổng doanh thu = tổng tiền phòng + phiếu thu)
+        grouped[key].revenue += (income.amount || 0);
+      });
+    }
     
     // Sắp xếp keys và tạo arrays
     const sortedKeys = Object.keys(grouped).sort();

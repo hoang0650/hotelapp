@@ -64,6 +64,12 @@ export class RoomComponent implements OnInit, OnDestroy {
   expenseList: any[] = [];
   expenseLoading = false;
   
+  // Phiếu thu
+  isIncomeModalVisible = false;
+  incomeForm: FormGroup;
+  incomeList: any[] = [];
+  incomeLoading = false;
+  
   shiftHandoverForm: FormGroup;
   private roomDataUpdatedSubscription: Subscription;
 
@@ -118,6 +124,15 @@ export class RoomComponent implements OnInit, OnDestroy {
       description: ['', [Validators.required]],
       notes: [''],
       recipient: ['']
+    });
+    
+    this.incomeForm = this.fb.group({
+      amount: [0, [Validators.required, Validators.min(1)]],
+      method: ['cash', [Validators.required]],
+      incomeCategory: ['other', [Validators.required]],
+      description: ['', [Validators.required]],
+      notes: [''],
+      payer: ['']
     });
   }
 
@@ -292,6 +307,109 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
     this.isExpenseModalVisible = true;
     this.loadExpenses();
+  }
+  
+  // Mở modal phiếu thu
+  openIncomeModal(): void {
+    if (!this.selectedHotelId) {
+      this.message.warning('Vui lòng chọn khách sạn');
+      return;
+    }
+    this.incomeForm.reset({
+      amount: 0,
+      method: 'cash',
+      incomeCategory: 'other',
+      description: '',
+      notes: '',
+      payer: ''
+    });
+    this.isIncomeModalVisible = true;
+    this.loadIncomes();
+  }
+  
+  // Load danh sách phiếu thu
+  loadIncomes(): void {
+    if (!this.selectedHotelId) return;
+    
+    this.incomeLoading = true;
+    this.transactionService.getIncomes({
+      hotelId: this.selectedHotelId,
+      page: 1,
+      limit: 1000
+    }).subscribe(
+      (data) => {
+        this.incomeList = data.data || [];
+        this.incomeLoading = false;
+      },
+      (error) => {
+        console.error('Error loading incomes:', error);
+        this.incomeLoading = false;
+      }
+    );
+  }
+  
+  // Tạo phiếu thu
+  submitIncome(): void {
+    if (!this.selectedHotelId) {
+      this.message.warning('Vui lòng chọn khách sạn');
+      return;
+    }
+    
+    if (this.incomeForm.invalid) {
+      this.message.warning('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+    
+    const incomeData = {
+      hotelId: this.selectedHotelId,
+      ...this.incomeForm.value
+    };
+    
+    this.incomeLoading = true;
+    this.transactionService.createIncome(incomeData).subscribe(
+      (response) => {
+        this.message.success('Tạo phiếu thu thành công');
+        this.isIncomeModalVisible = false;
+        this.loadIncomes();
+        this.showRoomHistory(); // Reload để cập nhật biểu đồ
+        // Cập nhật lại totalRevenue từ table sau khi tạo phiếu thu
+        setTimeout(() => {
+          this.updateRevenueFromTable();
+        }, 200);
+        this.incomeLoading = false;
+      },
+      (error) => {
+        this.message.error('Lỗi tạo phiếu thu: ' + (error.error?.message || error.message));
+        this.incomeLoading = false;
+      }
+    );
+  }
+  
+  // Xóa phiếu thu
+  deleteIncome(incomeId: string): void {
+    this.modalService.confirm({
+      nzTitle: 'Xác nhận xóa',
+      nzContent: 'Bạn có chắc chắn muốn xóa phiếu thu này?',
+      nzOkText: 'Xóa',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.transactionService.deleteIncome(incomeId).subscribe(
+          () => {
+            this.message.success('Xóa phiếu thu thành công');
+            this.loadIncomes();
+            this.showRoomHistory(); // Reload để cập nhật biểu đồ
+            // Cập nhật lại totalRevenue từ table sau khi xóa phiếu thu
+            setTimeout(() => {
+              this.updateRevenueFromTable();
+            }, 200);
+          },
+          (error) => {
+            this.message.error('Lỗi xóa phiếu thu: ' + (error.error?.message || error.message));
+          }
+        );
+      }
+    });
   }
   
   // Tạo phiếu chi
@@ -587,8 +705,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.invoiceService.showInvoiceModal(invoiceData);
   }
 
-  getRoomStatusClass(status: RoomStatus | undefined): string {
+  getRoomStatusClass(status: RoomStatus | undefined, guestStatus?: string): string {
     if (!status) return 'inactive-room';
+    
+    // Nếu phòng occupied và khách ra ngoài, dùng class đặc biệt
+    if (status === 'occupied' && guestStatus === 'out') {
+      return 'occupied-guest-out-room';
+    }
+    
     const option = this.roomStatusDisplayOptions.find(opt => opt.value === status);
     return option ? `${option.value}-room` : 'inactive-room';
   }
@@ -919,6 +1043,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     advancePayment: number;
     remainingAmount: number;
     guestSource: string;
+    transferredFrom?: string;
+    transferredAt?: Date;
   } | null {
     if (room.status !== 'occupied') {
       return null;
@@ -942,7 +1068,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       totalAmount: totalAmount,
       advancePayment: checkinInfo.advancePayment,
       remainingAmount: checkinInfo.remainingAmount,
-      guestSource: checkinInfo.guestSource || 'walkin'
+      guestSource: checkinInfo.guestSource || 'walkin',
+      transferredFrom: checkinInfo.transferredFrom,
+      transferredAt: checkinInfo.transferredAt
     };
   }
 
@@ -992,11 +1120,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     roomPrice: number; 
     serviceAmount: number;
     additionalCharges: number;
-    advancePayment: number; 
+    advancePayment: number;
+    discount: number;
     remainingAmount: number;
     rateType: string;
     rateTypeLabel: string;
     guestSource: string;
+    transferredFrom?: string;
+    transferredAt?: Date;
   } | null {
     if (room.status !== 'occupied') {
       return null;
@@ -1156,13 +1287,21 @@ export class RoomComponent implements OnInit, OnDestroy {
     
     // Tính tổng tiền = tiền phòng + tiền dịch vụ + phụ thu
     const totalAmount = roomPrice + serviceAmount + additionalCharges;
-    
+
+    // Lấy chiết khấu nếu có, mặc định = 0
+    const discount = lastCheckin.discount !== undefined && lastCheckin.discount !== null
+      ? (typeof lastCheckin.discount === 'number'
+        ? lastCheckin.discount
+        : Number(lastCheckin.discount) || 0)
+      : 0;
+
     // Cho phép giá trị âm (khi đặt trước nhiều hơn tổng tiền)
-    const remainingAmount = totalAmount - advancePayment;
-    
+    const remainingAmount = totalAmount - advancePayment - discount;
+
     return {
       guestName: guestName,
       checkinTime: checkinTime,
+      discount: discount,
       roomPrice: Math.round(roomPrice),
       serviceAmount: Math.round(serviceAmount),
       additionalCharges: Math.round(additionalCharges),
@@ -1170,8 +1309,16 @@ export class RoomComponent implements OnInit, OnDestroy {
       remainingAmount: Math.round(remainingAmount),
       rateType: rateType,
       rateTypeLabel: rateTypeLabel,
-      guestSource: guestSource
+      guestSource: guestSource,
+      transferredFrom: lastCheckin.transferredFrom,
+      transferredAt: lastCheckin.transferredAt ? new Date(lastCheckin.transferredAt) : undefined
     };
+  }
+
+  // Lấy số phòng theo ID
+  getRoomNumberById(roomId: string): string | null {
+    const room = this.rooms.find(r => r._id === roomId);
+    return room ? room.roomNumber : null;
   }
 
   // Lấy nguồn khách từ phòng

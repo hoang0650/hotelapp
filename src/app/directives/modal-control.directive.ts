@@ -8,6 +8,7 @@ import { RoomContentModalComponent } from '../components/room-content-modal/room
 import { InvoiceComponent } from '../components/invoice/invoice.component';
 import { BookingModalComponent } from '../components/booking-modal/booking-modal.component';
 import { RoomContextMenuComponent } from '../components/room-context-menu/room-context-menu.component';
+import { TransferRoomModalComponent } from '../components/transfer-room-modal/transfer-room-modal.component';
 import { Room } from '../interfaces/rooms';
 
 @Directive({
@@ -149,6 +150,9 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       case 'guest-out':
         this.showGuestOutModal();
         break;
+      case 'guest-return':
+        this.showGuestReturnModal();
+        break;
       case 'cancel-booking':
         this.cancelBooking();
         break;
@@ -181,6 +185,41 @@ export class ModalControlDirective implements OnInit, OnDestroy {
               this.modalService.success({
                 nzTitle: 'Thành công',
                 nzContent: `Đã ghi nhận khách phòng ${this.room.roomNumber} tạm ra ngoài.`,
+                nzOkText: 'Đóng'
+              });
+              this.roomsService.notifyRoomDataUpdated();
+            },
+            error: (err) => {
+              this.modalService.error({
+                nzTitle: 'Lỗi',
+                nzContent: err.error?.message || 'Không thể cập nhật trạng thái.',
+                nzOkText: 'Đóng'
+              });
+            }
+          });
+      }
+    });
+  }
+  
+  // Hiển thị modal khách quay lại
+  showGuestReturnModal(): void {
+    this.modalService.confirm({
+      nzTitle: `Khách quay lại - Phòng ${this.room.roomNumber}`,
+      nzContent: `
+        <div style="margin-bottom: 16px;">
+          <p>Xác nhận khách đã quay lại phòng.</p>
+        </div>
+      `,
+      nzOkText: 'Xác nhận',
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        this.roomsService.guestReturn(this.room._id)
+          .pipe(take(1))
+          .subscribe({
+            next: () => {
+              this.modalService.success({
+                nzTitle: 'Thành công',
+                nzContent: `Đã ghi nhận khách phòng ${this.room.roomNumber} quay lại.`,
                 nzOkText: 'Đóng'
               });
               this.roomsService.notifyRoomDataUpdated();
@@ -725,156 +764,83 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           return;
         }
         
-        // Lấy staffId từ localStorage
-        const staffId = localStorage.getItem('staffId') || localStorage.getItem('userId') || 'unknown';
-        
-        // Hiển thị modal chọn phòng đích
+        // Hiển thị modal chọn phòng đích sử dụng component
         this.modalRef = this.modalService.create({
           nzTitle: `Chuyển phòng - Từ phòng ${this.room.roomNumber}`,
-          nzContent: `
-            <div class="transfer-form">
-              <div style="margin-bottom: 16px; padding: 12px; background-color: #f0f0f0; border-radius: 4px;">
-                <strong>Phòng nguồn:</strong> ${this.room.roomNumber} - ${this.room.type || 'N/A'}<br>
-                <small class="text-muted">Trạng thái: ${this.getStatusLabel(this.room.status)}</small>
-              </div>
-              <div class="form-item">
-                <label for="target-room" style="font-weight: 500; margin-bottom: 8px;">Chọn phòng đích <span style="color: red;">*</span>:</label>
-                <select id="target-room" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
-                  <option value="">-- Chọn phòng --</option>
-                  ${filteredRooms.map(room => 
-                    `<option value="${room._id}">${room.roomNumber} - ${room.type || 'N/A'} (Tầng ${room.floor || 'N/A'})</option>`
-                  ).join('')}
-                </select>
-              </div>
-              <div class="form-item">
-                <label for="transfer-note" style="font-weight: 500; margin-bottom: 8px;">Ghi chú:</label>
-                <textarea id="transfer-note" class="form-control" rows="3" 
-                  placeholder="Nhập lý do chuyển phòng (không bắt buộc)..." 
-                  style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; resize: vertical;"></textarea>
-              </div>
-            </div>
-            <style>
-              .transfer-form {
-                display: flex;
-                flex-direction: column;
-                gap: 16px;
-              }
-              .form-item {
-                display: flex;
-                flex-direction: column;
-              }
-              .form-control:focus {
-                outline: none;
-                border-color: #40a9ff;
-                box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-              }
-            </style>
-          `,
+          nzContent: TransferRoomModalComponent,
           nzWidth: 500,
-          nzOkText: 'Xác nhận chuyển phòng',
-          nzCancelText: 'Hủy',
-          nzOnOk: () => {
-            // Tìm modal element - tìm modal cuối cùng (modal chuyển phòng)
-            let modalElement: HTMLElement | null = null;
+          nzData: {
+            sourceRoom: this.room,
+            availableRooms: filteredRooms
+          },
+          nzFooter: null,
+          nzMaskClosable: false
+        });
+
+        // Xử lý khi modal đóng
+        this.modalRef.afterClose.pipe(
+          take(1),
+          takeUntil(this.destroy$)
+        ).subscribe((result: any) => {
+          if (result?.success) {
+            const response = result.response;
+            const targetRoomNumber = response?.targetRoom?.roomNumber || 'N/A';
+            const booking = response?.booking;
             
-            // Cách 1: Tìm modal cuối cùng trong document
-            const allModals = document.querySelectorAll('.ant-modal');
-            if (allModals.length > 0) {
-              modalElement = allModals[allModals.length - 1] as HTMLElement;
-            }
+            // Tạo thông báo chi tiết
+            let message = `Đã chuyển khách từ phòng ${this.room.roomNumber} sang phòng ${targetRoomNumber}`;
             
-            // Cách 2: Tìm từ modal-wrap
-            if (!modalElement) {
-              const modalWrap = document.querySelector('.ant-modal-wrap:last-of-type');
-              if (modalWrap) {
-                modalElement = modalWrap.querySelector('.ant-modal') as HTMLElement;
+            // Thêm thông tin về giá và phòng đích nếu có
+            const targetRoom = response?.targetRoom;
+            if (targetRoom) {
+              message += `\n\nPhòng đích: ${targetRoom.roomNumber} - ${targetRoom.type || 'N/A'}`;
+              if (targetRoom.pricing) {
+                const pricingInfo = [];
+                if (targetRoom.pricing.hourly) pricingInfo.push(`Giờ: ${targetRoom.pricing.hourly.toLocaleString('vi-VN')} VNĐ`);
+                if (targetRoom.pricing.daily) pricingInfo.push(`Ngày: ${targetRoom.pricing.daily.toLocaleString('vi-VN')} VNĐ`);
+                if (targetRoom.pricing.nightly) pricingInfo.push(`Đêm: ${targetRoom.pricing.nightly.toLocaleString('vi-VN')} VNĐ`);
+                if (pricingInfo.length > 0) {
+                  message += `\n${pricingInfo.join(' | ')}`;
+                }
               }
             }
             
-            // Cách 3: Tìm từ body
-            if (!modalElement) {
-              modalElement = document.body.querySelector('.ant-modal:last-of-type') as HTMLElement;
-            }
-            
-            if (!modalElement) {
-              this.modalService.error({
-                nzTitle: 'Lỗi',
-                nzContent: 'Không tìm thấy form chuyển phòng.',
-                nzOkText: 'Đóng'
-              });
-              return false;
-            }
-            
-            const targetRoomSelect = modalElement.querySelector('#target-room') as HTMLSelectElement;
-            const transferNote = modalElement.querySelector('#transfer-note') as HTMLTextAreaElement;
-            
-            if (!targetRoomSelect || !targetRoomSelect.value) {
-              this.modalService.warning({
-                nzTitle: 'Cảnh báo',
-                nzContent: 'Vui lòng chọn phòng đích.',
-                nzOkText: 'Đóng'
-              });
-              return false; // Ngăn modal đóng
-            }
-            
-            const targetRoomId = targetRoomSelect.value;
-            const notes = transferNote?.value?.trim() || 'Chuyển phòng';
-            
-            // Disable nút OK để tránh click nhiều lần
-            const okButton = modalElement.querySelector('.ant-btn-primary') as HTMLButtonElement;
-            if (okButton) {
-              okButton.disabled = true;
-              okButton.textContent = 'Đang xử lý...';
-            }
-            
-            // Gọi API chuyển phòng
-            this.roomsService.transferRoom(
-              this.room._id,
-              targetRoomId,
-              staffId,
-              notes
-            ).pipe(
-              take(1),
-              takeUntil(this.destroy$)
-            ).subscribe(
-              (response) => {
-                // Đóng modal
-                if (this.modalRef) {
-                  this.modalRef.close();
-                  this.modalRef = null;
-                }
-                
-                // Hiển thị thông báo thành công
-                this.modalService.success({
-                  nzTitle: 'Thành công',
-                  nzContent: `Đã chuyển khách từ phòng ${this.room.roomNumber} sang phòng ${response.targetRoom?.roomNumber || targetRoomSelect.options[targetRoomSelect.selectedIndex]?.text || 'N/A'}`,
-                  nzOkText: 'Đóng'
-                });
-                
-                // Thông báo cập nhật dữ liệu phòng
-                setTimeout(() => {
-                  this.roomsService.notifyRoomDataUpdated();
-                }, 500);
-              },
-              (error) => {
-                // Enable lại nút OK
-                if (okButton) {
-                  okButton.disabled = false;
-                  okButton.textContent = 'Xác nhận chuyển phòng';
-                }
-                
-                // Hiển thị lỗi
-                const errorMessage = error.error?.error || error.error?.message || 'Không thể chuyển phòng, vui lòng thử lại sau.';
-                this.modalService.error({
-                  nzTitle: 'Lỗi chuyển phòng',
-                  nzContent: errorMessage,
-                  nzOkText: 'Đóng'
-                });
+            // Thêm thông tin về giá nếu có booking
+            if (booking) {
+              // Thông tin về các khoản giữ nguyên
+              const hasServices = booking.services && Array.isArray(booking.services) && booking.services.length > 0;
+              const hasAdditionalCharges = booking.additionalCharges && Array.isArray(booking.additionalCharges) && booking.additionalCharges.length > 0;
+              const hasDiscounts = booking.discounts && Array.isArray(booking.discounts) && booking.discounts.length > 0;
+              
+              if (hasServices || hasAdditionalCharges || hasDiscounts) {
+                message += '\n\nĐã giữ nguyên:';
+                if (hasServices) message += '\n- Dịch vụ đã đặt';
+                if (hasAdditionalCharges) message += '\n- Phụ thu';
+                if (hasDiscounts) message += '\n- Khuyến mãi';
               }
-            );
+              
+              // Thông tin về giá mới
+              if (booking.basePrice !== undefined && booking.basePrice !== null) {
+                message += `\n\nGiá phòng mới: ${booking.basePrice.toLocaleString('vi-VN')} VNĐ`;
+                if (booking.totalAmount !== undefined && booking.totalAmount !== null) {
+                  message += `\nTổng tiền: ${booking.totalAmount.toLocaleString('vi-VN')} VNĐ`;
+                }
+              }
+            }
             
-            return false; // Ngăn modal đóng tự động cho đến khi API thành công
+            // Hiển thị thông báo thành công
+            this.modalService.success({
+              nzTitle: 'Chuyển phòng thành công',
+              nzContent: message,
+              nzOkText: 'Đóng'
+            });
+            
+            // Thông báo cập nhật dữ liệu phòng
+            setTimeout(() => {
+              this.roomsService.notifyRoomDataUpdated();
+            }, 500);
           }
+          this.modalRef = null;
         });
       },
       (error) => {

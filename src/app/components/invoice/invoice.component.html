@@ -125,20 +125,7 @@
             <td class="text-right">{{ formatCurrency(product.price) }}</td>
             <td class="text-right">{{ formatCurrency(product.price * (product.quantity || 1)) }}</td>
           </tr>
-          
-          <!-- Hiển thị dịch vụ nếu có -->
-          <ng-container *ngIf="hasServices && !hasServiceProductsDuplicated()">
-            <tr class="section-header">
-              <td colspan="4"><strong>Dịch vụ sử dụng</strong></td>
-            </tr>
-            <tr *ngFor="let service of invoiceData.services" 
-                [hidden]="isServiceInProducts(service)">
-              <td>{{ service.name }}</td>
-              <td class="text-center">x{{ service.quantity || 1 }}</td>
-              <td class="text-right">{{ formatCurrency(service.price) }}</td>
-              <td class="text-right">{{ formatCurrency(service.price * (service.quantity || 1)) }}</td>
-            </tr>
-          </ng-container>
+
           
           <!-- Hiển thị nếu không có sản phẩm -->
           <tr *ngIf="(invoiceData.products || []).length === 0">
@@ -147,6 +134,19 @@
             <td class="text-right">{{ formatCurrency(invoiceData['amount'] || 0) }}</td>
             <td class="text-right">{{ formatCurrency(invoiceData['amount'] || 0) }}</td>
           </tr>
+           <!-- Hiển thị dịch vụ nếu có -->
+           <ng-container *ngIf="hasServices && !hasServiceProductsDuplicated()">
+            <!-- <tr class="section-header">
+              <td colspan="4"><strong>Dịch vụ sử dụng</strong></td>
+            </tr>-->
+            <tr *ngFor="let service of invoiceData.services" 
+                [hidden]="isServiceInProducts(service)">
+              <td>{{ service.name }}</td>
+              <td class="text-center">x{{ service.quantity || 1 }}</td>
+              <td class="text-right">{{ formatCurrency(service.price) }}</td>
+              <td class="text-right">{{ formatCurrency(service.price * (service.quantity || 1)) }}</td>
+            </tr>
+          </ng-container>
           
           
           <!-- Hiển thị tiền dịch vụ nếu có -->

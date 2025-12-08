@@ -2,6 +2,8 @@ import { Component, Input, OnInit, Inject } from '@angular/core';
 import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
+import { InvoiceService } from '../../services/invoice.service';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { take } from 'rxjs/operators';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
@@ -121,7 +123,9 @@ export class InvoiceComponent implements OnInit {
   constructor(
     @Inject(NZ_MODAL_DATA) private data: { invoiceData: InvoiceData, businessInfo: any },
     private hotelService: HotelService,
-    private businessService: BusinessService
+    private businessService: BusinessService,
+    private invoiceService: InvoiceService,
+    private message: NzMessageService
   ) {
     console.log('=== InvoiceComponent Constructor ===');
     console.log('Raw data received:', this.data);
@@ -710,79 +714,9 @@ export class InvoiceComponent implements OnInit {
   }
 
   exportInvoice(): void {
-    const docDefinition: any = {
-      content: [
-        { text: this.invoiceData?.businessName || 'Khách sạn', style: 'header' },
-        { text: this.invoiceData?.business_address || 'Chưa có địa chỉ' },
-        { text: `ĐT: ${this.invoiceData?.phoneNumber || 'Chưa có số điện thoại'}` },
-        { text: `Số hóa đơn: ${this.invoiceData?.invoiceNumber || ''}`, alignment: 'right' },
-        { text: `Ngày: ${new Date(this.invoiceData?.date).toLocaleDateString('vi-VN')}`, alignment: 'right' },
-        { text: 'HOÁ ĐƠN THANH TOÁN', style: 'invoiceTitle', margin: [0, 20, 0, 20] },
-        {
-          columns: [
-            [
-              { text: `Nhân viên: ${this.invoiceData?.staffName || 'Không có thông tin'}` },
-              { text: `Phòng: ${this.invoiceData?.roomNumber || ''}` },
-              { text: `Ngày đến: ${new Date(this.invoiceData?.checkInTime || 0).toLocaleString('vi-VN')}` },
-              { text: `Thời gian lưu trú: ${this.durationText}` }
-            ],
-            [
-              { text: `Khách hàng: ${this.getCustomerName()}` },
-              { text: `SĐT: ${this.getCustomerPhone()}` },
-              { text: `Thanh toán: ${this.getPaymentMethodLabel(this.invoiceData?.paymentMethod || '')}` },
-              { text: `Ngày đi: ${new Date(this.invoiceData?.checkOutTime || 0).toLocaleString('vi-VN')}` }
-            ]
-          ]
-        },
-        { margin: [0, 20, 0, 0], 
-          table: {
-            headerRows: 1,
-            widths: ['*', 'auto', 'auto', 'auto'],
-            body: [
-              ['Tên hàng', 'Số lượng', 'Đơn giá', 'Thành tiền'],
-              ...this.invoiceData?.products.map((product: InvoiceProduct) => [
-                product.name,
-                product.quantity || 'x1',
-                this.formatCurrency(product.price),
-                this.formatCurrency(product.price * (product.quantity || 1))
-              ]),
-              ['Tổng tiền hàng', '', '', this.formatCurrency(this.subtotal)],
-              ['Phụ thu (Charges)', '', '', this.formatCurrency(this.invoiceData?.additionalCharges || 0)],
-              ['Khuyến mãi (Discount)', '', '', this.formatCurrency(this.invoiceData?.discount || 0)],
-              [{ text: 'Tổng tiền (Total)', bold: true }, '', '', { text: this.formatCurrency(this.finalTotalAmount), bold: true }]
-            ]
-          }
-        },
-        {
-          text: [
-            '\n\nTrạng thái thanh toán: ', 
-            { text: this.getPaymentStatusLabel(this.invoiceData?.paymentStatus || ''), bold: true },
-            '\n\nCảm ơn quý khách đã sử dụng dịch vụ!\n',
-            'Chúc quý khách một ngày tốt lành!'
-          ],
-          style: 'thankYou'
-        }
-      ],
-      styles: {
-        header: {
-          fontSize: 16,
-          bold: true
-        },
-        invoiceTitle: {
-          fontSize: 20,
-          bold: true,
-          alignment: 'center'
-        },
-        thankYou: {
-          fontSize: 12,
-          alignment: 'center',
-          margin: [0, 20, 0, 0]
-        }
-      }
-    };
-
-    // Sử dụng pdfMake toàn cục từ window
-    window.pdfMake.createPdf(docDefinition).open();
+    // Sử dụng cùng định dạng PDF với downloadPDF và getDocumentDefinition
+    const documentDefinition = this.getDocumentDefinition();
+    window.pdfMake.createPdf(documentDefinition).print();
   }
 
   // Hàm in hóa đơn
@@ -793,74 +727,79 @@ export class InvoiceComponent implements OnInit {
 
   // Hàm tạo cấu trúc tài liệu PDF cho pdfMake
   private getDocumentDefinition(): any {
-    // Lấy font từ VFS (Virtual File System)
-    // window.pdfMake.fonts = {
-    //   Roboto: {
-    //     normal: 'Roboto-Regular.ttf',
-    //     bold: 'Roboto-Medium.ttf',
-    //     italics: 'Roboto-Italic.ttf',
-    //     bolditalics: 'Roboto-MediumItalic.ttf'
-    //   }
-    // };
-
-    const checkInTime = this.invoiceData.checkInTime ? new Date(this.invoiceData.checkInTime).toLocaleString('vi-VN') : 'N/A';
-    const checkOutTime = this.invoiceData.checkOutTime ? new Date(this.invoiceData.checkOutTime).toLocaleString('vi-VN') : 'N/A';
+    const checkInTime = this.invoiceData.checkInTime ? 
+      new Date(this.invoiceData.checkInTime).toLocaleDateString('vi-VN') + ' ' + 
+      new Date(this.invoiceData.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+    const checkOutTime = this.invoiceData.checkOutTime ? 
+      new Date(this.invoiceData.checkOutTime).toLocaleDateString('vi-VN') + ' ' + 
+      new Date(this.invoiceData.checkOutTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+    const invoiceDate = this.invoiceData.date ? 
+      new Date(this.invoiceData.date).toLocaleDateString('vi-VN') + ' ' + 
+      new Date(this.invoiceData.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 
+      new Date().toLocaleDateString('vi-VN') + ' ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const printDate = new Date().toLocaleDateString('vi-VN') + ' ' + 
+      new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
     // Tạo body cho bảng sản phẩm
     const productBody = (this.invoiceData.products || []).map(item => [
         item.name,
-        { text: item.quantity || 1, alignment: 'right' },
+        { text: `x${item.quantity || 1}`, alignment: 'center' },
         { text: this.formatCurrency(item.price || 0), alignment: 'right' },
         { text: this.formatCurrency((item.price || 0) * (item.quantity || 1)), alignment: 'right' }
     ]);
+
+    // Nếu không có sản phẩm, thêm dòng tiền phòng
+    if (productBody.length === 0) {
+      productBody.push([
+        `Tiền phòng ${this.invoiceData.roomNumber || ''}`,
+        { text: 'x1', alignment: 'center' },
+        { text: this.formatCurrency(this.invoiceData['amount'] || this.invoiceData.roomAmount || 0), alignment: 'right' },
+        { text: this.formatCurrency(this.invoiceData['amount'] || this.invoiceData.roomAmount || 0), alignment: 'right' }
+      ]);
+    }
 
     // Tạo body cho bảng dịch vụ (chỉ những dịch vụ không có trong products)
     const serviceBody = (this.invoiceData.services || [])
       .filter(service => !this.isServiceInProducts(service))
       .map(item => [
         item.name,
-        { text: item.quantity || 1, alignment: 'right' },
+        { text: `x${item.quantity || 1}`, alignment: 'center' },
         { text: this.formatCurrency(item.price || 0), alignment: 'right' },
         { text: this.formatCurrency((item.price || 0) * (item.quantity || 1)), alignment: 'right' }
-    ]);
+      ]);
 
     // Header của bảng chi tiết
-     const tableHeader = [{ text: 'Diễn giải', style: 'tableHeader' }, { text: 'Số lượng', style: 'tableHeader', alignment: 'right' }, { text: 'Đơn giá', style: 'tableHeader', alignment: 'right' }, { text: 'Thành tiền', style: 'tableHeader', alignment: 'right' }];
+    const tableHeader = [
+      { text: 'Tên hàng\n(Product)', style: 'tableHeader' }, 
+      { text: 'Số lượng\n(Quantity)', style: 'tableHeader', alignment: 'center' }, 
+      { text: 'Đơn giá\n(Unit)', style: 'tableHeader', alignment: 'right' }, 
+      { text: 'Thành tiền\n(Price)', style: 'tableHeader', alignment: 'right' }
+    ];
 
     // Kết hợp body sản phẩm và dịch vụ
-    let tableBody: any[] = [tableHeader, ...productBody];
-    if (serviceBody.length > 0) {
-        // Correctly type the object for colSpan - Use 'any' for simplicity here if type inference fails
-        const serviceHeaderRow: any[] = [{text: '', colSpan: 4, style: 'tableHeader', alignment: 'center'} as any, {}, {}, {}];
-        tableBody.push(serviceHeaderRow);
-        tableBody = tableBody.concat(serviceBody);
-    }
+    let tableBody: any[] = [tableHeader, ...productBody, ...serviceBody];
+
+    // Tính tổng tiền dịch vụ
+    const serviceTotal = this.serviceTotal || 0;
 
     return {
-      // defaultStyle: {
-      //   font: 'Roboto' // Sử dụng font Roboto
-      // },
       content: [
-        // Tiêu đề
-        { text: 'HÓA ĐƠN THANH TOÁN', style: 'header', alignment: 'center', margin: [0, 0, 0, 20] },
-
-        // Thông tin doanh nghiệp và khách hàng
+        // Header với thông tin khách sạn và số hóa đơn
         {
           columns: [
             {
               width: '*',
               text: [
-                { text: this.invoiceData.businessName || 'Tên Doanh Nghiệp', style: 'subheader' },
-                `\nĐịa chỉ: ${this.invoiceData.business_address || 'Địa chỉ doanh nghiệp'}`,
-                `\nĐiện thoại: ${this.invoiceData.phoneNumber || 'Số điện thoại'}`
+                { text: this.invoiceData.businessName || 'Khách sạn', bold: true, fontSize: 12 },
+                { text: `\n${this.invoiceData.business_address || 'Chưa có địa chỉ'}`, fontSize: 10 },
+                { text: `\nĐT: ${this.invoiceData.phoneNumber || 'Chưa có số điện thoại'}`, fontSize: 10 }
               ]
             },
             {
               width: '*',
               text: [
-                { text: `Số HĐ: ${this.invoiceData.invoiceNumber || this.invoiceData['bookingId'] || 'N/A' }`, bold: true },
-                `\nNgày: ${new Date(this.invoiceData.date).toLocaleDateString('vi-VN')}`,
-                `\nNV Thu ngân: ${this.invoiceData.staffName || 'N/A'}`
+                { text: `Số hóa đơn: ${this.invoiceData.invoiceNumber || this.invoiceData['bookingId'] || 'N/A'}`, bold: true, fontSize: 10 },
+                { text: `\nNgày: ${invoiceDate}`, fontSize: 10 }
               ],
               alignment: 'right'
             }
@@ -868,108 +807,273 @@ export class InvoiceComponent implements OnInit {
           margin: [0, 0, 0, 10]
         },
 
-        // Thông tin khách hàng
+        // Đường kẻ ngang
+        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2 }], margin: [0, 5, 0, 10] },
+
+        // Tiêu đề
+        { text: 'HOÁ ĐƠN THANH TOÁN', style: 'header', alignment: 'center', margin: [0, 0, 0, 15] },
+
+        // Thông tin khách hàng và đặt phòng (2 cột)
         {
-          text: [
-            { text: 'Thông tin khách hàng:', style: 'subheader' },
-            `\nTên khách hàng: ${this.getCustomerName()}`,
-            `\nSố điện thoại: ${this.getCustomerPhone()}`,
-            `\nEmail: ${this.getCustomerEmail()}`
+          columns: [
+            {
+              width: '*',
+              text: [
+                { text: 'Mã đặt phòng:', bold: true }, ` ${this.invoiceData['bookingId'] || 'N/A'}\n`,
+                { text: 'Phòng:', bold: true }, ` ${this.invoiceData.roomNumber || 'N/A'}\n`,
+                { text: 'Ngày đến:', bold: true }, ` ${checkInTime}\n`,
+                { text: 'Thời gian lưu trú:', bold: true }, ` ${this.durationText || 'N/A'}\n`,
+                { text: 'SĐT khách hàng:', bold: true }, ` ${this.getCustomerPhone() || 'Không có thông tin'}\n`,
+                { text: 'Nguồn khách:', bold: true }, ` ${this.getGuestSourceLabel(this.invoiceData.guestSource || this.invoiceData.guestInfo?.guestSource || 'walkin')}\n`,
+                { text: 'Hình thức tính:', bold: true }, ` ${this.getRateTypeLabel(this.invoiceData['rateType'])}`
+              ],
+              fontSize: 9
+            },
+            {
+              width: '*',
+              text: [
+                { text: 'Khách hàng:', bold: true }, ` ${this.getCustomerName()}\n`,
+                { text: 'Nhân viên:', bold: true }, ` ${this.invoiceData.staffName || 'Không có thông tin'}\n`,
+                { text: 'Ngày đi:', bold: true }, ` ${checkOutTime}\n`,
+                { text: 'Phương thức thanh toán:', bold: true }, ` ${this.getPaymentMethodLabel(this.invoiceData.paymentMethod || 'cash')}\n`,
+                { text: 'CCCD/CMND:', bold: true }, ` ${this.invoiceData['customerIdNumber'] || this.invoiceData.guestInfo?.idNumber || 'Không có'}\n`,
+                { text: 'Loại phòng:', bold: true }, ` ${this.invoiceData['roomType'] || 'Phòng thường'}\n`,
+                { text: 'Địa chỉ:', bold: true }, ` ${this.invoiceData.guestInfo?.address || this.invoiceData['customerAddress'] || 'Không có'}`
+              ],
+              fontSize: 9
+            }
           ],
-          margin: [0, 10, 0, 10]
+          margin: [0, 0, 0, 15]
         },
 
-        // Thông tin phòng và thời gian lưu trú
+        // Bảng chi tiết sản phẩm/dịch vụ
         {
-          text: [
-            { text: 'Thông tin phòng:', style: 'subheader' },
-            `\nPhòng: ${this.invoiceData.roomNumber || 'N/A'} - Loại: ${this.invoiceData.roomType || 'N/A'}`,
-            // `\nGiá phòng: ${this.formatCurrency(this.invoiceData.roomRate || 0)}`,
-            `\nCheck-in: ${checkInTime}`,
-            `\nCheck-out: ${checkOutTime}`,
-            `\nThời gian ở: ${this.durationText}`
-          ],
-          margin: [0, 0, 0, 10]
-        },
-
-        // Bảng chi tiết mới
-        {
-          style: 'tableExample',
           table: {
             widths: ['*', 'auto', 'auto', 'auto'],
             body: tableBody
           },
-          layout: 'lightHorizontalLines'
+          layout: {
+            hLineWidth: function (i: number, node: any) {
+              return i === 0 || i === node.table.body.length ? 1 : 0.5;
+            },
+            vLineWidth: function (i: number, node: any) {
+              return i === 0 || i === node.table.widths.length ? 1 : 0.5;
+            },
+            hLineColor: function (i: number, node: any) {
+              return i === 0 || i === node.table.body.length ? '#000' : '#aaa';
+            },
+            vLineColor: function (i: number, node: any) {
+              return i === 0 || i === node.table.widths.length ? '#000' : '#aaa';
+            }
+          },
+          margin: [0, 0, 0, 10]
         },
 
-        // Tổng cộng - sử dụng giá trị đã tính
+        // Tổng kết
         {
-          style: 'totalsTable',
           table: {
             widths: ['*', 'auto'],
             body: [
-              ['Tổng tiền dịch vụ(Total Service)', { text: this.formatCurrency(this.subtotal), alignment: 'right' }],
-              // Chỉ hiển thị dòng tổng dịch vụ nếu có
-              ...(this.serviceTotal > 0 ? [['Tổng tiền dịch vụ', { text: this.formatCurrency(this.serviceTotal), alignment: 'right' }]] : []),
-              ['Phụ thu', { text: this.formatCurrency(this.invoiceData.additionalCharges || 0), alignment: 'right' }],
-              ['Giảm giá', { text: this.formatCurrency(-(this.invoiceData.discount || 0)), alignment: 'right' }],
-              ['Đã trả trước', { text: this.formatCurrency(-(this.invoiceData.advancePayment || 0)), alignment: 'right' }],
-              [{ text: 'Tổng thanh toán', bold: true }, { text: this.formatCurrency(this.finalTotalAmount), bold: true, alignment: 'right' }]
+              ...(serviceTotal > 0 ? [[
+                { text: 'Tổng tiền dịch vụ(Total Service):', bold: true },
+                { text: this.formatCurrency(serviceTotal), alignment: 'right' }
+              ]] : []),
+              [
+                { text: 'Phụ thu (Charges):', bold: true },
+                { text: this.formatCurrency(this.invoiceData.additionalCharges || 0), alignment: 'right' }
+              ],
+              [
+                { text: 'Khuyến mãi (Discount):', bold: true },
+                { text: this.formatCurrency(-(this.invoiceData.discount || 0)), alignment: 'right' }
+              ],
+              [
+                { text: 'Tổng tiền (Total):', bold: true, fontSize: 11 },
+                { text: this.formatCurrency(this.finalTotalAmount), alignment: 'right', bold: true, fontSize: 11 }
+              ]
             ]
           },
           layout: 'noBorders',
-          margin: [0, 10, 0, 10]
+          margin: [0, 10, 0, 20]
         },
 
-        // Phương thức thanh toán
-        { text: `Hình thức thanh toán: ${this.getPaymentMethodLabel(this.invoiceData.paymentMethod)}`, margin: [0, 0, 0, 5] },
-        { text: `Trạng thái: ${this.getPaymentStatusLabel(this.invoiceData.paymentStatus)}`, bold: true, margin: [0, 0, 0, 10] },
-
-        // Ghi chú
-        this.invoiceData.notes ? { text: `Ghi chú: ${this.invoiceData.notes}`, margin: [0, 0, 0, 20] } : '',
-
-        // Chân trang
-        { text: 'Cảm ơn quý khách đã sử dụng dịch vụ!', alignment: 'center', italics: true }
+        // Footer
+        {
+          text: [
+            { text: 'Cảm ơn quý khách đã sử dụng dịch vụ!\n', alignment: 'center', fontSize: 10 },
+            { text: 'Chúc quý khách một ngày tốt lành!\n', alignment: 'center', fontSize: 10 },
+            { text: `Ngày in: ${printDate}`, alignment: 'center', fontSize: 9, italics: true }
+          ],
+          alignment: 'center',
+          margin: [0, 20, 0, 0]
+        }
       ],
       styles: {
         header: {
-          fontSize: 18,
+          fontSize: 16,
           bold: true
-        },
-        subheader: {
-          fontSize: 14,
-          bold: true,
-          margin: [0, 10, 0, 5]
-        },
-        tableExample: {
-          margin: [0, 5, 0, 15]
         },
         tableHeader: {
           bold: true,
-          fontSize: 12,
+          fontSize: 9,
           color: 'black'
-        },
-        totalsTable: {
-          margin: [0, 0, 0, 10]
         }
+      },
+      defaultStyle: {
+        fontSize: 10
       }
     };
   }
 
   // Gửi hóa đơn qua email
   sendInvoiceEmail(): void {
-    const pdfDocGenerator = window.pdfMake.createPdf(this.getDocumentDefinition());
     const customerEmail = this.getCustomerEmail();
     if (!customerEmail) {
-        alert('Không tìm thấy địa chỉ email của khách hàng.');
-        return;
+      this.message.warning('Không tìm thấy địa chỉ email của khách hàng.');
+      return;
     }
-    console.log('Chuẩn bị gửi hóa đơn PDF qua email cho:', customerEmail);
-    alert(`Hóa đơn sẽ được gửi đến ${customerEmail}. Tính năng đang được phát triển.`);
-    // TODO: Implement email sending logic. Get PDF as base64 or blob and send.
-    // pdfDocGenerator.getBase64((dataUrl: string) => {
-    //   // Send dataUrl to backend or use mailto link
-    // });
+
+    // Kiểm tra xem invoice đã có _id chưa (đã lưu vào database)
+    const invoiceId = this.invoiceData['_id'] || this.invoiceData['invoiceId'];
+    
+    // Nếu invoice chưa có trong database, tạo mới trước
+    if (!invoiceId) {
+      this.createInvoiceThenSendEmail(customerEmail);
+    } else {
+      // Invoice đã có, gửi email trực tiếp
+      this.sendEmailDirectly(invoiceId, customerEmail);
+    }
+  }
+
+  // Tạo invoice mới rồi gửi email
+  private createInvoiceThenSendEmail(customerEmail: string): void {
+    this.isLoading = true;
+    this.message.loading('Đang lưu hóa đơn...', { nzDuration: 0 });
+
+    // Chuẩn bị dữ liệu để tạo invoice
+    const invoicePayload = this.prepareInvoicePayload(customerEmail);
+    
+    if (!invoicePayload.hotelId || !invoicePayload.roomNumber || !invoicePayload.customerName) {
+      this.isLoading = false;
+      this.message.remove();
+      this.message.error('Thiếu thông tin bắt buộc để tạo hóa đơn (hotelId, roomNumber, customerName).');
+      return;
+    }
+
+    // Tạo invoice mới
+    this.invoiceService.createInvoice(invoicePayload).subscribe({
+      next: (response: any) => {
+        const newInvoiceId = response.data?._id || response.data?.id || response._id;
+        if (newInvoiceId) {
+          // Cập nhật invoiceData với _id mới
+          this.invoiceData['_id'] = newInvoiceId;
+          this.invoiceData['invoiceId'] = newInvoiceId;
+          // Gửi email sau khi tạo thành công
+          this.sendEmailDirectly(newInvoiceId, customerEmail);
+        } else {
+          this.isLoading = false;
+          this.message.remove();
+          this.message.error('Không thể lấy ID hóa đơn sau khi tạo.');
+        }
+      },
+      error: (error: any) => {
+        this.isLoading = false;
+        this.message.remove();
+        console.error('Error creating invoice:', error);
+        const errorMessage = error.error?.message || error.message || 'Vui lòng thử lại sau';
+        this.message.error('Lỗi khi tạo hóa đơn: ' + errorMessage);
+      }
+    });
+  }
+
+  // Gửi email trực tiếp
+  private sendEmailDirectly(invoiceId: string, customerEmail: string): void {
+    this.isLoading = true;
+    this.message.loading('Đang gửi hóa đơn qua email...', { nzDuration: 0 });
+
+    this.invoiceService.sendInvoiceEmail(invoiceId, customerEmail).subscribe({
+      next: (response: any) => {
+        this.isLoading = false;
+        this.message.remove();
+        this.message.success(`Hóa đơn đã được gửi đến ${customerEmail}`);
+      },
+      error: (error: any) => {
+        this.isLoading = false;
+        this.message.remove();
+        console.error('Error sending invoice email:', error);
+        const errorMessage = error.error?.message || error.message || 'Vui lòng thử lại sau';
+        this.message.error('Lỗi khi gửi email: ' + errorMessage);
+      }
+    });
+  }
+
+  // Chuẩn bị dữ liệu để tạo invoice
+  private prepareInvoicePayload(customerEmail?: string): any {
+    // Lấy hotelId từ nhiều nguồn
+    let hotelId = this.invoiceData['hotelId'];
+    if (!hotelId) {
+      hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId');
+    }
+
+    // Lấy roomId nếu có
+    const roomId = this.invoiceData['roomId'];
+
+    // Chuẩn bị products từ services và products
+    const products: any[] = [];
+    
+    // Thêm services vào products
+    if (this.invoiceData.services && Array.isArray(this.invoiceData.services)) {
+      this.invoiceData.services.forEach((service: any) => {
+        products.push({
+          name: service.name || service.serviceName || 'Dịch vụ',
+          price: service.price || 0,
+          quantity: service.quantity || 1,
+          totalPrice: service.totalPrice || (service.price || 0) * (service.quantity || 1)
+        });
+      });
+    }
+
+    // Thêm products hiện có
+    if (this.invoiceData.products && Array.isArray(this.invoiceData.products)) {
+      this.invoiceData.products.forEach((product: any) => {
+        products.push({
+          name: product.name || 'Sản phẩm',
+          price: product.price || 0,
+          quantity: product.quantity || 1,
+          totalPrice: product.totalPrice || (product.price || 0) * (product.quantity || 1)
+        });
+      });
+    }
+
+    return {
+      invoiceNumber: this.invoiceData.invoiceNumber,
+      hotelId: hotelId,
+      roomId: roomId,
+      roomNumber: this.invoiceData.roomNumber || '',
+      roomType: this.invoiceData.roomType || '',
+      bookingId: this.invoiceData['bookingId'] || this.invoiceData['bookingId'],
+      customerName: this.invoiceData.customerName || this.invoiceData.guestInfo?.name || 'Khách lẻ',
+      customerPhone: this.invoiceData.customerPhone || this.invoiceData.guestInfo?.phone || '',
+      customerEmail: this.invoiceData.customerEmail || this.invoiceData.guestInfo?.email || customerEmail || '',
+      guestDetails: this.invoiceData.guestInfo || {},
+      staffId: this.invoiceData.staffId || localStorage.getItem('staffId') || '',
+      staffName: this.invoiceData.staffName || localStorage.getItem('staffName') || 'Nhân viên',
+      checkInTime: this.invoiceData.checkInTime || this.invoiceData['checkInDate'] || new Date(),
+      checkOutTime: this.invoiceData.checkOutTime || this.invoiceData['checkOutDate'] || new Date(),
+      duration: this.invoiceData.duration || { hours: 0, days: 0 },
+      rateType: this.invoiceData.rateType || 'hourly',
+      products: products,
+      roomAmount: this.invoiceData.roomAmount || this.invoiceData.roomTotal || this.invoiceData['amount'] || 0,
+      serviceAmount: this.invoiceData['serviceAmount'] || this.invoiceData.servicesTotal || 0,
+      additionalCharges: this.invoiceData.additionalCharges || 0,
+      discount: this.invoiceData.discount || 0,
+      advancePayment: this.invoiceData.advancePayment || 0,
+      totalAmount: this.invoiceData.totalAmount || 0,
+      paymentMethod: this.invoiceData.paymentMethod || 'cash',
+      paymentStatus: this.invoiceData.paymentStatus || 'paid',
+      notes: this.invoiceData.notes || '',
+      status: 'issued',
+      date: this.invoiceData.date || new Date()
+    };
   }
   
   // Tải xuống hóa đơn dưới dạng PDF
@@ -981,10 +1085,35 @@ export class InvoiceComponent implements OnInit {
   
   // Xóa hóa đơn
   deleteInvoice(): void {
-    if (confirm('Bạn có chắc chắn muốn xóa hóa đơn này không?')) {
-      console.log('Xóa hóa đơn:', this.invoiceData.invoiceNumber);
-      // TODO: Implement delete functionality with backend API
-      alert('Hóa đơn đã được đánh dấu xóa. Tính năng đang được phát triển.');
+    // Lấy invoice ID
+    const invoiceId = this.invoiceData['_id'] || this.invoiceData['invoiceId'];
+    if (!invoiceId) {
+      this.message.warning('Không tìm thấy ID hóa đơn. Không thể xóa.');
+      return;
     }
+
+    // Hiển thị loading
+    this.isLoading = true;
+    this.message.loading('Đang xóa hóa đơn...', { nzDuration: 0 });
+
+    // Gọi API xóa hóa đơn
+    this.invoiceService.deleteInvoice(invoiceId).subscribe({
+      next: (response: any) => {
+        this.isLoading = false;
+        this.message.remove();
+        this.message.success('Xóa hóa đơn thành công');
+        // Đóng modal sau 1 giây
+        setTimeout(() => {
+          // Có thể emit event để parent component đóng modal
+          window.location.reload(); // Hoặc có thể dùng cách khác để đóng modal
+        }, 1000);
+      },
+      error: (error: any) => {
+        this.isLoading = false;
+        this.message.remove();
+        console.error('Error deleting invoice:', error);
+        this.message.error('Lỗi khi xóa hóa đơn: ' + (error.error?.message || error.message || 'Vui lòng thử lại sau'));
+      }
+    });
   }
 }

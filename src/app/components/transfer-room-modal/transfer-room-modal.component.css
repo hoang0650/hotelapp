@@ -1,0 +1,10 @@
+.transfer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.text-muted {
+  color: #6c757d;
+}
+

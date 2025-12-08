@@ -7,7 +7,8 @@
 }
 
 .dirty-room {
-    background: grey !important;
+    background: linear-gradient(135deg, #d4af37 0%, #f4cf37 100%);
+    color: #000;
 }
 .maintenance {
     background: #722ed1 !important;
@@ -224,6 +225,12 @@
     border: 2px solid #1890ff;
 }
 
+.stat-value.cleaning {
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    color: #ffffff;
+    border: 2px solid #f59e0b;
+}
+
 @media (max-width: 768px) {
     .room-stats-banner {
         padding: 16px 20px;
@@ -260,4 +267,88 @@
         font-size: 24px;
         padding: 8px 12px;
     }
+}
+
+/* Legend styles */
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 4px;
+    display: inline-block;
+}
+
+/* Event type status dots */
+.status-dot.event-checkin {
+    background-color: #52c41a;
+}
+
+.status-dot.event-checkout {
+    background-color: #1890ff;
+}
+
+.status-dot.event-notpay {
+    background-color: #ff4d4f;
+}
+
+.status-dot.event-maintenance {
+    background-color: #722ed1;
+}
+
+.status-dot.event-service-order {
+    background-color: #13c2c2;
+}
+
+.status-dot.event-transfer {
+    background-color: #ff9800;
+}
+
+.status-dot.event-booking {
+    background-color: #2f54eb;
+}
+
+.status-dot.event-cancel-booking {
+    background-color: #8c8c8c;
+}
+
+.status-dot.event-guest-out {
+    background-color: #fa8c16;
+}
+
+.status-dot.event-guest-return {
+    background-color: #52c41a;
+}
+
+/* Room status dots (backward compatibility) */
+.status-dot.available {
+    background-color: #52c41a;
+}
+
+.status-dot.occupied {
+    background-color: #ff4d4f;
+}
+
+.status-dot.dirty {
+    background-color: #faad14;
+}
+
+.status-dot.maintenance {
+    background-color: #722ed1;
+}
+
+.status-dot.booked {
+    background-color: #1890ff;
 }

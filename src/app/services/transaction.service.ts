@@ -100,5 +100,59 @@ export class TransactionService {
   deleteExpense(id: string): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/expense/${id}`);
   }
+
+  /**
+   * Tạo phiếu thu mới
+   * POST /transactions/income
+   */
+  createIncome(income: {
+    hotelId: string;
+    amount: number;
+    method: 'cash' | 'credit_card' | 'bank_transfer' | 'card' | 'virtual_card' | 'other';
+    incomeCategory?: 'service' | 'rental' | 'other';
+    description?: string;
+    notes?: string;
+    payer?: string;
+  }): Observable<ExpenseResponse> {
+    return this.http.post<ExpenseResponse>(`${this.apiUrl}/income`, income);
+  }
+
+  /**
+   * Lấy danh sách phiếu thu
+   * GET /transactions/income
+   */
+  getIncomes(params: {
+    hotelId: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Observable<ExpenseListResponse> {
+    let httpParams = new HttpParams()
+      .set('hotelId', params.hotelId);
+    
+    if (params.startDate) {
+      httpParams = httpParams.set('startDate', params.startDate);
+    }
+    if (params.endDate) {
+      httpParams = httpParams.set('endDate', params.endDate);
+    }
+    if (params.page) {
+      httpParams = httpParams.set('page', params.page.toString());
+    }
+    if (params.limit) {
+      httpParams = httpParams.set('limit', params.limit.toString());
+    }
+    
+    return this.http.get<ExpenseListResponse>(`${this.apiUrl}/income`, { params: httpParams });
+  }
+
+  /**
+   * Xóa phiếu thu
+   * DELETE /transactions/income/:id
+   */
+  deleteIncome(id: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/income/${id}`);
+  }
 }
 

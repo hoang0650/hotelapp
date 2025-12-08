@@ -112,7 +112,8 @@ export interface Event {
   notes?: string; 
   totalPrice?: number;
   // For transfer events
-  transferredFrom?: string; // Room ID
+  transferredFrom?: string; // Room ID (phòng nguồn)
+  transferredTo?: string; // Room ID (phòng đích)
   transferredAt?: Date;
   transferredBy?: string; // staffId
 }

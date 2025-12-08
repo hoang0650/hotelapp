@@ -158,12 +158,12 @@ export class InvoiceService {
 
   // Gửi email hóa đơn
   sendInvoiceEmail(invoiceId: string, email: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/invoice/${invoiceId}/email`, { email });
+    return this.http.post(`${this.apiUrl}/invoices/${invoiceId}/email`, { email });
   }
 
   // Xóa hóa đơn
   deleteInvoice(invoiceId: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/invoice/${invoiceId}`);
+    return this.http.delete(`${this.apiUrl}/invoices/${invoiceId}`);
   }
 
   // Tạo hóa đơn mới (API mới)

@@ -50,12 +50,12 @@
       </div>
       <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="6">
         <div class="action-buttons text-right">
-          <button nz-button nzType="primary" (click)="openShiftHandoverModal(shiftHandoverContent)" title="Giao ca">
-            <i nz-icon nzType="sync" nzTheme="outline"></i> Giao ca
+          <button nz-button nzType="primary" (click)="openIncomeModal()" title="Tạo phiếu thu" class="mr-2">
+            <i nz-icon nzType="plus-circle" nzTheme="outline"></i> Tạo phiếu thu
           </button>
           
-          <button nz-button nzType="default" (click)="showRoomHistory()" title="Lịch sử phòng" class="ml-2">
-            <i nz-icon nzType="history" nzTheme="outline"></i> Lịch sử
+          <button nz-button nzType="default" (click)="openExpenseModal()" title="Tạo phiếu chi">
+            <i nz-icon nzType="minus-circle" nzTheme="outline"></i> Tạo phiếu chi
           </button>
         </div>
       </div>
@@ -66,24 +66,44 @@
       <div nz-col [nzSpan]="24">
         <div class="legend mt-2">
           <span class="legend-item">
-            <span class="status-dot available"></span>
-            <span>Trống</span>
+            <span class="status-dot event-checkin"></span>
+            <span>Check-in</span>
           </span>
           <span class="legend-item">
-            <span class="status-dot occupied"></span>
-            <span>Đang sử dụng</span>
+            <span class="status-dot event-checkout"></span>
+            <span>Check-out</span>
           </span>
           <span class="legend-item">
-            <span class="status-dot booked"></span>
-            <span>Đã đặt trước</span>
+            <span class="status-dot event-notpay"></span>
+            <span>Chưa thanh toán</span>
           </span>
           <span class="legend-item">
-            <span class="status-dot dirty"></span>
-            <span>Cần dọn dẹp</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot maintenance"></span>
+            <span class="status-dot event-maintenance"></span>
             <span>Bảo trì</span>
+          </span>
+          <span class="legend-item">
+            <span class="status-dot event-service-order"></span>
+            <span>Đặt dịch vụ</span>
+          </span>
+          <span class="legend-item">
+            <span class="status-dot event-transfer"></span>
+            <span>Chuyển phòng</span>
+          </span>
+          <span class="legend-item">
+            <span class="status-dot event-booking"></span>
+            <span>Đặt trước</span>
+          </span>
+          <span class="legend-item">
+            <span class="status-dot event-cancel-booking"></span>
+            <span>Hủy đặt</span>
+          </span>
+          <span class="legend-item">
+            <span class="status-dot event-guest-out"></span>
+            <span>Khách ra ngoài</span>
+          </span>
+          <span class="legend-item">
+            <span class="status-dot event-guest-return"></span>
+            <span>Khách về</span>
           </span>
         </div>
       </div>
@@ -129,16 +149,12 @@
           <div nz-row [nzGutter]="[hGutter, vGutter]">
             <div 
               nz-col 
-              [nzXs]="24" 
-              [nzSm]="12" 
-              [nzMd]="8" 
-              [nzLg]="6" 
-              [nzXl]="4"
+              [nzSpan]="24 / count"
               *ngFor="let room of getRoomsByFloor()[floor]"
               class="room-col">
               <div 
                 class="room-item" 
-                [ngClass]="getRoomStatusClass(room.status)"
+                [ngClass]="getRoomStatusClass(room.status, room.guestStatus)"
                 appModalControl 
                 [room]="room">
                 
@@ -168,6 +184,11 @@
                   <div class="room-guest-source-label" [ngClass]="'source-' + getGuestSourceLabelAndColor(getRoomGuestSource(room)).color">
                     {{ getGuestSourceLabelAndColor(getRoomGuestSource(room)).label }}
                   </div>
+                  <!-- Trạng thái khách (ra ngoài/quay lại) -->
+                  <div class="room-guest-status-label" *ngIf="room.guestStatus === 'out'" 
+                       style="background-color: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-top: 4px; text-align: center; cursor: pointer;">
+                    Khách quay lại
+                  </div>
                 </ng-container>
                 
                 <!-- Thông tin booking cho phòng đã đặt -->
@@ -195,6 +216,15 @@
                 <!-- Thông tin chi tiết cho phòng đang có khách -->
                 <ng-container *ngIf="room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
                   <div class="room-details">
+                    <div class="detail-row" *ngIf="displayInfo.transferredFrom">
+                      <span class="detail-label">Chuyển từ:</span>
+                      <span class="detail-value highlight" style="color: #ff9800;">
+                        Phòng {{ getRoomNumberById(displayInfo.transferredFrom) || displayInfo.transferredFrom }}
+                        <span *ngIf="displayInfo.transferredAt" style="font-size: 0.85em; color: #999; margin-left: 4px;">
+                          ({{ displayInfo.transferredAt | date:'dd/MM/yyyy HH:mm' }})
+                        </span>
+                      </span>
+                    </div>
                     <div class="detail-row">
                       <span class="detail-label">Nhận phòng:</span>
                       <span class="detail-value highlight">{{ displayInfo.checkinTime }}</span>
@@ -467,6 +497,136 @@
   </div>
 </nz-modal>
 
+<!-- Modal phiếu thu -->
+<nz-modal
+  [(nzVisible)]="isIncomeModalVisible"
+  nzTitle="Quản lý phiếu thu"
+  [nzWidth]="900"
+  (nzOnCancel)="isIncomeModalVisible = false"
+  [nzFooter]="null">
+  <div *nzModalContent>
+    <!-- Form tạo phiếu thu -->
+    <nz-card nzTitle="Tạo phiếu thu mới" style="margin-bottom: 16px;">
+      <form [formGroup]="incomeForm" (ngSubmit)="submitIncome()">
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Số tiền</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập số tiền lớn hơn 0">
+            <nz-input-number
+              formControlName="amount"
+              [nzMin]="1"
+              [nzStep]="1000"
+              [nzFormatter]="formatNumber"
+              style="width: 100%">
+            </nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Phương thức thanh toán</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-select formControlName="method" style="width: 100%">
+              <nz-option nzValue="cash" nzLabel="Tiền mặt"></nz-option>
+              <nz-option nzValue="bank_transfer" nzLabel="Chuyển khoản"></nz-option>
+              <nz-option nzValue="card" nzLabel="Thẻ"></nz-option>
+              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Danh mục</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-select formControlName="incomeCategory" style="width: 100%">
+              <nz-option nzValue="service" nzLabel="Dịch vụ"></nz-option>
+              <nz-option nzValue="rental" nzLabel="Cho thuê"></nz-option>
+              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Mô tả</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập mô tả">
+            <input nz-input formControlName="description" placeholder="Nhập mô tả chi tiết">
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Người nộp</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <input nz-input formControlName="payer" placeholder="Tên người nộp (nếu có)">
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Ghi chú</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <textarea nz-input formControlName="notes" rows="3" placeholder="Ghi chú thêm (nếu có)"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-control [nzOffset]="6" [nzSpan]="18">
+            <button nz-button nzType="primary" [nzLoading]="incomeLoading" type="submit">
+              Tạo phiếu thu
+            </button>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </nz-card>
+
+    <!-- Danh sách phiếu thu -->
+    <nz-card nzTitle="Danh sách phiếu thu">
+      <nz-table
+        #incomeTable
+        [nzData]="incomeList"
+        [nzLoading]="incomeLoading"
+        [nzPageSize]="10"
+        nzShowSizeChanger
+        [nzTotal]="incomeList.length">
+        <thead>
+          <tr>
+            <th>Ngày</th>
+            <th>Mô tả</th>
+            <th>Danh mục</th>
+            <th>Số tiền</th>
+            <th>Phương thức</th>
+            <th>Người nộp</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let income of incomeTable.data">
+            <td>{{ income.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ income.description }}</td>
+            <td>
+              <nz-tag [nzColor]="'green'">
+                {{ income.incomeCategory === 'service' ? 'Dịch vụ' :
+                   income.incomeCategory === 'rental' ? 'Cho thuê' : 'Khác' }}
+              </nz-tag>
+            </td>
+            <td>{{ income.amount | number:'1.0-0' }} đ</td>
+            <td>
+              {{ income.method === 'cash' ? 'Tiền mặt' :
+                 income.method === 'bank_transfer' ? 'Chuyển khoản' :
+                 income.method === 'card' ? 'Thẻ' : 'Khác' }}
+            </td>
+            <td>{{ income.payer || '-' }}</td>
+            <td>
+              <button nz-button nzType="link" nzDanger (click)="deleteIncome(income._id!)" [disabled]="income.shiftHandoverId">
+                Xóa
+              </button>
+              <span *ngIf="income.shiftHandoverId" class="text-muted" style="font-size: 12px; margin-left: 8px;">
+                (Đã giao ca)
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </nz-card>
+  </div>
+</nz-modal>
+
 <style>
   .room-container {
     padding: 16px;
@@ -642,6 +802,10 @@
     margin-left: 8px;
   }
   
+  .mr-2 {
+    margin-right: 8px;
+  }
+  
   .text-right {
     text-align: right;
   }
@@ -757,6 +921,12 @@
   /* Room Status Colors */
   .occupied-room {
     background: linear-gradient(135deg, #8b0000 0%, #a00000 100%);
+    color: white;
+  }
+  
+  /* Phòng occupied nhưng khách ra ngoài - màu cam/warning */
+  .occupied-guest-out-room {
+    background: linear-gradient(135deg, #fa8c16 0%, #ffa940 100%);
     color: white;
   }
   

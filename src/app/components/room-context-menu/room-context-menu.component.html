@@ -1,8 +1,19 @@
 <div class="list-group list-group-flush">
   <!-- Actions for occupied room -->
   <ng-container *ngIf="isOccupied">
+    <!-- Hiển thị trạng thái khách nếu đang ra ngoài -->
+    <div class="list-group-item bg-warning-subtle py-2 px-3" *ngIf="isGuestOut">
+      <small class="text-warning fw-semibold d-flex align-items-center">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="margin-right: 6px;">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+        Khách đang ra ngoài
+      </small>
+    </div>
+    
     <a class="list-group-item list-group-item-action d-flex align-items-center" 
-       (click)="onActionClick('checkout')">
+       (click)="onActionClick('checkout')"
+       [ngClass]="{'list-group-item-warning': isGuestOut}">
       <span class="badge bg-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
         <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
       </span>
@@ -51,12 +62,23 @@
     </a>
     
     <a class="list-group-item list-group-item-action d-flex align-items-center" 
-       (click)="onActionClick('guest-out')">
-      <span class="badge bg-secondary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+       (click)="onActionClick('guest-out')"
+       *ngIf="isGuestIn">
+      <span class="badge bg-warning text-dark rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
         <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5a2 2 0 00-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z"/></svg>
       </span>
       <span class="flex-grow-1">Khách ra ngoài</span>
-      <span class="text-muted">›</span>
+      <span class="badge bg-warning-subtle text-warning">Out</span>
+    </a>
+    
+    <a class="list-group-item list-group-item-action d-flex align-items-center" 
+       (click)="onActionClick('guest-return')"
+       *ngIf="isGuestOut">
+      <span class="badge bg-success rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      </span>
+      <span class="flex-grow-1">Khách quay lại</span>
+      <span class="badge bg-success-subtle text-success">Return</span>
     </a>
   </ng-container>
   

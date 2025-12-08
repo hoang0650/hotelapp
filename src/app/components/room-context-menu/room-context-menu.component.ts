@@ -31,6 +31,16 @@ export class RoomContextMenuComponent implements OnInit {
     this.isBooked = status === 'booked';
   }
 
+  // Kiểm tra trạng thái khách
+  get isGuestOut(): boolean {
+    return this.room.guestStatus === 'out';
+  }
+
+  // Kiểm tra trạng thái khách trong phòng
+  get isGuestIn(): boolean {
+    return !this.room.guestStatus || this.room.guestStatus === 'in';
+  }
+
   onActionClick(action: string): void {
     this.actionSelected.emit(action);
   }

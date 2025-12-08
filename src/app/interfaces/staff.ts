@@ -50,6 +50,7 @@ export interface StaffEmploymentInfo {
   insurance?: number; // Bảo hiểm
   penalty?: number; // Phạt
   bonus?: number; // Thưởng
+  advancePayment?: number; // Ứng lương
   bankAccount?: BankAccount;
   taxId?: string;
 }
@@ -91,6 +92,7 @@ export interface StaffPayroll {
   insurance?: number; // Bảo hiểm
   penalty?: number; // Phạt
   bonus?: number; // Thưởng
+  advancePayment?: number; // Ứng lương
   overtime?: number;
   bonuses?: number;
   deductions?: number;

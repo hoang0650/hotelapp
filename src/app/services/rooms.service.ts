@@ -142,11 +142,13 @@ export class RoomsService {
   transferRoom(sourceRoomId: string, targetRoomId: string, staffId: string, notes: string): Observable<{
     sourceRoom: Room,
     targetRoom: Room,
+    booking?: any,
     message: string
   }> {
     return this.http.post<{
       sourceRoom: Room,
       targetRoom: Room,
+      booking?: any,
       message: string
     }>(`${this.apiUrl}/transfer`, {
       sourceRoomId,

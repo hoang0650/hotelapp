@@ -102,6 +102,14 @@
   background-color: #ffc107 !important;
 }
 
+.bg-warning-subtle {
+  background-color: #fff3cd !important;
+}
+
+.text-warning {
+  color: #ffc107 !important;
+}
+
 .bg-danger {
   background-color: #dc3545 !important;
   color: #fff;
@@ -126,5 +134,14 @@
 
 .text-dark {
   color: #212529 !important;
+}
+
+.list-group-item-warning {
+  background-color: #fff3cd !important;
+  border-left: 3px solid #ffc107 !important;
+}
+
+.bg-warning-subtle {
+  background-color: #fff3cd !important;
 }
 
