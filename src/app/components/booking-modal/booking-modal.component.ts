@@ -27,6 +27,7 @@ export class BookingModalComponent implements OnInit {
   hotelId?: string;
   isLoading = false;
   businessInfo: any = null;
+  hotelInfo: any = null;
 
   constructor(
     private fb: FormBuilder,
@@ -112,6 +113,9 @@ export class BookingModalComponent implements OnInit {
     
     this.hotelService.getHotelById(this.hotelId).subscribe(
       (hotel) => {
+        // Lưu thông tin hotel
+        this.hotelInfo = hotel;
+        
         if (hotel.businessId) {
           this.businessService.getBusinessById(hotel.businessId).subscribe(
             (business) => {
@@ -394,7 +398,7 @@ export class BookingModalComponent implements OnInit {
             {
               text: [
                 { text: 'Khách sạn: ', bold: true },
-                { text: this.businessInfo?.name || 'N/A' }
+                { text: this.hotelInfo?.name || 'N/A' }
               ],
               margin: [0, 0, 0, 10]
             },
@@ -411,14 +415,14 @@ export class BookingModalComponent implements OnInit {
         {
           text: [
             { text: 'Địa chỉ: ', bold: true },
-            { text: this.businessInfo?.contactInfo?.address || 'N/A' }
+            { text: this.getHotelAddress() || 'N/A' }
           ],
           margin: [0, 0, 0, 10]
         },
         {
           text: [
             { text: 'Số điện thoại: ', bold: true },
-            { text: this.businessInfo?.contactInfo?.phone || 'N/A' }
+            { text: this.hotelInfo?.contactInfo?.phone || 'N/A' }
           ],
           margin: [0, 0, 0, 20]
         },
@@ -544,6 +548,21 @@ export class BookingModalComponent implements OnInit {
       style: 'currency',
       currency: 'VND'
     }).format(amount);
+  }
+
+  getHotelAddress(): string {
+    if (!this.hotelInfo?.address) return '';
+    
+    const address = this.hotelInfo.address;
+    const parts: string[] = [];
+    
+    if (address.street) parts.push(address.street);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.country) parts.push(address.country);
+    if (address.postalCode) parts.push(address.postalCode);
+    
+    return parts.join(', ') || '';
   }
 
   formatNumber = (value: number): string => {
