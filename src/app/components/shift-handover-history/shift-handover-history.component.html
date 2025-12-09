@@ -75,7 +75,25 @@
         </ul>
       </nz-dropdown-menu>
       
-      <!-- Dropdown xuất Excel tổng hợp (doanh thu + phiếu chi) -->
+      <!-- Dropdown xuất Excel phiếu thu -->
+      <button nz-button nzType="default" nz-dropdown [nzDropdownMenu]="incomeMenu" style="margin-left: 8px;">
+        <i nz-icon nzType="file-excel"></i> Xuất Excel phiếu thu <i nz-icon nzType="down"></i>
+      </button>
+      <nz-dropdown-menu #incomeMenu="nzDropdownMenu">
+        <ul nz-menu>
+          <li nz-menu-item (click)="exportIncomeByMonth()">
+            <i nz-icon nzType="calendar"></i> Theo tháng
+          </li>
+          <li nz-menu-item (click)="exportIncomeByQuarter()">
+            <i nz-icon nzType="calendar"></i> Theo quý
+          </li>
+          <li nz-menu-item (click)="exportIncomeByYear()">
+            <i nz-icon nzType="calendar"></i> Theo năm
+          </li>
+        </ul>
+      </nz-dropdown-menu>
+      
+      <!-- Dropdown xuất Excel tổng hợp (doanh thu + phiếu chi + phiếu thu) -->
       <button nz-button nzType="primary" nz-dropdown [nzDropdownMenu]="combinedMenu" style="margin-left: 8px;">
         <i nz-icon nzType="file-excel"></i> Xuất Excel tổng hợp <i nz-icon nzType="down"></i>
       </button>
@@ -194,6 +212,9 @@
           <nz-descriptions-item nzTitle="Phiếu chi">
             {{ formatCurrency(selectedRecord.expenseAmount || 0) }}
           </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Phiếu thu">
+            {{ formatCurrency(selectedRecord.incomeAmount || 0) }}
+          </nz-descriptions-item>
           <nz-descriptions-item nzTitle="Tổng doanh thu">
             <strong class="text-primary">{{ formatCurrency(getTotalRevenue(selectedRecord)) }}</strong>
           </nz-descriptions-item>
@@ -236,6 +257,44 @@
                 </nz-tag>
               </td>
               <td>{{ formatDate(expense.timestamp) }}</td>
+            </tr>
+          </tbody>
+        </nz-table>
+        
+        <!-- Incomes (Phiếu thu) -->
+        <nz-divider nzText="Phiếu thu trong ca" *ngIf="selectedRecord.incomes && selectedRecord.incomes.length > 0"></nz-divider>
+        <nz-table
+          *ngIf="selectedRecord.incomes && selectedRecord.incomes.length > 0"
+          [nzData]="selectedRecord.incomes"
+          nzSize="small"
+          nzBordered
+        >
+          <thead>
+            <tr>
+              <th>Mô tả</th>
+              <th>Danh mục</th>
+              <th>Người nộp</th>
+              <th>Số tiền</th>
+              <th>Hình thức TT</th>
+              <th>Thời gian</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let income of selectedRecord.incomes">
+              <td>{{ income.description || 'Phiếu thu' }}</td>
+              <td>
+                <nz-tag [nzColor]="getIncomeCategoryColor(income.category)">
+                  {{ getIncomeCategoryLabel(income.category) }}
+                </nz-tag>
+              </td>
+              <td>{{ income.source || 'N/A' }}</td>
+              <td><strong class="text-success">{{ formatCurrency(income.amount || 0) }}</strong></td>
+              <td>
+                <nz-tag [nzColor]="income.method === 'cash' ? 'red' : income.method === 'bank_transfer' ? 'blue' : 'green'">
+                  {{ income.method === 'cash' ? 'Tiền mặt' : income.method === 'bank_transfer' ? 'Chuyển khoản' : 'Thẻ' }}
+                </nz-tag>
+              </td>
+              <td>{{ formatDate(income.timestamp) }}</td>
             </tr>
           </tbody>
         </nz-table>

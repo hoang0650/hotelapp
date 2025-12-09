@@ -23,6 +23,7 @@ import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
 import { TransactionService } from '../../services/transaction.service';
 import { take } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 
 type TableScroll = 'unset' | 'scroll' | 'fixed';
 
@@ -881,8 +882,8 @@ export class TableComponent implements OnInit, OnChanges {
     // Tính số tiền giao ca = Số tiền ca trước + Tiền mặt trong ca - Tiền giao quản lý
     this.shiftHandoverForm.valueChanges.subscribe(values => {
       const handoverAmount = (values.previousShiftAmount || 0) + (values.cashInShift || 0) - (values.managerHandoverAmount || 0);
-      // Tổng doanh thu = Tiền giao quản lý + Phiếu chi
-      const totalRevenue = (values.managerHandoverAmount || 0) + (values.expenseAmount || 0);
+      // Tổng doanh thu = Tiền giao quản lý + Phiếu chi - Phiếu thu (vì phiếu thu đã được tính vào tiền mặt)
+      const totalRevenue = (values.managerHandoverAmount || 0) + (values.expenseAmount || 0) + (values.incomeAmount || 0);
       
       if (handoverAmount >= 0) {
         this.handoverMessage = `Số tiền giao ca: ${this.formatterVND(handoverAmount)} đ | Tổng doanh thu: ${this.formatterVND(totalRevenue)} đ`;
@@ -1029,7 +1030,7 @@ export class TableComponent implements OnInit, OnChanges {
     });
   }
   
-  // Load phiếu chi từ database và cập nhật tiền mặt
+  // Load phiếu chi và phiếu thu từ database và cập nhật tiền mặt
   loadExpensesAndUpdateCash(totalCash: number, totalBankTransfer: number, totalCard: number): void {
     if (!this.hotelId) {
       // Nếu không có hotelId, chỉ cập nhật với dữ liệu hiện có
@@ -1049,24 +1050,41 @@ export class TableComponent implements OnInit, OnChanges {
     const startDate = today.toISOString();
     const endDate = new Date().toISOString();
     
-    // Lấy tất cả phiếu chi trong ca (không phân trang để lấy hết)
-    this.transactionService.getExpenses({
-      hotelId: this.hotelId,
-      startDate: startDate,
-      endDate: endDate,
-      page: 1,
-      limit: 1000 // Lấy tối đa 1000 phiếu chi
+    // Lấy tất cả phiếu chi và phiếu thu trong ca
+    forkJoin({
+      expenses: this.transactionService.getExpenses({
+        hotelId: this.hotelId,
+        startDate: startDate,
+        endDate: endDate,
+        page: 1,
+        limit: 1000
+      }),
+      incomes: this.transactionService.getIncomes({
+        hotelId: this.hotelId,
+        startDate: startDate,
+        endDate: endDate,
+        page: 1,
+        limit: 1000
+      })
     }).subscribe({
-      next: (response) => {
-        const expenses = response.data || [];
+      next: ({ expenses: expenseResponse, incomes: incomeResponse }) => {
+        const expenses = expenseResponse.data || [];
+        const incomes = incomeResponse.data || [];
         
-        // Lọc chỉ lấy phiếu chi SAU thời điểm giao tiền quản lý cuối cùng (nếu có)
+        // Lọc chỉ lấy phiếu chi và phiếu thu SAU thời điểm giao tiền quản lý cuối cùng (nếu có)
         const filteredExpenses = this.lastManagerHandoverTime 
           ? expenses.filter(expense => {
               const expenseTime = expense.createdAt ? new Date(expense.createdAt) : (expense.updatedAt ? new Date(expense.updatedAt) : new Date());
               return expenseTime > this.lastManagerHandoverTime!;
             })
           : expenses;
+        
+        const filteredIncomes = this.lastManagerHandoverTime 
+          ? incomes.filter((income: any) => {
+              const incomeTime = income.createdAt ? new Date(income.createdAt) : (income.updatedAt ? new Date(income.updatedAt) : new Date());
+              return incomeTime > this.lastManagerHandoverTime!;
+            })
+          : incomes;
         
         // Tính tổng tiền chi theo từng phương thức thanh toán
         let cashExpense = 0; // Tiền mặt chi
@@ -1090,24 +1108,48 @@ export class TableComponent implements OnInit, OnChanges {
           }
         });
         
-        // Lưu tiền mặt chi để sử dụng trong getActualCashInShift
-        this.cashExpenseAmount = cashExpense;
+        // Tính tổng tiền thu theo từng phương thức thanh toán
+        let cashIncome = 0; // Tiền mặt thu
+        let bankTransferIncome = 0; // Chuyển khoản thu
+        let cardIncome = 0; // Thẻ tín dụng thu
+        let totalIncomeAmount = 0; // Tổng thu (tất cả phương thức)
         
-        // Tiền mặt trong ca = Tiền mặt thu được - Tiền mặt chi
-        const actualCashInShift = Math.max(0, totalCash - cashExpense);
+        filteredIncomes.forEach((income: any) => {
+          if (income.status === 'completed' && income.amount > 0) {
+            totalIncomeAmount += income.amount;
+            
+            // Phân loại theo phương thức thanh toán
+            const method = income.method?.toLowerCase() || '';
+            if (method === 'cash') {
+              cashIncome += income.amount;
+            } else if (method === 'bank_transfer' || method === 'transfer') {
+              bankTransferIncome += income.amount;
+            } else if (method === 'card' || method === 'credit_card') {
+              cardIncome += income.amount;
+            }
+          }
+        });
+        
+        // Lưu tiền mặt chi và thu để sử dụng trong getActualCashInShift
+        this.cashExpenseAmount = cashExpense;
+        this.cashIncomeAmount = cashIncome;
+        
+        // Tiền mặt trong ca = Tiền mặt thu được - Tiền mặt chi + Tiền mặt thu từ phiếu thu
+        const actualCashInShift = Math.max(0, totalCash - cashExpense + cashIncome);
         
         // Cập nhật form với dữ liệu đã tính toán
         this.shiftHandoverForm.patchValue({
           shiftId: this.defaultShiftId,
-          cashAmount: actualCashInShift, // Tiền mặt còn lại sau khi trừ chi
+          cashAmount: actualCashInShift, // Tiền mặt còn lại sau khi trừ chi và cộng thu
           bankTransferAmount: totalBankTransfer,
           cardPaymentAmount: totalCard,
-          cashInShift: actualCashInShift, // Tiền mặt trong ca = tiền mặt thu - tiền mặt chi
-          expenseAmount: totalExpenseAmount // Tổng chi (tất cả phương thức)
+          cashInShift: actualCashInShift, // Tiền mặt trong ca = tiền mặt thu - tiền mặt chi + tiền mặt thu từ phiếu thu
+          expenseAmount: totalExpenseAmount, // Tổng chi (tất cả phương thức)
+          incomeAmount: totalIncomeAmount // Tổng thu (tất cả phương thức)
         });
       },
       error: (error) => {
-        console.error('Error loading expenses:', error);
+        console.error('Error loading expenses/incomes:', error);
         // Nếu lỗi, vẫn cập nhật với dữ liệu hiện có
         this.shiftHandoverForm.patchValue({
           shiftId: this.defaultShiftId,
@@ -1115,7 +1157,8 @@ export class TableComponent implements OnInit, OnChanges {
           bankTransferAmount: totalBankTransfer,
           cardPaymentAmount: totalCard,
           cashInShift: totalCash,
-          expenseAmount: this.totalExpense || 0
+          expenseAmount: this.totalExpense || 0,
+          incomeAmount: 0
         });
       }
     });
@@ -1202,11 +1245,11 @@ export class TableComponent implements OnInit, OnChanges {
     this.loadExpensesForShiftHandover(roomHistory, invoices, formData, handoverAmount, totalRevenue);
   }
   
-  // Load expenses từ database và gửi dữ liệu giao ca
+  // Load expenses và incomes từ database và gửi dữ liệu giao ca
   loadExpensesForShiftHandover(roomHistory: any[], invoices: any[], formData: any, handoverAmount: number, totalRevenue: number): void {
     if (!this.hotelId) {
-      // Nếu không có hotelId, gửi với expenses rỗng
-      this.sendShiftHandoverDataWithExpenses([], roomHistory, invoices, formData, handoverAmount, totalRevenue);
+      // Nếu không có hotelId, gửi với expenses và incomes rỗng
+      this.sendShiftHandoverDataWithExpenses([], [], roomHistory, invoices, formData, handoverAmount, totalRevenue);
       return;
     }
     
@@ -1216,16 +1259,26 @@ export class TableComponent implements OnInit, OnChanges {
     const startDate = today.toISOString();
     const endDate = new Date().toISOString();
     
-    // Lấy tất cả phiếu chi trong ca
-    this.transactionService.getExpenses({
-      hotelId: this.hotelId,
-      startDate: startDate,
-      endDate: endDate,
-      page: 1,
-      limit: 1000
+    // Lấy tất cả phiếu chi và phiếu thu trong ca
+    forkJoin({
+      expenses: this.transactionService.getExpenses({
+        hotelId: this.hotelId,
+        startDate: startDate,
+        endDate: endDate,
+        page: 1,
+        limit: 1000
+      }),
+      incomes: this.transactionService.getIncomes({
+        hotelId: this.hotelId,
+        startDate: startDate,
+        endDate: endDate,
+        page: 1,
+        limit: 1000
+      })
     }).subscribe({
-      next: (response) => {
-        const expenses = response.data || [];
+      next: ({ expenses: expenseResponse, incomes: incomeResponse }) => {
+        const expenses = expenseResponse.data || [];
+        const incomes = incomeResponse.data || [];
         
         // Chuyển đổi expenses thành format cho shift handover
         const expensesForHandover = expenses
@@ -1241,19 +1294,43 @@ export class TableComponent implements OnInit, OnChanges {
             timestamp: expense.createdAt || (expense as any).processedAt || new Date()
           }));
         
-        // Gửi dữ liệu giao ca với expenses
-        this.sendShiftHandoverDataWithExpenses(expensesForHandover, roomHistory, invoices, formData, handoverAmount, totalRevenue);
+        // Chuyển đổi incomes thành format cho shift handover
+        const incomesForHandover = incomes
+          .filter((income: any) => income.status === 'completed' && income.amount > 0)
+          .map((income: any) => ({
+            incomeId: income._id,
+            description: income.description || income.notes || 'Phiếu thu',
+            amount: income.amount,
+            category: income.incomeCategory || 'other',
+            source: income.details?.payer || income.payer || '',
+            method: income.method || 'cash',
+            approvedBy: income.approvedBy || null,
+            timestamp: income.createdAt || income.processedAt || new Date()
+          }));
+        
+        // Gửi dữ liệu giao ca với expenses và incomes
+        this.sendShiftHandoverDataWithExpenses(expensesForHandover, incomesForHandover, roomHistory, invoices, formData, handoverAmount, totalRevenue);
       },
       error: (error) => {
-        console.error('Error loading expenses for shift handover:', error);
-        // Nếu lỗi, vẫn gửi với expenses rỗng
-        this.sendShiftHandoverDataWithExpenses([], roomHistory, invoices, formData, handoverAmount, totalRevenue);
+        console.error('Error loading expenses/incomes for shift handover:', error);
+        // Nếu lỗi, vẫn gửi với expenses và incomes rỗng
+        this.sendShiftHandoverDataWithExpenses([], [], roomHistory, invoices, formData, handoverAmount, totalRevenue);
       }
     });
   }
   
-  // Gửi dữ liệu giao ca với expenses
-  sendShiftHandoverDataWithExpenses(expenses: any[], roomHistory: any[], invoices: any[], formData: any, handoverAmount: number, totalRevenue: number): void {
+  // Gửi dữ liệu giao ca với expenses và incomes
+  sendShiftHandoverDataWithExpenses(expenses: any[], incomes: any[], roomHistory: any[], invoices: any[], formData: any, handoverAmount: number, totalRevenue: number): void {
+    // Tính expenseAmount từ expenses
+    const calculatedExpenseAmount = expenses
+      .filter(expense => expense.amount > 0)
+      .reduce((sum, expense) => sum + (expense.amount || 0), 0);
+    
+    // Tính incomeAmount từ incomes
+    const calculatedIncomeAmount = incomes
+      .filter(income => income.amount > 0)
+      .reduce((sum, income) => sum + (income.amount || 0), 0);
+    
     const handoverData = {
       hotelId: this.hotelId,
       fromStaffId: formData.fromStaffId,
@@ -1265,19 +1342,19 @@ export class TableComponent implements OnInit, OnChanges {
       cashAmount: formData.cashAmount || 0,
       bankTransferAmount: formData.bankTransferAmount || 0,
       cardPaymentAmount: formData.cardPaymentAmount || 0,
-      expenseAmount: formData.expenseAmount || 0,
-      incomeAmount: formData.incomeAmount || 0,
+      expenseAmount: calculatedExpenseAmount || formData.expenseAmount || 0,
+      incomeAmount: calculatedIncomeAmount || formData.incomeAmount || 0,
       roomHistory: roomHistory,
       invoices: invoices,
       expenses: expenses, // Gửi expenses từ database
-      incomes: [],
+      incomes: incomes, // Gửi incomes từ database
       serviceOrders: [],
       notes: formData.notes || '',
       pendingIssues: [],
       shiftStartTime: new Date()
     };
 
-    console.log('Đang gửi dữ liệu giao ca với expenses:', handoverData);
+    console.log('Đang gửi dữ liệu giao ca với expenses và incomes:', handoverData);
 
     this.sendShiftHandoverData(handoverData);
   }
@@ -1343,7 +1420,61 @@ export class TableComponent implements OnInit, OnChanges {
         }
         
         // Xóa lịch sử thanh toán hiện tại sau khi giao ca thành công
-        this.listOfData = [];
+        // Lấy danh sách roomId và bookingId từ roomHistory để xóa chính xác
+        if (data.roomHistory && data.roomHistory.length > 0) {
+          const roomHistoryRoomIds = data.roomHistory.map((rh: any) => rh.roomId?.toString()).filter((id: any) => id);
+          const roomHistoryBookingIds = data.roomHistory.map((rh: any) => rh.bookingId?.toString()).filter((id: any) => id);
+          const roomHistoryInvoiceNumbers = data.roomHistory.map((rh: any) => rh.invoiceNumber).filter((num: any) => num);
+          const roomHistoryTimestamps = data.roomHistory.map((rh: any) => {
+            const ts = rh.timestamp;
+            return ts ? new Date(ts).getTime() : null;
+          }).filter((ts: any): ts is number => ts !== null);
+          
+          const originalLength = this.listOfData.length;
+          
+          // Xóa các item trong listOfData đã được giao ca
+          this.listOfData = this.listOfData.filter(item => {
+            const itemRoomId = item.roomId?.toString() || item._id?.toString();
+            const itemBookingId = item.bookingId?.toString();
+            const itemInvoiceNumber = item.invoiceNumber;
+            const itemCheckOutTime = item.checkOutTime || item.checkoutTime;
+            const itemTimestamp = itemCheckOutTime ? new Date(itemCheckOutTime).getTime() : null;
+            
+            // Kiểm tra xem item có trong roomHistory không
+            // 1. Kiểm tra bằng bookingId
+            if (itemBookingId && roomHistoryBookingIds.includes(itemBookingId)) {
+              return false; // Xóa
+            }
+            
+            // 2. Kiểm tra bằng invoiceNumber
+            if (itemInvoiceNumber && roomHistoryInvoiceNumbers.includes(itemInvoiceNumber)) {
+              return false; // Xóa
+            }
+            
+            // 3. Kiểm tra bằng roomId và timestamp (nếu không có bookingId/invoiceNumber)
+            if (itemRoomId && roomHistoryRoomIds.includes(itemRoomId) && itemTimestamp) {
+              const isInRoomHistory = roomHistoryTimestamps.some((rhTimestamp: number) => {
+                // Cho phép sai số 5 phút để đảm bảo khớp
+                return Math.abs(itemTimestamp - rhTimestamp) < 300000;
+              });
+              if (isInRoomHistory) {
+                return false; // Xóa
+              }
+            }
+            
+            // Giữ lại item
+            return true;
+          });
+          
+          const deletedCount = originalLength - this.listOfData.length;
+          if (deletedCount > 0) {
+            console.log(`Đã xóa ${deletedCount} bản ghi đã thanh toán sau khi giao ca`);
+          }
+        } else {
+          // Nếu không có roomHistory, xóa tất cả
+          this.listOfData = [];
+        }
+        
         this.totalPayment = 0;
         this.calculateTotalPayment();
         
@@ -1399,15 +1530,45 @@ export class TableComponent implements OnInit, OnChanges {
     this.isManagerHandoverModalVisible = true;
     this.managerPasswordVisible = false;
     
-    // Đảm bảo currentStaffId đã được set
+    // Đảm bảo staffList đã được load trước
+    if (!this.staffList || this.staffList.length === 0) {
+      this.loadStaffList();
+    }
+    
+    // Đảm bảo currentStaffId đã được set và hợp lệ
     if (!this.currentStaffId || !this.currentStaffId.trim()) {
       // Thử lấy từ localStorage
       const savedStaffId = localStorage.getItem('staffId');
       if (savedStaffId && savedStaffId.trim()) {
-        this.currentStaffId = savedStaffId.trim();
-      } else {
-        // Load lại staff list để lấy currentStaffId
-        this.loadStaffList();
+        // Validate xem staffId có trong danh sách staff không (nếu staffList đã có)
+        if (this.staffList && this.staffList.length > 0) {
+          const staffExists = this.staffList.find(s => s._id === savedStaffId.trim());
+          if (staffExists) {
+            this.currentStaffId = savedStaffId.trim();
+          } else {
+            // Nếu không tồn tại, tìm lại từ userId
+            const currentUserId = this.authService.getUserId();
+            const currentStaff = this.staffList.find(s => s.userId === currentUserId);
+            if (currentStaff && currentStaff._id) {
+              this.currentStaffId = currentStaff._id.trim();
+              localStorage.setItem('staffId', this.currentStaffId);
+            }
+          }
+        }
+      }
+    } else {
+      // Validate currentStaffId có trong danh sách staff không (nếu staffList đã có)
+      if (this.staffList && this.staffList.length > 0) {
+        const staffExists = this.staffList.find(s => s._id === this.currentStaffId.trim());
+        if (!staffExists) {
+          console.warn('currentStaffId không tồn tại trong danh sách, tìm lại từ userId');
+          const currentUserId = this.authService.getUserId();
+          const currentStaff = this.staffList.find(s => s.userId === currentUserId);
+          if (currentStaff && currentStaff._id) {
+            this.currentStaffId = currentStaff._id.trim();
+            localStorage.setItem('staffId', this.currentStaffId);
+          }
+        }
       }
     }
     
@@ -1426,11 +1587,11 @@ export class TableComponent implements OnInit, OnChanges {
     });
   }
   
-  // Load expenses cho modal giao tiền quản lý
+  // Load expenses và incomes cho modal giao tiền quản lý
   loadExpensesForManagerHandover(): void {
     if (!this.hotelId) return;
     
-    // Load thời điểm giao tiền quản lý cuối cùng trước, sau đó mới load expenses
+    // Load thời điểm giao tiền quản lý cuối cùng trước, sau đó mới load expenses và incomes
     this.loadLastManagerHandoverTime(() => {
       // Lấy ngày bắt đầu ca (có thể là đầu ngày hôm nay)
       const today = new Date();
@@ -1438,29 +1599,46 @@ export class TableComponent implements OnInit, OnChanges {
       const startDate = today.toISOString();
       const endDate = new Date().toISOString();
       
-      // Lấy tất cả phiếu chi trong ca
+      // Lấy tất cả phiếu chi và phiếu thu trong ca
       if (!this.hotelId) {
-        console.warn('Không có hotelId để load expenses');
+        console.warn('Không có hotelId để load expenses/incomes');
         return;
       }
       
-      this.transactionService.getExpenses({
-        hotelId: this.hotelId,
-        startDate: startDate,
-        endDate: endDate,
-        page: 1,
-        limit: 1000
+      forkJoin({
+        expenses: this.transactionService.getExpenses({
+          hotelId: this.hotelId,
+          startDate: startDate,
+          endDate: endDate,
+          page: 1,
+          limit: 1000
+        }),
+        incomes: this.transactionService.getIncomes({
+          hotelId: this.hotelId,
+          startDate: startDate,
+          endDate: endDate,
+          page: 1,
+          limit: 1000
+        })
       }).subscribe({
-        next: (response) => {
-          const expenses = response.data || [];
+        next: ({ expenses: expenseResponse, incomes: incomeResponse }) => {
+          const expenses = expenseResponse.data || [];
+          const incomes = incomeResponse.data || [];
           
-          // Lọc chỉ lấy phiếu chi SAU thời điểm giao tiền quản lý cuối cùng (nếu có)
+          // Lọc chỉ lấy phiếu chi và phiếu thu SAU thời điểm giao tiền quản lý cuối cùng (nếu có)
           const filteredExpenses = this.lastManagerHandoverTime 
             ? expenses.filter(expense => {
                 const expenseTime = expense.createdAt ? new Date(expense.createdAt) : (expense.updatedAt ? new Date(expense.updatedAt) : new Date());
                 return expenseTime > this.lastManagerHandoverTime!;
               })
             : expenses;
+          
+          const filteredIncomes = this.lastManagerHandoverTime 
+            ? incomes.filter((income: any) => {
+                const incomeTime = income.createdAt ? new Date(income.createdAt) : (income.updatedAt ? new Date(income.updatedAt) : new Date());
+                return incomeTime > this.lastManagerHandoverTime!;
+              })
+            : incomes;
           
           // Tính tổng tiền mặt chi (chỉ từ expenses sau giao tiền quản lý)
           let cashExpense = 0;
@@ -1476,16 +1654,32 @@ export class TableComponent implements OnInit, OnChanges {
             }
           });
           
-          // Cập nhật cashExpenseAmount để getActualCashInShift tính đúng
-          this.cashExpenseAmount = cashExpense;
+          // Tính tổng tiền mặt thu (chỉ từ incomes sau giao tiền quản lý)
+          let cashIncome = 0;
+          let totalIncomeAmount = 0;
           
-          // Cập nhật expenseAmount trong shiftHandoverForm (chỉ tính expenses sau giao tiền quản lý)
+          filteredIncomes.forEach((income: any) => {
+            if (income.status === 'completed' && income.amount > 0) {
+              totalIncomeAmount += income.amount;
+              const method = income.method?.toLowerCase() || '';
+              if (method === 'cash') {
+                cashIncome += income.amount;
+              }
+            }
+          });
+          
+          // Cập nhật cashExpenseAmount và cashIncomeAmount để getActualCashInShift tính đúng
+          this.cashExpenseAmount = cashExpense;
+          this.cashIncomeAmount = cashIncome;
+          
+          // Cập nhật expenseAmount và incomeAmount trong shiftHandoverForm (chỉ tính expenses và incomes sau giao tiền quản lý)
           this.shiftHandoverForm.patchValue({
-            expenseAmount: totalExpenseAmount
+            expenseAmount: totalExpenseAmount,
+            incomeAmount: totalIncomeAmount
           });
         },
         error: (error) => {
-          console.error('Error loading expenses for manager handover:', error);
+          console.error('Error loading expenses/incomes for manager handover:', error);
           // Nếu lỗi, giữ nguyên giá trị hiện tại
         }
       });
@@ -1526,16 +1720,17 @@ export class TableComponent implements OnInit, OnChanges {
   
   // Biến để lưu tiền mặt chi riêng
   private cashExpenseAmount: number = 0;
+  private cashIncomeAmount: number = 0;
   
-  // Tính tiền mặt thực tế trong ca (chỉ từ thanh toán, trừ đi tiền mặt chi từ phiếu chi)
+  // Tính tiền mặt thực tế trong ca (từ thanh toán, trừ tiền mặt chi và cộng tiền mặt thu từ phiếu thu)
   getActualCashInShift(): number {
     // Tính tiền mặt thu được từ thanh toán
     const cashReceived = this.paidData
       .filter(item => item.paymentMethod === 'cash')
       .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
     
-    // Tiền mặt trong ca = Tiền mặt thu - Tiền mặt chi (từ phiếu chi)
-    return Math.max(0, cashReceived - this.cashExpenseAmount);
+    // Tiền mặt trong ca = Tiền mặt thu - Tiền mặt chi (từ phiếu chi) + Tiền mặt thu (từ phiếu thu)
+    return Math.max(0, cashReceived - this.cashExpenseAmount + this.cashIncomeAmount);
   }
   
   // Tính tiền mặt sau khi giao quản lý
@@ -1567,8 +1762,46 @@ export class TableComponent implements OnInit, OnChanges {
       return;
     }
     
-    if (!this.currentStaffId || !this.currentStaffId.trim()) {
-      this.message.error('Không tìm thấy thông tin nhân viên hiện tại. Vui lòng đăng nhập lại.');
+    // Đảm bảo staffList đã được load và có dữ liệu
+    if (!this.staffList || this.staffList.length === 0) {
+      this.message.warning('Đang tải danh sách nhân viên...');
+      this.loadStaffList();
+      // Đợi một chút để staffList được load
+      setTimeout(() => {
+        this.submitManagerHandover();
+      }, 500);
+      return;
+    }
+    
+    // Đảm bảo fromStaffId hợp lệ trước khi submit
+    let fromStaffId = this.currentStaffId?.trim();
+    if (!fromStaffId) {
+      fromStaffId = localStorage.getItem('staffId')?.trim() || '';
+    }
+    if (!fromStaffId) {
+      fromStaffId = this.shiftHandoverForm?.get('fromStaffId')?.value?.trim() || '';
+    }
+    
+    // Validate fromStaffId
+    if (fromStaffId) {
+      const staffExists = this.staffList.find(s => s._id === fromStaffId);
+      if (!staffExists) {
+        // Tìm lại từ userId
+        const currentUserId = this.authService.getUserId();
+        const currentStaff = this.staffList.find(s => s.userId === currentUserId);
+        if (currentStaff && currentStaff._id) {
+          fromStaffId = currentStaff._id.trim();
+          this.currentStaffId = fromStaffId;
+          localStorage.setItem('staffId', fromStaffId);
+          this.shiftHandoverForm.patchValue({ fromStaffId: fromStaffId });
+          console.log('Đã cập nhật fromStaffId:', fromStaffId);
+        } else {
+          this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng chọn nhân viên trong form giao ca trước.');
+          return;
+        }
+      }
+    } else {
+      this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng chọn nhân viên trong form giao ca trước.');
       return;
     }
     
@@ -1685,7 +1918,7 @@ export class TableComponent implements OnInit, OnChanges {
     this.loadExpensesForManagerHandoverAndSubmit(formData, managerAmount, actualCash, cashAfterHandover, roomHistory, totalBankTransfer, totalCardPayment, totalExpenseAmount);
   }
   
-  // Load expenses và submit giao tiền quản lý
+  // Load expenses và incomes, sau đó submit giao tiền quản lý
   loadExpensesForManagerHandoverAndSubmit(
     formData: any, 
     managerAmount: number, 
@@ -1697,8 +1930,8 @@ export class TableComponent implements OnInit, OnChanges {
     totalExpenseAmount: number
   ): void {
     if (!this.hotelId) {
-      // Nếu không có hotelId, gửi với expenses rỗng
-      this.submitManagerHandoverWithExpenses([], formData, managerAmount, actualCash, cashAfterHandover, roomHistory, totalBankTransfer, totalCardPayment, totalExpenseAmount);
+      // Nếu không có hotelId, gửi với expenses và incomes rỗng
+      this.submitManagerHandoverWithExpenses([], [], formData, managerAmount, actualCash, cashAfterHandover, roomHistory, totalBankTransfer, totalCardPayment, totalExpenseAmount, 0);
       return;
     }
     
@@ -1708,24 +1941,41 @@ export class TableComponent implements OnInit, OnChanges {
     const startDate = today.toISOString();
     const endDate = new Date().toISOString();
     
-    // Lấy tất cả phiếu chi trong ca
-    this.transactionService.getExpenses({
-      hotelId: this.hotelId,
-      startDate: startDate,
-      endDate: endDate,
-      page: 1,
-      limit: 1000
+    // Lấy tất cả phiếu chi và phiếu thu trong ca
+    forkJoin({
+      expenses: this.transactionService.getExpenses({
+        hotelId: this.hotelId,
+        startDate: startDate,
+        endDate: endDate,
+        page: 1,
+        limit: 1000
+      }),
+      incomes: this.transactionService.getIncomes({
+        hotelId: this.hotelId,
+        startDate: startDate,
+        endDate: endDate,
+        page: 1,
+        limit: 1000
+      })
     }).subscribe({
-      next: (response) => {
-        const expenses = response.data || [];
+      next: ({ expenses: expenseResponse, incomes: incomeResponse }) => {
+        const expenses = expenseResponse.data || [];
+        const incomes = incomeResponse.data || [];
         
-        // Lọc chỉ lấy phiếu chi SAU thời điểm giao tiền quản lý cuối cùng (nếu có)
+        // Lọc chỉ lấy phiếu chi và phiếu thu SAU thời điểm giao tiền quản lý cuối cùng (nếu có)
         const filteredExpenses = this.lastManagerHandoverTime 
           ? expenses.filter(expense => {
               const expenseTime = expense.createdAt ? new Date(expense.createdAt) : (expense.updatedAt ? new Date(expense.updatedAt) : new Date());
               return expenseTime > this.lastManagerHandoverTime!;
             })
           : expenses;
+        
+        const filteredIncomes = this.lastManagerHandoverTime 
+          ? incomes.filter(income => {
+              const incomeTime = income.createdAt ? new Date(income.createdAt) : (income.updatedAt ? new Date(income.updatedAt) : new Date());
+              return incomeTime > this.lastManagerHandoverTime!;
+            })
+          : incomes;
         
         // Chuyển đổi expenses thành format cho shift handover
         const expensesForHandover = filteredExpenses
@@ -1741,25 +1991,45 @@ export class TableComponent implements OnInit, OnChanges {
             timestamp: expense.createdAt || (expense as any).processedAt || new Date()
           }));
         
+        // Chuyển đổi incomes thành format cho shift handover
+        const incomesForHandover = filteredIncomes
+          .filter((income: any) => income.status === 'completed' && income.amount > 0)
+          .map((income: any) => ({
+            incomeId: income._id,
+            description: income.description || income.notes || 'Phiếu thu',
+            amount: income.amount,
+            category: income.incomeCategory || 'other',
+            source: income.details?.payer || income.payer || '',
+            method: income.method || 'cash',
+            approvedBy: income.approvedBy || null,
+            timestamp: income.createdAt || income.processedAt || new Date()
+          }));
+        
         // Tính lại totalExpenseAmount từ filteredExpenses
         const recalculatedTotalExpenseAmount = filteredExpenses
           .filter(expense => expense.status === 'completed' && expense.amount > 0)
           .reduce((sum, expense) => sum + (expense.amount || 0), 0);
         
-        // Gửi dữ liệu với expenses
-        this.submitManagerHandoverWithExpenses(expensesForHandover, formData, managerAmount, actualCash, cashAfterHandover, roomHistory, totalBankTransfer, totalCardPayment, recalculatedTotalExpenseAmount);
+        // Tính lại totalIncomeAmount từ filteredIncomes
+        const recalculatedTotalIncomeAmount = filteredIncomes
+          .filter(income => income.status === 'completed' && income.amount > 0)
+          .reduce((sum, income) => sum + (income.amount || 0), 0);
+        
+        // Gửi dữ liệu với expenses và incomes
+        this.submitManagerHandoverWithExpenses(expensesForHandover, incomesForHandover, formData, managerAmount, actualCash, cashAfterHandover, roomHistory, totalBankTransfer, totalCardPayment, recalculatedTotalExpenseAmount, recalculatedTotalIncomeAmount);
       },
       error: (error) => {
-        console.error('Error loading expenses for manager handover:', error);
-        // Nếu lỗi, vẫn gửi với expenses rỗng
-        this.submitManagerHandoverWithExpenses([], formData, managerAmount, actualCash, cashAfterHandover, roomHistory, totalBankTransfer, totalCardPayment, totalExpenseAmount);
+        console.error('Error loading expenses/incomes for manager handover:', error);
+        // Nếu lỗi, vẫn gửi với expenses và incomes rỗng
+        this.submitManagerHandoverWithExpenses([], [], formData, managerAmount, actualCash, cashAfterHandover, roomHistory, totalBankTransfer, totalCardPayment, totalExpenseAmount, 0);
       }
     });
   }
   
-  // Submit giao tiền quản lý với expenses
+  // Submit giao tiền quản lý với expenses và incomes
   submitManagerHandoverWithExpenses(
     expenses: any[],
+    incomes: any[],
     formData: any, 
     managerAmount: number, 
     actualCash: number, 
@@ -1767,12 +2037,64 @@ export class TableComponent implements OnInit, OnChanges {
     roomHistory: any[], 
     totalBankTransfer: number, 
     totalCardPayment: number, 
-    totalExpenseAmount: number
+    totalExpenseAmount: number,
+    totalIncomeAmount: number
   ): void {
+    // Kiểm tra và lấy fromStaffId
+    let fromStaffId = this.currentStaffId?.trim();
+    
+    // Nếu không có currentStaffId, thử lấy từ localStorage hoặc shiftHandoverForm
+    if (!fromStaffId) {
+      fromStaffId = localStorage.getItem('staffId')?.trim() || '';
+    }
+    
+    if (!fromStaffId) {
+      fromStaffId = this.shiftHandoverForm?.get('fromStaffId')?.value?.trim() || '';
+    }
+    
+    // Validate fromStaffId - kiểm tra xem có trong danh sách staff hiện tại không
+    if (!fromStaffId || fromStaffId.trim() === '') {
+      this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng chọn nhân viên trong form giao ca trước.');
+      this.isSubmittingManagerHandover = false;
+      return;
+    }
+    
+    // Đảm bảo staffList đã được load
+    if (!this.staffList || this.staffList.length === 0) {
+      this.message.warning('Đang tải danh sách nhân viên...');
+      this.loadStaffList();
+      this.isSubmittingManagerHandover = false;
+      // Retry sau khi load xong
+      setTimeout(() => {
+        this.submitManagerHandoverWithExpenses(expenses, incomes, formData, managerAmount, actualCash, cashAfterHandover, roomHistory, totalBankTransfer, totalCardPayment, totalExpenseAmount, totalIncomeAmount);
+      }, 1000);
+      return;
+    }
+    
+    // Validate fromStaffId có trong danh sách staff không
+    const staffExists = this.staffList.find(s => s._id === fromStaffId);
+    if (!staffExists) {
+      console.warn('fromStaffId không tồn tại trong danh sách staff, tìm lại từ userId');
+      // Tìm lại từ userId
+      const currentUserId = this.authService.getUserId();
+      const currentStaff = this.staffList.find(s => s.userId === currentUserId);
+      if (currentStaff && currentStaff._id) {
+        fromStaffId = currentStaff._id.trim();
+        this.currentStaffId = fromStaffId;
+        localStorage.setItem('staffId', fromStaffId);
+        this.shiftHandoverForm.patchValue({ fromStaffId: fromStaffId });
+        console.log('Đã cập nhật fromStaffId:', fromStaffId);
+      } else {
+        this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng chọn nhân viên trong form giao ca trước.');
+        this.isSubmittingManagerHandover = false;
+        return;
+      }
+    }
+    
     // Gửi lên server để xác thực mật khẩu và lưu lịch sử
     const managerHandoverData = {
       hotelId: this.hotelId,
-      fromStaffId: this.currentStaffId.trim(),
+      fromStaffId: fromStaffId,
       managerUsername: formData.managerUsername.trim(), // Username hoặc email của quản lý
       managerPassword: formData.managerPassword.trim(),
       amount: managerAmount,
@@ -1788,25 +2110,50 @@ export class TableComponent implements OnInit, OnChanges {
       bankTransferAmount: totalBankTransfer,
       cardPaymentAmount: totalCardPayment,
       expenseAmount: totalExpenseAmount, // Tổng chi từ database (tất cả phương thức)
-      incomeAmount: this.shiftHandoverForm?.get('incomeAmount')?.value || 0,
-      expenses: expenses // Gửi expenses từ database
+      incomeAmount: totalIncomeAmount || this.shiftHandoverForm?.get('incomeAmount')?.value || 0, // Tổng thu từ database
+      expenses: expenses, // Gửi expenses từ database
+      incomes: incomes // Gửi incomes từ database
     };
     
-    console.log('Giao tiền quản lý với expenses:', managerHandoverData);
+    console.log('Giao tiền quản lý với expenses và incomes:', {
+      ...managerHandoverData,
+      expensesCount: expenses?.length || 0,
+      incomesCount: incomes?.length || 0
+    });
+    
+    // Validate fromStaffId trước khi gửi
+    if (!fromStaffId || fromStaffId.trim() === '') {
+      this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng đăng nhập lại.');
+      this.isSubmittingManagerHandover = false;
+      return;
+    }
     
     // Gọi API để xác thực và lưu
-    this.http.post(`http://localhost:3000/shift-handover/manager`, managerHandoverData).pipe(
+    this.http.post(`${environment.apiUrl || 'http://localhost:3000'}/shift-handover/manager`, managerHandoverData).pipe(
       catchError((error: HttpErrorResponse) => {
         let errorMessage = 'Có lỗi xảy ra khi giao tiền quản lý';
         
         if (error.error?.message) {
           errorMessage = error.error.message;
+          // Hiển thị thêm chi tiết nếu có
+          if (error.error.details) {
+            console.error('Chi tiết lỗi:', error.error.details);
+          }
         } else if (error.status === 401) {
           errorMessage = 'Mật khẩu quản lý không đúng';
+        } else if (error.status === 404) {
+          errorMessage = error.error?.message || 'Không tìm thấy thông tin. Vui lòng kiểm tra lại.';
+        } else if (error.status === 400) {
+          errorMessage = error.error?.message || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.';
         }
         
         this.message.error(errorMessage);
-        console.error('Lỗi giao tiền quản lý:', error);
+        console.error('Lỗi giao tiền quản lý:', {
+          status: error.status,
+          message: error.error?.message,
+          details: error.error?.details,
+          fullError: error
+        });
         return throwError(errorMessage);
       }),
       finalize(() => {
@@ -1830,8 +2177,8 @@ export class TableComponent implements OnInit, OnChanges {
         // Trigger lại valueChanges để cập nhật alert ngay lập tức
         const currentValues = this.shiftHandoverForm.value;
         const handoverAmount = (currentValues.previousShiftAmount || 0) + (currentValues.cashInShift || 0) - (currentValues.managerHandoverAmount || 0);
-        // Tổng doanh thu = Tiền giao quản lý + Phiếu chi
-        const totalRevenue = (currentValues.managerHandoverAmount || 0) + (currentValues.expenseAmount || 0);
+        // Tổng doanh thu = Tiền giao quản lý + Phiếu chi + Phiếu thu
+        const totalRevenue = (currentValues.managerHandoverAmount || 0) + (currentValues.expenseAmount || 0) + (currentValues.incomeAmount || 0);
         
         if (handoverAmount >= 0) {
           this.handoverMessage = `Số tiền giao ca: ${this.formatterVND(handoverAmount)} đ | Tổng doanh thu: ${this.formatterVND(totalRevenue)} đ`;

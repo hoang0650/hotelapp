@@ -57,6 +57,8 @@ export interface ShiftIncome {
     amount: number;
     category?: string;
     source?: string;
+    method?: 'cash' | 'bank_transfer' | 'card'; // Phương thức thanh toán
+    approvedBy?: string;
     timestamp: Date;
 }
 

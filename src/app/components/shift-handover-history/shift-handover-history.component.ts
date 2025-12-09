@@ -213,11 +213,34 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     return colorMap[category] || 'default';
   }
 
-  // Tính tổng doanh thu = Tiền giao quản lý + Phiếu chi
+  getIncomeCategoryLabel(category: string | undefined): string {
+    if (!category) return 'Khác';
+    const labelMap: Record<string, string> = {
+      'room_rental': 'Tiền phòng',
+      'service': 'Dịch vụ',
+      'deposit': 'Tiền cọc',
+      'other': 'Khác'
+    };
+    return labelMap[category] || category || 'Khác';
+  }
+
+  getIncomeCategoryColor(category: string | undefined): string {
+    if (!category) return 'default';
+    const colorMap: Record<string, string> = {
+      'room_rental': 'blue',
+      'service': 'green',
+      'deposit': 'orange',
+      'other': 'default'
+    };
+    return colorMap[category] || 'default';
+  }
+
+  // Tính tổng doanh thu = Tiền giao quản lý + Phiếu thu - Phiếu chi
   getTotalRevenue(record: ShiftHandover): number {
     const managerHandoverAmount = record.managerHandoverAmount || 0;
+    const incomeAmount = record.incomeAmount || 0;
     const expenseAmount = record.expenseAmount || 0;
-    return managerHandoverAmount + expenseAmount;
+    return managerHandoverAmount + incomeAmount - expenseAmount;
   }
 
   // Helper methods để lấy các giá trị từ room history
@@ -390,6 +413,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             'Chuyển khoản': record.bankTransferAmount || 0,
             'Cà thẻ': record.cardPaymentAmount || 0,
             'Phiếu chi': record.expenseAmount || 0,
+            'Phiếu thu': record.incomeAmount || 0,
             'Tổng doanh thu': this.getTotalRevenue(record),
             'Tổng tiền phòng': record.totalRoomRevenue || 0,
             'Trạng thái': this.getStatusLabel(record.status),
@@ -461,6 +485,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           // Gộp tất cả lịch sử phòng từ tất cả các ca
           const allRoomHistory: any[] = [];
           const allExpenses: any[] = [];
+          const allIncomes: any[] = [];
 
           allRecords.forEach(record => {
             // Thêm lịch sử phòng
@@ -513,6 +538,24 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
                 });
               });
             }
+
+            // Thêm phiếu thu
+            if (record.incomes && Array.isArray(record.incomes)) {
+              record.incomes.forEach(income => {
+                allIncomes.push({
+                  'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+                  'Mô tả': income.description || 'Phiếu thu',
+                  'Danh mục': this.getIncomeCategoryLabel(income.category),
+                  'Người nộp': income.source || '',
+                  'Số tiền': income.amount || 0,
+                  'Hình thức thanh toán': income.method === 'cash' ? 'Tiền mặt' : 
+                                          income.method === 'bank_transfer' ? 'Chuyển khoản' : 
+                                          income.method === 'card' ? 'Thẻ' : 'Khác',
+                  'Thời gian': format(new Date(income.timestamp), 'dd/MM/yyyy HH:mm'),
+                  'Người duyệt': income.approvedBy || ''
+                });
+              });
+            }
           });
 
           // Tạo workbook với nhiều sheets
@@ -532,6 +575,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             'Tổng chuyển khoản': allRecords.reduce((sum, r) => sum + (r.bankTransferAmount || 0), 0),
             'Tổng cà thẻ': allRecords.reduce((sum, r) => sum + (r.cardPaymentAmount || 0), 0),
             'Tổng phiếu chi': allRecords.reduce((sum, r) => sum + (r.expenseAmount || 0), 0),
+            'Tổng phiếu thu': allRecords.reduce((sum, r) => sum + (r.incomeAmount || 0), 0),
             'Tổng doanh thu': allRecords.reduce((sum, r) => sum + this.getTotalRevenue(r), 0),
             'Tổng tiền phòng': allRecords.reduce((sum, r) => sum + (r.totalRoomRevenue || 0), 0)
           }];
@@ -550,13 +594,19 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             workbook.SheetNames.push('Phiếu chi');
           }
 
+          // Sheet 4: Phiếu thu
+          if (allIncomes.length > 0) {
+            workbook.Sheets['Phiếu thu'] = XLSX.utils.json_to_sheet(allIncomes);
+            workbook.SheetNames.push('Phiếu thu');
+          }
+
           // Tạo tên file
           const dateStr = format(new Date(), 'ddMMyyyy_HHmmss');
-          const fileName = `Tong_doanh_thu_va_phiếu_chi_${dateStr}`;
+          const fileName = `Tong_doanh_thu_phiếu_chi_va_phiếu_thu_${dateStr}`;
 
           // Xuất file
           XLSX.writeFile(workbook, `${fileName}.xlsx`);
-          this.message.success(`Đã xuất dữ liệu: ${allRoomHistory.length} lịch sử phòng, ${allExpenses.length} phiếu chi`);
+          this.message.success(`Đã xuất dữ liệu: ${allRoomHistory.length} lịch sử phòng, ${allExpenses.length} phiếu chi, ${allIncomes.length} phiếu thu`);
           this.isLoading = false;
         },
         error: (error) => {
@@ -618,7 +668,22 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     this.exportExpenseByPeriod('year');
   }
 
-  // Xuất Excel tổng hợp (doanh thu + phiếu chi) theo tháng
+  // Xuất Excel phiếu thu theo tháng
+  exportIncomeByMonth(): void {
+    this.exportIncomeByPeriod('month');
+  }
+
+  // Xuất Excel phiếu thu theo quý
+  exportIncomeByQuarter(): void {
+    this.exportIncomeByPeriod('quarter');
+  }
+
+  // Xuất Excel phiếu thu theo năm
+  exportIncomeByYear(): void {
+    this.exportIncomeByPeriod('year');
+  }
+
+  // Xuất Excel tổng hợp (doanh thu + phiếu chi + phiếu thu) theo tháng
   exportCombinedByMonth(): void {
     this.exportCombinedByPeriod('month');
   }
@@ -662,10 +727,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             return;
           }
 
-          // Gộp tất cả lịch sử phòng và nhóm theo kỳ
+          // Gộp tất cả lịch sử phòng và phiếu thu, nhóm theo kỳ
           const revenueByPeriod: { [key: string]: any[] } = {};
+          const incomeByPeriod: { [key: string]: any[] } = {};
 
           allRecords.forEach(record => {
+            // Xử lý lịch sử phòng
             if (record.roomHistory && Array.isArray(record.roomHistory)) {
               record.roomHistory.forEach(room => {
                 const handoverDate = new Date(record.handoverTime);
@@ -714,6 +781,43 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
                 });
               });
             }
+
+            // Xử lý phiếu thu
+            if (record.incomes && Array.isArray(record.incomes)) {
+              record.incomes.forEach(income => {
+                const handoverDate = new Date(record.handoverTime);
+                let periodKey = '';
+
+                if (period === 'month') {
+                  const { year, month } = this.getMonthYear(handoverDate);
+                  periodKey = `${year}-${String(month).padStart(2, '0')}`;
+                } else if (period === 'quarter') {
+                  const { year, quarter } = this.getQuarter(handoverDate);
+                  periodKey = `${year}-Q${quarter}`;
+                } else {
+                  const year = this.getYear(handoverDate);
+                  periodKey = String(year);
+                }
+
+                if (!incomeByPeriod[periodKey]) {
+                  incomeByPeriod[periodKey] = [];
+                }
+
+                incomeByPeriod[periodKey].push({
+                  'Kỳ': periodKey,
+                  'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+                  'Mô tả': income.description || 'Phiếu thu',
+                  'Danh mục': this.getIncomeCategoryLabel(income.category),
+                  'Người nộp': income.source || '',
+                  'Số tiền': income.amount || 0,
+                  'Hình thức thanh toán': income.method === 'cash' ? 'Tiền mặt' : 
+                                          income.method === 'bank_transfer' ? 'Chuyển khoản' : 
+                                          income.method === 'card' ? 'Thẻ' : 'Khác',
+                  'Thời gian': format(new Date(income.timestamp), 'dd/MM/yyyy HH:mm'),
+                  'Người duyệt': income.approvedBy || ''
+                });
+              });
+            }
           });
 
           // Tạo workbook với nhiều sheets (mỗi kỳ một sheet)
@@ -722,17 +826,25 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             SheetNames: []
           };
 
+          // Lấy tất cả các kỳ (union của revenue và income periods)
+          const allPeriods = new Set([
+            ...Object.keys(revenueByPeriod),
+            ...Object.keys(incomeByPeriod)
+          ]);
+          const sortedPeriods = Array.from(allPeriods).sort();
+
           // Tạo sheet tổng hợp
           const summaryData: any[] = [];
-          const sortedPeriods = Object.keys(revenueByPeriod).sort();
 
           sortedPeriods.forEach(periodKey => {
-            const rooms = revenueByPeriod[periodKey];
+            const rooms = revenueByPeriod[periodKey] || [];
+            const incomes = incomeByPeriod[periodKey] || [];
             const totalRevenue = rooms.reduce((sum, r) => sum + (r['Số tiền'] || 0), 0);
             const totalRoom = rooms.reduce((sum, r) => sum + (r['Tiền phòng'] || 0), 0);
             const totalService = rooms.reduce((sum, r) => sum + (r['Tiền dịch vụ'] || 0), 0);
             const totalAdditional = rooms.reduce((sum, r) => sum + (r['Phụ thu'] || 0), 0);
             const totalDiscount = rooms.reduce((sum, r) => sum + (r['Khuyến mãi'] || 0), 0);
+            const totalIncome = incomes.reduce((sum, i) => sum + (i['Số tiền'] || 0), 0);
 
             summaryData.push({
               'Kỳ': periodKey,
@@ -741,20 +853,33 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
               'Tổng tiền dịch vụ': totalService,
               'Tổng phụ thu': totalAdditional,
               'Tổng khuyến mãi': totalDiscount,
-              'Tổng doanh thu': totalRevenue
+              'Tổng doanh thu phòng': totalRevenue,
+              'Số phiếu thu': incomes.length,
+              'Tổng phiếu thu': totalIncome,
+              'Tổng doanh thu': totalRevenue + totalIncome
             });
           });
 
           workbook.Sheets['Tổng hợp'] = XLSX.utils.json_to_sheet(summaryData);
           workbook.SheetNames.push('Tổng hợp');
 
-          // Tạo sheet cho mỗi kỳ
+          // Tạo sheet cho mỗi kỳ (doanh thu và phiếu thu)
           sortedPeriods.forEach(periodKey => {
             const periodLabel = period === 'month' ? `Tháng ${periodKey}` :
                                period === 'quarter' ? `Quý ${periodKey}` :
                                `Năm ${periodKey}`;
-            workbook.Sheets[periodLabel] = XLSX.utils.json_to_sheet(revenueByPeriod[periodKey]);
-            workbook.SheetNames.push(periodLabel);
+            
+            // Sheet doanh thu cho kỳ này
+            if (revenueByPeriod[periodKey] && revenueByPeriod[periodKey].length > 0) {
+              workbook.Sheets[`${periodLabel} - Doanh thu`] = XLSX.utils.json_to_sheet(revenueByPeriod[periodKey]);
+              workbook.SheetNames.push(`${periodLabel} - Doanh thu`);
+            }
+
+            // Sheet phiếu thu cho kỳ này
+            if (incomeByPeriod[periodKey] && incomeByPeriod[periodKey].length > 0) {
+              workbook.Sheets[`${periodLabel} - Phiếu thu`] = XLSX.utils.json_to_sheet(incomeByPeriod[periodKey]);
+              workbook.SheetNames.push(`${periodLabel} - Phiếu thu`);
+            }
           });
 
           // Tạo tên file
@@ -911,7 +1036,140 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     );
   }
 
-  // Xuất Excel tổng hợp (doanh thu + phiếu chi) theo kỳ (tháng/quý/năm)
+  // Xuất Excel phiếu thu theo kỳ (tháng/quý/năm)
+  private exportIncomeByPeriod(period: 'month' | 'quarter' | 'year'): void {
+    const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
+    
+    if (!currentHotelId) {
+      this.message.warning('Không tìm thấy thông tin khách sạn');
+      return;
+    }
+
+    this.isLoading = true;
+    
+    // Load tất cả dữ liệu
+    const params: any = {
+      hotelId: currentHotelId,
+      page: 1,
+      limit: 10000
+    };
+
+    this.subscriptions.add(
+      this.shiftHandoverService.getShiftHandoverHistory(params).subscribe({
+        next: (response: ShiftHandoverHistoryResponse) => {
+          const allRecords = response.data || [];
+          
+          if (allRecords.length === 0) {
+            this.message.warning('Không có dữ liệu để xuất Excel');
+            this.isLoading = false;
+            return;
+          }
+
+          // Gộp tất cả phiếu thu và nhóm theo kỳ
+          const incomeByPeriod: { [key: string]: any[] } = {};
+
+          allRecords.forEach(record => {
+            if (record.incomes && Array.isArray(record.incomes)) {
+              record.incomes.forEach(income => {
+                const incomeDate = new Date(income.timestamp);
+                let periodKey = '';
+
+                if (period === 'month') {
+                  const { year, month } = this.getMonthYear(incomeDate);
+                  periodKey = `${year}-${String(month).padStart(2, '0')}`;
+                } else if (period === 'quarter') {
+                  const { year, quarter } = this.getQuarter(incomeDate);
+                  periodKey = `${year}-Q${quarter}`;
+                } else {
+                  const year = this.getYear(incomeDate);
+                  periodKey = String(year);
+                }
+
+                if (!incomeByPeriod[periodKey]) {
+                  incomeByPeriod[periodKey] = [];
+                }
+
+                incomeByPeriod[periodKey].push({
+                  'Kỳ': periodKey,
+                  'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+                  'Mô tả': income.description || 'Phiếu thu',
+                  'Danh mục': this.getIncomeCategoryLabel(income.category),
+                  'Người nộp': income.source || '',
+                  'Số tiền': income.amount || 0,
+                  'Hình thức thanh toán': income.method === 'cash' ? 'Tiền mặt' : 
+                                          income.method === 'bank_transfer' ? 'Chuyển khoản' : 
+                                          income.method === 'card' ? 'Thẻ' : 'Khác',
+                  'Thời gian': format(new Date(income.timestamp), 'dd/MM/yyyy HH:mm'),
+                  'Người duyệt': income.approvedBy || ''
+                });
+              });
+            }
+          });
+
+          // Tạo workbook với nhiều sheets (mỗi kỳ một sheet)
+          const workbook: XLSX.WorkBook = {
+            Sheets: {},
+            SheetNames: []
+          };
+
+          // Tạo sheet tổng hợp
+          const summaryData: any[] = [];
+          const sortedPeriods = Object.keys(incomeByPeriod).sort();
+
+          sortedPeriods.forEach(periodKey => {
+            const incomes = incomeByPeriod[periodKey];
+            const totalIncome = incomes.reduce((sum, i) => sum + (i['Số tiền'] || 0), 0);
+            const totalCash = incomes.filter(i => i['Hình thức thanh toán'] === 'Tiền mặt')
+                                     .reduce((sum, i) => sum + (i['Số tiền'] || 0), 0);
+            const totalTransfer = incomes.filter(i => i['Hình thức thanh toán'] === 'Chuyển khoản')
+                                         .reduce((sum, i) => sum + (i['Số tiền'] || 0), 0);
+            const totalCard = incomes.filter(i => i['Hình thức thanh toán'] === 'Thẻ')
+                                     .reduce((sum, i) => sum + (i['Số tiền'] || 0), 0);
+
+            summaryData.push({
+              'Kỳ': periodKey,
+              'Số phiếu thu': incomes.length,
+              'Tổng tiền mặt': totalCash,
+              'Tổng chuyển khoản': totalTransfer,
+              'Tổng cà thẻ': totalCard,
+              'Tổng phiếu thu': totalIncome
+            });
+          });
+
+          workbook.Sheets['Tổng hợp'] = XLSX.utils.json_to_sheet(summaryData);
+          workbook.SheetNames.push('Tổng hợp');
+
+          // Tạo sheet cho mỗi kỳ
+          sortedPeriods.forEach(periodKey => {
+            const periodLabel = period === 'month' ? `Tháng ${periodKey}` :
+                               period === 'quarter' ? `Quý ${periodKey}` :
+                               `Năm ${periodKey}`;
+            workbook.Sheets[periodLabel] = XLSX.utils.json_to_sheet(incomeByPeriod[periodKey]);
+            workbook.SheetNames.push(periodLabel);
+          });
+
+          // Tạo tên file
+          const dateStr = format(new Date(), 'ddMMyyyy_HHmmss');
+          const periodLabel = period === 'month' ? 'theo_thang' :
+                            period === 'quarter' ? 'theo_quy' :
+                            'theo_nam';
+          const fileName = `Phieu_thu_${periodLabel}_${dateStr}`;
+
+          // Xuất file
+          XLSX.writeFile(workbook, `${fileName}.xlsx`);
+          this.message.success(`Đã xuất phiếu thu ${periodLabel.replace('_', ' ')}`);
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error exporting income by period:', error);
+          this.message.error('Không thể xuất dữ liệu ra Excel');
+          this.isLoading = false;
+        }
+      })
+    );
+  }
+
+  // Xuất Excel tổng hợp (doanh thu + phiếu chi + phiếu thu) theo kỳ (tháng/quý/năm)
   private exportCombinedByPeriod(period: 'month' | 'quarter' | 'year'): void {
     const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
     
@@ -940,9 +1198,10 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             return;
           }
 
-          // Gộp tất cả lịch sử phòng và phiếu chi, nhóm theo kỳ
+          // Gộp tất cả lịch sử phòng, phiếu chi và phiếu thu, nhóm theo kỳ
           const revenueByPeriod: { [key: string]: any[] } = {};
           const expenseByPeriod: { [key: string]: any[] } = {};
+          const incomeByPeriod: { [key: string]: any[] } = {};
 
           allRecords.forEach(record => {
             // Xử lý lịch sử phòng
@@ -1031,6 +1290,43 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
                 });
               });
             }
+
+            // Xử lý phiếu thu
+            if (record.incomes && Array.isArray(record.incomes)) {
+              record.incomes.forEach(income => {
+                const incomeDate = new Date(income.timestamp);
+                let periodKey = '';
+
+                if (period === 'month') {
+                  const { year, month } = this.getMonthYear(incomeDate);
+                  periodKey = `${year}-${String(month).padStart(2, '0')}`;
+                } else if (period === 'quarter') {
+                  const { year, quarter } = this.getQuarter(incomeDate);
+                  periodKey = `${year}-Q${quarter}`;
+                } else {
+                  const year = this.getYear(incomeDate);
+                  periodKey = String(year);
+                }
+
+                if (!incomeByPeriod[periodKey]) {
+                  incomeByPeriod[periodKey] = [];
+                }
+
+                incomeByPeriod[periodKey].push({
+                  'Kỳ': periodKey,
+                  'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+                  'Mô tả': income.description || 'Phiếu thu',
+                  'Danh mục': this.getIncomeCategoryLabel(income.category),
+                  'Người nộp': income.source || '',
+                  'Số tiền': income.amount || 0,
+                  'Hình thức thanh toán': income.method === 'cash' ? 'Tiền mặt' : 
+                                          income.method === 'bank_transfer' ? 'Chuyển khoản' : 
+                                          income.method === 'card' ? 'Thẻ' : 'Khác',
+                  'Thời gian': format(new Date(income.timestamp), 'dd/MM/yyyy HH:mm'),
+                  'Người duyệt': income.approvedBy || ''
+                });
+              });
+            }
           });
 
           // Tạo workbook với nhiều sheets (mỗi kỳ một sheet)
@@ -1039,10 +1335,11 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             SheetNames: []
           };
 
-          // Lấy tất cả các kỳ (union của revenue và expense periods)
+          // Lấy tất cả các kỳ (union của revenue, expense và income periods)
           const allPeriods = new Set([
             ...Object.keys(revenueByPeriod),
-            ...Object.keys(expenseByPeriod)
+            ...Object.keys(expenseByPeriod),
+            ...Object.keys(incomeByPeriod)
           ]);
           const sortedPeriods = Array.from(allPeriods).sort();
 
@@ -1052,6 +1349,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           sortedPeriods.forEach(periodKey => {
             const rooms = revenueByPeriod[periodKey] || [];
             const expenses = expenseByPeriod[periodKey] || [];
+            const incomes = incomeByPeriod[periodKey] || [];
             
             const totalRevenue = rooms.reduce((sum, r) => sum + (r['Số tiền'] || 0), 0);
             const totalRoom = rooms.reduce((sum, r) => sum + (r['Tiền phòng'] || 0), 0);
@@ -1059,7 +1357,8 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             const totalAdditional = rooms.reduce((sum, r) => sum + (r['Phụ thu'] || 0), 0);
             const totalDiscount = rooms.reduce((sum, r) => sum + (r['Khuyến mãi'] || 0), 0);
             const totalExpense = expenses.reduce((sum, e) => sum + (e['Số tiền'] || 0), 0);
-            const netRevenue = totalRevenue - totalExpense;
+            const totalIncome = incomes.reduce((sum, i) => sum + (i['Số tiền'] || 0), 0);
+            const netRevenue = totalRevenue + totalIncome - totalExpense;
 
             summaryData.push({
               'Kỳ': periodKey,
@@ -1071,6 +1370,8 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
               'Tổng doanh thu': totalRevenue,
               'Số phiếu chi': expenses.length,
               'Tổng phiếu chi': totalExpense,
+              'Số phiếu thu': incomes.length,
+              'Tổng phiếu thu': totalIncome,
               'Doanh thu thuần': netRevenue
             });
           });
@@ -1095,6 +1396,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
               workbook.Sheets[`${periodLabel} - Phiếu chi`] = XLSX.utils.json_to_sheet(expenseByPeriod[periodKey]);
               workbook.SheetNames.push(`${periodLabel} - Phiếu chi`);
             }
+
+            // Sheet phiếu thu cho kỳ này
+            if (incomeByPeriod[periodKey] && incomeByPeriod[periodKey].length > 0) {
+              workbook.Sheets[`${periodLabel} - Phiếu thu`] = XLSX.utils.json_to_sheet(incomeByPeriod[periodKey]);
+              workbook.SheetNames.push(`${periodLabel} - Phiếu thu`);
+            }
           });
 
           // Tạo tên file
@@ -1102,11 +1409,11 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const periodLabel = period === 'month' ? 'theo_thang' :
                             period === 'quarter' ? 'theo_quy' :
                             'theo_nam';
-          const fileName = `Tong_hop_doanh_thu_va_phieu_chi_${periodLabel}_${dateStr}`;
+          const fileName = `Tong_hop_doanh_thu_phieu_chi_va_phieu_thu_${periodLabel}_${dateStr}`;
 
           // Xuất file
           XLSX.writeFile(workbook, `${fileName}.xlsx`);
-          this.message.success(`Đã xuất tổng hợp doanh thu và phiếu chi ${periodLabel.replace('_', ' ')}`);
+          this.message.success(`Đã xuất tổng hợp doanh thu, phiếu chi và phiếu thu ${periodLabel.replace('_', ' ')}`);
           this.isLoading = false;
         },
         error: (error) => {

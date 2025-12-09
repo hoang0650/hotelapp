@@ -507,7 +507,7 @@
           </span>
           <span style="margin-left: 16px;">
             <strong>Tổng doanh thu:</strong> 
-            {{ formatterVND((shiftHandoverForm.get('managerHandoverAmount')?.value || 0) + (shiftHandoverForm.get('expenseAmount')?.value || 0)) }} đ
+            {{ formatterVND((shiftHandoverForm.get('managerHandoverAmount')?.value || 0) + (shiftHandoverForm.get('expenseAmount')?.value || 0) + (shiftHandoverForm.get('incomeAmount')?.value || 0)) }} đ
           </span>
         </div>
       </ng-template>
@@ -589,6 +589,7 @@
               [nzDisabled]="true"
               style="width: 100%"
             ></nz-input-number>
+            <small class="text-muted">Tự động tính từ phiếu thu trong ca</small>
           </nz-form-control>
         </nz-form-item>
       </div>
@@ -682,6 +683,14 @@
           <div>
             <p style="margin: 0;"><strong>Tiền mặt ca trước:</strong> {{ formatterVND(previousShiftAmount) }} đ</p>
             <p style="margin: 4px 0;"><strong>Tiền mặt thực thu trong ca:</strong> {{ formatterVND(getActualCashInShift()) }} đ</p>
+            <p style="margin: 4px 0; font-size: 12px; color: #666;">
+              <span *ngIf="(shiftHandoverForm.get('expenseAmount')?.value || 0) > 0" style="color: #ff4d4f;">
+                - Phiếu chi: {{ formatterVND(shiftHandoverForm.get('expenseAmount')?.value || 0) }} đ
+              </span>
+              <span *ngIf="(shiftHandoverForm.get('incomeAmount')?.value || 0) > 0" style="color: #52c41a; margin-left: 8px;">
+                + Phiếu thu: {{ formatterVND(shiftHandoverForm.get('incomeAmount')?.value || 0) }} đ
+              </span>
+            </p>
             <p style="margin: 0; font-size: 16px; color: #1890ff;"><strong>Tổng tiền mặt hiện có:</strong> {{ formatterVND(previousShiftAmount + getActualCashInShift()) }} đ</p>
           </div>
         </ng-template>
