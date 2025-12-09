@@ -1,0 +1,80 @@
+.paypal-payment-container {
+  padding: 20px 0;
+}
+
+.payment-summary {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.payment-summary h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item .label {
+  font-weight: 500;
+  color: #666;
+  font-size: 14px;
+}
+
+.summary-item .value {
+  font-weight: 600;
+  color: #1f1f1f;
+  font-size: 14px;
+}
+
+.summary-item .value.amount {
+  color: #1890ff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.summary-item .value nz-select {
+  margin-left: 8px;
+}
+
+.paypal-button-wrapper {
+  min-height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 24px 0;
+}
+
+.payment-note {
+  margin-top: 24px;
+  padding: 12px;
+  background: #e6f7ff;
+  border-radius: 4px;
+  border-left: 3px solid #1890ff;
+}
+
+.payment-note p {
+  margin: 0;
+  font-size: 13px;
+  color: #1890ff;
+  display: flex;
+  align-items: center;
+}
+
+.error-message {
+  padding: 20px 0;
+}
+

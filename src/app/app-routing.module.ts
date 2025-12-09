@@ -31,7 +31,7 @@ import { BankTransferHistoryComponent } from './components/bank-transfer-history
 import { PricingComponent } from './components/pricing/pricing.component';
 import { PricingManagementComponent } from './components/pricing-management/pricing-management.component';
 import { OtaManagementComponent } from './components/ota-management/ota-management.component';
-//import { AuthGuard } from './guards/auth.guard';
+import { PermissionGuard } from './guards/permission.guard';
 
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
@@ -43,30 +43,29 @@ const routes: Routes = [
   { path: 'room/:id', component: ProductDetailComponent },
   {
     path: 'admin', component: AdminComponent, children: [
-      { path: 'room', component: RoomComponent },
+      { path: 'room', component: RoomComponent, canActivate: [PermissionGuard] },
       { path: 'bill', component: InvoiceComponent },
-      { path: 'calendar', component: CalendarComponent },
-      { path: 'email-admin', component: EmailAdminComponent },
-      { path: 'qr-payment', component: QrPaymentComponent },
-      { path: 'visa-payment', component: VisaPaymentComponent },
-      { path: 'company', component: CompanyManagementComponent },
-      { path: 'room-management', component: RoomManagementComponent },
-      { path: 'service-management', component: ServiceManagementComponent },
-      { path: 'pricing-management', component: PricingManagementComponent },
+      { path: 'calendar', component: CalendarComponent, canActivate: [PermissionGuard] },
+      { path: 'email-admin', component: EmailAdminComponent, canActivate: [PermissionGuard] },
+      { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
+      { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
+      { path: 'company', component: CompanyManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'room-management', component: RoomManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'service-management', component: ServiceManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
       {
         path: 'users-management',
         component: UserManagementComponent,
-       // canActivate: [AuthGuard],
-        //data: { roles: ['admin'] }
+        canActivate: [PermissionGuard]
       },
-      { path: 'hotel', component: HotelManagementComponent },
-      { path: 'staff', component: StaffManagementComponent },
-      { path: 'chart', component: RevenueChartComponent },
+      { path: 'hotel', component: HotelManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'staff', component: StaffManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'chart', component: RevenueChartComponent, canActivate: [PermissionGuard] },
       { path: 'unauthorized', component: UnauthorizedComponent },
       { path: 'notfound', component: NotfoundComponent },
-      { path: 'shift-handover', component: RoomHistoryComponent },
-      { path: 'bank-transfer-history', component: BankTransferHistoryComponent },
-      { path: 'ota-management', component: OtaManagementComponent },
+      { path: 'shift-handover', component: RoomHistoryComponent, canActivate: [PermissionGuard] },
+      { path: 'bank-transfer-history', component: BankTransferHistoryComponent, canActivate: [PermissionGuard] },
+      { path: 'ota-management', component: OtaManagementComponent, canActivate: [PermissionGuard] },
       // Thêm các route con khác nếu cần
     ]
   },
@@ -78,8 +77,8 @@ const routes: Routes = [
   { path: 'email-compose', component: EmailComposeComponent },
   { path: 'about-us', component: AboutUsComponent },
   { path: 'chat', component: ChatComponent },
-  { path: 'qr-payment', component: QrPaymentComponent },
-  { path: 'visa-payment', component: VisaPaymentComponent }
+  { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
+  { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] }
 ];
 
 @NgModule({

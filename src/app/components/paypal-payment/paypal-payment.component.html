@@ -1,0 +1,94 @@
+<nz-modal
+  [(nzVisible)]="visible"
+  (nzVisibleChange)="onVisibleChange($event)"
+  nzTitle="Thanh toán qua PayPal"
+  [nzFooter]="null"
+  [nzWidth]="500"
+  [nzMaskClosable]="false"
+>
+  <ng-container *nzModalContent>
+    <div class="paypal-payment-container" *ngIf="paymentData">
+      <div class="payment-summary">
+        <h3>Thông tin thanh toán</h3>
+        <div class="summary-item">
+          <span class="label">Gói dịch vụ:</span>
+          <span class="value">{{ paymentData.packageName }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Hình thức:</span>
+          <span class="value">{{ paymentData.billingType === 'yearly' ? 'Thanh toán theo năm' : 'Thanh toán theo tháng' }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Loại tiền tệ:</span>
+          <span class="value">
+            <nz-select 
+              [(ngModel)]="selectedCurrency" 
+              (ngModelChange)="onCurrencyChange()"
+              style="width: 150px;"
+              nzPlaceHolder="Chọn tiền tệ"
+              [nzDisabled]="isConverting">
+              <nz-option 
+                *ngFor="let currency of availableCurrencies" 
+                [nzValue]="currency.code" 
+                [nzLabel]="currency.code + ' - ' + currency.name">
+                <span>{{ currency.code }} - {{ currency.name }} ({{ currency.symbol }})</span>
+              </nz-option>
+            </nz-select>
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Số tiền:</span>
+          <span class="value amount">
+            <span *ngIf="selectedCurrency !== 'USD'">
+              {{ formatPrice(originalAmount, selectedCurrency) }}
+              <span style="font-size: 12px; color: #999; margin-left: 8px;">
+                (≈ {{ formatPrice(convertedAmount, 'USD') }} USD)
+              </span>
+            </span>
+            <span *ngIf="selectedCurrency === 'USD'">
+              {{ formatPrice(originalAmount, 'USD') }}
+            </span>
+          </span>
+        </div>
+        <div class="summary-item" *ngIf="selectedCurrency !== 'USD' && exchangeRate !== 1">
+          <span class="label">Tỷ giá:</span>
+          <span class="value" style="font-size: 12px; color: #666;">
+            1 {{ selectedCurrency }} = {{ exchangeRate.toFixed(4) }} USD
+          </span>
+        </div>
+        <div class="summary-item" *ngIf="selectedCurrency !== 'USD'">
+          <span class="label">Thanh toán qua PayPal:</span>
+          <span class="value" style="color: #1890ff; font-weight: 600;">
+            {{ formatPrice(convertedAmount, 'USD') }}
+            <span style="font-size: 11px; color: #999; margin-left: 4px;" *ngIf="!currencyService.isPayPalSupported(selectedCurrency)">
+              ({{ selectedCurrency }} không được PayPal hỗ trợ, đã chuyển đổi sang USD)
+            </span>
+            <span style="font-size: 11px; color: #999; margin-left: 4px;" *ngIf="currencyService.isPayPalSupported(selectedCurrency)">
+              (Đã chuyển đổi sang USD)
+            </span>
+          </span>
+        </div>
+        <div class="summary-item" *ngIf="paymentData.description">
+          <span class="label">Mô tả:</span>
+          <span class="value">{{ paymentData.description }}</span>
+        </div>
+      </div>
+
+      <div class="paypal-button-wrapper">
+        <div id="paypal-button-container"></div>
+      </div>
+
+      <div class="payment-note">
+        <p>
+          <i nz-icon nzType="info-circle" nzTheme="outline" style="color: #1890ff; margin-right: 8px;"></i>
+          Bạn sẽ được chuyển đến trang thanh toán của PayPal để hoàn tất giao dịch
+        </p>
+      </div>
+    </div>
+
+    <div *ngIf="!paymentData" class="error-message">
+      <nz-alert nzType="error" nzMessage="Không có thông tin thanh toán" nzShowIcon></nz-alert>
+    </div>
+  </ng-container>
+</nz-modal>
+

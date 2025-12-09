@@ -15,7 +15,9 @@
             <tr>
               <th>Tên gói</th>
               <th>Mô tả</th>
-              <th>Giá</th>
+              <th>Giá tháng</th>
+              <th>Giá năm</th>
+              <th>Giảm giá (%)</th>
               <th>Thời hạn (tháng)</th>
               <th>Số người dùng tối đa</th>
               <th>Trạng thái</th>
@@ -26,7 +28,9 @@
             <tr *ngFor="let pkg of packagesTable.data">
               <td>{{ pkg.name }}</td>
               <td>{{ pkg.description }}</td>
-              <td>{{ formatCurrency(pkg.price) }}</td>
+              <td>{{ formatCurrency(pkg.monthlyPrice || pkg.price || 0) }}</td>
+              <td>{{ formatCurrency(pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0)) }}</td>
+              <td>{{ pkg.yearlyDiscount || 0 }}%</td>
               <td>{{ pkg.duration }}</td>
               <td>{{ pkg.maxUsers }}</td>
               <td>
@@ -35,15 +39,15 @@
                 </nz-tag>
               </td>
               <td>
-                <a nz-button nzType="link" (click)="showModal(pkg.id)">
+                <a nz-button nzType="link" (click)="showModal(pkg._id || pkg.id)">
                   <i nz-icon nzType="edit"></i>
                 </a>
                 <nz-divider nzType="vertical"></nz-divider>
-                <a nz-button nzType="link" nzDanger (click)="deletePackage(pkg.id)">
+                <a nz-button nzType="link" nzDanger (click)="deletePackage(pkg._id || pkg.id)">
                   <i nz-icon nzType="delete"></i>
                 </a>
                 <nz-divider nzType="vertical"></nz-divider>
-                <button nz-button nzType="default" (click)="onAdminSubscribe(pkg.id)">Đăng ký (Test)</button>
+                <button nz-button nzType="default" (click)="onAdminSubscribe(pkg._id || pkg.id)">Đăng ký (Test)</button>
               </td>
             </tr>
           </tbody>
@@ -102,17 +106,48 @@
           </nz-form-control>
         </nz-form-item>
 
-        <!-- Giá -->
+        <!-- Giá tháng -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Giá</nz-form-label>
+          <nz-form-label [nzSpan]="6" nzRequired>Giá theo tháng</nz-form-label>
           <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập giá hợp lệ">
             <nz-input-number 
-              formControlName="price" 
+              formControlName="monthlyPrice" 
               [nzMin]="0" 
               [nzStep]="1000" 
               [nzFormatter]="numberFormatter"
               style="width: 100%">
             </nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Giá năm -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>Giá theo năm</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập giá hợp lệ">
+            <nz-input-number 
+              formControlName="yearlyPrice" 
+              [nzMin]="0" 
+              [nzStep]="1000" 
+              [nzFormatter]="numberFormatter"
+              style="width: 100%">
+            </nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Giảm giá -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Giảm giá theo năm (%)</nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Giảm giá phải từ 0 đến 100%">
+            <nz-input-number 
+              formControlName="yearlyDiscount" 
+              [nzMin]="0" 
+              [nzMax]="100"
+              [nzStep]="1" 
+              style="width: 100%">
+            </nz-input-number>
+            <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+              Phần trăm giảm giá khi thanh toán theo năm (0-100%)
+            </div>
           </nz-form-control>
         </nz-form-item>
 
@@ -128,10 +163,21 @@
         <nz-form-item>
           <nz-form-label [nzSpan]="6">Tính năng</nz-form-label>
           <nz-form-control [nzSpan]="18">
-            <nz-select formControlName="features" nzMode="tags" nzPlaceHolder="Thêm tính năng">
-              <nz-option *ngFor="let feature of packageForm.get('features')?.value" [nzLabel]="feature" [nzValue]="feature">
+            <nz-select 
+              formControlName="features" 
+              nzMode="multiple" 
+              nzPlaceHolder="Chọn các tính năng"
+              [nzMaxTagCount]="3"
+              nzShowSearch>
+              <nz-option 
+                *ngFor="let feature of availableFeatures" 
+                [nzLabel]="feature.label" 
+                [nzValue]="feature.value">
               </nz-option>
             </nz-select>
+            <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+              Chọn các tính năng mà gói này sẽ cung cấp cho người dùng
+            </div>
           </nz-form-control>
         </nz-form-item>
 

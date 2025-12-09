@@ -3,6 +3,7 @@ import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
 import { Subscription } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-header',
@@ -15,8 +16,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   constructor(
     private userService: UserService,
-    private authService: AuthService
-  ) {}
+    private authService: AuthService,
+    public translate: TranslateService
+  ) {
+    // Set default language
+    const savedLang = localStorage.getItem('language') || 'vi';
+    translate.setDefaultLang('vi');
+    translate.use(savedLang);
+  }
 
   ngOnInit(): void {
     // Đăng ký lắng nghe từ UserService
@@ -53,15 +60,16 @@ export class HeaderComponent implements OnInit, OnDestroy {
   // Lấy vai trò người dùng
   get userRole(): string {
     if (!this.currentUser) return '';
-    const roleLabels: Record<string, string> = {
-      'superadmin': 'Super Admin',
-      'admin': 'Admin',
-      'business': 'Chủ doanh nghiệp',
-      'hotel': 'Quản lý khách sạn',
-      'staff': 'Nhân viên',
-      'guest': 'Khách'
-    };
-    return roleLabels[this.currentUser.role] || this.currentUser.role || '';
+    const role = this.currentUser.role || '';
+    // Sử dụng translate cho role labels
+    const roleKey = `ROLES.${role.toUpperCase()}`;
+    return this.translate.instant(roleKey) || role;
+  }
+
+  // Chuyển đổi ngôn ngữ
+  switchLanguage(lang: string): void {
+    this.translate.use(lang);
+    localStorage.setItem('language', lang);
   }
 
   logout(): void {

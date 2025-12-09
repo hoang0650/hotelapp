@@ -4,6 +4,9 @@ import { NgxEchartsModule } from 'ngx-echarts'; // Import NgxEchartsModule
 import { HighchartsChartModule } from 'highcharts-angular';
 import { DatePipe, registerLocaleData } from '@angular/common'; // Import DatePipe
 import { CommonModule } from '@angular/common'; // Đảm bảo CommonModule được import
+import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
@@ -109,8 +112,24 @@ import { AuthInterceptor } from './auth.interceptor'; // Import AuthInterceptor
 import { OtaManagementComponent } from './components/ota-management/ota-management.component'; // Import OtaManagementComponent
 import { ShiftHandoverHistoryComponent } from './components/shift-handover-history/shift-handover-history.component';
 import { BookingModalComponent } from './components/booking-modal/booking-modal.component';
+import { PaypalPaymentComponent } from './components/paypal-payment/paypal-payment.component';
+import { FooterComponent } from './components/footer/footer.component';
 
 registerLocaleData(vi);
+
+// Custom loader để load translation files
+export class CustomTranslateLoader implements TranslateLoader {
+  constructor(private http: HttpClient) {}
+
+  getTranslation(lang: string): Observable<any> {
+    return this.http.get(`./assets/i18n/${lang}.json`);
+  }
+}
+
+// Factory function để load translation files
+export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
+  return new CustomTranslateLoader(http);
+}
 
 @NgModule({
     declarations: [
@@ -164,7 +183,9 @@ registerLocaleData(vi);
         PricingComponent,
         OtaManagementComponent, // Thêm OtaManagementComponent vào declarations
         ShiftHandoverHistoryComponent,
-        BookingModalComponent
+        BookingModalComponent,
+        PaypalPaymentComponent,
+        FooterComponent
     ],
     bootstrap: [AppComponent],
     imports: [
@@ -217,7 +238,15 @@ registerLocaleData(vi);
         NzDatePickerModule,
         NzSpaceModule,
         BrowserAnimationsModule,
-        PricingManagementModule
+        PricingManagementModule,
+        TranslateModule.forRoot({
+          loader: {
+            provide: TranslateLoader,
+            useFactory: HttpLoaderFactory,
+            deps: [HttpClient]
+          },
+          defaultLanguage: 'vi'
+        })
     ],
     providers: [
         provideClientHydration(),

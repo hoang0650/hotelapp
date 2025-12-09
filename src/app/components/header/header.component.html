@@ -7,27 +7,28 @@
   <div class="collapse navbar-collapse" id="navbarNav">
     <ul class="navbar-nav mb-2 mb-lg-0 justify-content-start">
       <li class="nav-item">
-        <a class="nav-link" routerLink="/home" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Home</a>
+        <a class="nav-link" routerLink="/home" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.HOME' | translate }}</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="/about-us" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">About us</a>
+        <a class="nav-link" href="/about-us" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.ABOUT_US' | translate }}</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" routerLink="/pricing" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Bảng giá</a>
+        <a class="nav-link" routerLink="/pricing" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.PRICING' | translate }}</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" routerLink="/admin/room" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Admin</a>
+        <a class="nav-link" routerLink="/admin/room" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.ADMIN' | translate }}</a>
       </li>  
       <!-- <li class="nav-item">
           <a class="nav-link disabled" href="#" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Disabled</a>
       </li> -->
     </ul>
     <ul class="navbar-nav mb-2 mb-lg-0 ms-auto justify-content-end">
+      <!-- Language Switcher -->
       <li *ngIf="!isLoggedIn" class="nav-item">
-        <a class="nav-link" [routerLink]="['/signup']" aria-current="page">Sign up</a>
+        <a class="nav-link" [routerLink]="['/signup']" aria-current="page">{{ 'NAVBAR.SIGN_UP' | translate }}</a>
       </li>
       <li *ngIf="!isLoggedIn" class="nav-item">
-        <a class="nav-link" [routerLink]="['/login']" aria-current="page">Log in</a>
+        <a class="nav-link" [routerLink]="['/login']" aria-current="page">{{ 'NAVBAR.LOG_IN' | translate }}</a>
       </li>
       <li *ngIf="isLoggedIn" class="nav-item dropdown">
         <a class="nav-link dropdown-toggle d-flex align-items-center" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -47,10 +48,20 @@
             </div>
           </li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person me-2"></i>Hồ sơ cá nhân</a></li>
-          <li><a class="dropdown-item" routerLink="/settings"><i class="bi bi-gear me-2"></i>Cài đặt</a></li>
+          <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person me-2"></i>{{ 'NAVBAR.PROFILE' | translate }}</a></li>
+          <li><a class="dropdown-item" routerLink="/settings"><i class="bi bi-gear me-2"></i>{{ 'NAVBAR.SETTINGS' | translate }}</a></li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item text-danger" (click)="logout()" style="cursor: pointer;"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
+          <li><a class="dropdown-item text-danger" (click)="logout()" style="cursor: pointer;"><i class="bi bi-box-arrow-right me-2"></i>{{ 'NAVBAR.LOGOUT' | translate }}</a></li>
+        </ul>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-globe me-1"></i>{{ 'LANGUAGE.SELECT_LANGUAGE' | translate }}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+          <li><a class="dropdown-item" (click)="switchLanguage('en')" style="cursor: pointer;"><span class="me-2">🇬🇧</span>{{ 'LANGUAGE.EN' | translate }}</a></li>
+          <li><a class="dropdown-item" (click)="switchLanguage('vi')" style="cursor: pointer;"><span class="me-2">🇻🇳</span>{{ 'LANGUAGE.VI' | translate }}</a></li>
+          <li><a class="dropdown-item" (click)="switchLanguage('de')" style="cursor: pointer;"><span class="me-2">🇩🇪</span>{{ 'LANGUAGE.DE' | translate }}</a></li>
         </ul>
       </li>
     </ul>

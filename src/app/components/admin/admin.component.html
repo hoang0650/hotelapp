@@ -47,45 +47,45 @@
   <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null">
     <div class="logo"></div>
     <ul nz-menu nzTheme="dark" nzMode="inline">
-      <li nz-submenu nzTitle="Hotel" nzIcon="table">
+      <li nz-submenu [nzTitle]="'ADMIN_SIDEBAR.HOTEL' | translate" nzIcon="table">
         <ul>
-          <li nz-menu-item routerLink="/admin/room">Room</li>
-          <li nz-menu-item routerLink="/admin/bill">Invoice</li>
-          <li nz-menu-item routerLink="/admin/calendar">Calendar</li>
+          <li nz-menu-item routerLink="/admin/room">{{ 'ADMIN_SIDEBAR.ROOM' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/bill">{{ 'ADMIN_SIDEBAR.INVOICE' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/calendar">{{ 'ADMIN_SIDEBAR.CALENDAR' | translate }}</li>
         </ul>
       </li>
-      <li nz-submenu nzTitle="Management" nzIcon="team">
+      <li nz-submenu [nzTitle]="'ADMIN_SIDEBAR.MANAGEMENT' | translate" nzIcon="team">
         <ul>
-          <li nz-menu-item routerLink="/admin/company">Business Management</li>
-          <li nz-menu-item routerLink="/admin/hotel">Hotel Management</li>
-          <li nz-menu-item routerLink="/admin/room-management">Room Management</li>
-          <li nz-menu-item routerLink="/admin/staff">Staff Management</li>
-          <li nz-menu-item routerLink="/admin/users-management">User Management</li>
-          <li nz-menu-item routerLink="/admin/service-management">Service Management/li>
-          <li nz-menu-item routerLink="/admin/shift-handover">Shift Handover</li>
-          <li nz-menu-item routerLink="/admin/ota-management">OTAs Management</li>
-          <li nz-menu-item routerLink="/admin/bank-transfer-history">Bank Transfer History</li>
-          <li nz-menu-item routerLink="/admin/pricing-management">Pricing Management</li>
+          <li nz-menu-item routerLink="/admin/company">{{ 'ADMIN_SIDEBAR.BUSINESS_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/hotel">{{ 'ADMIN_SIDEBAR.HOTEL_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/room-management">{{ 'ADMIN_SIDEBAR.ROOM_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/staff">{{ 'ADMIN_SIDEBAR.STAFF_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/users-management">{{ 'ADMIN_SIDEBAR.USER_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/service-management">{{ 'ADMIN_SIDEBAR.SERVICE_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/shift-handover">{{ 'ADMIN_SIDEBAR.SHIFT_HANDOVER' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/ota-management">{{ 'ADMIN_SIDEBAR.OTAS_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/bank-transfer-history">{{ 'ADMIN_SIDEBAR.BANK_TRANSFER_HISTORY' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/pricing-management">{{ 'ADMIN_SIDEBAR.PRICING_MANAGEMENT' | translate }}</li>
         </ul>
       </li>
       <li nz-menu-item routerLink="/admin/chart">
         <span nz-icon nzType="pie-chart"></span>
-        <span>Revenue</span>
+        <span>{{ 'ADMIN_SIDEBAR.REVENUE' | translate }}</span>
       </li>
-      <li nz-submenu nzTitle="Payment" nzIcon="dollar">
+      <li nz-submenu [nzTitle]="'ADMIN_SIDEBAR.PAYMENT' | translate" nzIcon="dollar">
         <ul>
-          <li nz-menu-item routerLink="/admin/qr-payment">QR Code</li>
-          <li nz-menu-item routerLink="/admin/visa-payment">Visa</li>
+          <li nz-menu-item routerLink="/admin/qr-payment">{{ 'ADMIN_SIDEBAR.QR_CODE' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/visa-payment">{{ 'ADMIN_SIDEBAR.VISA' | translate }}</li>
         </ul>
       </li>
-      <li nz-submenu nzTitle="Expand Page" nzIcon="plus">
+      <li nz-submenu [nzTitle]="'ADMIN_SIDEBAR.EXPAND_PAGE' | translate" nzIcon="plus">
         <ul>
-          <li nz-menu-item routerLink="/admin/email-admin">Email Admin</li>
+          <li nz-menu-item routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN' | translate }}</li>
         </ul>
       </li>    
       <li nz-menu-item routerLink="/file">
         <span nz-icon nzType="file"></span>
-        <span>File</span>
+        <span>{{ 'ADMIN_SIDEBAR.FILE' | translate }}</span>
       </li>
     </ul>
   </nz-sider>
@@ -104,7 +104,7 @@
     <nz-content>
       <router-outlet></router-outlet>
     </nz-content>
-    <nz-footer>PHHotel ©2024</nz-footer>
+    <nz-footer></nz-footer>
   </nz-layout>
 </nz-layout>
   

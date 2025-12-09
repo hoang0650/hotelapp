@@ -1,0 +1,84 @@
+{
+  "NAVBAR": {
+    "HOME": "Home",
+    "ABOUT_US": "About us",
+    "PRICING": "Pricing",
+    "ADMIN": "Admin",
+    "SIGN_UP": "Sign up",
+    "LOG_IN": "Log in",
+    "PROFILE": "Profile",
+    "SETTINGS": "Settings",
+    "LOGOUT": "Logout"
+  },
+  "SIDEBAR": {
+    "HOME": "Home",
+    "BUSINESS_SIGNUP": "Business Registration",
+    "ACCOUNT": "Account",
+    "LOGIN": "Login",
+    "SIGNUP": "Signup",
+    "MANAGEMENT": "Management",
+    "COMPANY_MANAGEMENT": "Company Management",
+    "HOTEL_MANAGEMENT": "Hotel Management",
+    "ROOM_MANAGEMENT": "Room Management",
+    "SERVICE_MANAGEMENT": "Service Management",
+    "STAFF_MANAGEMENT": "Staff Management",
+    "USER_MANAGEMENT": "User Management",
+    "PRICING_MANAGEMENT": "Pricing Management",
+    "OTA_MANAGEMENT": "OTA Management",
+    "ROOM": "Room",
+    "REVENUE_CHART": "Revenue Chart",
+    "SHIFT_HANDOVER": "Shift Handover",
+    "BANK_TRANSFER_HISTORY": "Bank Transfer History",
+    "CALENDAR": "Calendar",
+    "EMAIL_MANAGEMENT": "Email Management",
+    "QR_PAYMENT": "QR Payment",
+    "VISA_PAYMENT": "Visa Payment",
+    "TOGGLE_COLLAPSE": "Collapse/Expand sidebar"
+  },
+  "FOOTER": {
+    "COPYRIGHT": "© 2025 Hotel Management System. All rights reserved.",
+    "PRIVACY_POLICY": "Privacy Policy",
+    "TERMS_OF_SERVICE": "Terms of Service",
+    "CONTACT_US": "Contact Us",
+    "ABOUT": "About"
+  },
+  "LANGUAGE": {
+    "EN": "English",
+    "VI": "Vietnamese",
+    "DE": "German",
+    "SELECT_LANGUAGE": "Select Language"
+  },
+  "ROLES": {
+    "SUPERADMIN": "Super Admin",
+    "ADMIN": "Admin",
+    "BUSINESS": "Business Owner",
+    "HOTEL": "Hotel Manager",
+    "STAFF": "Staff",
+    "GUEST": "Guest"
+  },
+  "ADMIN_SIDEBAR": {
+    "HOTEL": "Hotel",
+    "ROOM": "Room",
+    "INVOICE": "Invoice",
+    "CALENDAR": "Calendar",
+    "MANAGEMENT": "Management",
+    "BUSINESS_MANAGEMENT": "Business Management",
+    "HOTEL_MANAGEMENT": "Hotel Management",
+    "ROOM_MANAGEMENT": "Room Management",
+    "STAFF_MANAGEMENT": "Staff Management",
+    "USER_MANAGEMENT": "User Management",
+    "SERVICE_MANAGEMENT": "Service Management",
+    "SHIFT_HANDOVER": "Shift Handover",
+    "OTAS_MANAGEMENT": "OTAs Management",
+    "BANK_TRANSFER_HISTORY": "Bank Transfer History",
+    "PRICING_MANAGEMENT": "Pricing Management",
+    "REVENUE": "Revenue",
+    "PAYMENT": "Payment",
+    "QR_CODE": "QR Code",
+    "VISA": "Visa",
+    "EXPAND_PAGE": "Expand Page",
+    "EMAIL_ADMIN": "Email Admin",
+    "FILE": "File"
+  }
+}
+

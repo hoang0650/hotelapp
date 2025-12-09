@@ -1,0 +1,84 @@
+{
+  "NAVBAR": {
+    "HOME": "Startseite",
+    "ABOUT_US": "Über uns",
+    "PRICING": "Preise",
+    "ADMIN": "Administrator",
+    "SIGN_UP": "Registrieren",
+    "LOG_IN": "Anmelden",
+    "PROFILE": "Profil",
+    "SETTINGS": "Einstellungen",
+    "LOGOUT": "Abmelden"
+  },
+  "SIDEBAR": {
+    "HOME": "Startseite",
+    "BUSINESS_SIGNUP": "Geschäftsregistrierung",
+    "ACCOUNT": "Konto",
+    "LOGIN": "Anmelden",
+    "SIGNUP": "Registrieren",
+    "MANAGEMENT": "Verwaltung",
+    "COMPANY_MANAGEMENT": "Unternehmensverwaltung",
+    "HOTEL_MANAGEMENT": "Hotelverwaltung",
+    "ROOM_MANAGEMENT": "Zimmerverwaltung",
+    "SERVICE_MANAGEMENT": "Serviceverwaltung",
+    "STAFF_MANAGEMENT": "Personalverwaltung",
+    "USER_MANAGEMENT": "Benutzerverwaltung",
+    "PRICING_MANAGEMENT": "Preisverwaltung",
+    "OTA_MANAGEMENT": "OTA-Verwaltung",
+    "ROOM": "Zimmer",
+    "REVENUE_CHART": "Umsatzdiagramm",
+    "SHIFT_HANDOVER": "Schichtübergabe",
+    "BANK_TRANSFER_HISTORY": "Überweisungsverlauf",
+    "CALENDAR": "Kalender",
+    "EMAIL_MANAGEMENT": "E-Mail-Verwaltung",
+    "QR_PAYMENT": "QR-Zahlung",
+    "VISA_PAYMENT": "Visa-Zahlung",
+    "TOGGLE_COLLAPSE": "Sidebar ein-/ausklappen"
+  },
+  "FOOTER": {
+    "COPYRIGHT": "© 2025 Hotelverwaltungssystem. Alle Rechte vorbehalten.",
+    "PRIVACY_POLICY": "Datenschutzrichtlinie",
+    "TERMS_OF_SERVICE": "Nutzungsbedingungen",
+    "CONTACT_US": "Kontakt",
+    "ABOUT": "Über"
+  },
+  "LANGUAGE": {
+    "EN": "Englisch",
+    "VI": "Vietnamesisch",
+    "DE": "Deutsch",
+    "SELECT_LANGUAGE": "Sprache auswählen"
+  },
+  "ROLES": {
+    "SUPERADMIN": "Super-Administrator",
+    "ADMIN": "Administrator",
+    "BUSINESS": "Geschäftsinhaber",
+    "HOTEL": "Hotelleiter",
+    "STAFF": "Mitarbeiter",
+    "GUEST": "Gast"
+  },
+  "ADMIN_SIDEBAR": {
+    "HOTEL": "Hotel",
+    "ROOM": "Zimmer",
+    "INVOICE": "Rechnung",
+    "CALENDAR": "Kalender",
+    "MANAGEMENT": "Verwaltung",
+    "BUSINESS_MANAGEMENT": "Unternehmensverwaltung",
+    "HOTEL_MANAGEMENT": "Hotelverwaltung",
+    "ROOM_MANAGEMENT": "Zimmerverwaltung",
+    "STAFF_MANAGEMENT": "Personalverwaltung",
+    "USER_MANAGEMENT": "Benutzerverwaltung",
+    "SERVICE_MANAGEMENT": "Serviceverwaltung",
+    "SHIFT_HANDOVER": "Schichtübergabe",
+    "OTAS_MANAGEMENT": "OTA-Verwaltung",
+    "BANK_TRANSFER_HISTORY": "Überweisungsverlauf",
+    "PRICING_MANAGEMENT": "Preisverwaltung",
+    "REVENUE": "Umsatz",
+    "PAYMENT": "Zahlung",
+    "QR_CODE": "QR-Code",
+    "VISA": "Visa",
+    "EXPAND_PAGE": "Seite erweitern",
+    "EMAIL_ADMIN": "E-Mail-Administrator",
+    "FILE": "Datei"
+  }
+}
+

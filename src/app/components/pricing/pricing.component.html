@@ -3,64 +3,133 @@
     <div class="pricing-header">
       <h1>Chọn gói dịch vụ phù hợp với bạn</h1>
       <div class="billing-toggle">
-        <nz-radio-group [(ngModel)]="billingType">
-          <label nz-radio-button value="monthly">Thanh toán theo tháng</label>
-          <label nz-radio-button value="yearly">Thanh toán theo năm</label>
+        <p style="margin-bottom: 16px; color: #666; font-size: 14px;">
+          Chọn hình thức thanh toán cho gói đăng ký:
+        </p>
+        <nz-radio-group [ngModel]="billingType" (ngModelChange)="onBillingTypeChange($event)">
+          <label nz-radio-button [nzValue]="'monthly'">
+            <span>Thanh toán theo tháng</span>
+            <span style="font-size: 12px; color: #999; display: block; margin-top: 4px;">
+              Thanh toán hàng tháng
+            </span>
+          </label>
+          <label nz-radio-button [nzValue]="'yearly'">
+            <span>Thanh toán theo năm</span>
+            <span style="font-size: 12px; color: #999; display: block; margin-top: 4px;">
+              Tiết kiệm hơn với gói năm
+            </span>
+          </label>
         </nz-radio-group>
+        <div *ngIf="billingType === 'yearly'" style="margin-top: 12px; padding: 8px 12px; background: #e6f7ff; border-radius: 4px; border-left: 3px solid #1890ff;">
+          <i nz-icon nzType="info-circle" nzTheme="outline" style="color: #1890ff; margin-right: 8px;"></i>
+          <span style="font-size: 13px; color: #1890ff;">
+            Bạn sẽ đăng ký gói theo năm với giá ưu đãi và thời hạn 12 tháng
+          </span>
+        </div>
+        <div *ngIf="billingType === 'monthly'" style="margin-top: 12px; padding: 8px 12px; background: #f6ffed; border-radius: 4px; border-left: 3px solid #52c41a;">
+          <i nz-icon nzType="info-circle" nzTheme="outline" style="color: #52c41a; margin-right: 8px;"></i>
+          <span style="font-size: 13px; color: #52c41a;">
+            Bạn sẽ đăng ký gói theo tháng với thời hạn 1 tháng
+          </span>
+        </div>
       </div>
     </div>
 
     <div class="pricing-plans">
-      <div *ngFor="let package of packages" class="pricing-plan" [class.current-plan]="isCurrentPackage(package.id)">
+      <div *ngFor="let package of packages" class="pricing-plan" [class.current-plan]="isCurrentPackage(package._id || package.id)">
         <div class="plan-header">
           <h2>{{ package.name }}</h2>
           <div class="price">
-            <span class="amount">{{ billingType === 'yearly' ? package.price * 12 * 0.9 : package.price | currency:'VND':'symbol':'1.0-0' }}</span>
+            <span class="amount">{{ formatPrice(getPackagePrice(package)) }}</span>
             <span class="period">/{{ billingType === 'yearly' ? 'năm' : 'tháng' }}</span>
           </div>
-          <p *ngIf="billingType === 'yearly'" class="savings">Tiết kiệm 10%</p>
+          
+          <!-- Hiển thị giá gốc và tiết kiệm khi chọn năm -->
+          <div *ngIf="billingType === 'yearly' && getSavingsPercentage(package) > 0" class="savings-info">
+            <p class="savings" style="color: #52c41a; font-weight: bold; margin: 8px 0;">
+              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 4px;"></i>
+              Tiết kiệm {{ getSavingsPercentage(package) }}% 
+              <span style="font-size: 14px; font-weight: normal;">({{ formatPrice(getSavingsAmount(package)) }})</span>
+            </p>
+            <p style="font-size: 12px; color: #999; text-decoration: line-through; margin: 0;">
+              Giá gốc: {{ formatPrice(getOriginalYearlyPrice(package)) }}/năm
+            </p>
+          </div>
+          
+          <!-- Hiển thị giá tháng khi chọn tháng -->
+          <div *ngIf="billingType === 'monthly'" style="margin-top: 8px;">
+            <p style="font-size: 12px; color: #666; margin: 0;">
+              Thanh toán hàng tháng
+            </p>
+          </div>
+          
+          <p class="description">{{ getPackageDescription(package) }}</p>
         </div>
 
         <div class="plan-features">
           <ul>
             <li *ngFor="let feature of package.features">
               <i nz-icon nzType="check" nzTheme="outline"></i>
-              {{ feature }}
+              {{ getFeatureText(feature) }}
+            </li>
+            <li *ngIf="package.maxUsers">
+              <i nz-icon nzType="user" nzTheme="outline"></i>
+              Tối đa {{ package.maxUsers }} người dùng
+            </li>
+            <li *ngIf="package.permissions && package.permissions.length > 0">
+              <i nz-icon nzType="safety-certificate" nzTheme="outline"></i>
+              Quyền: {{ package.permissions.join(', ') }}
             </li>
           </ul>
         </div>
 
         <div class="plan-footer">
           <ng-container *ngIf="userId; else loginButton">
-            <ng-container *ngIf="isCurrentPackage(package.id); else subscribeButton">
+            <ng-container *ngIf="isCurrentPackage(package._id || package.id); else subscribeButton">
               <button
                 nz-button
                 nzType="primary"
                 nzDanger
                 (click)="cancelSubscription()"
-                [disabled]="package.name === 'FREE'">
+                [disabled]="isFreePackage(package) || loading">
                 Hủy gói
               </button>
               <p class="current-plan-text">Gói hiện tại của bạn</p>
-              <p *ngIf="currentPackage?.packageExpiryDate">
-                Hết hạn: {{ currentPackage.packageExpiryDate | date:'dd/MM/yyyy' }}
+              <p *ngIf="currentPackage?.billingType || billingType">
+                Thanh toán: {{ (currentPackage?.billingType || billingType) === 'yearly' ? 'Theo năm' : 'Theo tháng' }}
+              </p>
+              <p *ngIf="currentPackage?.expiryDate || currentPackage?.packageExpiryDate">
+                Hết hạn: {{ (currentPackage.expiryDate || currentPackage.packageExpiryDate) | date:'dd/MM/yyyy' }}
               </p>
             </ng-container>
             <ng-template #subscribeButton>
               <button
                 nz-button
                 nzType="primary"
-                [disabled]="isCurrentPackage(package.id) || loading"
-                (click)="subscribeToPlan(package.id)">
-                {{ isCurrentPackage(package.id) ? 'Đã đăng ký' : (loading ? 'Đang xử lý...' : 'Đăng ký') }}
+                [disabled]="isCurrentPackage(package._id || package.id) || loading || !package.isActive"
+                (click)="subscribeToPlan(package._id || package.id)">
+                {{ isCurrentPackage(package._id || package.id) ? 'Đã đăng ký' : (loading ? 'Đang xử lý...' : (package.isActive ? ('Đăng ký ' + (billingType === 'yearly' ? 'theo năm' : 'theo tháng')) : 'Không khả dụng')) }}
               </button>
+              <p style="margin-top: 8px; font-size: 12px; color: #999;">
+                Đăng ký gói {{ billingType === 'yearly' ? 'theo năm' : 'theo tháng' }}
+              </p>
             </ng-template>
           </ng-container>
           <ng-template #loginButton>
             <button nz-button nzType="primary" (click)="redirectToLogin()">Đăng nhập để đăng ký gói</button>
+            <p style="margin-top: 8px; font-size: 12px; color: #999;">Bạn có thể xem thông tin gói mà không cần đăng nhập</p>
           </ng-template>
         </div>
       </div>
     </div>
   </nz-spin>
+
+  <!-- PayPal Payment Modal -->
+  <app-paypal-payment
+    *ngIf="payPalPaymentData"
+    [(visible)]="showPayPalModal"
+    [paymentData]="payPalPaymentData"
+    (paymentSuccess)="onPayPalPaymentSuccess($event)"
+    (paymentCancel)="onPayPalPaymentCancel()">
+  </app-paypal-payment>
 </div> 

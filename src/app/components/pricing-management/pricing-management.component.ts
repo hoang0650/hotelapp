@@ -4,12 +4,15 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { formatCurrency } from '@angular/common';
+import { PermissionFeature } from '../../services/permission.service';
 
 interface PricingPackage {
   id: string;
   name: string;
   description: string;
-  price: number;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  yearlyDiscount: number;
   duration: number;
   features: string[];
   maxUsers: number;
@@ -40,6 +43,23 @@ export class PricingManagementComponent implements OnInit {
   isModalVisible = false;
   editingPackageId: string | null = null;
   availablePermissions = ['view', 'edit', 'delete', 'manage'];
+  availableFeatures: { value: PermissionFeature; label: string }[] = [
+    { value: 'room_management', label: 'Quản lý phòng' },
+    { value: 'hotel_management', label: 'Quản lý khách sạn' },
+    { value: 'company_management', label: 'Quản lý doanh nghiệp' },
+    { value: 'staff_management', label: 'Quản lý nhân viên' },
+    { value: 'service_management', label: 'Quản lý dịch vụ' },
+    { value: 'user_management', label: 'Quản lý người dùng' },
+    { value: 'pricing_management', label: 'Quản lý gói giá' },
+    { value: 'ota_management', label: 'Quản lý OTA' },
+    { value: 'revenue_chart', label: 'Biểu đồ doanh thu' },
+    { value: 'shift_handover', label: 'Giao ca' },
+    { value: 'bank_transfer_history', label: 'Lịch sử chuyển khoản' },
+    { value: 'calendar', label: 'Lịch' },
+    { value: 'email_admin', label: 'Quản lý email' },
+    { value: 'qr_payment', label: 'Thanh toán QR' },
+    { value: 'visa_payment', label: 'Thanh toán Visa' }
+  ];
   packageForm!: FormGroup;
 
   numberFormatter = (value: number): string => {
@@ -68,7 +88,9 @@ export class PricingManagementComponent implements OnInit {
     this.packageForm = this.fb.group({
       name: ['', [Validators.required]],
       description: ['', [Validators.required]],
-      price: [0, [Validators.required, Validators.min(0)]],
+      monthlyPrice: [0, [Validators.required, Validators.min(0)]],
+      yearlyPrice: [0, [Validators.required, Validators.min(0)]],
+      yearlyDiscount: [0, [Validators.min(0), Validators.max(100)]],
       duration: [1, [Validators.required, Validators.min(1)]],
       features: [[]],
       permissions: [['view'], [Validators.required]],
@@ -108,12 +130,14 @@ export class PricingManagementComponent implements OnInit {
   showModal(packageId?: string): void {
     this.editingPackageId = packageId || null;
     if (packageId) {
-      const pkg = this.packages.find(p => p._id === packageId);
+      const pkg = this.packages.find(p => p._id === packageId || p.id === packageId);
       if (pkg) {
         this.packageForm.patchValue({
           name: pkg.name,
           description: pkg.description,
-          price: pkg.price,
+          monthlyPrice: pkg.monthlyPrice || pkg.price || 0,
+          yearlyPrice: pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0),
+          yearlyDiscount: pkg.yearlyDiscount || 0,
           duration: pkg.duration,
           features: pkg.features || [],
           permissions: pkg.permissions || ['view'],
@@ -125,7 +149,9 @@ export class PricingManagementComponent implements OnInit {
       this.packageForm.reset({
         name: '',
         description: '',
-        price: 0,
+        monthlyPrice: 0,
+        yearlyPrice: 0,
+        yearlyDiscount: 0,
         duration: 1,
         features: [],
         permissions: ['view'],
@@ -141,7 +167,9 @@ export class PricingManagementComponent implements OnInit {
     this.packageForm.reset({
       name: '',
       description: '',
-      price: 0,
+      monthlyPrice: 0,
+      yearlyPrice: 0,
+      yearlyDiscount: 0,
       duration: 1,
       features: [],
       permissions: ['view'],
@@ -209,21 +237,31 @@ export class PricingManagementComponent implements OnInit {
   }
 
   deletePackage(packageId: string): void {
-    this.loading = true;
-    this.pricingService.deletePackage(packageId).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.message.success(response.message || 'Xóa gói thành công');
-          this.loadPackages();
-        } else {
-          this.message.error(response.message || 'Xóa gói thất bại');
-        }
-      },
-      error: (error) => {
-        this.message.error(error.error?.message || 'Xóa gói thất bại');
-      },
-      complete: () => {
-        this.loading = false;
+    this.modal.confirm({
+      nzTitle: 'Xác nhận xóa',
+      nzContent: 'Bạn có chắc chắn muốn xóa gói này? Hành động này không thể hoàn tác.',
+      nzOkText: 'Xóa',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        this.loading = true;
+        this.pricingService.deletePackage(packageId).subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.message.success(response.message || 'Xóa gói thành công');
+              this.loadPackages();
+            } else {
+              this.message.error(response.message || 'Xóa gói thất bại');
+            }
+          },
+          error: (error) => {
+            this.message.error(error.error?.message || 'Xóa gói thất bại');
+          },
+          complete: () => {
+            this.loading = false;
+          }
+        });
       }
     });
   }

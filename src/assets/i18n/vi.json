@@ -1,0 +1,84 @@
+{
+  "NAVBAR": {
+    "HOME": "Trang chủ",
+    "ABOUT_US": "Về chúng tôi",
+    "PRICING": "Bảng giá",
+    "ADMIN": "Quản trị",
+    "SIGN_UP": "Đăng ký",
+    "LOG_IN": "Đăng nhập",
+    "PROFILE": "Hồ sơ cá nhân",
+    "SETTINGS": "Cài đặt",
+    "LOGOUT": "Đăng xuất"
+  },
+  "SIDEBAR": {
+    "HOME": "Trang chủ",
+    "BUSINESS_SIGNUP": "Đăng ký doanh nghiệp",
+    "ACCOUNT": "Tài khoản",
+    "LOGIN": "Đăng nhập",
+    "SIGNUP": "Đăng ký",
+    "MANAGEMENT": "Quản lý",
+    "COMPANY_MANAGEMENT": "Quản lý doanh nghiệp",
+    "HOTEL_MANAGEMENT": "Quản lý khách sạn",
+    "ROOM_MANAGEMENT": "Quản lý phòng",
+    "SERVICE_MANAGEMENT": "Quản lý dịch vụ",
+    "STAFF_MANAGEMENT": "Quản lý nhân viên",
+    "USER_MANAGEMENT": "Quản lý người dùng",
+    "PRICING_MANAGEMENT": "Quản lý gói giá",
+    "OTA_MANAGEMENT": "Quản lý OTA",
+    "ROOM": "Phòng",
+    "REVENUE_CHART": "Biểu đồ doanh thu",
+    "SHIFT_HANDOVER": "Giao ca",
+    "BANK_TRANSFER_HISTORY": "Lịch sử chuyển khoản",
+    "CALENDAR": "Lịch",
+    "EMAIL_MANAGEMENT": "Quản lý email",
+    "QR_PAYMENT": "Thanh toán QR",
+    "VISA_PAYMENT": "Thanh toán Visa",
+    "TOGGLE_COLLAPSE": "Thu gọn/Mở rộng sidebar"
+  },
+  "FOOTER": {
+    "COPYRIGHT": "© 2025 Hệ thống Quản lý Khách sạn. Bảo lưu mọi quyền.",
+    "PRIVACY_POLICY": "Chính sách bảo mật",
+    "TERMS_OF_SERVICE": "Điều khoản dịch vụ",
+    "CONTACT_US": "Liên hệ",
+    "ABOUT": "Giới thiệu"
+  },
+  "LANGUAGE": {
+    "EN": "Tiếng Anh",
+    "VI": "Tiếng Việt",
+    "DE": "Tiếng Đức",
+    "SELECT_LANGUAGE": "Chọn ngôn ngữ"
+  },
+  "ROLES": {
+    "SUPERADMIN": "Siêu quản trị",
+    "ADMIN": "Quản trị viên",
+    "BUSINESS": "Chủ doanh nghiệp",
+    "HOTEL": "Quản lý khách sạn",
+    "STAFF": "Nhân viên",
+    "GUEST": "Khách"
+  },
+  "ADMIN_SIDEBAR": {
+    "HOTEL": "Khách sạn",
+    "ROOM": "Phòng",
+    "INVOICE": "Hóa đơn",
+    "CALENDAR": "Lịch",
+    "MANAGEMENT": "Quản lý",
+    "BUSINESS_MANAGEMENT": "Quản lý doanh nghiệp",
+    "HOTEL_MANAGEMENT": "Quản lý khách sạn",
+    "ROOM_MANAGEMENT": "Quản lý phòng",
+    "STAFF_MANAGEMENT": "Quản lý nhân viên",
+    "USER_MANAGEMENT": "Quản lý người dùng",
+    "SERVICE_MANAGEMENT": "Quản lý dịch vụ",
+    "SHIFT_HANDOVER": "Giao ca",
+    "OTAS_MANAGEMENT": "Quản lý OTA",
+    "BANK_TRANSFER_HISTORY": "Lịch sử chuyển khoản",
+    "PRICING_MANAGEMENT": "Quản lý gói giá",
+    "REVENUE": "Doanh thu",
+    "PAYMENT": "Thanh toán",
+    "QR_CODE": "Mã QR",
+    "VISA": "Visa",
+    "EXPAND_PAGE": "Mở rộng trang",
+    "EMAIL_ADMIN": "Quản lý email",
+    "FILE": "Tệp"
+  }
+}
+
