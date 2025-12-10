@@ -17,7 +17,7 @@ Mở file `hotelapp/src/environments/environment.ts` và cập nhật:
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000',
+  apiUrl: 'https://nest-production-8106.up.railway.app',
   paypalClientId: 'YOUR_PAYPAL_CLIENT_ID' // Thay bằng Client ID thực tế
 };
 ```

@@ -36,7 +36,7 @@ export interface ServiceOrder {
   providedIn: 'root'
 })
 export class RoomServiceService {
-  private apiUrl = 'http://localhost:3000/services';
+  private apiUrl = 'https://nest-production-8106.up.railway.app/services';
 
   constructor(private http: HttpClient) { }
 

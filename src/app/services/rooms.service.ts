@@ -13,7 +13,7 @@ import { throwError, of } from 'rxjs';
 export class RoomsService {
   private roomDataUpdated$ = new BehaviorSubject<any>(null);
   //private apiUrl = 'https://hotel-app-smp2.onrender.com/rooms';
-  private apiUrl = 'http://localhost:3000/rooms';
+  private apiUrl = 'https://nest-production-8106.up.railway.app/rooms';
 
   constructor(private http: HttpClient) { }
 
@@ -319,7 +319,7 @@ export class RoomsService {
     phoneNumber: string;
     [key: string]: any;
   }> {
-    return this.http.get<any>(`http://localhost:3000/hotels/${hotelId}`);
+    return this.http.get<any>(`https://nest-production-8106.up.railway.app/hotels/${hotelId}`);
   }
 
   // Lưu hóa đơn

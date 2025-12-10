@@ -31,6 +31,7 @@ import { BankTransferHistoryComponent } from './components/bank-transfer-history
 import { PricingComponent } from './components/pricing/pricing.component';
 import { PricingManagementComponent } from './components/pricing-management/pricing-management.component';
 import { OtaManagementComponent } from './components/ota-management/ota-management.component';
+import { TuyaSwitchComponent } from './components/tuya-switch/tuya-switch.component';
 import { PermissionGuard } from './guards/permission.guard';
 
 const routes: Routes = [
@@ -66,6 +67,7 @@ const routes: Routes = [
       { path: 'shift-handover', component: RoomHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'bank-transfer-history', component: BankTransferHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'ota-management', component: OtaManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'electric-setting', component: TuyaSwitchComponent, canActivate: [PermissionGuard] },
       // Thêm các route con khác nếu cần
     ]
   },

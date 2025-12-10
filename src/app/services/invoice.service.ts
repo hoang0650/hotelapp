@@ -243,4 +243,14 @@ export class InvoiceService {
       .set('period', period);
     return this.http.get(`${this.apiUrl}/invoice/statistics/${hotelId}`, { params });
   }
+
+  // Xem hóa đơn nháp (EasyInvoice)
+  previewDraftInvoice(invoiceData: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/invoices/easy-invoice/preview`, invoiceData);
+  }
+
+  // Xuất hóa đơn điện tử (EasyInvoice)
+  exportEasyInvoice(invoiceData: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/invoices/easy-invoice/export`, invoiceData);
+  }
 } 

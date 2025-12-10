@@ -8,7 +8,7 @@ import { Staff } from '../interfaces/staff';
 })
 export class StaffService {
   // private baseUrl = 'https://hotel-app-smp2.onrender.com/staffs';
-  private baseUrl = 'http://localhost:3000/staffs';
+  private baseUrl = 'https://nest-production-8106.up.railway.app/staffs';
 
   constructor(private http: HttpClient) {}
 

@@ -114,6 +114,8 @@ import { ShiftHandoverHistoryComponent } from './components/shift-handover-histo
 import { BookingModalComponent } from './components/booking-modal/booking-modal.component';
 import { PaypalPaymentComponent } from './components/paypal-payment/paypal-payment.component';
 import { FooterComponent } from './components/footer/footer.component';
+import { TuyaSwitchComponent } from './components/tuya-switch/tuya-switch.component';
+import { TuyaSwitchCompactComponent } from './components/tuya-switch/tuya-switch-compact.component';
 
 registerLocaleData(vi);
 
@@ -185,7 +187,9 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         ShiftHandoverHistoryComponent,
         BookingModalComponent,
         PaypalPaymentComponent,
-        FooterComponent
+        FooterComponent,
+        TuyaSwitchComponent,
+        TuyaSwitchCompactComponent
     ],
     bootstrap: [AppComponent],
     imports: [

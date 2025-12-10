@@ -1365,7 +1365,7 @@ export class TableComponent implements OnInit, OnChanges {
     }
     
     // Sử dụng API endpoint đúng từ backend
-    const apiUrl = `http://localhost:3000/shift-handover`;
+    const apiUrl = `https://nest-production-8106.up.railway.app/shift-handover`;
     
     this.http.post(apiUrl, data).pipe(
       catchError((error: HttpErrorResponse) => {
@@ -1489,7 +1489,7 @@ export class TableComponent implements OnInit, OnChanges {
   
   loadDataAfterHandover(): void {
     if (this.hotelId) {
-      const apiUrl = `http://localhost:3000/rooms?hotelId=${this.hotelId}`;
+      const apiUrl = `https://nest-production-8106.up.railway.app/rooms?hotelId=${this.hotelId}`;
       
       this.http.get(apiUrl).pipe(
         catchError((error: HttpErrorResponse) => {
@@ -2129,7 +2129,7 @@ export class TableComponent implements OnInit, OnChanges {
     }
     
     // Gọi API để xác thực và lưu
-    this.http.post(`${environment.apiUrl || 'http://localhost:3000'}/shift-handover/manager`, managerHandoverData).pipe(
+    this.http.post(`${environment.apiUrl || 'https://nest-production-8106.up.railway.app'}/shift-handover/manager`, managerHandoverData).pipe(
       catchError((error: HttpErrorResponse) => {
         let errorMessage = 'Có lỗi xảy ra khi giao tiền quản lý';
         

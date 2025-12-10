@@ -1,6 +1,6 @@
 {
   "/sepay": {
-    "target": "http://localhost:3000",
+    "target": "https://nest-production-8106.up.railway.app",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

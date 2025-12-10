@@ -13,6 +13,7 @@ import { DatePipe } from '@angular/common';
 import { ServiceService } from '../../services/service.service';
 import { GuestsService } from '../../services/guests.service';
 import { BusinessService } from '../../services/business.service';
+import { TuyaService } from '../../services/tuya.service';
 
 // Interface cho dữ liệu cập nhật phòng
 interface RoomUpdate {
@@ -140,7 +141,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     private datePipe: DatePipe,
     private serviceService: ServiceService,
     private guestsService: GuestsService,
-    private businessService: BusinessService
+    private businessService: BusinessService,
+    private tuyaService: TuyaService
   ) {
     // Log dữ liệu nhận được từ directive để debug
     console.log('Room Content Modal received data:', data);
@@ -946,6 +948,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               discount: discount
             });
             
+            // Tự động bật công tắc điện khi check-in
+            this.tuyaService.autoTurnOnOnCheckIn(this.roomData._id).subscribe({
+              next: (response) => {
+                if (response.data && response.data.devicesControlled > 0) {
+                  console.log(`Đã tự động bật ${response.data.devicesControlled} công tắc điện`);
+                }
+              },
+              error: (error) => {
+                console.error('Lỗi khi tự động bật công tắc:', error);
+                // Không hiển thị lỗi để không làm phiền user
+              }
+            });
+            
             // Notify để reload data - dữ liệu sẽ được lấy từ RoomEvent khi reload
             this.roomsService.notifyRoomDataUpdated();
           }, 100);
@@ -1262,6 +1277,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             this.message.success('Trả phòng thành công');
             
             // Dữ liệu đã được lưu vào RoomEvent qua backend, không cần xóa session nữa
+            
+            // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
+            this.tuyaService.autoTurnOffOnCheckOut(this.roomData._id).subscribe({
+              next: (response) => {
+                if (response.data && response.data.devicesControlled > 0) {
+                  console.log(`Đã tự động tắt ${response.data.devicesControlled} công tắc điện để tiết kiệm điện`);
+                }
+              },
+              error: (error) => {
+                console.error('Lỗi khi tự động tắt công tắc:', error);
+                // Không hiển thị lỗi để không làm phiền user
+              }
+            });
             
             // Cập nhật danh sách phòng
             this.roomsService.notifyRoomDataUpdated();

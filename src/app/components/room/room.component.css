@@ -352,3 +352,14 @@
 .status-dot.booked {
     background-color: #1890ff;
 }
+
+/* Công tắc điện trong room card */
+.room-switch {
+    margin-top: 8px;
+    padding: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

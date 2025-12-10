@@ -87,6 +87,7 @@ export class InvoiceComponent implements OnInit {
   businessInfo: any; // Giữ lại để tương thích
   hotelInfo: any; // Thông tin khách sạn
   isLoading: boolean = false;
+  isLoadingEasyInvoice: boolean = false;
   
   today: Date = new Date();
   
@@ -1115,5 +1116,186 @@ export class InvoiceComponent implements OnInit {
         this.message.error('Lỗi khi xóa hóa đơn: ' + (error.error?.message || error.message || 'Vui lòng thử lại sau'));
       }
     });
+  }
+
+  // Xem hóa đơn nháp (EasyInvoice)
+  xemHoaDonNhap(): void {
+    if (!this.hotelInfo) {
+      this.message.warning('Chưa có thông tin khách sạn. Vui lòng đợi...');
+      return;
+    }
+
+    this.isLoadingEasyInvoice = true;
+    const invoiceData = this.prepareEasyInvoiceData();
+    
+    this.invoiceService.previewDraftInvoice(invoiceData).subscribe({
+      next: (response: any) => {
+        this.isLoadingEasyInvoice = false;
+        // Mở hóa đơn nháp trong tab mới hoặc iframe
+        if (response.data?.previewUrl) {
+          window.open(response.data.previewUrl, '_blank');
+        } else if (response.previewUrl) {
+          window.open(response.previewUrl, '_blank');
+        } else {
+          this.message.success('Xem hóa đơn nháp thành công');
+          console.log('Preview data:', response);
+        }
+      },
+      error: (error: any) => {
+        this.isLoadingEasyInvoice = false;
+        console.error('Error previewing draft invoice:', error);
+        const errorMessage = error.error?.message || error.message || 'Vui lòng thử lại sau';
+        this.message.error('Lỗi khi xem hóa đơn nháp: ' + errorMessage);
+      }
+    });
+  }
+
+  // Xuất hóa đơn điện tử (EasyInvoice)
+  xuatHoaDon(): void {
+    if (!this.hotelInfo) {
+      this.message.warning('Chưa có thông tin khách sạn. Vui lòng đợi...');
+      return;
+    }
+
+    this.isLoadingEasyInvoice = true;
+    const invoiceData = this.prepareEasyInvoiceData();
+    
+    this.invoiceService.exportEasyInvoice(invoiceData).subscribe({
+      next: (response: any) => {
+        this.isLoadingEasyInvoice = false;
+        this.message.success('Xuất hóa đơn điện tử thành công!');
+        
+        // Mở hóa đơn đã xuất trong tab mới hoặc tải xuống
+        if (response.data?.invoiceUrl) {
+          window.open(response.data.invoiceUrl, '_blank');
+        } else if (response.invoiceUrl) {
+          window.open(response.invoiceUrl, '_blank');
+        } else if (response.data?.pdfUrl) {
+          window.open(response.data.pdfUrl, '_blank');
+        } else if (response.pdfUrl) {
+          window.open(response.pdfUrl, '_blank');
+        }
+        
+        // Cập nhật invoiceData với thông tin hóa đơn điện tử nếu có
+        if (response.data?.invoiceId) {
+          this.invoiceData['easyInvoiceId'] = response.data.invoiceId;
+        }
+        if (response.data?.invoiceNumber) {
+          this.invoiceData['easyInvoiceNumber'] = response.data.invoiceNumber;
+        }
+      },
+      error: (error: any) => {
+        this.isLoadingEasyInvoice = false;
+        console.error('Error exporting easy invoice:', error);
+        const errorMessage = error.error?.message || error.message || 'Vui lòng thử lại sau';
+        this.message.error('Lỗi khi xuất hóa đơn điện tử: ' + errorMessage);
+      }
+    });
+  }
+
+  // Chuẩn bị dữ liệu cho EasyInvoice từ hotelInfo và invoiceData
+  private prepareEasyInvoiceData(): any {
+    // Lấy thông tin công ty từ hotelInfo
+    const companyInfo = {
+      name: this.hotelInfo?.name || this.invoiceData.businessName || 'Khách sạn',
+      address: this.formatBusinessAddress(this.hotelInfo?.address) || this.invoiceData.business_address || '',
+      phone: this.hotelInfo?.contactInfo?.phone || this.invoiceData.phoneNumber || '',
+      email: this.hotelInfo?.contactInfo?.email || '',
+      taxCode: this.hotelInfo?.taxCode || this.businessInfo?.taxCode || '',
+      website: this.hotelInfo?.contactInfo?.website || ''
+    };
+
+    // Chuẩn bị danh sách sản phẩm/dịch vụ
+    const items: any[] = [];
+    
+    // Thêm products
+    if (this.invoiceData.products && this.invoiceData.products.length > 0) {
+      this.invoiceData.products.forEach((product: any) => {
+        items.push({
+          name: product.name,
+          quantity: product.quantity || 1,
+          unitPrice: product.price || 0,
+          totalPrice: (product.price || 0) * (product.quantity || 1)
+        });
+      });
+    }
+
+    // Thêm services (chỉ những service không có trong products)
+    if (this.invoiceData.services && this.invoiceData.services.length > 0) {
+      this.invoiceData.services.forEach((service: any) => {
+        if (!this.isServiceInProducts(service)) {
+          items.push({
+            name: service.name,
+            quantity: service.quantity || 1,
+            unitPrice: service.price || 0,
+            totalPrice: (service.price || 0) * (service.quantity || 1)
+          });
+        }
+      });
+    }
+
+    // Nếu không có items, thêm tiền phòng
+    if (items.length === 0) {
+      items.push({
+        name: `Tiền phòng ${this.invoiceData.roomNumber || ''}`,
+        quantity: 1,
+        unitPrice: this.invoiceData.roomAmount || this.invoiceData.roomTotal || this.invoiceData['amount'] || 0,
+        totalPrice: this.invoiceData.roomAmount || this.invoiceData.roomTotal || this.invoiceData['amount'] || 0
+      });
+    }
+
+    // Thông tin khách hàng
+    const customerInfo = {
+      name: this.getCustomerName(),
+      phone: this.getCustomerPhone(),
+      email: this.getCustomerEmail(),
+      address: this.invoiceData.guestInfo?.address || this.invoiceData['customerAddress'] || '',
+      idNumber: this.invoiceData['customerIdNumber'] || this.invoiceData.guestInfo?.idNumber || ''
+    };
+
+    // Tính tổng tiền
+    const subtotal = items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+    const additionalCharges = this.invoiceData.additionalCharges || 0;
+    const discount = this.invoiceData.discount || 0;
+    const totalAmount = subtotal + additionalCharges - discount;
+
+    return {
+      // Thông tin công ty
+      company: companyInfo,
+      
+      // Thông tin khách hàng
+      customer: customerInfo,
+      
+      // Thông tin hóa đơn
+      invoice: {
+        invoiceNumber: this.invoiceData.invoiceNumber || this.invoiceData['bookingId'] || '',
+        date: this.invoiceData.date ? new Date(this.invoiceData.date).toISOString() : new Date().toISOString(),
+        dueDate: this.invoiceData.checkOutTime ? new Date(this.invoiceData.checkOutTime).toISOString() : new Date().toISOString()
+      },
+      
+      // Danh sách sản phẩm/dịch vụ
+      items: items,
+      
+      // Tổng tiền
+      subtotal: subtotal,
+      additionalCharges: additionalCharges,
+      discount: discount,
+      totalAmount: totalAmount,
+      
+      // Thông tin bổ sung
+      roomNumber: this.invoiceData.roomNumber || '',
+      roomType: this.invoiceData['roomType'] || '',
+      checkInTime: this.invoiceData.checkInTime ? new Date(this.invoiceData.checkInTime).toISOString() : '',
+      checkOutTime: this.invoiceData.checkOutTime ? new Date(this.invoiceData.checkOutTime).toISOString() : '',
+      duration: this.durationText,
+      rateType: this.getRateTypeLabel(this.invoiceData.rateType),
+      paymentMethod: this.getPaymentMethodLabel(this.invoiceData.paymentMethod),
+      staffName: this.invoiceData.staffName || '',
+      notes: this.invoiceData.notes || '',
+      
+      // Metadata
+      hotelId: this.invoiceData['hotelId'] || localStorage.getItem('selectedHotelId'),
+      bookingId: this.invoiceData['bookingId'] || ''
+    };
   }
 }

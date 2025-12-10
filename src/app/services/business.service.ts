@@ -10,7 +10,7 @@ import { AuthService } from './auth.service';
 })
 export class BusinessService {
   // private apiUrl = 'https://hotel-app-smp2.onrender.com/businesses';
-  private apiUrl = 'http://localhost:3000/businesses'
+  private apiUrl = 'https://nest-production-8106.up.railway.app/businesses'
 
   constructor(
     private http: HttpClient,

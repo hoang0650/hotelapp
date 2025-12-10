@@ -19,7 +19,7 @@ interface RevenueData {
 })
 export class HotelService {
   //private apiUrl = 'https://hotel-app-smp2.onrender.com/hotels';
-  private apiUrl = 'http://localhost:3000/hotels'
+  private apiUrl = 'https://nest-production-8106.up.railway.app/hotels'
 
   constructor(private http: HttpClient) { }
 
@@ -108,7 +108,7 @@ export class HotelService {
 
   // Lấy doanh thu khách sạn theo period từ shift-handover API
   getHotelRevenueByPeriod(hotelId: string, period: 'day' | 'week' | 'month' = 'day'): Observable<RevenueData> {
-    const apiUrl = 'http://localhost:3000/shift-handover/revenue/period';
+    const apiUrl = 'https://nest-production-8106.up.railway.app/shift-handover/revenue/period';
     const params = new HttpParams()
       .set('hotelId', hotelId)
       .set('period', period);

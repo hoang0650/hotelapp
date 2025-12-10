@@ -48,7 +48,7 @@ export interface ServiceModalResponse {
   providedIn: 'root'
 })
 export class ServiceService {
-  private apiUrl = 'http://localhost:3000/services';
+  private apiUrl = 'https://nest-production-8106.up.railway.app/services';
 
   constructor(private http: HttpClient) { }
 

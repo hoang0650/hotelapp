@@ -31,7 +31,7 @@ export interface PermissionRules {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = 'https://nest-production-8106.up.railway.app/api';
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   private tokenExpirationTimer: any;

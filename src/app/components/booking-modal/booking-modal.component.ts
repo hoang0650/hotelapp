@@ -537,10 +537,34 @@ export class BookingModalComponent implements OnInit {
     };
     
     if (window.pdfMake) {
-      window.pdfMake.createPdf(docDefinition).open();
+      // Tạo tên file: tenkhach-ngày nhận phòng.pdf
+      const guestName = this.formatFileName(formValue.guestName);
+      const checkInDateStr = this.formatDateForFileName(checkInDate);
+      const fileName = `${guestName}-${checkInDateStr}.pdf`;
+      
+      window.pdfMake.createPdf(docDefinition).download(fileName);
     } else {
       this.message.error('PDF library chưa được tải. Vui lòng tải lại trang.');
     }
+  }
+
+  formatFileName(name: string): string {
+    if (!name) return 'khach';
+    // Loại bỏ dấu tiếng Việt và ký tự đặc biệt, thay khoảng trắng bằng dấu gạch ngang
+    return name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Loại bỏ dấu
+      .replace(/[^a-zA-Z0-9\s-]/g, '') // Loại bỏ ký tự đặc biệt
+      .replace(/\s+/g, '-') // Thay khoảng trắng bằng dấu gạch ngang
+      .toLowerCase()
+      .trim();
+  }
+
+  formatDateForFileName(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   }
 
   formatCurrency(amount: number): string {

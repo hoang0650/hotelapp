@@ -28,7 +28,7 @@ export interface OtaBookingsResponse {
   providedIn: 'root'
 })
 export class OtaService {
-  private apiUrl = 'http://localhost:3000/ota-integrations';
+  private apiUrl = 'https://nest-production-8106.up.railway.app/ota-integrations';
   
   constructor(private http: HttpClient) { }
 

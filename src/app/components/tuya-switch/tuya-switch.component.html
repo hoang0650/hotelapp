@@ -1,0 +1,268 @@
+<div class="tuya-switch-container" [class.compact-mode]="compactMode">
+  <nz-card 
+    [nzLoading]="isLoading" 
+    [nzTitle]="'TUYA.TITLE' | translate"
+    [nzExtra]="!compactMode ? extraTemplate : undefined">
+    <ng-template #extraTemplate>
+      <button nz-button nzType="primary" (click)="openAddDeviceModal()">
+        <span nz-icon nzType="plus" nzTheme="outline"></span>
+        {{ 'TUYA.ADD_DEVICE' | translate }}
+      </button>
+      <button nz-button nzType="default" (click)="showByRoom = !showByRoom; loadDevices()" style="margin-left: 8px;">
+        <span nz-icon [nzType]="showByRoom ? 'unordered-list' : 'appstore'" nzTheme="outline"></span>
+        {{ (showByRoom ? 'TUYA.ALL_DEVICES' : 'TUYA.SHOW_BY_ROOM') | translate }}
+      </button>
+    </ng-template>
+    <!-- Hiển thị theo phòng -->
+    <div *ngIf="showByRoom && rooms.length > 0" class="rooms-list">
+      <div *ngFor="let room of rooms" class="room-section">
+        <div class="room-header">
+          <h3>Phòng {{ room.roomNumber }}</h3>
+          <div class="room-controls">
+            <button 
+              nz-button 
+              nzType="primary" 
+              nzSize="small"
+              [disabled]="isAnyDeviceToggling()"
+              (click)="turnOnByRoom(room.roomId)">
+              <span nz-icon nzType="poweroff" nzTheme="outline"></span>
+              {{ 'TUYA.TURN_ON_ALL' | translate }}
+            </button>
+            <button 
+              nz-button 
+              nzType="default" 
+              nzSize="small"
+              [disabled]="isAnyDeviceToggling()"
+              (click)="turnOffByRoom(room.roomId)">
+              <span nz-icon nzType="poweroff" nzTheme="outline"></span>
+              {{ 'TUYA.TURN_OFF_ALL' | translate }}
+            </button>
+          </div>
+        </div>
+        
+        <div class="devices-list">
+          <div *ngFor="let device of devicesByRoom[room.roomId]" class="device-item">
+            <div class="device-info">
+              <div class="device-header">
+                <h4>{{ device.name }}</h4>
+                <nz-tag [nzColor]="device.online ? 'green' : 'red'">
+                  {{ device.online ? ('TUYA.ONLINE' | translate) : ('TUYA.OFFLINE' | translate) }}
+                </nz-tag>
+              </div>
+            </div>
+            
+            <div class="device-controls">
+              <nz-switch
+                [ngModel]="device.state"
+                [nzDisabled]="!device.online || isDeviceToggling(device.id)"
+                [nzLoading]="isDeviceToggling(device.id)"
+                (ngModelChange)="toggle(device)"
+                [nzCheckedChildren]="'TUYA.TURN_ON' | translate"
+                [nzUnCheckedChildren]="'TUYA.TURN_OFF' | translate">
+              </nz-switch>
+              
+              <div class="control-buttons" *ngIf="!compactMode">
+                <button 
+                  nz-button 
+                  nzType="primary" 
+                  nzSize="small"
+                  [disabled]="!device.online || device.state || isDeviceToggling(device.id)"
+                  (click)="turnOn(device)">
+                  <span nz-icon nzType="poweroff" nzTheme="outline"></span>
+                  {{ 'TUYA.TURN_ON' | translate }}
+                </button>
+                <button 
+                  nz-button 
+                  nzType="default" 
+                  nzSize="small"
+                  [disabled]="!device.online || !device.state || isDeviceToggling(device.id)"
+                  (click)="turnOff(device)">
+                  <span nz-icon nzType="poweroff" nzTheme="outline"></span>
+                  {{ 'TUYA.TURN_OFF' | translate }}
+                </button>
+                <button 
+                  nz-button 
+                  nzType="link" 
+                  nzSize="small"
+                  [disabled]="isDeviceToggling(device.id)"
+                  (click)="refreshStatus(device)"
+                  [nz-tooltip]="'TUYA.REFRESH' | translate">
+                  <span nz-icon nzType="reload" nzTheme="outline"></span>
+                </button>
+                <button 
+                  nz-button 
+                  nzType="link" 
+                  nzSize="small"
+                  (click)="openEditDeviceModal(device)"
+                  [nz-tooltip]="'TUYA.EDIT_DEVICE' | translate">
+                  <span nz-icon nzType="edit" nzTheme="outline"></span>
+                </button>
+                <button 
+                  nz-button 
+                  nzType="link" 
+                  nzSize="small"
+                  nzDanger
+                  (click)="deleteDevice(device)"
+                  [nz-tooltip]="'TUYA.DELETE_DEVICE' | translate">
+                  <span nz-icon nzType="delete" nzTheme="outline"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Hiển thị danh sách thiết bị thông thường -->
+    <div *ngIf="!showByRoom || rooms.length === 0" class="devices-list">
+      <div *ngFor="let device of devices" class="device-item">
+        <div class="device-info">
+          <div class="device-header">
+            <h4>{{ device.name }}</h4>
+            <nz-tag [nzColor]="device.online ? 'green' : 'red'">
+              {{ device.online ? ('TUYA.ONLINE' | translate) : ('TUYA.OFFLINE' | translate) }}
+            </nz-tag>
+          </div>
+          <p *ngIf="device.roomNumber" class="device-room">
+            {{ 'TUYA.ROOM_NUMBER' | translate }}: {{ device.roomNumber }}
+          </p>
+        </div>
+        
+        <div class="device-controls">
+          <nz-switch
+            [ngModel]="device.state"
+            [nzDisabled]="!device.online || isDeviceToggling(device.id)"
+            [nzLoading]="isDeviceToggling(device.id)"
+            (ngModelChange)="toggle(device)"
+            [nzCheckedChildren]="'TUYA.TURN_ON' | translate"
+            [nzUnCheckedChildren]="'TUYA.TURN_OFF' | translate">
+          </nz-switch>
+          
+          <div class="control-buttons" *ngIf="!compactMode">
+            <button 
+              nz-button 
+              nzType="primary" 
+              nzSize="small"
+              [disabled]="!device.online || device.state || isDeviceToggling(device.id)"
+              (click)="turnOn(device)">
+              <span nz-icon nzType="poweroff" nzTheme="outline"></span>
+              {{ 'TUYA.TURN_ON' | translate }}
+            </button>
+            <button 
+              nz-button 
+              nzType="default" 
+              nzSize="small"
+              [disabled]="!device.online || !device.state || isDeviceToggling(device.id)"
+              (click)="turnOff(device)">
+              <span nz-icon nzType="poweroff" nzTheme="outline"></span>
+              {{ 'TUYA.TURN_OFF' | translate }}
+            </button>
+            <button 
+              nz-button 
+              nzType="link" 
+              nzSize="small"
+              [disabled]="isDeviceToggling(device.id)"
+              (click)="refreshStatus(device)"
+              [nz-tooltip]="'TUYA.REFRESH' | translate">
+              <span nz-icon nzType="reload" nzTheme="outline"></span>
+            </button>
+            <button 
+              nz-button 
+              nzType="link" 
+              nzSize="small"
+              (click)="openEditDeviceModal(device)"
+              [nz-tooltip]="'TUYA.EDIT_DEVICE' | translate">
+              <span nz-icon nzType="edit" nzTheme="outline"></span>
+            </button>
+            <button 
+              nz-button 
+              nzType="link" 
+              nzSize="small"
+              nzDanger
+              (click)="deleteDevice(device)"
+              [nz-tooltip]="'TUYA.DELETE_DEVICE' | translate">
+              <span nz-icon nzType="delete" nzTheme="outline"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div *ngIf="devices.length === 0 && !isLoading" class="empty-state">
+        <nz-empty [nzNotFoundContent]="'TUYA.NO_DEVICES' | translate"></nz-empty>
+        <button nz-button nzType="primary" (click)="hotelId ? loadDevicesByHotel() : loadDevices()">
+          <span nz-icon nzType="reload" nzTheme="outline"></span>
+          {{ 'TUYA.RELOAD' | translate }}
+        </button>
+      </div>
+    </div>
+  </nz-card>
+  
+  <!-- Modal thêm/sửa thiết bị -->
+  <nz-modal
+    [(nzVisible)]="isModalVisible"
+    [nzTitle]="(isEditMode ? 'TUYA.EDIT_DEVICE' : 'TUYA.ADD_DEVICE') | translate"
+    (nzOnCancel)="closeModal()"
+    (nzOnOk)="saveDevice()"
+    [nzOkText]="'TUYA.SAVE' | translate"
+    [nzCancelText]="'TUYA.CANCEL' | translate">
+    <ng-container *nzModalContent>
+      <form [formGroup]="deviceForm" nz-form>
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>
+            {{ 'TUYA.DEVICE_ID' | translate }}
+          </nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập Device ID">
+            <input nz-input formControlName="deviceId" [readonly]="isEditMode" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>
+            {{ 'TUYA.DEVICE_NAME' | translate }}
+          </nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập tên thiết bị">
+            <input nz-input formControlName="name" />
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6" nzRequired>
+            {{ 'TUYA.HOTEL' | translate }}
+          </nz-form-label>
+          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng chọn khách sạn">
+            <nz-select formControlName="hotelId" [nzPlaceHolder]="'TUYA.SELECT_HOTEL' | translate">
+              <nz-option 
+                *ngFor="let hotel of allHotels" 
+                [nzValue]="hotel._id" 
+                [nzLabel]="hotel.name">
+              </nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+        
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">
+            {{ 'TUYA.ROOM' | translate }}
+          </nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-select 
+              formControlName="roomId" 
+              [nzPlaceHolder]="'TUYA.SELECT_ROOM' | translate"
+              [nzDisabled]="!deviceForm.get('hotelId')?.value || allRooms.length === 0">
+              <nz-option [nzValue]="''" [nzLabel]="'TUYA.SELECT_ROOM' | translate"></nz-option>
+              <nz-option 
+                *ngFor="let room of allRooms" 
+                [nzValue]="room._id" 
+                [nzLabel]="'Phòng ' + room.roomNumber">
+              </nz-option>
+            </nz-select>
+            <div *ngIf="!deviceForm.get('hotelId')?.value" style="color: #ff4d4f; font-size: 12px; margin-top: 4px;">
+              {{ 'TUYA.SELECT_HOTEL' | translate }} trước
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </ng-container>
+  </nz-modal>
+</div>
+

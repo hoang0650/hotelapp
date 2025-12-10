@@ -165,6 +165,14 @@
                 
                 <!-- Số phòng -->
                 <div class="room-number">{{ room.roomNumber }}</div>
+                <!-- Công tắc điện compact -->
+                <div class="room-switch" *ngIf="selectedHotelId">
+                  <app-tuya-switch-compact 
+                    [roomId]="room._id" 
+                    [roomNumber]="room.roomNumber"
+                    [autoLoad]="true">
+                  </app-tuya-switch-compact>
+                </div>
                 
                 <!-- Loại phòng -->
                 <div class="room-type">{{ room.type }}</div>

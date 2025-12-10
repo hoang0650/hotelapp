@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
 })
 export class ChatService {
   private socket: Socket;
-  private baseUrl: string = 'http://localhost:3000';
+  private baseUrl: string = 'https://nest-production-8106.up.railway.app';
 
   constructor(private http: HttpClient) {
     this.socket = io('https://hotel-app-smp2.onrender.com', {

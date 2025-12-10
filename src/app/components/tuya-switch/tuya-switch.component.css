@@ -1,0 +1,139 @@
+.tuya-switch-container {
+  padding: 16px;
+}
+
+.devices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.device-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background-color: #fafafa;
+  transition: all 0.3s;
+}
+
+.device-item:hover {
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+
+.device-info {
+  flex: 1;
+}
+
+.device-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.device-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.device-room {
+  margin: 0;
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.device-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+}
+
+.rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.room-section {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #fafafa;
+}
+
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #1890ff;
+}
+
+.room-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.room-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.compact-mode .device-item {
+  padding: 12px;
+}
+
+.compact-mode .device-header h4 {
+  font-size: 14px;
+}
+
+.compact-mode .control-buttons {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .device-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .device-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .control-buttons {
+    flex-wrap: wrap;
+  }
+
+  .room-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .room-controls {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+

@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class EmailService {
-  private apiUrl = 'http://localhost:3000/emails'; // Địa chỉ API của bạn
+  private apiUrl = 'https://nest-production-8106.up.railway.app/emails'; // Địa chỉ API của bạn
 
   constructor(private http: HttpClient) {}
 

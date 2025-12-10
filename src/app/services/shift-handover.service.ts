@@ -29,7 +29,7 @@ export interface PreviousShiftAmountResponse {
   providedIn: 'root'
 })
 export class ShiftHandoverService {
-  private apiUrl = 'http://localhost:3000/shift-handover';
+  private apiUrl = 'https://nest-production-8106.up.railway.app/shift-handover';
 
   constructor(
     private http: HttpClient,
