@@ -67,11 +67,11 @@ export class PricingService {
     return this.http.get(`${this.apiUrl}/subscribers/all`);
   }
 
-  subscribe(userId: string, packageId: string, billingType: 'monthly' | 'yearly' = 'monthly', paymentId?: string): Observable<any> {
+  subscribe(userId: string, packageId: string, billingType: 'monthly' | 'yearly' = 'monthly', paymentId?: string, paymentMethod?: string): Observable<any> {
     const payload: any = { userId, packageId, billingType };
     if (paymentId) {
       payload.paymentId = paymentId;
-      payload.paymentMethod = 'paypal';
+      payload.paymentMethod = paymentMethod || 'paypal'; // Default to paypal if not specified
     }
     return this.http.post(`${this.apiUrl}/subscribe`, payload).pipe(
       tap(() => this.subscriptionChanged$.next())

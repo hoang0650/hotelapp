@@ -35,8 +35,19 @@
       </div>
     </div>
 
+    <!-- Thông báo gói đã chọn -->
+    <div *ngIf="selectedPackage" class="selected-package-notification" style="margin: 20px 0; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; text-align: center;">
+      <i nz-icon nzType="check-circle" nzTheme="fill" style="font-size: 24px; margin-right: 8px;"></i>
+      <strong>Đã chọn gói: {{ selectedPackage.name }} - {{ selectedPackage.billingType === 'yearly' ? 'Theo năm' : 'Theo tháng' }}</strong>
+      <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">
+        Tổng tiền: {{ formatPrice(getPackagePrice(selectedPackage)) }}
+      </p>
+    </div>
+
     <div class="pricing-plans">
-      <div *ngFor="let package of packages" class="pricing-plan" [class.current-plan]="isCurrentPackage(package._id || package.id)">
+      <div *ngFor="let package of packages" class="pricing-plan" 
+           [class.current-plan]="isCurrentPackage(package._id || package.id)"
+           [class.selected-plan]="selectedPackage && (selectedPackage.packageId === (package._id || package.id))">
         <div class="plan-header">
           <h2>{{ package.name }}</h2>
           <div class="price">
@@ -103,16 +114,44 @@
               </p>
             </ng-container>
             <ng-template #subscribeButton>
-              <button
-                nz-button
-                nzType="primary"
-                [disabled]="isCurrentPackage(package._id || package.id) || loading || !package.isActive"
-                (click)="subscribeToPlan(package._id || package.id)">
-                {{ isCurrentPackage(package._id || package.id) ? 'Đã đăng ký' : (loading ? 'Đang xử lý...' : (package.isActive ? ('Đăng ký ' + (billingType === 'yearly' ? 'theo năm' : 'theo tháng')) : 'Không khả dụng')) }}
-              </button>
-              <p style="margin-top: 8px; font-size: 12px; color: #999;">
-                Đăng ký gói {{ billingType === 'yearly' ? 'theo năm' : 'theo tháng' }}
-              </p>
+              <!-- Hiển thị nút thanh toán SePay nếu đã chọn gói này -->
+              <ng-container *ngIf="selectedPackage && (selectedPackage.packageId === (package._id || package.id)); else selectPackageButton">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <button
+                    nz-button
+                    nzType="primary"
+                    [nzSize]="'large'"
+                    [disabled]="loading"
+                    (click)="payWithSePay()"
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: 600;">
+                    <i nz-icon nzType="credit-card" nzTheme="outline" style="margin-right: 8px;"></i>
+                    {{ loading ? 'Đang xử lý...' : 'Thanh toán qua SePay' }}
+                  </button>
+                  <button
+                    nz-button
+                    nzType="default"
+                    [nzSize]="'small'"
+                    (click)="cancelPackageSelection()"
+                    style="font-size: 12px;">
+                    Hủy chọn
+                  </button>
+                  <p style="margin-top: 4px; font-size: 11px; color: #999; text-align: center;">
+                    Tổng tiền: {{ formatPrice(getPackagePrice(selectedPackage)) }}
+                  </p>
+                </div>
+              </ng-container>
+              <ng-template #selectPackageButton>
+                <button
+                  nz-button
+                  nzType="primary"
+                  [disabled]="isCurrentPackage(package._id || package.id) || loading || !package.isActive"
+                  (click)="subscribeToPlan(package._id || package.id)">
+                  {{ isCurrentPackage(package._id || package.id) ? 'Đã đăng ký' : (loading ? 'Đang xử lý...' : (package.isActive ? ('Chọn gói ' + (billingType === 'yearly' ? 'theo năm' : 'theo tháng')) : 'Không khả dụng')) }}
+                </button>
+                <p style="margin-top: 8px; font-size: 12px; color: #999;">
+                  Chọn gói {{ billingType === 'yearly' ? 'theo năm' : 'theo tháng' }}
+                </p>
+              </ng-template>
             </ng-template>
           </ng-container>
           <ng-template #loginButton>

@@ -76,6 +76,48 @@ export class OtaService {
     return this.http.post<ApiResponse>(`${this.apiUrl}/${id}/sync`, {});
   }
 
+  /**
+   * Đồng bộ inventory/availability lên OTA provider
+   * @param id ID của OTA integration
+   * @param startDate Ngày bắt đầu (optional, mặc định là hôm nay)
+   * @param endDate Ngày kết thúc (optional, mặc định là 90 ngày sau)
+   */
+  syncInventoryToOta(
+    id: string, 
+    startDate?: Date, 
+    endDate?: Date
+  ): Observable<ApiResponse> {
+    const body: any = {};
+    if (startDate) {
+      body.startDate = startDate.toISOString();
+    }
+    if (endDate) {
+      body.endDate = endDate.toISOString();
+    }
+    return this.http.post<ApiResponse>(`${this.apiUrl}/${id}/sync-inventory`, body);
+  }
+
+  /**
+   * Đồng bộ inventory cho tất cả OTA của một hotel
+   * @param hotelId ID của hotel
+   * @param startDate Ngày bắt đầu (optional)
+   * @param endDate Ngày kết thúc (optional)
+   */
+  syncAllInventoryForHotel(
+    hotelId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Observable<ApiResponse> {
+    let params = new HttpParams();
+    if (startDate) {
+      params = params.set('startDate', startDate.toISOString());
+    }
+    if (endDate) {
+      params = params.set('endDate', endDate.toISOString());
+    }
+    return this.http.post<ApiResponse>(`${this.apiUrl}/hotel/${hotelId}/sync-all-inventory`, {}, { params });
+  }
+
   // ============ API RIÊNG TỪNG TRANG OTA ============
 
   /**

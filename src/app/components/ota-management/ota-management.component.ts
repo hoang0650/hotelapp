@@ -66,6 +66,13 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     byProvider: Record<OtaProvider, number>;
   } | null = null;
 
+  // Inventory sync
+  isSyncingInventory = false;
+  isSyncInventoryModalVisible = false;
+  inventoryDateRange: [Date, Date] | null = null;
+  selectedOtaForSync: string[] = [];
+  inventorySyncResult: any = null;
+
   constructor(
     private fb: FormBuilder,
     private otaService: OtaService,
@@ -618,5 +625,123 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     } else {
       this.getBookingsByProvider(provider, false);
     }
+  }
+
+  // ============ INVENTORY SYNC ============
+
+  /**
+   * Hiển thị modal đồng bộ inventory
+   */
+  showSyncInventoryModal(): void {
+    this.isSyncInventoryModalVisible = true;
+    this.inventoryDateRange = null;
+    this.selectedOtaForSync = this.otaIntegrations
+      .filter(i => i.status === 'active')
+      .map(i => i._id);
+    this.inventorySyncResult = null;
+  }
+
+  /**
+   * Đóng modal đồng bộ inventory
+   */
+  handleSyncInventoryCancel(): void {
+    this.isSyncInventoryModalVisible = false;
+    this.inventoryDateRange = null;
+    this.selectedOtaForSync = [];
+    this.inventorySyncResult = null;
+  }
+
+  /**
+   * Thực hiện đồng bộ inventory
+   */
+  handleSyncInventoryOk(): void {
+    if (this.selectedOtaForSync.length === 0) {
+      this.message.warning('Vui lòng chọn ít nhất một OTA để đồng bộ');
+      return;
+    }
+
+    this.isSyncingInventory = true;
+    this.inventorySyncResult = null;
+
+    const startDate = this.inventoryDateRange?.[0] || new Date();
+    const endDate = this.inventoryDateRange?.[1] || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+
+    // Đồng bộ từng OTA đã chọn
+    const syncPromises = this.selectedOtaForSync.map(integrationId => {
+      return this.otaService.syncInventoryToOta(integrationId, startDate, endDate).toPromise();
+    });
+
+    Promise.all(syncPromises)
+      .then(results => {
+        this.isSyncingInventory = false;
+        
+        const syncResults = results.map((result, index) => {
+          const integration = this.otaIntegrations.find(i => i._id === this.selectedOtaForSync[index]);
+          return {
+            provider: integration?.provider || 'Unknown',
+            success: result && !result.error,
+            syncedRooms: result?.data?.syncedRooms || 0,
+            error: result?.error || result?.message
+          };
+        });
+
+        this.inventorySyncResult = {
+          results: syncResults,
+          totalSuccess: syncResults.filter(r => r.success).length,
+          totalFailed: syncResults.filter(r => !r.success).length
+        };
+
+        const successCount = this.inventorySyncResult.totalSuccess;
+        if (successCount > 0) {
+          this.message.success(`Đã đồng bộ thành công ${successCount}/${syncResults.length} OTA`);
+        } else {
+          this.message.error('Không có OTA nào đồng bộ thành công');
+        }
+
+        // Refresh integrations để cập nhật lastSync
+        this.loadOtaIntegrations();
+      })
+      .catch(error => {
+        this.isSyncingInventory = false;
+        this.message.error('Lỗi khi đồng bộ inventory');
+        console.error('Sync inventory error:', error);
+      });
+  }
+
+  /**
+   * Đồng bộ inventory cho một OTA cụ thể
+   */
+  syncInventory(integration: OtaIntegration): void {
+    if (integration.status !== 'active') {
+      this.message.warning('OTA chưa được kích hoạt');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: `Đồng bộ phòng trống lên ${integration.provider}`,
+      nzContent: 'Bạn có muốn đồng bộ số phòng trống và giá phòng lên OTA này không?',
+      nzOkText: 'Đồng bộ',
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        this.isSyncingInventory = true;
+        const startDate = new Date();
+        const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+
+        this.subscriptions.add(
+          this.otaService.syncInventoryToOta(integration._id, startDate, endDate).subscribe({
+            next: (response: ApiResponse) => {
+              this.isSyncingInventory = false;
+              this.message.success(`Đã đồng bộ ${response.data?.syncedRooms || 0} loại phòng lên ${integration.provider}`);
+              this.loadOtaIntegrations();
+            },
+            error: (error: any) => {
+              this.isSyncingInventory = false;
+              this.message.error(error.error?.message || 'Lỗi khi đồng bộ inventory');
+              console.error('Sync inventory error:', error);
+            }
+          })
+        );
+      }
+    });
   }
 }

@@ -4,6 +4,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { AuthService } from '../../services/auth.service';
 import { PayPalPaymentData } from '../paypal-payment/paypal-payment.component';
+import { SePayService, SePayPaymentData } from '../../services/sepay.service';
 
 interface PricingPlan {
   name: string;
@@ -32,6 +33,7 @@ export class PricingComponent implements OnInit {
   userId: string = '';
   showPayPalModal = false;
   payPalPaymentData: PayPalPaymentData | null = null;
+  selectedPackage: any = null; // Gói đã chọn để thanh toán
 
   plans: PricingPlan[] = [
     {
@@ -123,7 +125,8 @@ export class PricingComponent implements OnInit {
     private message: NzMessageService,
     private modal: NzModalService,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private sepayService: SePayService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -137,6 +140,55 @@ export class PricingComponent implements OnInit {
       this.loadCurrentPackage();
     } else {
       this.currentPackage = null;
+    }
+
+    // Xử lý callback từ SePay sau khi thanh toán
+    this.handlePaymentCallback();
+  }
+
+  /**
+   * Xử lý callback từ SePay sau khi thanh toán
+   */
+  handlePaymentCallback(): void {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('paymentStatus') || urlParams.get('payment');
+    const packageId = urlParams.get('packageId');
+    const billingType = urlParams.get('billingType') as 'monthly' | 'yearly' | null;
+    const transactionId = urlParams.get('transaction_id') || urlParams.get('transactionId') || urlParams.get('order_invoice_number');
+
+    if (paymentStatus === 'success' && packageId && billingType && this.userId) {
+      // Thanh toán thành công, đăng ký gói
+      this.loading = true;
+      // Gọi subscribe với paymentMethod='sepay' và transactionId (chuyển null thành undefined)
+      const paymentId = transactionId || undefined;
+      this.pricingService.subscribe(this.userId, packageId, billingType, paymentId, 'sepay').subscribe({
+        next: (response: any) => {
+          if (response.success !== false) {
+            const billingTypeText = billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+            this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công`);
+            this.loadCurrentPackage();
+            this.selectedPackage = null; // Reset selected package
+            // Xóa query params để tránh xử lý lại
+            window.history.replaceState({}, '', '/pricing');
+          } else {
+            this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
+          }
+          this.loading = false;
+        },
+        error: (error: any) => {
+          console.error('Subscribe error after SePay payment:', error);
+          this.message.error(error.error?.message || 'Có lỗi xảy ra khi đăng ký gói dịch vụ sau thanh toán');
+          this.loading = false;
+        }
+      });
+    } else if (paymentStatus === 'error') {
+      this.message.error('Thanh toán thất bại. Vui lòng thử lại.');
+      this.selectedPackage = null; // Reset selected package
+      window.history.replaceState({}, '', '/pricing');
+    } else if (paymentStatus === 'cancel') {
+      this.message.warning('Bạn đã hủy thanh toán.');
+      this.selectedPackage = null; // Reset selected package
+      window.history.replaceState({}, '', '/pricing');
     }
   }
 
@@ -200,22 +252,104 @@ export class PricingComponent implements OnInit {
       return;
     }
 
-    // Xác nhận đăng ký với billingType hiện tại
-    const billingTypeText = this.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
     const pkg = this.packages.find(p => (p._id || p.id) === packageId);
-    const packagePrice = pkg ? this.getPackagePrice(pkg) : 0;
-    const priceText = this.formatPrice(packagePrice);
+    if (!pkg) {
+      this.message.error('Không tìm thấy gói dịch vụ.');
+      return;
+    }
 
-    // Mở PayPal payment modal
-    this.payPalPaymentData = {
+    const billingTypeText = this.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+
+    // Kiểm tra nếu là gói miễn phí
+    if (this.isFreePackage(pkg)) {
+      // Đăng ký trực tiếp không cần thanh toán
+      this.loading = true;
+      this.pricingService.subscribe(this.userId, packageId, this.billingType).subscribe({
+        next: (response: any) => {
+          if (response.success !== false) {
+            this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công`);
+            this.loadCurrentPackage();
+            this.selectedPackage = null;
+          } else {
+            this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
+          }
+          this.loading = false;
+        },
+        error: (error: any) => {
+          console.error('Subscribe error:', error);
+          this.message.error(error.error?.message || 'Có lỗi xảy ra khi đăng ký gói dịch vụ');
+          this.loading = false;
+        }
+      });
+      return;
+    }
+
+    // Lưu gói đã chọn để hiển thị nút thanh toán
+    this.selectedPackage = {
+      ...pkg,
+      packageId: packageId,
+      billingType: this.billingType
+    };
+
+    this.message.success(`Đã chọn gói ${pkg.name} - ${billingTypeText}. Vui lòng thanh toán để hoàn tất đăng ký.`);
+  }
+
+  /**
+   * Thanh toán qua SePay
+   */
+  payWithSePay(): void {
+    if (!this.selectedPackage || !this.userId) {
+      this.message.warning('Vui lòng chọn gói trước khi thanh toán');
+      return;
+    }
+
+    const packageId = this.selectedPackage.packageId;
+    const pkg = this.selectedPackage;
+    const packagePrice = this.getPackagePrice(pkg);
+    const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+    const baseUrl = window.location.origin;
+
+    // Tạo form thanh toán SePay
+    const sepayPaymentData: SePayPaymentData = {
       packageId: packageId,
       packageName: pkg?.name || 'N/A',
       amount: packagePrice,
-      billingType: this.billingType,
-      currency: 'USD', // Mặc định USD, người dùng có thể thay đổi trong modal
-      description: `Đăng ký gói ${pkg?.name || 'N/A'} - ${billingTypeText}`
+      billingType: this.selectedPackage.billingType,
+      currency: 'VND',
+      description: `Đăng ký gói ${pkg?.name || 'N/A'} - ${billingTypeText}`,
+      customerId: this.userId,
+      orderInvoiceNumber: `INV_${Date.now()}_${packageId}`
     };
-    this.showPayPalModal = true;
+
+    // Tạo callback URLs
+    const callbacks = {
+      successUrl: `${baseUrl}/pricing?paymentStatus=success&packageId=${packageId}&billingType=${this.selectedPackage.billingType}`,
+      errorUrl: `${baseUrl}/pricing?paymentStatus=error&packageId=${packageId}&billingType=${this.selectedPackage.billingType}`,
+      cancelUrl: `${baseUrl}/pricing?paymentStatus=cancel&packageId=${packageId}&billingType=${this.selectedPackage.billingType}`
+    };
+
+    // Tạo và submit form thanh toán SePay
+    this.loading = true;
+    this.sepayService.createPaymentForm(sepayPaymentData, callbacks, (error: any) => {
+      this.loading = false;
+      console.error('Error initiating SePay payment:', error);
+      const errorMessage = error.error?.error || error.error?.message || error.message || 'Có lỗi xảy ra khi tạo form thanh toán SePay. Vui lòng thử lại.';
+      this.message.error(errorMessage);
+      
+      // Nếu lỗi do cấu hình SePay chưa đúng, hiển thị hướng dẫn
+      if (errorMessage.includes('chưa được cấu hình')) {
+        this.message.warning('Vui lòng liên hệ quản trị viên để cấu hình SePay.');
+      }
+    });
+    // Note: Nếu thành công, createPaymentForm sẽ tự động submit form và redirect đến SePay
+  }
+
+  /**
+   * Hủy chọn gói
+   */
+  cancelPackageSelection(): void {
+    this.selectedPackage = null;
+    this.message.info('Đã hủy chọn gói');
   }
 
   cancelSubscription(): void {

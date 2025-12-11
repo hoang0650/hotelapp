@@ -1,8 +1,8 @@
 import { Hotel } from './hotel';
 import { Room } from './rooms';
 
-export type OtaProvider = 'Booking.com' | 'Agoda' | 'Traveloka' | 'Trip.com' | 'Expedia';
-export const ALL_OTA_PROVIDERS: OtaProvider[] = ['Booking.com', 'Agoda', 'Traveloka', 'Trip.com', 'Expedia'];
+export type OtaProvider = 'Booking.com' | 'Agoda' | 'Traveloka' | 'Trip.com' | 'Expedia' | 'G2J';
+export const ALL_OTA_PROVIDERS: OtaProvider[] = ['Booking.com', 'Agoda', 'Traveloka', 'Trip.com', 'Expedia', 'G2J'];
 
 export type OtaIntegrationStatus = 'active' | 'inactive' | 'error' | 'pending';
 export type OtaBookingStatus = 'pending' | 'confirmed' | 'modified' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
@@ -362,13 +362,7 @@ export interface OtaCalendarResponse {
     }[];
     summary: {
         total: number;
-        byProvider: {
-            'Booking.com': number;
-            'Agoda': number;
-            'Traveloka': number;
-            'Trip.com': number;
-            'Expedia': number;
-        };
+        byProvider: Record<OtaProvider, number>;
     };
 }
 
@@ -379,5 +373,6 @@ export const OTA_PROVIDER_COLORS: Record<OtaProvider, string> = {
     'Agoda': '#5391ff',
     'Traveloka': '#0194f3',
     'Trip.com': '#287dfa',
-    'Expedia': '#00355f'
+    'Expedia': '#00355f',
+    'G2J': '#ff6b35'
 };

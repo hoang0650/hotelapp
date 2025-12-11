@@ -95,6 +95,11 @@
                       nz-tooltip="Đồng bộ dữ liệu">
                 <i nz-icon nzType="sync" [nzSpin]="isSyncing"></i>
               </button>
+              <button nz-button nzType="link" (click)="syncInventory(integration)"
+                      [disabled]="integration.status !== 'active' || isSyncingInventory"
+                      nz-tooltip="Đồng bộ phòng trống">
+                <i nz-icon nzType="home" [nzSpin]="isSyncingInventory"></i>
+              </button>
               <button nz-button nzType="link" nzDanger (click)="deleteIntegration(integration)"
                       nz-tooltip="Xóa">
                 <i nz-icon nzType="delete"></i>
@@ -122,6 +127,24 @@
       <button nz-button nzType="dashed" (click)="loadCalendarBookings()">
         <i nz-icon nzType="calendar"></i> Tất cả (Calendar)
       </button>
+    </div>
+  </nz-card>
+
+  <!-- Inventory Sync Actions -->
+  <nz-card class="inventory-sync-card">
+    <div class="inventory-header">
+      <h3>
+        <i nz-icon nzType="home"></i> Đồng bộ phòng trống lên OTA
+      </h3>
+      <button nz-button nzType="primary" (click)="showSyncInventoryModal()">
+        <i nz-icon nzType="sync"></i> Đồng bộ tất cả OTA
+      </button>
+    </div>
+    <div class="inventory-info">
+      <p style="color: #666; margin: 8px 0;">
+        <i nz-icon nzType="info-circle" nzTheme="outline"></i>
+        Đồng bộ số phòng trống và giá phòng lên các trang OTA để khách có thể đặt phòng trực tuyến.
+      </p>
     </div>
   </nz-card>
 
@@ -470,6 +493,79 @@
           </div>
         </div>
       </form>
+    </ng-container>
+  </nz-modal>
+
+  <!-- Sync Inventory Modal -->
+  <nz-modal
+    [(nzVisible)]="isSyncInventoryModalVisible"
+    nzTitle="Đồng bộ phòng trống lên OTA"
+    (nzOnCancel)="handleSyncInventoryCancel()"
+    (nzOnOk)="handleSyncInventoryOk()"
+    [nzOkLoading]="isSyncingInventory"
+    [nzWidth]="600">
+    <ng-container *nzModalContent>
+      <div class="sync-inventory-content">
+        <nz-alert 
+          nzType="info" 
+          nzMessage="Đồng bộ số phòng trống và giá phòng"
+          nzDescription="Hệ thống sẽ tính toán số phòng trống dựa trên bookings và trạng thái phòng, sau đó cập nhật lên các trang OTA đã kích hoạt."
+          [nzShowIcon]="true"
+          style="margin-bottom: 20px;">
+        </nz-alert>
+
+        <nz-form-item>
+          <nz-form-label>Khoảng thời gian đồng bộ</nz-form-label>
+          <nz-form-control>
+            <nz-range-picker 
+              [(ngModel)]="inventoryDateRange"
+              [nzShowTime]="false"
+              [nzFormat]="'DD/MM/YYYY'"
+              style="width: 100%;">
+            </nz-range-picker>
+            <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+              Mặc định: Từ hôm nay đến 90 ngày sau
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>Chọn OTA để đồng bộ</nz-form-label>
+          <nz-form-control>
+            <nz-checkbox-group [(ngModel)]="selectedOtaForSync">
+              <label nz-checkbox 
+                     *ngFor="let integration of otaIntegrations" 
+                     [nzValue]="integration._id"
+                     [nzDisabled]="integration.status !== 'active'">
+                {{ integration.provider }}
+                <nz-tag *ngIf="integration.status !== 'active'" 
+                        [nzColor]="'default'" 
+                        style="margin-left: 8px;">
+                  Chưa kích hoạt
+                </nz-tag>
+              </label>
+            </nz-checkbox-group>
+            <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+              Chỉ các OTA đã kích hoạt mới có thể đồng bộ
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <div *ngIf="inventorySyncResult" class="sync-result">
+          <nz-divider>Kết quả đồng bộ</nz-divider>
+          <div *ngFor="let result of inventorySyncResult.results" class="result-item">
+            <nz-tag [nzColor]="result.success ? 'success' : 'error'">
+              {{ result.provider }}
+            </nz-tag>
+            <span *ngIf="result.success" style="margin-left: 8px; color: #52c41a;">
+              Đã đồng bộ {{ result.syncedRooms }} loại phòng
+            </span>
+            <span *ngIf="!result.success" style="margin-left: 8px; color: #ff4d4f;">
+              Lỗi: {{ result.error }}
+            </span>
+          </div>
+        </div>
+      </div>
     </ng-container>
   </nz-modal>
 </div>
