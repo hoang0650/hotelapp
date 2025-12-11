@@ -1412,7 +1412,63 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // ƯU TIÊN: Sử dụng rateType từ user, không tự động chuyển đổi nếu user đã chọn rõ ràng
     switch (rateType) {
       case 'hourly':
-        // Kiểm tra nếu quá số giờ tự động chuyển sang qua đêm (chỉ khi rateType là hourly mặc định)
+        // Kiểm tra xem có vượt qua khung giờ qua đêm không
+        if (checkInTime && checkOutTime) {
+          const checkInDateOnly = new Date(checkInTime);
+          checkInDateOnly.setHours(0, 0, 0, 0);
+          const checkOutDateOnly = new Date(checkOutTime);
+          checkOutDateOnly.setHours(0, 0, 0, 0);
+          const isSameDay = checkInDateOnly.getTime() === checkOutDateOnly.getTime();
+          
+          const checkInMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
+          const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
+          const nightlyStartMinutes = parseTime(nightlyStartTime).hour * 60 + parseTime(nightlyStartTime).minute;
+          const nightlyEndMinutes = parseTime(nightlyEndTime).hour * 60 + parseTime(nightlyEndTime).minute;
+          
+          // Kiểm tra nếu check-out sau nightlyStartTime (cùng ngày) hoặc khác ngày
+          const hasNightlyPeriod = !isSameDay || (isSameDay && checkOutMinutes > nightlyStartMinutes);
+          
+          if (hasNightlyPeriod) {
+            // Có khung giờ qua đêm: tính phụ thu check-in sớm + giá qua đêm + phụ thu check-out muộn
+            let earlyCheckinSurcharge = 0;
+            let lateCheckoutSurcharge = 0;
+            
+            // Tính số giờ trước nightlyStartTime (nếu check-in trước nightlyStartTime)
+            if (checkInMinutes < nightlyStartMinutes) {
+              const hoursBeforeNightly = (nightlyStartMinutes - checkInMinutes) / 60;
+              // Chỉ tính phụ thu check-in sớm (KHÔNG tính giá theo giờ)
+              if (nightlyEarlyCheckinSurcharge > 0) {
+                earlyCheckinSurcharge = hoursBeforeNightly * nightlyEarlyCheckinSurcharge;
+              }
+            }
+            
+            // Tính giá qua đêm
+            total = nightlyRate;
+            
+            // Tính số giờ sau nightlyEndTime (nếu check-out sau nightlyEndTime)
+            if (!isSameDay || (isSameDay && checkOutMinutes > nightlyEndMinutes)) {
+              let hoursAfterNightly = 0;
+              if (isSameDay) {
+                hoursAfterNightly = (checkOutMinutes - nightlyEndMinutes) / 60;
+              } else {
+                // Khác ngày: tính từ 0:00 đến checkOutMinutes
+                hoursAfterNightly = checkOutMinutes / 60;
+              }
+              
+              // Chỉ tính phụ thu check-out muộn (KHÔNG tính giá theo giờ)
+              if (nightlyLateCheckoutSurcharge > 0) {
+                lateCheckoutSurcharge = hoursAfterNightly * nightlyLateCheckoutSurcharge;
+              }
+            }
+            
+            // Tổng = phụ thu check-in sớm + giá qua đêm + phụ thu check-out muộn
+            total = earlyCheckinSurcharge + nightlyRate + lateCheckoutSurcharge;
+            break;
+          }
+        }
+        
+        // Nếu không có khung giờ qua đêm, tính theo giờ bình thường
+        // Kiểm tra nếu quá số giờ tự động chuyển sang qua đêm (nhưng chưa vào khung giờ qua đêm)
         if (durationInHours >= autoNightlyHours && nightlyRate > 0) {
           // Tự động chuyển sang tính qua đêm
           const durationInNights = Math.ceil(durationInHours / 24);

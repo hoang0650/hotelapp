@@ -63,10 +63,11 @@ export class RoomManagementComponent implements OnInit {
       // Cấu hình tính giá
       priceSettings: this.fb.group({
         nightlyStartTime: ['22:00'], // Giờ bắt đầu tính qua đêm (HH:mm)
-        nightlyEndTime: ['06:00'], // Giờ kết thúc tính qua đêm (HH:mm)
+        nightlyEndTime: ['12:00'], // Giờ kết thúc tính qua đêm (HH:mm) - cập nhật từ 06:00 thành 12:00
         dailyStartTime: ['06:00'], // Giờ bắt đầu tính theo ngày (HH:mm)
         dailyEndTime: ['22:00'], // Giờ kết thúc tính theo ngày (HH:mm)
         autoNightlyHours: [8, [Validators.min(1)]], // Số giờ tự động chuyển sang qua đêm
+        autoDailyHours: [24, [Validators.min(1)]], // Số giờ tự động chuyển từ nightly sang daily (mặc định 24 giờ)
         gracePeriodMinutes: [15, [Validators.min(0), Validators.max(60)]], // Thời gian miễn phí sau giờ thứ 2 (phút)
         timezone: ['UTC+7'], // Múi giờ (UTC+7 cho Việt Nam)
         // Phụ thu cho daily rates
@@ -206,10 +207,11 @@ export class RoomManagementComponent implements OnInit {
             priceConfigId: fullRoom.priceConfigId,
             priceSettings: {
               nightlyStartTime: (fullRoom as any).priceSettings?.nightlyStartTime || '22:00',
-              nightlyEndTime: (fullRoom as any).priceSettings?.nightlyEndTime || '06:00',
+              nightlyEndTime: (fullRoom as any).priceSettings?.nightlyEndTime || '12:00',
               dailyStartTime: (fullRoom as any).priceSettings?.dailyStartTime || '06:00',
               dailyEndTime: (fullRoom as any).priceSettings?.dailyEndTime || '22:00',
               autoNightlyHours: (fullRoom as any).priceSettings?.autoNightlyHours || 8,
+              autoDailyHours: (fullRoom as any).priceSettings?.autoDailyHours || 24,
               gracePeriodMinutes: (fullRoom as any).priceSettings?.gracePeriodMinutes || 15,
               timezone: (fullRoom as any).priceSettings?.timezone || 'UTC+7',
               dailyEarlyCheckinSurcharge: (fullRoom as any).priceSettings?.dailyEarlyCheckinSurcharge || 0,
@@ -261,10 +263,11 @@ export class RoomManagementComponent implements OnInit {
             priceConfigId: roomToEdit.priceConfigId,
             priceSettings: {
               nightlyStartTime: (roomToEdit as any).priceSettings?.nightlyStartTime || '22:00',
-              nightlyEndTime: (roomToEdit as any).priceSettings?.nightlyEndTime || '06:00',
+              nightlyEndTime: (roomToEdit as any).priceSettings?.nightlyEndTime || '12:00',
               dailyStartTime: (roomToEdit as any).priceSettings?.dailyStartTime || '06:00',
               dailyEndTime: (roomToEdit as any).priceSettings?.dailyEndTime || '22:00',
               autoNightlyHours: (roomToEdit as any).priceSettings?.autoNightlyHours || 8,
+              autoDailyHours: (roomToEdit as any).priceSettings?.autoDailyHours || 24,
               gracePeriodMinutes: (roomToEdit as any).priceSettings?.gracePeriodMinutes || 15,
               timezone: (roomToEdit as any).priceSettings?.timezone || 'UTC+7',
               dailyEarlyCheckinSurcharge: (roomToEdit as any).priceSettings?.dailyEarlyCheckinSurcharge || 0,
@@ -306,10 +309,11 @@ export class RoomManagementComponent implements OnInit {
       priceConfigId: null,
       priceSettings: {
         nightlyStartTime: '22:00',
-        nightlyEndTime: '06:00',
+        nightlyEndTime: '12:00',
         dailyStartTime: '06:00',
         dailyEndTime: '22:00',
         autoNightlyHours: 8,
+        autoDailyHours: 24,
         gracePeriodMinutes: 15,
         timezone: 'UTC+7',
         dailyEarlyCheckinSurcharge: 0,
@@ -361,10 +365,11 @@ export class RoomManagementComponent implements OnInit {
       priceConfigId: hasPriceConfig ? formValue.priceConfigId : null,
       priceSettings: formValue.priceSettings ? {
         nightlyStartTime: formValue.priceSettings.nightlyStartTime || '22:00',
-        nightlyEndTime: formValue.priceSettings.nightlyEndTime || '06:00',
+        nightlyEndTime: formValue.priceSettings.nightlyEndTime || '12:00',
         dailyStartTime: formValue.priceSettings.dailyStartTime || '06:00',
         dailyEndTime: formValue.priceSettings.dailyEndTime || '22:00',
         autoNightlyHours: Number(formValue.priceSettings.autoNightlyHours) || 8,
+        autoDailyHours: Number(formValue.priceSettings.autoDailyHours) || 24,
         gracePeriodMinutes: Number(formValue.priceSettings.gracePeriodMinutes) || 15,
         timezone: formValue.priceSettings.timezone || 'UTC+7',
         dailyEarlyCheckinSurcharge: Number(formValue.priceSettings.dailyEarlyCheckinSurcharge) || 0,

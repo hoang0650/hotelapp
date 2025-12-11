@@ -343,8 +343,8 @@
                                 type="time" 
                                 formControlName="nightlyEndTime" 
                                 class="w-100"
-                                placeholder="06:00" />
-                            <div class="form-hint">Giờ kết thúc tính giá qua đêm (ví dụ: 06:00)</div>
+                                placeholder="12:00" />
+                            <div class="form-hint">Giờ kết thúc tính giá qua đêm (ví dụ: 12:00 - trưa hôm sau)</div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -387,7 +387,22 @@
                                 [nzStep]="1" 
                                 class="w-100" 
                                 nzPlaceHolder="8" />
-                            <div class="form-hint">Số giờ tự động chuyển sang tính qua đêm (ví dụ: 8 giờ)</div>
+                            <div class="form-hint">Số giờ tự động chuyển sang tính qua đêm khi chọn hourly rate (ví dụ: 8 giờ)</div>
+                        </nz-form-control>
+                    </nz-form-item>
+                </div>
+                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+                    <nz-form-item>
+                        <nz-form-label>Số giờ tự động chuyển từ nightly sang daily</nz-form-label>
+                        <nz-form-control>
+                            <nz-input-number 
+                                formControlName="autoDailyHours" 
+                                [nzMin]="1" 
+                                [nzMax]="48"
+                                [nzStep]="1" 
+                                class="w-100" 
+                                nzPlaceHolder="24" />
+                            <div class="form-hint">Nếu thời gian nghỉ vượt quá số giờ này, sẽ tự động chuyển từ nightly rate sang daily rate (ví dụ: 24 giờ = 1 ngày)</div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
