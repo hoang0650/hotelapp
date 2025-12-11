@@ -38,6 +38,23 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // Kiểm tra xem có phải thiết bị mobile không
+  private isMobileDevice(): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    // Kiểm tra user agent
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+    
+    // Kiểm tra touch support
+    const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    // Kiểm tra kích thước màn hình
+    const isSmallScreen = window.innerWidth <= 768;
+    
+    return mobileRegex.test(userAgent) || (hasTouchScreen && isSmallScreen);
+  }
+
   @HostListener('click', ['$event']) 
   onClick(event: MouseEvent): void {
     // Kiểm tra xem click có phải từ button trong context menu không
@@ -47,6 +64,17 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       return;
     }
     
+    // Nếu là mobile, hiển thị context menu thay vì mở modal
+    if (this.isMobileDevice()) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (this.room && !this.contextMenuModalRef) {
+        this.showContextMenu(event);
+      }
+      return;
+    }
+    
+    // Trên PC: giữ nguyên logic mở modal
     if (this.room && !this.isModalOpening && !this.modalRef) {
       const modalType = this.getModalType();
       this.showModal(this.room, modalType);
@@ -55,20 +83,37 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   @HostListener('contextmenu', ['$event']) 
   onContextMenu(event: MouseEvent) {
+    // Trên mobile, không xử lý contextmenu (đã xử lý trong onClick)
+    if (this.isMobileDevice()) {
+      return;
+    }
+    
     event.preventDefault();
     if (this.room) {
       this.showContextMenu(event);
     }
   }
 
-  // Hiển thị menu ngữ cảnh khi nhấp chuột phải
-  showContextMenu(event: MouseEvent): void {
+  // Hiển thị menu ngữ cảnh khi nhấp chuột phải (PC) hoặc click (Mobile)
+  showContextMenu(event: MouseEvent | TouchEvent): void {
+    const isMobile = this.isMobileDevice();
+    
     // Tính toán vị trí hiển thị menu
-    const menuX = event.clientX;
-    const menuY = event.clientY;
+    let menuX: number;
+    let menuY: number;
+    
+    if (isMobile) {
+      // Trên mobile: hiển thị ở giữa màn hình
+      menuX = window.innerWidth / 2;
+      menuY = window.innerHeight / 2;
+    } else {
+      // Trên PC: hiển thị tại vị trí click
+      menuX = (event as MouseEvent).clientX;
+      menuY = (event as MouseEvent).clientY;
+    }
     
     // Tạo và hiển thị menu tùy chọn sử dụng component
-    this.contextMenuModalRef = this.modalService.create({
+    const modalConfig: any = {
       nzTitle: `Phòng ${this.room.roomNumber} - Tùy chọn`,
       nzContent: RoomContextMenuComponent,
       nzData: {
@@ -79,18 +124,36 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       nzClosable: true,
       nzMask: true,
       nzMaskStyle: { backgroundColor: 'rgba(0,0,0,0.25)' },
-      nzWidth: 280,
+      nzWidth: isMobile ? Math.min(320, window.innerWidth - 40) : 280,
       nzBodyStyle: { padding: '0' },
       nzClassName: 'context-menu-modal',
-      nzStyle: { 
+      nzZIndex: 99999
+    };
+    
+    if (isMobile) {
+      // Trên mobile: căn giữa màn hình
+      modalConfig.nzStyle = {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        margin: '0',
+        padding: '0',
+        maxWidth: '90vw',
+        maxHeight: '90vh'
+      };
+    } else {
+      // Trên PC: hiển thị tại vị trí click
+      modalConfig.nzStyle = {
         position: 'fixed',
         top: `${menuY}px`,
         left: `${menuX}px`,
         margin: '0',
         padding: '0'
-      },
-      nzZIndex: 99999
-    });
+      };
+    }
+    
+    this.contextMenuModalRef = this.modalService.create(modalConfig);
 
     // Lắng nghe event từ component
     this.contextMenuModalRef.afterOpen.subscribe(() => {

@@ -691,6 +691,18 @@ export class InvoiceComponent implements OnInit {
     };
     return statusClasses[status.toLowerCase()] || '';
   }
+
+  // Lấy màu sắc cho trạng thái thanh toán (dùng cho nz-tag)
+  getPaymentStatusColor(status: string | undefined): string {
+    if (!status) return 'success';
+    const colorMap: { [key: string]: string } = {
+      'paid': 'success',
+      'pending': 'warning',
+      'partial': 'processing',
+      'included_in_room_charge': 'purple'
+    };
+    return colorMap[status.toLowerCase()] || 'default';
+  }
   
   // Kiểm tra xem dịch vụ có trong danh sách sản phẩm không
   isServiceInProducts(service: Service): boolean {

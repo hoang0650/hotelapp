@@ -16,7 +16,7 @@
         <div class="right-section">
           <p><strong>Số hóa đơn:</strong> {{ invoiceData.invoiceNumber || invoiceData['bookingId'] || 'N/A' }}</p>
           <p><strong>Ngày:</strong> {{ invoiceData.date | date:'dd/MM/yyyy HH:mm' }}</p>
-          <nz-tag [nzColor]="getPaymentStatusClass(invoiceData.paymentStatus || '')">
+          <nz-tag [nzColor]="getPaymentStatusColor(invoiceData.paymentStatus || '')">
             {{ getPaymentStatusLabel(invoiceData.paymentStatus || '') }}
           </nz-tag>
         </div>

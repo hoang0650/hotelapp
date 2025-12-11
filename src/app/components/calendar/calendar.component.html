@@ -39,43 +39,54 @@
 </div>
 <br>
 <!-- Lịch sử đặt phòng -->
-<div class="booking-history-section" style="margin-top: 24px;">
-  <h3 style="margin-bottom: 16px; font-size: 18px; font-weight: 600;">Lịch sử đặt phòng</h3>
+<div class="booking-history-section">
+  <h3 class="booking-history-title">Lịch sử đặt phòng</h3>
   <nz-table 
     [nzData]="allBookings" 
     [nzPageSize]="10" 
     [nzShowPagination]="true"
     [nzLoading]="isLoading"
     nzSize="small"
-    [nzScroll]="{ x: '100%' }">
+    [nzScroll]="{ x: '100%' }"
+    class="booking-table">
     <thead>
       <tr>
-        <th nzWidth="120px">Phòng Khách</th>
-        <th nzWidth="180px">Ngày đến</th>
-        <th nzWidth="180px">Ngày đi</th>
-        <th nzWidth="120px">Trạng thái</th>
-        <th nzWidth="100px">Thao tác</th>
+        <th nzWidth="120px" class="col-room-guest">Phòng Khách</th>
+        <th nzWidth="180px" class="col-checkin hide-on-mobile">Ngày đến</th>
+        <th nzWidth="180px" class="col-checkout hide-on-mobile">Ngày đi</th>
+        <th nzWidth="120px" class="col-status">Trạng thái</th>
+        <th nzWidth="100px" class="col-actions">Thao tác</th>
       </tr>
     </thead>
     <tbody>
       <tr *ngFor="let booking of allBookings">
-        <td>
-          <div>
+        <td class="col-room-guest">
+          <div class="room-number">
             <strong>{{ booking.roomNumber || 'N/A' }}</strong>
           </div>
-          <div style="color: #666; font-size: 12px;">
+          <div class="guest-name">
             {{ booking.userName || booking.guestInfo?.name || 'Khách đặt trước' }}
           </div>
+          <div class="mobile-dates">
+            <div class="mobile-date-item">
+              <span class="date-label">Đến:</span>
+              <span class="date-value">{{ formatDateTime(booking.checkInDate) }}</span>
+            </div>
+            <div class="mobile-date-item">
+              <span class="date-label">Đi:</span>
+              <span class="date-value">{{ formatDateTime(booking.checkOutDate) }}</span>
+            </div>
+          </div>
         </td>
-        <td>{{ formatDateTime(booking.checkInDate) }}</td>
-        <td>{{ formatDateTime(booking.checkOutDate) }}</td>
-        <td>
+        <td class="col-checkin hide-on-mobile">{{ formatDateTime(booking.checkInDate) }}</td>
+        <td class="col-checkout hide-on-mobile">{{ formatDateTime(booking.checkOutDate) }}</td>
+        <td class="col-status">
           <nz-tag [nzColor]="booking.status === 'checked_in' ? 'blue' : booking.status === 'booked' ? 'green' : booking.status === 'cancelled' ? 'red' : 'default'">
             {{ booking.status === 'checked_in' ? 'Đã nhận phòng' : booking.status === 'booked' ? 'Đã đặt' : booking.status === 'cancelled' ? 'Đã hủy' : 'Đặt trước' }}
           </nz-tag>
         </td>
-        <td>
-          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <td class="col-actions">
+          <div class="action-buttons">
             <!-- Nút Nhận phòng - hiển thị cho booking có thể check-in -->
             <button 
               nz-button 
@@ -85,7 +96,8 @@
               *ngIf="booking.roomId && booking.status !== 'cancelled' && booking.status !== 'checked_in'"
               [nzLoading]="isCheckingIn"
               [disabled]="isLoading"
-              title="Nhận phòng cho khách đặt trước">
+              title="Nhận phòng cho khách đặt trước"
+              class="action-btn">
               Nhận phòng
             </button>
             <!-- Nút Hủy - hiển thị cho booking chưa bị hủy và chưa check-in -->
@@ -97,18 +109,19 @@
               (click)="cancelBooking(booking)" 
               *ngIf="booking.status !== 'cancelled' && booking.status !== 'checked_in' && booking.roomId"
               [nzLoading]="isLoading"
-              [disabled]="isCheckingIn">
+              [disabled]="isCheckingIn"
+              class="action-btn">
               Hủy
             </button>
             <!-- Trạng thái đã hủy -->
-            <span *ngIf="booking.status === 'cancelled'" style="color: #999; font-size: 12px;">Đã hủy</span>
+            <span *ngIf="booking.status === 'cancelled'" class="status-text cancelled">Đã hủy</span>
             <!-- Trạng thái đã nhận phòng -->
-            <span *ngIf="booking.status === 'checked_in'" style="color: #52c41a; font-size: 12px;">Đã nhận phòng</span>
+            <span *ngIf="booking.status === 'checked_in'" class="status-text checked-in">Đã nhận phòng</span>
           </div>
         </td>
       </tr>
       <tr *ngIf="allBookings.length === 0 && !isLoading">
-        <td colspan="5" style="text-align: center; padding: 40px;">
+        <td colspan="5" class="empty-state">
           <nz-empty [nzNotFoundContent]="'Chưa có đặt phòng nào'" [nzNotFoundImage]="'simple'"></nz-empty>
         </td>
       </tr>

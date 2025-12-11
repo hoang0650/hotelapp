@@ -58,7 +58,8 @@ export class PricingManagementComponent implements OnInit {
     { value: 'calendar', label: 'Lịch' },
     { value: 'email_admin', label: 'Quản lý email' },
     { value: 'qr_payment', label: 'Thanh toán QR' },
-    { value: 'visa_payment', label: 'Thanh toán Visa' }
+    { value: 'visa_payment', label: 'Thanh toán Visa' },
+    { value: 'electric_management', label: 'Quản lý điện' }
   ];
   packageForm!: FormGroup;
 

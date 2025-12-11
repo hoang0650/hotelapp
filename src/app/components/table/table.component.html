@@ -7,8 +7,8 @@
     </ng-template>
     <div *ngIf="switchValue">
       <form nz-form [formGroup]="settingForm" nzLayout="vertical">
-        <div nz-row [nzGutter]="24">
-          <div nz-col [nzSpan]="12">
+        <div nz-row [nzGutter]="[16, 16]">
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <div *ngFor="let switch of listOfSwitch">
               <nz-form-item>
                 <nz-form-control>
@@ -17,7 +17,7 @@
               </nz-form-item>
             </div>
           </div>
-          <div nz-col [nzSpan]="12">
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <div *ngFor="let radio of listOfRadio">
               <nz-form-item>
                 <nz-form-label>{{ radio.name }}</nz-form-label>
@@ -39,24 +39,25 @@
 
 <div class="control-bar nz-card">
   <div class="left-controls">
-    <button nz-button nzType="default" (click)="switchValue = !switchValue" nz-tooltip nzTooltipTitle="Cài đặt hiển thị" aria-label="Cài đặt hiển thị">
+    <button nz-button nzType="default" (click)="switchValue = !switchValue" nz-tooltip nzTooltipTitle="Cài đặt hiển thị" aria-label="Cài đặt hiển thị" class="btn-icon-only">
       <i nz-icon nzType="setting"></i>
+      <span class="btn-text">Cài đặt</span>
     </button>
-    <button nz-button [nzLoading]="exported" nzType="primary" (click)="exportToExcel()" nz-tooltip nzTooltipTitle="Xuất Excel" aria-label="Xuất Excel">
+    <button nz-button [nzLoading]="exported" nzType="primary" (click)="exportToExcel()" nz-tooltip nzTooltipTitle="Xuất Excel" aria-label="Xuất Excel" class="btn-icon-only">
       <i nz-icon nzType="file-excel"></i>
-      <span>Xuất Excel</span>
+      <span class="btn-text">Xuất Excel</span>
     </button>
-    <button nz-button nzType="default" nzDanger (click)="openManagerHandoverModal()" nz-tooltip nzTooltipTitle="Giao tiền quản lý" aria-label="Giao tiền quản lý">
+    <button nz-button nzType="default" nzDanger (click)="openManagerHandoverModal()" nz-tooltip nzTooltipTitle="Giao tiền quản lý" aria-label="Giao tiền quản lý" class="btn-icon-only">
       <i nz-icon nzType="dollar"></i>
-      <span>Giao tiền QL</span>
+      <span class="btn-text">Giao tiền QL</span>
     </button>
-    <button nz-button nzType="primary" nzDanger (click)="openShiftHandoverModal()" nz-tooltip nzTooltipTitle="Giao ca" aria-label="Giao ca">
+    <button nz-button nzType="primary" nzDanger (click)="openShiftHandoverModal()" nz-tooltip nzTooltipTitle="Giao ca" aria-label="Giao ca" class="btn-icon-only">
       <i nz-icon nzType="sync"></i>
-      <span>Giao ca</span>
+      <span class="btn-text">Giao ca</span>
     </button>
-    <button nz-button nzType="default" (click)="openShiftHandoverHistory()" nz-tooltip nzTooltipTitle="Lịch sử giao ca" aria-label="Lịch sử giao ca">
+    <button nz-button nzType="default" (click)="openShiftHandoverHistory()" nz-tooltip nzTooltipTitle="Lịch sử giao ca" aria-label="Lịch sử giao ca" class="btn-icon-only">
       <i nz-icon nzType="history"></i>
-      <span>Lịch sử giao ca</span>
+      <span class="btn-text">Lịch sử</span>
     </button>
     
     <!-- Nút lọc dữ liệu -->
@@ -64,7 +65,7 @@
       [ngModel]="currentFilterType" 
       (ngModelChange)="onFilterChange($event)" 
       nzPlaceHolder="Lọc lịch sử"
-      style="min-width: 150px; margin-left: 8px"
+      class="filter-select"
     >
       <nz-option nzValue="all" nzLabel="Tất cả lịch sử"></nz-option>
       <nz-option nzValue="checkout" nzLabel="Checkout mới nhất"></nz-option>
@@ -73,7 +74,7 @@
     </nz-select>
     
     <!-- Nút tải lại dữ liệu -->
-    <button nz-button nzType="default" (click)="loadHistory(currentFilterType)" [nzLoading]="settingValue.loading" nz-tooltip nzTooltipTitle="Tải lại dữ liệu" aria-label="Tải lại dữ liệu">
+    <button nz-button nzType="default" (click)="loadHistory(currentFilterType)" [nzLoading]="settingValue.loading" nz-tooltip nzTooltipTitle="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" class="btn-icon-only">
       <i nz-icon nzType="reload"></i>
     </button>
   </div>
@@ -823,15 +824,30 @@
     padding: 12px 16px;
     border-radius: 4px;
     background-color: #ffffff;
+    flex-wrap: wrap;
+    gap: 12px;
   }
 
   .left-controls {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
   }
 
   .right-controls {
     min-width: 250px;
+    flex-shrink: 0;
+  }
+
+  .btn-icon-only .btn-text {
+    margin-left: 4px;
+  }
+
+  .filter-select {
+    min-width: 150px;
+    margin-left: 8px;
   }
 
   .status-summary {
@@ -849,6 +865,7 @@
     display: flex;
     justify-content: center;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .expanded-row {
@@ -884,18 +901,89 @@
     margin-bottom: 16px;
   }
 
+  /* Tablet và nhỏ hơn */
+  @media (max-width: 992px) {
+    .left-controls {
+      gap: 6px;
+    }
+
+    .btn-icon-only .btn-text {
+      display: none;
+    }
+
+    .filter-select {
+      margin-left: 4px;
+      min-width: 120px;
+    }
+  }
+
+  /* Mobile */
   @media (max-width: 768px) {
     .status-summary {
-       justify-content: flex-start;
+      justify-content: flex-start;
+      padding: 12px;
+    }
+
+    .status-summary nz-statistic {
+      flex: 1;
+      min-width: 120px;
     }
 
     .control-bar {
       flex-direction: column;
-      align-items: flex-start;
-      gap: 16px;
+      align-items: stretch;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .left-controls {
+      width: 100%;
+      justify-content: flex-start;
+      gap: 6px;
     }
 
     .right-controls {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .btn-icon-only {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .filter-select {
+      flex: 1;
+      min-width: 0;
+      margin-left: 0;
+    }
+
+    .action-buttons {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .action-buttons button {
+      width: 100%;
+    }
+  }
+
+  /* Mobile nhỏ */
+  @media (max-width: 480px) {
+    .control-bar {
+      padding: 8px;
+    }
+
+    .left-controls {
+      gap: 4px;
+    }
+
+    .status-summary {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .status-summary nz-statistic {
       width: 100%;
     }
   }

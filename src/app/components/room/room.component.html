@@ -61,77 +61,60 @@
       </div>
     </div>
     
-    <!-- Legend -->
-    <div nz-row>
-      <div nz-col [nzSpan]="24">
-        <div class="legend mt-2">
-          <span class="legend-item">
-            <span class="status-dot event-checkin"></span>
-            <span>Check-in</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot event-checkout"></span>
-            <span>Check-out</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot event-notpay"></span>
-            <span>Chưa thanh toán</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot event-maintenance"></span>
-            <span>Bảo trì</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot event-service-order"></span>
-            <span>Đặt dịch vụ</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot event-transfer"></span>
-            <span>Chuyển phòng</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot event-booking"></span>
-            <span>Đặt trước</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot event-cancel-booking"></span>
-            <span>Hủy đặt</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot event-guest-out"></span>
-            <span>Khách ra ngoài</span>
-          </span>
-          <span class="legend-item">
-            <span class="status-dot event-guest-return"></span>
-            <span>Khách về</span>
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Banner Thống kê phòng -->
   <div class="room-stats-banner" *ngIf="selectedHotelId && rooms.length > 0">
+    <div class="banner-header">
+      <h3 class="banner-title">
+        <i nz-icon nzType="dashboard" nzTheme="outline"></i>
+        Thống kê phòng
+      </h3>
+      <div class="banner-total">
+        <span class="total-label">Tổng:</span>
+        <span class="total-value">{{ rooms.length }}</span>
+      </div>
+    </div>
     <div class="banner-content">
       <div class="stat-item">
-        <span class="stat-label">Trống:</span>
+        <!--<div class="stat-icon vacant">
+          <i nz-icon nzType="home" nzTheme="outline"></i>
+        </div>-->
+        <span class="stat-label">Trống</span>
         <span class="stat-value vacant">{{ getVacantRoomCount() }}</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">Đang ở:</span>
+        <!--<div class="stat-icon occupied">
+          <i nz-icon nzType="user" nzTheme="outline"></i>
+        </div>-->
+        <span class="stat-label">Đang ở</span>
         <span class="stat-value occupied">{{ getOccupiedRoomCount() }}</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">Đang bẩn:</span>
+        <!--<div class="stat-icon dirty">
+          <i nz-icon nzType="clear" nzTheme="outline"></i>
+        </div>-->
+        <span class="stat-label">Đang bẩn</span>
         <span class="stat-value dirty">{{ getDirtyRoomCount() }}</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">Sửa chữa:</span>
+        <!--<div class="stat-icon maintenance">
+          <i nz-icon nzType="setting" nzTheme="outline"></i>
+        </div>-->
+        <span class="stat-label">Sửa chữa</span>
         <span class="stat-value maintenance">{{ getMaintenanceRoomCount() }}</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">Đã đặt:</span>
+        <!--<div class="stat-icon booked">
+          <i nz-icon nzType="calendar" nzTheme="outline"></i>
+        </div>-->
+        <span class="stat-label">Đã đặt</span>
         <span class="stat-value booked">{{ getBookedRoomCount() }}</span>
+      </div>
+      <div class="stat-item">
+        <!--<div class="stat-icon guest-out">
+          <i nz-icon nzType="logout" nzTheme="outline"></i>
+        </div>-->
+        <span class="stat-label">Khách ra ngoài</span>
+        <span class="stat-value guest-out">{{ getGuestOutRoomCount() }}</span>
       </div>
     </div>
   </div>
@@ -160,7 +143,7 @@
                 
                 <!-- Icon phòng -->
                 <div class="room-icon">
-                  <i nz-icon nzType="home" nzTheme="outline"></i>
+                  <i nz-icon [nzType]="getRoomIcon(room)" nzTheme="outline"></i>
                 </div>
                 
                 <!-- Số phòng -->
@@ -194,7 +177,7 @@
                   </div>
                   <!-- Trạng thái khách (ra ngoài/quay lại) -->
                   <div class="room-guest-status-label" *ngIf="room.guestStatus === 'out'" 
-                       style="background-color: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-top: 4px; text-align: center; cursor: pointer;">
+                       style="background-color: #e6fffb; color: #13c2c2; border: 1px solid #87e8de; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-top: 4px; text-align: center; cursor: pointer;">
                     Khách quay lại
                   </div>
                 </ng-container>
@@ -734,6 +717,84 @@
   .collapse-content {
     padding: 0;
   }
+
+  /* Responsive cho Collapse Sections */
+  @media (max-width: 992px) {
+    .collapse-container {
+      padding: 12px;
+    }
+
+    .collapse-actions {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .collapse-container ::ng-deep .ant-collapse-header {
+      padding: 12px 16px;
+      font-size: 15px;
+    }
+
+    .collapse-container ::ng-deep .ant-collapse-content-box {
+      padding: 16px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .collapse-container {
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .collapse-actions {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .collapse-actions button {
+      width: 100%;
+      text-align: left;
+    }
+
+    .collapse-container ::ng-deep .ant-collapse-header {
+      padding: 10px 12px;
+      font-size: 14px;
+      flex-wrap: wrap;
+    }
+
+    .collapse-container ::ng-deep .ant-collapse-extra {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .collapse-container ::ng-deep .ant-collapse-extra button {
+      width: 100%;
+    }
+
+    .collapse-container ::ng-deep .ant-collapse-content-box {
+      padding: 12px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .collapse-container {
+      padding: 8px;
+    }
+
+    .collapse-container ::ng-deep .ant-collapse-header {
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    .collapse-container ::ng-deep .ant-collapse-content-box {
+      padding: 10px;
+    }
+
+    .collapse-actions button {
+      font-size: 12px;
+      padding: 4px 8px;
+    }
+  }
   
   /* Banner Đặt trước */
   .advance-payment-banner {
@@ -932,9 +993,9 @@
     color: white;
   }
   
-  /* Phòng occupied nhưng khách ra ngoài - màu cam/warning */
+  /* Phòng occupied nhưng khách ra ngoài - màu cyan */
   .occupied-guest-out-room {
-    background: linear-gradient(135deg, #fa8c16 0%, #ffa940 100%);
+    background: linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%);
     color: white;
   }
   

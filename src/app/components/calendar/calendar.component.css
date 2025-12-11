@@ -19,6 +19,102 @@
   margin-top: 2px;
 }
 
+/* Booking History Section Styles */
+.booking-history-section {
+  margin-top: 24px;
+}
+
+.booking-history-title {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.booking-table {
+  width: 100%;
+}
+
+.col-room-guest {
+  min-width: 120px;
+}
+
+.col-checkin,
+.col-checkout {
+  min-width: 150px;
+}
+
+.col-status {
+  min-width: 100px;
+}
+
+.col-actions {
+  min-width: 120px;
+}
+
+.room-number {
+  margin-bottom: 4px;
+}
+
+.guest-name {
+  color: #666;
+  font-size: 12px;
+}
+
+.mobile-dates {
+  display: none;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.mobile-date-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.date-label {
+  color: #8c8c8c;
+  font-weight: 500;
+}
+
+.date-value {
+  color: #262626;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  white-space: nowrap;
+}
+
+.status-text {
+  font-size: 12px;
+}
+
+.status-text.cancelled {
+  color: #999;
+}
+
+.status-text.checked-in {
+  color: #52c41a;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+}
+
+.hide-on-mobile {
+  display: table-cell;
+}
+
 .calendar-container {
   max-width: 100%;
   margin: 0 auto;
@@ -101,62 +197,399 @@
   color: red;
 }
 
+@media (max-width: 992px) {
+  .calendar-container {
+    padding: 8px;
+  }
+
+  .calendar-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .calendar-header > div:first-child {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .calendar-header button {
+    font-size: 14px;
+    padding: 4px 8px;
+  }
+
+  .calendar-grid {
+    gap: 4px;
+  }
+
+  .calendar-day {
+    min-height: 90px;
+    padding: 8px;
+  }
+
+  .date {
+    font-size: 1.1em;
+  }
+
+  .booking-info {
+    font-size: 0.75em;
+  }
+
+  .booking-history-section {
+    margin-top: 20px;
+  }
+
+  .booking-history-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .booking-table ::ng-deep .ant-table {
+    font-size: 13px;
+  }
+
+  .booking-table ::ng-deep .ant-table-thead > tr > th {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .booking-table ::ng-deep .ant-table-tbody > tr > td {
+    padding: 8px;
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 768px) {
+  .calendar-container {
+    padding: 6px;
+  }
+
   .calendar-header {
     flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 0 5px;
+  }
+
+  .calendar-header > div:first-child {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .calendar-header button {
+    font-size: 16px;
+    padding: 6px 10px;
+    min-width: 40px;
+  }
+
+  .calendar-header button[nz-button] {
+    width: 100%;
+    margin-top: 8px;
   }
 
   .month-year {
-    margin: 10px 0;
+    margin: 0;
+    font-size: 1.3em;
   }
 
   .calendar-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+
+  .day-header {
+    padding: 6px 4px;
+    font-size: 11px;
+    font-weight: 600;
   }
 
   .calendar-day {
-    min-height: 100px;
+    min-height: 80px;
+    padding: 6px 4px;
+  }
+
+  .date {
+    font-size: 1em;
+    margin-bottom: 4px;
   }
 
   .booking-info {
     font-size: 0.7em;
+    margin-top: 4px;
+  }
+
+  .booking-timeline {
+    font-size: 9px;
+  }
+
+  .booking-user {
+    font-size: 9px;
+  }
+
+  .booking-room {
+    font-size: 8px;
+  }
+
+  .add-booking-btn {
+    padding: 3px;
+    font-size: 10px;
+  }
+
+  .booking-history-section {
+    margin-top: 16px;
+  }
+
+  .booking-history-title {
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .mobile-dates {
+    display: block;
+  }
+
+  .booking-table ::ng-deep .ant-table {
+    font-size: 12px;
+  }
+
+  .booking-table ::ng-deep .ant-table-thead > tr > th {
+    padding: 6px 4px;
+    font-size: 11px;
+  }
+
+  .booking-table ::ng-deep .ant-table-tbody > tr > td {
+    padding: 6px 4px;
+    font-size: 11px;
+  }
+
+  .col-room-guest {
+    min-width: 140px;
+  }
+
+  .col-status {
+    min-width: 90px;
+  }
+
+  .col-actions {
+    min-width: 100px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .action-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .booking-table ::ng-deep .ant-pagination {
+    margin: 12px 0;
+    font-size: 12px;
+  }
+
+  .booking-table ::ng-deep .ant-pagination-item,
+  .booking-table ::ng-deep .ant-pagination-prev,
+  .booking-table ::ng-deep .ant-pagination-next {
+    min-width: 28px;
+    height: 28px;
+    line-height: 26px;
+  }
+}
+
+@media (max-width: 576px) {
+  .calendar-container {
+    padding: 4px;
+  }
+
+  .calendar-header {
+    padding: 0 4px;
+    margin-bottom: 8px;
+  }
+
+  .calendar-header button {
+    font-size: 14px;
+    padding: 4px 8px;
+    min-width: 36px;
+  }
+
+  .month-year {
+    font-size: 1.1em;
+  }
+
+  .calendar-grid {
+    gap: 2px;
+  }
+
+  .day-header {
+    padding: 4px 2px;
+    font-size: 10px;
+  }
+
+  .calendar-day {
+    min-height: 70px;
+    padding: 4px 2px;
+  }
+
+  .date {
+    font-size: 0.9em;
+    margin-bottom: 3px;
+  }
+
+  .booking-info {
+    font-size: 0.65em;
+    margin-top: 3px;
+  }
+
+  .booking-timeline {
+    font-size: 8px;
+  }
+
+  .booking-user {
+    font-size: 8px;
+  }
+
+  .booking-room {
+    font-size: 7px;
+  }
+
+  .add-booking-btn {
+    padding: 2px;
+    font-size: 9px;
+  }
+
+  .booking-history-section {
+    margin-top: 12px;
+  }
+
+  .booking-history-title {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .booking-table ::ng-deep .ant-table {
+    font-size: 11px;
+  }
+
+  .booking-table ::ng-deep .ant-table-thead > tr > th {
+    padding: 4px 2px;
+    font-size: 10px;
+  }
+
+  .booking-table ::ng-deep .ant-table-tbody > tr > td {
+    padding: 4px 2px;
+    font-size: 10px;
+  }
+
+  .room-number strong {
+    font-size: 11px;
+  }
+
+  .guest-name {
+    font-size: 10px;
+  }
+
+  .mobile-date-item {
+    font-size: 10px;
+  }
+
+  .booking-table ::ng-deep .ant-btn-sm {
+    height: 24px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .booking-table ::ng-deep .ant-tag {
+    font-size: 10px;
+    padding: 0 6px;
+    line-height: 20px;
+  }
+
+  .status-text {
+    font-size: 10px;
+  }
+
+  .booking-table ::ng-deep .ant-pagination {
+    margin: 10px 0;
+    font-size: 11px;
+  }
+
+  .booking-table ::ng-deep .ant-pagination-item,
+  .booking-table ::ng-deep .ant-pagination-prev,
+  .booking-table ::ng-deep .ant-pagination-next {
+    min-width: 24px;
+    height: 24px;
+    line-height: 22px;
+    font-size: 11px;
   }
 }
 
 @media (max-width: 480px) {
   .calendar-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .calendar-day {
-    min-height: 120px;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
   }
 
   .day-header {
-    display: none; /* Ẩn tiêu đề ngày khi ở chế độ cột */
-  }
-
-  .booking-info {
-    font-size: 0.7em;
-  }
-
-  .calendar-header {
-    padding: 0 5px;
+    padding: 3px 1px;
+    font-size: 9px;
   }
 
   .calendar-day {
-    padding: 8px;
-  }
-
-  .month-year {
-    font-size: 1.2em;
+    min-height: 60px;
+    padding: 3px 1px;
   }
 
   .date {
-    font-size: 1em;
+    font-size: 0.85em;
+  }
+
+  .booking-info {
+    font-size: 0.6em;
+  }
+
+  .booking-timeline {
+    font-size: 7px;
+  }
+
+  .booking-user {
+    font-size: 7px;
+  }
+
+  .booking-room {
+    font-size: 6px;
+  }
+
+  .add-booking-btn {
+    padding: 1px;
+    font-size: 8px;
+  }
+
+  .booking-table ::ng-deep .ant-table-scroll {
+    overflow-x: auto;
+  }
+
+  .booking-table ::ng-deep .ant-table-thead > tr > th,
+  .booking-table ::ng-deep .ant-table-tbody > tr > td {
+    white-space: nowrap;
+    min-width: 80px;
+  }
+
+  .col-room-guest {
+    min-width: 120px;
+  }
+
+  .col-status {
+    min-width: 80px;
+  }
+
+  .col-actions {
+    min-width: 90px;
   }
 }

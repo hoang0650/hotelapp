@@ -20,7 +20,8 @@ export type PermissionFeature =
   | 'calendar'             // Lịch
   | 'email_admin'          // Quản lý email
   | 'qr_payment'          // Thanh toán QR
-  | 'visa_payment';        // Thanh toán Visa
+  | 'visa_payment'        // Thanh toán Visa
+  | 'electric_management'; // Quản lý điện
 
 // Map routes với permissions
 export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
@@ -39,7 +40,8 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/calendar': ['calendar'],
   '/admin/email-admin': ['email_admin'],
   '/admin/qr-payment': ['qr_payment'],
-  '/admin/visa-payment': ['visa_payment']
+  '/admin/visa-payment': ['visa_payment'],
+  '/admin/electric-setting': ['electric_management']
 };
 
 @Injectable({
@@ -181,7 +183,8 @@ export class PermissionService {
       'calendar': ['view', 'edit', 'manage'],
       'email_admin': ['view', 'edit', 'manage'],
       'qr_payment': ['view', 'edit', 'manage'],
-      'visa_payment': ['view', 'edit', 'manage']
+      'visa_payment': ['view', 'edit', 'manage'],
+      'electric_management': ['view', 'edit', 'manage']
     };
 
     const requiredPermissions = featurePermissionMap[feature] || ['view'];
@@ -223,7 +226,8 @@ export class PermissionService {
       'calendar',
       'email_admin',
       'qr_payment',
-      'visa_payment'
+      'visa_payment',
+      'electric_management'
     ];
 
     return allFeatures.filter(feature => this.hasFeatureAccess(feature));

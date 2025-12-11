@@ -281,13 +281,50 @@ export class PricingComponent implements OnInit {
     return '';
   }
 
+  // Map các feature values với labels
+  private availableFeatures: { value: string; label: string }[] = [
+    { value: 'room_management', label: 'Quản lý phòng' },
+    { value: 'hotel_management', label: 'Quản lý khách sạn' },
+    { value: 'company_management', label: 'Quản lý doanh nghiệp' },
+    { value: 'staff_management', label: 'Quản lý nhân viên' },
+    { value: 'service_management', label: 'Quản lý dịch vụ' },
+    { value: 'user_management', label: 'Quản lý người dùng' },
+    { value: 'pricing_management', label: 'Quản lý gói giá' },
+    { value: 'ota_management', label: 'Quản lý OTA' },
+    { value: 'revenue_chart', label: 'Biểu đồ doanh thu' },
+    { value: 'shift_handover', label: 'Giao ca' },
+    { value: 'bank_transfer_history', label: 'Lịch sử chuyển khoản' },
+    { value: 'calendar', label: 'Lịch' },
+    { value: 'email_admin', label: 'Quản lý email' },
+    { value: 'qr_payment', label: 'Thanh toán QR' },
+    { value: 'visa_payment', label: 'Thanh toán Visa' },
+    { value: 'electric_management', label: 'Quản lý điện' }
+  ];
+
   getFeatureText(feature: any): string {
+    // Nếu là string (value), tìm label tương ứng
     if (typeof feature === 'string') {
+      const featureMap = this.availableFeatures.find(f => f.value === feature);
+      if (featureMap) {
+        return featureMap.label;
+      }
+      // Nếu không tìm thấy trong map, trả về string gốc
       return feature;
     }
+    
+    // Nếu là object, ưu tiên lấy label
     if (feature && typeof feature === 'object') {
-      return feature.text || feature.name || String(feature);
+      // Nếu có value, map với availableFeatures để lấy label
+      if (feature.value) {
+        const featureMap = this.availableFeatures.find(f => f.value === feature.value);
+        if (featureMap) {
+          return featureMap.label;
+        }
+      }
+      // Fallback: lấy label, text, hoặc name
+      return feature.label || feature.text || feature.name || String(feature);
     }
+    
     return String(feature || '');
   }
 

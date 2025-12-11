@@ -880,6 +880,37 @@ export class RoomComponent implements OnInit, OnDestroy {
     return this.rooms.filter(room => room.status === 'booked').length;
   }
 
+  // Đếm số lượng phòng có khách ra ngoài
+  getGuestOutRoomCount(): number {
+    return this.rooms.filter(room => room.status === 'occupied' && room.guestStatus === 'out').length;
+  }
+
+  // Lấy icon phòng theo trạng thái
+  getRoomIcon(room: Room): string {
+    // Nếu phòng đang occupied và khách ra ngoài
+    if (room.status === 'occupied' && room.guestStatus === 'out') {
+      return 'logout';
+    }
+    
+    // Icon theo trạng thái phòng
+    switch (room.status) {
+      case 'vacant':
+        return 'home';
+      case 'occupied':
+        return 'user';
+      case 'dirty':
+        return 'clear';
+      case 'maintenance':
+        return 'setting';
+      case 'booked':
+        return 'calendar';
+      case 'cleaning':
+        return 'clear';
+      default:
+        return 'home';
+    }
+  }
+
   // Nhóm phòng theo tầng (có filter theo selectedFloor nếu có)
   getRoomsByFloor(): { [floor: string]: Room[] } {
     const grouped: { [floor: string]: Room[] } = {};

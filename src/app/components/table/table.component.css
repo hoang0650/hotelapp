@@ -8,6 +8,133 @@ form nz-form-item {
     display: block;
 }
 
+/* Responsive table wrapper */
+::ng-deep .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Responsive table */
+@media (max-width: 992px) {
+    ::ng-deep .ant-table {
+        font-size: 13px;
+    }
+
+    ::ng-deep .ant-table-thead > tr > th {
+        padding: 10px 6px;
+    }
+
+    ::ng-deep .ant-table-tbody > tr > td {
+        padding: 10px 6px;
+    }
+}
+
+@media (max-width: 768px) {
+    ::ng-deep .ant-table {
+        font-size: 12px;
+    }
+
+    ::ng-deep .ant-table-thead > tr > th {
+        padding: 8px 4px;
+        font-size: 11px;
+    }
+
+    ::ng-deep .ant-table-tbody > tr > td {
+        padding: 8px 4px;
+        font-size: 11px;
+    }
+
+    ::ng-deep .ant-table-pagination {
+        margin: 12px 0;
+    }
+
+    ::ng-deep .ant-pagination {
+        font-size: 12px;
+    }
+
+    /* Ẩn một số cột trên mobile */
+    ::ng-deep .ant-table-thead > tr > th:nth-child(4),
+    ::ng-deep .ant-table-tbody > tr > td:nth-child(4) {
+        display: none; /* Ẩn cột Nguồn */
+    }
+
+    ::ng-deep .ant-table-thead > tr > th:nth-child(9),
+    ::ng-deep .ant-table-tbody > tr > td:nth-child(9) {
+        display: none; /* Ẩn cột Ghi chú */
+    }
+
+    /* Cải thiện hiển thị customer info trên mobile */
+    .customer-info {
+        font-size: 11px;
+    }
+
+    .customer-name {
+        font-size: 12px;
+    }
+
+    .customer-phone, .customer-id {
+        font-size: 10px;
+    }
+
+    /* Cải thiện hiển thị time info */
+    .time-info {
+        font-size: 11px;
+    }
+
+    .time-label {
+        font-size: 10px;
+    }
+
+    .checkin-time, .checkout-time {
+        font-size: 11px;
+    }
+
+    /* Cải thiện detail info */
+    .detail-info {
+        font-size: 10px;
+    }
+
+    /* Cải thiện action buttons */
+    .action-buttons button {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    ::ng-deep .ant-table {
+        font-size: 11px;
+    }
+
+    ::ng-deep .ant-table-thead > tr > th {
+        padding: 6px 2px;
+        font-size: 10px;
+    }
+
+    ::ng-deep .ant-table-tbody > tr > td {
+        padding: 6px 2px;
+        font-size: 10px;
+    }
+
+    /* Ẩn thêm cột trên mobile nhỏ */
+    ::ng-deep .ant-table-thead > tr > th:nth-child(6),
+    ::ng-deep .ant-table-tbody > tr > td:nth-child(6) {
+        display: none; /* Ẩn cột Chi tiết */
+    }
+
+    .customer-info {
+        font-size: 10px;
+    }
+
+    .time-info {
+        font-size: 10px;
+    }
+
+    .detail-info {
+        font-size: 9px;
+    }
+}
+
 /* Customer info styles */
 .customer-info {
     display: flex;
@@ -78,11 +205,24 @@ form nz-form-item {
     cursor: pointer;
 }
 
+@media (max-width: 768px) {
+    .notes-cell {
+        max-width: 80px;
+        font-size: 10px;
+    }
+}
+
 /* Services list in expanded row */
 .services-list {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .services-list {
+        gap: 4px;
+    }
 }
 
 /* Expanded row styles */
@@ -93,6 +233,26 @@ form nz-form-item {
 
 .expanded-row nz-card {
     background: white;
+}
+
+@media (max-width: 768px) {
+    .expanded-row {
+        padding: 12px;
+    }
+
+    ::ng-deep .expanded-row .ant-descriptions {
+        font-size: 12px;
+    }
+
+    ::ng-deep .expanded-row .ant-descriptions-item-label {
+        font-size: 11px;
+        padding: 8px;
+    }
+
+    ::ng-deep .expanded-row .ant-descriptions-item-content {
+        font-size: 11px;
+        padding: 8px;
+    }
 }
 
 /* Action buttons */

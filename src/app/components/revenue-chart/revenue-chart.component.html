@@ -253,51 +253,269 @@
     color: #ff4d4f;
   }
   
-  @media (max-width: 992px) {
+  @media (max-width: 1200px) {
     .chart-header {
       flex-direction: column;
+      align-items: flex-start;
     }
     
     .chart-summary {
       width: 100%;
+      margin-top: 12px;
+    }
+  }
+  
+  @media (max-width: 992px) {
+    .chart-header {
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .chart-title {
+      width: 100%;
+    }
+    
+    .chart-controls {
+      width: 100%;
+    }
+    
+    .chart-controls ::ng-deep .ant-radio-group {
+      width: 100%;
+      display: flex;
+    }
+    
+    .chart-controls ::ng-deep .ant-radio-button-wrapper {
+      flex: 1;
+      text-align: center;
+    }
+    
+    .chart-summary {
+      width: 100%;
+      flex-direction: row;
     }
     
     .summary-card {
       flex: 1;
+      min-width: 0;
+    }
+    
+    .summary-value {
+      font-size: 18px;
     }
   }
   
   @media (max-width: 768px) {
+    nz-card {
+      margin: 0 -8px;
+    }
+    
+    nz-card ::ng-deep .ant-card-body {
+      padding: 16px !important;
+    }
+    
+    .chart-header {
+      margin-bottom: 16px;
+      gap: 10px;
+    }
+    
+    .main-title {
+      font-size: 16px;
+    }
+    
+    .chart-controls {
+      margin-bottom: 12px;
+    }
+    
+    .chart-controls ::ng-deep .ant-radio-button-wrapper {
+      font-size: 12px;
+      padding: 4px 8px;
+    }
+    
+    .chart-summary {
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .summary-card {
+      width: 100%;
+      padding: 12px;
+      min-width: 0;
+    }
+    
+    .summary-icon {
+      font-size: 20px;
+      padding: 6px;
+      margin-right: 12px;
+    }
+    
+    .summary-label {
+      font-size: 13px;
+    }
+    
+    .summary-value {
+      font-size: 16px;
+    }
+    
     .chart-container {
+      margin-bottom: 16px;
+    }
+    
+    .chart-container highcharts-chart {
       height: 350px !important;
+    }
+    
+    .chart-footer {
+      margin-top: 16px;
+    }
+    
+    .chart-info-card {
+      padding: 16px;
+    }
+    
+    .info-header {
+      margin-bottom: 10px;
+    }
+    
+    .info-header i {
+      font-size: 16px;
+    }
+    
+    .info-title {
+      font-size: 14px;
+    }
+    
+    .info-text {
+      font-size: 13px;
+      margin-bottom: 12px;
     }
     
     .info-stats {
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
     
     .info-stat-item {
       width: 100%;
       justify-content: space-between;
+      padding: 8px 12px;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+    }
+    
+    .stat-value {
+      font-size: 13px;
     }
   }
   
   @media (max-width: 576px) {
+    nz-card ::ng-deep .ant-card-body {
+      padding: 12px !important;
+    }
+    
+    .chart-header {
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+    
+    .main-title {
+      font-size: 15px;
+    }
+    
+    .chart-controls {
+      margin-bottom: 10px;
+    }
+    
+    .chart-controls ::ng-deep .ant-radio-button-wrapper {
+      font-size: 11px;
+      padding: 3px 6px;
+    }
+    
     .chart-summary {
-      flex-direction: column;
+      gap: 10px;
     }
     
     .summary-card {
-      width: 100%;
+      padding: 10px;
+    }
+    
+    .summary-icon {
+      font-size: 18px;
+      padding: 5px;
+      margin-right: 10px;
+    }
+    
+    .summary-label {
+      font-size: 12px;
+    }
+    
+    .summary-value {
+      font-size: 15px;
     }
     
     .chart-container {
-      height: 300px !important;
+      margin-bottom: 12px;
+    }
+    
+    .chart-container highcharts-chart {
+      height: 280px !important;
     }
     
     .chart-info-card {
-      padding: 16px;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    
+    .info-header {
+      margin-bottom: 8px;
+    }
+    
+    .info-header i {
+      font-size: 15px;
+    }
+    
+    .info-title {
+      font-size: 13px;
+    }
+    
+    .info-text {
+      font-size: 12px;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    
+    .info-stats {
+      gap: 8px;
+    }
+    
+    .info-stat-item {
+      padding: 6px 10px;
+    }
+    
+    .stat-label {
+      font-size: 11px;
+    }
+    
+    .stat-value {
+      font-size: 12px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .chart-container highcharts-chart {
+      height: 250px !important;
+    }
+    
+    .summary-card {
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+    }
+    
+    .summary-icon {
+      margin-right: 0;
+      margin-bottom: 8px;
     }
   }
 </style>
