@@ -17,9 +17,14 @@ export class BankTransferHistoryComponent implements OnInit {
   transactions: SepayTransaction[] = [];
   errorMessage: string | null = null;
 
-  // SePay API Token - nên lưu trong environment hoặc database
-  // TODO: Tạo UI để user nhập token hoặc lưu trong database
-  private sepayApiToken = 'OONBUVPK88JW02IH5EORYXY1JSMW5N6RL3WVNTCZRFUFBBAKHGQJVDI4LD4GUFZH';
+  // SePay OAuth2 Access Token
+  // TODO: Lưu token trong database hoặc localStorage, hoặc implement OAuth2 flow
+  // Token có thể được lấy từ:
+  // 1. OAuth2 flow (authorization code -> access token)
+  // 2. Database (lưu trong BankIntegration model)
+  // 3. Environment variables (cho development)
+  private sepayApiToken = localStorage.getItem('sepay_access_token') || 
+    'OONBUVPK88JW02IH5EORYXY1JSMW5N6RL3WVNTCZRFUFBBAKHGQJVDI4LD4GUFZH'; // Fallback cho development
 
   // Định dạng ngày tháng
   dateRange: Date[] = [];
@@ -142,8 +147,8 @@ export class BankTransferHistoryComponent implements OnInit {
   }
 
   fetchSepayTransactions(): void {
-    if (!this.sepayApiToken || !this.sepayApiToken.trim()) {
-      this.errorMessage = 'Vui lòng cấu hình SePay API Token.';
+      if (!this.sepayApiToken || !this.sepayApiToken.trim()) {
+      this.errorMessage = 'Vui lòng cấu hình SePay OAuth2 Access Token. Token có thể được lấy qua OAuth2 flow hoặc từ database.';
       this.isLoading = false;
       return;
     }
@@ -193,7 +198,7 @@ export class BankTransferHistoryComponent implements OnInit {
         if (error.status === 0) {
           this.errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và đảm bảo backend đang chạy.';
         } else if (error.status === 401 || error.status === 403) {
-          this.errorMessage = 'Xác thực thất bại. Vui lòng kiểm tra SePay API Token.';
+          this.errorMessage = 'Access Token không hợp lệ hoặc đã hết hạn. Vui lòng refresh token hoặc đăng nhập lại qua OAuth2.';
         } else if (error.error?.error) {
           this.errorMessage = error.error.error;
           if (error.error.detail) {
