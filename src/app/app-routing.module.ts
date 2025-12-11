@@ -32,6 +32,7 @@ import { PricingComponent } from './components/pricing/pricing.component';
 import { PricingManagementComponent } from './components/pricing-management/pricing-management.component';
 import { OtaManagementComponent } from './components/ota-management/ota-management.component';
 import { TuyaSwitchComponent } from './components/tuya-switch/tuya-switch.component';
+import { SepayOAuth2CallbackComponent } from './components/sepay-oauth2-callback/sepay-oauth2-callback.component';
 import { PermissionGuard } from './guards/permission.guard';
 
 const routes: Routes = [
@@ -80,7 +81,8 @@ const routes: Routes = [
   { path: 'about-us', component: AboutUsComponent },
   { path: 'chat', component: ChatComponent },
   { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
-  { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] }
+  { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
+  { path: 'sepay-oauth2-callback', component: SepayOAuth2CallbackComponent }
 ];
 
 @NgModule({

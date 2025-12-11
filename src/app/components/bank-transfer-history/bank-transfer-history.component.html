@@ -1,5 +1,44 @@
 <div class="bank-transfer-history-container">
-  <p>Lịch sử giao dịch SePay</p>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h2 style="margin: 0;">Lịch sử giao dịch SePay</h2>
+    <div style="display: flex; gap: 8px;">
+      <button 
+        nz-button 
+        nzType="default" 
+        nzSize="small"
+        (click)="fetchSepayTransactions()"
+        [nzLoading]="isLoading"
+        title="Làm mới dữ liệu"
+      >
+        <i nz-icon nzType="reload" nzTheme="outline"></i>
+        Làm mới
+      </button>
+      <button 
+        *ngIf="sepayRefreshToken"
+        nz-button 
+        nzType="default" 
+        nzSize="small"
+        (click)="manualRefreshToken()"
+        [nzLoading]="isLoading"
+        title="Làm mới Access Token"
+      >
+        <i nz-icon nzType="key" nzTheme="outline"></i>
+        Refresh Token
+      </button>
+      <button 
+        *ngIf="!sepayApiToken || !sepayApiToken.trim() || (!sepayRefreshToken && !sepayClientId)"
+        nz-button 
+        nzType="primary" 
+        nzSize="small"
+        (click)="startOAuth2Login()"
+        [nzLoading]="isLoading"
+        title="Đăng nhập SePay qua OAuth2"
+      >
+        <i nz-icon nzType="login" nzTheme="outline"></i>
+        Đăng nhập SePay
+      </button>
+    </div>
+  </div>
 
   <nz-alert 
     *ngIf="errorMessage" 
@@ -8,11 +47,36 @@
     nzShowIcon 
     class="error-alert"
     [nzDescription]="'Tài liệu tham khảo: https://docs.sepay.vn/'"
+    [nzCloseable]="true"
+    (nzOnClose)="errorMessage = null"
   >
     <ng-container *nzAlertContent>
       <div>
         <p>{{ errorMessage }}</p>
-        <p style="margin-top: 8px; font-size: 12px; color: #666;">
+        <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button 
+            *ngIf="errorMessage.includes('hết hạn') || errorMessage.includes('không hợp lệ')"
+            nz-button 
+            nzType="primary" 
+            nzSize="small"
+            (click)="manualRefreshToken()"
+            [nzLoading]="isLoading"
+          >
+            <i nz-icon nzType="reload" nzTheme="outline"></i>
+            Làm mới Token
+          </button>
+          <button 
+            nz-button 
+            nzType="default" 
+            nzSize="small"
+            (click)="fetchSepayTransactions()"
+            [nzLoading]="isLoading"
+          >
+            <i nz-icon nzType="reload" nzTheme="outline"></i>
+            Thử lại
+          </button>
+        </div>
+        <p style="margin-top: 12px; font-size: 12px; color: #666;">
           Tài liệu tham khảo: 
           <a href="https://docs.sepay.vn/" target="_blank" rel="noopener noreferrer">https://docs.sepay.vn/</a>
         </p>

@@ -1,0 +1,28 @@
+<div class="sepay-oauth2-callback-container">
+  <div class="callback-content">
+    <div *ngIf="status === 'processing'" class="processing">
+      <nz-spin [nzSize]="'large'"></nz-spin>
+      <h3>{{ message }}</h3>
+      <p>Vui lòng đợi trong giây lát...</p>
+    </div>
+
+    <div *ngIf="status === 'success'" class="success">
+      <i nz-icon nzType="check-circle" nzTheme="fill" style="font-size: 64px; color: #52c41a;"></i>
+      <h3>{{ message }}</h3>
+      <p>Bạn sẽ được chuyển hướng về trang lịch sử giao dịch...</p>
+    </div>
+
+    <div *ngIf="status === 'error'" class="error">
+      <i nz-icon nzType="close-circle" nzTheme="fill" style="font-size: 64px; color: #ff4d4f;"></i>
+      <h3>Đăng nhập thất bại</h3>
+      <p>{{ message }}</p>
+      <div style="margin-top: 24px;">
+        <button nz-button nzType="primary" (click)="router.navigate(['/admin/bank-transfer-history'])">
+          <i nz-icon nzType="arrow-left" nzTheme="outline"></i>
+          Quay lại trang lịch sử giao dịch
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

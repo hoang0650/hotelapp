@@ -116,6 +116,7 @@ import { PaypalPaymentComponent } from './components/paypal-payment/paypal-payme
 import { FooterComponent } from './components/footer/footer.component';
 import { TuyaSwitchComponent } from './components/tuya-switch/tuya-switch.component';
 import { TuyaSwitchCompactComponent } from './components/tuya-switch/tuya-switch-compact.component';
+import { SepayOAuth2CallbackComponent } from './components/sepay-oauth2-callback/sepay-oauth2-callback.component';
 
 registerLocaleData(vi);
 
@@ -180,6 +181,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         UserManagementComponent,
         UserFormModalComponent,
         BankTransferHistoryComponent,
+        SepayOAuth2CallbackComponent,
         NlToBrPipe,
         AiChatboxComponent,
         PricingComponent,
