@@ -114,18 +114,40 @@
               </p>
             </ng-container>
             <ng-template #subscribeButton>
-              <!-- Hiển thị nút thanh toán SePay nếu đã chọn gói này -->
+              <!-- Hiển thị nút thanh toán nếu đã chọn gói này -->
               <ng-container *ngIf="selectedPackage && (selectedPackage.packageId === (package._id || package.id)); else selectPackageButton">
                 <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button
+                      nz-button
+                      nzType="primary"
+                      [nzSize]="'large'"
+                      [disabled]="loading"
+                      (click)="payWithPayPal()"
+                      style="background: linear-gradient(135deg, #0070ba 0%, #003087 100%); border: none; font-weight: 600;">
+                      <i nz-icon nzType="pay-circle" nzTheme="fill" style="margin-right: 8px;"></i>
+                      PayPal
+                    </button>
+                    <button
+                      nz-button
+                      nzType="primary"
+                      [nzSize]="'large'"
+                      [disabled]="loading"
+                      (click)="payWithSePay()"
+                      style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: 600;">
+                      <i nz-icon nzType="credit-card" nzTheme="outline" style="margin-right: 8px;"></i>
+                      SePay
+                    </button>
+                  </div>
                   <button
                     nz-button
                     nzType="primary"
                     [nzSize]="'large'"
                     [disabled]="loading"
-                    (click)="payWithSePay()"
-                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: 600;">
-                    <i nz-icon nzType="credit-card" nzTheme="outline" style="margin-right: 8px;"></i>
-                    {{ loading ? 'Đang xử lý...' : 'Thanh toán qua SePay' }}
+                    (click)="payWithCrypto()"
+                    style="background: linear-gradient(135deg, #26a17b 0%, #1e7e56 100%); border: none; font-weight: 600;">
+                    <i nz-icon nzType="dollar-circle" nzTheme="fill" style="margin-right: 8px;"></i>
+                    Crypto USDT
                   </button>
                   <button
                     nz-button
@@ -161,6 +183,91 @@
         </div>
       </div>
     </div>
+
+    <!-- Lịch sử thanh toán -->
+    <div *ngIf="userId" class="payment-history-section" style="margin-top: 40px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="margin: 0;">Lịch sử thanh toán</h2>
+        <button 
+          nz-button 
+          nzType="default" 
+          nzSize="small"
+          (click)="togglePaymentHistory()"
+          [nzLoading]="paymentHistoryLoading">
+          <i nz-icon [nzType]="showPaymentHistory ? 'up' : 'down'" nzTheme="outline"></i>
+          {{ showPaymentHistory ? 'Ẩn' : 'Hiển thị' }} lịch sử
+        </button>
+      </div>
+
+      <nz-collapse *ngIf="showPaymentHistory" nzAccordion>
+        <nz-collapse-panel 
+          nzHeader="Lịch sử thanh toán của tôi" 
+          [nzActive]="true"
+          [nzDisabled]="false">
+          <nz-spin [nzSpinning]="paymentHistoryLoading">
+            <nz-empty 
+              *ngIf="!paymentHistoryLoading && paymentHistory.length === 0"
+              nzNotFoundContent="Chưa có lịch sử thanh toán">
+            </nz-empty>
+
+            <nz-list 
+              *ngIf="!paymentHistoryLoading && paymentHistory.length > 0"
+              [nzDataSource]="paymentHistory"
+              [nzRenderItem]="payment"
+              nzBordered>
+              <ng-template #payment let-item>
+                <nz-list-item>
+                  <nz-list-item-meta>
+                    <nz-list-item-meta-title>
+                      <div style="display: flex; align-items: center; gap: 12px;">
+                        <i 
+                          nz-icon 
+                          [nzType]="item.paymentMethodIcon || 'credit-card'" 
+                          [nzTheme]="item.paymentMethod === 'crypto_usdt' ? 'fill' : 'outline'"
+                          [style.color]="getPaymentMethodColor(item.paymentMethod)">
+                        </i>
+                        <span style="font-weight: 600;">{{ item.paymentMethodLabel || item.paymentMethod }}</span>
+                        <nz-tag [nzColor]="getPaymentStatusColor(item.status)">
+                          {{ getPaymentStatusText(item.status) }}
+                        </nz-tag>
+                      </div>
+                    </nz-list-item-meta-title>
+                    <nz-list-item-meta-description>
+                      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                          <strong>Gói:</strong> {{ item.packageId?.name || 'N/A' }}
+                        </div>
+                        <div>
+                          <strong>Số tiền:</strong> 
+                          <span *ngIf="item.currency === 'USD'">
+                            ${{ item.amount | number:'1.2-2' }}
+                          </span>
+                          <span *ngIf="item.currency !== 'USD'">
+                            {{ item.amount | number:'1.0-0' }} {{ item.currency || 'VND' }}
+                          </span>
+                          <span *ngIf="item.cryptoAmount" style="color: #26a17b; margin-left: 8px;">
+                            ({{ item.cryptoAmount }} USDT)
+                          </span>
+                        </div>
+                        <div>
+                          <strong>Ngày:</strong> {{ (item.createdAt || item.created_at) | date:'dd/MM/yyyy HH:mm' }}
+                        </div>
+                        <div *ngIf="item.transactionId">
+                          <strong>Mã GD:</strong> 
+                          <code style="font-size: 11px; background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">
+                            {{ item.transactionId }}
+                          </code>
+                        </div>
+                      </div>
+                    </nz-list-item-meta-description>
+                  </nz-list-item-meta>
+                </nz-list-item>
+              </ng-template>
+            </nz-list>
+          </nz-spin>
+        </nz-collapse-panel>
+      </nz-collapse>
+    </div>
   </nz-spin>
 
   <!-- PayPal Payment Modal -->
@@ -171,4 +278,13 @@
     (paymentSuccess)="onPayPalPaymentSuccess($event)"
     (paymentCancel)="onPayPalPaymentCancel()">
   </app-paypal-payment>
+
+  <!-- Crypto Payment Modal -->
+  <app-crypto-payment
+    *ngIf="cryptoPaymentData"
+    [(visible)]="showCryptoModal"
+    [paymentData]="cryptoPaymentData"
+    (paymentSuccess)="onCryptoPaymentSuccess($event)"
+    (paymentCancel)="onCryptoPaymentCancel()">
+  </app-crypto-payment>
 </div> 

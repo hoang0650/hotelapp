@@ -113,6 +113,7 @@ import { OtaManagementComponent } from './components/ota-management/ota-manageme
 import { ShiftHandoverHistoryComponent } from './components/shift-handover-history/shift-handover-history.component';
 import { BookingModalComponent } from './components/booking-modal/booking-modal.component';
 import { PaypalPaymentComponent } from './components/paypal-payment/paypal-payment.component';
+import { CryptoPaymentComponent } from './components/crypto-payment/crypto-payment.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { TuyaSwitchComponent } from './components/tuya-switch/tuya-switch.component';
 import { TuyaSwitchCompactComponent } from './components/tuya-switch/tuya-switch-compact.component';
@@ -189,6 +190,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         ShiftHandoverHistoryComponent,
         BookingModalComponent,
         PaypalPaymentComponent,
+        CryptoPaymentComponent,
         FooterComponent,
         TuyaSwitchComponent,
         TuyaSwitchCompactComponent

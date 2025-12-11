@@ -5,6 +5,9 @@ import { NzModalService } from 'ng-zorro-antd/modal';
 import { AuthService } from '../../services/auth.service';
 import { PayPalPaymentData } from '../paypal-payment/paypal-payment.component';
 import { SePayService, SePayPaymentData } from '../../services/sepay.service';
+import { PayPalService } from '../../services/paypal.service';
+import { CryptoService, CryptoPaymentData } from '../../services/crypto.service';
+import { forkJoin } from 'rxjs';
 
 interface PricingPlan {
   name: string;
@@ -33,7 +36,12 @@ export class PricingComponent implements OnInit {
   userId: string = '';
   showPayPalModal = false;
   payPalPaymentData: PayPalPaymentData | null = null;
+  showCryptoModal = false;
+  cryptoPaymentData: CryptoPaymentData | null = null;
   selectedPackage: any = null; // Gói đã chọn để thanh toán
+  paymentHistory: any[] = []; // Lịch sử thanh toán
+  showPaymentHistory = false; // Hiển thị lịch sử thanh toán
+  paymentHistoryLoading = false;
 
   plans: PricingPlan[] = [
     {
@@ -126,7 +134,9 @@ export class PricingComponent implements OnInit {
     private modal: NzModalService,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
-    private sepayService: SePayService
+    private sepayService: SePayService,
+    private paypalService: PayPalService,
+    private cryptoService: CryptoService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -138,6 +148,7 @@ export class PricingComponent implements OnInit {
     this.loadPackages();
     if (this.userId) {
       this.loadCurrentPackage();
+      this.loadPaymentHistory();
     } else {
       this.currentPackage = null;
     }
@@ -292,6 +303,56 @@ export class PricingComponent implements OnInit {
     };
 
     this.message.success(`Đã chọn gói ${pkg.name} - ${billingTypeText}. Vui lòng thanh toán để hoàn tất đăng ký.`);
+  }
+
+  /**
+   * Thanh toán qua PayPal
+   */
+  payWithPayPal(): void {
+    if (!this.selectedPackage || !this.userId) {
+      this.message.warning('Vui lòng chọn gói trước khi thanh toán');
+      return;
+    }
+
+    const packageId = this.selectedPackage.packageId;
+    const pkg = this.selectedPackage;
+    const packagePrice = this.getPackagePrice(pkg);
+    const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+
+    this.payPalPaymentData = {
+      packageId: packageId,
+      packageName: pkg?.name || 'N/A',
+      amount: packagePrice,
+      billingType: this.selectedPackage.billingType,
+      currency: 'USD' // PayPal sử dụng USD
+    };
+
+    this.showPayPalModal = true;
+  }
+
+  /**
+   * Thanh toán qua Crypto USDT
+   */
+  payWithCrypto(): void {
+    if (!this.selectedPackage || !this.userId) {
+      this.message.warning('Vui lòng chọn gói trước khi thanh toán');
+      return;
+    }
+
+    const packageId = this.selectedPackage.packageId;
+    const pkg = this.selectedPackage;
+    const packagePrice = this.getPackagePrice(pkg);
+
+    this.cryptoPaymentData = {
+      packageId: packageId,
+      packageName: pkg?.name || 'N/A',
+      amount: packagePrice,
+      billingType: this.selectedPackage.billingType,
+      currency: 'VND',
+      userId: this.userId
+    };
+
+    this.showCryptoModal = true;
   }
 
   /**
@@ -624,5 +685,168 @@ export class PricingComponent implements OnInit {
     console.log('PayPal payment cancelled');
     this.showPayPalModal = false;
     this.payPalPaymentData = null;
+  }
+
+  onCryptoPaymentSuccess(event: any): void {
+    console.log('Crypto payment success:', event);
+    
+    if (event.success && this.selectedPackage) {
+      this.loading = true;
+      // Gọi subscribe với paymentMethod='crypto_usdt'
+      this.pricingService.subscribe(
+        this.userId,
+        this.selectedPackage.packageId,
+        this.selectedPackage.billingType,
+        event.transactionId,
+        'crypto_usdt'
+      ).subscribe({
+        next: (response: any) => {
+          if (response.success !== false) {
+            const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+            this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công. Đang chờ xác nhận thanh toán.`);
+            this.loadCurrentPackage();
+            this.selectedPackage = null;
+          } else {
+            this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
+          }
+          this.loading = false;
+        },
+        error: (error: any) => {
+          console.error('Subscribe error after crypto payment:', error);
+          this.message.error(error.error?.message || 'Có lỗi xảy ra khi đăng ký gói dịch vụ sau thanh toán');
+          this.loading = false;
+        }
+      });
+    }
+  }
+
+  onCryptoPaymentCancel(): void {
+    console.log('Crypto payment cancelled');
+    this.showCryptoModal = false;
+    this.cryptoPaymentData = null;
+  }
+
+  /**
+   * Load lịch sử thanh toán của user
+   */
+  loadPaymentHistory(): void {
+    if (!this.userId) return;
+
+    this.paymentHistoryLoading = true;
+    
+    // Load từ tất cả các phương thức thanh toán
+    const paypalHistory$ = this.paypalService.getPaymentHistory({ userId: this.userId, limit: 10 });
+    const cryptoHistory$ = this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 10 });
+
+    // Combine tất cả payment history
+    forkJoin([paypalHistory$, cryptoHistory$]).subscribe({
+        next: ([paypalData, cryptoData]) => {
+          const allPayments: any[] = [];
+          
+          // Thêm PayPal payments
+          if (paypalData?.data) {
+            paypalData.data.forEach((payment: any) => {
+              allPayments.push({
+                ...payment,
+                paymentMethod: 'paypal',
+                paymentMethodLabel: 'PayPal',
+                paymentMethodIcon: 'pay-circle'
+              });
+            });
+          }
+
+          // Thêm Crypto payments
+          if (cryptoData?.data) {
+            cryptoData.data.forEach((payment: any) => {
+              allPayments.push({
+                ...payment,
+                paymentMethod: 'crypto_usdt',
+                paymentMethodLabel: `Crypto USDT (${payment.cryptoNetwork || 'N/A'})`,
+                paymentMethodIcon: 'dollar-circle'
+              });
+            });
+          }
+
+          // Sắp xếp theo ngày tạo (mới nhất trước)
+          this.paymentHistory = allPayments.sort((a, b) => {
+            const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
+            const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
+            return dateB - dateA;
+          });
+
+          this.paymentHistoryLoading = false;
+        },
+        error: (error) => {
+          console.error('Error loading payment history:', error);
+          this.paymentHistoryLoading = false;
+          // Không hiển thị lỗi để không làm phiền user
+        }
+      });
+  }
+
+  /**
+   * Toggle hiển thị lịch sử thanh toán
+   */
+  togglePaymentHistory(): void {
+    this.showPaymentHistory = !this.showPaymentHistory;
+    if (this.showPaymentHistory && this.paymentHistory.length === 0) {
+      this.loadPaymentHistory();
+    }
+  }
+
+  /**
+   * Lấy màu cho payment method
+   */
+  getPaymentMethodColor(method: string): string {
+    switch (method) {
+      case 'paypal':
+        return '#0070ba';
+      case 'sepay':
+        return '#667eea';
+      case 'crypto_usdt':
+        return '#26a17b';
+      default:
+        return '#999';
+    }
+  }
+
+  /**
+   * Lấy text cho status
+   */
+  getPaymentStatusText(status: string): string {
+    switch (status) {
+      case 'completed':
+        return 'Hoàn thành';
+      case 'pending':
+        return 'Đang chờ';
+      case 'failed':
+        return 'Thất bại';
+      case 'cancelled':
+        return 'Đã hủy';
+      case 'refunded':
+        return 'Đã hoàn tiền';
+      default:
+        return 'Không xác định';
+    }
+  }
+
+  /**
+   * Lấy màu cho status
+   */
+  getPaymentStatusColor(status: string): string {
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'pending':
+        return 'processing';
+      case 'failed':
+        return 'error';
+      case 'cancelled':
+        return 'default';
+      case 'refunded':
+        return 'warning';
+      default:
+        return 'default';
+    }
   }
 }

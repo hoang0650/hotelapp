@@ -2,6 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { BankTransferService, BankTransfer, SepayTransaction } from '../../services/bank-transfer.service';
+import { PayPalService } from '../../services/paypal.service';
+import { CryptoService } from '../../services/crypto.service';
+import { AuthService } from '../../services/auth.service';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-bank-transfer-history',
@@ -16,6 +20,14 @@ export class BankTransferHistoryComponent implements OnInit {
   selectedTransfer: BankTransfer | null = null;
   transactions: SepayTransaction[] = [];
   errorMessage: string | null = null;
+  
+  // Payment history từ các phương thức khác
+  paypalPayments: any[] = [];
+  cryptoPayments: any[] = [];
+  allPayments: any[] = []; // Tổng hợp tất cả payment history
+  activeTabIndex = 0; // 0: Tất cả, 1: SePay, 2: PayPal, 3: Crypto
+  userId: string = '';
+  allPaymentsLoading = false;
 
   // SePay OAuth2 Access Token và Refresh Token
   public sepayApiToken: string | null = localStorage.getItem('sepay_access_token') || 
@@ -55,8 +67,15 @@ export class BankTransferHistoryComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private bankTransferService: BankTransferService,
+    private paypalService: PayPalService,
+    private cryptoService: CryptoService,
+    private authService: AuthService,
     private message: NzMessageService
   ) {
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser?._id) {
+      this.userId = currentUser._id;
+    }
     this.searchForm = this.fb.group({
       startDate: [null],
       endDate: [null],
@@ -70,6 +89,13 @@ export class BankTransferHistoryComponent implements OnInit {
     // Kiểm tra xem có token không, nếu không thì không fetch
     if (this.sepayApiToken && this.sepayApiToken.trim()) {
       this.fetchSepayTransactions();
+    }
+    
+    // Load payment history từ PayPal và Crypto nếu có userId
+    if (this.userId) {
+      this.loadPayPalPayments();
+      this.loadCryptoPayments();
+      this.loadAllPayments();
     }
   }
 
@@ -449,6 +475,204 @@ export class BankTransferHistoryComponent implements OnInit {
         this.message.error(error.error?.error || error.error?.detail || 'Không thể tạo authorization URL. Vui lòng thử lại.');
       }
     });
+  }
+
+  /**
+   * Load lịch sử thanh toán PayPal
+   */
+  loadPayPalPayments(): void {
+    if (!this.userId) return;
+
+    this.paypalService.getPaymentHistory({ userId: this.userId, limit: 50 }).subscribe({
+      next: (response) => {
+        if (response?.success && response.data) {
+          this.paypalPayments = response.data;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading PayPal payments:', error);
+        // Không hiển thị lỗi để không làm phiền user
+      }
+    });
+  }
+
+  /**
+   * Load lịch sử thanh toán Crypto
+   */
+  loadCryptoPayments(): void {
+    if (!this.userId) return;
+
+    this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 50 }).subscribe({
+      next: (response) => {
+        if (response?.success && response.data) {
+          this.cryptoPayments = response.data;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading Crypto payments:', error);
+        // Không hiển thị lỗi để không làm phiền user
+      }
+    });
+  }
+
+  /**
+   * Load tất cả lịch sử thanh toán (tổng hợp từ tất cả phương thức)
+   */
+  loadAllPayments(): void {
+    if (!this.userId) return;
+
+    this.allPaymentsLoading = true;
+
+    // Load từ tất cả các phương thức thanh toán
+    const paypalHistory$ = this.paypalService.getPaymentHistory({ userId: this.userId, limit: 100 });
+    const cryptoHistory$ = this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 100 });
+
+    // Combine tất cả payment history
+    forkJoin([paypalHistory$, cryptoHistory$]).subscribe({
+      next: ([paypalData, cryptoData]) => {
+        const allPayments: any[] = [];
+        
+        // Thêm PayPal payments
+        if (paypalData?.success && paypalData.data) {
+          paypalData.data.forEach((payment: any) => {
+            allPayments.push({
+              ...payment,
+              paymentMethod: 'paypal',
+              paymentMethodLabel: 'PayPal',
+              paymentMethodIcon: 'pay-circle',
+              paymentMethodColor: '#0070ba'
+            });
+          });
+        } else if (paypalData?.data) {
+          // Fallback nếu response không có success field
+          paypalData.data.forEach((payment: any) => {
+            allPayments.push({
+              ...payment,
+              paymentMethod: 'paypal',
+              paymentMethodLabel: 'PayPal',
+              paymentMethodIcon: 'pay-circle',
+              paymentMethodColor: '#0070ba'
+            });
+          });
+        }
+
+        // Thêm Crypto payments
+        if (cryptoData?.success && cryptoData.data) {
+          cryptoData.data.forEach((payment: any) => {
+            allPayments.push({
+              ...payment,
+              paymentMethod: 'crypto_usdt',
+              paymentMethodLabel: `Crypto USDT (${payment.cryptoNetwork || 'N/A'})`,
+              paymentMethodIcon: 'dollar-circle',
+              paymentMethodColor: '#26a17b'
+            });
+          });
+        } else if (cryptoData?.data) {
+          // Fallback nếu response không có success field
+          cryptoData.data.forEach((payment: any) => {
+            allPayments.push({
+              ...payment,
+              paymentMethod: 'crypto_usdt',
+              paymentMethodLabel: `Crypto USDT (${payment.cryptoNetwork || 'N/A'})`,
+              paymentMethodIcon: 'dollar-circle',
+              paymentMethodColor: '#26a17b'
+            });
+          });
+        }
+
+        // Sắp xếp theo ngày tạo (mới nhất trước)
+        this.allPayments = allPayments.sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
+          const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
+          return dateB - dateA;
+        });
+
+        this.allPaymentsLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading all payment history:', error);
+        this.allPaymentsLoading = false;
+        // Không hiển thị lỗi để không làm phiền user
+      }
+    });
+  }
+
+  /**
+   * Chuyển tab
+   */
+  onTabChange(event: any): void {
+    // nzSelectChange emit NzTabChangeEvent hoặc number tùy version
+    // Nếu là object, lấy index từ event.index, nếu là number thì dùng trực tiếp
+    this.activeTabIndex = typeof event === 'number' ? event : (event?.index ?? event);
+  }
+
+  /**
+   * Format số tiền
+   */
+  formatAmount(amount: number, currency: string = 'VND'): string {
+    if (!amount && amount !== 0) return '0';
+    if (currency === 'USD') {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(amount);
+    }
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  }
+
+  /**
+   * Lấy text cho payment method
+   */
+  getPaymentMethodText(method: string): string {
+    switch (method) {
+      case 'paypal':
+        return 'PayPal';
+      case 'sepay':
+        return 'SePay';
+      case 'crypto_usdt':
+        return 'Crypto USDT';
+      default:
+        return method;
+    }
+  }
+
+  /**
+   * Lấy icon cho payment method
+   */
+  getPaymentMethodIcon(method: string): string {
+    switch (method) {
+      case 'paypal':
+        return 'pay-circle';
+      case 'sepay':
+        return 'credit-card';
+      case 'crypto_usdt':
+        return 'dollar-circle';
+      default:
+        return 'wallet';
+    }
+  }
+
+  /**
+   * Lấy màu cho payment method
+   */
+  getPaymentMethodColor(method: string): string {
+    switch (method) {
+      case 'paypal':
+        return '#0070ba';
+      case 'sepay':
+        return '#667eea';
+      case 'crypto_usdt':
+        return '#26a17b';
+      default:
+        return '#999';
+    }
   }
 
   // Các hàm xử lý sắp xếp, lọc có thể được thêm ở đây nếu cần
