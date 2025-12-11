@@ -69,6 +69,7 @@ export class SePayService {
       currency: paymentData.currency || 'VND',
       order_amount: Math.round(paymentData.amount).toString(), // Đảm bảo là số nguyên
       operation: 'PURCHASE',
+      // Không thêm payment_method nếu để trống - SePay sẽ tự chọn
       order_description: paymentData.description || `Thanh toán gói ${paymentData.packageName} - ${paymentData.billingType === 'yearly' ? 'theo năm' : 'theo tháng'}`,
       order_invoice_number: orderInvoiceNumber
     };
@@ -165,11 +166,12 @@ export class SePayService {
     ];
 
     fieldOrder.forEach(fieldName => {
-      if (fields[fieldName]) {
+      // Thêm field nếu có trong fields (kể cả giá trị rỗng cho payment_method)
+      if (fields[fieldName] !== undefined && fields[fieldName] !== null) {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = fieldName;
-        input.value = fields[fieldName];
+        input.value = fields[fieldName] || ''; // Đảm bảo có giá trị, kể cả rỗng
         form.appendChild(input);
       }
     });
