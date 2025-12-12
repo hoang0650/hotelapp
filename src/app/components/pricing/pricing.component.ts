@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { PricingService } from '../../services/pricing.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
@@ -29,7 +29,7 @@ interface PricingPlan {
   templateUrl: './pricing.component.html',
   styleUrl: './pricing.component.css'
 })
-export class PricingComponent implements OnInit {
+export class PricingComponent implements OnInit, OnDestroy {
   billingType: 'monthly' | 'yearly' = 'monthly';
   packages: any[] = [];
   currentPackage: any;
@@ -53,11 +53,13 @@ export class PricingComponent implements OnInit {
 
   // SePay QR code
   showSePayModal = false;
-  sepayPaymentCode = '';
+  // Bỏ sepayPaymentCode - không cần mã thanh toán nữa
   sepayAmount = 0;
   sepayQrUrl = '';
   sepayBeneficiaryName = '';
+  sepayPaymentHistoryId = ''; // Lưu paymentHistoryId để kiểm tra trạng thái
   currentUser: any = null;
+  private paymentStatusCheckInterval: any = null; // Interval để kiểm tra trạng thái thanh toán
 
   plans: PricingPlan[] = [
     {
@@ -228,6 +230,9 @@ export class PricingComponent implements OnInit {
       // Thanh toán thành công - webhook sẽ tự động xử lý đăng ký gói
       this.message.success('Thanh toán thành công! Hệ thống đang xử lý đăng ký gói. Vui lòng đợi vài giây...');
       this.selectedPackage = null; // Reset selected package
+      
+      // Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
+      this.loadLatestPaymentAndPlaySound();
       
       // Reload package sau 2 giây để kiểm tra xem đã đăng ký chưa
       setTimeout(() => {
@@ -448,14 +453,17 @@ export class PricingComponent implements OnInit {
       next: (response: any) => {
         this.loading = false;
         if (response.success) {
-          // Lưu thông tin payment và hiển thị modal với QR code
-          this.sepayPaymentCode = response.paymentCode;
+          // Lưu thông tin payment và hiển thị modal với QR code (không lưu paymentCode vì không cần hiển thị)
           this.sepayAmount = packagePrice;
           this.sepayQrUrl = qrPaymentUrl;
           this.sepayBeneficiaryName = beneficiaryName;
+          this.sepayPaymentHistoryId = response.paymentHistoryId || ''; // Lưu paymentHistoryId để kiểm tra trạng thái
           
           // Hiển thị modal với QR code
           this.showSePayModal = true;
+          
+          // Bắt đầu polling để kiểm tra trạng thái thanh toán và tự động đóng modal khi thành công
+          this.startPaymentStatusPolling();
         } else {
           this.message.error(response.error || 'Có lỗi xảy ra khi tạo payment history');
         }
@@ -474,27 +482,13 @@ export class PricingComponent implements OnInit {
    */
   closeSePayModal(): void {
     this.showSePayModal = false;
-    // Copy mã thanh toán vào clipboard
-    if (this.sepayPaymentCode) {
-      navigator.clipboard.writeText(this.sepayPaymentCode).then(() => {
-        this.message.success('Đã copy mã thanh toán vào clipboard');
-      });
-    }
+    // Bỏ copy mã thanh toán - không cần mã thanh toán nữa
     this.selectedPackage = null;
     this.loadCurrentPackage();
     this.loadPaymentHistory();
   }
 
-  /**
-   * Copy mã thanh toán vào clipboard
-   */
-  copyPaymentCode(): void {
-    if (this.sepayPaymentCode) {
-      navigator.clipboard.writeText(this.sepayPaymentCode).then(() => {
-        this.message.success('Đã copy mã thanh toán vào clipboard');
-      });
-    }
-  }
+  // Bỏ copyPaymentCode - không cần mã thanh toán nữa
 
   /**
    * Hủy chọn gói
@@ -952,5 +946,315 @@ export class PricingComponent implements OnInit {
       default:
         return 'default';
     }
+  }
+
+  /**
+   * Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
+   */
+  private loadLatestPaymentAndPlaySound(): void {
+    if (!this.userId) {
+      console.warn('[loadLatestPaymentAndPlaySound] Không tìm thấy userId');
+      // Fallback: lấy từ selectedPackage hoặc sepayAmount ngay lập tức
+      const amount = this.selectedPackage?.price || this.sepayAmount || 0;
+      if (amount > 0) {
+        this.playPaymentSuccessSound(amount);
+      }
+      return;
+    }
+    
+    // Đợi một chút để đảm bảo webhook đã cập nhật dữ liệu
+    setTimeout(() => {
+      // Lấy lịch sử chuyển khoản SePay gần nhất
+      this.sepayService.getPaymentHistory({ userId: this.userId, limit: 10 }).subscribe({
+        next: (response: any) => {
+          let amount = 0;
+          
+          // Tìm giao dịch gần nhất có status 'completed' hoặc 'paid'
+          const paymentHistories = Array.isArray(response) 
+            ? response 
+            : (response?.success && response.data ? response.data : []);
+          
+          if (paymentHistories && paymentHistories.length > 0) {
+            // Tìm giao dịch gần nhất đã hoàn thành
+            const completedPayment = paymentHistories.find((p: any) => 
+              (p.status === 'completed' || p.status === 'paid') && 
+              (p.amount > 0 || p.totalAmount > 0)
+            );
+            
+            if (completedPayment) {
+              amount = completedPayment.amount || completedPayment.totalAmount || 0;
+            } else {
+              // Nếu không tìm thấy completed, lấy giao dịch gần nhất
+              const latestPayment = paymentHistories[0];
+              amount = latestPayment.amount || latestPayment.totalAmount || 0;
+            }
+          }
+          
+          // Nếu không lấy được từ API, thử lấy từ selectedPackage hoặc sepayAmount
+          if (amount === 0) {
+            amount = this.selectedPackage?.price || this.sepayAmount || 0;
+          }
+          
+          if (amount > 0) {
+            console.log('[loadLatestPaymentAndPlaySound] Số tiền thanh toán:', amount);
+            // Phát thông báo âm thanh
+            this.playPaymentSuccessSound(amount);
+          } else {
+            console.warn('[loadLatestPaymentAndPlaySound] Không tìm thấy số tiền thanh toán');
+          }
+        },
+        error: (error) => {
+          console.error('[loadLatestPaymentAndPlaySound] Lỗi khi lấy lịch sử thanh toán:', error);
+          // Fallback: lấy từ selectedPackage hoặc sepayAmount
+          const amount = this.selectedPackage?.price || this.sepayAmount || 0;
+          if (amount > 0) {
+            console.log('[loadLatestPaymentAndPlaySound] Sử dụng số tiền từ selectedPackage/sepayAmount:', amount);
+            this.playPaymentSuccessSound(amount);
+          }
+        }
+      });
+    }, 1000); // Đợi 1 giây để webhook cập nhật dữ liệu
+  }
+  
+  /**
+   * Phát thông báo âm thanh khi thanh toán thành công
+   */
+  private playPaymentSuccessSound(amount: number): void {
+    try {
+      console.log('[playPaymentSuccessSound] Bắt đầu phát thông báo, số tiền:', amount);
+      
+      // Kiểm tra xem trình duyệt có hỗ trợ Web Speech API không
+      if (!('speechSynthesis' in window)) {
+        console.warn('[playPaymentSuccessSound] Trình duyệt không hỗ trợ Web Speech API');
+        return;
+      }
+      
+      // Dừng tất cả các utterance đang phát (nếu có)
+      window.speechSynthesis.cancel();
+      
+      // Format số tiền theo định dạng Việt Nam
+      const formattedAmount = new Intl.NumberFormat('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+      
+      // Tạo nội dung thông báo
+      const message = `Đã thanh toán thành công ${formattedAmount} đồng`;
+      console.log('[playPaymentSuccessSound] Nội dung thông báo:', message);
+      
+      // Hàm phát âm thanh (sau khi voices đã load)
+      const speak = () => {
+        try {
+          // Tạo utterance
+          const utterance = new SpeechSynthesisUtterance(message);
+          
+          // Cấu hình giọng nói (ưu tiên tiếng Việt nếu có)
+          utterance.lang = 'vi-VN';
+          utterance.rate = 1.0; // Tốc độ nói (0.1 - 10)
+          utterance.pitch = 1.0; // Độ cao giọng (0 - 2)
+          utterance.volume = 1.0; // Âm lượng (0 - 1)
+          
+          // Tìm giọng nói tiếng Việt nếu có
+          const voices = window.speechSynthesis.getVoices();
+          console.log('[playPaymentSuccessSound] Số lượng voices:', voices.length);
+          
+          const vietnameseVoice = voices.find(voice => 
+            voice.lang.includes('vi') || voice.name.toLowerCase().includes('vietnamese')
+          );
+          
+          if (vietnameseVoice) {
+            utterance.voice = vietnameseVoice;
+            console.log('[playPaymentSuccessSound] Sử dụng giọng tiếng Việt:', vietnameseVoice.name);
+          } else {
+            console.log('[playPaymentSuccessSound] Không tìm thấy giọng tiếng Việt, sử dụng giọng mặc định');
+          }
+          
+          // Thêm event handlers để debug
+          utterance.onstart = () => {
+            console.log('[playPaymentSuccessSound] Bắt đầu phát âm thanh');
+          };
+          
+          utterance.onend = () => {
+            console.log('[playPaymentSuccessSound] Kết thúc phát âm thanh');
+          };
+          
+          utterance.onerror = (event) => {
+            console.error('[playPaymentSuccessSound] Lỗi khi phát âm thanh:', event);
+          };
+          
+          // Phát âm thanh
+          window.speechSynthesis.speak(utterance);
+          console.log('[playPaymentSuccessSound] Đã gọi speak()');
+        } catch (error) {
+          console.error('[playPaymentSuccessSound] Lỗi trong hàm speak():', error);
+        }
+      };
+      
+      // Kiểm tra xem voices đã load chưa
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        // Voices đã load, phát ngay
+        speak();
+      } else {
+        // Chưa load, đợi event voiceschanged
+        console.log('[playPaymentSuccessSound] Chờ voices load...');
+        const onVoicesChanged = () => {
+          console.log('[playPaymentSuccessSound] Voices đã load');
+          window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+          speak();
+        };
+        window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+        
+        // Timeout sau 2 giây nếu voices vẫn chưa load
+        setTimeout(() => {
+          window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+          const voicesAfterTimeout = window.speechSynthesis.getVoices();
+          if (voicesAfterTimeout.length > 0) {
+            console.log('[playPaymentSuccessSound] Phát sau timeout');
+            speak();
+          } else {
+            console.warn('[playPaymentSuccessSound] Không thể load voices sau 2 giây, thử phát với giọng mặc định');
+            speak(); // Vẫn thử phát với giọng mặc định
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('[playPaymentSuccessSound] Lỗi khi phát âm thanh:', error);
+    }
+  }
+
+  /**
+   * Bắt đầu kiểm tra trạng thái thanh toán (polling)
+   */
+  private startPaymentStatusPolling(): void {
+    // Dừng interval cũ nếu có
+    if (this.paymentStatusCheckInterval) {
+      clearInterval(this.paymentStatusCheckInterval);
+    }
+    
+    // Kiểm tra mỗi 5 giây, tối đa 5 phút (60 lần)
+    let checkCount = 0;
+    const maxChecks = 60;
+    
+    this.paymentStatusCheckInterval = setInterval(() => {
+      checkCount++;
+      
+      if (!this.sepayPaymentHistoryId) {
+        this.stopPaymentStatusPolling();
+        return;
+      }
+      
+      // Kiểm tra trạng thái thanh toán
+      // Tìm payment history bằng paymentHistoryId
+      this.sepayService.getPaymentHistory({
+        limit: 100, // Lấy nhiều hơn để tìm được payment history
+        skip: 0
+      }).subscribe({
+        next: (response: any) => {
+          // Tìm payment history với paymentHistoryId
+          const paymentHistories = Array.isArray(response) 
+            ? response 
+            : (response.data || []);
+          
+          // Tìm bằng paymentHistoryId
+          const paymentHistory = paymentHistories.find((p: any) => {
+            // Tìm bằng paymentHistoryId
+            if (this.sepayPaymentHistoryId && (p._id === this.sepayPaymentHistoryId || p.id === this.sepayPaymentHistoryId)) {
+              return true;
+            }
+            return false;
+          });
+          
+          if (paymentHistory) {
+            // Kiểm tra số tiền có khớp không (so sánh với số tiền cần thanh toán)
+            const expectedAmount = this.sepayAmount;
+            const receivedAmount = paymentHistory.paymentGatewayResponse?.transferAmount || paymentHistory.amount;
+            const amountDifference = Math.abs(receivedAmount - expectedAmount);
+            const amountTolerance = expectedAmount * 0.01; // Cho phép sai số 1%
+            
+            // Kiểm tra trạng thái thanh toán
+            if (paymentHistory.status === 'completed' || paymentHistory.status === 'paid') {
+              // Kiểm tra số tiền có khớp không
+              if (amountDifference <= amountTolerance) {
+                // Thanh toán thành công và số tiền khớp
+                this.stopPaymentStatusPolling();
+                this.onPaymentSuccess();
+              } else {
+                console.warn('Số tiền không khớp:', {
+                  expected: expectedAmount,
+                  received: receivedAmount,
+                  difference: amountDifference
+                });
+                // Vẫn coi là thành công nếu status là completed (có thể do phí giao dịch)
+                this.stopPaymentStatusPolling();
+                this.onPaymentSuccess();
+              }
+            } else if (paymentHistory.status === 'failed' || paymentHistory.status === 'cancelled') {
+              // Thanh toán thất bại
+              this.stopPaymentStatusPolling();
+              this.message.warning('Thanh toán đã bị hủy hoặc thất bại. Vui lòng thử lại.');
+            }
+          }
+          
+          // Dừng polling sau maxChecks lần
+          if (checkCount >= maxChecks) {
+            this.stopPaymentStatusPolling();
+            console.log('Đã kiểm tra trạng thái thanh toán tối đa, dừng polling');
+          }
+        },
+        error: (error) => {
+          console.error('Error checking payment status:', error);
+          // Tiếp tục polling nếu chưa đạt maxChecks
+          if (checkCount >= maxChecks) {
+            this.stopPaymentStatusPolling();
+          }
+        }
+      });
+    }, 5000); // Kiểm tra mỗi 5 giây
+  }
+  
+  /**
+   * Dừng kiểm tra trạng thái thanh toán
+   */
+  private stopPaymentStatusPolling(): void {
+    if (this.paymentStatusCheckInterval) {
+      clearInterval(this.paymentStatusCheckInterval);
+      this.paymentStatusCheckInterval = null;
+    }
+  }
+  
+  /**
+   * Xử lý khi thanh toán thành công
+   */
+  private onPaymentSuccess(): void {
+    console.log('[onPaymentSuccess] Thanh toán thành công, đóng modal QR');
+    
+    // Dừng polling
+    this.stopPaymentStatusPolling();
+    
+    // Đóng modal QR trước (tự động đóng)
+    this.showSePayModal = false;
+    
+    // Force change detection để đảm bảo modal đóng ngay lập tức
+    this.cdr.detectChanges();
+    
+    // Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
+    this.loadLatestPaymentAndPlaySound();
+    
+    // Hiển thị thông báo thành công
+    this.message.success('Thanh toán thành công! Hệ thống đang xử lý đăng ký gói...');
+    
+    // Reload package sau 2 giây để kiểm tra xem đã đăng ký chưa
+    setTimeout(() => {
+      this.loadCurrentPackage();
+      this.loadPaymentHistory();
+    }, 2000);
+  }
+
+  /**
+   * Cleanup khi component bị destroy
+   */
+  ngOnDestroy(): void {
+    this.stopPaymentStatusPolling();
   }
 }

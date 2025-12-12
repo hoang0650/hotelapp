@@ -199,10 +199,10 @@
                       {{ item.transactionId }}
                     </code>
                   </div>
-                  <div *ngIf="item.sepayInvoiceNumber">
-                    <strong>Mã thanh toán:</strong> 
+                  <div *ngIf="item.paymentGatewayResponse?.transferAmount">
+                    <strong>Số tiền nhận được:</strong> 
                     <code style="font-size: 11px; background: #e6f7ff; padding: 2px 6px; border-radius: 3px; color: #1890ff; font-weight: bold;">
-                      {{ item.sepayInvoiceNumber }}
+                      {{ item.paymentGatewayResponse.transferAmount | number:'1.0-0' }} VNĐ
                     </code>
                   </div>
                 </div>

@@ -320,25 +320,7 @@
             {{ formatPrice(sepayAmount) }}
           </strong>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Mã thanh toán">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <code style="font-size: 18px; font-weight: bold; color: #1890ff; background: #f0f0f0; padding: 8px 12px; border-radius: 4px; flex: 1;">
-              {{ sepayPaymentCode }}
-            </code>
-            <button 
-              nz-button 
-              nzType="default" 
-              nzSize="small"
-              (click)="copyPaymentCode()"
-              nz-tooltip
-              nzTooltipTitle="Copy mã thanh toán">
-              <i nz-icon nzType="copy" nzTheme="outline"></i>
-            </button>
-          </div>
-          <div style="margin-top: 8px; color: #ff4d4f; font-weight: 600; font-size: 14px;">
-            ⚠️ Quan trọng: Vui lòng chuyển khoản với nội dung chính xác là mã thanh toán trên!
-          </div>
-        </nz-descriptions-item>
+        <!-- Bỏ hiển thị mã thanh toán - webhook sẽ tự động nhận diện -->
         <nz-descriptions-item *ngIf="sepayBeneficiaryName" nzTitle="Tên người thụ hưởng">
           <strong>{{ sepayBeneficiaryName }}</strong>
         </nz-descriptions-item>
@@ -374,17 +356,8 @@
         <p style="margin: 0; color: #1890ff; font-size: 13px;">
           <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 6px;"></i>
           Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và đăng ký gói cho bạn trong vòng vài phút.
-          Bạn có thể theo dõi trạng thái thanh toán trong lịch sử thanh toán.
+          <strong>Modal này sẽ tự động đóng khi thanh toán thành công.</strong>
         </p>
-      </div>
-
-      <div style="margin-top: 20px; text-align: right;">
-        <button 
-          nz-button 
-          nzType="primary"
-          (click)="closeSePayModal()">
-          Đã hiểu, tiếp tục
-        </button>
       </div>
     </div>
   </nz-modal>
