@@ -302,4 +302,90 @@
     (paymentSuccess)="onCryptoPaymentSuccess($event)"
     (paymentCancel)="onCryptoPaymentCancel()">
   </app-crypto-payment>
+
+  <!-- SePay QR Payment Modal -->
+  <nz-modal
+    [(nzVisible)]="showSePayModal"
+    nzTitle="Thanh toán SePay"
+    [nzWidth]="600"
+    [nzFooter]="null"
+    (nzOnCancel)="closeSePayModal()">
+    <div *nzModalContent>
+      <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
+        <nz-descriptions-item nzTitle="Gói dịch vụ">
+          <strong>{{ selectedPackage?.name || 'N/A' }}</strong>
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Số tiền">
+          <strong style="font-size: 18px; color: #1890ff;">
+            {{ formatPrice(sepayAmount) }}
+          </strong>
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Mã thanh toán">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <code style="font-size: 18px; font-weight: bold; color: #1890ff; background: #f0f0f0; padding: 8px 12px; border-radius: 4px; flex: 1;">
+              {{ sepayPaymentCode }}
+            </code>
+            <button 
+              nz-button 
+              nzType="default" 
+              nzSize="small"
+              (click)="copyPaymentCode()"
+              nz-tooltip
+              nzTooltipTitle="Copy mã thanh toán">
+              <i nz-icon nzType="copy" nzTheme="outline"></i>
+            </button>
+          </div>
+          <div style="margin-top: 8px; color: #ff4d4f; font-weight: 600; font-size: 14px;">
+            ⚠️ Quan trọng: Vui lòng chuyển khoản với nội dung chính xác là mã thanh toán trên!
+          </div>
+        </nz-descriptions-item>
+        <nz-descriptions-item *ngIf="sepayBeneficiaryName" nzTitle="Tên người thụ hưởng">
+          <strong>{{ sepayBeneficiaryName }}</strong>
+        </nz-descriptions-item>
+      </nz-descriptions>
+
+      <!-- QR Code -->
+      <div *ngIf="sepayQrUrl" style="text-align: center; margin: 20px 0;">
+        <div style="margin-bottom: 12px;">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600;">
+            <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
+            Quét QR để thanh toán
+          </h3>
+        </div>
+        <div style="display: inline-block; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <img 
+            [src]="sepayQrUrl" 
+            alt="QR Code thanh toán" 
+            style="max-width: 300px; width: 100%; height: auto; display: block;"
+            onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
+          />
+        </div>
+        <div style="margin-top: 12px; font-size: 12px; color: #666;">
+          <p style="margin: 4px 0;">
+            <strong>Ngân hàng:</strong> {{ currentUser?.bankAccount?.bankName || 'N/A' }}
+          </p>
+          <p style="margin: 4px 0;">
+            <strong>Số tài khoản:</strong> {{ currentUser?.bankAccount?.accountNumber || 'N/A' }}
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; padding: 12px; background: #f0f9ff; border-radius: 4px; border-left: 4px solid #1890ff;">
+        <p style="margin: 0; color: #1890ff; font-size: 13px;">
+          <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 6px;"></i>
+          Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và đăng ký gói cho bạn trong vòng vài phút.
+          Bạn có thể theo dõi trạng thái thanh toán trong lịch sử thanh toán.
+        </p>
+      </div>
+
+      <div style="margin-top: 20px; text-align: right;">
+        <button 
+          nz-button 
+          nzType="primary"
+          (click)="closeSePayModal()">
+          Đã hiểu, tiếp tục
+        </button>
+      </div>
+    </div>
+  </nz-modal>
 </div> 

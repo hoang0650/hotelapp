@@ -1,0 +1,366 @@
+<div class="profile-container" style="max-width: 1200px; margin: 0 auto; padding: 24px;">
+  <nz-spin [nzSpinning]="loading">
+    <div *ngIf="!loading">
+      <h1 style="margin-bottom: 24px; font-size: 24px; font-weight: 600;">
+        <i nz-icon nzType="user" nzTheme="outline" style="margin-right: 8px;"></i>
+        Hồ sơ cá nhân
+      </h1>
+
+      <nz-card [nzBordered]="true" style="margin-bottom: 24px;">
+        <h2 nz-typography style="margin-bottom: 20px; font-size: 18px; font-weight: 600;">
+          <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 8px;"></i>
+          Thông tin cơ bản
+        </h2>
+        
+        <form [formGroup]="profileForm" nz-form>
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6" nzRequired>Tên đăng nhập</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <input nz-input formControlName="username" readonly />
+              <div style="font-size: 12px; color: #999; margin-top: 4px;">Tên đăng nhập không thể thay đổi</div>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6" nzRequired>Email</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <input nz-input formControlName="email" readonly />
+              <div style="font-size: 12px; color: #999; margin-top: 4px;">Email không thể thay đổi</div>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6">Họ và tên</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <input nz-input formControlName="fullName" placeholder="Nhập họ và tên" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6">Số điện thoại</nz-form-label>
+            <nz-form-control [nzSpan]="18" [nzErrorTip]="'Vui lòng nhập số điện thoại hợp lệ'">
+              <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6">Ảnh đại diện (URL)</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <input nz-input formControlName="avatar" placeholder="Nhập URL ảnh đại diện" />
+            </nz-form-control>
+          </nz-form-item>
+        </form>
+      </nz-card>
+
+      <nz-card [nzBordered]="true" style="margin-bottom: 24px;">
+        <h2 nz-typography style="margin-bottom: 20px; font-size: 18px; font-weight: 600;">
+          <i nz-icon nzType="bank" nzTheme="outline" style="margin-right: 8px;"></i>
+          Thông tin ngân hàng
+        </h2>
+        
+        <form [formGroup]="bankAccountForm" nz-form>
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Tên ngân hàng</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="bankName" placeholder="Ví dụ: Vietcombank, Techcombank..." />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Số tài khoản</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="accountNumber" placeholder="Nhập số tài khoản" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="24">
+              <nz-form-item>
+                <nz-form-label>Tên người thụ hưởng</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="beneficiaryName" placeholder="Nhập tên người thụ hưởng (hiển thị trên QR code)" />
+                  <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                    Tên người thụ hưởng sẽ được hiển thị bên dưới QR code khi thanh toán
+                  </div>
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+
+          <!-- Nút tạo QR thanh toán -->
+          <nz-row [nzGutter]="16" style="margin-top: 16px; margin-bottom: 16px;">
+            <nz-col [nzSpan]="24">
+              <button 
+                nz-button 
+                nzType="primary" 
+                (click)="generateQrPayment()"
+                [disabled]="!bankAccountForm.get('bankName')?.value || !bankAccountForm.get('accountNumber')?.value">
+                <i nz-icon nzType="qrcode" nzTheme="outline"></i>
+                Tạo QR thanh toán
+              </button>
+              <button 
+                *ngIf="showQrPreview"
+                nz-button 
+                nzType="default" 
+                nzDanger
+                (click)="clearQrPreview()"
+                style="margin-left: 8px;">
+                <i nz-icon nzType="delete" nzTheme="outline"></i>
+                Xóa QR
+              </button>
+            </nz-col>
+          </nz-row>
+
+          <!-- QR Code đã lưu (từ database) -->
+          <nz-row *ngIf="currentUser?.bankAccount?.qrPaymentUrl && !showQrPreview" [nzGutter]="16" style="margin-top: 16px; margin-bottom: 16px;">
+            <nz-col [nzSpan]="24">
+              <nz-card [nzBordered]="true" style="background: #f0f9ff;">
+                <div style="text-align: center; padding: 20px;">
+                  <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 600;">
+                    <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
+                    QR Code thanh toán đã lưu
+                  </h3>
+                  <div style="display: inline-block; padding: 16px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <img 
+                      [src]="currentUser?.bankAccount?.qrPaymentUrl || ''" 
+                      alt="QR Code thanh toán" 
+                      style="max-width: 300px; width: 100%; height: auto; display: block;"
+                      onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
+                    />
+                  </div>
+                  <div style="margin-top: 16px; font-size: 12px; color: #666;">
+                    <p><strong>Ngân hàng:</strong> {{ currentUser?.bankAccount?.bankName || 'N/A' }}</p>
+                    <p><strong>Số tài khoản:</strong> {{ currentUser?.bankAccount?.accountNumber || 'N/A' }}</p>
+                    <p style="margin-top: 8px; color: #52c41a;">
+                      <i nz-icon nzType="check-circle" nzTheme="outline"></i>
+                      QR code đã được lưu trong hệ thống
+                    </p>
+                  </div>
+                </div>
+              </nz-card>
+            </nz-col>
+          </nz-row>
+
+          <!-- Preview QR Code mới tạo (chưa lưu) -->
+          <nz-row *ngIf="showQrPreview && qrPaymentUrl" [nzGutter]="16" style="margin-top: 16px; margin-bottom: 16px;">
+            <nz-col [nzSpan]="24">
+              <nz-card [nzBordered]="true" style="background: #fff7e6; border: 2px solid #ffc53d;">
+                <div style="text-align: center; padding: 20px;">
+                  <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 600;">
+                    <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
+                    QR Code thanh toán SePay (Chưa lưu)
+                  </h3>
+                  <div style="display: inline-block; padding: 16px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <img 
+                      [src]="qrPaymentUrl" 
+                      alt="QR Code thanh toán" 
+                      style="max-width: 300px; width: 100%; height: auto; display: block;"
+                      onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
+                    />
+                  </div>
+                  <div style="margin-top: 16px; font-size: 12px; color: #666;">
+                    <p><strong>Ngân hàng:</strong> {{ bankAccountForm.get('bankName')?.value }}</p>
+                    <p><strong>Số tài khoản:</strong> {{ bankAccountForm.get('accountNumber')?.value }}</p>
+                    <p *ngIf="qrBeneficiaryName" style="margin-top: 8px; padding: 8px; background: #fff; border-radius: 4px; border: 1px solid #ffc53d;">
+                      <strong style="color: #ff9800;">Tên người thụ hưởng:</strong> 
+                      <span style="font-weight: 600; color: #333;">{{ qrBeneficiaryName }}</span>
+                    </p>
+                    <p style="margin-top: 8px; color: #ff9800; font-weight: 600;">
+                      <i nz-icon nzType="info-circle" nzTheme="outline"></i>
+                      Bấm "Lưu thay đổi" để lưu QR code này vào hệ thống
+                    </p>
+                  </div>
+                </div>
+              </nz-card>
+            </nz-col>
+          </nz-row>
+
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Tên chủ tài khoản</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="accountHolderName" placeholder="Nhập tên chủ tài khoản" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Chi nhánh</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="branch" placeholder="Nhập chi nhánh ngân hàng" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>SWIFT/BIC Code</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="swiftCode" placeholder="Nhập SWIFT code (nếu có)" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>IBAN</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="iban" placeholder="Nhập IBAN (nếu có)" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+        </form>
+      </nz-card>
+
+      <nz-card [nzBordered]="true" style="margin-bottom: 24px;">
+        <h2 nz-typography style="margin-bottom: 20px; font-size: 18px; font-weight: 600;">
+          <i nz-icon nzType="idcard" nzTheme="outline" style="margin-right: 8px;"></i>
+          Thông tin cá nhân
+        </h2>
+        
+        <form [formGroup]="personalInfoForm" nz-form>
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="8">
+              <nz-form-item>
+                <nz-form-label>Ngày sinh</nz-form-label>
+                <nz-form-control>
+                  <nz-date-picker formControlName="dateOfBirth" nzFormat="dd/MM/yyyy" style="width: 100%;"></nz-date-picker>
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="8">
+              <nz-form-item>
+                <nz-form-label>Giới tính</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="gender" style="width: 100%;">
+                    <nz-option nzValue="male" nzLabel="Nam"></nz-option>
+                    <nz-option nzValue="female" nzLabel="Nữ"></nz-option>
+                    <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="8">
+              <nz-form-item>
+                <nz-form-label>Quốc tịch</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="nationality" placeholder="Nhập quốc tịch" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="8">
+              <nz-form-item>
+                <nz-form-label>Số CMND/CCCD</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="idCard" placeholder="Nhập số CMND/CCCD" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="8">
+              <nz-form-item>
+                <nz-form-label>Ngày cấp</nz-form-label>
+                <nz-form-control>
+                  <nz-date-picker formControlName="idCardIssueDate" nzFormat="dd/MM/yyyy" style="width: 100%;"></nz-date-picker>
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="8">
+              <nz-form-item>
+                <nz-form-label>Nơi cấp</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="idCardIssuePlace" placeholder="Nhập nơi cấp" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+
+          <nz-divider nzText="Địa chỉ"></nz-divider>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6">Đường/Phố</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <input nz-input formControlName="address.street" placeholder="Nhập số nhà, tên đường" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="8">
+              <nz-form-item>
+                <nz-form-label>Phường/Xã</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="address.ward" placeholder="Nhập phường/xã" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="8">
+              <nz-form-item>
+                <nz-form-label>Quận/Huyện</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="address.district" placeholder="Nhập quận/huyện" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="8">
+              <nz-form-item>
+                <nz-form-label>Tỉnh/Thành phố</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="address.city" placeholder="Nhập tỉnh/thành phố" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+
+          <nz-row [nzGutter]="16">
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Quốc gia</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="address.country" placeholder="Nhập quốc gia" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+            <nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Mã bưu điện</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="address.postalCode" placeholder="Nhập mã bưu điện" />
+                </nz-form-control>
+              </nz-form-item>
+            </nz-col>
+          </nz-row>
+        </form>
+      </nz-card>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+        <button 
+          nz-button 
+          nzType="default" 
+          (click)="resetForm()"
+          [disabled]="saving">
+          <i nz-icon nzType="reload" nzTheme="outline"></i>
+          Đặt lại
+        </button>
+        <button 
+          nz-button 
+          nzType="primary" 
+          (click)="saveProfile()"
+          [nzLoading]="saving">
+          <i nz-icon nzType="save" nzTheme="outline"></i>
+          Lưu thay đổi
+        </button>
+      </div>
+    </div>
+  </nz-spin>
+</div>
+

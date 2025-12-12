@@ -73,6 +73,18 @@
       <nz-option nzValue="maintenance" nzLabel="Bảo trì"></nz-option>
     </nz-select>
     
+    <!-- Bộ lọc trạng thái thanh toán -->
+    <nz-select 
+      [ngModel]="paymentStatusFilter" 
+      (ngModelChange)="onPaymentStatusFilterChange($event)" 
+      nzPlaceHolder="Trạng thái thanh toán"
+      class="filter-select"
+    >
+      <nz-option nzValue="all" nzLabel="Tất cả"></nz-option>
+      <nz-option nzValue="paid" nzLabel="Đã thanh toán"></nz-option>
+      <nz-option nzValue="pending" nzLabel="Chưa thanh toán"></nz-option>
+    </nz-select>
+    
     <!-- Nút tải lại dữ liệu -->
     <button nz-button nzType="default" (click)="loadHistory(currentFilterType)" [nzLoading]="settingValue.loading" nz-tooltip nzTooltipTitle="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" class="btn-icon-only">
       <i nz-icon nzType="reload"></i>
@@ -89,7 +101,16 @@
 </div>
 
 <div class="status-summary nz-card" *ngIf="settingValue.totalPayment">
-  <nz-statistic [nzValue]="paidData.length" nzTitle="Đã thanh toán" [nzValueStyle]="{ color: '#52c41a' }"></nz-statistic>
+  <nz-statistic 
+    [nzValue]="paidCount" 
+    nzTitle="Đã thanh toán" 
+    [nzValueStyle]="{ color: '#52c41a' }">
+  </nz-statistic>
+  <nz-statistic 
+    [nzValue]="pendingCount" 
+    nzTitle="Chưa thanh toán" 
+    [nzValueStyle]="{ color: '#faad14' }">
+  </nz-statistic>
   <nz-statistic [nzValue]="totalPayment" nzTitle="Tổng tiền" [nzSuffix]="'đ'" [nzValueStyle]="{ color: '#722ed1' }"></nz-statistic>
 </div>
 
@@ -231,7 +252,10 @@
             {{ getPaymentMethodLabel(data.paymentMethod || 'cash') }}
           </nz-tag>
           <div style="margin-top: 4px;">
-            <nz-tag [nzColor]="'success'">Đã thanh toán</nz-tag>
+            <nz-tag 
+              [nzColor]="getPaymentStatusColor(data.paymentStatus || data.payment?.status || data.payment?.paymentStatus || 'pending')">
+              {{ getPaymentStatusText(data.paymentStatus || data.payment?.status || data.payment?.paymentStatus || 'pending') }}
+            </nz-tag>
           </div>
         </td>
         <td>
@@ -316,7 +340,10 @@
                   </nz-tag>
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Trạng thái" [nzSpan]="1">
-                  <nz-tag nzColor="success">Đã thanh toán</nz-tag>
+                  <nz-tag 
+                    [nzColor]="getPaymentStatusColor(data.paymentStatus || data.payment?.status || data.payment?.paymentStatus || 'pending')">
+                    {{ getPaymentStatusText(data.paymentStatus || data.payment?.status || data.payment?.paymentStatus || 'pending') }}
+                  </nz-tag>
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Số hóa đơn" [nzSpan]="1">
                   {{ data.invoiceNumber || data._id || 'N/A' }}

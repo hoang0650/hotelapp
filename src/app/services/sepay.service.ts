@@ -172,6 +172,20 @@ export class SePayService {
   }
 
   /**
+   * Tạo payment history cho checkout phòng
+   */
+  createPaymentHistoryForRoom(payload: {
+    userId: string;
+    amount: number;
+    currency?: string;
+    description?: string;
+    roomId: string;
+    roomNumber: string;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/create-payment-history`, payload);
+  }
+
+  /**
    * Gọi backend để tạo signature và lấy config (DEPRECATED - không dùng nữa)
    */
   private createPaymentRequest(

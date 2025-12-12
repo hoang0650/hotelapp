@@ -27,4 +27,30 @@ export interface User {
   };
   permissions?: Array<'view' | 'create' | 'edit' | 'delete' | 'manage_revenue'>;
   metadata?: any;
+  bankAccount?: {
+    bankName?: string;
+    accountNumber?: string;
+    accountHolderName?: string;
+    beneficiaryName?: string; // Tên người thụ hưởng (hiển thị trên QR code)
+    branch?: string;
+    swiftCode?: string;
+    iban?: string;
+    qrPaymentUrl?: string; // Link QR thanh toán SePay
+  };
+  personalInfo?: {
+    dateOfBirth?: Date;
+    gender?: string;
+    nationality?: string;
+    idCard?: string;
+    idCardIssueDate?: Date;
+    idCardIssuePlace?: string;
+    address?: {
+      street?: string;
+      ward?: string;
+      district?: string;
+      city?: string;
+      country?: string;
+      postalCode?: string;
+    };
+  };
 } 

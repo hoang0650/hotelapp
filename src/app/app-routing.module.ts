@@ -33,6 +33,7 @@ import { PricingManagementComponent } from './components/pricing-management/pric
 import { OtaManagementComponent } from './components/ota-management/ota-management.component';
 import { TuyaSwitchComponent } from './components/tuya-switch/tuya-switch.component';
 import { SepayOAuth2CallbackComponent } from './components/sepay-oauth2-callback/sepay-oauth2-callback.component';
+import { ProfileComponent } from './components/profile/profile.component';
 import { PermissionGuard } from './guards/permission.guard';
 
 const routes: Routes = [
@@ -80,6 +81,7 @@ const routes: Routes = [
   { path: 'email-compose', component: EmailComposeComponent },
   { path: 'about-us', component: AboutUsComponent },
   { path: 'chat', component: ChatComponent },
+  { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },
   { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'sepay-oauth2-callback', component: SepayOAuth2CallbackComponent }

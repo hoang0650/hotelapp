@@ -327,6 +327,31 @@ export class RoomsService {
     return this.http.post<any>(`${this.apiUrl}/invoices`, invoiceData);
   }
 
+  // Tính giá phòng dựa trên priceConfig
+  calculateRoomPrice(roomId: string, checkInDate: Date, checkOutDate: Date, rateType: 'hourly' | 'daily' | 'nightly'): Observable<{
+    roomId: string;
+    totalPrice: number;
+    priceDetails: any;
+    durationInHours: number;
+    rateType: string;
+    originalRateType?: string;
+  }> {
+    const priceConfigApiUrl = 'https://nest-production-8106.up.railway.app/priceConfig';
+    return this.http.post<{
+      roomId: string;
+      totalPrice: number;
+      priceDetails: any;
+      durationInHours: number;
+      rateType: string;
+      originalRateType?: string;
+    }>(`${priceConfigApiUrl}/calculate`, {
+      roomId,
+      checkInDate: checkInDate.toISOString(),
+      checkOutDate: checkOutDate.toISOString(),
+      rateType
+    });
+  }
+
   private handleError<T>(operation = 'operation', result?: T) {
     return (error: any): Observable<T> => {
       console.error(`${operation} failed: ${error.message}`);

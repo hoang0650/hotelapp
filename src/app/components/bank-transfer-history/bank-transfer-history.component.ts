@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { BankTransferService, BankTransfer, SepayTransaction } from '../../services/bank-transfer.service';
@@ -13,7 +13,7 @@ import { forkJoin } from 'rxjs';
   templateUrl: './bank-transfer-history.component.html',
   styleUrls: ['./bank-transfer-history.component.css']
 })
-export class BankTransferHistoryComponent implements OnInit {
+export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   searchForm: FormGroup;
   transfers: BankTransfer[] = [];
   isLoading = false;
@@ -30,6 +30,10 @@ export class BankTransferHistoryComponent implements OnInit {
   activeTabIndex = 0; // 0: Tất cả, 1: SePay, 2: PayPal, 3: Crypto
   userId: string = '';
   allPaymentsLoading = false;
+  
+  // Auto-refresh interval
+  private refreshInterval: any = null;
+  private readonly REFRESH_INTERVAL = 30000; // 30 giây
 
   // SePay OAuth2 Access Token và Refresh Token
   public sepayApiToken: string | null = localStorage.getItem('sepay_access_token') || 
@@ -101,6 +105,69 @@ export class BankTransferHistoryComponent implements OnInit {
       this.loadSePayPayments();
       this.loadAllPayments();
     }
+
+    // Bắt đầu auto-refresh cho payment history (đặc biệt là SePay)
+    this.startAutoRefresh();
+  }
+
+  ngOnDestroy() {
+    // Dọn dẹp interval khi component bị destroy
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+  }
+
+  /**
+   * Bắt đầu auto-refresh payment history
+   */
+  startAutoRefresh(): void {
+    // Chỉ auto-refresh nếu có userId
+    if (!this.userId) return;
+
+    // Clear interval cũ nếu có
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+
+    // Tạo interval mới để refresh payment history mỗi 30 giây
+    this.refreshInterval = setInterval(() => {
+      // Chỉ refresh payment history, không refresh SePay transactions (tốn token)
+      this.refreshPaymentHistory();
+    }, this.REFRESH_INTERVAL);
+  }
+
+  /**
+   * Refresh tất cả payment history (không refresh SePay transactions)
+   */
+  refreshPaymentHistory(): void {
+    if (!this.userId) return;
+
+    // Refresh payment history từ các phương thức thanh toán
+    this.loadPayPalPayments();
+    this.loadCryptoPayments();
+    this.loadSePayPayments();
+    this.loadAllPayments();
+  }
+
+  /**
+   * Refresh tất cả dữ liệu (bao gồm cả SePay transactions nếu có token)
+   */
+  refreshAllData(): void {
+    this.isLoading = true;
+    
+    // Refresh SePay transactions nếu có token
+    if (this.sepayApiToken && this.sepayApiToken.trim()) {
+      this.fetchSepayTransactions();
+    }
+    
+    // Refresh payment history
+    this.refreshPaymentHistory();
+    
+    // Refresh transfers
+    this.loadTransfers();
+    
+    this.message.success('Đã làm mới dữ liệu');
   }
 
   loadTransfers() {

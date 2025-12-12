@@ -43,9 +43,11 @@ export interface LoginResponse {
 }
 
 export interface ApiResponse<T = any> {
+  success?: boolean;
   message: string;
   data?: T;
   error?: string;
+  user?: T; // Backend có thể trả về 'user' thay vì 'data'
 }
 
 @Injectable({
@@ -194,5 +196,58 @@ export class UserService {
    */
   refreshCurrentUser(): void {
     this.checkAuthStatus();
+  }
+
+  /**
+   * Cập nhật hồ sơ cá nhân (thông tin cá nhân và ngân hàng)
+   */
+  updateProfile(profileData: {
+    fullName?: string;
+    phone?: string;
+    avatar?: string;
+    bankAccount?: {
+      bankName?: string;
+      accountNumber?: string;
+      accountHolderName?: string;
+      branch?: string;
+      swiftCode?: string;
+      iban?: string;
+    };
+    personalInfo?: {
+      dateOfBirth?: Date;
+      gender?: string;
+      nationality?: string;
+      idCard?: string;
+      idCardIssueDate?: Date;
+      idCardIssuePlace?: string;
+      address?: {
+        street?: string;
+        ward?: string;
+        district?: string;
+        city?: string;
+        country?: string;
+        postalCode?: string;
+      };
+    };
+  }): Observable<ApiResponse<User>> {
+    return this.http.put<any>(`${this.apiUrl}/profile`, profileData, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      map(response => {
+        // Backend trả về { success, message, user } hoặc { success, message, data }
+        const userData = response.user || response.data;
+        if (userData) {
+          this.currentUserSubject.next(userData);
+        }
+        // Normalize response về format ApiResponse
+        return {
+          success: response.success,
+          message: response.message,
+          data: userData,
+          error: response.error,
+          user: userData
+        } as ApiResponse<User>;
+      })
+    );
   }
 }

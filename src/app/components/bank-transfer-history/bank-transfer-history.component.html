@@ -6,9 +6,9 @@
         nz-button 
         nzType="default" 
         nzSize="small"
-        (click)="fetchSepayTransactions()"
-        [nzLoading]="isLoading"
-        title="Làm mới dữ liệu"
+        (click)="refreshAllData()"
+        [nzLoading]="isLoading || allPaymentsLoading"
+        title="Làm mới tất cả dữ liệu (giao dịch SePay và lịch sử thanh toán)"
       >
         <i nz-icon nzType="reload" nzTheme="outline"></i>
         Làm mới
@@ -148,6 +148,23 @@
 
     <!-- Tab SePay -->
     <nz-tab nzTitle="SePay">
+      <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; color: #999;">
+          <i nz-icon nzType="info-circle" nzTheme="outline"></i>
+          Tự động cập nhật mỗi 30 giây
+        </span>
+        <button 
+          nz-button 
+          nzType="default" 
+          nzSize="small"
+          (click)="refreshPaymentHistory()"
+          [nzLoading]="allPaymentsLoading"
+          title="Làm mới lịch sử thanh toán SePay"
+        >
+          <i nz-icon nzType="reload" nzTheme="outline"></i>
+          Làm mới
+        </button>
+      </div>
       <nz-list 
         [nzDataSource]="sepayPayments"
         [nzRenderItem]="payment"
@@ -156,19 +173,26 @@
           <nz-list-item>
             <nz-list-item-meta>
               <nz-list-item-meta-title>
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                   <i nz-icon nzType="credit-card" nzTheme="outline" style="color: #667eea;"></i>
                   <span>SePay Payment</span>
                   <nz-tag [nzColor]="getStatusColor(item.status)">
                     {{ getStatusText(item.status) }}
                   </nz-tag>
+                  <span *ngIf="item.status === 'pending'" style="font-size: 11px; color: #ff9800;">
+                    <i nz-icon nzType="clock-circle" nzTheme="outline"></i>
+                    Đang chờ thanh toán
+                  </span>
                 </div>
               </nz-list-item-meta-title>
               <nz-list-item-meta-description>
                 <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                   <div><strong>Gói:</strong> {{ item.packageId?.name || 'N/A' }}</div>
                   <div><strong>Số tiền:</strong> {{ formatAmount(item.amount, item.currency || 'VND') }}</div>
-                  <div><strong>Ngày:</strong> {{ (item.createdAt || item.created_at) | date:'dd/MM/yyyy HH:mm' }}</div>
+                  <div><strong>Ngày tạo:</strong> {{ (item.createdAt || item.created_at) | date:'dd/MM/yyyy HH:mm' }}</div>
+                  <div *ngIf="item.completedAt">
+                    <strong>Ngày hoàn thành:</strong> {{ item.completedAt | date:'dd/MM/yyyy HH:mm' }}
+                  </div>
                   <div *ngIf="item.transactionId">
                     <strong>Mã GD:</strong> 
                     <code style="font-size: 11px; background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">
@@ -176,8 +200,8 @@
                     </code>
                   </div>
                   <div *ngIf="item.sepayInvoiceNumber">
-                    <strong>Invoice:</strong> 
-                    <code style="font-size: 11px; background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">
+                    <strong>Mã thanh toán:</strong> 
+                    <code style="font-size: 11px; background: #e6f7ff; padding: 2px 6px; border-radius: 3px; color: #1890ff; font-weight: bold;">
                       {{ item.sepayInvoiceNumber }}
                     </code>
                   </div>

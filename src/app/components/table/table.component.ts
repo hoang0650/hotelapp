@@ -71,8 +71,9 @@ export class TableComponent implements OnInit, OnChanges {
 
   // Bộ lọc
   currentFilterType = 'checkout'; // Giá trị mặc định là checkout
+  paymentStatusFilter: 'all' | 'paid' | 'pending' = 'all'; // Bộ lọc trạng thái thanh toán
   
-  // Getter để lọc chỉ các bản ghi đã thanh toán (loại trừ dọn dẹp, bảo trì, check-in, booking)
+  // Getter để lọc các bản ghi checkout (bao gồm cả đã thanh toán và chưa thanh toán)
   get paidData(): any[] {
     if (!this.listOfData) return [];
     return this.listOfData.filter(item => {
@@ -96,16 +97,22 @@ export class TableComponent implements OnInit, OnChanges {
       // Loại trừ nếu không có checkOutTime (chưa checkout)
       if (!item.checkOutTime && !item.checkoutTime) return false;
       
-      // Kiểm tra trạng thái thanh toán
-      const isPaid = item.paymentStatus === 'paid' || 
-                     item.payment?.status === 'paid' ||
-                     item.payment?.paymentStatus === 'paid';
-      
       // Kiểm tra event checkout
       const isCheckout = eventType === 'check-out' || eventType === 'checkout';
+      if (!isCheckout) return false;
       
-      // Chỉ lấy các bản ghi đã thanh toán HOẶC là checkout (có checkOutTime)
-      return isPaid || isCheckout;
+      // Áp dụng bộ lọc trạng thái thanh toán
+      if (this.paymentStatusFilter !== 'all') {
+        const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || 'pending';
+        if (this.paymentStatusFilter === 'paid' && paymentStatus !== 'paid') {
+          return false;
+        }
+        if (this.paymentStatusFilter === 'pending' && paymentStatus === 'paid') {
+          return false;
+        }
+      }
+      
+      return true;
     });
   }
   
@@ -217,7 +224,7 @@ export class TableComponent implements OnInit, OnChanges {
 
   paymentStatusOptions = [
     { value: 'paid', label: 'Đã thanh toán', color: 'success' },
-    { value: 'pending', label: 'Chờ thanh toán', color: 'warning' },
+    { value: 'pending', label: 'Chưa thanh toán', color: 'warning' },
     { value: 'refunded', label: 'Đã hoàn tiền', color: 'cyan' },
     { value: 'cancelled', label: 'Đã hủy', color: 'error' }
   ];
@@ -305,7 +312,7 @@ export class TableComponent implements OnInit, OnChanges {
   
   getPaymentStatusText(status: string): string {
     const found = this.paymentStatusOptions.find(option => option.value === status);
-    return found ? found.label : 'Chờ thanh toán';
+    return found ? found.label : 'Chưa thanh toán';
   }
 
   getPaymentStatusColor(status: string): string {
@@ -663,8 +670,13 @@ export class TableComponent implements OnInit, OnChanges {
   }
   
   calculateTotalPayment(): void {
-    // Tính tổng tiền chỉ từ các bản ghi đã thanh toán
+    // Tính tổng tiền chỉ từ các bản ghi đã thanh toán (paymentStatus = 'paid')
     let baseTotal = this.paidData.reduce((sum, current) => {
+      // Chỉ tính tiền từ các bản ghi đã thanh toán
+      const paymentStatus = current.paymentStatus || current.payment?.status || current.payment?.paymentStatus || 'pending';
+      if (paymentStatus !== 'paid') {
+        return sum;
+      }
       const amount = current?.totalAmount || current?.amount || current?.payment?.amount || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0);
@@ -2329,6 +2341,28 @@ export class TableComponent implements OnInit, OnChanges {
   onFilterChange(filterType: string): void {
     this.currentFilterType = filterType;
     this.loadHistory(filterType);
+  }
+
+  onPaymentStatusFilterChange(status: 'all' | 'paid' | 'pending'): void {
+    this.paymentStatusFilter = status;
+    // Không cần reload, chỉ cần filter lại dữ liệu hiện tại
+    this.calculateTotalPayment();
+  }
+
+  // Getter để đếm số lượng đã thanh toán
+  get paidCount(): number {
+    return this.paidData.filter(item => {
+      const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || 'pending';
+      return paymentStatus === 'paid';
+    }).length;
+  }
+
+  // Getter để đếm số lượng chưa thanh toán
+  get pendingCount(): number {
+    return this.paidData.filter(item => {
+      const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || 'pending';
+      return paymentStatus === 'pending';
+    }).length;
   }
   
   loadHistory(filterType: string = 'all'): void {

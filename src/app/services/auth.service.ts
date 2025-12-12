@@ -367,4 +367,11 @@ export class AuthService {
     // Kiểm tra status của user
     return user.status !== 'active';
   }
+
+  /**
+   * Cập nhật current user (dùng sau khi cập nhật profile)
+   */
+  setCurrentUser(user: User): void {
+    this.currentUserSubject.next(user);
+  }
 }

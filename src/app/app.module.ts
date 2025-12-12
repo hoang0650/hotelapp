@@ -118,6 +118,7 @@ import { FooterComponent } from './components/footer/footer.component';
 import { TuyaSwitchComponent } from './components/tuya-switch/tuya-switch.component';
 import { TuyaSwitchCompactComponent } from './components/tuya-switch/tuya-switch-compact.component';
 import { SepayOAuth2CallbackComponent } from './components/sepay-oauth2-callback/sepay-oauth2-callback.component';
+import { ProfileComponent } from './components/profile/profile.component';
 
 registerLocaleData(vi);
 
@@ -193,7 +194,8 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         CryptoPaymentComponent,
         FooterComponent,
         TuyaSwitchComponent,
-        TuyaSwitchCompactComponent
+        TuyaSwitchCompactComponent,
+        ProfileComponent
     ],
     bootstrap: [AppComponent],
     imports: [

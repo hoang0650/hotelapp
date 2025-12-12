@@ -7,6 +7,7 @@ import { PayPalPaymentData } from '../paypal-payment/paypal-payment.component';
 import { SePayService, SePayPaymentData } from '../../services/sepay.service';
 import { PayPalService } from '../../services/paypal.service';
 import { CryptoService, CryptoPaymentData } from '../../services/crypto.service';
+import { UserService } from '../../services/user.service';
 import { forkJoin } from 'rxjs';
 
 interface PricingPlan {
@@ -49,6 +50,14 @@ export class PricingComponent implements OnInit {
     { value: 'ERC20', label: 'ERC20 (Ethereum)', icon: '⛽' },
     { value: 'BEP20', label: 'BEP20 (BSC)', icon: '🔷' }
   ];
+
+  // SePay QR code
+  showSePayModal = false;
+  sepayPaymentCode = '';
+  sepayAmount = 0;
+  sepayQrUrl = '';
+  sepayBeneficiaryName = '';
+  currentUser: any = null;
 
   plans: PricingPlan[] = [
     {
@@ -143,7 +152,8 @@ export class PricingComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private sepayService: SePayService,
     private paypalService: PayPalService,
-    private cryptoService: CryptoService
+    private cryptoService: CryptoService,
+    private userService: UserService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -156,12 +166,46 @@ export class PricingComponent implements OnInit {
     if (this.userId) {
       this.loadCurrentPackage();
       this.loadPaymentHistory();
+      this.loadCurrentUser(); // Load user để lấy QR code
     } else {
       this.currentPackage = null;
     }
 
     // Xử lý callback từ SePay sau khi thanh toán
     this.handlePaymentCallback();
+  }
+
+  /**
+   * Load thông tin user hiện tại để lấy QR code từ profile
+   */
+  loadCurrentUser(): void {
+    // Lấy user từ AuthService
+    this.currentUser = this.authService.getCurrentUser();
+    
+    // Nếu chưa có user hoặc chưa có bankAccount, load từ API
+    if (this.userId && (!this.currentUser || !this.currentUser.bankAccount)) {
+      this.userService.getProfile().subscribe({
+        next: (userData: any) => {
+          this.currentUser = userData;
+        },
+        error: (error: any) => {
+          console.error('Error loading user profile:', error);
+          // Fallback: sử dụng user từ AuthService
+          if (!this.currentUser) {
+            this.currentUser = this.authService.getCurrentUser();
+          }
+        }
+      });
+    }
+    
+    // Nếu chưa có user, subscribe để lấy khi có
+    if (!this.currentUser) {
+      this.authService.currentUser$.subscribe({
+        next: (user) => {
+          this.currentUser = user;
+        }
+      });
+    }
   }
 
   /**
@@ -359,7 +403,7 @@ export class PricingComponent implements OnInit {
 
   /**
    * Thanh toán qua SePay
-   * Tạo payment history và hiển thị thông tin thanh toán
+   * Tạo payment history và hiển thị QR code thanh toán
    * Webhook sẽ tự động xử lý khi SePay nhận được tiền
    */
   payWithSePay(): void {
@@ -368,10 +412,24 @@ export class PricingComponent implements OnInit {
       return;
     }
 
+    // Đảm bảo đã load user profile
+    if (!this.currentUser) {
+      this.loadCurrentUser();
+    }
+
     const packageId = this.selectedPackage.packageId;
     const pkg = this.selectedPackage;
     const packagePrice = this.getPackagePrice(pkg);
     const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+
+    // Lấy QR code từ profile
+    const qrPaymentUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
+    const beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
+
+    if (!qrPaymentUrl) {
+      this.message.warning('Chưa có QR code thanh toán trong profile. Vui lòng cập nhật thông tin ngân hàng trong profile trước khi thanh toán.');
+      return;
+    }
 
     // Tạo payment history
     const sepayPaymentData: SePayPaymentData = {
@@ -390,37 +448,14 @@ export class PricingComponent implements OnInit {
       next: (response: any) => {
         this.loading = false;
         if (response.success) {
-          // Hiển thị modal hoặc thông báo với thông tin thanh toán
-          const paymentCode = response.paymentCode;
-          const amount = response.amount;
-          const currency = response.currency;
+          // Lưu thông tin payment và hiển thị modal với QR code
+          this.sepayPaymentCode = response.paymentCode;
+          this.sepayAmount = packagePrice;
+          this.sepayQrUrl = qrPaymentUrl;
+          this.sepayBeneficiaryName = beneficiaryName;
           
-          this.modal.success({
-            nzTitle: 'Thông tin thanh toán SePay',
-            nzContent: `
-              <div style="padding: 20px;">
-                <p><strong>Gói dịch vụ:</strong> ${response.packageName}</p>
-                <p><strong>Số tiền:</strong> ${amount.toLocaleString('vi-VN')} ${currency}</p>
-                <p><strong>Mã thanh toán:</strong> <code style="font-size: 18px; font-weight: bold; color: #1890ff; background: #f0f0f0; padding: 8px 12px; border-radius: 4px;">${paymentCode}</code></p>
-                <p style="margin-top: 16px; color: #ff4d4f; font-weight: bold;">
-                  ⚠️ Quan trọng: Vui lòng chuyển khoản với nội dung chính xác là mã thanh toán trên!
-                </p>
-                <p style="margin-top: 12px;">
-                  Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và đăng ký gói cho bạn trong vòng vài phút.
-                </p>
-              </div>
-            `,
-            nzWidth: 500,
-            nzOnOk: () => {
-              // Copy mã thanh toán vào clipboard
-              navigator.clipboard.writeText(paymentCode).then(() => {
-                this.message.success('Đã copy mã thanh toán vào clipboard');
-              });
-              this.selectedPackage = null;
-              this.loadCurrentPackage();
-              this.loadPaymentHistory();
-            }
-          });
+          // Hiển thị modal với QR code
+          this.showSePayModal = true;
         } else {
           this.message.error(response.error || 'Có lỗi xảy ra khi tạo payment history');
         }
@@ -432,6 +467,33 @@ export class PricingComponent implements OnInit {
         this.message.error(errorMessage);
       }
     });
+  }
+
+  /**
+   * Đóng modal SePay và reload package/payment history
+   */
+  closeSePayModal(): void {
+    this.showSePayModal = false;
+    // Copy mã thanh toán vào clipboard
+    if (this.sepayPaymentCode) {
+      navigator.clipboard.writeText(this.sepayPaymentCode).then(() => {
+        this.message.success('Đã copy mã thanh toán vào clipboard');
+      });
+    }
+    this.selectedPackage = null;
+    this.loadCurrentPackage();
+    this.loadPaymentHistory();
+  }
+
+  /**
+   * Copy mã thanh toán vào clipboard
+   */
+  copyPaymentCode(): void {
+    if (this.sepayPaymentCode) {
+      navigator.clipboard.writeText(this.sepayPaymentCode).then(() => {
+        this.message.success('Đã copy mã thanh toán vào clipboard');
+      });
+    }
   }
 
   /**

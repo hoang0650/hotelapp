@@ -1219,6 +1219,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     const rateTypeLabel = rateTypeLabels[rateType] || 'Theo giờ';
     
     // Tính tiền phòng dựa trên thời gian
+    // Sử dụng logic đơn giản để hiển thị, tính toán chính xác sẽ được thực hiện bởi backend khi checkout
     let roomPrice = 0;
     if (checkinTime) {
       const now = new Date();
@@ -1226,29 +1227,26 @@ export class RoomComponent implements OnInit, OnDestroy {
       const durationInDays = Math.ceil(durationInHours / 24);
       
       // Ưu tiên lấy giá từ room pricing (đã được backend cập nhật từ priceConfig nếu có)
-      // Backend đã tự động ưu tiên priceConfig, nên giá trong room.pricing đã đúng
       const hourlyRate = room.pricing?.hourly || room.firstHourRate || 0;
       const dailyRate = room.pricing?.daily || 0;
       const nightlyRate = room.pricing?.nightly || 0;
+      const additionalHourRate = room.additionalHourRate || (hourlyRate * 0.8);
       
+      // Tính giá đơn giản để hiển thị (tính toán chính xác sẽ được backend thực hiện khi checkout)
       switch (rateType) {
         case 'hourly':
-          // Ưu tiên sử dụng firstHourRate và additionalHourRate nếu có (từ priceConfig hoặc room)
+          // Tính giá giờ đầu + các giờ tiếp theo
           if (room.firstHourRate && room.additionalHourRate) {
             roomPrice = room.firstHourRate;
             if (durationInHours > 1) {
               roomPrice += (durationInHours - 1) * room.additionalHourRate;
             }
-            // Chuyển sang giá ngày nếu vượt quá 6 giờ
-            if (durationInHours > 6 && dailyRate > 0) {
-              roomPrice = dailyRate;
-            }
           } else {
-            // Fallback: tính từ hourlyRate
             roomPrice = hourlyRate * durationInHours;
-            if (durationInHours > 6 && dailyRate > 0 && roomPrice > dailyRate) {
-              roomPrice = dailyRate;
-            }
+          }
+          // Chuyển sang giá ngày nếu vượt quá 6 giờ
+          if (durationInHours > 6 && dailyRate > 0) {
+            roomPrice = dailyRate;
           }
           break;
         case 'daily':
