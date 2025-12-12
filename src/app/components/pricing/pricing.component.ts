@@ -42,6 +42,13 @@ export class PricingComponent implements OnInit {
   paymentHistory: any[] = []; // Lịch sử thanh toán
   showPaymentHistory = false; // Hiển thị lịch sử thanh toán
   paymentHistoryLoading = false;
+  selectedCryptoNetwork: 'TRC20' | 'ERC20' | 'BEP20' = 'TRC20'; // Mạng crypto đã chọn
+  
+  cryptoNetworks = [
+    { value: 'TRC20', label: 'TRC20 (Tron)', icon: '🌐' },
+    { value: 'ERC20', label: 'ERC20 (Ethereum)', icon: '⛽' },
+    { value: 'BEP20', label: 'BEP20 (BSC)', icon: '🔷' }
+  ];
 
   plans: PricingPlan[] = [
     {
@@ -349,7 +356,8 @@ export class PricingComponent implements OnInit {
       amount: packagePrice,
       billingType: this.selectedPackage.billingType,
       currency: 'VND',
-      userId: this.userId
+      userId: this.userId,
+      network: this.selectedCryptoNetwork // Thêm network đã chọn
     };
 
     this.showCryptoModal = true;

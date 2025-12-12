@@ -32,6 +32,11 @@ export class CryptoPaymentComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Nếu paymentData có network, sử dụng network đó
+    if (this.paymentData?.network) {
+      this.selectedNetwork = this.paymentData.network;
+    }
+    
     if (this.visible && this.paymentData) {
       this.createPayment();
     }
@@ -43,6 +48,9 @@ export class CryptoPaymentComponent implements OnInit {
       return;
     }
 
+    // Ưu tiên sử dụng network từ paymentData, nếu không có thì dùng selectedNetwork
+    const network = this.paymentData.network || this.selectedNetwork;
+
     this.loading = true;
     const request: CryptoPaymentRequest = {
       packageId: this.paymentData.packageId,
@@ -50,7 +58,7 @@ export class CryptoPaymentComponent implements OnInit {
       billingType: this.paymentData.billingType,
       amount: this.paymentData.amount,
       currency: this.paymentData.currency || 'VND',
-      network: this.selectedNetwork
+      network: network
     };
 
     this.cryptoService.createPayment(request).subscribe({

@@ -52,6 +52,7 @@ export interface CryptoPaymentData {
   billingType: 'monthly' | 'yearly';
   currency?: string;
   userId: string;
+  network?: 'TRC20' | 'ERC20' | 'BEP20'; // Thêm network option
 }
 
 @Injectable({
