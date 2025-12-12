@@ -82,7 +82,8 @@
     >
       <nz-option nzValue="all" nzLabel="Tất cả"></nz-option>
       <nz-option nzValue="paid" nzLabel="Đã thanh toán"></nz-option>
-      <nz-option nzValue="pending" nzLabel="Chưa thanh toán"></nz-option>
+      <nz-option nzValue="pending" nzLabel="Chờ thanh toán"></nz-option>
+      <nz-option nzValue="unpaid" nzLabel="Chưa thanh toán"></nz-option>
     </nz-select>
     
     <!-- Nút tải lại dữ liệu -->
@@ -108,6 +109,11 @@
   </nz-statistic>
   <nz-statistic 
     [nzValue]="pendingCount" 
+    nzTitle="Chờ thanh toán" 
+    [nzValueStyle]="{ color: '#1890ff' }">
+  </nz-statistic>
+  <nz-statistic 
+    [nzValue]="unpaidCount" 
     nzTitle="Chưa thanh toán" 
     [nzValueStyle]="{ color: '#faad14' }">
   </nz-statistic>

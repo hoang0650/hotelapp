@@ -1,4 +1,4 @@
-import { Component, OnInit, NgModule, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnInit, NgModule, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup, NonNullableFormBuilder, Validators } from '@angular/forms';
 import { NzTableLayout, NzTablePaginationPosition, NzTablePaginationType, NzTableSize } from 'ng-zorro-antd/table';
 import { ProductService } from '../../services/product.service';
@@ -9,8 +9,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { format } from 'date-fns';
-import { finalize, catchError } from 'rxjs/operators';
-import { throwError } from 'rxjs';
+import { finalize, catchError, takeUntil, debounceTime } from 'rxjs/operators';
+import { throwError, Subject } from 'rxjs';
 import { InvoiceService } from '../../services/invoice.service';
 import { StaffService } from '../../services/staff.service';
 import { ShiftHandoverService } from '../../services/shift-handover.service';
@@ -71,7 +71,7 @@ export class TableComponent implements OnInit, OnChanges {
 
   // Bộ lọc
   currentFilterType = 'checkout'; // Giá trị mặc định là checkout
-  paymentStatusFilter: 'all' | 'paid' | 'pending' = 'all'; // Bộ lọc trạng thái thanh toán
+  paymentStatusFilter: 'all' | 'paid' | 'pending' | 'unpaid' = 'all'; // Bộ lọc trạng thái thanh toán
   
   // Getter để lọc các bản ghi checkout (bao gồm cả đã thanh toán và chưa thanh toán)
   get paidData(): any[] {
@@ -103,12 +103,27 @@ export class TableComponent implements OnInit, OnChanges {
       
       // Áp dụng bộ lọc trạng thái thanh toán
       if (this.paymentStatusFilter !== 'all') {
-        const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || 'pending';
-        if (this.paymentStatusFilter === 'paid' && paymentStatus !== 'paid') {
-          return false;
-        }
-        if (this.paymentStatusFilter === 'pending' && paymentStatus === 'paid') {
-          return false;
+        // Lấy paymentStatus từ nhiều nguồn, ưu tiên paymentStatus trực tiếp
+        const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || item.status || 'unpaid';
+        
+        // Chuẩn hóa trạng thái: 'completed' từ SePay = 'paid'
+        const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
+        
+        if (this.paymentStatusFilter === 'paid') {
+          // Chỉ hiển thị các giao dịch đã thanh toán (bao gồm cả 'completed' từ SePay)
+          if (normalizedStatus !== 'paid') {
+            return false;
+          }
+        } else if (this.paymentStatusFilter === 'pending') {
+          // Chỉ hiển thị các giao dịch đang chờ thanh toán (đã checkout, đang chờ xác nhận)
+          if (normalizedStatus !== 'pending') {
+            return false;
+          }
+        } else if (this.paymentStatusFilter === 'unpaid') {
+          // Hiển thị các giao dịch chưa thanh toán (không phải 'paid'/'completed' và không phải 'pending')
+          if (normalizedStatus === 'paid' || normalizedStatus === 'pending') {
+            return false;
+          }
         }
       }
       
@@ -224,7 +239,8 @@ export class TableComponent implements OnInit, OnChanges {
 
   paymentStatusOptions = [
     { value: 'paid', label: 'Đã thanh toán', color: 'success' },
-    { value: 'pending', label: 'Chưa thanh toán', color: 'warning' },
+    { value: 'pending', label: 'Chờ thanh toán', color: 'processing' },
+    { value: 'unpaid', label: 'Chưa thanh toán', color: 'warning' },
     { value: 'refunded', label: 'Đã hoàn tiền', color: 'cyan' },
     { value: 'cancelled', label: 'Đã hủy', color: 'error' }
   ];
@@ -300,23 +316,41 @@ export class TableComponent implements OnInit, OnChanges {
     if (!this.listOfData) return 0;
     
     return this.listOfData.filter(item => {
+      // Lấy paymentStatus từ nhiều nguồn
+      const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || item.status || 'unpaid';
+      // Chuẩn hóa: 'completed' từ SePay = 'paid'
+      const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
+      
       if (status === 'paid') {
-        return item.paymentStatus === 'paid' || item.payment?.status === 'paid' || (item.amount > 0 || item.payment?.amount > 0);
+        return normalizedStatus === 'paid' || (item.amount > 0 || item.payment?.amount > 0);
       } else if (status === 'pending') {
-        return item.paymentStatus === 'pending' || item.payment?.status === 'pending' || (item.amount === 0 && (!item.payment || item.payment.amount === 0));
+        return normalizedStatus === 'pending' || (item.amount === 0 && (!item.payment || item.payment.amount === 0));
       } else {
-        return item.paymentStatus === status || item.payment?.status === status;
+        return normalizedStatus === status;
       }
     }).length;
   }
   
   getPaymentStatusText(status: string): string {
-    const found = this.paymentStatusOptions.find(option => option.value === status);
-    return found ? found.label : 'Chưa thanh toán';
+    // Chuẩn hóa: 'completed' từ SePay = 'paid'
+    const normalizedStatus = (status === 'completed') ? 'paid' : status;
+    
+    const found = this.paymentStatusOptions.find(option => option.value === normalizedStatus);
+    if (found) {
+      return found.label;
+    }
+    // Nếu không tìm thấy trong options, kiểm tra trực tiếp
+    if (normalizedStatus === 'paid') return 'Đã thanh toán';
+    if (normalizedStatus === 'pending') return 'Chờ thanh toán';
+    if (normalizedStatus === 'unpaid') return 'Chưa thanh toán';
+    return 'Chưa thanh toán'; // Default
   }
 
   getPaymentStatusColor(status: string): string {
-    const found = this.paymentStatusOptions.find(option => option.value === status);
+    // Chuẩn hóa: 'completed' từ SePay = 'paid'
+    const normalizedStatus = (status === 'completed') ? 'paid' : status;
+    
+    const found = this.paymentStatusOptions.find(option => option.value === normalizedStatus);
     return found ? found.color : 'warning';
   }
 
@@ -670,11 +704,13 @@ export class TableComponent implements OnInit, OnChanges {
   }
   
   calculateTotalPayment(): void {
-    // Tính tổng tiền chỉ từ các bản ghi đã thanh toán (paymentStatus = 'paid')
+    // Tính tổng tiền chỉ từ các bản ghi đã thanh toán (paymentStatus = 'paid' hoặc 'completed')
     let baseTotal = this.paidData.reduce((sum, current) => {
       // Chỉ tính tiền từ các bản ghi đã thanh toán
-      const paymentStatus = current.paymentStatus || current.payment?.status || current.payment?.paymentStatus || 'pending';
-      if (paymentStatus !== 'paid') {
+      const paymentStatus = current.paymentStatus || current.payment?.status || current.payment?.paymentStatus || current.status || 'pending';
+      // Chuẩn hóa: 'completed' từ SePay = 'paid'
+      const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
+      if (normalizedStatus !== 'paid') {
         return sum;
       }
       const amount = current?.totalAmount || current?.amount || current?.payment?.amount || 0;
@@ -2343,7 +2379,7 @@ export class TableComponent implements OnInit, OnChanges {
     this.loadHistory(filterType);
   }
 
-  onPaymentStatusFilterChange(status: 'all' | 'paid' | 'pending'): void {
+  onPaymentStatusFilterChange(status: 'all' | 'paid' | 'pending' | 'unpaid'): void {
     this.paymentStatusFilter = status;
     // Không cần reload, chỉ cần filter lại dữ liệu hiện tại
     this.calculateTotalPayment();
@@ -2351,17 +2387,53 @@ export class TableComponent implements OnInit, OnChanges {
 
   // Getter để đếm số lượng đã thanh toán
   get paidCount(): number {
-    return this.paidData.filter(item => {
-      const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || 'pending';
-      return paymentStatus === 'paid';
+    if (!this.listOfData) return 0;
+    return this.listOfData.filter(item => {
+      // Chỉ đếm các event checkout
+      const eventType = (item.event || item.type || '').toLowerCase();
+      if (eventType !== 'check-out' && eventType !== 'checkout') return false;
+      if (!item.checkOutTime && !item.checkoutTime) return false;
+      
+      // Lấy paymentStatus từ nhiều nguồn
+      const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || item.status || 'unpaid';
+      // Chuẩn hóa: 'completed' từ SePay = 'paid'
+      const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
+      return normalizedStatus === 'paid';
     }).length;
   }
 
-  // Getter để đếm số lượng chưa thanh toán
+  // Getter để đếm số lượng chờ thanh toán (pending)
   get pendingCount(): number {
-    return this.paidData.filter(item => {
-      const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || 'pending';
-      return paymentStatus === 'pending';
+    if (!this.listOfData) return 0;
+    return this.listOfData.filter(item => {
+      // Chỉ đếm các event checkout
+      const eventType = (item.event || item.type || '').toLowerCase();
+      if (eventType !== 'check-out' && eventType !== 'checkout') return false;
+      if (!item.checkOutTime && !item.checkoutTime) return false;
+      
+      // Lấy paymentStatus từ nhiều nguồn
+      const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || item.status || 'unpaid';
+      // Chuẩn hóa: 'completed' từ SePay = 'paid', không phải 'pending'
+      const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
+      return normalizedStatus === 'pending';
+    }).length;
+  }
+
+  // Getter để đếm số lượng chưa thanh toán (unpaid)
+  get unpaidCount(): number {
+    if (!this.listOfData) return 0;
+    return this.listOfData.filter(item => {
+      // Chỉ đếm các event checkout
+      const eventType = (item.event || item.type || '').toLowerCase();
+      if (eventType !== 'check-out' && eventType !== 'checkout') return false;
+      if (!item.checkOutTime && !item.checkoutTime) return false;
+      
+      // Lấy paymentStatus từ nhiều nguồn
+      const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || item.status || 'unpaid';
+      // Chuẩn hóa: 'completed' từ SePay = 'paid'
+      const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
+      // Chưa thanh toán = không phải 'paid'/'completed' và không phải 'pending'
+      return normalizedStatus !== 'paid' && normalizedStatus !== 'pending';
     }).length;
   }
   

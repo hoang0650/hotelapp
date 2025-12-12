@@ -131,8 +131,8 @@
           <tr *ngIf="(invoiceData.products || []).length === 0">
             <td>Tiền phòng {{ invoiceData.roomNumber }}</td>
             <td class="text-center">x1</td>
-            <td class="text-right">{{ formatCurrency(invoiceData['amount'] || 0) }}</td>
-            <td class="text-right">{{ formatCurrency(invoiceData['amount'] || 0) }}</td>
+            <td class="text-right">{{ formatCurrency(invoiceData.roomTotal || invoiceData.roomPrice || invoiceData['amount'] || 0) }}</td>
+            <td class="text-right">{{ formatCurrency(invoiceData.roomTotal || invoiceData.roomPrice || invoiceData['amount'] || 0) }}</td>
           </tr>
            <!-- Hiển thị dịch vụ nếu có -->
            <ng-container *ngIf="hasServices && !hasServiceProductsDuplicated()">

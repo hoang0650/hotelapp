@@ -105,6 +105,8 @@ export interface Event {
   guestInfo?: GuestInfo; 
   selectedServices?: OrderedService[]; 
   paymentMethod?: 'cash' | 'card' | 'transfer'; 
+  paymentStatus?: 'paid' | 'pending'; // Trạng thái thanh toán (từ RoomEvent model)
+  paymentTransactionId?: string; // ID giao dịch thanh toán (nếu có)
   rateType?: 'hourly' | 'daily' | 'nightly'; // Loại giá
   advancePayment?: number; 
   additionalCharges?: number;

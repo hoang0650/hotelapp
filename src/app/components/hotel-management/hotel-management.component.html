@@ -331,6 +331,142 @@
           </nz-form-control>
         </nz-form-item>
 
+        <nz-divider nzText="Thông tin tài khoản ngân hàng" nzOrientation="left"></nz-divider>
+
+        <div formGroupName="bankAccount">
+          <nz-form-item>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="bankName">Tên ngân hàng</nz-form-label>
+            <nz-form-control [nzSm]="14" [nzXs]="24">
+              <input nz-input formControlName="bankName" id="bankName" placeholder="Ví dụ: Vietcombank, Techcombank..." />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="accountNumber">Số tài khoản</nz-form-label>
+            <nz-form-control [nzSm]="14" [nzXs]="24">
+              <input nz-input formControlName="accountNumber" id="accountNumber" placeholder="Nhập số tài khoản" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="accountHolderName">Tên chủ tài khoản</nz-form-label>
+            <nz-form-control [nzSm]="14" [nzXs]="24">
+              <input nz-input formControlName="accountHolderName" id="accountHolderName" placeholder="Tên chủ tài khoản" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="beneficiaryName">Tên người thụ hưởng</nz-form-label>
+            <nz-form-control [nzSm]="14" [nzXs]="24">
+              <input nz-input formControlName="beneficiaryName" id="beneficiaryName" placeholder="Tên người thụ hưởng (hiển thị trên QR code)" />
+              <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                Tên người thụ hưởng sẽ được hiển thị bên dưới QR code khi thanh toán
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="branch">Chi nhánh</nz-form-label>
+            <nz-form-control [nzSm]="14" [nzXs]="24">
+              <input nz-input formControlName="branch" id="branch" placeholder="Chi nhánh ngân hàng (tùy chọn)" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <!-- Nút tạo QR thanh toán -->
+          <nz-form-item>
+            <nz-form-label [nzSm]="6" [nzXs]="24"></nz-form-label>
+            <nz-form-control [nzSm]="14" [nzXs]="24">
+              <button 
+                nz-button 
+                nzType="primary" 
+                (click)="generateQrPayment()"
+                [disabled]="!hotelForm.get('bankAccount.bankName')?.value || !hotelForm.get('bankAccount.accountNumber')?.value">
+                <i nz-icon nzType="qrcode" nzTheme="outline"></i>
+                Tạo QR thanh toán
+              </button>
+              <button 
+                *ngIf="showQrPreview"
+                nz-button 
+                nzType="default" 
+                nzDanger
+                (click)="clearQrPreview()"
+                style="margin-left: 8px;">
+                <i nz-icon nzType="delete" nzTheme="outline"></i>
+                Xóa QR
+              </button>
+            </nz-form-control>
+          </nz-form-item>
+
+          <!-- QR Code đã lưu (từ database) -->
+          <nz-form-item *ngIf="selectedHotel?.bankAccount?.qrPaymentUrl && !showQrPreview">
+            <nz-form-label [nzSm]="6" [nzXs]="24"></nz-form-label>
+            <nz-form-control [nzSm]="14" [nzXs]="24">
+              <nz-card [nzBordered]="true" style="background: #f0f9ff;">
+                <div style="text-align: center; padding: 20px;">
+                  <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 600;">
+                    <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
+                    QR Code thanh toán đã lưu
+                  </h3>
+                  <div style="display: inline-block; padding: 16px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <img 
+                      [src]="selectedHotel?.bankAccount?.qrPaymentUrl || ''" 
+                      alt="QR Code thanh toán" 
+                      style="max-width: 300px; width: 100%; height: auto; display: block;"
+                      onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
+                    />
+                  </div>
+                  <div style="margin-top: 16px; font-size: 12px; color: #666;">
+                    <p><strong>Ngân hàng:</strong> {{ selectedHotel?.bankAccount?.bankName || 'N/A' }}</p>
+                    <p><strong>Số tài khoản:</strong> {{ selectedHotel?.bankAccount?.accountNumber || 'N/A' }}</p>
+                    <p *ngIf="selectedHotel?.bankAccount?.beneficiaryName" style="margin-top: 8px;">
+                      <strong>Tên người thụ hưởng:</strong> {{ selectedHotel?.bankAccount?.beneficiaryName }}
+                    </p>
+                    <p style="margin-top: 8px; color: #52c41a;">
+                      <i nz-icon nzType="check-circle" nzTheme="outline"></i>
+                      QR code đã được lưu trong hệ thống
+                    </p>
+                  </div>
+                </div>
+              </nz-card>
+            </nz-form-control>
+          </nz-form-item>
+
+          <!-- Preview QR Code mới tạo (chưa lưu) -->
+          <nz-form-item *ngIf="showQrPreview && qrPaymentUrl">
+            <nz-form-label [nzSm]="6" [nzXs]="24"></nz-form-label>
+            <nz-form-control [nzSm]="14" [nzXs]="24">
+              <nz-card [nzBordered]="true" style="background: #fff7e6; border: 2px solid #ffc53d;">
+                <div style="text-align: center; padding: 20px;">
+                  <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 600;">
+                    <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
+                    QR Code thanh toán SePay (Chưa lưu)
+                  </h3>
+                  <div style="display: inline-block; padding: 16px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <img 
+                      [src]="qrPaymentUrl" 
+                      alt="QR Code thanh toán" 
+                      style="max-width: 300px; width: 100%; height: auto; display: block;"
+                      onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
+                    />
+                  </div>
+                  <div style="margin-top: 16px; font-size: 12px; color: #666;">
+                    <p><strong>Ngân hàng:</strong> {{ hotelForm.get('bankAccount.bankName')?.value }}</p>
+                    <p><strong>Số tài khoản:</strong> {{ hotelForm.get('bankAccount.accountNumber')?.value }}</p>
+                    <p *ngIf="qrBeneficiaryName" style="margin-top: 8px; padding: 8px; background: #fff; border-radius: 4px; border: 1px solid #ffc53d;">
+                      <strong style="color: #ff9800;">Tên người thụ hưởng:</strong> 
+                      <span style="font-weight: 600; color: #333;">{{ qrBeneficiaryName }}</span>
+                    </p>
+                    <p style="margin-top: 8px; color: #ff9800; font-weight: 600;">
+                      <i nz-icon nzType="info-circle" nzTheme="outline"></i>
+                      Bấm "Cập nhật" để lưu QR code này vào hệ thống
+                    </p>
+                  </div>
+                </div>
+              </nz-card>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
         <nz-form-item>
           <nz-form-control [nzSm]="{ span: 14, offset: 6 }" [nzXs]="24">
             <nz-space>

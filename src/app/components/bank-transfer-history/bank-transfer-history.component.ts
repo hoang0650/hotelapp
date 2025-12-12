@@ -220,12 +220,17 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   }
 
   getStatusColor(status: string): string {
-    switch (status) {
+    // Chuẩn hóa: 'completed' từ SePay = 'success'
+    const normalizedStatus = (status === 'completed') ? 'success' : status;
+    
+    switch (normalizedStatus) {
       case 'success':
+      case 'paid':
         return 'success';
       case 'pending':
         return 'processing';
       case 'failed':
+      case 'cancelled':
         return 'error';
       default:
         return 'default';
@@ -233,13 +238,19 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   }
 
   getStatusText(status: string): string {
-    switch (status) {
+    // Chuẩn hóa: 'completed' từ SePay = 'success'
+    const normalizedStatus = (status === 'completed') ? 'success' : status;
+    
+    switch (normalizedStatus) {
       case 'success':
-        return 'Thành công';
+      case 'paid':
+        return 'Hoàn thành';
       case 'pending':
         return 'Đang xử lý';
       case 'failed':
         return 'Thất bại';
+      case 'cancelled':
+        return 'Đã hủy';
       default:
         return 'Không xác định';
     }

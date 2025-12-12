@@ -839,8 +839,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const remainingMinutes = durationInMinutes % 60;
     const durationInDays = Math.ceil(durationInHours / 24);
     
-    // Đảm bảo duration không âm
-    const validDurationInHours = Math.max(0, durationInHours);
+    // Đảm bảo duration không âm và có giá trị tối thiểu
+    // Nếu duration quá nhỏ (dưới 1 giờ), vẫn tính ít nhất 1 giờ để tránh lỗi tính toán
+    const validDurationInHours = Math.max(1, durationInHours); // Tối thiểu 1 giờ
     const validDurationInDays = Math.max(1, durationInDays);
     
     // Xác định loại giá và tính tiền phòng
@@ -918,11 +919,24 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         console.log(`Final price calculation: ${roomPrice} (room) + ${serviceTotal} (services) + ${this.initialCharges} (initial charges) + ${checkoutCharges} (checkout charges) - ${this.initialDiscount} (initial discount) - ${checkoutDiscount} (checkout discount) = ${this.totalPrice}`);
       },
       error: (error) => {
-        console.error('Error calculating room price from backend:', error);
+        console.error('[calculateTotalPrice] Error calculating room price from backend:', error);
+        console.error('[calculateTotalPrice] Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          url: error.url,
+          error: error.error
+        });
         // Fallback: sử dụng tính toán frontend đơn giản
-        const roomPrice = this.calculateRoomTotalByRateType(validDurationInHours, validDurationInDays, rateType, remainingMinutes);
+        // Đảm bảo validDurationInHours tối thiểu là 1 để tránh lỗi tính toán
+        const safeDurationInHours = Math.max(1, validDurationInHours);
+        const safeDurationInDays = Math.max(1, validDurationInDays);
+        console.log(`[calculateTotalPrice] Using fallback calculation with duration: ${safeDurationInHours} hours, rateType: ${rateType}`);
+        const roomPrice = this.calculateRoomTotalByRateType(safeDurationInHours, safeDurationInDays, rateType, remainingMinutes);
         this._roomPriceTotal = roomPrice;
         this._hasRoomPriceFromAPI = true; // Đánh dấu đã tính toán (dù là fallback)
+        
+        console.log(`[calculateTotalPrice] Fallback room price calculated: ${roomPrice}`);
         
         // Force change detection để cập nhật UI
         this.cdr.detectChanges();
@@ -1364,13 +1378,32 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     durationInHours: number,
     durationInDays: number
   ): void {
+    // Đảm bảo roomTotal có giá trị hợp lệ
+    // Nếu roomTotal là 0 hoặc undefined, sử dụng _roomPriceTotal hoặc tính lại
+    let validRoomTotal = roomTotal;
+    if (!validRoomTotal || validRoomTotal <= 0) {
+      console.warn('[processCheckoutWithPrice] roomTotal is invalid, using _roomPriceTotal:', {
+        roomTotal,
+        _roomPriceTotal: this._roomPriceTotal
+      });
+      validRoomTotal = this._roomPriceTotal || 0;
+      
+      // Nếu vẫn không có giá trị, tính lại từ calculateRoomTotalByRateType
+      if (!validRoomTotal || validRoomTotal <= 0) {
+        const remainingMinutes = 0;
+        validRoomTotal = this.calculateRoomTotalByRateType(durationInHours, durationInDays, rateType, remainingMinutes);
+        console.warn('[processCheckoutWithPrice] Recalculated roomTotal:', validRoomTotal);
+      }
+    }
+    
+    console.log('[processCheckoutWithPrice] Final roomTotal:', validRoomTotal);
     // Chuẩn bị dữ liệu checkout
     const paymentMethod = this.checkOutForm.get('paymentMethod')?.value;
     const checkoutData = {
       status: 'dirty',
       paymentStatus: paymentMethod === 'transfer' ? 'pending' : 'paid', // Pending nếu chuyển khoản, paid nếu tiền mặt/thẻ
       checkoutTime: currentTime,
-      roomTotal: roomTotal, // Gửi roomTotal riêng
+      roomTotal: validRoomTotal, // Gửi validRoomTotal đã được validate
       rateType: rateType, // Gửi rateType đã được tính toán từ backend
       totalAmount: grandTotal, // Tổng tiền (room + services + charges - discount)
       remainingAmount: remainingAmount,
@@ -1427,23 +1460,34 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // Tạo danh sách products cho hóa đơn
     const products: any[] = [];
     
-    // Thêm tiền phòng vào products
+    console.log('[processCheckoutWithPrice] Creating invoice products:', {
+      roomTotal: validRoomTotal,
+      roomNumber: this.roomData.roomNumber,
+      servicesCount: this.selectedServices?.length || 0
+    });
+    
+    // Thêm tiền phòng vào products (sử dụng validRoomTotal đã được validate ở trên)
     products.push({
       name: `Tiền phòng ${this.roomData.roomNumber}`,
-      price: roomTotal,
-      quantity: 1
+      price: validRoomTotal,
+      quantity: 1,
+      totalPrice: validRoomTotal // Thêm totalPrice để đảm bảo tính đúng
     });
     
     // Thêm các dịch vụ vào products
     if (this.selectedServices && this.selectedServices.length > 0) {
       this.selectedServices.forEach(service => {
+        const serviceTotal = service.price * (service.quantity || 1);
         products.push({
           name: service.serviceName,
           price: service.price,
-          quantity: service.quantity || 1
+          quantity: service.quantity || 1,
+          totalPrice: serviceTotal // Thêm totalPrice để đảm bảo tính đúng
         });
       });
     }
+    
+    console.log('[processCheckoutWithPrice] Products created:', products);
     
     // Tạo dữ liệu hóa đơn
     const invoiceData = {
@@ -1466,8 +1510,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         hours: durationInHours,
         days: durationInDays
       },
-      roomPrice: roomTotal,
-      roomTotal: roomTotal,
+      roomPrice: validRoomTotal,
+      roomTotal: validRoomTotal,
       products: products,
       services: this.selectedServices.map(service => ({
         name: service.serviceName,
@@ -1483,8 +1527,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       advancePayment: advancePayment || 0,
       remainingAmount: remainingAmount,
       paymentMethod: paymentMethod,
+      paymentStatus: checkoutData.paymentStatus || 'paid', // Thêm paymentStatus từ checkoutData
       notes: this.checkOutForm.get('notes')?.value,
-      rateType: rateType // Thêm rateType vào invoiceData
+      rateType: rateType, // Thêm rateType vào invoiceData
+      guestInfo: {
+        name: customerName,
+        phone: customerPhone && customerPhone !== 'N/A' ? customerPhone : '',
+        email: customerEmail && customerEmail !== 'N/A' ? customerEmail : '',
+        idNumber: formGuestInfo.idNumber || '',
+        address: formGuestInfo.address || '',
+        guestSource: guestSource // Thêm guestSource vào guestInfo
+      },
+      guestSource: guestSource // Thêm guestSource trực tiếp vào invoiceData để dễ truy cập
     };
     
     // Kiểm tra nếu payment method là 'transfer' (chuyển khoản)
@@ -1621,14 +1675,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           // Hiển thị modal với QR code và thông tin thanh toán
           this.showSePayModal = true;
           
-          // Lưu checkoutData và invoiceData để sử dụng sau khi thanh toán
+          // Lưu checkoutData và invoiceData để sử dụng sau khi đóng modal QR
           (this as any)._pendingCheckoutData = checkoutData;
           (this as any)._pendingInvoiceData = invoiceData;
           
-          // Bắt đầu kiểm tra trạng thái thanh toán (polling)
-          if (this.sepayPaymentHistoryId) {
-            this.startPaymentStatusPolling();
-          }
+          // Không bắt đầu polling - người dùng có thể đóng modal và hiển thị invoice ngay
+          // Webhook sẽ tự động cập nhật trạng thái sau
         } else {
           this.message.error(response.error || 'Có lỗi xảy ra khi tạo payment history');
           // Vẫn tiếp tục checkout
@@ -1792,8 +1844,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
    * Xử lý khi thanh toán thành công
    */
   private onPaymentSuccess(): void {
-    // Tắt QR modal
+    console.log('[onPaymentSuccess] Thanh toán thành công, đóng modal QR và hiển thị invoice');
+    
+    // Dừng polling
+    this.stopPaymentStatusPolling();
+    
+    // Đóng modal QR trước (tự động đóng)
     this.showSePayModal = false;
+    
+    // Force change detection để đảm bảo modal đóng ngay lập tức
+    this.cdr.detectChanges();
     
     // Lấy checkoutData và invoiceData đã lưu
     const checkoutData = (this as any)._pendingCheckoutData;
@@ -1807,56 +1867,86 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       // Hiển thị thông báo thành công
       this.message.success('Thanh toán thành công! Đang hiển thị hóa đơn...');
       
-      // Đóng modal checkout trước
+      // Đợi một chút để modal QR đóng hoàn toàn trước khi đóng modal checkout
+      setTimeout(() => {
+        // Đóng modal checkout
+        if (this.modalRef) {
+          this.modalRef.close();
+        }
+        
+        // Cập nhật checkout với paymentStatus = 'paid' trong background
+        this.roomsService.checkOutRoom(this.roomData._id, checkoutData)
+          .subscribe(
+            (response) => {
+              // Cập nhật danh sách phòng
+              this.roomsService.notifyRoomDataUpdated();
+              
+              // Hiển thị invoice sau khi checkout thành công
+              setTimeout(() => {
+                this.showInvoice(invoiceData);
+              }, 500);
+            },
+            (error) => {
+              console.error('Error updating checkout with payment status:', error);
+              // Vẫn hiển thị invoice ngay cả khi có lỗi
+              setTimeout(() => {
+                this.showInvoice(invoiceData);
+              }, 500);
+            }
+          );
+      }, 300);
+    } else {
+      console.error('[onPaymentSuccess] Không tìm thấy checkoutData hoặc invoiceData');
+    }
+  }
+  
+  /**
+   * Đóng modal SePay (người dùng đóng thủ công)
+   * Sau khi đóng, hiển thị invoice ngay lập tức
+   * Webhook sẽ tự động cập nhật trạng thái thanh toán sau
+   */
+  closeSePayModal(): void {
+    // Đóng modal QR
+    this.showSePayModal = false;
+    
+    // Dừng polling nếu có
+    this.stopPaymentStatusPolling();
+    
+    // Lấy checkoutData và invoiceData đã lưu
+    const checkoutData = (this as any)._pendingCheckoutData;
+    const invoiceData = (this as any)._pendingInvoiceData;
+    
+    if (checkoutData && invoiceData) {
+      // Hiển thị thông báo
+      this.message.info('Đã lưu thông tin thanh toán. Hệ thống sẽ tự động cập nhật trạng thái khi nhận được xác nhận từ ngân hàng.');
+      
+      // Đóng modal checkout
       if (this.modalRef) {
         this.modalRef.close();
       }
       
-      // Cập nhật checkout với paymentStatus = 'paid' trong background
+      // Thực hiện checkout với paymentStatus = 'pending' (webhook sẽ cập nhật sau)
       this.roomsService.checkOutRoom(this.roomData._id, checkoutData)
         .subscribe(
           (response) => {
             // Cập nhật danh sách phòng
             this.roomsService.notifyRoomDataUpdated();
             
-            // Hiển thị invoice sau khi checkout thành công
+            // Hiển thị invoice ngay lập tức
             setTimeout(() => {
               this.showInvoice(invoiceData);
             }, 300);
           },
           (error) => {
-            console.error('Error updating checkout with payment status:', error);
+            console.error('Error during checkout:', error);
             // Vẫn hiển thị invoice ngay cả khi có lỗi
             setTimeout(() => {
               this.showInvoice(invoiceData);
             }, 300);
           }
         );
-    }
-  }
-  
-  /**
-   * Đóng modal SePay (người dùng có thể đóng thủ công)
-   * Lưu ý: Vẫn tiếp tục kiểm tra trạng thái thanh toán trong background
-   */
-  closeSePayModal(): void {
-    // Cho phép đóng modal nhưng vẫn tiếp tục kiểm tra trạng thái thanh toán
-    this.showSePayModal = false;
-    
-    // Không tự động proceed checkout nếu chưa thanh toán
-    // Chỉ proceed nếu người dùng đóng thủ công (polling vẫn chạy trong background)
-    const checkoutData = (this as any)._pendingCheckoutData;
-    const invoiceData = (this as any)._pendingInvoiceData;
-    
-    if (checkoutData && invoiceData) {
-      // Chỉ proceed checkout nếu paymentStatus đã là 'paid'
-      // Nếu chưa, polling sẽ tự động gọi onPaymentSuccess khi thanh toán thành công
-      if (checkoutData.paymentStatus === 'paid') {
-        this.proceedWithCheckout(checkoutData, invoiceData);
-      } else {
-        // Hiển thị thông báo rằng hệ thống sẽ tự động xác nhận khi thanh toán thành công
-        this.message.info('Hệ thống sẽ tự động xác nhận và hiển thị hóa đơn khi thanh toán thành công.');
-      }
+    } else {
+      console.warn('[closeSePayModal] Không tìm thấy checkoutData hoặc invoiceData');
     }
   }
   
@@ -2131,12 +2221,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         // Tính số ngày (làm tròn lên) - theo logic backend: Math.ceil(durationInHours / 24)
         // Backend: const durationInDays = Math.ceil(durationInHours / 24);
         //          totalPrice = durationInDays * priceConfig.dailyRates.standardPrice;
-        const durationInDaysCalculated = Math.ceil(durationInHours / 24);
-        total = durationInDaysCalculated * dailyRate;
+        // Đảm bảo durationInHours tối thiểu là 0 (backend không có Math.max)
+        const safeDurationForDaily = Math.max(0, durationInHours);
+        const durationInDaysCalculated = Math.ceil(safeDurationForDaily / 24);
+        // Backend không có Math.max(1, ...), nhưng để tránh lỗi hiển thị, đảm bảo ít nhất 1 ngày nếu có thời gian
+        const finalDays = safeDurationForDaily > 0 ? Math.max(1, durationInDaysCalculated) : 0;
+        total = finalDays * dailyRate;
         priceDetails.basePrice = dailyRate;
-        priceDetails.days = durationInDaysCalculated;
+        priceDetails.days = finalDays;
         priceDetails.rateType = 'daily';
-        console.log(`Daily rate calculation: ${durationInHours} hours = ${durationInDaysCalculated} days * ${dailyRate} = ${total}`);
+        console.log(`Daily rate calculation: ${safeDurationForDaily} hours = ${finalDays} days * ${dailyRate} = ${total}`);
         break;
         
       case 'nightly':
@@ -2158,34 +2252,41 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           checkOutMinutes2 = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
         }
         
+        // Đảm bảo durationInHours tối thiểu là 0 (backend không có Math.max)
+        const safeDurationForNightly = Math.max(0, durationInHours);
+        
         // Kiểm tra nếu vượt quá autoDailyHours thì tự động chuyển sang daily rate (theo logic backend)
         // Backend: if (durationInHours > autoDailyHours) {
         //            const durationInDays = Math.ceil(durationInHours / 24);
         //            totalPrice = durationInDays * priceConfig.dailyRates.standardPrice;
-        if (durationInHours > autoDailyHours) {
+        if (safeDurationForNightly > autoDailyHours) {
           // Tự động chuyển sang daily rate
-          const durationInDays2 = Math.ceil(durationInHours / 24);
-          total = durationInDays2 * dailyRate;
+          const durationInDays2 = Math.ceil(safeDurationForNightly / 24);
+          // Backend không có Math.max(1, ...), nhưng để tránh lỗi hiển thị, đảm bảo ít nhất 1 ngày nếu có thời gian
+          const finalDays2 = safeDurationForNightly > 0 ? Math.max(1, durationInDays2) : 0;
+          total = finalDays2 * dailyRate;
           priceDetails = {
             basePrice: dailyRate,
             rateType: 'daily',
-            days: durationInDays2,
+            days: finalDays2,
             autoConverted: true,
             originalRateType: 'nightly',
-            reason: `Vượt quá ${autoDailyHours} giờ (${durationInHours} giờ)`
+            reason: `Vượt quá ${autoDailyHours} giờ (${safeDurationForNightly} giờ)`
           };
-          console.log(`Nightly auto-converted to daily: ${durationInHours} hours > ${autoDailyHours} hours = ${durationInDays2} days * ${dailyRate} = ${total}`);
+          console.log(`Nightly auto-converted to daily: ${safeDurationForNightly} hours > ${autoDailyHours} hours = ${finalDays2} days * ${dailyRate} = ${total}`);
         } else {
           // Tính giá qua đêm (theo logic backend)
           // Backend: const durationInNights = Math.ceil(durationInHours / 24);
           //          totalPrice = durationInNights * priceConfig.nightlyRates.standardPrice;
-          const durationInNights = Math.ceil(durationInHours / 24);
-          total = durationInNights * nightlyRate;
+          const durationInNights = Math.ceil(safeDurationForNightly / 24);
+          // Backend không có Math.max(1, ...), nhưng để tránh lỗi hiển thị, đảm bảo ít nhất 1 đêm nếu có thời gian
+          const finalNights = safeDurationForNightly > 0 ? Math.max(1, durationInNights) : 0;
+          total = finalNights * nightlyRate;
           priceDetails.basePrice = nightlyRate;
           priceDetails.rateType = 'nightly';
-          priceDetails.nights = durationInNights;
+          priceDetails.nights = finalNights;
           
-          console.log(`Nightly base calculation: ${durationInHours} hours = ${durationInNights} nights * ${nightlyRate} = ${total}`);
+          console.log(`Nightly base calculation: ${safeDurationForNightly} hours = ${finalNights} nights * ${nightlyRate} = ${total}`);
           
           // Tính phụ thu check-in sớm (nếu check-in trước startTime) - theo logic backend
           // Backend: if (checkInMinutes2 < startTimeMinutes2) {

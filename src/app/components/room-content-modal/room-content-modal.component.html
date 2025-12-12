@@ -637,23 +637,16 @@
         <p style="margin: 0; color: #1890ff; font-size: 13px;">
           <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 6px;"></i>
           Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và cập nhật trạng thái thanh toán trong vòng vài phút.
-          Hóa đơn sẽ tự động hiển thị khi thanh toán thành công.
+          <strong>Bạn có thể đóng modal này và xem hóa đơn ngay. Trạng thái thanh toán sẽ được cập nhật tự động khi nhận được xác nhận từ ngân hàng.</strong>
         </p>
       </div>
 
       <div style="margin-top: 20px; text-align: right;">
         <button 
           nz-button 
-          nzType="default"
-          (click)="closeSePayModal()"
-          style="margin-right: 8px;">
-          Đóng (vẫn kiểm tra thanh toán)
-        </button>
-        <button 
-          nz-button 
           nzType="primary"
           (click)="closeSePayModal()">
-          Đã hiểu
+          Đóng và hiển thị hóa đơn
         </button>
       </div>
     </div>

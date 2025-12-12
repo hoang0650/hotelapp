@@ -33,6 +33,11 @@ export class HotelManagementComponent implements OnInit {
   selectedViewHotel: Hotel | null = null;
   currentUser: User | null = null;
   permissions: PermissionRules | null = null;
+  
+  // QR Payment
+  qrPaymentUrl: string = '';
+  showQrPreview: boolean = false;
+  qrBeneficiaryName: string = '';
 
   hotelStatusOptions: { label: string, value: HotelStatusType }[] = [
     { label: 'Hoạt động', value: 'active' },
@@ -78,6 +83,14 @@ export class HotelManagementComponent implements OnInit {
         currency: ['VND'],
         language: ['vi'],
         taxRate: [0]
+      }),
+      bankAccount: this.fb.group({
+        bankName: [''],
+        accountNumber: [''],
+        accountHolderName: [''],
+        beneficiaryName: [''],
+        branch: [''],
+        qrPaymentUrl: ['']
       })
     });
   }
@@ -259,8 +272,27 @@ export class HotelManagementComponent implements OnInit {
           currency: hotel.settings?.currency || 'VND',
           language: hotel.settings?.language || 'vi',
           taxRate: hotel.settings?.taxRate || 0
+        },
+        bankAccount: {
+          bankName: hotel.bankAccount?.bankName || '',
+          accountNumber: hotel.bankAccount?.accountNumber || '',
+          accountHolderName: hotel.bankAccount?.accountHolderName || '',
+          beneficiaryName: hotel.bankAccount?.beneficiaryName || '',
+          branch: hotel.bankAccount?.branch || '',
+          qrPaymentUrl: hotel.bankAccount?.qrPaymentUrl || ''
         }
       });
+      
+      // Load QR code nếu có
+      if (hotel.bankAccount?.qrPaymentUrl) {
+        this.qrPaymentUrl = hotel.bankAccount.qrPaymentUrl;
+        this.qrBeneficiaryName = hotel.bankAccount.beneficiaryName || '';
+        this.showQrPreview = false; // Đã lưu, không hiển thị preview
+      } else {
+        this.qrPaymentUrl = '';
+        this.qrBeneficiaryName = '';
+        this.showQrPreview = false;
+      }
     } else {
       // Tạo mới
       if (!this.canCreateHotel) {
@@ -292,6 +324,9 @@ export class HotelManagementComponent implements OnInit {
   stopEdit(): void {
     this.editId = null;
     this.selectedHotel = null;
+    this.qrPaymentUrl = '';
+    this.qrBeneficiaryName = '';
+    this.showQrPreview = false;
     this.hotelForm.reset({
       status: 'active',
       settings: {
@@ -303,6 +338,41 @@ export class HotelManagementComponent implements OnInit {
       },
       facilities: []
     });
+  }
+  
+  /**
+   * Tạo QR thanh toán SePay từ số tài khoản và tên ngân hàng
+   */
+  generateQrPayment(): void {
+    const bankAccountGroup = this.hotelForm.get('bankAccount') as FormGroup;
+    const bankName = bankAccountGroup?.get('bankName')?.value?.trim();
+    const accountNumber = bankAccountGroup?.get('accountNumber')?.value?.trim();
+    const beneficiaryName = bankAccountGroup?.get('beneficiaryName')?.value?.trim() || '';
+
+    if (!bankName || !accountNumber) {
+      this.message.warning('Vui lòng nhập tên ngân hàng và số tài khoản');
+      return;
+    }
+
+    // Tạo URL QR thanh toán SePay
+    const encodedAccount = encodeURIComponent(accountNumber);
+    const encodedBank = encodeURIComponent(bankName);
+    this.qrPaymentUrl = `https://qr.sepay.vn/img?acc=${encodedAccount}&bank=${encodedBank}`;
+    
+    // Lưu tên người thụ hưởng
+    this.qrBeneficiaryName = beneficiaryName || bankAccountGroup?.get('accountHolderName')?.value?.trim() || '';
+    
+    this.showQrPreview = true;
+    this.message.success('Đã tạo QR thanh toán thành công. Vui lòng bấm "Cập nhật" để lưu vào hệ thống.');
+  }
+
+  /**
+   * Xóa QR preview
+   */
+  clearQrPreview(): void {
+    this.qrPaymentUrl = '';
+    this.qrBeneficiaryName = '';
+    this.showQrPreview = false;
   }
 
   submitForm(): void {
@@ -334,6 +404,16 @@ export class HotelManagementComponent implements OnInit {
         hotelData[key] = value;
       }
     });
+    
+    // Cập nhật bankAccount với QR payment URL nếu có
+    if (hotelData.bankAccount) {
+      if (this.qrPaymentUrl) {
+        hotelData.bankAccount.qrPaymentUrl = this.qrPaymentUrl;
+      }
+      if (this.qrBeneficiaryName) {
+        hotelData.bankAccount.beneficiaryName = this.qrBeneficiaryName;
+      }
+    }
 
     this.isLoading = true;
 

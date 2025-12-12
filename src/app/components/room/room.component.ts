@@ -1232,7 +1232,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       const nightlyRate = room.pricing?.nightly || 0;
       const additionalHourRate = room.additionalHourRate || (hourlyRate * 0.8);
       
-      // Tính giá ước tính đơn giản để hiển thị (không tính phụ thu, không tự động chuyển đổi)
+      // Tính giá ước tính để hiển thị (theo logic backend priceConfig.js)
       // Logic chính xác sẽ được backend xử lý khi checkout
       switch (rateType) {
         case 'hourly':
@@ -1247,12 +1247,51 @@ export class RoomComponent implements OnInit, OnDestroy {
           }
           break;
         case 'daily':
-          roomPrice = dailyRate * durationInDays;
+          // Theo backend: Math.ceil(durationInHours / 24) * dailyRate
+          const dailyDays = Math.ceil(durationInHours / 24);
+          roomPrice = dailyRate * dailyDays;
           break;
         case 'nightly':
-          roomPrice = nightlyRate;
-          if (durationInDays > 1) {
-            roomPrice += (durationInDays - 1) * dailyRate;
+          // Theo backend: Math.ceil(durationInHours / 24) * nightlyRate + surcharges
+          // Lấy priceConfig để tính surcharges nếu có
+          const priceConfig = (room as any)?.priceConfig;
+          const autoDailyHours = priceConfig?.nightlyRates?.autoDailyHours || 24;
+          const nightlyStartTime = priceConfig?.nightlyRates?.startTime || '22:00';
+          const nightlyEndTime = priceConfig?.nightlyRates?.endTime || '12:00';
+          const earlyCheckinSurcharge = priceConfig?.nightlyRates?.earlyCheckinSurcharge || 0;
+          const lateCheckoutSurcharge = priceConfig?.nightlyRates?.lateCheckoutSurcharge || 0;
+          
+          // Kiểm tra auto-conversion sang daily (theo backend)
+          if (durationInHours > autoDailyHours) {
+            // Tự động chuyển sang daily rate
+            const dailyDays2 = Math.ceil(durationInHours / 24);
+            roomPrice = dailyRate * dailyDays2;
+          } else {
+            // Tính giá qua đêm: Math.ceil(durationInHours / 24) * nightlyRate
+            const nightlyNights = Math.ceil(durationInHours / 24);
+            roomPrice = nightlyRate * nightlyNights;
+            
+            // Tính phụ thu check-in sớm (nếu có)
+            if (checkinTime && earlyCheckinSurcharge > 0) {
+              const [startHour, startMinute] = nightlyStartTime.split(':').map(Number);
+              const checkInMinutes = checkinTime.getHours() * 60 + checkinTime.getMinutes();
+              const startTimeMinutes = startHour * 60 + startMinute;
+              if (checkInMinutes < startTimeMinutes) {
+                const earlyHours = (startTimeMinutes - checkInMinutes) / 60;
+                roomPrice += earlyHours * earlyCheckinSurcharge;
+              }
+            }
+            
+            // Tính phụ thu check-out muộn (nếu có)
+            if (lateCheckoutSurcharge > 0) {
+              const [endHour, endMinute] = nightlyEndTime.split(':').map(Number);
+              const checkOutMinutes = now.getHours() * 60 + now.getMinutes();
+              const endTimeMinutes = endHour * 60 + endMinute;
+              if (checkOutMinutes > endTimeMinutes) {
+                const lateHours = (checkOutMinutes - endTimeMinutes) / 60;
+                roomPrice += lateHours * lateCheckoutSurcharge;
+              }
+            }
           }
           break;
         default:

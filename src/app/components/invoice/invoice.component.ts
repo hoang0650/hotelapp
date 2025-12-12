@@ -57,6 +57,7 @@ interface InvoiceData {
   advancePayment?: number;
   totalAmount: number;
   roomTotal?: number;
+  roomPrice?: number; // Giá phòng (tương thích với roomTotal)
   roomAmount?: number; // Tương thích với tên khác
   paymentMethod?: string;
   paymentStatus?: string;
@@ -64,6 +65,7 @@ interface InvoiceData {
   notes?: string;
   staffId?: string;
   rateType?: string; // Loại giá: hourly, daily, nightly
+  remainingAmount?: number; // Số tiền còn lại phải thanh toán
   guestInfo?: {
     name?: string;
     phone?: string;
@@ -458,13 +460,18 @@ export class InvoiceComponent implements OnInit {
   
   // Tính tổng tiền cuối cùng
   calculateFinalTotal(): void {
-    // Nếu có totalAmount từ dữ liệu, sử dụng nó
-    if (this.invoiceData.totalAmount && this.invoiceData.totalAmount > 0) {
+    // Ưu tiên 1: Sử dụng remainingAmount từ dữ liệu (đã được tính từ room-content-modal)
+    if (this.invoiceData.remainingAmount !== undefined && this.invoiceData.remainingAmount !== null) {
+      this.finalTotalAmount = this.invoiceData.remainingAmount;
+    }
+    // Ưu tiên 2: Nếu có totalAmount từ dữ liệu, tính remainingAmount từ đó
+    else if (this.invoiceData.totalAmount && this.invoiceData.totalAmount > 0) {
       // Trừ tiền đã trả trước nếu có
       const advancePayment = this.invoiceData.advancePayment || 0;
       this.finalTotalAmount = this.invoiceData.totalAmount - advancePayment;
-    } else {
-      // Tính từ subtotal nếu không có totalAmount
+    } 
+    // Ưu tiên 3: Tính từ subtotal nếu không có totalAmount
+    else {
       let currentTotal = this.subtotal + this.serviceTotal;
       
       // Cộng phụ thu
