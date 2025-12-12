@@ -625,10 +625,10 @@
         </div>
         <div style="margin-top: 12px; font-size: 12px; color: #666;">
           <p style="margin: 4px 0;">
-            <strong>Ngân hàng:</strong> {{ currentUser?.bankAccount?.bankName || 'N/A' }}
+            <strong>Ngân hàng:</strong> {{ sepayBankName || currentUser?.bankAccount?.bankName || hotelBankAccount?.bankName || 'N/A' }}
           </p>
           <p style="margin: 4px 0;">
-            <strong>Số tài khoản:</strong> {{ currentUser?.bankAccount?.accountNumber || 'N/A' }}
+            <strong>Số tài khoản:</strong> {{ sepayAccountNumber || currentUser?.bankAccount?.accountNumber || hotelBankAccount?.accountNumber || 'N/A' }}
           </p>
         </div>
       </div>

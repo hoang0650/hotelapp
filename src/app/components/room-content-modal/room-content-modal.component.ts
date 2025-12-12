@@ -59,7 +59,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   sepayAmount = 0;
   sepayQrUrl = '';
   sepayBeneficiaryName = '';
+  sepayBankName = '';
+  sepayAccountNumber = '';
   currentUser: any = null;
+  hotelBankAccount: any = null; // Thông tin ngân hàng của hotel
   
   // Định dạng hiển thị tiền Việt Nam
   formatterVND = (value: number): string => `${value} đ`;
@@ -646,12 +649,26 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.hotelService.getHotelById(this.roomData.hotelId).subscribe(
       (data) => {
         this.businessInfo = data;
+        // Lưu thông tin ngân hàng của hotel
+        this.hotelBankAccount = data.bankAccount || null;
         console.log('Thông tin doanh nghiệp:', this.businessInfo);
+        console.log('Thông tin ngân hàng hotel:', this.hotelBankAccount);
+        
+        // Nếu hotel không có bankAccount, thử lấy từ manager
+        if (!this.hotelBankAccount?.qrPaymentUrl && data.managerId) {
+          const manager = typeof data.managerId === 'object' ? data.managerId : null;
+          if (manager?.bankAccount?.qrPaymentUrl) {
+            // Sử dụng QR code từ manager nếu hotel không có
+            this.hotelBankAccount = manager.bankAccount;
+            console.log('Sử dụng QR code từ manager vì hotel chưa có:', this.hotelBankAccount);
+          }
+        }
       },
       (error) => {
         console.error('Lỗi khi tải thông tin doanh nghiệp:', error);
         // Xử lý lỗi nếu cần, ví dụ hiển thị thông tin mặc định hoặc thông báo
         this.businessInfo = { name: 'Khách sạn Mặc định', address: '', phoneNumber: '' }; // Ví dụ
+        this.hotelBankAccount = null;
       }
     );
   }
@@ -1467,14 +1484,40 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Lấy QR code từ profile
-    const qrPaymentUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
-    const beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
-    const bankName = this.currentUser?.bankAccount?.bankName || '';
-    const accountNumber = this.currentUser?.bankAccount?.accountNumber || '';
+    // ƯU TIÊN 1: Lấy QR code từ hotel (doanh nghiệp)
+    let qrPaymentUrl = '';
+    let beneficiaryName = '';
+    let bankName = '';
+    let accountNumber = '';
+    
+    if (this.hotelBankAccount?.qrPaymentUrl) {
+      // Hotel có QR code
+      qrPaymentUrl = this.hotelBankAccount.qrPaymentUrl;
+      beneficiaryName = this.hotelBankAccount.beneficiaryName || this.hotelBankAccount.accountHolderName || '';
+      bankName = this.hotelBankAccount.bankName || '';
+      accountNumber = this.hotelBankAccount.accountNumber || '';
+      console.log('Sử dụng QR code từ hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
+    } else {
+      // ƯU TIÊN 2: Lấy QR code từ manager của hotel (nếu có)
+      const manager = this.businessInfo?.managerId;
+      if (manager && typeof manager === 'object' && manager.bankAccount?.qrPaymentUrl) {
+        qrPaymentUrl = manager.bankAccount.qrPaymentUrl;
+        beneficiaryName = manager.bankAccount.beneficiaryName || manager.bankAccount.accountHolderName || '';
+        bankName = manager.bankAccount.bankName || '';
+        accountNumber = manager.bankAccount.accountNumber || '';
+        console.log('Sử dụng QR code từ manager của hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
+      } else {
+        // ƯU TIÊN 3: Lấy QR code từ user hiện tại (admin/staff của hotel)
+        qrPaymentUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
+        beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
+        bankName = this.currentUser?.bankAccount?.bankName || '';
+        accountNumber = this.currentUser?.bankAccount?.accountNumber || '';
+        console.log('Sử dụng QR code từ user hiện tại (admin/staff):', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
+      }
+    }
     
     if (!qrPaymentUrl) {
-      this.message.warning('Chưa có QR code thanh toán trong profile. Vui lòng cập nhật thông tin ngân hàng trong profile.');
+      this.message.warning('Chưa có QR code thanh toán. Vui lòng cập nhật thông tin ngân hàng cho khách sạn hoặc trong profile.');
       // Vẫn tiếp tục checkout nhưng không hiển thị QR
       this.proceedWithCheckout(checkoutData, invoiceData);
       return;
@@ -1501,6 +1544,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           this.sepayAmount = amount;
           this.sepayQrUrl = qrPaymentUrl;
           this.sepayBeneficiaryName = beneficiaryName;
+          this.sepayBankName = bankName;
+          this.sepayAccountNumber = accountNumber;
           
           // Hiển thị modal với QR code và thông tin thanh toán
           this.showSePayModal = true;

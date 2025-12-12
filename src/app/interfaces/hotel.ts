@@ -27,6 +27,15 @@ export interface HotelSettings {
   taxRate?: number;
 }
 
+export interface HotelBankAccount {
+  bankName?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
+  beneficiaryName?: string;
+  branch?: string;
+  qrPaymentUrl?: string;
+}
+
 export type HotelStatus = 'active' | 'inactive' | 'maintenance' | 'suspended';
 
 export interface Hotel {
@@ -44,6 +53,7 @@ export interface Hotel {
   rooms?: string[] | Room[]; // Danh sách ID phòng hoặc Room objects đã populate
   staff?: string[] | User[]; // Danh sách ID nhân viên hoặc User objects đã populate
   settings?: HotelSettings;
+  bankAccount?: HotelBankAccount; // Thông tin ngân hàng cho thanh toán chuyển khoản
   createdAt?: Date;
   updatedAt?: Date;
   // phoneNumber?: string; // Đã được gộp vào contactInfo.phone
