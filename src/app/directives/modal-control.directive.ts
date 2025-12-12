@@ -1302,7 +1302,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   }
 
   calculatePayment(checkinTime: any, checkoutTime: any, roomType: any): number {
-    if (!checkinTime || !checkoutTime) {
+    if (!checkinTime || !checkoutTime || !this.room || !this.room._id) {
       return 0;
     }
 
@@ -1310,124 +1310,37 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     const checkinDate = new Date(checkinTime);
     const checkoutDate = new Date(checkoutTime);
     
-    // Tính thời gian chính xác theo phút (theo logic backend)
+    // Tính thời gian chính xác theo phút
     const durationInMilliseconds = checkoutDate.getTime() - checkinDate.getTime();
     const durationInMinutes = Math.floor(durationInMilliseconds / (1000 * 60));
     const durationInHours = Math.floor(durationInMinutes / 60);
     const remainingMinutes = durationInMinutes % 60;
-    const durationInDays = Math.ceil(durationInHours / 24);
     
-    // Lấy giá từ room
-    const priceConfig = (this.room as any)?.priceConfig;
-    const hourlyRate = this.room.pricing?.hourly || this.room.firstHourRate || priceConfig?.hourlyRates?.firstHourPrice || 0;
-    const dailyRate = this.room.pricing?.daily || priceConfig?.dailyRates?.standardPrice || 0;
-    const nightlyRate = this.room.pricing?.nightly || priceConfig?.nightlyRates?.standardPrice || 0;
-    const additionalHourRate = this.room.additionalHourRate || priceConfig?.hourlyRates?.additionalHourPrice || (hourlyRate * 0.8);
+    // Lấy giá từ room (ước tính đơn giản)
+    const hourlyRate = this.room.pricing?.hourly || this.room.firstHourRate || 0;
+    const dailyRate = this.room.pricing?.daily || 0;
+    const nightlyRate = this.room.pricing?.nightly || 0;
+    const additionalHourRate = this.room.additionalHourRate || (hourlyRate * 0.8);
     
-    // Lấy các tham số từ priceConfig hoặc giá trị mặc định
-    const gracePeriodMinutes = priceConfig?.hourlyRates?.gracePeriodMinutes || 15;
-    const autoNightlyHours = priceConfig?.hourlyRates?.autoNightlyHours || 8;
-    const maxHoursBeforeDay = priceConfig?.hourlyRates?.maxHoursBeforeDay || 6;
-    const autoDailyHours = priceConfig?.nightlyRates?.autoDailyHours || 24;
-    
-    // Lấy thời gian quy định
-    const nightlyStartTime = priceConfig?.nightlyRates?.startTime || '22:00';
-    const nightlyEndTime = priceConfig?.nightlyRates?.endTime || '12:00';
-    const nightlyEarlyCheckinSurcharge = priceConfig?.nightlyRates?.earlyCheckinSurcharge || 0;
-    const nightlyLateCheckoutSurcharge = priceConfig?.nightlyRates?.lateCheckoutSurcharge || 0;
-    
-    // Parse thời gian
-    const [nightlyStartHour, nightlyStartMinute] = nightlyStartTime.split(':').map(Number);
-    const [nightlyEndHour, nightlyEndMinute] = nightlyEndTime.split(':').map(Number);
-    
-    // Tính thời gian check-in/check-out theo phút trong ngày
-    const checkInMinutes = checkinDate.getHours() * 60 + checkinDate.getMinutes();
-    const checkOutMinutes = checkoutDate.getHours() * 60 + checkoutDate.getMinutes();
-    const nightlyStartMinutes = nightlyStartHour * 60 + nightlyStartMinute;
-    const nightlyEndMinutes = nightlyEndHour * 60 + nightlyEndMinute;
-    
-    // Tính ngày check-in và check-out
-    const checkInDateOnly = new Date(checkinDate.getFullYear(), checkinDate.getMonth(), checkinDate.getDate());
-    const checkOutDateOnly = new Date(checkoutDate.getFullYear(), checkoutDate.getMonth(), checkoutDate.getDate());
-    const isSameDay = checkInDateOnly.getTime() === checkOutDateOnly.getTime();
-    
-    // Biến lưu kết quả
+    // Tính giá ước tính đơn giản (không tính phụ thu, không tự động chuyển đổi)
+    // Logic chính xác sẽ được backend xử lý khi checkout
     let roomTotal = 0;
+    
+    // Tính giá giờ đầu + các giờ tiếp theo (ước tính)
+    if (this.room.firstHourRate && this.room.additionalHourRate) {
+      roomTotal = this.room.firstHourRate;
+      if (durationInHours > 1) {
+        roomTotal += (durationInHours - 1) * this.room.additionalHourRate;
+      }
+    } else {
+      roomTotal = hourlyRate * durationInHours;
+    }
+    
+    // --- TÍNH TIỀN DỊCH VỤ ---
     let serviceTotal = 0;
     let additionalCharge = 0;
     let discount = 0;
     
-    // Mặc định tính theo giờ (theo logic backend, rateType được ưu tiên từ user)
-    // Nhưng trong hàm này, chúng ta sẽ tự động xác định rateType dựa trên thời gian
-    let rateType = 'hourly';
-    
-    // Kiểm tra xem có vượt qua khung giờ qua đêm không
-    const hasNightlyPeriod = !isSameDay || (isSameDay && checkOutMinutes > nightlyStartMinutes);
-    
-    if (hasNightlyPeriod) {
-      // Có khung giờ qua đêm: tính phụ thu check-in sớm + giá qua đêm + phụ thu check-out muộn
-      let earlyCheckinSurcharge = 0;
-      let lateCheckoutSurcharge = 0;
-      
-      // Tính số giờ trước nightlyStartTime (nếu check-in trước nightlyStartTime)
-      if (checkInMinutes < nightlyStartMinutes) {
-        const hoursBeforeNightly = (nightlyStartMinutes - checkInMinutes) / 60;
-        if (nightlyEarlyCheckinSurcharge > 0) {
-          earlyCheckinSurcharge = hoursBeforeNightly * nightlyEarlyCheckinSurcharge;
-        }
-      }
-      
-      // Tính giá qua đêm
-      roomTotal = nightlyRate;
-      
-      // Tính số giờ sau nightlyEndTime (nếu check-out sau nightlyEndTime)
-      if (!isSameDay || (isSameDay && checkOutMinutes > nightlyEndMinutes)) {
-        let hoursAfterNightly = 0;
-        if (isSameDay) {
-          hoursAfterNightly = (checkOutMinutes - nightlyEndMinutes) / 60;
-        } else {
-          hoursAfterNightly = checkOutMinutes / 60;
-        }
-        
-        if (nightlyLateCheckoutSurcharge > 0) {
-          lateCheckoutSurcharge = hoursAfterNightly * nightlyLateCheckoutSurcharge;
-        }
-      }
-      
-      // Tổng = phụ thu check-in sớm + giá qua đêm + phụ thu check-out muộn
-      roomTotal = earlyCheckinSurcharge + nightlyRate + lateCheckoutSurcharge;
-    } else {
-      // Không có khung giờ qua đêm, tính theo giờ bình thường
-      // Tính giá giờ đầu
-      roomTotal = this.room.firstHourRate || hourlyRate;
-      
-      // Tính giá cho các giờ tiếp theo
-      if (durationInHours >= 1) {
-        let billableHours = durationInHours - 1;
-        
-        // Áp dụng grace period
-        if (durationInHours >= 2 && remainingMinutes > gracePeriodMinutes) {
-          billableHours += 1;
-        } else if (durationInHours === 1 && remainingMinutes > gracePeriodMinutes) {
-          billableHours = 1;
-        }
-        
-        if (billableHours > 0) {
-          roomTotal += billableHours * additionalHourRate;
-        }
-      }
-      
-      // Kiểm tra nếu quá số giờ tự động chuyển sang qua đêm
-      if (durationInHours >= autoNightlyHours && nightlyRate > 0) {
-        const durationInNights = Math.ceil(durationInHours / 24);
-        roomTotal = durationInNights * nightlyRate;
-      } else if (durationInHours > maxHoursBeforeDay && dailyRate > 0) {
-        // Chuyển sang tính giá ngày nếu vượt quá số giờ tối đa
-        roomTotal = dailyRate;
-      }
-    }
-    
-    // --- TÍNH TIỀN DỊCH VỤ ---
     const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
     if (savedCheckinData) {
       try {
@@ -1450,7 +1363,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       }
     }
     
-    // --- TÍNH TỔNG TIỀN ---
+    // --- TÍNH TỔNG TIỀN (ước tính) ---
+    // Lưu ý: Tính toán chính xác sẽ được backend xử lý khi checkout
     const totalPrice = roomTotal + serviceTotal + additionalCharge - discount;
     
     return Math.max(0, Math.round(totalPrice));

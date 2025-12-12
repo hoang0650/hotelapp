@@ -1218,24 +1218,25 @@ export class RoomComponent implements OnInit, OnDestroy {
     };
     const rateTypeLabel = rateTypeLabels[rateType] || 'Theo giờ';
     
-    // Tính tiền phòng dựa trên thời gian
-    // Sử dụng logic đơn giản để hiển thị, tính toán chính xác sẽ được thực hiện bởi backend khi checkout
+    // Tính tiền phòng dựa trên thời gian (ước tính đơn giản để hiển thị)
+    // Tính toán chính xác sẽ được thực hiện bởi backend khi checkout
     let roomPrice = 0;
     if (checkinTime) {
       const now = new Date();
       const durationInHours = Math.ceil((now.getTime() - checkinTime.getTime()) / (1000 * 60 * 60));
       const durationInDays = Math.ceil(durationInHours / 24);
       
-      // Ưu tiên lấy giá từ room pricing (đã được backend cập nhật từ priceConfig nếu có)
+      // Lấy giá từ room pricing (đã được backend cập nhật từ priceConfig nếu có)
       const hourlyRate = room.pricing?.hourly || room.firstHourRate || 0;
       const dailyRate = room.pricing?.daily || 0;
       const nightlyRate = room.pricing?.nightly || 0;
       const additionalHourRate = room.additionalHourRate || (hourlyRate * 0.8);
       
-      // Tính giá đơn giản để hiển thị (tính toán chính xác sẽ được backend thực hiện khi checkout)
+      // Tính giá ước tính đơn giản để hiển thị (không tính phụ thu, không tự động chuyển đổi)
+      // Logic chính xác sẽ được backend xử lý khi checkout
       switch (rateType) {
         case 'hourly':
-          // Tính giá giờ đầu + các giờ tiếp theo
+          // Tính giá giờ đầu + các giờ tiếp theo (ước tính)
           if (room.firstHourRate && room.additionalHourRate) {
             roomPrice = room.firstHourRate;
             if (durationInHours > 1) {
@@ -1243,10 +1244,6 @@ export class RoomComponent implements OnInit, OnDestroy {
             }
           } else {
             roomPrice = hourlyRate * durationInHours;
-          }
-          // Chuyển sang giá ngày nếu vượt quá 6 giờ
-          if (durationInHours > 6 && dailyRate > 0) {
-            roomPrice = dailyRate;
           }
           break;
         case 'daily':

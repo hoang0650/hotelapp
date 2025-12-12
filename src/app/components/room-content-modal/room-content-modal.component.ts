@@ -844,40 +844,87 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // Xác định loại giá và tính tiền phòng
     // Ưu tiên lấy rateType từ form checkout nếu có, nếu không thì lấy từ lastCheckIn
     const rateType = this.checkOutForm?.get('rateType')?.value || lastCheckIn.rateType || 'hourly';
-    const roomPrice = this.calculateRoomTotalByRateType(validDurationInHours, validDurationInDays, rateType, remainingMinutes);
     
-    // Lưu roomPrice vào biến để hiển thị
-    this._roomPriceTotal = roomPrice;
-    
-    console.log(`Room price (${rateType}): ${roomPrice}`, {
-      rateType: rateType,
-      formRateType: this.checkOutForm?.get('rateType')?.value,
-      lastCheckInRateType: lastCheckIn.rateType
+    // Gọi backend API để tính giá chính xác theo priceConfig
+    this.roomsService.calculateRoomPrice(
+      this.roomData._id,
+      checkInTime,
+      checkOutTime,
+      rateType as 'hourly' | 'daily' | 'nightly'
+    ).subscribe({
+      next: (priceResponse) => {
+        // Cập nhật rateType từ backend (có thể đã được tự động chuyển đổi)
+        const finalRateType = priceResponse.rateType || rateType;
+        
+        // Cập nhật rateType trong form nếu đã thay đổi
+        if (priceResponse.originalRateType && priceResponse.rateType !== priceResponse.originalRateType) {
+          this.checkOutForm.patchValue({ rateType: finalRateType }, { emitEvent: false });
+          console.log(`RateType tự động chuyển từ ${priceResponse.originalRateType} sang ${finalRateType}`);
+        }
+        
+        // Sử dụng giá từ backend
+        const roomPrice = priceResponse.totalPrice || 0;
+        this._roomPriceTotal = roomPrice;
+        
+        console.log(`Room price (${finalRateType}): ${roomPrice}`, {
+          rateType: finalRateType,
+          originalRateType: priceResponse.originalRateType,
+          formRateType: this.checkOutForm?.get('rateType')?.value,
+          lastCheckInRateType: lastCheckIn.rateType,
+          priceDetails: priceResponse.priceDetails
+        });
+        
+        // Tính tổng tiền dịch vụ
+        const serviceTotal = this.selectedServices.reduce((total, service) => {
+          // Sử dụng totalPrice nếu có, nếu không thì tính từ price và quantity
+          const serviceAmount = service.totalPrice !== undefined ? 
+            service.totalPrice : (service.price * (service.quantity || 1));
+          return total + serviceAmount;
+        }, 0);
+        this._servicesPriceTotal = serviceTotal; // Lưu tổng tiền dịch vụ
+        console.log(`Service total: ${serviceTotal}`);
+        
+        // Lấy giá trị phụ thu và giảm giá TỪ FORM CHECKOUT
+        const checkoutCharges = +(this.checkOutForm?.get('additionalCharges')?.value || 0);
+        const checkoutDiscount = +(this.checkOutForm?.get('discount')?.value || 0);
+        
+        // Tổng cộng = Tiền phòng + Tổng DV + Phụ thu (checkin + checkout) - Giảm giá (checkin + checkout)
+        const subtotal = roomPrice + serviceTotal;
+        this.totalPrice = Math.max(0, subtotal + this.initialCharges + checkoutCharges - this.initialDiscount - checkoutDiscount);
+        
+        // Lấy tiền trả trước (luôn lấy từ initial state hoặc checkin event)
+        const lastCheckInEvent = this.listData && this.listData.length > 0 ? this.listData[0] : null;
+        this.advancePayment = lastCheckInEvent?.advancePayment || 0;
+        
+        console.log(`Final price calculation: ${roomPrice} (room) + ${serviceTotal} (services) + ${this.initialCharges} (initial charges) + ${checkoutCharges} (checkout charges) - ${this.initialDiscount} (initial discount) - ${checkoutDiscount} (checkout discount) = ${this.totalPrice}`);
+      },
+      error: (error) => {
+        console.error('Error calculating room price from backend:', error);
+        // Fallback: sử dụng tính toán frontend đơn giản
+        const roomPrice = this.calculateRoomTotalByRateType(validDurationInHours, validDurationInDays, rateType, remainingMinutes);
+        this._roomPriceTotal = roomPrice;
+        
+        // Tính tổng tiền dịch vụ
+        const serviceTotal = this.selectedServices.reduce((total, service) => {
+          const serviceAmount = service.totalPrice !== undefined ? 
+            service.totalPrice : (service.price * (service.quantity || 1));
+          return total + serviceAmount;
+        }, 0);
+        this._servicesPriceTotal = serviceTotal;
+        
+        // Lấy giá trị phụ thu và giảm giá TỪ FORM CHECKOUT
+        const checkoutCharges = +(this.checkOutForm?.get('additionalCharges')?.value || 0);
+        const checkoutDiscount = +(this.checkOutForm?.get('discount')?.value || 0);
+        
+        // Tổng cộng
+        const subtotal = roomPrice + serviceTotal;
+        this.totalPrice = Math.max(0, subtotal + this.initialCharges + checkoutCharges - this.initialDiscount - checkoutDiscount);
+        
+        // Lấy tiền trả trước
+        const lastCheckInEvent = this.listData && this.listData.length > 0 ? this.listData[0] : null;
+        this.advancePayment = lastCheckInEvent?.advancePayment || 0;
+      }
     });
-    
-    // Tính tổng tiền dịch vụ
-    const serviceTotal = this.selectedServices.reduce((total, service) => {
-      // Sử dụng totalPrice nếu có, nếu không thì tính từ price và quantity
-      const serviceAmount = service.totalPrice !== undefined ? 
-        service.totalPrice : (service.price * (service.quantity || 1));
-      return total + serviceAmount;
-    }, 0);
-    this._servicesPriceTotal = serviceTotal; // Lưu tổng tiền dịch vụ
-    console.log(`Service total: ${serviceTotal}`);
-    
-    // Lấy giá trị phụ thu và giảm giá TỪ FORM CHECKOUT
-    const checkoutCharges = +(this.checkOutForm?.get('additionalCharges')?.value || 0);
-    const checkoutDiscount = +(this.checkOutForm?.get('discount')?.value || 0);
-    
-    // Tổng cộng = Tiền phòng + Tổng DV + Phụ thu (checkin + checkout) - Giảm giá (checkin + checkout)
-    const subtotal = roomPrice + serviceTotal;
-    this.totalPrice = Math.max(0, subtotal + this.initialCharges + checkoutCharges - this.initialDiscount - checkoutDiscount);
-    
-    // Lấy tiền trả trước (luôn lấy từ initial state hoặc checkin event)
-    const lastCheckInEvent = this.listData && this.listData.length > 0 ? this.listData[0] : null;
-    this.advancePayment = lastCheckInEvent?.advancePayment || 0;
-    
-    console.log(`Final price calculation: ${roomPrice} (room) + ${serviceTotal} (services) + ${this.initialCharges} (initial charges) + ${checkoutCharges} (checkout charges) - ${this.initialDiscount} (initial discount) - ${checkoutDiscount} (checkout discount) = ${this.totalPrice}`);
   }
 
   // Xử lý check-in
