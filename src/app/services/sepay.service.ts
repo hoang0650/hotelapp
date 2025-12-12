@@ -143,7 +143,36 @@ export class SePayService {
   }
 
   /**
-   * Gọi backend để tạo signature và lấy config
+   * Tạo payment history và lấy thông tin thanh toán
+   * Gọi trực tiếp đến webhook endpoint để tạo payment history
+   */
+  createPaymentHistory(paymentData: SePayPaymentData): Observable<any> {
+    // Tạo mã thanh toán
+    const orderInvoiceNumber = paymentData.orderInvoiceNumber || 
+      this.generateSePayPaymentCode('PHG', 6, 8);
+
+    // Gọi đến webhook endpoint để tạo payment history
+    // Note: Endpoint này sẽ tạo payment history với status 'pending'
+    const webhookUrl = 'https://nest-production-8106.up.railway.app/hooks/sepay-payment';
+    
+    // Tạo payload để tạo payment history
+    const payload = {
+      packageId: paymentData.packageId,
+      userId: paymentData.customerId,
+      billingType: paymentData.billingType,
+      amount: paymentData.amount,
+      currency: paymentData.currency || 'VND',
+      orderInvoiceNumber: orderInvoiceNumber,
+      description: paymentData.description
+    };
+
+    // Gọi đến endpoint tạo payment history (có thể là một endpoint mới hoặc sử dụng webhook endpoint)
+    // Tạm thời sử dụng endpoint mới để tạo payment history
+    return this.http.post<any>(`${this.apiUrl}/create-payment-history`, payload);
+  }
+
+  /**
+   * Gọi backend để tạo signature và lấy config (DEPRECATED - không dùng nữa)
    */
   private createPaymentRequest(
     fields: Record<string, string>,

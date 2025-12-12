@@ -359,6 +359,8 @@ export class PricingComponent implements OnInit {
 
   /**
    * Thanh toán qua SePay
+   * Tạo payment history và hiển thị thông tin thanh toán
+   * Webhook sẽ tự động xử lý khi SePay nhận được tiền
    */
   payWithSePay(): void {
     if (!this.selectedPackage || !this.userId) {
@@ -370,9 +372,8 @@ export class PricingComponent implements OnInit {
     const pkg = this.selectedPackage;
     const packagePrice = this.getPackagePrice(pkg);
     const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
-    const baseUrl = window.location.origin;
 
-    // Tạo form thanh toán SePay
+    // Tạo payment history
     const sepayPaymentData: SePayPaymentData = {
       packageId: packageId,
       packageName: pkg?.name || 'N/A',
@@ -380,33 +381,57 @@ export class PricingComponent implements OnInit {
       billingType: this.selectedPackage.billingType,
       currency: 'VND',
       description: `Đăng ký gói ${pkg?.name || 'N/A'} - ${billingTypeText}`,
-      customerId: this.userId,
-      // Không cần truyền orderInvoiceNumber, backend sẽ tự tạo theo cấu trúc SePay
-      // Format: PHG + số nguyên (3-8 ký tự), ví dụ: PHG11111111
+      customerId: this.userId
     };
 
-    // Tạo callback URLs (đơn giản hóa vì webhook sẽ xử lý đăng ký gói)
-    const callbacks = {
-      successUrl: `${baseUrl}/pricing?paymentStatus=success&paymentMethod=sepay&packageId=${packageId}`,
-      errorUrl: `${baseUrl}/pricing?paymentStatus=error&paymentMethod=sepay`,
-      cancelUrl: `${baseUrl}/pricing?paymentStatus=cancel&paymentMethod=sepay`
-    };
-
-    // Tạo và submit form thanh toán SePay
+    // Gọi API tạo payment history
     this.loading = true;
-    this.sepayService.createPaymentForm(sepayPaymentData, callbacks, (error: any) => {
-      this.loading = false;
-      console.error('Error initiating SePay payment:', error);
-      const errorMessage = error.error?.error || error.error?.message || error.message || 'Có lỗi xảy ra khi tạo form thanh toán SePay. Vui lòng thử lại.';
-      this.message.error(errorMessage);
-      
-      // Nếu lỗi do cấu hình SePay chưa đúng, hiển thị hướng dẫn
-      if (errorMessage.includes('chưa được cấu hình')) {
-        this.message.warning('Vui lòng liên hệ quản trị viên để cấu hình SePay.');
+    this.sepayService.createPaymentHistory(sepayPaymentData).subscribe({
+      next: (response: any) => {
+        this.loading = false;
+        if (response.success) {
+          // Hiển thị modal hoặc thông báo với thông tin thanh toán
+          const paymentCode = response.paymentCode;
+          const amount = response.amount;
+          const currency = response.currency;
+          
+          this.modal.success({
+            nzTitle: 'Thông tin thanh toán SePay',
+            nzContent: `
+              <div style="padding: 20px;">
+                <p><strong>Gói dịch vụ:</strong> ${response.packageName}</p>
+                <p><strong>Số tiền:</strong> ${amount.toLocaleString('vi-VN')} ${currency}</p>
+                <p><strong>Mã thanh toán:</strong> <code style="font-size: 18px; font-weight: bold; color: #1890ff; background: #f0f0f0; padding: 8px 12px; border-radius: 4px;">${paymentCode}</code></p>
+                <p style="margin-top: 16px; color: #ff4d4f; font-weight: bold;">
+                  ⚠️ Quan trọng: Vui lòng chuyển khoản với nội dung chính xác là mã thanh toán trên!
+                </p>
+                <p style="margin-top: 12px;">
+                  Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và đăng ký gói cho bạn trong vòng vài phút.
+                </p>
+              </div>
+            `,
+            nzWidth: 500,
+            nzOnOk: () => {
+              // Copy mã thanh toán vào clipboard
+              navigator.clipboard.writeText(paymentCode).then(() => {
+                this.message.success('Đã copy mã thanh toán vào clipboard');
+              });
+              this.selectedPackage = null;
+              this.loadCurrentPackage();
+              this.loadPaymentHistory();
+            }
+          });
+        } else {
+          this.message.error(response.error || 'Có lỗi xảy ra khi tạo payment history');
+        }
+      },
+      error: (error: any) => {
+        this.loading = false;
+        console.error('Error creating SePay payment history:', error);
+        const errorMessage = error.error?.error || error.error?.message || error.message || 'Có lỗi xảy ra khi tạo payment history. Vui lòng thử lại.';
+        this.message.error(errorMessage);
       }
     });
-    // Note: Nếu thành công, createPaymentForm sẽ tự động submit form và redirect đến SePay
-    // Webhook sẽ tự động xử lý đăng ký gói khi thanh toán thành công
   }
 
   /**
