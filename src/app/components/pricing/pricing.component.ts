@@ -166,39 +166,33 @@ export class PricingComponent implements OnInit {
 
   /**
    * Xử lý callback từ SePay sau khi thanh toán
+   * Với webhook, chỉ cần hiển thị thông báo và reload package
+   * Webhook sẽ tự động xử lý đăng ký gói
    */
   handlePaymentCallback(): void {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('paymentStatus') || urlParams.get('payment');
+    const paymentMethod = urlParams.get('paymentMethod');
     const packageId = urlParams.get('packageId');
-    const billingType = urlParams.get('billingType') as 'monthly' | 'yearly' | null;
-    const transactionId = urlParams.get('transaction_id') || urlParams.get('transactionId') || urlParams.get('order_invoice_number');
 
-    if (paymentStatus === 'success' && packageId && billingType && this.userId) {
-      // Thanh toán thành công, đăng ký gói
-      this.loading = true;
-      // Gọi subscribe với paymentMethod='sepay' và transactionId (chuyển null thành undefined)
-      const paymentId = transactionId || undefined;
-      this.pricingService.subscribe(this.userId, packageId, billingType, paymentId, 'sepay').subscribe({
-        next: (response: any) => {
-          if (response.success !== false) {
-            const billingTypeText = billingType === 'yearly' ? 'theo năm' : 'theo tháng';
-            this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công`);
-            this.loadCurrentPackage();
-            this.selectedPackage = null; // Reset selected package
-            // Xóa query params để tránh xử lý lại
-            window.history.replaceState({}, '', '/pricing');
-          } else {
-            this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
-          }
-          this.loading = false;
-        },
-        error: (error: any) => {
-          console.error('Subscribe error after SePay payment:', error);
-          this.message.error(error.error?.message || 'Có lỗi xảy ra khi đăng ký gói dịch vụ sau thanh toán');
-          this.loading = false;
-        }
-      });
+    // Chỉ xử lý callback từ SePay
+    if (paymentMethod !== 'sepay') {
+      return;
+    }
+
+    if (paymentStatus === 'success') {
+      // Thanh toán thành công - webhook sẽ tự động xử lý đăng ký gói
+      this.message.success('Thanh toán thành công! Hệ thống đang xử lý đăng ký gói. Vui lòng đợi vài giây...');
+      this.selectedPackage = null; // Reset selected package
+      
+      // Reload package sau 2 giây để kiểm tra xem đã đăng ký chưa
+      setTimeout(() => {
+        this.loadCurrentPackage();
+        this.loadPaymentHistory();
+      }, 2000);
+      
+      // Xóa query params để tránh xử lý lại
+      window.history.replaceState({}, '', '/pricing');
     } else if (paymentStatus === 'error') {
       this.message.error('Thanh toán thất bại. Vui lòng thử lại.');
       this.selectedPackage = null; // Reset selected package
@@ -387,14 +381,15 @@ export class PricingComponent implements OnInit {
       currency: 'VND',
       description: `Đăng ký gói ${pkg?.name || 'N/A'} - ${billingTypeText}`,
       customerId: this.userId,
-      orderInvoiceNumber: `INV_${Date.now()}_${packageId}`
+      // Không cần truyền orderInvoiceNumber, backend sẽ tự tạo theo cấu trúc SePay
+      // Format: PHG + số nguyên (3-8 ký tự), ví dụ: PHG11111111
     };
 
-    // Tạo callback URLs
+    // Tạo callback URLs (đơn giản hóa vì webhook sẽ xử lý đăng ký gói)
     const callbacks = {
-      successUrl: `${baseUrl}/pricing?paymentStatus=success&packageId=${packageId}&billingType=${this.selectedPackage.billingType}`,
-      errorUrl: `${baseUrl}/pricing?paymentStatus=error&packageId=${packageId}&billingType=${this.selectedPackage.billingType}`,
-      cancelUrl: `${baseUrl}/pricing?paymentStatus=cancel&packageId=${packageId}&billingType=${this.selectedPackage.billingType}`
+      successUrl: `${baseUrl}/pricing?paymentStatus=success&paymentMethod=sepay&packageId=${packageId}`,
+      errorUrl: `${baseUrl}/pricing?paymentStatus=error&paymentMethod=sepay`,
+      cancelUrl: `${baseUrl}/pricing?paymentStatus=cancel&paymentMethod=sepay`
     };
 
     // Tạo và submit form thanh toán SePay
@@ -411,6 +406,7 @@ export class PricingComponent implements OnInit {
       }
     });
     // Note: Nếu thành công, createPaymentForm sẽ tự động submit form và redirect đến SePay
+    // Webhook sẽ tự động xử lý đăng ký gói khi thanh toán thành công
   }
 
   /**
@@ -745,10 +741,11 @@ export class PricingComponent implements OnInit {
     // Load từ tất cả các phương thức thanh toán
     const paypalHistory$ = this.paypalService.getPaymentHistory({ userId: this.userId, limit: 10 });
     const cryptoHistory$ = this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 10 });
+    const sepayHistory$ = this.sepayService.getPaymentHistory({ userId: this.userId, limit: 10 });
 
     // Combine tất cả payment history
-    forkJoin([paypalHistory$, cryptoHistory$]).subscribe({
-        next: ([paypalData, cryptoData]) => {
+    forkJoin([paypalHistory$, cryptoHistory$, sepayHistory$]).subscribe({
+        next: ([paypalData, cryptoData, sepayData]) => {
           const allPayments: any[] = [];
           
           // Thêm PayPal payments
@@ -771,6 +768,18 @@ export class PricingComponent implements OnInit {
                 paymentMethod: 'crypto_usdt',
                 paymentMethodLabel: `Crypto USDT (${payment.cryptoNetwork || 'N/A'})`,
                 paymentMethodIcon: 'dollar-circle'
+              });
+            });
+          }
+
+          // Thêm SePay payments
+          if (sepayData?.data) {
+            sepayData.data.forEach((payment: any) => {
+              allPayments.push({
+                ...payment,
+                paymentMethod: 'sepay',
+                paymentMethodLabel: 'SePay',
+                paymentMethodIcon: 'credit-card'
               });
             });
           }

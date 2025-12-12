@@ -4,6 +4,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { BankTransferService, BankTransfer, SepayTransaction } from '../../services/bank-transfer.service';
 import { PayPalService } from '../../services/paypal.service';
 import { CryptoService } from '../../services/crypto.service';
+import { SePayService } from '../../services/sepay.service';
 import { AuthService } from '../../services/auth.service';
 import { forkJoin } from 'rxjs';
 
@@ -24,6 +25,7 @@ export class BankTransferHistoryComponent implements OnInit {
   // Payment history từ các phương thức khác
   paypalPayments: any[] = [];
   cryptoPayments: any[] = [];
+  sepayPayments: any[] = []; // SePay payment history từ PaymentHistory model
   allPayments: any[] = []; // Tổng hợp tất cả payment history
   activeTabIndex = 0; // 0: Tất cả, 1: SePay, 2: PayPal, 3: Crypto
   userId: string = '';
@@ -69,6 +71,7 @@ export class BankTransferHistoryComponent implements OnInit {
     private bankTransferService: BankTransferService,
     private paypalService: PayPalService,
     private cryptoService: CryptoService,
+    private sepayService: SePayService,
     private authService: AuthService,
     private message: NzMessageService
   ) {
@@ -91,10 +94,11 @@ export class BankTransferHistoryComponent implements OnInit {
       this.fetchSepayTransactions();
     }
     
-    // Load payment history từ PayPal và Crypto nếu có userId
+    // Load payment history từ PayPal, Crypto và SePay nếu có userId
     if (this.userId) {
       this.loadPayPalPayments();
       this.loadCryptoPayments();
+      this.loadSePayPayments();
       this.loadAllPayments();
     }
   }
@@ -516,6 +520,25 @@ export class BankTransferHistoryComponent implements OnInit {
   }
 
   /**
+   * Load lịch sử thanh toán SePay từ PaymentHistory
+   */
+  loadSePayPayments(): void {
+    if (!this.userId) return;
+
+    this.sepayService.getPaymentHistory({ userId: this.userId, limit: 50 }).subscribe({
+      next: (response) => {
+        if (response?.success && response.data) {
+          this.sepayPayments = response.data;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading SePay payments:', error);
+        // Không hiển thị lỗi để không làm phiền user
+      }
+    });
+  }
+
+  /**
    * Load tất cả lịch sử thanh toán (tổng hợp từ tất cả phương thức)
    */
   loadAllPayments(): void {
@@ -526,10 +549,11 @@ export class BankTransferHistoryComponent implements OnInit {
     // Load từ tất cả các phương thức thanh toán
     const paypalHistory$ = this.paypalService.getPaymentHistory({ userId: this.userId, limit: 100 });
     const cryptoHistory$ = this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 100 });
+    const sepayHistory$ = this.sepayService.getPaymentHistory({ userId: this.userId, limit: 100 });
 
     // Combine tất cả payment history
-    forkJoin([paypalHistory$, cryptoHistory$]).subscribe({
-      next: ([paypalData, cryptoData]) => {
+    forkJoin([paypalHistory$, cryptoHistory$, sepayHistory$]).subscribe({
+      next: ([paypalData, cryptoData, sepayData]) => {
         const allPayments: any[] = [];
         
         // Thêm PayPal payments
@@ -576,6 +600,30 @@ export class BankTransferHistoryComponent implements OnInit {
               paymentMethodLabel: `Crypto USDT (${payment.cryptoNetwork || 'N/A'})`,
               paymentMethodIcon: 'dollar-circle',
               paymentMethodColor: '#26a17b'
+            });
+          });
+        }
+
+        // Thêm SePay payments
+        if (sepayData?.success && sepayData.data) {
+          sepayData.data.forEach((payment: any) => {
+            allPayments.push({
+              ...payment,
+              paymentMethod: 'sepay',
+              paymentMethodLabel: 'SePay',
+              paymentMethodIcon: 'credit-card',
+              paymentMethodColor: '#667eea'
+            });
+          });
+        } else if (sepayData?.data) {
+          // Fallback nếu response không có success field
+          sepayData.data.forEach((payment: any) => {
+            allPayments.push({
+              ...payment,
+              paymentMethod: 'sepay',
+              paymentMethodLabel: 'SePay',
+              paymentMethodIcon: 'credit-card',
+              paymentMethodColor: '#667eea'
             });
           });
         }

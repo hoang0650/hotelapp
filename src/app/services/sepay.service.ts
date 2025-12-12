@@ -46,6 +46,22 @@ export class SePayService {
   constructor(private http: HttpClient) {}
 
   /**
+   * Tạo mã thanh toán SePay theo cấu trúc
+   * Format: PHG + số nguyên (3-8 ký tự)
+   * Ví dụ: PHG11111111
+   */
+  private generateSePayPaymentCode(prefix: string = 'PHG', minLength: number = 6, maxLength: number = 8): string {
+    // Tạo số ngẫu nhiên từ 6-8 ký tự để đảm bảo unique
+    const length = Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
+    // Tạo số ngẫu nhiên với độ dài đã chọn
+    const min = Math.pow(10, length - 1);
+    const max = Math.pow(10, length) - 1;
+    const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+    
+    return `${prefix}${randomNumber}`;
+  }
+
+  /**
    * Tạo form thanh toán SePay và submit
    * @param paymentData Thông tin thanh toán
    * @param callbacks URLs callback (success, error, cancel)
@@ -60,9 +76,9 @@ export class SePayService {
     },
     onError?: (error: any) => void
   ): void {
-    // Tạo order_invoice_number nếu chưa có
+    // Tạo order_invoice_number nếu chưa có theo cấu trúc SePay: PHG + số nguyên (3-8 ký tự)
     const orderInvoiceNumber = paymentData.orderInvoiceNumber || 
-      `INV_${Date.now()}_${paymentData.packageId}`;
+      this.generateSePayPaymentCode('PHG', 6, 8);
 
     // Chuẩn bị các trường form
     const formFields: Record<string, string> = {
@@ -185,6 +201,27 @@ export class SePayService {
         document.body.removeChild(form);
       }
     }, 1000);
+  }
+
+  /**
+   * Lấy lịch sử thanh toán SePay
+   */
+  getPaymentHistory(params?: {
+    userId?: string;
+    status?: string;
+    limit?: number;
+    skip?: number;
+  }): Observable<any> {
+    let queryParams = '';
+    if (params) {
+      const query = new URLSearchParams();
+      if (params.userId) query.append('userId', params.userId);
+      if (params.status) query.append('status', params.status);
+      if (params.limit) query.append('limit', params.limit.toString());
+      if (params.skip) query.append('skip', params.skip.toString());
+      queryParams = '?' + query.toString();
+    }
+    return this.http.get(`${this.apiUrl}/payment-history${queryParams}`);
   }
 }
 
