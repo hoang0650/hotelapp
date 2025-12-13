@@ -266,12 +266,14 @@ export class RoomsService {
 
   // Khách tạm ra ngoài
   guestOut(roomId: string, note?: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/${roomId}/guest-out`, { note });
+    const staffId = localStorage.getItem('staffId') || null;
+    return this.http.post<any>(`${this.apiUrl}/${roomId}/guest-out`, { note, staffId });
   }
 
   // Khách quay lại
   guestReturn(roomId: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/${roomId}/guest-return`, {});
+    const staffId = localStorage.getItem('staffId') || null;
+    return this.http.post<any>(`${this.apiUrl}/${roomId}/guest-return`, { staffId });
   }
 
   // Giao ca
