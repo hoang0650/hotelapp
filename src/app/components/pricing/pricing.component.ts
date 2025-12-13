@@ -982,7 +982,10 @@ export class PricingComponent implements OnInit, OnDestroy {
             );
             
             if (completedPayment) {
-              amount = completedPayment.amount || completedPayment.totalAmount || 0;
+              // Ưu tiên lấy transferAmount từ paymentGatewayResponse (số tiền thực tế nhận được)
+              amount = completedPayment.paymentGatewayResponse?.transferAmount || 
+                      completedPayment.amount || 
+                      completedPayment.totalAmount || 0;
             } else {
               // Nếu không tìm thấy completed, lấy giao dịch gần nhất
               const latestPayment = paymentHistories[0];
@@ -1032,13 +1035,11 @@ export class PricingComponent implements OnInit, OnDestroy {
       // Dừng tất cả các utterance đang phát (nếu có)
       window.speechSynthesis.cancel();
       
-      // Format số tiền theo định dạng Việt Nam
-      const formattedAmount = new Intl.NumberFormat('vi-VN', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(amount);
+      // Format số tiền: làm tròn và chuyển thành số nguyên, không có dấu phẩy để dễ đọc hơn khi phát âm
+      const roundedAmount = Math.round(amount);
+      const formattedAmount = roundedAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' '); // Thêm khoảng trắng mỗi 3 chữ số
       
-      // Tạo nội dung thông báo
+      // Tạo nội dung thông báo theo format: "đã thanh toán thành công {{số tiền}} đồng"
       const message = `Đã thanh toán thành công ${formattedAmount} đồng`;
       console.log('[playPaymentSuccessSound] Nội dung thông báo:', message);
       

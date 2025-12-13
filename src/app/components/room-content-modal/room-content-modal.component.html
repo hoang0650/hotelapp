@@ -391,7 +391,62 @@
     <form nz-form [formGroup]="checkOutForm" (ngSubmit)="submitForm()">
       <div class="totals-summary mb-3">
         <p><strong>Tổng tiền phòng:</strong> {{ roomPriceTotal | number }} đồng</p>
-        <p><strong>Tổng tiền dịch vụ:</strong> {{ servicesPriceTotal | number }} đồng</p>
+        
+        <!-- Hiển thị chi tiết phụ thu sớm/trễ nếu có -->
+        <div *ngIf="roomPriceDetails" style="margin-left: 20px; margin-top: 8px; font-size: 13px; color: #666;">
+          <!-- Phụ thu check-in sớm -->
+          <div *ngIf="roomPriceDetails.earlyCheckinHours && roomPriceDetails.earlyCheckinHours > 0">
+            <span style="color: #1890ff;">
+              <i nz-icon nzType="clock-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+              Check-in sớm: {{ roomPriceDetails.earlyCheckinHours | number:'1.1-1' }} giờ
+            </span>
+            <span style="margin-left: 8px; color: #ff4d4f;">
+              × {{ (roomPriceDetails.earlyCheckinSurcharge / roomPriceDetails.earlyCheckinHours) | number:'1.0-0' }} đ/giờ
+              = {{ roomPriceDetails.earlyCheckinSurcharge | number:'1.0-0' }} đ
+            </span>
+          </div>
+          
+          <!-- Phụ thu check-out trễ -->
+          <div *ngIf="roomPriceDetails.lateCheckoutHours && roomPriceDetails.lateCheckoutHours > 0" style="margin-top: 4px;">
+            <span style="color: #1890ff;">
+              <i nz-icon nzType="clock-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+              Check-out trễ: {{ roomPriceDetails.lateCheckoutHours | number:'1.1-1' }} giờ
+            </span>
+            <span style="margin-left: 8px; color: #ff4d4f;">
+              × {{ (roomPriceDetails.lateCheckoutSurcharge / roomPriceDetails.lateCheckoutHours) | number:'1.0-0' }} đ/giờ
+              = {{ roomPriceDetails.lateCheckoutSurcharge | number:'1.0-0' }} đ
+            </span>
+          </div>
+          
+          <!-- Breakdown cho hourly rate với nightly period -->
+          <div *ngIf="roomPriceDetails.breakdown" style="margin-top: 8px;">
+            <!-- Before nightly (early check-in) -->
+            <div *ngIf="roomPriceDetails.breakdown.beforeNightly" style="margin-top: 4px;">
+              <span style="color: #1890ff;">
+                <i nz-icon nzType="clock-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+                Check-in sớm: {{ roomPriceDetails.breakdown.beforeNightly.hours | number:'1.1-1' }} giờ
+              </span>
+              <span style="margin-left: 8px; color: #ff4d4f;">
+                × {{ (roomPriceDetails.breakdown.beforeNightly.earlyCheckinSurcharge / roomPriceDetails.breakdown.beforeNightly.hours) | number:'1.0-0' }} đ/giờ
+                = {{ roomPriceDetails.breakdown.beforeNightly.earlyCheckinSurcharge | number:'1.0-0' }} đ
+              </span>
+            </div>
+            
+            <!-- After nightly (late check-out) -->
+            <div *ngIf="roomPriceDetails.breakdown.afterNightly" style="margin-top: 4px;">
+              <span style="color: #1890ff;">
+                <i nz-icon nzType="clock-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+                Check-out trễ: {{ roomPriceDetails.breakdown.afterNightly.hours | number:'1.1-1' }} giờ
+              </span>
+              <span style="margin-left: 8px; color: #ff4d4f;">
+                × {{ (roomPriceDetails.breakdown.afterNightly.lateCheckoutSurcharge / roomPriceDetails.breakdown.afterNightly.hours) | number:'1.0-0' }} đ/giờ
+                = {{ roomPriceDetails.breakdown.afterNightly.lateCheckoutSurcharge | number:'1.0-0' }} đ
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <p style="margin-top: 8px;"><strong>Tổng tiền dịch vụ:</strong> {{ servicesPriceTotal | number }} đồng</p>
       </div>
       
       <nz-form-item>

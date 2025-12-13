@@ -10,7 +10,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { format } from 'date-fns';
 import { finalize, catchError, takeUntil, debounceTime } from 'rxjs/operators';
-import { throwError, Subject } from 'rxjs';
+import { throwError, Subject, Subscription } from 'rxjs';
 import { InvoiceService } from '../../services/invoice.service';
 import { StaffService } from '../../services/staff.service';
 import { ShiftHandoverService } from '../../services/shift-handover.service';
@@ -62,7 +62,7 @@ interface SettingRadio {
   templateUrl: './table.component.html',
   styleUrls: ['./table.component.css']
 })
-export class TableComponent implements OnInit, OnChanges {
+export class TableComponent implements OnInit, OnChanges, OnDestroy {
   @Input() listOfData: any[] = [];
   @Input() hotelId: string | null = null;
   @Input() fixedColumn: boolean = true;
@@ -72,6 +72,9 @@ export class TableComponent implements OnInit, OnChanges {
   // Bộ lọc
   currentFilterType = 'checkout'; // Giá trị mặc định là checkout
   paymentStatusFilter: 'all' | 'paid' | 'pending' | 'unpaid' = 'all'; // Bộ lọc trạng thái thanh toán
+  
+  // Subscription để tự động reload khi có cập nhật dữ liệu phòng
+  private roomDataUpdateSubscription?: Subscription;
   
   // Getter để lọc các bản ghi checkout (bao gồm cả đã thanh toán và chưa thanh toán)
   get paidData(): any[] {
@@ -285,6 +288,24 @@ export class TableComponent implements OnInit, OnChanges {
     // Tải lịch sử checkout mới nhất nếu không có dữ liệu được truyền vào
     if (this.hotelId && this.listOfData.length === 0) {
       this.loadHistory(this.currentFilterType);
+    }
+    
+    // Subscribe vào roomDataUpdated$ để tự động reload khi có cập nhật
+    this.roomDataUpdateSubscription = this.roomService.getRoomDataUpdated$().subscribe(() => {
+      console.log('[TableComponent] Room data updated, reloading history...');
+      if (this.hotelId) {
+        // Đợi một chút để đảm bảo backend đã cập nhật xong
+        setTimeout(() => {
+          this.loadHistory(this.currentFilterType);
+        }, 500);
+      }
+    });
+  }
+  
+  ngOnDestroy(): void {
+    // Unsubscribe để tránh memory leak
+    if (this.roomDataUpdateSubscription) {
+      this.roomDataUpdateSubscription.unsubscribe();
     }
   }
   
