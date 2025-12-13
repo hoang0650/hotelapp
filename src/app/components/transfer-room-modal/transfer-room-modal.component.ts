@@ -95,6 +95,30 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
         const targetRoom = response.targetRoom;
         const booking = response.booking;
         
+        // Lưu thông tin checkin vào localStorage cho phòng đích
+        // Lấy thông tin từ phòng nguồn (nếu có trong localStorage)
+        const sourceCheckinData = localStorage.getItem(`checkin_${this.sourceRoom._id}`);
+        if (sourceCheckinData && targetRoom?._id) {
+          try {
+            const checkinData = JSON.parse(sourceCheckinData);
+            // Cập nhật roomId và roomNumber cho phòng đích
+            const targetCheckinData = {
+              ...checkinData,
+              roomId: targetRoom._id,
+              roomNumber: targetRoom.roomNumber,
+              transferredFrom: this.sourceRoom._id,
+              transferredFromRoomNumber: this.sourceRoom.roomNumber,
+              transferredAt: new Date()
+            };
+            // Lưu vào localStorage cho phòng đích
+            localStorage.setItem(`checkin_${targetRoom._id}`, JSON.stringify(targetCheckinData));
+            // Xóa dữ liệu cũ của phòng nguồn
+            localStorage.removeItem(`checkin_${this.sourceRoom._id}`);
+          } catch (e) {
+            console.error('Error saving transfer checkin data:', e);
+          }
+        }
+        
         // Tạo thông báo chi tiết
         let successMessage = `Đã chuyển từ phòng ${this.sourceRoom.roomNumber} sang phòng ${targetRoom?.roomNumber || 'N/A'}`;
         

@@ -861,14 +861,38 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         ).subscribe((result: any) => {
           if (result?.success) {
             const response = result.response;
-            const targetRoomNumber = response?.targetRoom?.roomNumber || 'N/A';
+            const targetRoom = response?.targetRoom;
+            const targetRoomNumber = targetRoom?.roomNumber || 'N/A';
             const booking = response?.booking;
+            
+            // Lưu thông tin checkin vào localStorage cho phòng đích
+            // Lấy thông tin từ phòng nguồn (nếu có trong localStorage)
+            const sourceCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
+            if (sourceCheckinData && targetRoom?._id) {
+              try {
+                const checkinData = JSON.parse(sourceCheckinData);
+                // Cập nhật roomId và roomNumber cho phòng đích, giữ nguyên thông tin khách
+                const targetCheckinData = {
+                  ...checkinData,
+                  roomId: targetRoom._id,
+                  roomNumber: targetRoom.roomNumber,
+                  transferredFrom: this.room._id,
+                  transferredFromRoomNumber: this.room.roomNumber,
+                  transferredAt: new Date()
+                };
+                // Lưu vào localStorage cho phòng đích
+                localStorage.setItem(`checkin_${targetRoom._id}`, JSON.stringify(targetCheckinData));
+                // Xóa dữ liệu cũ của phòng nguồn
+                localStorage.removeItem(`checkin_${this.room._id}`);
+              } catch (e) {
+                console.error('Error saving transfer checkin data:', e);
+              }
+            }
             
             // Tạo thông báo chi tiết
             let message = `Đã chuyển khách từ phòng ${this.room.roomNumber} sang phòng ${targetRoomNumber}`;
             
             // Thêm thông tin về giá và phòng đích nếu có
-            const targetRoom = response?.targetRoom;
             if (targetRoom) {
               message += `\n\nPhòng đích: ${targetRoom.roomNumber} - ${targetRoom.type || 'N/A'}`;
               if (targetRoom.pricing) {
