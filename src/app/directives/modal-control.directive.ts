@@ -244,13 +244,20 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         this.roomsService.guestOut(this.room._id, note)
           .pipe(take(1))
           .subscribe({
-            next: () => {
+            next: (response) => {
+              // Cập nhật guestStatus ngay lập tức trong room object để UI phản hồi nhanh
+              if (response && response.room) {
+                this.room.guestStatus = response.room.guestStatus || 'out';
+              }
               this.modalService.success({
                 nzTitle: 'Thành công',
                 nzContent: `Đã ghi nhận khách phòng ${this.room.roomNumber} tạm ra ngoài.`,
                 nzOkText: 'Đóng'
               });
-              this.roomsService.notifyRoomDataUpdated();
+              // Delay một chút để đảm bảo backend đã lưu xong
+              setTimeout(() => {
+                this.roomsService.notifyRoomDataUpdated();
+              }, 100);
             },
             error: (err) => {
               this.modalService.error({
@@ -279,13 +286,20 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         this.roomsService.guestReturn(this.room._id)
           .pipe(take(1))
           .subscribe({
-            next: () => {
+            next: (response) => {
+              // Cập nhật guestStatus ngay lập tức trong room object để UI phản hồi nhanh
+              if (response && response.room) {
+                this.room.guestStatus = response.room.guestStatus || 'in';
+              }
               this.modalService.success({
                 nzTitle: 'Thành công',
                 nzContent: `Đã ghi nhận khách phòng ${this.room.roomNumber} quay lại.`,
                 nzOkText: 'Đóng'
               });
-              this.roomsService.notifyRoomDataUpdated();
+              // Delay một chút để đảm bảo backend đã lưu xong
+              setTimeout(() => {
+                this.roomsService.notifyRoomDataUpdated();
+              }, 100);
             },
             error: (err) => {
               this.modalService.error({

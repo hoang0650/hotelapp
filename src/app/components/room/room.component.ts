@@ -96,17 +96,20 @@ export class RoomComponent implements OnInit, OnDestroy {
       // Reload rooms khi có thay đổi dữ liệu
       if (this.selectedHotelId) {
         // Quick reload: chỉ reload rooms, không reload bookings và history
-        this.loadRooms(true);
-        // Reload events cho tất cả phòng occupied để cập nhật thông tin mới nhất (bao gồm guestSource)
+        // Delay một chút để đảm bảo backend đã cập nhật xong (đặc biệt là guestStatus)
         setTimeout(() => {
-          this.loadEventsForOccupiedRooms(true); // Force reload events
-        }, 200); // Đợi một chút để đảm bảo rooms đã được reload
-        // Reload lịch sử thanh toán sau khi có thay đổi (ví dụ: checkout)
-        if (!this.isModalOpen) {
+          this.loadRooms(true);
+          // Reload events cho tất cả phòng occupied để cập nhật thông tin mới nhất (bao gồm guestSource)
           setTimeout(() => {
-            this.showRoomHistory();
-          }, 300); // Đợi một chút để đảm bảo backend đã cập nhật xong
-        }
+            this.loadEventsForOccupiedRooms(true); // Force reload events
+          }, 200); // Đợi một chút để đảm bảo rooms đã được reload
+          // Reload lịch sử thanh toán sau khi có thay đổi (ví dụ: checkout)
+          if (!this.isModalOpen) {
+            setTimeout(() => {
+              this.showRoomHistory();
+            }, 300); // Đợi một chút để đảm bảo backend đã cập nhật xong
+          }
+        }, 150); // Delay ban đầu để đảm bảo backend đã lưu guestStatus
       }
     });
     
@@ -540,7 +543,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       
       this.roomsService.getRooms(params).subscribe(
         (data) => {
-          this.rooms = data;
+          // Đảm bảo guestStatus được giữ nguyên từ backend
+          this.rooms = data.map(room => ({
+            ...room,
+            guestStatus: room.guestStatus || undefined // Đảm bảo guestStatus được set đúng
+          }));
           this.updateFloorsFromRooms();
           this.isReloading = false;
           
@@ -570,7 +577,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       bookings: bookingsRequest
     }).subscribe({
       next: (results: any) => {
-        this.rooms = results.rooms;
+        // Đảm bảo guestStatus được giữ nguyên từ backend
+        this.rooms = results.rooms.map((room: Room) => ({
+          ...room,
+          guestStatus: room.guestStatus || undefined // Đảm bảo guestStatus được set đúng
+        }));
         this.updateFloorsFromRooms();
         this.bookings = results.bookings.bookings || [];
         this.isLoading = false;
