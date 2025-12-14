@@ -37,6 +37,7 @@ import { ProfileComponent } from './components/profile/profile.component';
 import { PermissionGuard } from './guards/permission.guard';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
+import { SettingsComponent } from './components/settings/settings.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
@@ -74,6 +75,8 @@ const routes: Routes = [
       { path: 'bank-transfer-history', component: BankTransferHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'ota-management', component: OtaManagementComponent, canActivate: [PermissionGuard] },
       { path: 'electric-setting', component: TuyaSwitchComponent, canActivate: [PermissionGuard] },
+      { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },
+      { path: 'settings', component: SettingsComponent, canActivate: [PermissionGuard] },
       // Thêm các route con khác nếu cần
     ]
   },
@@ -85,7 +88,6 @@ const routes: Routes = [
   { path: 'email-compose', component: EmailComposeComponent },
   { path: 'about-us', component: AboutUsComponent },
   { path: 'chat', component: ChatComponent },
-  { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },
   { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'sepay-oauth2-callback', component: SepayOAuth2CallbackComponent }

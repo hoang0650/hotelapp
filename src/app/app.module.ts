@@ -70,6 +70,7 @@ import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzSpaceModule } from 'ng-zorro-antd/space';
+import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { FilterPipe } from './pipes/filter.pipe';
@@ -121,6 +122,7 @@ import { SepayOAuth2CallbackComponent } from './components/sepay-oauth2-callback
 import { ProfileComponent } from './components/profile/profile.component';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
+import { SettingsComponent } from './components/settings/settings.component';
 
 registerLocaleData(vi);
 
@@ -148,6 +150,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         SignupComponent,
         ForgotPasswordComponent,
         ResetPasswordComponent,
+        SettingsComponent,
         ProductDetailComponent,
         SidebarComponent,
         AdminComponent,
@@ -251,6 +254,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         NzFormModule, // Đảm bảo NzFormModule được import
         NzDatePickerModule,
         NzSpaceModule,
+        NzPageHeaderModule,
         BrowserAnimationsModule,
         PricingManagementModule,
         TranslateModule.forRoot({

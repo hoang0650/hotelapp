@@ -171,4 +171,9 @@ export class AdminComponent implements OnInit {
            this.authService.isStaff();
   }
 
+  // Settings - Chỉ superadmin và admin
+  canAccessSettings(): boolean {
+    return this.authService.isSuperAdmin() || this.authService.isAdmin();
+  }
+
 }

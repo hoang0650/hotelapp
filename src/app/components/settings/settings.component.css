@@ -1,0 +1,27 @@
+.settings-container {
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: calc(100vh - 64px);
+}
+
+::ng-deep .ant-tabs-card > .ant-tabs-content {
+  margin-top: 16px;
+}
+
+::ng-deep .ant-tabs-card > .ant-tabs-content > .ant-tabs-tabpane {
+  background: #fff;
+  padding: 24px;
+  border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 16px;
+  }
+
+  ::ng-deep .ant-tabs-card > .ant-tabs-content > .ant-tabs-tabpane {
+    padding: 16px;
+  }
+}
+

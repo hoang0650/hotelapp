@@ -86,6 +86,10 @@
         <span nz-icon nzType="file"></span>
         <span>{{ 'ADMIN_SIDEBAR.FILE' | translate }}</span>
       </li>
+      <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/settings">
+        <span nz-icon nzType="setting"></span>
+        <span>Cài đặt hệ thống</span>
+      </li>
     </ul>
   </nz-sider>
   <nz-layout>

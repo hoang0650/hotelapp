@@ -1,0 +1,669 @@
+<div class="settings-container">
+  <nz-page-header nzTitle="Cài đặt hệ thống" nzSubtitle="Quản lý cấu hình toàn hệ thống">
+  </nz-page-header>
+
+  <nz-card [nzBordered]="false" style="margin-top: 16px;">
+    <nz-tabset [(nzSelectedIndex)]="activeTab" nzType="card">
+      <!-- Tab 1: Cài đặt hệ thống -->
+      <nz-tab nzTitle="Cài đặt hệ thống" nzIcon="setting">
+        <form nz-form [formGroup]="systemForm" nzLayout="vertical" style="margin-top: 16px;">
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label nzRequired>Tên hệ thống</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng nhập tên hệ thống!">
+                  <input nz-input formControlName="systemName" placeholder="Tên hệ thống" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Phiên bản</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="systemVersion" placeholder="1.0.0" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-label nzRequired>Múi giờ</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng chọn múi giờ!">
+                  <nz-select formControlName="timezone" nzPlaceHolder="Chọn múi giờ">
+                    <nz-option nzValue="Asia/Ho_Chi_Minh" nzLabel="UTC+7 (Việt Nam)"></nz-option>
+                    <nz-option nzValue="Asia/Bangkok" nzLabel="UTC+7 (Thái Lan)"></nz-option>
+                    <nz-option nzValue="Asia/Singapore" nzLabel="UTC+8 (Singapore)"></nz-option>
+                    <nz-option nzValue="UTC" nzLabel="UTC"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-label nzRequired>Ngôn ngữ</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng chọn ngôn ngữ!">
+                  <nz-select formControlName="language" nzPlaceHolder="Chọn ngôn ngữ">
+                    <nz-option nzValue="vi" nzLabel="Tiếng Việt"></nz-option>
+                    <nz-option nzValue="en" nzLabel="English"></nz-option>
+                    <nz-option nzValue="zh" nzLabel="中文"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-label nzRequired>Tiền tệ</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng chọn tiền tệ!">
+                  <nz-select formControlName="currency" nzPlaceHolder="Chọn tiền tệ">
+                    <nz-option nzValue="VND" nzLabel="VND (₫)"></nz-option>
+                    <nz-option nzValue="USD" nzLabel="USD ($)"></nz-option>
+                    <nz-option nzValue="EUR" nzLabel="EUR (€)"></nz-option>
+                    <nz-option nzValue="THB" nzLabel="THB (฿)"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label nzRequired>Định dạng ngày</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng chọn định dạng ngày!">
+                  <nz-select formControlName="dateFormat" nzPlaceHolder="Chọn định dạng ngày">
+                    <nz-option nzValue="DD/MM/YYYY" nzLabel="DD/MM/YYYY"></nz-option>
+                    <nz-option nzValue="MM/DD/YYYY" nzLabel="MM/DD/YYYY"></nz-option>
+                    <nz-option nzValue="YYYY-MM-DD" nzLabel="YYYY-MM-DD"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label nzRequired>Định dạng giờ</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng chọn định dạng giờ!">
+                  <nz-select formControlName="timeFormat" nzPlaceHolder="Chọn định dạng giờ">
+                    <nz-option nzValue="24h" nzLabel="24 giờ"></nz-option>
+                    <nz-option nzValue="12h" nzLabel="12 giờ (AM/PM)"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <nz-divider nzText="Sao lưu và bảo mật"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="autoBackup">Tự động sao lưu</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-label>Tần suất sao lưu</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="backupFrequency" nzPlaceHolder="Chọn tần suất">
+                    <nz-option nzValue="daily" nzLabel="Hàng ngày"></nz-option>
+                    <nz-option nzValue="weekly" nzLabel="Hàng tuần"></nz-option>
+                    <nz-option nzValue="monthly" nzLabel="Hàng tháng"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-label>Số file sao lưu tối đa</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="maxBackupFiles" [nzMin]="1" [nzMax]="365" style="width: 100%"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Thời gian timeout phiên (phút)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="sessionTimeout" [nzMin]="5" [nzMax]="480" style="width: 100%"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Mức độ log</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="logLevel" nzPlaceHolder="Chọn mức độ log">
+                    <nz-option nzValue="debug" nzLabel="Debug"></nz-option>
+                    <nz-option nzValue="info" nzLabel="Info"></nz-option>
+                    <nz-option nzValue="warn" nzLabel="Warning"></nz-option>
+                    <nz-option nzValue="error" nzLabel="Error"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enableLogging">Bật ghi log</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; text-align: right;">
+            <button nz-button nzType="default" (click)="resetForm(systemForm)" style="margin-right: 8px;">
+              Khôi phục mặc định
+            </button>
+            <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveSystemSettings()">
+              Lưu cài đặt
+            </button>
+          </div>
+        </form>
+      </nz-tab>
+
+      <!-- Tab 2: Cài đặt Email -->
+      <nz-tab nzTitle="Cài đặt Email" nzIcon="mail">
+        <form nz-form [formGroup]="emailForm" nzLayout="vertical" style="margin-top: 16px;">
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="emailEnabled">Bật gửi email</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <nz-divider nzText="Cấu hình SMTP"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>SMTP Host</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="smtpHost" placeholder="smtp.gmail.com" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>SMTP Port</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="smtpPort" [nzMin]="1" [nzMax]="65535" style="width: 100%"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>SMTP User</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="smtpUser" placeholder="your-email@gmail.com" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>SMTP Password</nz-form-label>
+                <nz-form-control>
+                  <input nz-input type="password" formControlName="smtpPassword" placeholder="Mật khẩu hoặc App Password" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="smtpSecure">Sử dụng SSL/TLS</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <nz-divider nzText="Thông tin Email"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Email gửi từ</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="emailFrom" placeholder="noreply@example.com" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Tên người gửi</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="emailFromName" placeholder="Hệ thống quản lý khách sạn" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Email trả lời</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="emailReplyTo" placeholder="support@example.com" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Email test</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="emailTestAddress" type="email" placeholder="test@example.com" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; text-align: right;">
+            <button nz-button nzType="default" (click)="testEmailConnection()" [nzLoading]="loading" style="margin-right: 8px;">
+              Kiểm tra kết nối
+            </button>
+            <button nz-button nzType="default" (click)="sendTestEmail()" [nzLoading]="loading" style="margin-right: 8px;">
+              Gửi email test
+            </button>
+            <button nz-button nzType="default" (click)="resetForm(emailForm)" style="margin-right: 8px;">
+              Khôi phục mặc định
+            </button>
+            <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveEmailSettings()">
+              Lưu cài đặt
+            </button>
+          </div>
+        </form>
+      </nz-tab>
+
+      <!-- Tab 3: Cài đặt Thanh toán -->
+      <nz-tab nzTitle="Cài đặt Thanh toán" nzIcon="dollar">
+        <form nz-form [formGroup]="paymentForm" nzLayout="vertical" style="margin-top: 16px;">
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label nzRequired>Phương thức thanh toán mặc định</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng chọn phương thức thanh toán!">
+                  <nz-select formControlName="defaultPaymentMethod" nzPlaceHolder="Chọn phương thức">
+                    <nz-option nzValue="cash" nzLabel="Tiền mặt"></nz-option>
+                    <nz-option nzValue="bank_transfer" nzLabel="Chuyển khoản"></nz-option>
+                    <nz-option nzValue="card" nzLabel="Thẻ"></nz-option>
+                    <nz-option nzValue="qr" nzLabel="QR Code"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Thời gian timeout thanh toán (giây)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="paymentTimeout" [nzMin]="30" [nzMax]="3600" style="width: 100%"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <nz-divider nzText="Bật/Tắt phương thức thanh toán"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enableCash">Tiền mặt</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enableBankTransfer">Chuyển khoản</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enableCard">Thẻ</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enableQR">QR Code</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enableCrypto">Crypto</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enablePayPal">PayPal</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <nz-divider nzText="Tự động đối soát"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="autoReconcile">Tự động đối soát</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Tần suất đối soát</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="reconcileFrequency" nzPlaceHolder="Chọn tần suất">
+                    <nz-option nzValue="hourly" nzLabel="Hàng giờ"></nz-option>
+                    <nz-option nzValue="daily" nzLabel="Hàng ngày"></nz-option>
+                    <nz-option nzValue="weekly" nzLabel="Hàng tuần"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Số dư tối thiểu cảnh báo</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="minimumBalanceAlert" [nzMin]="0" [nzFormatter]="formatterVND" [nzParser]="parserVND" style="width: 100%"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; text-align: right;">
+            <button nz-button nzType="default" (click)="resetForm(paymentForm)" style="margin-right: 8px;">
+              Khôi phục mặc định
+            </button>
+            <button nz-button nzType="primary" [nzLoading]="saving" (click)="savePaymentSettings()">
+              Lưu cài đặt
+            </button>
+          </div>
+        </form>
+      </nz-tab>
+
+      <!-- Tab 4: Cài đặt Thông báo -->
+      <nz-tab nzTitle="Cài đặt Thông báo" nzIcon="bell">
+        <form nz-form [formGroup]="notificationForm" nzLayout="vertical" style="margin-top: 16px;">
+          <nz-divider nzText="Bật/Tắt kênh thông báo"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enableEmailNotifications">Thông báo Email</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enableSMSNotifications">Thông báo SMS</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enablePushNotifications">Thông báo Push</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <nz-divider nzText="Loại thông báo"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="notifyOnBooking">Thông báo khi có đặt phòng</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="notifyOnCheckin">Thông báo khi check-in</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="notifyOnCheckout">Thông báo khi check-out</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="notifyOnPayment">Thông báo khi thanh toán</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="notifyOnCancellation">Thông báo khi hủy đặt phòng</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="notifyOnLowInventory">Thông báo khi hết hàng</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="notifyOnSystemError">Thông báo lỗi hệ thống</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Email nhận thông báo</nz-form-label>
+                <nz-form-control nzErrorTip="Email không hợp lệ!">
+                  <input nz-input formControlName="notificationEmail" type="email" placeholder="admin@example.com" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; text-align: right;">
+            <button nz-button nzType="default" (click)="resetForm(notificationForm)" style="margin-right: 8px;">
+              Khôi phục mặc định
+            </button>
+            <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveNotificationSettings()">
+              Lưu cài đặt
+            </button>
+          </div>
+        </form>
+      </nz-tab>
+
+      <!-- Tab 5: Cài đặt Chung -->
+      <nz-tab nzTitle="Cài đặt Chung" nzIcon="global">
+        <form nz-form [formGroup]="generalForm" nzLayout="vertical" style="margin-top: 16px;">
+          <nz-divider nzText="Thông tin công ty"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Tên công ty</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="companyName" placeholder="Tên công ty" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Địa chỉ</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="companyAddress" placeholder="Địa chỉ công ty" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Số điện thoại</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="companyPhone" placeholder="+84..." />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Email</nz-form-label>
+                <nz-form-control nzErrorTip="Email không hợp lệ!">
+                  <input nz-input formControlName="companyEmail" type="email" placeholder="contact@example.com" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Website</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="companyWebsite" placeholder="https://example.com" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Mã số thuế</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="taxId" placeholder="Mã số thuế" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Giấy phép kinh doanh</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="businessLicense" placeholder="Số giấy phép" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <nz-divider nzText="Giao diện"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Logo</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="logo" placeholder="URL logo" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-label>Favicon</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="favicon" placeholder="URL favicon" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <nz-divider nzText="Bảo trì và Bảo mật"></nz-divider>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="maintenanceMode">Chế độ bảo trì</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="allowRegistration">Cho phép đăng ký</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="requireEmailVerification">Yêu cầu xác thực email</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+              <nz-form-item>
+                <nz-form-control>
+                  <label nz-checkbox formControlName="enable2FA">Bật xác thực 2 yếu tố</label>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+            <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+              <nz-form-item>
+                <nz-form-label>Thông báo bảo trì</nz-form-label>
+                <nz-form-control>
+                  <textarea nz-input formControlName="maintenanceMessage" rows="3" placeholder="Hệ thống đang bảo trì. Vui lòng quay lại sau."></textarea>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; text-align: right;">
+            <button nz-button nzType="default" (click)="resetForm(generalForm)" style="margin-right: 8px;">
+              Khôi phục mặc định
+            </button>
+            <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveGeneralSettings()">
+              Lưu cài đặt
+            </button>
+          </div>
+        </form>
+      </nz-tab>
+    </nz-tabset>
+  </nz-card>
+</div>
+
