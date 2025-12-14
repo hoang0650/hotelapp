@@ -1155,8 +1155,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       ? `${checkinInfo.checkinTime.getHours().toString().padStart(2, '0')}:${checkinInfo.checkinTime.getMinutes().toString().padStart(2, '0')} ${checkinInfo.checkinTime.getDate().toString().padStart(2, '0')}/${(checkinInfo.checkinTime.getMonth() + 1).toString().padStart(2, '0')}/${checkinInfo.checkinTime.getFullYear()}`
       : '';
     
-    // Tổng tiền = tiền phòng + tiền dịch vụ + phụ thu
-    const totalAmount = checkinInfo.roomPrice + checkinInfo.serviceAmount + checkinInfo.additionalCharges;
+    // Tổng tiền = tiền phòng + tiền dịch vụ + phụ thu - chiết khấu (đồng bộ với room-content-modal)
+    const subtotal = checkinInfo.roomPrice + checkinInfo.serviceAmount;
+    const totalAmount = Math.max(0, subtotal + checkinInfo.additionalCharges - checkinInfo.discount);
     
     return {
       checkinTime: checkinTimeStr,
@@ -1441,17 +1442,19 @@ export class RoomComponent implements OnInit, OnDestroy {
     // Lấy nguồn khách từ event
     const guestSource = lastCheckin.guestInfo?.guestSource || 'walkin';
     
-    // Tính tiền dịch vụ từ selectedServices
+    // Tính tiền dịch vụ từ selectedServices (đồng bộ với room-content-modal)
     let serviceAmount = 0;
     if (lastCheckin.selectedServices && Array.isArray(lastCheckin.selectedServices)) {
       serviceAmount = lastCheckin.selectedServices.reduce((sum: number, service: any) => {
-        const quantity = service.quantity || 1;
-        const price = service.price || service.unitPrice || 0;
-        return sum + (quantity * price);
+        // Sử dụng totalPrice nếu có (giống room-content-modal), nếu không thì tính từ price và quantity
+        const serviceAmount = service.totalPrice !== undefined 
+          ? service.totalPrice 
+          : (service.price || service.unitPrice || 0) * (service.quantity || 1);
+        return sum + serviceAmount;
       }, 0);
     }
     
-    // Lấy phụ thu từ event
+    // Lấy phụ thu từ event (đồng bộ với room-content-modal)
     let additionalCharges = 0;
     if (lastCheckin.additionalCharges !== undefined && lastCheckin.additionalCharges !== null) {
       additionalCharges = typeof lastCheckin.additionalCharges === 'number' 
@@ -1459,18 +1462,20 @@ export class RoomComponent implements OnInit, OnDestroy {
         : Number(lastCheckin.additionalCharges) || 0;
     }
     
-    // Tính tổng tiền = tiền phòng + tiền dịch vụ + phụ thu
-    const totalAmount = roomPrice + serviceAmount + additionalCharges;
-
-    // Lấy chiết khấu nếu có, mặc định = 0
+    // Lấy chiết khấu nếu có, mặc định = 0 (đồng bộ với room-content-modal)
     const discount = lastCheckin.discount !== undefined && lastCheckin.discount !== null
       ? (typeof lastCheckin.discount === 'number'
         ? lastCheckin.discount
         : Number(lastCheckin.discount) || 0)
       : 0;
+    
+    // Tính tổng tiền = tiền phòng + tiền dịch vụ + phụ thu - chiết khấu (đồng bộ với room-content-modal)
+    // Công thức: subtotal = roomPrice + serviceAmount, totalAmount = subtotal + additionalCharges - discount
+    const subtotal = roomPrice + serviceAmount;
+    const totalAmount = Math.max(0, subtotal + additionalCharges - discount);
 
     // Cho phép giá trị âm (khi đặt trước nhiều hơn tổng tiền)
-    const remainingAmount = totalAmount - advancePayment - discount;
+    const remainingAmount = totalAmount - advancePayment;
 
     // Lấy thông tin chuyển phòng từ nhiều nguồn
     let transferredFrom: string | undefined = undefined;
