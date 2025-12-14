@@ -430,11 +430,38 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         this.roomService.recheckinRoom(payload).subscribe(
           (response) => {
             this.message.success('Check-in lại thành công');
+            
+            // Lưu thông tin checkin event vào localStorage nếu có trong response
+            if (response.checkinEvent && response.room?._id) {
+              try {
+                const checkinEvent = response.checkinEvent;
+                const checkinData = {
+                  checkinTime: checkinEvent.checkinTime,
+                  guestInfo: checkinEvent.guestInfo || {},
+                  rateType: checkinEvent.rateType || 'hourly',
+                  advancePayment: checkinEvent.advancePayment || 0,
+                  additionalCharges: checkinEvent.additionalCharges || 0,
+                  discount: checkinEvent.discount || 0,
+                  selectedServices: checkinEvent.selectedServices || [],
+                  paymentMethod: checkinEvent.paymentMethod || 'cash',
+                  expectedCheckoutTime: checkinEvent.expectedCheckoutTime,
+                  transferredFrom: checkinEvent.transferredFrom,
+                  transferredAt: checkinEvent.transferredAt,
+                  roomId: response.room._id,
+                  roomNumber: response.room.roomNumber
+                };
+                localStorage.setItem(`checkin_${response.room._id}`, JSON.stringify(checkinData));
+                console.log('Saved recheckin event data to localStorage:', checkinData);
+              } catch (e) {
+                console.error('Error saving recheckin event data:', e);
+              }
+            }
+            
             // Reload history
             if (this.hotelId) {
               setTimeout(() => {
                 this.loadHistory(this.currentFilterType);
-                // Notify room component để reload rooms
+                // Notify room component để reload rooms với force reload
                 this.roomService.notifyRoomDataUpdated();
               }, 300);
             }

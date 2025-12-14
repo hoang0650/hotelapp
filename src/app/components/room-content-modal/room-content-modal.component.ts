@@ -3065,15 +3065,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                         fullEvent: JSON.stringify(lastCheckin, null, 2)
                       });
                       
-                      // Cập nhật listData với dữ liệu từ backend (bao gồm rateType)
+                      // Cập nhật listData với dữ liệu từ backend (bao gồm rateType, selectedServices, expectedCheckoutTime)
                       this.listData = [{
                         checkinTime: lastCheckin.checkinTime,
                         rateType: lastCheckin.rateType || rateType || 'hourly', // Ưu tiên từ backend, nếu không có thì dùng rateType đã lưu
                         advancePayment: lastCheckin.advancePayment || 0,
                         guestInfo: lastCheckin.guestInfo || { name: 'Khách lẻ' },
-                        additionalCharges: this.initialCharges,
-                        discount: this.initialDiscount,
-                        notes: this.initialNotes
+                        additionalCharges: lastCheckin.additionalCharges || this.initialCharges || 0,
+                        discount: lastCheckin.discount || this.initialDiscount || 0,
+                        selectedServices: lastCheckin.selectedServices || [],
+                        expectedCheckoutTime: lastCheckin.expectedCheckoutTime,
+                        transferredFrom: lastCheckin.transferredFrom,
+                        transferredAt: lastCheckin.transferredAt,
+                        notes: lastCheckin.notes || this.initialNotes || ''
                       }];
                       
                       // Cập nhật form với dữ liệu từ backend (bao gồm guestSource)
@@ -3126,12 +3130,23 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                       const reloadedRateType = lastCheckin.rateType || rateType || 'hourly';
                       this.checkOutForm.patchValue({
                         advancePayment: lastCheckin.advancePayment || 0,
-                        rateType: reloadedRateType // Cập nhật rateType trong form
+                        rateType: reloadedRateType, // Cập nhật rateType trong form
+                        additionalCharges: lastCheckin.additionalCharges || 0,
+                        discount: lastCheckin.discount || 0,
+                        notes: lastCheckin.notes || ''
                       }, { emitEvent: false }); // Không emit event để tránh trigger calculateTotalPrice nhiều lần
                       console.log('Reloaded form with guestSource from backend:', reloadedGuestInfo.guestSource);
                       console.log('Reloaded form with rateType from backend:', reloadedRateType);
+                      console.log('Reloaded form with selectedServices from backend:', lastCheckin.selectedServices);
+                      console.log('Reloaded form with expectedCheckoutTime from backend:', lastCheckin.expectedCheckoutTime);
                       
                       this.advancePayment = lastCheckin.advancePayment || 0;
+                      
+                      // Cập nhật selectedServices nếu có
+                      if (lastCheckin.selectedServices && Array.isArray(lastCheckin.selectedServices) && lastCheckin.selectedServices.length > 0) {
+                        // Có thể cần cập nhật selectedServices trong component nếu có property này
+                        console.log('Reloaded selectedServices:', lastCheckin.selectedServices);
+                      }
                       
                       // Tính lại tiền sau khi reload (vì rateType có thể đã thay đổi)
                       setTimeout(() => {
