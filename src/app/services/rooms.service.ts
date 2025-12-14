@@ -143,12 +143,38 @@ export class RoomsService {
     sourceRoom: Room,
     targetRoom: Room,
     booking?: any,
+    checkinEvent?: {
+      checkinTime?: Date;
+      guestInfo?: any;
+      rateType?: string;
+      advancePayment?: number;
+      additionalCharges?: number;
+      discount?: number;
+      selectedServices?: any[];
+      paymentMethod?: string;
+      expectedCheckoutTime?: Date;
+      transferredFrom?: string;
+      transferredAt?: Date;
+    },
     message: string
   }> {
     return this.http.post<{
       sourceRoom: Room,
       targetRoom: Room,
       booking?: any,
+      checkinEvent?: {
+        checkinTime?: Date;
+        guestInfo?: any;
+        rateType?: string;
+        advancePayment?: number;
+        additionalCharges?: number;
+        discount?: number;
+        selectedServices?: any[];
+        paymentMethod?: string;
+        expectedCheckoutTime?: Date;
+        transferredFrom?: string;
+        transferredAt?: Date;
+      },
       message: string
     }>(`${this.apiUrl}/transfer`, {
       sourceRoomId,

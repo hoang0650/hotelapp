@@ -206,6 +206,7 @@ export interface Booking {
   actualCheckOutDate?: Date;
   status: 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
   bookingType: 'hourly' | 'daily' | 'nightly';
+  rateType?: 'hourly' | 'daily' | 'nightly'; // Alias cho bookingType để tương thích
   adults?: number;
   children?: number;
   basePrice: number;
@@ -255,6 +256,7 @@ export interface Booking {
     idType?: string;
     idNumber?: string;
   };
+  guestInfo?: GuestInfo; // Alias cho guestDetails để tương thích với code hiện tại
   notes?: string;
   createdBy?: string;
   logs?: Array<{

@@ -1057,7 +1057,10 @@ export class RoomComponent implements OnInit, OnDestroy {
         'daily': 'Ngày đêm',
         'nightly': 'Qua đêm'
       };
-      const rateTypeLabel = rateTypeLabels[room.currentBooking.rateType || 'hourly'] || 'Theo giờ';
+      // Lấy rateType từ bookingType hoặc rateType (tương thích cả hai)
+      const currentBooking = room.currentBooking as any;
+      const rateType = currentBooking?.rateType || currentBooking?.bookingType || 'hourly';
+      const rateTypeLabel = rateTypeLabels[rateType] || 'Theo giờ';
       
       const checkInDateStr = checkInDate 
         ? `${checkInDate.getHours().toString().padStart(2, '0')}:${checkInDate.getMinutes().toString().padStart(2, '0')} ${checkInDate.getDate().toString().padStart(2, '0')}/${(checkInDate.getMonth() + 1).toString().padStart(2, '0')}/${checkInDate.getFullYear()}`
@@ -1067,8 +1070,13 @@ export class RoomComponent implements OnInit, OnDestroy {
         ? `${checkOutDate.getHours().toString().padStart(2, '0')}:${checkOutDate.getMinutes().toString().padStart(2, '0')} ${checkOutDate.getDate().toString().padStart(2, '0')}/${(checkOutDate.getMonth() + 1).toString().padStart(2, '0')}/${checkOutDate.getFullYear()}`
         : '';
       
+      // Lấy guestName từ guestInfo hoặc guestDetails (tương thích cả hai)
+      const guestName = currentBooking?.guestInfo?.name 
+        || currentBooking?.guestDetails?.name 
+        || 'Khách đặt trước';
+      
       return {
-        guestName: room.currentBooking.guestInfo?.name || 'Khách đặt trước',
+        guestName: guestName,
         checkInDate: checkInDateStr,
         checkOutDate: checkOutDateStr,
         rateTypeLabel: rateTypeLabel
@@ -1391,14 +1399,13 @@ export class RoomComponent implements OnInit, OnDestroy {
     // Ưu tiên 2: Từ room.currentBooking nếu có
     if ((!guestName || guestName === 'Khách lẻ') && room.currentBooking) {
       const currentBooking = typeof room.currentBooking === 'object' ? room.currentBooking : null;
-      if (currentBooking?.guestInfo?.name && currentBooking.guestInfo.name !== 'Khách lẻ') {
-        guestName = currentBooking.guestInfo.name;
-      } else {
-        // Kiểm tra guestDetails nếu có (có thể từ backend trả về)
-        const bookingAny = currentBooking as any;
-        if (bookingAny?.guestDetails?.name && bookingAny.guestDetails.name !== 'Khách lẻ') {
-          guestName = bookingAny.guestDetails.name;
-        }
+      const bookingAny = currentBooking as any;
+      // Kiểm tra guestInfo trước (tương thích với code cũ)
+      if (bookingAny?.guestInfo?.name && bookingAny.guestInfo.name !== 'Khách lẻ') {
+        guestName = bookingAny.guestInfo.name;
+      } else if (bookingAny?.guestDetails?.name && bookingAny.guestDetails.name !== 'Khách lẻ') {
+        // Kiểm tra guestDetails (từ Booking model)
+        guestName = bookingAny.guestDetails.name;
       }
     }
     
@@ -1472,8 +1479,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     // Ưu tiên 2: Từ currentBooking nếu có
     if (room.currentBooking) {
       const currentBooking = typeof room.currentBooking === 'object' ? room.currentBooking : null;
-      if (currentBooking?.guestInfo?.guestSource) {
-        return currentBooking.guestInfo.guestSource;
+      const bookingAny = currentBooking as any;
+      // Kiểm tra guestInfo trước (tương thích với code cũ)
+      if (bookingAny?.guestInfo?.guestSource) {
+        return bookingAny.guestInfo.guestSource;
+      } else if (bookingAny?.guestDetails) {
+        // Booking model không có guestSource trong guestDetails, nhưng có thể có trong metadata
+        // Hoặc có thể lấy từ source field
+        return bookingAny.source === 'walk_in' ? 'walkin' : (bookingAny.source || 'walkin');
       }
     }
     
