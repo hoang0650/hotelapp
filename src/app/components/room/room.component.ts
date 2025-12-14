@@ -1013,16 +1013,30 @@ export class RoomComponent implements OnInit, OnDestroy {
     
     // Nếu currentBooking là Booking đầy đủ
     const booking = room.currentBooking as any;
+    
+    // Kiểm tra từ transferHistory trước (nếu có nhiều lần chuyển)
+    if (booking.transferHistory && Array.isArray(booking.transferHistory) && booking.transferHistory.length > 0) {
+      const firstTransfer = booking.transferHistory[0];
+      const lastTransfer = booking.transferHistory[booking.transferHistory.length - 1];
+      
+      return {
+        fromRoomId: firstTransfer.fromRoomId?.toString() || booking.transferredFrom?.toString(),
+        fromRoomNumber: firstTransfer.fromRoomNumber || this.getRoomNumberById(firstTransfer.fromRoomId?.toString() || booking.transferredFrom?.toString() || '') || 'N/A',
+        toRoomId: lastTransfer.toRoomId?.toString() || booking.transferredTo?.toString() || room._id?.toString(),
+        toRoomNumber: lastTransfer.toRoomNumber || this.getRoomNumberById(lastTransfer.toRoomId?.toString() || booking.transferredTo?.toString() || '') || room.roomNumber || 'N/A',
+        transferredAt: lastTransfer.transferredAt ? new Date(lastTransfer.transferredAt) : (booking.transferredAt ? new Date(booking.transferredAt) : undefined),
+        transferredBy: lastTransfer.transferredBy || booking.transferredBy,
+        transferHistory: booking.transferHistory
+      };
+    }
+    
+    // Nếu không có transferHistory, lấy từ transferredFrom/transferredTo
     if (booking.transferredFrom || booking.transferredTo) {
       return {
-        fromRoomId: booking.transferredFrom,
-        fromRoomNumber: booking.transferHistory && booking.transferHistory.length > 0 
-          ? booking.transferHistory[0].fromRoomNumber 
-          : (this.getRoomNumberById(booking.transferredFrom || '') || 'N/A'),
-        toRoomId: booking.transferredTo,
-        toRoomNumber: booking.transferHistory && booking.transferHistory.length > 0
-          ? booking.transferHistory[booking.transferHistory.length - 1].toRoomNumber
-          : (this.getRoomNumberById(booking.transferredTo || '') || 'N/A'),
+        fromRoomId: booking.transferredFrom?.toString(),
+        fromRoomNumber: this.getRoomNumberById(booking.transferredFrom?.toString() || '') || 'N/A',
+        toRoomId: booking.transferredTo?.toString() || room._id?.toString(),
+        toRoomNumber: this.getRoomNumberById(booking.transferredTo?.toString() || '') || room.roomNumber || 'N/A',
         transferredAt: booking.transferredAt ? new Date(booking.transferredAt) : undefined,
         transferredBy: booking.transferredBy,
         transferHistory: booking.transferHistory || []
@@ -1186,7 +1200,22 @@ export class RoomComponent implements OnInit, OnDestroy {
         results.forEach(({ roomId, events }) => {
           const roomIndex = this.rooms.findIndex(r => r._id === roomId);
           if (roomIndex !== -1) {
-            this.rooms[roomIndex].events = events;
+            // Đảm bảo events có đầy đủ thông tin, bao gồm transferredFrom và transferredAt
+            this.rooms[roomIndex].events = events.map(event => ({
+              ...event,
+              // Đảm bảo transferredFrom được convert đúng sang string (có thể là ObjectId)
+              transferredFrom: event.transferredFrom 
+                ? (typeof event.transferredFrom === 'object' 
+                  ? (event.transferredFrom as any)?._id?.toString() || (event.transferredFrom as any)?.toString()
+                  : event.transferredFrom.toString())
+                : undefined,
+              transferredAt: event.transferredAt ? new Date(event.transferredAt) : undefined,
+              transferredBy: event.transferredBy
+                ? (typeof event.transferredBy === 'object'
+                  ? (event.transferredBy as any)?._id?.toString() || (event.transferredBy as any)?.toString()
+                  : event.transferredBy.toString())
+                : undefined
+            }));
           }
         });
       },
@@ -1443,6 +1472,44 @@ export class RoomComponent implements OnInit, OnDestroy {
     // Cho phép giá trị âm (khi đặt trước nhiều hơn tổng tiền)
     const remainingAmount = totalAmount - advancePayment - discount;
 
+    // Lấy thông tin chuyển phòng từ nhiều nguồn
+    let transferredFrom: string | undefined = undefined;
+    let transferredAt: Date | undefined = undefined;
+    
+    // Ưu tiên 1: Từ checkin event (RoomEvent collection)
+    if (lastCheckin.transferredFrom) {
+      // Đảm bảo convert đúng sang string (có thể là ObjectId hoặc string)
+      transferredFrom = typeof lastCheckin.transferredFrom === 'object' 
+        ? (lastCheckin.transferredFrom as any)?._id?.toString() || (lastCheckin.transferredFrom as any)?.toString()
+        : lastCheckin.transferredFrom.toString();
+      transferredAt = lastCheckin.transferredAt ? new Date(lastCheckin.transferredAt) : undefined;
+    }
+    
+    // Ưu tiên 2: Từ currentBooking nếu không có trong event
+    if (!transferredFrom && room.currentBooking) {
+      const currentBooking = typeof room.currentBooking === 'object' ? room.currentBooking : null;
+      const bookingAny = currentBooking as any;
+      
+      // Kiểm tra transferHistory trước (nếu có nhiều lần chuyển)
+      if (bookingAny?.transferHistory && Array.isArray(bookingAny.transferHistory) && bookingAny.transferHistory.length > 0) {
+        const lastTransfer = bookingAny.transferHistory[bookingAny.transferHistory.length - 1];
+        if (lastTransfer.fromRoomId) {
+          transferredFrom = typeof lastTransfer.fromRoomId === 'object'
+            ? (lastTransfer.fromRoomId as any)?._id?.toString() || (lastTransfer.fromRoomId as any)?.toString()
+            : lastTransfer.fromRoomId.toString();
+          transferredAt = lastTransfer.transferredAt ? new Date(lastTransfer.transferredAt) : undefined;
+        }
+      }
+      
+      // Nếu không có trong transferHistory, lấy từ transferredFrom trực tiếp
+      if (!transferredFrom && bookingAny?.transferredFrom) {
+        transferredFrom = typeof bookingAny.transferredFrom === 'object'
+          ? (bookingAny.transferredFrom as any)?._id?.toString() || (bookingAny.transferredFrom as any)?.toString()
+          : bookingAny.transferredFrom.toString();
+        transferredAt = bookingAny.transferredAt ? new Date(bookingAny.transferredAt) : undefined;
+      }
+    }
+    
     return {
       guestName: guestName,
       checkinTime: checkinTime,
@@ -1455,8 +1522,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       rateType: rateType,
       rateTypeLabel: rateTypeLabel,
       guestSource: guestSource,
-      transferredFrom: lastCheckin.transferredFrom,
-      transferredAt: lastCheckin.transferredAt ? new Date(lastCheckin.transferredAt) : undefined
+      transferredFrom: transferredFrom,
+      transferredAt: transferredAt
     };
   }
 

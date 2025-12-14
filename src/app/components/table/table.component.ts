@@ -388,24 +388,44 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
 
   // Check-in lại (undo checkout)
   recheckin(item: any): void {
-    if (!item.roomId) {
+    // Lấy roomId từ nhiều nguồn
+    const roomId = item.roomId || item.room?._id || item.room?._id?.toString();
+    
+    if (!roomId) {
       this.message.error('Không tìm thấy thông tin phòng');
+      console.error('Item data:', item);
       return;
     }
 
+    // Lấy invoiceId từ nhiều nguồn
+    const invoiceId = item.invoiceId || item.invoice?._id || item.invoiceNumber;
+    
+    // Lấy historyId (là _id của bookingHistory entry)
+    const historyId = item._id || item.bookingId;
+
     this.modalService.confirm({
       nzTitle: 'Xác nhận check-in lại',
-      nzContent: `Bạn có chắc chắn muốn check-in lại phòng ${item.roomNumber}? Hành động này sẽ hoàn tác checkout và khôi phục lại trạng thái phòng như trước khi checkout.`,
+      nzContent: `Bạn có chắc chắn muốn check-in lại phòng ${item.roomNumber || 'N/A'}? Hành động này sẽ hoàn tác checkout và khôi phục lại trạng thái phòng như trước khi checkout.`,
       nzOkText: 'Xác nhận',
       nzOkType: 'primary',
       nzOkDanger: false,
       nzCancelText: 'Hủy',
       nzOnOk: () => {
-        const payload = {
-          roomId: item.roomId,
-          invoiceId: item.invoiceId || item._id,
-          historyId: item._id
+        const payload: any = {
+          roomId: roomId.toString()
         };
+        
+        // Chỉ thêm invoiceId nếu có
+        if (invoiceId) {
+          payload.invoiceId = invoiceId.toString();
+        }
+        
+        // Chỉ thêm historyId nếu có
+        if (historyId) {
+          payload.historyId = historyId.toString();
+        }
+
+        console.log('Recheckin payload:', payload);
 
         this.roomService.recheckinRoom(payload).subscribe(
           (response) => {
@@ -420,7 +440,14 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
             }
           },
           (error) => {
-            this.message.error('Lỗi khi check-in lại: ' + (error.error?.error || error.message));
+            console.error('Recheckin error:', error);
+            const errorMessage = error.error?.error || error.error?.message || error.message || 'Lỗi không xác định';
+            this.message.error('Lỗi khi check-in lại: ' + errorMessage);
+            
+            // Hiển thị thông tin chi tiết nếu có
+            if (error.error?.details) {
+              console.error('Error details:', error.error.details);
+            }
           }
         );
       }
@@ -429,10 +456,20 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
 
   // Xóa lịch sử checkout
   deleteHistory(item: any): void {
-    if (!item.roomId || !item._id) {
+    // Lấy roomId từ nhiều nguồn
+    const roomId = item.roomId || item.room?._id || item.room?._id?.toString();
+    
+    // Lấy historyId (là _id của bookingHistory entry)
+    const historyId = item._id || item.bookingId;
+    
+    if (!roomId || !historyId) {
       this.message.error('Không tìm thấy thông tin cần thiết');
+      console.error('Item data:', item);
       return;
     }
+
+    // Lấy invoiceId từ nhiều nguồn
+    const invoiceId = item.invoiceId || item.invoice?._id || item.invoiceNumber;
 
     this.modalService.confirm({
       nzTitle: 'Xác nhận xóa',
@@ -442,11 +479,17 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       nzOkDanger: true,
       nzCancelText: 'Hủy',
       nzOnOk: () => {
-        const payload = {
-          roomId: item.roomId,
-          invoiceId: item.invoiceId,
-          historyId: item._id
+        const payload: any = {
+          roomId: roomId.toString(),
+          historyId: historyId.toString()
         };
+        
+        // Chỉ thêm invoiceId nếu có
+        if (invoiceId) {
+          payload.invoiceId = invoiceId.toString();
+        }
+
+        console.log('Delete history payload:', payload);
 
         this.roomService.deleteCheckoutHistory(payload).subscribe(
           (response) => {
@@ -461,7 +504,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
             }
           },
           (error) => {
-            this.message.error('Lỗi khi xóa lịch sử: ' + (error.error?.error || error.message));
+            console.error('Delete history error:', error);
+            const errorMessage = error.error?.error || error.error?.message || error.message || 'Lỗi không xác định';
+            this.message.error('Lỗi khi xóa lịch sử: ' + errorMessage);
           }
         );
       }

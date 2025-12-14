@@ -217,13 +217,22 @@
                 <!-- Thông tin chi tiết cho phòng đang có khách -->
                 <ng-container *ngIf="room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
                   <div class="room-details">
-                    <div class="detail-row" *ngIf="displayInfo.transferredFrom">
+                    <!-- Hiển thị thông tin chuyển phòng từ nhiều nguồn -->
+                    <div class="detail-row" *ngIf="displayInfo.transferredFrom || getBookingTransferInfo(room)">
                       <span class="detail-label">Chuyển từ:</span>
                       <span class="detail-value highlight" style="color: #ff9800;">
-                        Phòng {{ getRoomNumberById(displayInfo.transferredFrom) || displayInfo.transferredFrom }}
-                        <span *ngIf="displayInfo.transferredAt" style="font-size: 0.85em; color: #999; margin-left: 4px;">
-                          ({{ displayInfo.transferredAt | date:'dd/MM/yyyy HH:mm' }})
-                        </span>
+                        <ng-container *ngIf="getBookingTransferInfo(room) as transferInfo">
+                          Phòng {{ transferInfo.fromRoomNumber || getRoomNumberById(transferInfo.fromRoomId || '') || 'N/A' }}
+                          <span *ngIf="transferInfo.transferredAt" style="font-size: 0.85em; color: #999; margin-left: 4px;">
+                            ({{ transferInfo.transferredAt | date:'dd/MM/yyyy HH:mm' }})
+                          </span>
+                        </ng-container>
+                        <ng-container *ngIf="!getBookingTransferInfo(room) && displayInfo.transferredFrom">
+                          Phòng {{ getRoomNumberById(displayInfo.transferredFrom) || displayInfo.transferredFrom }}
+                          <span *ngIf="displayInfo.transferredAt" style="font-size: 0.85em; color: #999; margin-left: 4px;">
+                            ({{ displayInfo.transferredAt | date:'dd/MM/yyyy HH:mm' }})
+                          </span>
+                        </ng-container>
                       </span>
                     </div>
                     <div class="detail-row">
