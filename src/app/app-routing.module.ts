@@ -38,6 +38,7 @@ import { PermissionGuard } from './guards/permission.guard';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { SettingsComponent } from './components/settings/settings.component';
+import { MaintenanceComponent } from './components/maintenance/maintenance.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
@@ -48,6 +49,7 @@ const routes: Routes = [
   { path: 'business-signup', component: BusinessSignupComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password/:token', component: ResetPasswordComponent },
+  { path: 'maintenance', component: MaintenanceComponent },
   { path: 'room/:id', component: ProductDetailComponent },
   {
     path: 'admin', component: AdminComponent, children: [

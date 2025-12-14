@@ -123,6 +123,7 @@ import { ProfileComponent } from './components/profile/profile.component';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { SettingsComponent } from './components/settings/settings.component';
+import { MaintenanceComponent } from './components/maintenance/maintenance.component';
 
 registerLocaleData(vi);
 
@@ -151,6 +152,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         ForgotPasswordComponent,
         ResetPasswordComponent,
         SettingsComponent,
+        MaintenanceComponent,
         ProductDetailComponent,
         SidebarComponent,
         AdminComponent,

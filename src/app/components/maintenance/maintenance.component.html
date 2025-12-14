@@ -1,0 +1,29 @@
+<div class="maintenance-container">
+  <div class="maintenance-content">
+    <div class="maintenance-icon">
+      <i nz-icon nzType="tool" nzTheme="outline" style="font-size: 80px; color: #1890ff;"></i>
+    </div>
+    <h1 class="maintenance-title">Hệ thống đang bảo trì</h1>
+    <p class="maintenance-message">{{ maintenanceMessage }}</p>
+    <div class="maintenance-info" *ngIf="!isAdmin">
+      <p>Chúng tôi đang thực hiện bảo trì hệ thống để cải thiện dịch vụ.</p>
+      <p>Vui lòng quay lại sau. Xin cảm ơn!</p>
+    </div>
+    <div class="maintenance-actions" *ngIf="!isAdmin">
+      <button nz-button nzType="primary" (click)="goToLogin()">
+        <i nz-icon nzType="logout"></i>
+        Đăng xuất
+      </button>
+    </div>
+    <div class="maintenance-admin-info" *ngIf="isAdmin">
+      <nz-alert
+        nzType="info"
+        nzMessage="Bạn đang đăng nhập với quyền quản trị viên"
+        nzDescription="Bạn có thể tiếp tục sử dụng hệ thống để kiểm tra và quản lý."
+        nzShowIcon
+        style="margin-top: 24px;"
+      ></nz-alert>
+    </div>
+  </div>
+</div>
+
