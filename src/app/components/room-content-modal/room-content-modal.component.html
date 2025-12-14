@@ -232,6 +232,16 @@
   <ng-container *ngIf="roomData?.status === 'occupied'; else checkoutError">
     <h3>Trả phòng {{ roomData.roomNumber }} - Tầng {{ roomData.floor }}</h3>
     
+    <!-- Hiển thị thông tin chuyển phòng từ Booking nếu có -->
+    <div *ngIf="getBookingTransferInfo()" class="transfer-info-alert mb-3">
+      <nz-alert 
+        nzType="info" 
+        nzShowIcon
+        [nzMessage]="'Thông tin chuyển phòng'"
+        [nzDescription]="getTransferInfoDescription()">
+      </nz-alert>
+    </div>
+    
     <nz-divider nzText="Thông tin khách hàng"></nz-divider>
     
     <form nz-form [formGroup]="checkOutForm">

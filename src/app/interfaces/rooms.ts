@@ -70,7 +70,13 @@ export interface Room {
     rateType?: 'hourly' | 'daily' | 'nightly';
     advancePayment?: number;
     notes?: string;
-  };
+    // Thông tin chuyển phòng từ Booking
+    transferredFrom?: string; // Room ID phòng ban đầu
+    transferredTo?: string; // Room ID phòng đích hiện tại
+    transferredAt?: Date; // Thời gian chuyển phòng
+    transferredBy?: string; // staffId
+    transferHistory?: TransferHistoryItem[]; // Lịch sử chuyển phòng
+  } | Booking; // Có thể là object đơn giản hoặc Booking đầy đủ
   
   revenue?: RoomRevenue; // Mới
   
@@ -173,6 +179,100 @@ export interface BookingHistory {
   paymentStatus?: string;
   checkInTime?: Date; // Thường là một phần của event 'check-out'
   // checkOutTime?: Date; // Đã có date là thời điểm của event
+}
+
+// Interface cho lịch sử chuyển phòng trong Booking
+export interface TransferHistoryItem {
+  fromRoomId: string;
+  toRoomId: string;
+  fromRoomNumber: string;
+  toRoomNumber: string;
+  transferredAt: Date;
+  transferredBy?: string; // staffId
+  notes?: string;
+  oldBasePrice: number;
+  newBasePrice: number;
+}
+
+// Interface cho Booking
+export interface Booking {
+  _id?: string;
+  hotelId: string;
+  roomId: string;
+  guestId?: string;
+  checkInDate: Date;
+  checkOutDate: Date;
+  actualCheckInDate?: Date;
+  actualCheckOutDate?: Date;
+  status: 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
+  bookingType: 'hourly' | 'daily' | 'nightly';
+  adults?: number;
+  children?: number;
+  basePrice: number;
+  additionalCharges?: Array<{
+    description?: string;
+    amount: number;
+    date?: Date;
+  }>;
+  discounts?: Array<{
+    description?: string;
+    amount: number;
+    date?: Date;
+  }>;
+  deposit?: number;
+  totalAmount: number;
+  paidAmount?: number;
+  paymentStatus: 'pending' | 'partial' | 'paid' | 'refunded';
+  paymentMethod?: 'cash' | 'credit_card' | 'bank_transfer';
+  paymentDetails?: {
+    transactionId?: string;
+    cardLast4?: string;
+    bankReference?: string;
+    paymentDate?: Date;
+    paymentHistory?: Array<{
+      amount: number;
+      date: Date;
+      method: string;
+      staffId?: string;
+      transactionId?: string;
+    }>;
+  };
+  services?: Array<{
+    serviceId?: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    date?: Date;
+  }>;
+  source?: 'direct' | 'ota' | 'phone' | 'walk_in';
+  otaSource?: string;
+  otaBookingId?: string;
+  guestDetails?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    idType?: string;
+    idNumber?: string;
+  };
+  notes?: string;
+  createdBy?: string;
+  logs?: Array<{
+    action: string;
+    timestamp: Date;
+    userId?: string;
+    staffId?: string;
+    details?: string;
+  }>;
+  // Thông tin chuyển phòng
+  transferredFrom?: string; // Room ID phòng ban đầu
+  transferredTo?: string; // Room ID phòng đích hiện tại
+  transferredAt?: Date; // Thời gian chuyển phòng
+  transferredBy?: string; // staffId người thực hiện chuyển phòng
+  transferHistory?: TransferHistoryItem[]; // Lịch sử các lần chuyển phòng
+  createdAt?: Date;
+  updatedAt?: Date;
+  metadata?: any;
 }
 
 // Mô hình cho giao ca

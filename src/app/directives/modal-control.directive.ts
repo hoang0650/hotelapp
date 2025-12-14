@@ -864,30 +864,61 @@ export class ModalControlDirective implements OnInit, OnDestroy {
             const targetRoom = response?.targetRoom;
             const targetRoomNumber = targetRoom?.roomNumber || 'N/A';
             const booking = response?.booking;
+            const checkinEvent = response?.checkinEvent; // Thông tin check-in mới từ backend
             
             // Lưu thông tin checkin vào localStorage cho phòng đích
-            // Lấy thông tin từ phòng nguồn (nếu có trong localStorage)
-            const sourceCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
-            if (sourceCheckinData && targetRoom?._id) {
+            // Ưu tiên sử dụng thông tin từ response.checkinEvent (từ backend)
+            if (checkinEvent && targetRoom?._id) {
               try {
-                const checkinData = JSON.parse(sourceCheckinData);
-                // Cập nhật roomId và roomNumber cho phòng đích, giữ nguyên thông tin khách
+                // Sử dụng thông tin từ backend (đầy đủ và chính xác nhất)
                 const targetCheckinData = {
-                  ...checkinData,
+                  checkinTime: checkinEvent.checkinTime,
+                  guestInfo: checkinEvent.guestInfo || {},
+                  rateType: checkinEvent.rateType || 'hourly',
+                  advancePayment: checkinEvent.advancePayment || 0,
+                  additionalCharges: checkinEvent.additionalCharges || 0,
+                  discount: checkinEvent.discount || 0,
+                  selectedServices: checkinEvent.selectedServices || [],
+                  paymentMethod: checkinEvent.paymentMethod || 'cash',
+                  expectedCheckoutTime: checkinEvent.expectedCheckoutTime,
                   roomId: targetRoom._id,
                   roomNumber: targetRoom.roomNumber,
-                  transferredFrom: this.room._id,
+                  transferredFrom: checkinEvent.transferredFrom || this.room._id,
                   transferredFromRoomNumber: this.room.roomNumber,
-                  transferredAt: new Date()
+                  transferredAt: checkinEvent.transferredAt || new Date()
                 };
                 // Lưu vào localStorage cho phòng đích
                 localStorage.setItem(`checkin_${targetRoom._id}`, JSON.stringify(targetCheckinData));
-                // Xóa dữ liệu cũ của phòng nguồn
-                localStorage.removeItem(`checkin_${this.room._id}`);
+                console.log('Saved checkin data from backend response:', targetCheckinData);
               } catch (e) {
-                console.error('Error saving transfer checkin data:', e);
+                console.error('Error saving transfer checkin data from response:', e);
+              }
+            } else {
+              // Fallback: Lấy thông tin từ phòng nguồn (nếu có trong localStorage)
+              const sourceCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
+              if (sourceCheckinData && targetRoom?._id) {
+                try {
+                  const checkinData = JSON.parse(sourceCheckinData);
+                  // Cập nhật roomId và roomNumber cho phòng đích, giữ nguyên thông tin khách
+                  const targetCheckinData = {
+                    ...checkinData,
+                    roomId: targetRoom._id,
+                    roomNumber: targetRoom.roomNumber,
+                    transferredFrom: this.room._id,
+                    transferredFromRoomNumber: this.room.roomNumber,
+                    transferredAt: new Date()
+                  };
+                  // Lưu vào localStorage cho phòng đích
+                  localStorage.setItem(`checkin_${targetRoom._id}`, JSON.stringify(targetCheckinData));
+                  console.log('Saved checkin data from localStorage fallback:', targetCheckinData);
+                } catch (e) {
+                  console.error('Error saving transfer checkin data from localStorage:', e);
+                }
               }
             }
+            
+            // Xóa dữ liệu cũ của phòng nguồn
+            localStorage.removeItem(`checkin_${this.room._id}`);
             
             // Tạo thông báo chi tiết
             let message = `Đã chuyển khách từ phòng ${this.room.roomNumber} sang phòng ${targetRoomNumber}`;
