@@ -30,7 +30,8 @@ export class ForgotPasswordComponent implements OnInit {
 
   private initForm(): void {
     this.forgotPasswordForm = this.fb.group({
-      emailOrUsername: ['', [Validators.required]]
+      emailOrUsername: ['', [Validators.required]],
+      emailFrom: ['', [Validators.email]] // Email gửi từ (optional)
     });
   }
 
@@ -47,6 +48,7 @@ export class ForgotPasswordComponent implements OnInit {
 
     this.isLoading = true;
     const emailOrUsername = this.forgotPasswordForm.get('emailOrUsername')?.value;
+    const emailFrom = this.forgotPasswordForm.get('emailFrom')?.value;
     
     // Kiểm tra xem input có phải là email không (chứa @)
     const isEmail = emailOrUsername.includes('@');
@@ -56,6 +58,11 @@ export class ForgotPasswordComponent implements OnInit {
       requestData.email = emailOrUsername;
     } else {
       requestData.username = emailOrUsername;
+    }
+    
+    // Thêm emailFrom nếu có
+    if (emailFrom && emailFrom.trim()) {
+      requestData.emailFrom = emailFrom.trim();
     }
 
     this.userService.forgotPassword(requestData).subscribe({
