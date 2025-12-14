@@ -194,6 +194,16 @@ export class RoomsService {
     return this.http.post<any>(`${this.apiUrl}/checkout/${id}`, payload);
   }
 
+  // Check-in lại (undo checkout)
+  recheckinRoom(payload: { roomId: string, invoiceId?: string, historyId?: string }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/recheckin`, payload);
+  }
+
+  // Xóa lịch sử checkout
+  deleteCheckoutHistory(payload: { roomId: string, invoiceId?: string, historyId: string }): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/history`, { body: payload });
+  }
+
   // Dọn dẹp phòng
   cleanRoom(roomId: string, roomUpdate: any): Observable<any> {
     const url = `${this.apiUrl}/clean/${roomId}`;

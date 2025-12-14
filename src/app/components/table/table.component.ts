@@ -375,6 +375,99 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     return found ? found.color : 'warning';
   }
 
+  // Kiểm tra quyền
+  get canRecheckin(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin() || 
+           this.authService.isBusiness();
+  }
+
+  get canDelete(): boolean {
+    return this.authService.isSuperAdmin();
+  }
+
+  // Check-in lại (undo checkout)
+  recheckin(item: any): void {
+    if (!item.roomId) {
+      this.message.error('Không tìm thấy thông tin phòng');
+      return;
+    }
+
+    this.modalService.confirm({
+      nzTitle: 'Xác nhận check-in lại',
+      nzContent: `Bạn có chắc chắn muốn check-in lại phòng ${item.roomNumber}? Hành động này sẽ hoàn tác checkout và khôi phục lại trạng thái phòng như trước khi checkout.`,
+      nzOkText: 'Xác nhận',
+      nzOkType: 'primary',
+      nzOkDanger: false,
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        const payload = {
+          roomId: item.roomId,
+          invoiceId: item.invoiceId || item._id,
+          historyId: item._id
+        };
+
+        this.roomService.recheckinRoom(payload).subscribe(
+          (response) => {
+            this.message.success('Check-in lại thành công');
+            // Reload history
+            if (this.hotelId) {
+              setTimeout(() => {
+                this.loadHistory(this.currentFilterType);
+                // Notify room component để reload rooms
+                this.roomService.notifyRoomDataUpdated();
+              }, 300);
+            }
+          },
+          (error) => {
+            this.message.error('Lỗi khi check-in lại: ' + (error.error?.error || error.message));
+          }
+        );
+      }
+    });
+  }
+
+  // Xóa lịch sử checkout
+  deleteHistory(item: any): void {
+    if (!item.roomId || !item._id) {
+      this.message.error('Không tìm thấy thông tin cần thiết');
+      return;
+    }
+
+    this.modalService.confirm({
+      nzTitle: 'Xác nhận xóa',
+      nzContent: `Bạn có chắc chắn muốn xóa lịch sử checkout này? Hành động này không thể hoàn tác.`,
+      nzOkText: 'Xóa',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        const payload = {
+          roomId: item.roomId,
+          invoiceId: item.invoiceId,
+          historyId: item._id
+        };
+
+        this.roomService.deleteCheckoutHistory(payload).subscribe(
+          (response) => {
+            this.message.success('Xóa lịch sử thành công');
+            // Reload history
+            if (this.hotelId) {
+              setTimeout(() => {
+                this.loadHistory(this.currentFilterType);
+                // Notify room component để reload rooms và cập nhật tổng tiền
+                this.roomService.notifyRoomDataUpdated();
+              }, 300);
+            }
+          },
+          (error) => {
+            this.message.error('Lỗi khi xóa lịch sử: ' + (error.error?.error || error.message));
+          }
+        );
+      }
+    });
+  }
+
   viewInvoice(item: any): void {
     if (!item) {
       this.message.warning('Không thể hiển thị hóa đơn: Thiếu thông tin phòng');

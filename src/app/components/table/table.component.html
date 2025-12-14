@@ -285,6 +285,29 @@
               aria-label="Xem hóa đơn">
               <i nz-icon nzType="file-text"></i>
             </button>
+            <button
+              *ngIf="canRecheckin"
+              nz-button
+              nzType="default"
+              nzShape="circle"
+              (click)="recheckin(data)"
+              nz-tooltip
+              nzTooltipTitle="Check-in lại"
+              aria-label="Check-in lại">
+              <i nz-icon nzType="redo"></i>
+            </button>
+            <button
+              *ngIf="canDelete"
+              nz-button
+              nzType="default"
+              nzDanger
+              nzShape="circle"
+              (click)="deleteHistory(data)"
+              nz-tooltip
+              nzTooltipTitle="Xóa lịch sử"
+              aria-label="Xóa lịch sử">
+              <i nz-icon nzType="delete"></i>
+            </button>
           </div>
         </td>
       </tr>

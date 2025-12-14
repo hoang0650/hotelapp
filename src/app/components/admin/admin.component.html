@@ -47,7 +47,7 @@
   <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null">
     <div class="logo"></div>
     <ul nz-menu nzTheme="dark" nzMode="inline">
-      <li nz-submenu [nzTitle]="'ADMIN_SIDEBAR.HOTEL' | translate" nzIcon="table">
+      <li nz-submenu *ngIf="canAccessHotelMenu()" [nzTitle]="'ADMIN_SIDEBAR.HOTEL' | translate" nzIcon="table">
         <ul>
           <li nz-menu-item routerLink="/admin/room">{{ 'ADMIN_SIDEBAR.ROOM' | translate }}</li>
           <li nz-menu-item routerLink="/admin/shift-handover">{{ 'ADMIN_SIDEBAR.SHIFT_HANDOVER' | translate }}</li>
@@ -55,34 +55,34 @@
           <li nz-menu-item routerLink="/admin/bank-transfer-history">{{ 'ADMIN_SIDEBAR.BANK_TRANSFER_HISTORY' | translate }}</li>
         </ul>
       </li>
-      <li nz-submenu [nzTitle]="'ADMIN_SIDEBAR.MANAGEMENT' | translate" nzIcon="team">
+      <li nz-submenu *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessOTAManagement() || canAccessPricingManagement()" [nzTitle]="'ADMIN_SIDEBAR.MANAGEMENT' | translate" nzIcon="team">
         <ul>
-          <li nz-menu-item routerLink="/admin/company">{{ 'ADMIN_SIDEBAR.BUSINESS_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/hotel">{{ 'ADMIN_SIDEBAR.HOTEL_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/room-management">{{ 'ADMIN_SIDEBAR.ROOM_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/staff">{{ 'ADMIN_SIDEBAR.STAFF_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/users-management">{{ 'ADMIN_SIDEBAR.USER_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/service-management">{{ 'ADMIN_SIDEBAR.SERVICE_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/ota-management">{{ 'ADMIN_SIDEBAR.OTAS_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/pricing-management">{{ 'ADMIN_SIDEBAR.PRICING_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessBusinessManagement()" routerLink="/admin/company">{{ 'ADMIN_SIDEBAR.BUSINESS_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessHotelManagement()" routerLink="/admin/hotel">{{ 'ADMIN_SIDEBAR.HOTEL_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/room-management">{{ 'ADMIN_SIDEBAR.ROOM_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessStaffManagement()" routerLink="/admin/staff">{{ 'ADMIN_SIDEBAR.STAFF_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessUserManagement()" routerLink="/admin/users-management">{{ 'ADMIN_SIDEBAR.USER_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessServiceManagement()" routerLink="/admin/service-management">{{ 'ADMIN_SIDEBAR.SERVICE_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessOTAManagement()" routerLink="/admin/ota-management">{{ 'ADMIN_SIDEBAR.OTAS_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessPricingManagement()" routerLink="/admin/pricing-management">{{ 'ADMIN_SIDEBAR.PRICING_MANAGEMENT' | translate }}</li>
         </ul>
       </li>
-      <li nz-menu-item routerLink="/admin/electric-setting">
+      <li nz-menu-item *ngIf="canAccessElectricSetting()" routerLink="/admin/electric-setting">
         <span nz-icon nzType="pie-chart"></span>
         <span>{{ 'ADMIN_SIDEBAR.ELECTRIC_SETTING' | translate }}</span>
       </li>
-      <li nz-submenu [nzTitle]="'ADMIN_SIDEBAR.PAYMENT' | translate" nzIcon="dollar">
+      <li nz-submenu *ngIf="canAccessPaymentMenu()" [nzTitle]="'ADMIN_SIDEBAR.PAYMENT' | translate" nzIcon="dollar">
         <ul>
           <li nz-menu-item routerLink="/admin/qr-payment">{{ 'ADMIN_SIDEBAR.QR_CODE' | translate }}</li>
           <li nz-menu-item routerLink="/admin/visa-payment">{{ 'ADMIN_SIDEBAR.VISA' | translate }}</li>
         </ul>
       </li>
-      <li nz-submenu [nzTitle]="'ADMIN_SIDEBAR.EXPAND_PAGE' | translate" nzIcon="plus">
+      <li nz-submenu *ngIf="canAccessEmailAdmin()" [nzTitle]="'ADMIN_SIDEBAR.EXPAND_PAGE' | translate" nzIcon="plus">
         <ul>
           <li nz-menu-item routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN' | translate }}</li>
         </ul>
       </li>    
-      <li nz-menu-item routerLink="/file">
+      <li nz-menu-item *ngIf="canAccessFile()" routerLink="/file">
         <span nz-icon nzType="file"></span>
         <span>{{ 'ADMIN_SIDEBAR.FILE' | translate }}</span>
       </li>
