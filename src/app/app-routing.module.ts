@@ -39,6 +39,8 @@ import { ForgotPasswordComponent } from './components/forgot-password/forgot-pas
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { MaintenanceComponent } from './components/maintenance/maintenance.component';
+import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
+import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
@@ -92,7 +94,9 @@ const routes: Routes = [
   { path: 'chat', component: ChatComponent },
   { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
-  { path: 'sepay-oauth2-callback', component: SepayOAuth2CallbackComponent }
+  { path: 'sepay-oauth2-callback', component: SepayOAuth2CallbackComponent },
+  { path: 'privacy-policy', component: PrivacyPolicyComponent },
+  { path: 'terms-of-service', component: TermsOfServiceComponent }
 ];
 
 @NgModule({

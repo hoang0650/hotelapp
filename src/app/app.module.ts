@@ -124,6 +124,8 @@ import { ForgotPasswordComponent } from './components/forgot-password/forgot-pas
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { MaintenanceComponent } from './components/maintenance/maintenance.component';
+import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
+import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
 
 registerLocaleData(vi);
 
@@ -204,7 +206,9 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         FooterComponent,
         TuyaSwitchComponent,
         TuyaSwitchCompactComponent,
-        ProfileComponent
+        ProfileComponent,
+        PrivacyPolicyComponent,
+        TermsOfServiceComponent
     ],
     bootstrap: [AppComponent],
     imports: [

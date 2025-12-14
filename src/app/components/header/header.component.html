@@ -5,20 +5,6 @@
     <span class="navbar-toggler-icon"></span>
   </button>
   <div class="collapse navbar-collapse" id="navbarNav">
-    <!-- Notifications trong collapse menu (chỉ hiển thị trên mobile và khi đã đăng nhập) -->
-    <ul class="navbar-nav mb-2 mb-lg-0 d-lg-none" *ngIf="isLoggedIn">
-      <li class="nav-item">
-        <a class="nav-link d-flex align-items-center" (click)="openNotificationDrawer()" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <i class="bi bi-bell me-2" style="font-size: 18px;"></i>
-          <span>Thông báo</span>
-          <span *ngIf="unreadCount > 0" class="badge bg-danger ms-2" style="font-size: 10px; padding: 2px 6px; min-width: 18px; border-radius: 9px;">
-            {{ unreadCount > 99 ? '99+' : unreadCount }}
-          </span>
-        </a>
-      </li>
-      <li><hr class="dropdown-divider"></li>
-    </ul>
-    
     <ul class="navbar-nav mb-2 mb-lg-0 justify-content-start">
       <li class="nav-item">
         <a class="nav-link" href="/home" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.HOME' | translate }}</a>
@@ -68,21 +54,20 @@
           <li><a class="dropdown-item text-danger" (click)="logout()" style="cursor: pointer;"><i class="bi bi-box-arrow-right me-2"></i>{{ 'NAVBAR.LOGOUT' | translate }}</a></li>
         </ul>
       </li>
-      <!-- Notifications (chỉ hiển thị trên desktop) -->
-      <li class="nav-item d-none d-lg-block" style="position: relative;">
-        <a class="nav-link d-flex align-items-center" (click)="openNotificationDrawer()" style="cursor: pointer;" title="Thông báo">
-          <i class="bi bi-bell me-1" style="font-size: 18px;"></i>
-          <span class="d-none d-md-inline">Thông báo</span>
-          <span *ngIf="unreadCount > 0" class="badge bg-danger ms-1" style="font-size: 10px; padding: 2px 6px; min-width: 18px; border-radius: 9px;">
+      <!-- Notifications (chỉ hiển thị trên desktop, không hiển thị trên mobile) -->
+      <li *ngIf="isLoggedIn" class="nav-item d-none d-lg-block notification-nav-item" style="position: relative;">
+        <a class="nav-link d-flex align-items-center justify-content-center" (click)="openNotificationDrawer()" style="cursor: pointer; min-width: 50px;" [title]="'NAVBAR.NOTIFICATIONS' | translate">
+          <i class="bi bi-bell-fill" style="font-size: 20px; color: white;"></i>
+          <span *ngIf="unreadCount > 0" class="badge bg-danger" style="position: absolute; top: 5px; right: 5px; font-size: 10px; padding: 2px 5px; min-width: 18px; border-radius: 10px; border: 2px solid #0d6efd;">
             {{ unreadCount > 99 ? '99+' : unreadCount }}
           </span>
         </a>
       </li>
       
-      <!-- Language Switcher -->
-      <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="bi bi-globe me-1"></i>{{ 'LANGUAGE.SELECT_LANGUAGE' | translate }}
+      <!-- Language Switcher (chỉ hiển thị trên desktop) -->
+      <li class="nav-item dropdown d-none d-lg-block">
+        <a class="nav-link dropdown-toggle d-flex align-items-center justify-content-center" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; min-width: 50px;" [title]="'LANGUAGE.SELECT_LANGUAGE' | translate">
+          <i class="bi bi-globe" style="font-size: 20px; color: white;"></i>
         </a>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
           <li><a class="dropdown-item" (click)="switchLanguage('en')" style="cursor: pointer;"><span class="me-2">🇬🇧</span>{{ 'LANGUAGE.EN' | translate }}</a></li>
@@ -92,9 +77,20 @@
       </li>
     </ul>
     
-    <!-- Notifications và Language trong collapse menu (chỉ hiển thị trên mobile) -->
+    <!-- Notifications và Language Switcher trong collapse menu (chỉ hiển thị trên mobile) -->
     <ul class="navbar-nav mb-2 mb-lg-0 d-lg-none">
       <li><hr class="dropdown-divider"></li>
+      <!-- Notifications trong collapse menu (mobile) -->
+      <li *ngIf="isLoggedIn" class="nav-item" style="position: relative;">
+        <a class="nav-link d-flex align-items-center" (click)="openNotificationDrawer()" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <i class="bi bi-bell-fill me-2" style="font-size: 18px; color: white;"></i>
+          <span>{{ 'NAVBAR.NOTIFICATIONS' | translate }}</span>
+          <span *ngIf="unreadCount > 0" class="badge bg-danger ms-2" style="font-size: 10px; padding: 2px 6px; min-width: 18px; border-radius: 10px;">
+            {{ unreadCount > 99 ? '99+' : unreadCount }}
+          </span>
+        </a>
+      </li>
+      <!-- Language Switcher trong collapse menu (mobile) -->
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" id="languageDropdownMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false">
           <i class="bi bi-globe me-2"></i>{{ 'LANGUAGE.SELECT_LANGUAGE' | translate }}
@@ -112,7 +108,7 @@
 <!-- Notification Drawer -->
 <nz-drawer
   [nzVisible]="isNotificationDrawerVisible"
-  [nzTitle]="'Thông báo'"
+  [nzTitle]="'NOTIFICATIONS.TITLE' | translate"
   [nzPlacement]="'right'"
   [nzWidth]="400"
   (nzOnClose)="closeNotificationDrawer()"
@@ -122,7 +118,7 @@
       <!-- Header Actions -->
       <div class="notification-actions" *ngIf="notifications.length > 0">
         <button nz-button nzType="link" nzSize="small" (click)="markAllAsRead()">
-          Đánh dấu tất cả đã đọc
+          {{ 'NOTIFICATIONS.MARK_ALL_READ' | translate }}
         </button>
       </div>
       
@@ -144,13 +140,13 @@
           <div class="notification-title">{{ notification.title }}</div>
           <div class="notification-message">{{ notification.message }}</div>
           <div class="notification-priority" *ngIf="notification.priority === 'urgent' || notification.priority === 'high'">
-            <nz-tag nzColor="red">Ưu tiên cao</nz-tag>
+            <nz-tag nzColor="red">{{ 'NOTIFICATIONS.HIGH_PRIORITY' | translate }}</nz-tag>
           </div>
         </div>
       </div>
       
       <ng-template #noNotifications>
-        <nz-empty nzNotFoundContent="Không có thông báo nào"></nz-empty>
+        <nz-empty [nzNotFoundContent]="'NOTIFICATIONS.NO_NOTIFICATIONS' | translate"></nz-empty>
       </ng-template>
     </div>
   </ng-container>

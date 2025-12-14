@@ -96,6 +96,13 @@
 }
 
 /* Responsive */
+@media (max-width: 991.98px) {
+  /* Ẩn hoàn toàn nút thông báo trên mobile và tablet */
+  .notification-nav-item {
+    display: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   .notification-drawer {
     padding: 12px;

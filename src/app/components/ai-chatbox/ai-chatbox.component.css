@@ -3,8 +3,8 @@
   right: 24px;
   bottom: 24px;
   z-index: 1000;
-  max-width: 340px;
-  min-width: 280px;
+  max-width: 480px;
+  min-width: 400px;
   transition: all 0.3s;
 }
 .ai-chatbox-container.minimized .ai-chatbox-card {
@@ -16,6 +16,45 @@
   bottom: 100%;
   margin-bottom: 8px;
   z-index: 1001;
+  width: 72px;
+  height: 72px;
+  font-size: 28px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.chatbox-toggle i,
+.chatbox-toggle nz-icon {
+  font-size: 28px !important;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  line-height: 1 !important;
+}
+
+@media (min-width: 992px) {
+  .chatbox-toggle {
+    width: 80px;
+    height: 80px;
+    font-size: 32px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .chatbox-toggle i,
+  .chatbox-toggle nz-icon {
+    font-size: 32px !important;
+    width: 32px;
+    height: 32px;
+    margin: 0 !important;
+    line-height: 1 !important;
+  }
 }
 .ai-chatbox-card {
   box-shadow: 0 4px 24px rgba(0,0,0,0.18);
@@ -23,13 +62,13 @@
   overflow: hidden;
 }
 .ai-chatbox-messages {
-  max-height: 320px;
+  max-height: 450px;
   overflow-y: auto;
-  padding: 0 8px;
+  padding: 0 16px;
   background: #fafafa;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .chat-message-row {
   display: flex;
@@ -55,13 +94,13 @@
   background: #e6f7ff;
   color: #222;
   border-radius: 16px;
-  padding: 8px 14px;
+  padding: 12px 18px;
   box-shadow: 0 2px 8px rgba(24,144,255,0.08);
-  max-width: 260px;
+  max-width: 380px;
   min-width: 40px;
   word-break: break-word;
   position: relative;
-  font-size: 15px;
+  font-size: 17px;
   transition: background 0.2s;
 }
 .bubble.user {
@@ -81,16 +120,16 @@
   margin-bottom: 4px;
 }
 .msg-time {
-  font-size: 11px;
+  font-size: 12px;
   color: #bbb;
-  margin-top: 2px;
+  margin-top: 4px;
   text-align: right;
 }
 .chat-img-in-bubble {
-  max-width: 120px;
-  max-height: 80px;
+  max-width: 200px;
+  max-height: 150px;
   border-radius: 8px;
-  margin: 4px 0;
+  margin: 6px 0;
   display: block;
   border: 1px solid #e6f7ff;
 }
@@ -105,19 +144,19 @@
 }
 .ai-chatbox-input {
   display: flex;
-  gap: 8px;
-  padding: 8px;
+  gap: 12px;
+  padding: 16px;
   border-top: 1px solid #f0f0f0;
   background: #fff;
 }
 .ai-chatbox-typing {
-  padding: 8px;
+  padding: 12px;
   color: #1890ff;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .ai-typing-text {
   display: inline-block;

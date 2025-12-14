@@ -8,7 +8,14 @@
     "LOG_IN": "Anmelden",
     "PROFILE": "Profil",
     "SETTINGS": "Einstellungen",
-    "LOGOUT": "Abmelden"
+    "LOGOUT": "Abmelden",
+    "NOTIFICATIONS": "Benachrichtigungen"
+  },
+  "NOTIFICATIONS": {
+    "TITLE": "Benachrichtigungen",
+    "MARK_ALL_READ": "Alle als gelesen markieren",
+    "NO_NOTIFICATIONS": "Keine Benachrichtigungen",
+    "HIGH_PRIORITY": "Hohe Priorität"
   },
   "SIDEBAR": {
     "HOME": "Startseite",
@@ -120,6 +127,46 @@
     "AUTO_REFRESH": "Auto-Aktualisierung",
     "SHOW_BY_ROOM": "Nach Zimmer anzeigen",
     "ALL_DEVICES": "Alle Geräte"
+  },
+  "PRIVACY_POLICY": {
+    "TITLE": "Datenschutzrichtlinie",
+    "LAST_UPDATED": "Zuletzt aktualisiert",
+    "INTRODUCTION_TITLE": "Einführung",
+    "INTRODUCTION_CONTENT": "Wir verpflichten uns, Ihre Privatsphäre zu schützen. Diese Richtlinie erklärt, wie wir Ihre persönlichen Informationen sammeln, verwenden und schützen.",
+    "INFORMATION_COLLECTED_TITLE": "Informationen, die wir sammeln",
+    "INFORMATION_COLLECTED_CONTENT": "Wir können folgende Arten von Informationen sammeln:",
+    "INFO_ITEM_1": "Persönliche Informationen: Name, E-Mail, Telefonnummer",
+    "INFO_ITEM_2": "Buchungsinformationen: Check-in-Datum, Check-out-Datum, Zimmernummer",
+    "INFO_ITEM_3": "Zahlungsinformationen: Zahlungsmethode, Kartennummer (verschlüsselt)",
+    "INFO_ITEM_4": "Nutzungsinformationen: Buchungsverlauf, Systeminteraktionen",
+    "USE_OF_INFORMATION_TITLE": "Wie wir Informationen verwenden",
+    "USE_OF_INFORMATION_CONTENT": "Wir verwenden Informationen, um Dienstleistungen bereitzustellen, Buchungen zu bearbeiten, die Benutzererfahrung zu verbessern und wichtige Benachrichtigungen zu senden.",
+    "DATA_PROTECTION_TITLE": "Datenschutz",
+    "DATA_PROTECTION_CONTENT": "Wir verwenden fortschrittliche Sicherheitsmaßnahmen, um Ihre Informationen vor unbefugtem Zugriff, Änderung, Offenlegung oder Zerstörung zu schützen.",
+    "CONTACT_TITLE": "Kontakt",
+    "CONTACT_CONTENT": "Wenn Sie Fragen zu dieser Datenschutzrichtlinie haben, kontaktieren Sie uns bitte per E-Mail oder Telefon."
+  },
+  "TERMS_OF_SERVICE": {
+    "TITLE": "Nutzungsbedingungen",
+    "LAST_UPDATED": "Zuletzt aktualisiert",
+    "ACCEPTANCE_TITLE": "Annahme der Bedingungen",
+    "ACCEPTANCE_CONTENT": "Durch die Nutzung unseres Dienstes stimmen Sie diesen Bedingungen zu.",
+    "USE_OF_SERVICE_TITLE": "Nutzung des Dienstes",
+    "USE_OF_SERVICE_CONTENT": "Sie stimmen zu, den Dienst rechtmäßig zu nutzen und dürfen nicht:",
+    "USE_ITEM_1": "Den Dienst für illegale Zwecke nutzen",
+    "USE_ITEM_2": "Unbefugten Zugriff auf das System versuchen",
+    "USE_ITEM_3": "Dienstbetrieb schädigen oder stören",
+    "USE_ITEM_4": "Informationen anderer Benutzer ohne Erlaubnis verwenden",
+    "BOOKING_TITLE": "Buchung",
+    "BOOKING_CONTENT": "Alle Buchungen müssen bestätigt und gemäß den Vorschriften bezahlt werden. Wir behalten uns das Recht vor, Buchungen aus berechtigten Gründen abzulehnen.",
+    "PAYMENT_TITLE": "Zahlung",
+    "PAYMENT_CONTENT": "Die Zahlung muss fristgemäß wie angegeben erfolgen. Wir akzeptieren die auf der Website aufgeführten Zahlungsmethoden.",
+    "CANCELLATION_TITLE": "Stornierung",
+    "CANCELLATION_CONTENT": "Die Stornierungsrichtlinie gilt gemäß den spezifischen Vorschriften für jeden Zimmertyp und jedes Servicepaket.",
+    "LIABILITY_TITLE": "Haftung",
+    "LIABILITY_CONTENT": "Wir haften nicht für Schäden, die aus der Nutzung des Dienstes entstehen, außer wie gesetzlich vorgeschrieben.",
+    "CONTACT_TITLE": "Kontakt",
+    "CONTACT_CONTENT": "Wenn Sie Fragen zu den Nutzungsbedingungen haben, kontaktieren Sie uns bitte."
   }
 }
 

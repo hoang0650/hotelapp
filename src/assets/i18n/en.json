@@ -8,7 +8,14 @@
     "LOG_IN": "Log in",
     "PROFILE": "Profile",
     "SETTINGS": "Settings",
-    "LOGOUT": "Logout"
+    "LOGOUT": "Logout",
+    "NOTIFICATIONS": "Notifications"
+  },
+  "NOTIFICATIONS": {
+    "TITLE": "Notifications",
+    "MARK_ALL_READ": "Mark all as read",
+    "NO_NOTIFICATIONS": "No notifications",
+    "HIGH_PRIORITY": "High priority"
   },
   "SIDEBAR": {
     "HOME": "Home",
@@ -120,6 +127,46 @@
     "AUTO_REFRESH": "Auto Refresh",
     "SHOW_BY_ROOM": "Show by Room",
     "ALL_DEVICES": "All Devices"
+  },
+  "PRIVACY_POLICY": {
+    "TITLE": "Privacy Policy",
+    "LAST_UPDATED": "Last Updated",
+    "INTRODUCTION_TITLE": "Introduction",
+    "INTRODUCTION_CONTENT": "We are committed to protecting your privacy. This policy explains how we collect, use, and protect your personal information.",
+    "INFORMATION_COLLECTED_TITLE": "Information We Collect",
+    "INFORMATION_COLLECTED_CONTENT": "We may collect the following types of information:",
+    "INFO_ITEM_1": "Personal information: name, email, phone number",
+    "INFO_ITEM_2": "Booking information: check-in date, check-out date, room number",
+    "INFO_ITEM_3": "Payment information: payment method, card number (encrypted)",
+    "INFO_ITEM_4": "Usage information: booking history, system interactions",
+    "USE_OF_INFORMATION_TITLE": "How We Use Information",
+    "USE_OF_INFORMATION_CONTENT": "We use information to provide services, process bookings, improve user experience, and send important notifications.",
+    "DATA_PROTECTION_TITLE": "Data Protection",
+    "DATA_PROTECTION_CONTENT": "We use advanced security measures to protect your information from unauthorized access, alteration, disclosure, or destruction.",
+    "CONTACT_TITLE": "Contact",
+    "CONTACT_CONTENT": "If you have questions about this privacy policy, please contact us via email or phone."
+  },
+  "TERMS_OF_SERVICE": {
+    "TITLE": "Terms of Service",
+    "LAST_UPDATED": "Last Updated",
+    "ACCEPTANCE_TITLE": "Acceptance of Terms",
+    "ACCEPTANCE_CONTENT": "By using our service, you agree to these terms and conditions.",
+    "USE_OF_SERVICE_TITLE": "Use of Service",
+    "USE_OF_SERVICE_CONTENT": "You agree to use the service lawfully and must not:",
+    "USE_ITEM_1": "Use the service for illegal purposes",
+    "USE_ITEM_2": "Attempt unauthorized access to the system",
+    "USE_ITEM_3": "Harm or interfere with service operations",
+    "USE_ITEM_4": "Use other users' information without permission",
+    "BOOKING_TITLE": "Booking",
+    "BOOKING_CONTENT": "All bookings must be confirmed and paid according to regulations. We reserve the right to refuse bookings for valid reasons.",
+    "PAYMENT_TITLE": "Payment",
+    "PAYMENT_CONTENT": "Payment must be made on time as specified. We accept payment methods listed on the website.",
+    "CANCELLATION_TITLE": "Cancellation",
+    "CANCELLATION_CONTENT": "Cancellation policy applies according to specific regulations for each room type and service package.",
+    "LIABILITY_TITLE": "Liability",
+    "LIABILITY_CONTENT": "We are not liable for any damages arising from the use of the service, except as required by law.",
+    "CONTACT_TITLE": "Contact",
+    "CONTACT_CONTENT": "If you have questions about the terms of service, please contact us."
   }
 }
 

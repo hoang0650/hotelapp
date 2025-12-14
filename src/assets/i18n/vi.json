@@ -8,7 +8,14 @@
     "LOG_IN": "Đăng nhập",
     "PROFILE": "Hồ sơ cá nhân",
     "SETTINGS": "Cài đặt",
-    "LOGOUT": "Đăng xuất"
+    "LOGOUT": "Đăng xuất",
+    "NOTIFICATIONS": "Thông báo"
+  },
+  "NOTIFICATIONS": {
+    "TITLE": "Thông báo",
+    "MARK_ALL_READ": "Đánh dấu tất cả đã đọc",
+    "NO_NOTIFICATIONS": "Không có thông báo nào",
+    "HIGH_PRIORITY": "Ưu tiên cao"
   },
   "SIDEBAR": {
     "HOME": "Trang chủ",
@@ -120,6 +127,46 @@
     "AUTO_REFRESH": "Tự động làm mới",
     "SHOW_BY_ROOM": "Hiển thị theo phòng",
     "ALL_DEVICES": "Tất cả thiết bị"
+  },
+  "PRIVACY_POLICY": {
+    "TITLE": "Chính sách bảo mật",
+    "LAST_UPDATED": "Cập nhật lần cuối",
+    "INTRODUCTION_TITLE": "Giới thiệu",
+    "INTRODUCTION_CONTENT": "Chúng tôi cam kết bảo vệ quyền riêng tư của bạn. Chính sách này giải thích cách chúng tôi thu thập, sử dụng và bảo vệ thông tin cá nhân của bạn.",
+    "INFORMATION_COLLECTED_TITLE": "Thông tin chúng tôi thu thập",
+    "INFORMATION_COLLECTED_CONTENT": "Chúng tôi có thể thu thập các loại thông tin sau:",
+    "INFO_ITEM_1": "Thông tin cá nhân: tên, email, số điện thoại",
+    "INFO_ITEM_2": "Thông tin đặt phòng: ngày check-in, check-out, số phòng",
+    "INFO_ITEM_3": "Thông tin thanh toán: phương thức thanh toán, số thẻ (được mã hóa)",
+    "INFO_ITEM_4": "Thông tin sử dụng: lịch sử đặt phòng, tương tác với hệ thống",
+    "USE_OF_INFORMATION_TITLE": "Cách chúng tôi sử dụng thông tin",
+    "USE_OF_INFORMATION_CONTENT": "Chúng tôi sử dụng thông tin để cung cấp dịch vụ, xử lý đặt phòng, cải thiện trải nghiệm người dùng và gửi thông báo quan trọng.",
+    "DATA_PROTECTION_TITLE": "Bảo vệ dữ liệu",
+    "DATA_PROTECTION_CONTENT": "Chúng tôi sử dụng các biện pháp bảo mật tiên tiến để bảo vệ thông tin của bạn khỏi truy cập trái phép, thay đổi, tiết lộ hoặc phá hủy.",
+    "CONTACT_TITLE": "Liên hệ",
+    "CONTACT_CONTENT": "Nếu bạn có câu hỏi về chính sách bảo mật này, vui lòng liên hệ với chúng tôi qua email hoặc điện thoại."
+  },
+  "TERMS_OF_SERVICE": {
+    "TITLE": "Điều khoản dịch vụ",
+    "LAST_UPDATED": "Cập nhật lần cuối",
+    "ACCEPTANCE_TITLE": "Chấp nhận điều khoản",
+    "ACCEPTANCE_CONTENT": "Bằng cách sử dụng dịch vụ của chúng tôi, bạn đồng ý với các điều khoản và điều kiện này.",
+    "USE_OF_SERVICE_TITLE": "Sử dụng dịch vụ",
+    "USE_OF_SERVICE_CONTENT": "Bạn đồng ý sử dụng dịch vụ một cách hợp pháp và không được:",
+    "USE_ITEM_1": "Sử dụng dịch vụ cho mục đích bất hợp pháp",
+    "USE_ITEM_2": "Cố gắng truy cập trái phép vào hệ thống",
+    "USE_ITEM_3": "Gây hại hoặc can thiệp vào hoạt động của dịch vụ",
+    "USE_ITEM_4": "Sử dụng thông tin của người dùng khác mà không được phép",
+    "BOOKING_TITLE": "Đặt phòng",
+    "BOOKING_CONTENT": "Tất cả các đặt phòng phải được xác nhận và thanh toán theo quy định. Chúng tôi có quyền từ chối đặt phòng nếu có lý do chính đáng.",
+    "PAYMENT_TITLE": "Thanh toán",
+    "PAYMENT_CONTENT": "Thanh toán phải được thực hiện đúng hạn theo quy định. Chúng tôi chấp nhận các phương thức thanh toán được liệt kê trên trang web.",
+    "CANCELLATION_TITLE": "Hủy đặt phòng",
+    "CANCELLATION_CONTENT": "Chính sách hủy đặt phòng được áp dụng theo quy định cụ thể cho từng loại phòng và gói dịch vụ.",
+    "LIABILITY_TITLE": "Trách nhiệm",
+    "LIABILITY_CONTENT": "Chúng tôi không chịu trách nhiệm cho bất kỳ thiệt hại nào phát sinh từ việc sử dụng dịch vụ, ngoại trừ những trường hợp được quy định bởi pháp luật.",
+    "CONTACT_TITLE": "Liên hệ",
+    "CONTACT_CONTENT": "Nếu bạn có câu hỏi về điều khoản dịch vụ, vui lòng liên hệ với chúng tôi."
   }
 }
 
