@@ -93,9 +93,10 @@ export class SettingsService {
 
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('token');
+    // authenticateToken middleware expects "Bearer <token>" format
     return new HttpHeaders({
       'Content-Type': 'application/json',
-      'Authorization': token || ''
+      'Authorization': token ? `Bearer ${token}` : ''
     });
   }
 
