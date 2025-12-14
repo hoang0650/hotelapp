@@ -2331,163 +2331,51 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // ƯU TIÊN: Sử dụng rateType từ user (theo logic backend)
     switch (rateType) {
       case 'hourly':
-        // Lấy thời gian quy định cho nightly rate
+        // Hourly rate: KHÔNG tính phụ thu sớm/trễ, chỉ tính theo giờ đơn giản
         const firstHourPrice = this.roomData.firstHourRate || priceConfig?.hourlyRates?.firstHourPrice || hourlyRate;
         const additionalHourPrice = this.roomData.additionalHourRate || priceConfig?.hourlyRates?.additionalHourPrice || additionalHourRate;
         
-        // Parse thời gian quy định
-        const [nightlyStartHour, nightlyStartMinute] = nightlyStartTime.split(':').map(Number);
-        const [nightlyEndHour, nightlyEndMinute] = nightlyEndTime.split(':').map(Number);
+        // Tính giá giờ đầu
+        total = firstHourPrice;
+        priceDetails.firstHourPrice = firstHourPrice;
         
-        // Tính thời gian check-in/check-out theo phút trong ngày
-        let checkInMinutes = 0;
-        let checkOutMinutes = 0;
-        let nightlyStartMinutes = 0;
-        let nightlyEndMinutes = 0;
-        let isSameDay = true;
-        
-        if (checkInTime && checkOutTime) {
-          checkInMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
-          checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
-          nightlyStartMinutes = nightlyStartHour * 60 + nightlyStartMinute;
-          nightlyEndMinutes = nightlyEndHour * 60 + nightlyEndMinute;
+        // Tính giá cho các giờ tiếp theo
+        if (durationInHours >= 1) {
+          let billableHours = durationInHours - 1; // Số giờ tính phí (trừ giờ đầu)
           
-          // Tính ngày check-in và check-out
-          const checkInDateOnly = new Date(checkInTime.getFullYear(), checkInTime.getMonth(), checkInTime.getDate());
-          const checkOutDateOnly = new Date(checkOutTime.getFullYear(), checkOutTime.getMonth(), checkOutTime.getDate());
-          isSameDay = checkInDateOnly.getTime() === checkOutDateOnly.getTime();
-        }
-        
-        // Kiểm tra xem có vượt qua khung giờ qua đêm không
-        // Khung giờ qua đêm: từ nightlyStartTime (ví dụ 22:00) đến nightlyEndTime ngày hôm sau (ví dụ 12:00)
-        let hasNightlyPeriod = false;
-        let nightlyPrice = 0;
-        let earlyCheckinSurcharge = 0;
-        let lateCheckoutSurcharge = 0;
-        let hoursBeforeNightly = 0;
-        let hoursAfterNightly = 0;
-        
-        // Kiểm tra nếu check-out sau nightlyStartTime (cùng ngày) hoặc khác ngày
-        if (checkInTime && checkOutTime && (!isSameDay || (isSameDay && checkOutMinutes > nightlyStartMinutes))) {
-          hasNightlyPeriod = true;
-          
-          // Tính số giờ trước nightlyStartTime (nếu check-in trước nightlyStartTime)
-          if (checkInMinutes < nightlyStartMinutes) {
-            hoursBeforeNightly = (nightlyStartMinutes - checkInMinutes) / 60;
-            
-            // Chỉ tính phụ thu check-in sớm (KHÔNG tính giá theo giờ)
-            if (nightlyEarlyCheckinSurcharge > 0) {
-              earlyCheckinSurcharge = hoursBeforeNightly * nightlyEarlyCheckinSurcharge;
-            }
+          // Nếu có thời gian dư sau giờ thứ 2
+          if (durationInHours >= 2 && remainingMinutes > gracePeriodMinutes) {
+            billableHours += 1;
+          } else if (durationInHours === 1 && remainingMinutes > gracePeriodMinutes) {
+            billableHours = 1;
           }
           
-          // Tính giá qua đêm (luôn có nếu vào khung giờ qua đêm)
-          nightlyPrice = nightlyRate;
-          
-          // Tính số giờ sau nightlyEndTime (nếu check-out sau nightlyEndTime)
-          // Nếu cùng ngày: checkOutMinutes > nightlyEndMinutes
-          // Nếu khác ngày: luôn có giờ sau nightlyEndTime
-          if (!isSameDay || (isSameDay && checkOutMinutes > nightlyEndMinutes)) {
-            if (isSameDay) {
-              hoursAfterNightly = (checkOutMinutes - nightlyEndMinutes) / 60;
-            } else {
-              // Khác ngày: tính từ 0:00 đến checkOutMinutes
-              hoursAfterNightly = checkOutMinutes / 60;
-            }
-            
-            // Chỉ tính phụ thu check-out muộn (KHÔNG tính giá theo giờ)
-            if (nightlyLateCheckoutSurcharge > 0) {
-              lateCheckoutSurcharge = hoursAfterNightly * nightlyLateCheckoutSurcharge;
-            }
+          if (billableHours > 0) {
+            const additionalPrice = billableHours * additionalHourPrice;
+            total += additionalPrice;
+            priceDetails.additionalHoursCount = billableHours;
+            priceDetails.additionalHoursPrice = additionalPrice;
+            priceDetails.remainingMinutes = remainingMinutes;
+            priceDetails.gracePeriodMinutes = gracePeriodMinutes;
           }
         }
         
-        // Nếu không có khung giờ qua đêm, tính theo giờ bình thường
-        if (!hasNightlyPeriod) {
-          // Tính giá giờ đầu
-          total = firstHourPrice;
-          priceDetails.firstHourPrice = firstHourPrice;
-          
-          // Tính giá cho các giờ tiếp theo
-          if (durationInHours >= 1) {
-            let billableHours = durationInHours - 1; // Số giờ tính phí (trừ giờ đầu)
-            
-            // Nếu có thời gian dư sau giờ thứ 2
-            if (durationInHours >= 2 && remainingMinutes > gracePeriodMinutes) {
-              billableHours += 1;
-            } else if (durationInHours === 1 && remainingMinutes > gracePeriodMinutes) {
-              billableHours = 1;
-            }
-            
-            if (billableHours > 0) {
-              const additionalPrice = billableHours * additionalHourPrice;
-              total += additionalPrice;
-              priceDetails.additionalHoursCount = billableHours;
-              priceDetails.additionalHoursPrice = additionalPrice;
-              priceDetails.remainingMinutes = remainingMinutes;
-              priceDetails.gracePeriodMinutes = gracePeriodMinutes;
-            }
-          }
-          
-          // KHÔNG tự động chuyển sang nightly khi chọn hourly
-          // Nếu user chọn hourly, luôn tính theo giờ bình thường
-          // Chỉ kiểm tra maxHoursBeforeDay để chuyển sang daily (nếu cần)
-          if (durationInHours > maxHoursBeforeDay && dailyRate > 0) {
-            // Chuyển sang tính giá ngày nếu vượt quá số giờ tối đa
-            total = dailyRate;
-            priceDetails = {
-              basePrice: dailyRate,
-              rateType: 'daily',
-              autoConverted: true,
-              originalRateType: 'hourly',
-              reason: `Vượt quá ${maxHoursBeforeDay} giờ (${durationInHours} giờ)`
-            };
-          } else {
-            priceDetails.rateType = 'hourly';
-            priceDetails.note = 'Tính theo giờ bình thường, không tự động chuyển sang nightly';
-          }
+        // KHÔNG tự động chuyển sang nightly khi chọn hourly
+        // Nếu user chọn hourly, luôn tính theo giờ bình thường
+        // Chỉ kiểm tra maxHoursBeforeDay để chuyển sang daily (nếu cần)
+        if (durationInHours > maxHoursBeforeDay && dailyRate > 0) {
+          // Chuyển sang tính giá ngày nếu vượt quá số giờ tối đa
+          total = dailyRate;
+          priceDetails = {
+            basePrice: dailyRate,
+            rateType: 'daily',
+            autoConverted: true,
+            originalRateType: 'hourly',
+            reason: `Vượt quá ${maxHoursBeforeDay} giờ (${durationInHours} giờ)`
+          };
         } else {
-          // Có khung giờ qua đêm nhưng user đã chọn hourly
-          // KHÔNG tự động chuyển sang nightly, vẫn tính theo giờ
-          // Tính giá giờ đầu
-          total = firstHourPrice;
-          priceDetails.firstHourPrice = firstHourPrice;
-          
-          // Tính giá cho các giờ tiếp theo
-          if (durationInHours >= 1) {
-            let billableHours = durationInHours - 1; // Số giờ tính phí (trừ giờ đầu)
-            
-            // Nếu có thời gian dư sau giờ thứ 2
-            if (durationInHours >= 2 && remainingMinutes > gracePeriodMinutes) {
-              billableHours += 1;
-            } else if (durationInHours === 1 && remainingMinutes > gracePeriodMinutes) {
-              billableHours = 1;
-            }
-            
-            if (billableHours > 0) {
-              const additionalPrice = billableHours * additionalHourPrice;
-              total += additionalPrice;
-              priceDetails.additionalHoursCount = billableHours;
-              priceDetails.additionalHoursPrice = additionalPrice;
-              priceDetails.remainingMinutes = remainingMinutes;
-              priceDetails.gracePeriodMinutes = gracePeriodMinutes;
-            }
-          }
-          
-          // Kiểm tra maxHoursBeforeDay để chuyển sang daily (nếu cần)
-          if (durationInHours > maxHoursBeforeDay && dailyRate > 0) {
-            total = dailyRate;
-            priceDetails = {
-              basePrice: dailyRate,
-              rateType: 'daily',
-              autoConverted: true,
-              originalRateType: 'hourly',
-              reason: `Vượt quá ${maxHoursBeforeDay} giờ (${durationInHours} giờ)`
-            };
-          } else {
-            priceDetails.rateType = 'hourly';
-            priceDetails.note = 'Tính theo giờ bình thường, không tự động chuyển sang nightly';
-          }
+          priceDetails.rateType = 'hourly';
+          priceDetails.note = 'Tính theo giờ bình thường, không tính phụ thu sớm/trễ';
         }
         break;
         
