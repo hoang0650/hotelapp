@@ -243,12 +243,17 @@ export class InvoiceComponent implements OnInit {
     let customerName = 'Khách lẻ';
     let customerPhone = '';
     let customerEmail = '';
+    let guestSource = 'walkin';
     
     // Ưu tiên 1: Từ invoiceData.customerName (đã được frontend xử lý)
     if (this.invoiceData.customerName && this.invoiceData.customerName !== 'Khách lẻ') {
       customerName = this.invoiceData.customerName;
       customerPhone = this.invoiceData.customerPhone || '';
       customerEmail = this.invoiceData.customerEmail || '';
+    }
+    // Lấy guestSource từ invoiceData trực tiếp (ưu tiên cao nhất)
+    if (this.invoiceData.guestSource) {
+      guestSource = this.invoiceData.guestSource;
     }
     
     // Ưu tiên 2: Từ invoiceData.guestInfo
@@ -259,6 +264,10 @@ export class InvoiceComponent implements OnInit {
         customerEmail = this.invoiceData.guestInfo.email || customerEmail;
       }
     }
+    // Lấy guestSource từ guestInfo nếu chưa có
+    if (!this.invoiceData.guestSource && this.invoiceData.guestInfo?.guestSource) {
+      guestSource = this.invoiceData.guestInfo.guestSource;
+    }
     
     // Ưu tiên 3: Từ invoiceData.guestDetails
     if ((!customerName || customerName === 'Khách lẻ') && this.invoiceData['guestDetails']) {
@@ -268,6 +277,10 @@ export class InvoiceComponent implements OnInit {
         customerPhone = guestDetails.phone || customerPhone;
         customerEmail = guestDetails.email || customerEmail;
       }
+    }
+    // Lấy guestSource từ guestDetails nếu chưa có
+    if (!this.invoiceData.guestSource && !this.invoiceData.guestInfo?.guestSource && this.invoiceData['guestDetails']?.guestSource) {
+      guestSource = this.invoiceData['guestDetails'].guestSource;
     }
     
     // Ưu tiên 4: Từ bookingId nếu được populate (có thể cần fetch thêm)
@@ -290,6 +303,21 @@ export class InvoiceComponent implements OnInit {
         }
       }
     }
+    // Lấy guestSource từ bookingId nếu chưa có
+    if (!this.invoiceData.guestSource && !this.invoiceData.guestInfo?.guestSource && !this.invoiceData['guestDetails']?.guestSource) {
+      const bookingId = this.invoiceData['bookingId'];
+      if (typeof bookingId === 'object' && bookingId !== null) {
+        if (bookingId.guestInfo?.guestSource) {
+          guestSource = bookingId.guestInfo.guestSource;
+        } else if (bookingId.guestDetails?.guestSource) {
+          guestSource = bookingId.guestDetails.guestSource;
+        } else if (bookingId.guestSource) {
+          guestSource = bookingId.guestSource;
+        } else if (bookingId.source) {
+          guestSource = bookingId.source;
+        }
+      }
+    }
     
     // Cập nhật invoiceData với thông tin đã tìm được
     this.invoiceData.customerName = customerName;
@@ -299,6 +327,8 @@ export class InvoiceComponent implements OnInit {
     if (customerEmail) {
       this.invoiceData.customerEmail = customerEmail;
     }
+    // Cập nhật guestSource
+    this.invoiceData.guestSource = guestSource;
     
     // Đảm bảo guestInfo có đầy đủ thông tin
     if (!this.invoiceData.guestInfo) {
@@ -313,11 +343,16 @@ export class InvoiceComponent implements OnInit {
     if (!this.invoiceData.guestInfo.email && customerEmail) {
       this.invoiceData.guestInfo.email = customerEmail;
     }
+    // Đảm bảo guestInfo có guestSource
+    if (!this.invoiceData.guestInfo.guestSource) {
+      this.invoiceData.guestInfo.guestSource = guestSource;
+    }
     
     console.log('Customer info loaded:', {
       customerName,
       customerPhone,
-      customerEmail
+      customerEmail,
+      guestSource
     });
   }
   
@@ -671,6 +706,44 @@ export class InvoiceComponent implements OnInit {
     return 'N/A';
   }
   
+  // Lấy nguồn khách từ nhiều nguồn
+  getGuestSource(): string {
+    // Ưu tiên 1: Từ invoiceData.guestSource trực tiếp
+    if (this.invoiceData.guestSource) {
+      return this.invoiceData.guestSource;
+    }
+    
+    // Ưu tiên 2: Từ invoiceData.guestInfo.guestSource
+    if (this.invoiceData.guestInfo?.guestSource) {
+      return this.invoiceData.guestInfo.guestSource;
+    }
+    
+    // Ưu tiên 3: Từ invoiceData.guestDetails.guestSource
+    if (this.invoiceData['guestDetails']?.guestSource) {
+      return this.invoiceData['guestDetails'].guestSource;
+    }
+    
+    // Ưu tiên 4: Từ bookingId nếu được populate
+    if (this.invoiceData['bookingId'] && typeof this.invoiceData['bookingId'] === 'object') {
+      const booking = this.invoiceData['bookingId'];
+      if (booking.guestInfo?.guestSource) {
+        return booking.guestInfo.guestSource;
+      }
+      if (booking.guestDetails?.guestSource) {
+        return booking.guestDetails.guestSource;
+      }
+      if (booking.guestSource) {
+        return booking.guestSource;
+      }
+      if (booking.source) {
+        return booking.source;
+      }
+    }
+    
+    // Mặc định là walkin
+    return 'walkin';
+  }
+  
   // Lấy màu sắc cho phương thức thanh toán
   getPaymentMethodColor(method: string | undefined): string {
     if (!method) return 'green';
@@ -844,7 +917,7 @@ export class InvoiceComponent implements OnInit {
                 { text: 'Ngày đến:', bold: true }, ` ${checkInTime}\n`,
                 { text: 'Thời gian lưu trú:', bold: true }, ` ${this.durationText || 'N/A'}\n`,
                 { text: 'SĐT khách hàng:', bold: true }, ` ${this.getCustomerPhone() || 'Không có thông tin'}\n`,
-                { text: 'Nguồn khách:', bold: true }, ` ${this.getGuestSourceLabel(this.invoiceData.guestSource || this.invoiceData.guestInfo?.guestSource || 'walkin')}\n`,
+                { text: 'Nguồn khách:', bold: true }, ` ${this.getGuestSourceLabel(this.getGuestSource())}\n`,
                 { text: 'Hình thức tính:', bold: true }, ` ${this.getRateTypeLabel(this.invoiceData['rateType'])}`
               ],
               fontSize: 9

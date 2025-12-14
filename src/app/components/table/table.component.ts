@@ -753,6 +753,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       paymentStatus: invoice.paymentStatus || 'paid',
       notes: invoice.notes || '',
       guestDetails: invoice.guestDetails || invoice.guestInfo || {},
+      guestInfo: invoice.guestInfo || invoice.guestDetails || {},
+      guestSource: invoice.guestSource || invoice.guestInfo?.guestSource || invoice.guestDetails?.guestSource || 'walkin',
       hotelId: hotelId, // Đảm bảo hotelId luôn là string
       rateType: invoice.rateType || 'hourly',
       businessInfo: invoice.businessInfo || null // Truyền businessInfo đầy đủ để component có thể sử dụng
