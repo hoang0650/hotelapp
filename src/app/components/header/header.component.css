@@ -1,21 +1,107 @@
-.bg-custom{
-  background-color: #c13341;
+/* Notification Drawer Styles */
+.notification-drawer {
+  padding: 16px;
 }
 
-#header {
-  z-index: 2;
+.notification-actions {
+  margin-bottom: 16px;
+  text-align: right;
 }
-/* .menu-container {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
+
+.notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notification-item {
+  padding: 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fff;
+}
+
+.notification-item:hover {
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+}
+
+.notification-item.unread {
+  background: #f0f7ff;
+  border-left: 3px solid #1890ff;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #262626;
+  margin-bottom: 4px;
+}
+
+.notification-message {
+  font-size: 13px;
+  color: #595959;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.notification-priority {
+  margin-top: 8px;
+}
+
+/* Notification badge in header */
+.nav-item {
+  position: relative;
+}
+
+.nav-link {
+  position: relative;
+}
+
+/* Notification icon animation */
+.nav-link i.bi-bell {
+  transition: transform 0.3s ease;
+}
+
+.nav-link:hover i.bi-bell {
+  transform: scale(1.1);
+}
+
+/* Badge styling */
+.nav-link .badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
   }
-  
-.login-menu {
-    margin-left: auto;
-    margin-right: 60px;
+  50% {
+    opacity: 0.7;
+  }
 }
 
-.ms-auto {
-  margin-left: auto;
-} */
+/* Responsive */
+@media (max-width: 768px) {
+  .notification-drawer {
+    padding: 12px;
+  }
+
+  .notification-item {
+    padding: 12px;
+  }
+}

@@ -1,9 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SettingsService } from '../../services/settings.service';
+import { NotificationsService } from '../../services/notifications.service';
 
 @Component({
   selector: 'app-settings',
@@ -31,9 +33,11 @@ export class SettingsComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private message: NzMessageService,
+    private router: Router,
     private authService: AuthService,
     private userService: UserService,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private notificationsService: NotificationsService
   ) {
     this.initForms();
   }
@@ -295,11 +299,28 @@ export class SettingsComponent implements OnInit {
     this.saving = true;
     const settings = this.generalForm.value;
     
+    // Lấy giá trị maintenance mode hiện tại từ localStorage hoặc form
+    const previousMaintenanceMode = localStorage.getItem('maintenanceMode') === 'true' || 
+                                     this.generalForm.get('maintenanceMode')?.value === true;
+    const newMaintenanceMode = settings.maintenanceMode;
+    
     this.settingsService.updateGeneralSettings(settings).subscribe({
       next: (response) => {
         this.saving = false;
         if (response.success) {
           this.message.success(response.message || 'Đã lưu cài đặt chung');
+          
+          // Kiểm tra nếu maintenance mode được tắt
+          if (previousMaintenanceMode === true && newMaintenanceMode === false) {
+            // Maintenance mode đã được tắt
+            this.handleMaintenanceModeDisabled();
+          } else if (previousMaintenanceMode === false && newMaintenanceMode === true) {
+            // Maintenance mode đã được bật
+            this.handleMaintenanceModeEnabled(settings.maintenanceMessage);
+          } else if (newMaintenanceMode === false) {
+            // Đảm bảo xóa maintenance mode nếu đang tắt
+            this.handleMaintenanceModeDisabled();
+          }
         } else {
           this.message.error(response.message || 'Lỗi khi lưu cài đặt chung');
         }
@@ -309,6 +330,38 @@ export class SettingsComponent implements OnInit {
         this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt chung');
       }
     });
+  }
+
+  private handleMaintenanceModeDisabled(): void {
+    // Xóa maintenance mode flags từ localStorage
+    localStorage.removeItem('maintenanceMode');
+    localStorage.removeItem('maintenanceMessage');
+    
+    // Reload notifications để cập nhật trạng thái
+    this.notificationsService.loadAnnouncements();
+    
+    // Broadcast event để các component khác biết
+    window.dispatchEvent(new CustomEvent('maintenanceModeChanged', { 
+      detail: { enabled: false } 
+    }));
+    
+    this.message.success('Chế độ bảo trì đã được tắt. Người dùng có thể sử dụng hệ thống bình thường.');
+  }
+
+  private handleMaintenanceModeEnabled(maintenanceMessage?: string): void {
+    // Lưu maintenance mode flags vào localStorage
+    localStorage.setItem('maintenanceMode', 'true');
+    if (maintenanceMessage) {
+      localStorage.setItem('maintenanceMessage', maintenanceMessage);
+    }
+    
+    // Reload notifications để cập nhật trạng thái
+    this.notificationsService.loadAnnouncements();
+    
+    // Broadcast event để các component khác biết
+    window.dispatchEvent(new CustomEvent('maintenanceModeChanged', { 
+      detail: { enabled: true, message: maintenanceMessage } 
+    }));
   }
 
   testEmailConnection(): void {
