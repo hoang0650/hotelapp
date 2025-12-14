@@ -35,6 +35,8 @@ import { TuyaSwitchComponent } from './components/tuya-switch/tuya-switch.compon
 import { SepayOAuth2CallbackComponent } from './components/sepay-oauth2-callback/sepay-oauth2-callback.component';
 import { ProfileComponent } from './components/profile/profile.component';
 import { PermissionGuard } from './guards/permission.guard';
+import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
@@ -43,6 +45,8 @@ const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
   { path: 'business-signup', component: BusinessSignupComponent },
+  { path: 'forgot-password', component: ForgotPasswordComponent },
+  { path: 'reset-password/:token', component: ResetPasswordComponent },
   { path: 'room/:id', component: ProductDetailComponent },
   {
     path: 'admin', component: AdminComponent, children: [

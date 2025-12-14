@@ -73,8 +73,18 @@ export class AuthService {
     }
   }
 
-  login(email: string, password: string): Observable<boolean> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/users/login`, { email, password })
+  login(emailOrUsername: string, password: string): Observable<boolean> {
+    // Kiểm tra xem input có phải là email không (chứa @)
+    const isEmail = emailOrUsername.includes('@');
+    const loginPayload: any = { password };
+    
+    if (isEmail) {
+      loginPayload.email = emailOrUsername;
+    } else {
+      loginPayload.username = emailOrUsername;
+    }
+    
+    return this.http.post<AuthResponse>(`${this.apiUrl}/users/login`, loginPayload)
       .pipe(
         map(response => {
           if (response && response.token) {

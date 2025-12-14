@@ -119,6 +119,8 @@ import { TuyaSwitchComponent } from './components/tuya-switch/tuya-switch.compon
 import { TuyaSwitchCompactComponent } from './components/tuya-switch/tuya-switch-compact.component';
 import { SepayOAuth2CallbackComponent } from './components/sepay-oauth2-callback/sepay-oauth2-callback.component';
 import { ProfileComponent } from './components/profile/profile.component';
+import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 
 registerLocaleData(vi);
 
@@ -144,6 +146,8 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         LoginComponent,
         HomeComponent,
         SignupComponent,
+        ForgotPasswordComponent,
+        ResetPasswordComponent,
         ProductDetailComponent,
         SidebarComponent,
         AdminComponent,

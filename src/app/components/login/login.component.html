@@ -6,9 +6,9 @@
           <h5 class="card-title text-center mb-4">Đăng nhập tài khoản</h5>
           <form nz-form [formGroup]="loginForm" class="login-form" (ngSubmit)="submitForm()">
             <nz-form-item>
-              <nz-form-control nzErrorTip="Vui lòng nhập email!">
+              <nz-form-control nzErrorTip="Vui lòng nhập tên đăng nhập hoặc email!">
                 <nz-input-group nzPrefixIcon="user">
-                  <input type="email" nz-input formControlName="email" placeholder="Email" />
+                  <input type="text" nz-input formControlName="emailOrUsername" placeholder="Tên đăng nhập hoặc Email" />
                 </nz-input-group>
               </nz-form-control>
             </nz-form-item>

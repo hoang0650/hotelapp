@@ -35,7 +35,7 @@ export class LoginComponent implements OnInit {
 
   private initForm(): void {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
+      emailOrUsername: ['', [Validators.required]],
       password: ['', [Validators.required]],
       twoFactorCode: ['']
     });
@@ -53,10 +53,22 @@ export class LoginComponent implements OnInit {
     }
 
     this.isLoading = true;
+    const emailOrUsername = this.loginForm.get('emailOrUsername')?.value;
+    const password = this.loginForm.get('password')?.value;
+    
+    // Kiểm tra xem input có phải là email không (chứa @)
+    const isEmail = emailOrUsername.includes('@');
+    
     const loginData: LoginRequest = {
-      email: this.loginForm.get('email')?.value,
-      password: this.loginForm.get('password')?.value
+      password: password
     };
+    
+    // Gán email hoặc username tùy theo input
+    if (isEmail) {
+      loginData.email = emailOrUsername;
+    } else {
+      loginData.username = emailOrUsername;
+    }
 
     if (this.showTwoFactorInput) {
       loginData.twoFactorCode = this.loginForm.get('twoFactorCode')?.value;

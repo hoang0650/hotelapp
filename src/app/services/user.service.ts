@@ -29,7 +29,8 @@ export interface BusinessSignUpRequest extends SignUpRequest {
 }
 
 export interface LoginRequest {
-  email: string;
+  email?: string;
+  username?: string;
   password: string;
   twoFactorCode?: string;
 }
@@ -111,6 +112,14 @@ export class UserService {
         return response;
       })
     );
+  }
+
+  forgotPassword(data: { email?: string; username?: string }): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/forgot-password`, data);
+  }
+
+  resetPassword(data: { token: string; password: string }): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/reset-password`, data);
   }
 
   logout(): void {
