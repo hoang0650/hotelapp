@@ -41,6 +41,7 @@ import { SettingsComponent } from './components/settings/settings.component';
 import { MaintenanceComponent } from './components/maintenance/maintenance.component';
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
+import { ShiftHandoverHistoryComponent } from './components/shift-handover-history/shift-handover-history.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
@@ -76,6 +77,7 @@ const routes: Routes = [
       { path: 'unauthorized', component: UnauthorizedComponent },
       { path: 'notfound', component: NotfoundComponent },
       { path: 'shift-handover', component: RoomHistoryComponent, canActivate: [PermissionGuard] },
+      { path: 'shift-handover-history', component: ShiftHandoverHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'bank-transfer-history', component: BankTransferHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'ota-management', component: OtaManagementComponent, canActivate: [PermissionGuard] },
       { path: 'electric-setting', component: TuyaSwitchComponent, canActivate: [PermissionGuard] },

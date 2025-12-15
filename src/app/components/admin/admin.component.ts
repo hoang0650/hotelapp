@@ -176,4 +176,10 @@ export class AdminComponent implements OnInit {
     return this.authService.isSuperAdmin() || this.authService.isAdmin();
   }
 
+  // Shift Handover History - superadmin, admin, business, hotel
+  canAccessShiftHandoverHistory(): boolean {
+    const rules = this.authService.getPermissionRules();
+    return rules.canViewShiftHistory;
+  }
+
 }

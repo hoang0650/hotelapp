@@ -4,7 +4,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
-import { SettingsService } from '../../services/settings.service';
+import { SettingsService, EmailSettings } from '../../services/settings.service';
 import { NotificationsService } from '../../services/notifications.service';
 
 @Component({
@@ -29,6 +29,15 @@ export class SettingsComponent implements OnInit {
   
   // Current user
   currentUser: any = null;
+
+  // Email providers
+  emailProviders = [
+    { value: 'resend', label: 'Resend (Khuyến nghị)', description: 'Miễn phí 3000 email/tháng, API đơn giản' },
+    { value: 'sendgrid', label: 'SendGrid', description: 'Miễn phí 100 email/ngày' },
+    { value: 'mailgun', label: 'Mailgun', description: 'Miễn phí 5000 email/tháng (3 tháng đầu)' },
+    { value: 'aws-ses', label: 'AWS SES', description: 'Giá rẻ, scale tốt' },
+    { value: 'nodemailer', label: 'Nodemailer (SMTP)', description: 'SMTP truyền thống (Gmail, Outlook, etc.)' }
+  ];
   
   constructor(
     private fb: FormBuilder,
@@ -68,15 +77,34 @@ export class SettingsComponent implements OnInit {
     // Email Settings Form
     this.emailForm = this.fb.group({
       emailEnabled: [true],
+      emailProvider: ['nodemailer', [Validators.required]],
+      // Nodemailer/SMTP
       smtpHost: ['smtp.gmail.com'],
       smtpPort: [587, [Validators.min(1), Validators.max(65535)]],
       smtpSecure: [false],
       smtpUser: [''],
       smtpPassword: [''],
-      emailFrom: [''],
+      // Resend
+      resendApiKey: [''],
+      // SendGrid
+      sendgridApiKey: [''],
+      // Mailgun
+      mailgunApiKey: [''],
+      mailgunDomain: [''],
+      // AWS SES
+      awsAccessKeyId: [''],
+      awsSecretAccessKey: [''],
+      awsRegion: ['us-east-1'],
+      // Common
+      emailFrom: ['', [Validators.required, Validators.email]],
       emailFromName: ['Hệ thống quản lý khách sạn'],
       emailReplyTo: [''],
       emailTestAddress: ['']
+    });
+
+    // Khi provider thay đổi, cập nhật validators
+    this.emailForm.get('emailProvider')?.valueChanges.subscribe(provider => {
+      this.updateEmailValidators(provider);
     });
 
     // Payment Settings Form
@@ -215,9 +243,64 @@ export class SettingsComponent implements OnInit {
     }
 
     this.saving = true;
-    const settings = this.emailForm.value;
+    const formValue = this.emailForm.value;
     
-    this.settingsService.updateEmailSettings(settings).subscribe({
+    // Chỉ gửi các trường liên quan đến provider được chọn
+    const emailSettings: Partial<EmailSettings> = {
+      emailEnabled: formValue.emailEnabled,
+      emailProvider: formValue.emailProvider,
+      emailFrom: formValue.emailFrom,
+      emailFromName: formValue.emailFromName || 'Hệ thống quản lý khách sạn',
+      emailReplyTo: formValue.emailReplyTo || '',
+      emailTestAddress: formValue.emailTestAddress || ''
+    };
+
+    // Thêm các trường dựa trên provider được chọn
+    switch (formValue.emailProvider) {
+      case 'nodemailer':
+        emailSettings.smtpHost = formValue.smtpHost || 'smtp.gmail.com';
+        emailSettings.smtpPort = formValue.smtpPort || 587;
+        emailSettings.smtpSecure = formValue.smtpSecure || false;
+        emailSettings.smtpUser = formValue.smtpUser || '';
+        // Chỉ gửi password nếu có giá trị (không gửi nếu rỗng để giữ nguyên password cũ)
+        if (formValue.smtpPassword && formValue.smtpPassword.trim() !== '') {
+          emailSettings.smtpPassword = formValue.smtpPassword;
+        }
+        break;
+      case 'resend':
+        // Chỉ gửi API key nếu có giá trị
+        if (formValue.resendApiKey && formValue.resendApiKey.trim() !== '') {
+          emailSettings.resendApiKey = formValue.resendApiKey;
+        }
+        break;
+      case 'sendgrid':
+        // Chỉ gửi API key nếu có giá trị
+        if (formValue.sendgridApiKey && formValue.sendgridApiKey.trim() !== '') {
+          emailSettings.sendgridApiKey = formValue.sendgridApiKey;
+        }
+        break;
+      case 'mailgun':
+        // Chỉ gửi API key và domain nếu có giá trị
+        if (formValue.mailgunApiKey && formValue.mailgunApiKey.trim() !== '') {
+          emailSettings.mailgunApiKey = formValue.mailgunApiKey;
+        }
+        if (formValue.mailgunDomain && formValue.mailgunDomain.trim() !== '') {
+          emailSettings.mailgunDomain = formValue.mailgunDomain;
+        }
+        break;
+      case 'aws-ses':
+        // Chỉ gửi credentials nếu có giá trị
+        if (formValue.awsAccessKeyId && formValue.awsAccessKeyId.trim() !== '') {
+          emailSettings.awsAccessKeyId = formValue.awsAccessKeyId;
+        }
+        if (formValue.awsSecretAccessKey && formValue.awsSecretAccessKey.trim() !== '') {
+          emailSettings.awsSecretAccessKey = formValue.awsSecretAccessKey;
+        }
+        emailSettings.awsRegion = formValue.awsRegion || 'us-east-1';
+        break;
+    }
+    
+    this.settingsService.updateEmailSettings(emailSettings).subscribe({
       next: (response) => {
         this.saving = false;
         if (response.success) {
@@ -371,7 +454,39 @@ export class SettingsComponent implements OnInit {
     }
 
     this.loading = true;
-    const emailSettings = this.emailForm.value;
+    const formValue = this.emailForm.value;
+    
+    // Chỉ gửi các trường liên quan đến provider được chọn
+    const emailSettings: Partial<EmailSettings> = {
+      emailProvider: formValue.emailProvider,
+      emailFrom: formValue.emailFrom
+    };
+
+    // Thêm các trường dựa trên provider
+    switch (formValue.emailProvider) {
+      case 'nodemailer':
+        emailSettings.smtpHost = formValue.smtpHost;
+        emailSettings.smtpPort = formValue.smtpPort;
+        emailSettings.smtpSecure = formValue.smtpSecure;
+        emailSettings.smtpUser = formValue.smtpUser;
+        emailSettings.smtpPassword = formValue.smtpPassword;
+        break;
+      case 'resend':
+        emailSettings.resendApiKey = formValue.resendApiKey;
+        break;
+      case 'sendgrid':
+        emailSettings.sendgridApiKey = formValue.sendgridApiKey;
+        break;
+      case 'mailgun':
+        emailSettings.mailgunApiKey = formValue.mailgunApiKey;
+        emailSettings.mailgunDomain = formValue.mailgunDomain;
+        break;
+      case 'aws-ses':
+        emailSettings.awsAccessKeyId = formValue.awsAccessKeyId;
+        emailSettings.awsSecretAccessKey = formValue.awsSecretAccessKey;
+        emailSettings.awsRegion = formValue.awsRegion;
+        break;
+    }
     
     this.settingsService.testEmailConnection(emailSettings).subscribe({
       next: (response) => {
@@ -389,6 +504,74 @@ export class SettingsComponent implements OnInit {
     });
   }
 
+  updateEmailValidators(provider: string): void {
+    // Reset tất cả validators
+    const fields = ['smtpHost', 'smtpPort', 'smtpUser', 'smtpPassword', 
+                    'resendApiKey', 'sendgridApiKey', 'mailgunApiKey', 
+                    'mailgunDomain', 'awsAccessKeyId', 'awsSecretAccessKey'];
+    
+    fields.forEach(field => {
+      const control = this.emailForm.get(field);
+      if (control) {
+        control.clearValidators();
+        control.updateValueAndValidity();
+      }
+    });
+
+    // Thêm validators dựa trên provider
+    switch (provider) {
+      case 'nodemailer':
+        this.emailForm.get('smtpHost')?.setValidators([Validators.required]);
+        this.emailForm.get('smtpPort')?.setValidators([Validators.required]);
+        this.emailForm.get('smtpUser')?.setValidators([Validators.required, Validators.email]);
+        this.emailForm.get('smtpPassword')?.setValidators([Validators.required]);
+        break;
+      case 'resend':
+        this.emailForm.get('resendApiKey')?.setValidators([Validators.required]);
+        break;
+      case 'sendgrid':
+        this.emailForm.get('sendgridApiKey')?.setValidators([Validators.required]);
+        break;
+      case 'mailgun':
+        this.emailForm.get('mailgunApiKey')?.setValidators([Validators.required]);
+        this.emailForm.get('mailgunDomain')?.setValidators([Validators.required]);
+        break;
+      case 'aws-ses':
+        this.emailForm.get('awsAccessKeyId')?.setValidators([Validators.required]);
+        this.emailForm.get('awsSecretAccessKey')?.setValidators([Validators.required]);
+        this.emailForm.get('awsRegion')?.setValidators([Validators.required]);
+        break;
+    }
+
+    // Update validity
+    fields.forEach(field => {
+      this.emailForm.get(field)?.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  getCurrentEmailProvider(): string {
+    return this.emailForm.get('emailProvider')?.value || 'nodemailer';
+  }
+
+  showEmailField(field: string): boolean {
+    const provider = this.getCurrentEmailProvider();
+    
+    switch (field) {
+      case 'smtp':
+        return provider === 'nodemailer';
+      case 'resend':
+        return provider === 'resend';
+      case 'sendgrid':
+        return provider === 'sendgrid';
+      case 'mailgun':
+        return provider === 'mailgun';
+      case 'aws':
+        return provider === 'aws-ses';
+      default:
+        return false;
+    }
+  }
+
   sendTestEmail(): void {
     const testAddress = this.emailForm.get('emailTestAddress')?.value;
     if (!testAddress) {
@@ -397,7 +580,39 @@ export class SettingsComponent implements OnInit {
     }
 
     this.loading = true;
-    const emailSettings = this.emailForm.value;
+    const formValue = this.emailForm.value;
+    
+    // Chỉ gửi các trường liên quan đến provider được chọn
+    const emailSettings: Partial<EmailSettings> = {
+      emailProvider: formValue.emailProvider,
+      emailFrom: formValue.emailFrom
+    };
+
+    // Thêm các trường dựa trên provider
+    switch (formValue.emailProvider) {
+      case 'nodemailer':
+        emailSettings.smtpHost = formValue.smtpHost;
+        emailSettings.smtpPort = formValue.smtpPort;
+        emailSettings.smtpSecure = formValue.smtpSecure;
+        emailSettings.smtpUser = formValue.smtpUser;
+        emailSettings.smtpPassword = formValue.smtpPassword;
+        break;
+      case 'resend':
+        emailSettings.resendApiKey = formValue.resendApiKey;
+        break;
+      case 'sendgrid':
+        emailSettings.sendgridApiKey = formValue.sendgridApiKey;
+        break;
+      case 'mailgun':
+        emailSettings.mailgunApiKey = formValue.mailgunApiKey;
+        emailSettings.mailgunDomain = formValue.mailgunDomain;
+        break;
+      case 'aws-ses':
+        emailSettings.awsAccessKeyId = formValue.awsAccessKeyId;
+        emailSettings.awsSecretAccessKey = formValue.awsSecretAccessKey;
+        emailSettings.awsRegion = formValue.awsRegion;
+        break;
+    }
     
     this.settingsService.sendTestEmail(emailSettings, testAddress).subscribe({
       next: (response) => {

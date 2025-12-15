@@ -21,11 +21,25 @@ export interface SystemSettings {
 
 export interface EmailSettings {
   emailEnabled: boolean;
-  smtpHost: string;
-  smtpPort: number;
-  smtpSecure: boolean;
-  smtpUser: string;
+  emailProvider: 'resend' | 'sendgrid' | 'mailgun' | 'aws-ses' | 'nodemailer';
+  // Nodemailer/SMTP settings
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpSecure?: boolean;
+  smtpUser?: string;
   smtpPassword?: string;
+  // Resend settings
+  resendApiKey?: string;
+  // SendGrid settings
+  sendgridApiKey?: string;
+  // Mailgun settings
+  mailgunApiKey?: string;
+  mailgunDomain?: string;
+  // AWS SES settings
+  awsAccessKeyId?: string;
+  awsSecretAccessKey?: string;
+  awsRegion?: string;
+  // Common settings
   emailFrom: string;
   emailFromName: string;
   emailReplyTo: string;

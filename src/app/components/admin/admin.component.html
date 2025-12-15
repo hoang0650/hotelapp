@@ -51,6 +51,7 @@
         <ul>
           <li nz-menu-item routerLink="/admin/room">{{ 'ADMIN_SIDEBAR.ROOM' | translate }}</li>
           <li nz-menu-item routerLink="/admin/shift-handover">{{ 'ADMIN_SIDEBAR.SHIFT_HANDOVER' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessShiftHandoverHistory()" routerLink="/admin/shift-handover-history">Lịch sử giao ca</li>
           <li nz-menu-item routerLink="/admin/calendar">{{ 'ADMIN_SIDEBAR.CALENDAR' | translate }}</li>
           <li nz-menu-item routerLink="/admin/bank-transfer-history">{{ 'ADMIN_SIDEBAR.BANK_TRANSFER_HISTORY' | translate }}</li>
         </ul>

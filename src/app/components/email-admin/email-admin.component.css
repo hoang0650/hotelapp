@@ -1,34 +1,19 @@
-.app-container {
-  display: flex;
-  flex-direction: row;
-  height: 100vh;
+.email-admin-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.sidebar {
-  width: 200px;
-  background-color: #f0f0f0;
-  padding: 10px;
+nz-card {
+  margin-bottom: 16px;
 }
 
-.content {
-  flex: 1;
-  padding: 20px;
-  overflow-x: auto; 
+nz-form-item {
+  margin-bottom: 16px;
 }
 
 @media screen and (max-width: 768px) {
-  .app-container {
-      flex-direction: column;
-  }
-
-  .sidebar {
-      width: 100%;
-      order: 1;
-  }
-
-  .content {
-      width: 100%;
-      order: 2;
-      overflow-x: auto;
+  .email-admin-container {
+    padding: 16px;
   }
 }

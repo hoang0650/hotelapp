@@ -71,6 +71,7 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzSpaceModule } from 'ng-zorro-antd/space';
 import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
+import { NzResultModule } from 'ng-zorro-antd/result';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { FilterPipe } from './pipes/filter.pipe';
@@ -261,6 +262,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         NzDatePickerModule,
         NzSpaceModule,
         NzPageHeaderModule,
+        NzResultModule,
         BrowserAnimationsModule,
         PricingManagementModule,
         TranslateModule.forRoot({

@@ -183,55 +183,146 @@
             </div>
           </div>
 
-          <nz-divider nzText="Cấu hình SMTP"></nz-divider>
-
-          <div nz-row [nzGutter]="16">
-            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+          <!-- Email Provider -->
+          <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+            <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
               <nz-form-item>
-                <nz-form-label>SMTP Host</nz-form-label>
-                <nz-form-control>
-                  <input nz-input formControlName="smtpHost" placeholder="smtp.gmail.com" />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-              <nz-form-item>
-                <nz-form-label>SMTP Port</nz-form-label>
-                <nz-form-control>
-                  <nz-input-number formControlName="smtpPort" [nzMin]="1" [nzMax]="65535" style="width: 100%"></nz-input-number>
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-          </div>
-
-          <div nz-row [nzGutter]="16">
-            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-              <nz-form-item>
-                <nz-form-label>SMTP User</nz-form-label>
-                <nz-form-control>
-                  <input nz-input formControlName="smtpUser" placeholder="your-email@gmail.com" />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-              <nz-form-item>
-                <nz-form-label>SMTP Password</nz-form-label>
-                <nz-form-control>
-                  <input nz-input type="password" formControlName="smtpPassword" placeholder="Mật khẩu hoặc App Password" />
+                <nz-form-label nzRequired>Email Provider</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng chọn email provider">
+                  <nz-select formControlName="emailProvider" nzPlaceHolder="Chọn email provider">
+                    <nz-option *ngFor="let provider of emailProviders" [nzValue]="provider.value" [nzLabel]="provider.label">
+                      <div>
+                        <strong>{{ provider.label }}</strong>
+                        <div style="font-size: 12px; color: #999; margin-top: 4px;">{{ provider.description }}</div>
+                      </div>
+                    </nz-option>
+                  </nz-select>
                 </nz-form-control>
               </nz-form-item>
             </div>
           </div>
 
-          <div nz-row [nzGutter]="16">
-            <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-              <nz-form-item>
-                <nz-form-control>
-                  <label nz-checkbox formControlName="smtpSecure">Sử dụng SSL/TLS</label>
-                </nz-form-control>
-              </nz-form-item>
+          <!-- Nodemailer/SMTP Settings -->
+          <nz-card *ngIf="showEmailField('smtp')" [nzTitle]="'Cấu hình SMTP'" [nzBordered]="false" style="margin-top: 16px;">
+            <nz-divider nzText="Cấu hình SMTP"></nz-divider>
+
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label nzRequired>SMTP Host</nz-form-label>
+                  <nz-form-control nzErrorTip="Vui lòng nhập SMTP host">
+                    <input nz-input formControlName="smtpHost" placeholder="smtp.gmail.com" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label nzRequired>SMTP Port</nz-form-label>
+                  <nz-form-control nzErrorTip="Vui lòng nhập SMTP port">
+                    <nz-input-number formControlName="smtpPort" [nzMin]="1" [nzMax]="65535" style="width: 100%"></nz-input-number>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
             </div>
-          </div>
+
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Email/Username</nz-form-label>
+                  <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
+                    <input nz-input type="email" formControlName="smtpUser" placeholder="your-email@gmail.com" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Mật khẩu/App Password</nz-form-label>
+                  <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu">
+                    <input nz-input type="password" formControlName="smtpPassword" placeholder="Mật khẩu hoặc App Password" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label>Bảo mật (SSL/TLS)</nz-form-label>
+                  <nz-form-control>
+                    <nz-switch formControlName="smtpSecure"></nz-switch>
+                    <div style="font-size: 12px; color: #999; margin-top: 4px;">Bật cho port 465, tắt cho port 587</div>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+          </nz-card>
+
+          <!-- Resend Settings -->
+          <nz-card *ngIf="showEmailField('resend')" [nzTitle]="'Cấu hình Resend'" [nzBordered]="false" style="margin-top: 16px;">
+            <nz-alert nzType="info" nzMessage="Resend - Miễn phí 3000 email/tháng" [nzDescription]="'Đăng ký tại https://resend.com và lấy API Key từ dashboard'" style="margin-bottom: 16px;"></nz-alert>
+            <nz-form-item>
+              <nz-form-label nzRequired>Resend API Key</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập Resend API Key">
+                <input nz-input type="password" formControlName="resendApiKey" placeholder="re_xxxxx" />
+              </nz-form-control>
+            </nz-form-item>
+          </nz-card>
+
+          <!-- SendGrid Settings -->
+          <nz-card *ngIf="showEmailField('sendgrid')" [nzTitle]="'Cấu hình SendGrid'" [nzBordered]="false" style="margin-top: 16px;">
+            <nz-alert nzType="info" nzMessage="SendGrid - Miễn phí 100 email/ngày" [nzDescription]="'Đăng ký tại https://sendgrid.com và tạo API Key'" style="margin-bottom: 16px;"></nz-alert>
+            <nz-form-item>
+              <nz-form-label nzRequired>SendGrid API Key</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập SendGrid API Key">
+                <input nz-input type="password" formControlName="sendgridApiKey" placeholder="SG.xxxxx" />
+              </nz-form-control>
+            </nz-form-item>
+          </nz-card>
+
+          <!-- Mailgun Settings -->
+          <nz-card *ngIf="showEmailField('mailgun')" [nzTitle]="'Cấu hình Mailgun'" [nzBordered]="false" style="margin-top: 16px;">
+            <nz-alert nzType="info" nzMessage="Mailgun - Miễn phí 5000 email/tháng (3 tháng đầu)" [nzDescription]="'Đăng ký tại https://mailgun.com và verify domain'" style="margin-bottom: 16px;"></nz-alert>
+            <nz-form-item>
+              <nz-form-label nzRequired>Mailgun API Key</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập Mailgun API Key">
+                <input nz-input type="password" formControlName="mailgunApiKey" placeholder="xxxxx" />
+              </nz-form-control>
+            </nz-form-item>
+            <nz-form-item>
+              <nz-form-label nzRequired>Mailgun Domain</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập Mailgun Domain">
+                <input nz-input formControlName="mailgunDomain" placeholder="yourdomain.com" />
+              </nz-form-control>
+            </nz-form-item>
+          </nz-card>
+
+          <!-- AWS SES Settings -->
+          <nz-card *ngIf="showEmailField('aws')" [nzTitle]="'Cấu hình AWS SES'" [nzBordered]="false" style="margin-top: 16px;">
+            <nz-alert nzType="info" nzMessage="AWS SES - Giá rẻ, scale tốt" [nzDescription]="'$0.10 cho 1000 email. Cần có AWS account và verify domain'" style="margin-bottom: 16px;"></nz-alert>
+            <nz-form-item>
+              <nz-form-label nzRequired>AWS Access Key ID</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập AWS Access Key ID">
+                <input nz-input formControlName="awsAccessKeyId" placeholder="AKIAIOSFODNN7EXAMPLE" />
+              </nz-form-control>
+            </nz-form-item>
+            <nz-form-item>
+              <nz-form-label nzRequired>AWS Secret Access Key</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập AWS Secret Access Key">
+                <input nz-input type="password" formControlName="awsSecretAccessKey" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" />
+              </nz-form-control>
+            </nz-form-item>
+            <nz-form-item>
+              <nz-form-label nzRequired>AWS Region</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập AWS Region">
+                <nz-select formControlName="awsRegion">
+                  <nz-option nzValue="us-east-1" nzLabel="US East (N. Virginia)"></nz-option>
+                  <nz-option nzValue="us-west-2" nzLabel="US West (Oregon)"></nz-option>
+                  <nz-option nzValue="eu-west-1" nzLabel="Europe (Ireland)"></nz-option>
+                  <nz-option nzValue="ap-southeast-1" nzLabel="Asia Pacific (Singapore)"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </nz-card>
 
           <nz-divider nzText="Thông tin Email"></nz-divider>
 
