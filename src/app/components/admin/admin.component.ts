@@ -77,13 +77,13 @@ export class AdminComponent implements OnInit {
   // ============ KIỂM TRA QUYỀN HIỂN THỊ MENU ============
   
   // Menu Hotel (Room, Shift Handover, Calendar, Bank Transfer History)
-  // Staff KHÔNG được phép truy cập menu này
+  // Staff được phép truy cập menu này
   canAccessHotelMenu(): boolean {
     return this.authService.isSuperAdmin() || 
            this.authService.isAdmin() || 
            this.authService.isBusiness() || 
-           this.authService.isHotelManager();
-    // Không cho phép staff
+           this.authService.isHotelManager() ||
+           this.authService.isStaff();
   }
 
   // Business Management - Chỉ superadmin và admin

@@ -161,11 +161,18 @@ export class PermissionService {
       return true;
     }
 
-    // Staff KHÔNG được phép truy cập các tính năng quản lý khách sạn
+    // Staff được phép truy cập một số tính năng cơ bản
     if (user?.role === 'staff') {
-      // Staff không được phép truy cập các features sau:
+      // Staff được phép truy cập các features sau:
+      const allowedFeatures: PermissionFeature[] = [
+        'room_management', // Được xem và thao tác với phòng
+        'shift_handover', // Được giao ca và xem lịch sử giao ca
+        'calendar', // Được xem lịch
+        'bank_transfer_history' // Được xem lịch sử chuyển khoản (giao tiền)
+      ];
+      
+      // Chặn các features quản lý cấp cao
       const blockedFeatures: PermissionFeature[] = [
-        'room_management',
         'hotel_management',
         'company_management',
         'staff_management',
@@ -174,9 +181,6 @@ export class PermissionService {
         'pricing_management',
         'ota_management',
         'revenue_chart',
-        'shift_handover',
-        'bank_transfer_history',
-        'calendar',
         'email_admin',
         'qr_payment',
         'visa_payment',
@@ -185,6 +189,11 @@ export class PermissionService {
       
       if (blockedFeatures.includes(feature)) {
         return false;
+      }
+      
+      // Nếu feature nằm trong allowedFeatures, cho phép
+      if (allowedFeatures.includes(feature)) {
+        return true;
       }
     }
 

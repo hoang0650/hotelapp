@@ -424,7 +424,16 @@ export class UserManagementComponent implements OnInit {
         },
         error: (error) => {
           console.error('Update user error:', error);
-          this.message.error(error.error?.message || 'Lỗi khi cập nhật người dùng');
+          const errorMessage = error.error?.message || 'Lỗi khi cập nhật người dùng';
+          this.message.error(errorMessage);
+          // Nếu là lỗi về giới hạn user, hiển thị thông báo rõ ràng hơn
+          if (errorMessage.includes('giới hạn số lượng người dùng') || errorMessage.includes('nâng cấp gói')) {
+            this.modal.warning({
+              nzTitle: 'Đã đạt giới hạn người dùng',
+              nzContent: errorMessage,
+              nzOkText: 'Đóng'
+            });
+          }
           this.isLoading = false;
         }
       });
@@ -438,7 +447,16 @@ export class UserManagementComponent implements OnInit {
         },
         error: (error) => {
           console.error('Create user error:', error);
-          this.message.error(error.error?.message || 'Lỗi khi thêm người dùng');
+          const errorMessage = error.error?.message || 'Lỗi khi thêm người dùng';
+          this.message.error(errorMessage);
+          // Nếu là lỗi về giới hạn user, hiển thị thông báo rõ ràng hơn
+          if (errorMessage.includes('giới hạn số lượng người dùng') || errorMessage.includes('nâng cấp gói')) {
+            this.modal.warning({
+              nzTitle: 'Đã đạt giới hạn người dùng',
+              nzContent: errorMessage,
+              nzOkText: 'Đóng'
+            });
+          }
           this.isLoading = false;
         }
       });

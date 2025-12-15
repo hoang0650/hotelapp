@@ -256,7 +256,7 @@ export class AuthService {
           canManageHotels: false,
           canManageRooms: false,       // Chỉ xem và thao tác cơ bản
           canManageStaff: false,       // Không được quản lý staff
-          canViewShiftHistory: false,
+          canViewShiftHistory: true,   // Được xem lịch sử giao ca
           canAskAIAboutStaff: false,   // Không được hỏi về staff khác
           canAskAIAboutBusiness: false,
           canAskAIAboutHotel: false,

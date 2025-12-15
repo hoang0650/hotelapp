@@ -83,9 +83,10 @@
               <i nz-icon nzType="check" nzTheme="outline"></i>
               {{ getFeatureText(feature) }}
             </li>
-            <li *ngIf="package.maxUsers">
+            <li *ngIf="package.maxUsers !== undefined && package.maxUsers !== null">
               <i nz-icon nzType="user" nzTheme="outline"></i>
-              Tối đa {{ package.maxUsers }} người dùng
+              <span *ngIf="package.maxUsers === -1">Không giới hạn người dùng</span>
+              <span *ngIf="package.maxUsers !== -1">Tối đa {{ package.maxUsers }} người dùng</span>
             </li>
             <li *ngIf="package.permissions && package.permissions.length > 0">
               <i nz-icon nzType="safety-certificate" nzTheme="outline"></i>

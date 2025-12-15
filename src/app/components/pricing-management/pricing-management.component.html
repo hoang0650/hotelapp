@@ -196,7 +196,16 @@
         <nz-form-item>
           <nz-form-label [nzSpan]="6" nzRequired>Số người dùng tối đa</nz-form-label>
           <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập số người dùng hợp lệ">
-            <nz-input-number formControlName="maxUsers" [nzMin]="1" [nzStep]="1" style="width: 100%"></nz-input-number>
+            <nz-checkbox formControlName="unlimitedUsers" style="margin-bottom: 8px;">
+              Không giới hạn
+            </nz-checkbox>
+            <nz-input-number 
+              formControlName="maxUsers" 
+              [nzMin]="1" 
+              [nzStep]="1" 
+              [nzDisabled]="packageForm.get('unlimitedUsers')?.value"
+              style="width: 100%">
+            </nz-input-number>
           </nz-form-control>
         </nz-form-item>
 

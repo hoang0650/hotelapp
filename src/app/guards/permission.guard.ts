@@ -32,10 +32,19 @@ export class PermissionGuard implements CanActivate {
       return true;
     }
 
-    // Staff KHÔNG được phép truy cập các routes quản lý khách sạn
+    // Staff được phép truy cập một số routes cơ bản
     if (user.role === 'staff') {
-      const blockedRoutes = [
+      // Staff được phép truy cập các routes sau:
+      const allowedRoutes = [
         '/admin/room',
+        '/admin/shift-handover',
+        '/admin/shift-handover-history',
+        '/admin/calendar',
+        '/admin/bank-transfer-history' // Được xem lịch sử chuyển khoản (giao tiền)
+      ];
+      
+      // Chặn các routes quản lý cấp cao
+      const blockedRoutes = [
         '/admin/room-management',
         '/admin/hotel',
         '/admin/company',
@@ -45,10 +54,6 @@ export class PermissionGuard implements CanActivate {
         '/admin/pricing-management',
         '/admin/ota-management',
         '/admin/chart',
-        '/admin/shift-handover',
-        '/admin/shift-handover-history',
-        '/admin/bank-transfer-history',
-        '/admin/calendar',
         '/admin/email-admin',
         '/admin/qr-payment',
         '/admin/visa-payment',
@@ -58,6 +63,11 @@ export class PermissionGuard implements CanActivate {
       if (blockedRoutes.includes(state.url)) {
         this.router.navigate(['/admin/unauthorized']);
         return false;
+      }
+      
+      // Nếu route nằm trong allowedRoutes, cho phép
+      if (allowedRoutes.includes(state.url)) {
+        return true;
       }
     }
 

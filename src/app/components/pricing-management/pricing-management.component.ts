@@ -15,7 +15,7 @@ interface PricingPackage {
   yearlyDiscount: number;
   duration: number;
   features: string[];
-  maxUsers: number;
+  maxUsers: number | null; // -1 hoặc null = không giới hạn
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -95,8 +95,24 @@ export class PricingManagementComponent implements OnInit {
       duration: [1, [Validators.required, Validators.min(1)]],
       features: [[]],
       permissions: [['view'], [Validators.required]],
-      maxUsers: [1, [Validators.required, Validators.min(1)]],
+      maxUsers: [1, [Validators.required]], // Cho phép -1 (không giới hạn)
+      unlimitedUsers: [false], // Checkbox để chọn không giới hạn
       isActive: [true]
+    });
+    
+    // Theo dõi thay đổi của unlimitedUsers
+    this.packageForm.get('unlimitedUsers')?.valueChanges.subscribe(unlimited => {
+      const maxUsersControl = this.packageForm.get('maxUsers');
+      if (unlimited) {
+        maxUsersControl?.setValue(-1, { emitEvent: false });
+        maxUsersControl?.clearValidators();
+      } else {
+        maxUsersControl?.setValidators([Validators.required, Validators.min(1)]);
+        if (maxUsersControl?.value === -1) {
+          maxUsersControl?.setValue(1);
+        }
+      }
+      maxUsersControl?.updateValueAndValidity();
     });
   }
 
@@ -133,6 +149,7 @@ export class PricingManagementComponent implements OnInit {
     if (packageId) {
       const pkg = this.packages.find(p => p._id === packageId || p.id === packageId);
       if (pkg) {
+        const isUnlimited = pkg.maxUsers === -1 || pkg.maxUsers === null;
         this.packageForm.patchValue({
           name: pkg.name,
           description: pkg.description,
@@ -142,7 +159,8 @@ export class PricingManagementComponent implements OnInit {
           duration: pkg.duration,
           features: pkg.features || [],
           permissions: pkg.permissions || ['view'],
-          maxUsers: pkg.maxUsers,
+          maxUsers: isUnlimited ? 1 : pkg.maxUsers,
+          unlimitedUsers: isUnlimited,
           isActive: pkg.isActive
         });
       }
@@ -175,6 +193,7 @@ export class PricingManagementComponent implements OnInit {
       features: [],
       permissions: ['view'],
       maxUsers: 1,
+      unlimitedUsers: false,
       isActive: true
     });
     this.editingPackageId = null;
@@ -185,11 +204,18 @@ export class PricingManagementComponent implements OnInit {
       this.loading = true;
       const formData = this.packageForm.value;
 
-      const payload = {
+      // Nếu unlimitedUsers được chọn, set maxUsers = -1
+      const maxUsers = formData.unlimitedUsers ? -1 : formData.maxUsers;
+
+      const payload: any = {
         ...formData,
+        maxUsers: maxUsers,
         features: formData.features || [],
         permissions: formData.permissions || ['view']
       };
+      
+      // Xóa unlimitedUsers khỏi payload vì không cần gửi lên backend
+      delete payload.unlimitedUsers;
 
       if (this.editingPackageId) {
         this.pricingService.updatePackage(this.editingPackageId, payload).subscribe({

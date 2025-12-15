@@ -144,12 +144,6 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Kiểm tra nếu là staff thì chuyển hướng
-    if (this.authService.isStaff()) {
-      this.message.warning('Bạn không có quyền truy cập trang này');
-      this.router.navigate(['/admin/unauthorized']);
-      return;
-    }
     this.loadHotels();
   }
 
@@ -522,17 +516,34 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   loadHotels(): void {
-    // Staff không được phép truy cập trang này, đã được chặn ở ngOnInit
-    if (this.authService.isStaff()) {
-      return;
-    }
-    
     this.isLoading = true;
     this.hotelService.getHotels().subscribe(data => {
       this.hotels = data;
       
-      if (data && data.length > 0) {
-        // Chọn hotel đầu tiên
+      // Nếu là staff, tự động set hotelId từ currentUser và không cho phép thay đổi
+      if (this.authService.isStaff()) {
+        const currentUser = this.authService.getCurrentUser();
+        // Lấy hotelId từ user hoặc từ hotels list (nếu backend đã filter)
+        const staffHotelId = currentUser?.hotelId || (data.length > 0 ? data[0]._id : null);
+        
+        if (staffHotelId) {
+          this.selectedHotelId = staffHotelId;
+          // Chỉ load hotel của staff (backend đã filter, nhưng đảm bảo frontend cũng filter)
+          this.hotels = data.filter(hotel => hotel._id === staffHotelId);
+          if (this.selectedHotelId) {
+            // Load rooms ngay sau khi set hotelId
+            this.onHotelChange(this.selectedHotelId);
+          }
+        } else {
+          // Nếu không có hotelId, thử load lại từ API
+          console.warn('Staff không có hotelId, kiểm tra lại thông tin nhân viên');
+          this.selectedHotelId = null;
+          this.rooms = [];
+          this.floors = [];
+          this.message.warning('Không tìm thấy khách sạn của bạn. Vui lòng liên hệ quản trị viên.');
+        }
+      } else if (data && data.length > 0) {
+        // Các role khác: chọn hotel đầu tiên
         this.selectedHotelId = data[0]._id!;
         this.onHotelChange(this.selectedHotelId);
       } else {
