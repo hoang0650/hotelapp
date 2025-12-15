@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { PricingService } from '../../services/pricing.service';
+import { AuthService } from '../../services/auth.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -43,6 +44,9 @@ export class PricingManagementComponent implements OnInit {
   isModalVisible = false;
   editingPackageId: string | null = null;
   availablePermissions = ['view', 'edit', 'delete', 'manage'];
+  currentUser: any = null;
+  currentUserPackage: any = null;
+  isAdmin = false;
   availableFeatures: { value: PermissionFeature; label: string }[] = [
     { value: 'room_management', label: 'Quản lý phòng' },
     { value: 'hotel_management', label: 'Quản lý khách sạn' },
@@ -71,6 +75,7 @@ export class PricingManagementComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private pricingService: PricingService,
+    private authService: AuthService,
     private message: NzMessageService,
     private modal: NzModalService
   ) {
@@ -78,10 +83,22 @@ export class PricingManagementComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadPackages();
-    this.loadSubscribers();
-    this.pricingService.subscriptionChanged$.subscribe(() => {
+    this.currentUser = this.authService.getCurrentUser();
+    this.isAdmin = this.authService.isSuperAdmin() || this.authService.isAdmin();
+    
+    if (this.isAdmin) {
+      this.loadPackages();
       this.loadSubscribers();
+    } else {
+      this.loadCurrentUserPackage();
+    }
+    
+    this.pricingService.subscriptionChanged$.subscribe(() => {
+      if (this.isAdmin) {
+        this.loadSubscribers();
+      } else {
+        this.loadCurrentUserPackage();
+      }
     });
   }
 
@@ -125,6 +142,36 @@ export class PricingManagementComponent implements OnInit {
       },
       error: (error) => {
         this.message.error('Không thể tải danh sách gói');
+        this.loading = false;
+      }
+    });
+  }
+
+  loadCurrentUserPackage(): void {
+    if (!this.currentUser?._id) {
+      this.message.error('Không tìm thấy thông tin người dùng');
+      return;
+    }
+    
+    this.loading = true;
+    this.pricingService.getCurrentUserPackage(this.currentUser._id).subscribe({
+      next: (response: any) => {
+        const packageData = response.data || response;
+        if (packageData && packageData._id) {
+          this.currentUserPackage = packageData;
+          this.packages = [packageData]; // Chỉ hiển thị gói của user
+        } else {
+          this.packages = [];
+          this.currentUserPackage = null;
+        }
+        this.loading = false;
+      },
+      error: (error) => {
+        if (error.status !== 404) {
+          this.message.error('Không thể tải thông tin gói của bạn');
+        }
+        this.packages = [];
+        this.currentUserPackage = null;
         this.loading = false;
       }
     });
@@ -349,5 +396,53 @@ export class PricingManagementComponent implements OnInit {
         this.message.error('Đăng ký gói thất bại');
       }
     });
+  }
+
+  subscribeToPackage(packageId: string, billingType: 'monthly' | 'yearly' = 'monthly'): void {
+    if (!this.currentUser?._id) {
+      this.message.error('Không tìm thấy thông tin người dùng');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: 'Xác nhận đăng ký',
+      nzContent: `Bạn có chắc chắn muốn đăng ký gói này?`,
+      nzOkText: 'Đăng ký',
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        this.loading = true;
+        this.pricingService.subscribe(this.currentUser._id, packageId, billingType).subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.message.success(response.message || 'Đăng ký gói thành công');
+              this.loadCurrentUserPackage();
+            } else {
+              this.message.error(response.message || 'Đăng ký gói thất bại');
+            }
+            this.loading = false;
+          },
+          error: (error) => {
+            this.message.error(error.error?.message || 'Đăng ký gói thất bại');
+            this.loading = false;
+          }
+        });
+      }
+    });
+  }
+
+  canEditPackage(): boolean {
+    return this.isAdmin;
+  }
+
+  canDeletePackage(): boolean {
+    return this.isAdmin;
+  }
+
+  canCreatePackage(): boolean {
+    return this.isAdmin;
+  }
+
+  canViewSubscribers(): boolean {
+    return this.isAdmin;
   }
 } 

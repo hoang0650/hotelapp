@@ -18,6 +18,7 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzMessageModule } from 'ng-zorro-antd/message';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 
 import { PricingManagementComponent } from './pricing-management.component';
 
@@ -41,7 +42,8 @@ import { PricingManagementComponent } from './pricing-management.component';
     NzDividerModule,
     NzTabsModule,
     NzMessageModule,
-    NzSelectModule
+    NzSelectModule,
+    NzEmptyModule
   ],
   exports: [PricingManagementComponent]
 })

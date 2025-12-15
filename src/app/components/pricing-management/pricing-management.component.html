@@ -1,15 +1,15 @@
 <div class="pricing-management-container">
   <nz-card>
     <div class="header-actions">
-      <h2>Quản lý gói dịch vụ</h2>
-      <button nz-button nzType="primary" (click)="showModal()">
+      <h2>{{ isAdmin ? 'Quản lý gói dịch vụ' : 'Gói dịch vụ của tôi' }}</h2>
+      <button *ngIf="canCreatePackage()" nz-button nzType="primary" (click)="showModal()">
         <i nz-icon nzType="plus"></i>Thêm gói mới
       </button>
     </div>
 
     <nz-tabset [nzAnimated]="false">
       <!-- Tab Danh sách gói -->
-      <nz-tab nzTitle="Danh sách gói">
+      <nz-tab nzTitle="{{ isAdmin ? 'Danh sách gói' : 'Gói của tôi' }}">
         <nz-table #packagesTable [nzData]="packages" [nzLoading]="loading">
           <thead>
             <tr>
@@ -32,30 +32,41 @@
               <td>{{ formatCurrency(pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0)) }}</td>
               <td>{{ pkg.yearlyDiscount || 0 }}%</td>
               <td>{{ pkg.duration }}</td>
-              <td>{{ pkg.maxUsers }}</td>
+              <td>{{ pkg.maxUsers === -1 || pkg.maxUsers === null ? 'Không giới hạn' : pkg.maxUsers }}</td>
               <td>
                 <nz-tag [nzColor]="pkg.isActive ? 'success' : 'error'">
                   {{ pkg.isActive ? 'Đang hoạt động' : 'Đã tắt' }}
                 </nz-tag>
               </td>
               <td>
-                <a nz-button nzType="link" (click)="showModal(pkg._id || pkg.id)">
+                <a *ngIf="canEditPackage()" nz-button nzType="link" (click)="showModal(pkg._id || pkg.id)">
                   <i nz-icon nzType="edit"></i>
                 </a>
-                <nz-divider nzType="vertical"></nz-divider>
-                <a nz-button nzType="link" nzDanger (click)="deletePackage(pkg._id || pkg.id)">
+                <nz-divider *ngIf="canEditPackage()" nzType="vertical"></nz-divider>
+                <a *ngIf="canDeletePackage()" nz-button nzType="link" nzDanger (click)="deletePackage(pkg._id || pkg.id)">
                   <i nz-icon nzType="delete"></i>
                 </a>
-                <nz-divider nzType="vertical"></nz-divider>
-                <button nz-button nzType="default" (click)="onAdminSubscribe(pkg._id || pkg.id)">Đăng ký (Test)</button>
+                <nz-divider *ngIf="canDeletePackage()" nzType="vertical"></nz-divider>
+                <button *ngIf="!isAdmin" nz-button nzType="primary" (click)="subscribeToPackage(pkg._id || pkg.id, 'monthly')">
+                  Đăng ký tháng
+                </button>
+                <button *ngIf="!isAdmin" nz-button nzType="default" style="margin-left: 8px;" (click)="subscribeToPackage(pkg._id || pkg.id, 'yearly')">
+                  Đăng ký năm
+                </button>
+                <button *ngIf="isAdmin" nz-button nzType="default" (click)="onAdminSubscribe(pkg._id || pkg.id)">Đăng ký (Test)</button>
+              </td>
+            </tr>
+            <tr *ngIf="!isAdmin && packages.length === 0">
+              <td colspan="9" style="text-align: center; padding: 20px;">
+                <nz-empty nzNotFoundContent="Bạn chưa đăng ký gói nào"></nz-empty>
               </td>
             </tr>
           </tbody>
         </nz-table>
       </nz-tab>
 
-      <!-- Tab Danh sách đăng ký -->
-      <nz-tab nzTitle="Danh sách đăng ký">
+      <!-- Tab Danh sách đăng ký - Chỉ hiển thị cho admin -->
+      <nz-tab *ngIf="canViewSubscribers()" nzTitle="Danh sách đăng ký">
         <nz-table #subscribersTable [nzData]="subscribers" [nzLoading]="loading">
           <thead>
             <tr>
