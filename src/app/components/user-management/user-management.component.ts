@@ -125,9 +125,15 @@ export class UserManagementComponent implements OnInit {
 
   /**
    * Kiểm tra có thể quản lý user cụ thể không
+   * Business chỉ có quyền XEM, không có quyền quản lý (edit/delete/block)
    */
   canManageUser(user: User): boolean {
     if (!this.currentUser) return false;
+    
+    // Business chỉ có quyền xem, không có quyền quản lý
+    if (this.isBusiness && !this.isAdmin) {
+      return false;
+    }
     
     // Không thể tự quản lý chính mình
     if (user._id === this.currentUser._id) return false;
@@ -138,12 +144,6 @@ export class UserManagementComponent implements OnInit {
     // Admin không thể quản lý superadmin
     if (this.isAdmin) {
       return user.role !== 'superadmin';
-    }
-    
-    // Business chỉ quản lý user thuộc business của mình
-    if (this.isBusiness) {
-      return (user.role === 'hotel' || user.role === 'staff') && 
-             user.businessId === this.currentUser.businessId;
     }
     
     // Hotel manager chỉ quản lý staff thuộc hotel
@@ -157,8 +157,14 @@ export class UserManagementComponent implements OnInit {
   /**
    * Kiểm tra có thể block user không
    * - Admin/Superadmin không thể bị block
+   * - Business không có quyền block
    */
   canBlockUser(user: User): boolean {
+    // Business chỉ có quyền xem, không có quyền block
+    if (this.isBusiness && !this.isAdmin) {
+      return false;
+    }
+    
     if (!this.canManageUser(user)) return false;
     
     // Không thể block admin hoặc superadmin
@@ -234,7 +240,19 @@ export class UserManagementComponent implements OnInit {
   }
 
   private handleUsersLoaded(users: User[]): void {
-    this.users = users;
+    // Backend đã filter đúng, nhưng đảm bảo frontend cũng filter lại để chắc chắn
+    // Business chỉ thấy users thuộc business của mình (bao gồm cả chính business owner)
+    if (this.isBusiness && this.currentUser?.businessId && !this.isAdmin) {
+      this.users = users.filter(user => {
+        if (!this.currentUser) return false;
+        // User thuộc business của mình
+        return (user.businessId && user.businessId.toString() === this.currentUser.businessId?.toString()) ||
+               // Hoặc chính business owner
+               (user._id === this.currentUser._id && user.role === 'business');
+      });
+    } else {
+      this.users = users;
+    }
     this.applyFilters();
     this.isLoading = false;
   }
