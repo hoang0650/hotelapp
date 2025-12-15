@@ -1,6 +1,6 @@
 <div class="email-admin-container" *ngIf="canAccess()">
   <nz-card [nzTitle]="'Cấu hình Email'" [nzBordered]="true">
-    <div *nzLoading="loading">
+    <nz-spin [nzSpinning]="loading">
       <form nz-form [formGroup]="emailForm" nzLayout="vertical">
         <!-- Email Enabled -->
         <nz-form-item>
@@ -172,7 +172,7 @@
             <button nz-button nzType="default" (click)="sendTestEmail()" [nzLoading]="testing">
               <i nz-icon nzType="mail"></i> Gửi Email Test
             </button>
-          </div>
+  </div>
         </nz-card>
 
         <!-- Actions -->
@@ -180,11 +180,43 @@
           <button nz-button nzType="primary" (click)="saveEmailSettings()" [nzLoading]="saving" [nzSize]="'large'">
             <i nz-icon nzType="save"></i> Lưu cài đặt
           </button>
-        </div>
+      </div>
       </form>
-    </div>
+    </nz-spin>
   </nz-card>
-</div>
+
+  <!-- Form gửi email -->
+  <nz-card [nzTitle]="'Gửi Email'" [nzBordered]="true" style="margin-top: 16px;">
+    <form nz-form [formGroup]="sendEmailForm" nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired>Đến (To)</nz-form-label>
+        <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
+          <input nz-input type="email" formControlName="to" placeholder="recipient@example.com" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label nzRequired>Chủ đề (Subject)</nz-form-label>
+        <nz-form-control nzErrorTip="Vui lòng nhập chủ đề">
+          <input nz-input formControlName="subject" placeholder="Chủ đề email" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label nzRequired>Nội dung (Body)</nz-form-label>
+        <nz-form-control nzErrorTip="Vui lòng nhập nội dung">
+          <textarea nz-input formControlName="body" rows="6" placeholder="Nội dung email"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+
+      <div style="margin-top: 16px; text-align: right;">
+        <button nz-button nzType="primary" (click)="sendEmail()" [nzLoading]="sending" [nzSize]="'large'">
+          <i nz-icon nzType="mail"></i> Gửi Email
+        </button>
+      </div>
+    </form>
+  </nz-card>
+  </div>
 
 <div *ngIf="!canAccess()" style="text-align: center; padding: 50px;">
   <nz-result nzStatus="403" nzTitle="Không có quyền truy cập" nzSubTitle="Chỉ superadmin, admin và business mới có quyền truy cập trang này.">

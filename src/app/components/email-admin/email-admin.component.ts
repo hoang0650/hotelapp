@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { SettingsService, EmailSettings } from '../../services/settings.service';
 import { AuthService } from '../../services/auth.service';
+import { EmailService, EmailData } from '../../services/email.service';
 
 @Component({
   selector: 'app-email-admin',
@@ -11,9 +12,11 @@ import { AuthService } from '../../services/auth.service';
 })
 export class EmailAdminComponent implements OnInit {
   emailForm!: FormGroup;
+  sendEmailForm!: FormGroup;
   loading = false;
   saving = false;
   testing = false;
+  sending = false;
   testEmailAddress = '';
 
   emailProviders = [
@@ -28,9 +31,11 @@ export class EmailAdminComponent implements OnInit {
     private fb: FormBuilder,
     private message: NzMessageService,
     private settingsService: SettingsService,
-    private authService: AuthService
+    private authService: AuthService,
+    private emailService: EmailService
   ) {
     this.initForm();
+    this.initSendEmailForm();
   }
 
   ngOnInit(): void {
@@ -80,6 +85,14 @@ export class EmailAdminComponent implements OnInit {
     // Khi provider thay đổi, cập nhật validators
     this.emailForm.get('emailProvider')?.valueChanges.subscribe(provider => {
       this.updateValidators(provider);
+    });
+  }
+
+  initSendEmailForm(): void {
+    this.sendEmailForm = this.fb.group({
+      to: ['', [Validators.required, Validators.email]],
+      subject: ['', [Validators.required]],
+      body: ['', [Validators.required]]
     });
   }
 
@@ -399,5 +412,44 @@ export class EmailAdminComponent implements OnInit {
       default:
         return false;
     }
+  }
+
+  sendEmail(): void {
+    if (this.sendEmailForm.invalid) {
+      Object.values(this.sendEmailForm.controls).forEach(control => {
+        if (control.invalid) {
+          control.markAsDirty();
+          control.updateValueAndValidity({ onlySelf: true });
+        }
+      });
+      this.message.warning('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    this.sending = true;
+    const formValue = this.sendEmailForm.value;
+    
+    const emailData: EmailData = {
+      to: formValue.to,
+      subject: formValue.subject,
+      body: formValue.body
+    };
+
+    this.emailService.sendEmail(emailData).subscribe({
+      next: (response) => {
+        this.sending = false;
+        if (response.success || response.messageId) {
+          this.message.success('Email đã được gửi thành công');
+          this.sendEmailForm.reset();
+        } else {
+          this.message.error('Lỗi khi gửi email');
+        }
+      },
+      error: (error) => {
+        console.error('Error sending email:', error);
+        this.message.error(error.error?.message || 'Lỗi khi gửi email');
+        this.sending = false;
+      }
+    });
   }
 }

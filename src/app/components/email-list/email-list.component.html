@@ -1,22 +1,56 @@
 <!-- Giao diện danh sách email -->
-<nz-table #basicTable [nzData]="emailList" [nzBordered]="true">
-    <thead>
-      <tr>
-        <th nzWidth="25%">Người nhận</th>
-        <th nzWidth="35%">Chủ đề</th>
-        <th nzWidth="30%">Ngày gửi</th>
-        <th nzWidth="10%">Hành động</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let email of basicTable.data">
-        <td>{{ email.email }}</td>
-        <td>{{ email.subject }}</td>
-        <td>{{ email.date | date: 'short' }}</td>
-        <td>
-          <button nz-button nzType="link" (click)="onView(email)">Xem</button>
-        </td>
-      </tr>
-    </tbody>
-  </nz-table>
+<nz-card [nzTitle]="'Lịch sử Email'" [nzBordered]="true">
+  <div *nzLoading="loading">
+    <div style="margin-bottom: 16px; text-align: right;">
+      <button nz-button nzType="default" nzIcon="reload" (click)="refresh()">
+        Làm mới
+      </button>
+    </div>
+    
+    <nz-table 
+      #basicTable 
+      [nzData]="emailList" 
+      [nzBordered]="true"
+      [nzShowPagination]="true"
+      [nzPageSize]="10">
+      <thead>
+        <tr>
+          <th nzWidth="25%">Người nhận</th>
+          <th nzWidth="25%">Chủ đề</th>
+          <th nzWidth="15%">OTP</th>
+          <th nzWidth="20%">Ngày gửi</th>
+          <th nzWidth="10%">Trạng thái</th>
+          <th nzWidth="10%">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let email of basicTable.data">
+          <td>{{ email.email }}</td>
+          <td>{{ email.subject || 'OTP Code' }}</td>
+          <td>
+            <nz-tag *ngIf="email.otp" [nzColor]="'blue'">{{ email.otp }}</nz-tag>
+            <span *ngIf="!email.otp">-</span>
+          </td>
+          <td>{{ email.date | date: 'dd/MM/yyyy HH:mm' }}</td>
+          <td>
+            <nz-tag 
+              [nzColor]="email.status === 'sent' ? 'green' : email.status === 'failed' ? 'red' : 'orange'">
+              {{ email.status === 'sent' ? 'Đã gửi' : email.status === 'failed' ? 'Thất bại' : 'Đang xử lý' }}
+            </nz-tag>
+          </td>
+          <td>
+            <button nz-button nzType="link" nzSize="small" (click)="onView(email)">
+              Xem
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="emailList.length === 0">
+          <td colspan="6" style="text-align: center; padding: 40px;">
+            <nz-empty nzNotFoundContent="Không có email nào"></nz-empty>
+          </td>
+        </tr>
+      </tbody>
+    </nz-table>
+  </div>
+</nz-card>
   

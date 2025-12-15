@@ -23,14 +23,29 @@ export class EmailComposeComponent {
     this.file = event.target.files[0];
   }
 
-  onSend(): void {
+  async onSend(): Promise<void> {
     if (this.emailForm.valid) {
       const formValue = this.emailForm.value;
+      
+      // Convert File to base64 if file exists
+      let fileData: { name: string; data: string } | undefined;
+      if (this.file) {
+        try {
+          const base64Data = await this.fileToBase64(this.file);
+          fileData = {
+            name: this.file.name,
+            data: base64Data
+          };
+        } catch (error) {
+          console.error('Error converting file to base64:', error);
+        }
+      }
+
       const emailData = {
         to: formValue.to,
         subject: formValue.subject,
         body: formValue.body,
-        file: this.file
+        file: fileData
       };
 
       this.emailService.sendEmail(emailData).subscribe(
@@ -46,6 +61,20 @@ export class EmailComposeComponent {
     } else {
       console.log('Form is invalid');
     }
+  }
+
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix (data:image/png;base64,)
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
   }
 
   sendOtp(): void {
