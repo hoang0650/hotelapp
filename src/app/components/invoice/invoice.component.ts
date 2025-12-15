@@ -3,6 +3,8 @@ import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
 import { InvoiceService } from '../../services/invoice.service';
+import { AuthService } from '../../services/auth.service';
+import { SettingsService } from '../../services/settings.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { take } from 'rxjs/operators';
 
@@ -91,6 +93,10 @@ export class InvoiceComponent implements OnInit {
   isLoading: boolean = false;
   isLoadingEasyInvoice: boolean = false;
   
+  // Permissions
+  canViewDraftInvoice: boolean = true; // Mặc định cho phép
+  canExportInvoice: boolean = true; // Mặc định cho phép
+  
   today: Date = new Date();
   
   // Các trường tính toán mới
@@ -128,6 +134,8 @@ export class InvoiceComponent implements OnInit {
     private hotelService: HotelService,
     private businessService: BusinessService,
     private invoiceService: InvoiceService,
+    private authService: AuthService,
+    private settingsService: SettingsService,
     private message: NzMessageService
   ) {
     console.log('=== InvoiceComponent Constructor ===');
@@ -361,6 +369,7 @@ export class InvoiceComponent implements OnInit {
     // Nếu đã có hotelInfo từ data, sử dụng luôn
     if (this.hotelInfo && this.hotelInfo.name) {
       this.updateInvoiceDataWithHotelInfo(this.hotelInfo);
+      this.checkInvoicePermissions(this.hotelInfo);
       return;
     }
     
@@ -368,6 +377,7 @@ export class InvoiceComponent implements OnInit {
     if (this.invoiceData['hotelInfo'] && this.invoiceData['hotelInfo'].name) {
       this.hotelInfo = this.invoiceData['hotelInfo'];
       this.updateInvoiceDataWithHotelInfo(this.invoiceData['hotelInfo']);
+      this.checkInvoicePermissions(this.hotelInfo);
       return;
     }
     
@@ -411,6 +421,7 @@ export class InvoiceComponent implements OnInit {
         
         // Cập nhật invoiceData với thông tin khách sạn
         this.updateInvoiceDataWithHotelInfo(hotel);
+        this.checkInvoicePermissions(hotel);
         this.isLoading = false;
       },
       error: (err) => {
@@ -1389,5 +1400,53 @@ export class InvoiceComponent implements OnInit {
       hotelId: this.invoiceData['hotelId'] || localStorage.getItem('selectedHotelId'),
       bookingId: this.invoiceData['bookingId'] || ''
     };
+  }
+  
+  checkInvoicePermissions(hotel: any): void {
+    // Nếu là superadmin hoặc admin, luôn cho phép
+    if (this.authService.isSuperAdmin() || this.authService.isAdmin()) {
+      this.canViewDraftInvoice = true;
+      this.canExportInvoice = true;
+      return;
+    }
+    
+    // Kiểm tra từ hotel settings
+    if (hotel && hotel.settings) {
+      this.canViewDraftInvoice = hotel.settings.enableDraftInvoice || false;
+      this.canExportInvoice = hotel.settings.enableExportInvoice || false;
+    } else {
+      // Nếu không có hotel info, kiểm tra từ pricing package
+      this.checkPricingPackagePermissions();
+    }
+  }
+  
+  checkPricingPackagePermissions(): void {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser || !currentUser.businessId) {
+      // Nếu không có businessId, mặc định tắt
+      this.canViewDraftInvoice = false;
+      this.canExportInvoice = false;
+      return;
+    }
+    
+    // Lấy thông tin pricing package từ business
+    this.businessService.getBusinessById(currentUser.businessId).pipe(take(1)).subscribe({
+      next: (business: any) => {
+        if (business && business.subscribedPackage) {
+          const packageId = business.subscribedPackage;
+          // Gọi API để lấy thông tin package
+          // Tạm thời, nếu có package thì cho phép (sẽ cần cập nhật sau khi có API)
+          this.canViewDraftInvoice = true;
+          this.canExportInvoice = true;
+        } else {
+          this.canViewDraftInvoice = false;
+          this.canExportInvoice = false;
+        }
+      },
+      error: () => {
+        this.canViewDraftInvoice = false;
+        this.canExportInvoice = false;
+      }
+    });
   }
 }

@@ -233,6 +233,97 @@
           </nz-form-control>
         </nz-form-item>
 
+        <!-- Tính năng Quản lý OTA -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng Quản lý OTA</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="otaManagementFeature">
+              Bật tính năng quản lý OTA tự động
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng quản lý tích hợp với các kênh OTA (Booking.com, Agoda, v.v.).
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Tính năng Quản lý Email -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng Quản lý Email</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="emailManagementFeature">
+              Bật tính năng quản lý email tự động
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng quản lý cấu hình email và gửi email.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Tính năng Quản lý Điện -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng Quản lý Điện</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="electricManagementFeature">
+              Bật tính năng quản lý điện tự động
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng quản lý cài đặt và theo dõi điện năng tiêu thụ.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Tính năng Thanh toán PayPal -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng Thanh toán PayPal</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="paypalPaymentFeature">
+              Bật tính năng thanh toán PayPal tự động
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng thanh toán qua PayPal.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Tính năng Thanh toán Crypto -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng Thanh toán Crypto</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="cryptoPaymentFeature">
+              Bật tính năng thanh toán Crypto tự động
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng thanh toán qua tiền điện tử (Bitcoin, Ethereum, USDT, v.v.).
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Tính năng Xem hóa đơn nháp -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng Xem hóa đơn nháp</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="draftInvoiceFeature">
+              Bật tính năng xem hóa đơn nháp tự động
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng xem hóa đơn nháp trước khi xuất hóa đơn chính thức.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Tính năng Xuất hóa đơn -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng Xuất hóa đơn</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="exportInvoiceFeature">
+              Bật tính năng xuất hóa đơn tự động
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng xuất hóa đơn ra file PDF hoặc các định dạng khác.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
         <!-- Trạng thái -->
         <nz-form-item>
           <nz-form-label [nzSpan]="6">Trạng thái</nz-form-label>

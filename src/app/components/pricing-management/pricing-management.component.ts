@@ -18,6 +18,13 @@ interface PricingPackage {
   features: string[];
   maxUsers: number | null; // -1 hoặc null = không giới hạn
   qrPaymentFeature?: boolean; // Tính năng QR thanh toán
+  otaManagementFeature?: boolean; // Tính năng quản lý OTA
+  emailManagementFeature?: boolean; // Tính năng quản lý email
+  electricManagementFeature?: boolean; // Tính năng quản lý điện
+  paypalPaymentFeature?: boolean; // Tính năng thanh toán PayPal
+  cryptoPaymentFeature?: boolean; // Tính năng thanh toán Crypto
+  draftInvoiceFeature?: boolean; // Tính năng xem hóa đơn nháp
+  exportInvoiceFeature?: boolean; // Tính năng xuất hóa đơn
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -116,6 +123,13 @@ export class PricingManagementComponent implements OnInit {
       maxUsers: [1, [Validators.required]], // Cho phép -1 (không giới hạn)
       unlimitedUsers: [false], // Checkbox để chọn không giới hạn
       qrPaymentFeature: [false], // Tính năng QR thanh toán
+      otaManagementFeature: [false], // Tính năng quản lý OTA
+      emailManagementFeature: [false], // Tính năng quản lý email
+      electricManagementFeature: [false], // Tính năng quản lý điện
+      paypalPaymentFeature: [false], // Tính năng thanh toán PayPal
+      cryptoPaymentFeature: [false], // Tính năng thanh toán Crypto
+      draftInvoiceFeature: [false], // Tính năng xem hóa đơn nháp
+      exportInvoiceFeature: [false], // Tính năng xuất hóa đơn
       isActive: [true]
     });
     
@@ -211,6 +225,13 @@ export class PricingManagementComponent implements OnInit {
           maxUsers: isUnlimited ? 1 : pkg.maxUsers,
           unlimitedUsers: isUnlimited,
           qrPaymentFeature: pkg.qrPaymentFeature || false,
+          otaManagementFeature: pkg.otaManagementFeature || false,
+          emailManagementFeature: pkg.emailManagementFeature || false,
+          electricManagementFeature: pkg.electricManagementFeature || false,
+          paypalPaymentFeature: pkg.paypalPaymentFeature || false,
+          cryptoPaymentFeature: pkg.cryptoPaymentFeature || false,
+          draftInvoiceFeature: pkg.draftInvoiceFeature || false,
+          exportInvoiceFeature: pkg.exportInvoiceFeature || false,
           isActive: pkg.isActive
         });
       }
@@ -227,6 +248,13 @@ export class PricingManagementComponent implements OnInit {
         maxUsers: 1,
         unlimitedUsers: false,
         qrPaymentFeature: false,
+        otaManagementFeature: false,
+        emailManagementFeature: false,
+        electricManagementFeature: false,
+        paypalPaymentFeature: false,
+        cryptoPaymentFeature: false,
+        draftInvoiceFeature: false,
+        exportInvoiceFeature: false,
         isActive: true
       });
     }
@@ -247,6 +275,13 @@ export class PricingManagementComponent implements OnInit {
       maxUsers: 1,
       unlimitedUsers: false,
       qrPaymentFeature: false,
+      otaManagementFeature: false,
+      emailManagementFeature: false,
+      electricManagementFeature: false,
+      paypalPaymentFeature: false,
+      cryptoPaymentFeature: false,
+      draftInvoiceFeature: false,
+      exportInvoiceFeature: false,
       isActive: true
     });
     this.editingPackageId = null;
@@ -450,5 +485,18 @@ export class PricingManagementComponent implements OnInit {
 
   canViewSubscribers(): boolean {
     return this.isAdmin;
+  }
+  
+  toggleAllFeatures(value: boolean): void {
+    this.packageForm.patchValue({
+      qrPaymentFeature: value,
+      otaManagementFeature: value,
+      emailManagementFeature: value,
+      electricManagementFeature: value,
+      paypalPaymentFeature: value,
+      cryptoPaymentFeature: value,
+      draftInvoiceFeature: value,
+      exportInvoiceFeature: value
+    });
   }
 } 

@@ -213,10 +213,10 @@
     
     <div nz-actions class="custom-footer">
       <div class="footer-buttons">
-        <button nz-button nzType="default" (click)="xemHoaDonNhap()" [nzLoading]="isLoadingEasyInvoice">
+        <button nz-button nzType="default" (click)="xemHoaDonNhap()" [nzLoading]="isLoadingEasyInvoice" *ngIf="canViewDraftInvoice">
           <span nz-icon nzType="eye" nzTheme="outline"></span> Xem hóa đơn nháp
         </button>
-        <button nz-button nzType="primary" (click)="xuatHoaDon()" [nzLoading]="isLoadingEasyInvoice">
+        <button nz-button nzType="primary" (click)="xuatHoaDon()" [nzLoading]="isLoadingEasyInvoice" *ngIf="canExportInvoice">
           <span nz-icon nzType="file-text" nzTheme="outline"></span> Xuất hóa đơn
         </button>
         <button nz-button nzType="primary" (click)="exportInvoice()">

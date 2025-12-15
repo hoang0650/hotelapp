@@ -24,6 +24,7 @@ export class SettingsComponent implements OnInit {
   notificationForm!: FormGroup;
   generalForm!: FormGroup;
   hotelQRPaymentForm!: FormGroup;
+  hotelFeaturesForm!: FormGroup;
   
   // Loading states
   loading = false;
@@ -168,6 +169,17 @@ export class SettingsComponent implements OnInit {
     // Hotel QR Payment Form
     this.hotelQRPaymentForm = this.fb.group({
       enableQRPaymentForBankTransfer: [false]
+    });
+    
+    // Hotel Features Form (OTA, Email, Electric, PayPal, Crypto, Draft Invoice, Export Invoice)
+    this.hotelFeaturesForm = this.fb.group({
+      enableOTAManagement: [false],
+      enableEmailManagement: [false],
+      enableElectricManagement: [false],
+      enablePayPalPayment: [false],
+      enableCryptoPayment: [false],
+      enableDraftInvoice: [false],
+      enableExportInvoice: [false]
     });
   }
 
@@ -703,6 +715,15 @@ export class SettingsComponent implements OnInit {
         this.hotelQRPaymentForm.patchValue({
           enableQRPaymentForBankTransfer: this.currentHotelSettings.enableQRPaymentForBankTransfer || false
         });
+        this.hotelFeaturesForm.patchValue({
+          enableOTAManagement: this.currentHotelSettings.enableOTAManagement || false,
+          enableEmailManagement: this.currentHotelSettings.enableEmailManagement || false,
+          enableElectricManagement: this.currentHotelSettings.enableElectricManagement || false,
+          enablePayPalPayment: this.currentHotelSettings.enablePayPalPayment || false,
+          enableCryptoPayment: this.currentHotelSettings.enableCryptoPayment || false,
+          enableDraftInvoice: this.currentHotelSettings.enableDraftInvoice || false,
+          enableExportInvoice: this.currentHotelSettings.enableExportInvoice || false
+        });
       },
       error: (error) => {
         console.error('Error loading hotel settings:', error);
@@ -733,6 +754,49 @@ export class SettingsComponent implements OnInit {
         this.saving = false;
         this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt QR thanh toán');
       }
+    });
+  }
+  
+  saveHotelFeaturesSettings(): void {
+    if (!this.selectedHotelId) {
+      this.message.warning('Vui lòng chọn khách sạn');
+      return;
+    }
+    
+    this.saving = true;
+    const settings = {
+      ...this.currentHotelSettings,
+      enableOTAManagement: this.hotelFeaturesForm.value.enableOTAManagement,
+      enableEmailManagement: this.hotelFeaturesForm.value.enableEmailManagement,
+      enableElectricManagement: this.hotelFeaturesForm.value.enableElectricManagement,
+      enablePayPalPayment: this.hotelFeaturesForm.value.enablePayPalPayment,
+      enableCryptoPayment: this.hotelFeaturesForm.value.enableCryptoPayment,
+      enableDraftInvoice: this.hotelFeaturesForm.value.enableDraftInvoice,
+      enableExportInvoice: this.hotelFeaturesForm.value.enableExportInvoice
+    };
+    
+    this.hotelService.updateHotelSettings(this.selectedHotelId, settings).subscribe({
+      next: (response) => {
+        this.saving = false;
+        this.message.success(response.message || 'Đã lưu cài đặt tính năng cho khách sạn');
+        this.currentHotelSettings = response.settings || {};
+      },
+      error: (error) => {
+        this.saving = false;
+        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt tính năng');
+      }
+    });
+  }
+  
+  toggleAllFeatures(value: boolean): void {
+    this.hotelFeaturesForm.patchValue({
+      enableOTAManagement: value,
+      enableEmailManagement: value,
+      enableElectricManagement: value,
+      enablePayPalPayment: value,
+      enableCryptoPayment: value,
+      enableDraftInvoice: value,
+      enableExportInvoice: value
     });
   }
   
