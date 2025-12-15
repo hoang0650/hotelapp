@@ -21,7 +21,8 @@ export type PermissionFeature =
   | 'email_admin'          // Quản lý email
   | 'qr_payment'          // Thanh toán QR
   | 'visa_payment'        // Thanh toán Visa
-  | 'electric_management'; // Quản lý điện
+  | 'electric_management' // Quản lý điện
+  | 'settings_management'; // Quản lý cài đặt
 
 // Map routes với permissions
 export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
@@ -158,6 +159,33 @@ export class PermissionService {
     // Superadmin có toàn quyền
     if (user?.role === 'superadmin') {
       return true;
+    }
+
+    // Staff KHÔNG được phép truy cập các tính năng quản lý khách sạn
+    if (user?.role === 'staff') {
+      // Staff không được phép truy cập các features sau:
+      const blockedFeatures: PermissionFeature[] = [
+        'room_management',
+        'hotel_management',
+        'company_management',
+        'staff_management',
+        'service_management',
+        'user_management',
+        'pricing_management',
+        'ota_management',
+        'revenue_chart',
+        'shift_handover',
+        'bank_transfer_history',
+        'calendar',
+        'email_admin',
+        'qr_payment',
+        'visa_payment',
+        'electric_management'
+      ];
+      
+      if (blockedFeatures.includes(feature)) {
+        return false;
+      }
     }
 
     // Kiểm tra permissions từ package

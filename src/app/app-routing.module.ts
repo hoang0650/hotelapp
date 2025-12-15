@@ -44,7 +44,7 @@ import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-
 import { ShiftHandoverHistoryComponent } from './components/shift-handover-history/shift-handover-history.component';
 
 const routes: Routes = [
-  { path: '', redirectTo: 'admin/room', pathMatch: 'full' },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
   { path: 'pricing', component: PricingComponent },
   { path: 'login', component: LoginComponent },

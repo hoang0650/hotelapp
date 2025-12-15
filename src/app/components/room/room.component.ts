@@ -17,6 +17,8 @@ import { RoomContentModalComponent } from '../room-content-modal/room-content-mo
 import { TransactionService } from '../../services/transaction.service';
 import { BookingModalComponent } from '../booking-modal/booking-modal.component';
 import { CalendarComponent } from '../calendar/calendar.component';
+import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-room',
@@ -90,7 +92,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private message: NzMessageService,
     private invoiceService: InvoiceService,
-    private transactionService: TransactionService
+    private transactionService: TransactionService,
+    private authService: AuthService,
+    private router: Router
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
       // Reload rooms khi có thay đổi dữ liệu
@@ -140,6 +144,12 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Kiểm tra nếu là staff thì chuyển hướng
+    if (this.authService.isStaff()) {
+      this.message.warning('Bạn không có quyền truy cập trang này');
+      this.router.navigate(['/admin/unauthorized']);
+      return;
+    }
     this.loadHotels();
   }
 
@@ -512,10 +522,17 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   loadHotels(): void {
+    // Staff không được phép truy cập trang này, đã được chặn ở ngOnInit
+    if (this.authService.isStaff()) {
+      return;
+    }
+    
     this.isLoading = true;
     this.hotelService.getHotels().subscribe(data => {
       this.hotels = data;
+      
       if (data && data.length > 0) {
+        // Chọn hotel đầu tiên
         this.selectedHotelId = data[0]._id!;
         this.onHotelChange(this.selectedHotelId);
       } else {
@@ -618,6 +635,15 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   onHotelChange(hotelId: string | null): void {
+    // Staff không được phép thay đổi hotel
+    if (this.authService.isStaff()) {
+      const currentUser = this.authService.getCurrentUser();
+      if (currentUser?.hotelId && hotelId !== currentUser.hotelId) {
+        this.message.warning('Bạn chỉ có thể xem khách sạn của mình');
+        this.selectedHotelId = currentUser.hotelId;
+        return;
+      }
+    }
     this.selectedHotelId = hotelId;
     this.selectedFloor = null;
     this.floors = [];

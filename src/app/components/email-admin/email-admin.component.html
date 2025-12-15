@@ -66,7 +66,7 @@
 
         <!-- Resend Settings -->
         <nz-card *ngIf="showField('resend')" [nzTitle]="'Cấu hình Resend'" [nzBordered]="false" style="margin-top: 16px;">
-          <nz-alert nzType="info" nzMessage="Resend - Miễn phí 3000 email/tháng" [nzDescription]="'Đăng ký tại https://resend.com và lấy API Key từ dashboard'" style="margin-bottom: 16px;"></nz-alert>
+          <nz-alert nzType="info" nzMessage="Resend - Miễn phí 3000 email/tháng" [nzDescription]="'Đăng ký tại https://resend.com và lấy API Key từ dashboard. Lưu ý: Để gửi email đến các địa chỉ khác (không phải email đăng ký), bạn cần verify domain tại https://resend.com/domains và sử dụng email từ domain đã verify làm địa chỉ From.'" style="margin-bottom: 16px;"></nz-alert>
           <nz-form-item>
             <nz-form-label nzRequired>Resend API Key</nz-form-label>
             <nz-form-control nzErrorTip="Vui lòng nhập Resend API Key">

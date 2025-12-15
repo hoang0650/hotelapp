@@ -32,6 +32,35 @@ export class PermissionGuard implements CanActivate {
       return true;
     }
 
+    // Staff KHÔNG được phép truy cập các routes quản lý khách sạn
+    if (user.role === 'staff') {
+      const blockedRoutes = [
+        '/admin/room',
+        '/admin/room-management',
+        '/admin/hotel',
+        '/admin/company',
+        '/admin/staff',
+        '/admin/service-management',
+        '/admin/users-management',
+        '/admin/pricing-management',
+        '/admin/ota-management',
+        '/admin/chart',
+        '/admin/shift-handover',
+        '/admin/shift-handover-history',
+        '/admin/bank-transfer-history',
+        '/admin/calendar',
+        '/admin/email-admin',
+        '/admin/qr-payment',
+        '/admin/visa-payment',
+        '/admin/electric-setting'
+      ];
+      
+      if (blockedRoutes.includes(state.url)) {
+        this.router.navigate(['/admin/unauthorized']);
+        return false;
+      }
+    }
+
     // Kiểm tra permission cho route
     const routePath = state.url;
     const hasAccess = this.permissionService.canAccessRoute(routePath);
