@@ -69,7 +69,7 @@
           <td>
             <div *ngIf="integration.propertyInfo">
               <strong>{{ integration.propertyInfo.name }}</strong>
-              <p>{{ integration.propertyInfo.address?.city }}, {{ integration.propertyInfo.address?.country }}</p>
+              <p>{{ integration.propertyInfo.address.city }}, {{ integration.propertyInfo.address.country }}</p>
               <nz-rate [ngModel]="integration.propertyInfo.starRating" nzDisabled></nz-rate>
             </div>
             <span *ngIf="!integration.propertyInfo" class="text-muted">Chưa có thông tin</span>
@@ -205,7 +205,7 @@
           </td>
           <td>
             <div class="guest-info">
-              <strong>{{ booking.guestDetails?.name }}</strong>
+              <strong>{{ booking.guestDetails.name }}</strong>
               <small *ngIf="booking.guestDetails?.email">
                 <br>{{ booking.guestDetails.email }}
               </small>
@@ -217,13 +217,13 @@
           <td>{{ formatDate(booking.checkInDate) }}</td>
           <td>{{ formatDate(booking.checkOutDate) }}</td>
           <td>
-            {{ booking.roomDetails?.roomTypeName }}
+            {{ booking.roomDetails.roomTypeName }}
             <small *ngIf="booking.numberOfNights">
               <br>({{ booking.numberOfNights }} đêm)
             </small>
           </td>
           <td>
-            <strong>{{ formatCurrency(booking.pricing?.totalAmount || 0, booking.pricing?.currency) }}</strong>
+            <strong>{{ formatCurrency(booking.pricing.totalAmount || 0, booking.pricing.currency) }}</strong>
             <br>
             <nz-tag [nzColor]="booking.paymentStatus === 'paid' ? 'green' : 'orange'">
               {{ booking.paymentStatus === 'paid' ? 'Đã thanh toán' : 

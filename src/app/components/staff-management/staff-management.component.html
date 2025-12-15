@@ -84,16 +84,16 @@
         <tr *ngFor="let staff of staffTable.data">
           <td>
             <div class="staff-info">
-              <nz-avatar [nzText]="staff.personalInfo?.firstName?.charAt(0) || '?'" nzSize="small"></nz-avatar>
+              <nz-avatar [nzText]="staff.personalInfo.firstName.charAt(0) || '?'" nzSize="small"></nz-avatar>
               <div class="staff-details">
                 <strong>{{ getFullName(staff) }}</strong>
-                <small>{{ staff.personalInfo?.idNumber || '-' }}</small>
+                <small>{{ staff.personalInfo.idNumber || '-' }}</small>
               </div>
             </div>
           </td>
           <td>
-            <nz-tag [nzColor]="staff.employmentInfo?.position === 'manager' ? 'blue' : 'green'">
-              {{ getPositionLabel(staff.employmentInfo?.position || 'other') }}
+            <nz-tag [nzColor]="staff.employmentInfo.position === 'manager' ? 'blue' : 'green'">
+              {{ getPositionLabel(staff.employmentInfo.position || 'other') }}
             </nz-tag>
             <div *ngIf="staff.employmentInfo?.department">
               <small class="text-muted">{{ staff.employmentInfo.department }}</small>
@@ -108,13 +108,13 @@
             </div>
           </td>
           <td>
-            <nz-tag [nzColor]="staff.employmentInfo?.status === 'active' ? 'success' : 
-                              staff.employmentInfo?.status === 'on_leave' ? 'warning' : 'error'">
-              {{ getStatusLabel(staff.employmentInfo?.status || 'active') }}
+            <nz-tag [nzColor]="staff.employmentInfo.status === 'active' ? 'success' : 
+                              staff.employmentInfo.status === 'on_leave' ? 'warning' : 'error'">
+              {{ getStatusLabel(staff.employmentInfo.status || 'active') }}
             </nz-tag>
           </td>
           <td>
-            {{ (staff.employmentInfo?.salary || 0) | number }} đ
+            {{ (staff.employmentInfo.salary || 0) | number }} đ
           </td>
           <td>
             <button nz-button nzShape="circle" nzType="default" (click)="startEdit(staff)" nz-tooltip nzTooltipTitle="Chỉnh sửa">
@@ -612,9 +612,9 @@
           <div class="staff-info-header" style="margin-bottom: 20px; padding: 16px; background: #f5f5f5; border-radius: 8px;">
             <h3>{{ getFullName(selectedStaffForSalary) }}</h3>
             <p style="margin: 0; color: #666;">
-              <strong>Chức vụ:</strong> {{ getPositionLabel(selectedStaffForSalary.employmentInfo?.position || 'other') }} | 
-              <strong>Lương cơ bản:</strong> {{ formatCurrency(selectedStaffForSalary.employmentInfo?.salary || 0) }} | 
-              <strong>Ngày bắt đầu:</strong> {{ selectedStaffForSalary.employmentInfo?.startDate | date:'dd/MM/yyyy' }}
+              <strong>Chức vụ:</strong> {{ getPositionLabel(selectedStaffForSalary.employmentInfo.position || 'other') }} | 
+              <strong>Lương cơ bản:</strong> {{ formatCurrency(selectedStaffForSalary.employmentInfo.salary || 0) }} | 
+              <strong>Ngày bắt đầu:</strong> {{ selectedStaffForSalary.employmentInfo.startDate | date:'dd/MM/yyyy' }}
             </p>
           </div>
 
@@ -758,14 +758,14 @@
               <div style="margin-bottom: 15px;">
                 <strong>Chức vụ:</strong> 
                 <span style="font-weight: bold;">
-                  {{ getPositionLabel(selectedStaffForSalary?.employmentInfo?.position || '') }}
+                  {{ getPositionLabel(selectedStaffForSalary.employmentInfo.position || '') }}
                 </span>
               </div>
               
               <div style="margin-bottom: 15px;">
                 <strong>Lương Cơ Bản:</strong> 
                 <span style="font-weight: bold;">
-                  THÁNG = {{ formatCurrencyK(selectedStaffForSalary?.employmentInfo?.salary || 0) }}
+                  THÁNG = {{ formatCurrencyK(selectedStaffForSalary.employmentInfo.salary || 0) }}
                 </span>
               </div>
 
@@ -779,7 +779,7 @@
               <div style="margin-bottom: 15px;">
                 <strong>Ngày bắt đầu làm việc:</strong> 
                 <span style="font-weight: bold;">
-                  {{ formatDate(selectedStaffForSalary?.employmentInfo?.startDate) }}
+                  {{ formatDate(selectedStaffForSalary.employmentInfo.startDate) }}
                 </span>
               </div>
 

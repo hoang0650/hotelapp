@@ -127,47 +127,47 @@
 
           <nz-descriptions nzTitle="Thông tin cơ bản" nzBordered [nzColumn]="1">
             <nz-descriptions-item nzTitle="Tên khách sạn">
-              {{ selectedViewHotel?.name }}
+              {{ selectedViewHotel.name }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Xếp hạng">
-              <nz-rate [ngModel]="selectedViewHotel?.starRating || 0" nzDisabled></nz-rate>
+              <nz-rate [ngModel]="selectedViewHotel.starRating || 0" nzDisabled></nz-rate>
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Doanh nghiệp" *ngIf="isAdmin">
-              {{ getBusinessName(selectedViewHotel?.businessId) }}
+              {{ getBusinessName(selectedViewHotel.businessId) }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Địa chỉ">
               <span *ngIf="selectedViewHotel?.address">
-                {{ selectedViewHotel?.address?.street }}
-                <span *ngIf="selectedViewHotel?.address?.city">, {{ selectedViewHotel?.address?.city }}</span>
-                <span *ngIf="selectedViewHotel?.address?.state">, {{ selectedViewHotel?.address?.state }}</span>
-                <span *ngIf="selectedViewHotel?.address?.country">, {{ selectedViewHotel?.address?.country }}</span>
+                {{ selectedViewHotel!.address!.street }}
+                <span *ngIf="selectedViewHotel!.address!.city">, {{ selectedViewHotel!.address!.city }}</span>
+                <span *ngIf="selectedViewHotel!.address!.state">, {{ selectedViewHotel!.address!.state }}</span>
+                <span *ngIf="selectedViewHotel!.address!.country">, {{ selectedViewHotel!.address!.country }}</span>
               </span>
               <span *ngIf="!selectedViewHotel?.address">-</span>
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Điện thoại">
-              {{ selectedViewHotel?.contactInfo?.phone || '-' }}
+              {{ selectedViewHotel!.contactInfo?.phone || '-' }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Email">
-              {{ selectedViewHotel?.contactInfo?.email || '-' }}
+              {{ selectedViewHotel!.contactInfo?.email || '-' }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Website">
               <a *ngIf="selectedViewHotel?.contactInfo?.website" 
-                 [href]="selectedViewHotel?.contactInfo?.website" 
+                 [href]="selectedViewHotel!.contactInfo!.website" 
                  target="_blank">
-                {{ selectedViewHotel?.contactInfo?.website }}
+                {{ selectedViewHotel!.contactInfo!.website }}
               </a>
               <span *ngIf="!selectedViewHotel?.contactInfo?.website">-</span>
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Quản lý">
-              {{ getManagerName(selectedViewHotel?.managerId) }}
+              {{ getManagerName(selectedViewHotel.managerId) }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Trạng thái">
-              <nz-tag [nzColor]="getStatusColor(selectedViewHotel?.status)">
-                {{ getHotelStatusLabel(selectedViewHotel?.status) }}
+              <nz-tag [nzColor]="getStatusColor(selectedViewHotel.status)">
+                {{ getHotelStatusLabel(selectedViewHotel.status) }}
               </nz-tag>
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Mô tả" *ngIf="selectedViewHotel?.description">
-              {{ selectedViewHotel?.description }}
+              {{ selectedViewHotel.description }}
             </nz-descriptions-item>
           </nz-descriptions>
 

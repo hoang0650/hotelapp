@@ -59,12 +59,12 @@
             <td nzEllipsis>{{ business.taxId }}</td>
             <td nzEllipsis>
               <span *ngIf="business.address?.street || business.address?.city">
-                {{ business.address?.street }}<span *ngIf="business.address?.street && business.address?.city">, </span>{{ business.address?.city }}
+                {{ business.address.street }}<span *ngIf="business.address.street && business.address.city">, </span>{{ business.address.city }}
               </span>
               <span *ngIf="!business.address?.street && !business.address?.city">-</span>
             </td>
-            <td nzEllipsis>{{ business.contactInfo?.phone || '-' }}</td>
-            <td nzEllipsis>{{ business.contactInfo?.email || '-' }}</td>
+            <td nzEllipsis>{{ business.contactInfo.phone || '-' }}</td>
+            <td nzEllipsis>{{ business.contactInfo.email || '-' }}</td>
             <td>
               <nz-badge 
                 [nzCount]="getHotelArray(business).length" 
@@ -132,41 +132,41 @@
 
           <nz-descriptions nzTitle="Thông tin cơ bản" nzBordered [nzColumn]="1">
             <nz-descriptions-item nzTitle="Tên doanh nghiệp">
-              {{ selectedViewBusiness?.name }}
+              {{ selectedViewBusiness!.name }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Tên pháp lý">
-              {{ selectedViewBusiness?.legalName || '-' }}
+              {{ selectedViewBusiness!.legalName || '-' }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Mã số thuế">
-              {{ selectedViewBusiness?.taxId }}
+              {{ selectedViewBusiness!.taxId }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Địa chỉ">
               <span *ngIf="selectedViewBusiness?.address">
-                {{ selectedViewBusiness?.address?.street }}
-                <span *ngIf="selectedViewBusiness?.address?.city">, {{ selectedViewBusiness?.address?.city }}</span>
-                <span *ngIf="selectedViewBusiness?.address?.state">, {{ selectedViewBusiness?.address?.state }}</span>
-                <span *ngIf="selectedViewBusiness?.address?.country">, {{ selectedViewBusiness?.address?.country }}</span>
-                <span *ngIf="selectedViewBusiness?.address?.postalCode"> {{ selectedViewBusiness?.address?.postalCode }}</span>
+                {{ selectedViewBusiness!.address!.street }}
+                <span *ngIf="selectedViewBusiness!.address!.city">, {{ selectedViewBusiness!.address!.city }}</span>
+                <span *ngIf="selectedViewBusiness!.address!.state">, {{ selectedViewBusiness!.address!.state }}</span>
+                <span *ngIf="selectedViewBusiness!.address!.country">, {{ selectedViewBusiness!.address!.country }}</span>
+                <span *ngIf="selectedViewBusiness!.address!.postalCode"> {{ selectedViewBusiness!.address!.postalCode }}</span>
               </span>
               <span *ngIf="!selectedViewBusiness?.address">-</span>
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Số điện thoại">
-              {{ selectedViewBusiness?.contactInfo?.phone || '-' }}
+              {{ selectedViewBusiness!.contactInfo.phone || '-' }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Email">
-              {{ selectedViewBusiness?.contactInfo?.email || '-' }}
+              {{ selectedViewBusiness!.contactInfo.email || '-' }}
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Website">
               <a *ngIf="selectedViewBusiness?.contactInfo?.website" 
-                 [href]="selectedViewBusiness?.contactInfo?.website" 
+                 [href]="selectedViewBusiness!.contactInfo!.website" 
                  target="_blank">
-                {{ selectedViewBusiness?.contactInfo?.website }}
+                {{ selectedViewBusiness!.contactInfo!.website }}
               </a>
               <span *ngIf="!selectedViewBusiness?.contactInfo?.website">-</span>
             </nz-descriptions-item>
             <nz-descriptions-item nzTitle="Trạng thái">
-              <nz-tag [nzColor]="getStatusColor(selectedViewBusiness?.status)">
-                {{ getStatusLabel(selectedViewBusiness?.status) }}
+              <nz-tag [nzColor]="getStatusColor(selectedViewBusiness.status)">
+                {{ getStatusLabel(selectedViewBusiness.status) }}
               </nz-tag>
             </nz-descriptions-item>
           </nz-descriptions>
