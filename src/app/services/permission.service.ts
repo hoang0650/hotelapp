@@ -213,7 +213,8 @@ export class PermissionService {
       'email_admin': ['view', 'edit', 'manage'],
       'qr_payment': ['view', 'edit', 'manage'],
       'visa_payment': ['view', 'edit', 'manage'],
-      'electric_management': ['view', 'edit', 'manage']
+      'electric_management': ['view', 'edit', 'manage'],
+      'settings_management': ['view', 'edit', 'manage']
     };
 
     const requiredPermissions = featurePermissionMap[feature] || ['view'];

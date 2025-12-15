@@ -23,7 +23,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   constructor(
     private userService: UserService,
-    private authService: AuthService,
+    public authService: AuthService, // Đổi thành public để sử dụng trong template
     private notificationsService: NotificationsService,
     public translate: TranslateService
   ) {
