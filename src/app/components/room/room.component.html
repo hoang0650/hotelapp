@@ -21,7 +21,7 @@
           <nz-form-label>Khách sạn</nz-form-label>
           <nz-form-control>
             <nz-select 
-              [nzValue]="selectedHotelId"
+              [ngModel]="selectedHotelId"
               [nzDisabled]="true"
               class="w-100">
               <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>

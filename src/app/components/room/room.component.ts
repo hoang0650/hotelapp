@@ -93,7 +93,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     private message: NzMessageService,
     private invoiceService: InvoiceService,
     private transactionService: TransactionService,
-    private authService: AuthService,
+    public authService: AuthService, // Đổi thành public để sử dụng trong template
     private router: Router
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
