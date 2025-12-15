@@ -117,14 +117,21 @@ export class BookingModalComponent implements OnInit {
         this.hotelInfo = hotel;
         
         if (hotel.businessId) {
-          this.businessService.getBusinessById(hotel.businessId).subscribe(
-            (business) => {
-              this.businessInfo = business;
-            },
-            (error) => {
-              console.error('Error loading business info:', error);
-            }
-          );
+          // Extract businessId nếu là object
+          const businessId = typeof hotel.businessId === 'object' && hotel.businessId !== null && '_id' in hotel.businessId
+            ? hotel.businessId._id
+            : hotel.businessId;
+          
+          if (businessId && typeof businessId === 'string') {
+            this.businessService.getBusinessById(businessId).subscribe(
+              (business) => {
+                this.businessInfo = business;
+              },
+              (error) => {
+                console.error('Error loading business info:', error);
+              }
+            );
+          }
         }
       },
       (error) => {

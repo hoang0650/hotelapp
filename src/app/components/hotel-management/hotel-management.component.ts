@@ -545,9 +545,16 @@ export class HotelManagementComponent implements OnInit {
     this.selectedViewHotel = null;
   }
 
-  getBusinessName(businessId: string | undefined): string {
+  getBusinessName(businessId: string | { _id: string; [key: string]: any } | undefined): string {
     if (!businessId) return 'N/A';
-    const business = this.businesses.find(b => b._id === businessId);
+    
+    // Extract businessId nếu là object
+    const id = typeof businessId === 'object' && businessId !== null && '_id' in businessId 
+      ? businessId._id 
+      : businessId;
+    
+    if (!id || typeof id !== 'string') return 'N/A';
+    const business = this.businesses.find(b => b._id === id);
     return business ? business.name : 'N/A';
   }
 

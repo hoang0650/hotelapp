@@ -41,7 +41,7 @@ export type HotelStatus = 'active' | 'inactive' | 'maintenance' | 'suspended';
 export interface Hotel {
   _id?: string; // Optional vì khi tạo mới chưa có
   name: string;
-  businessId: string; // ID của Business chứa khách sạn này
+  businessId: string | { _id: string; [key: string]: any }; // ID của Business chứa khách sạn này (có thể là string hoặc object khi populated)
   address?: HotelAddress;
   contactInfo?: HotelContactInfo;
   images?: string[];

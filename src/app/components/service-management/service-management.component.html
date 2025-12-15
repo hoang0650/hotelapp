@@ -63,50 +63,77 @@
     <div class="table-container table-responsive">
       <div class="service-list mt-4">
         <nz-spin [nzSpinning]="isLoading">
-          <nz-table #serviceTable [nzData]="services" nzBordered [nzScroll]="{ x: '1000px' }">
+          <nz-table #serviceTable [nzData]="services" nzBordered [nzScroll]="{ x: '1400px' }">
             <thead>
               <tr>
                 <th nzWidth="150px">Tên dịch vụ</th>
-                <th nzWidth="100px">Giá</th>
-                <th nzWidth="100px">Tiền tệ</th>
+                <th nzWidth="100px">Giá Bán</th>
+                <th nzWidth="100px">Giá Vốn</th>
+                <th nzWidth="120px">SL nhập</th>
+                <th nzWidth="100px">SL Bán</th>
+                <th nzWidth="100px">Tồn kho</th>
                 <th nzWidth="120px">Danh mục</th>
                 <th nzWidth="100px">Trạng thái</th>
-                <th nzWidth="100px">Tùy chỉnh</th>
                 <th nzWidth="150px">Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let service of services">
-                <td>{{ service.name }}</td>
-                <td>{{ service.price | currency: (service.currency || 'VND'):'symbol':'1.0-0' }}</td>
-                <td>{{ service.currency }}</td>
-                <td>{{ getCategoryLabel(service.category) }}</td>
-                <td>
-                  <nz-tag [nzColor]="service.isActive ? 'green' : 'red'">
-                    {{ service.isActive ? 'Hoạt động' : 'Ngừng' }}
-                  </nz-tag>
-                </td>
-                <td>{{ service.isCustom ? 'Có' : 'Không' }}</td>
-                <td>
-                  <nz-button-group>
-                    <button nz-button nzSize="small" nzType="primary" 
-                            (click)="startEdit(service._id!)" 
+              <ng-container *ngFor="let category of getGroupedCategories()">
+                <tr class="category-header">
+                  <td colspan="9" style="background-color: #f0f0f0; font-weight: bold; padding: 8px;">
+                    <span style="color: #52c41a; margin-right: 8px;">●</span>
+                    {{ getCategoryLabel(category) }}
+                  </td>
+                </tr>
+                <tr *ngFor="let service of getServicesByCategory(category)">
+                  <td>{{ service.name }}</td>
+                  <td>{{ service.price | currency: (service.currency || 'VND'):'symbol':'1.0-0' }}</td>
+                  <td>
+                    <span *ngIf="service.costPrice && service.costPrice > 0">
+                      {{ service.costPrice | currency: (service.currency || 'VND'):'symbol':'1.0-0' }}
+                    </span>
+                    <span *ngIf="!service.costPrice || service.costPrice === 0" style="color: #999;">
+                      Bình quân gia quyền
+                    </span>
+                  </td>
+                  <td>
+                    <span style="margin-right: 8px;">{{ service.importQuantity || 0 }}</span>
+                    <button nz-button nzType="link" nzSize="small" 
+                            (click)="updateImportQuantity(service._id!, 1)"
                             *ngIf="canManage(service)"
-                            nz-tooltip nzTooltipTitle="Chỉnh sửa">
-                      <i nz-icon nzType="edit"></i>
+                            nz-tooltip nzTooltipTitle="Thêm số lượng nhập">
+                      <i nz-icon nzType="plus-circle" nzTheme="fill" style="color: #52c41a;"></i>
                     </button>
-                    <button nz-button nzSize="small" nzType="text" nzDanger
-                            *ngIf="canDelete(service)"
-                            nz-popconfirm 
-                            nzPopconfirmTitle="Bạn có chắc muốn xóa?" 
-                            (nzOnConfirm)="deleteService(service._id!)"
-                            nz-tooltip nzTooltipTitle="Xóa">
-                      <i nz-icon nzType="delete"></i>
-                    </button>
-                  </nz-button-group>
-                  <span *ngIf="!canManage(service)" class="text-muted">-</span>
-                </td>
-              </tr>
+                  </td>
+                  <td>{{ service.salesQuantity || 0 }}</td>
+                  <td>{{ service.inventory !== undefined ? service.inventory : calculateInventory(service) }}</td>
+                  <td>{{ getCategoryLabel(service.category) }}</td>
+                  <td>
+                    <nz-tag [nzColor]="service.isActive ? 'green' : 'red'">
+                      {{ service.isActive ? 'Hoạt động' : 'Ngừng' }}
+                    </nz-tag>
+                  </td>
+                  <td>
+                    <nz-button-group>
+                      <button nz-button nzSize="small" nzType="primary" 
+                              (click)="startEdit(service._id!)" 
+                              *ngIf="canManage(service)"
+                              nz-tooltip nzTooltipTitle="Chỉnh sửa">
+                        <i nz-icon nzType="edit"></i>
+                      </button>
+                      <button nz-button nzSize="small" nzType="text" nzDanger
+                              *ngIf="canDelete(service)"
+                              nz-popconfirm 
+                              nzPopconfirmTitle="Bạn có chắc muốn xóa?" 
+                              (nzOnConfirm)="deleteService(service._id!)"
+                              nz-tooltip nzTooltipTitle="Xóa">
+                        <i nz-icon nzType="delete"></i>
+                      </button>
+                    </nz-button-group>
+                    <span *ngIf="!canManage(service)" class="text-muted">-</span>
+                  </td>
+                </tr>
+              </ng-container>
             </tbody>
           </nz-table>
         </nz-spin>
@@ -144,7 +171,7 @@
 
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label nzRequired>Giá</nz-form-label>
+              <nz-form-label nzRequired>Giá Bán</nz-form-label>
               <nz-form-control nzErrorTip="Vui lòng nhập giá hợp lệ">
                 <nz-input-number formControlName="price" [nzMin]="0" [nzStep]="1000" class="w-100"></nz-input-number>
               </nz-form-control>
@@ -152,7 +179,36 @@
           </div>
         </nz-row>
 
-        <div nz-row [nzGutter]="16">
+        <nz-row [nzGutter]="16">
+          <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <nz-form-item>
+              <nz-form-label>Giá Vốn</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="costPrice" [nzMin]="0" [nzStep]="1000" class="w-100"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <nz-form-item>
+              <nz-form-label>Số lượng nhập</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="importQuantity" [nzMin]="0" [nzStep]="1" class="w-100"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+
+          <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <nz-form-item>
+              <nz-form-label>Số lượng bán</nz-form-label>
+              <nz-form-control>
+                <nz-input-number formControlName="salesQuantity" [nzMin]="0" [nzStep]="1" class="w-100"></nz-input-number>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </nz-row>
+
+        <nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
               <nz-form-label nzRequired>Danh mục</nz-form-label>
@@ -181,7 +237,7 @@
               </nz-form-control>
             </nz-form-item>
           </div>
-        </div>
+        </nz-row>
 
         <nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">

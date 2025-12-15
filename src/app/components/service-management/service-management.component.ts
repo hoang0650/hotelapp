@@ -60,7 +60,11 @@ export class ServiceManagementComponent implements OnInit {
       image: [''],
       isActive: [true, Validators.required],
       currency: ['VND'],
-      isCustom: [false]
+      isCustom: [false],
+      // Quản lý kho
+      costPrice: [0, [Validators.min(0)]],
+      importQuantity: [0, [Validators.min(0)]],
+      salesQuantity: [0, [Validators.min(0)]]
     });
   }
 
@@ -68,6 +72,11 @@ export class ServiceManagementComponent implements OnInit {
     this.currentUser = this.authService.getCurrentUser();
     this.permissions = this.authService.getPermissionRules();
     this.loadHotels();
+    
+    // Nếu là business và không có hotel được chọn, load tất cả dịch vụ của business
+    if (this.isBusiness && !this.isAdmin && !this.selectedHotelId) {
+      this.loadServices(); // Load tất cả dịch vụ của business (không truyền hotelId)
+    }
   }
 
   // ============ KIỂM TRA QUYỀN ============
@@ -94,12 +103,14 @@ export class ServiceManagementComponent implements OnInit {
 
   canManage(service: Service): boolean {
     if (!this.currentUser) return false;
-    if (this.isAdmin) return true;
+    if (this.isAdmin || this.isSuperAdmin) return true;
     
     // Business chỉ quản lý dịch vụ của hotels thuộc business mình
     if (this.isBusiness) {
       const hotel = this.hotels.find(h => h._id === service.hotelId);
-      return !!hotel && hotel.businessId === this.currentUser.businessId;
+      if (!hotel) return false;
+      const hotelBusinessId = this.extractBusinessId(hotel);
+      return hotelBusinessId === this.currentUser.businessId;
     }
     
     // Hotel manager chỉ quản lý dịch vụ của hotel mình
@@ -126,6 +137,21 @@ export class ServiceManagementComponent implements OnInit {
     }
   }
 
+  // Helper function để extract businessId từ hotel (xử lý cả populated và non-populated)
+  private extractBusinessId(hotel: Hotel): string | null {
+    if (!hotel || !hotel.businessId) {
+      return null;
+    }
+    
+    if (typeof hotel.businessId === 'object' && hotel.businessId !== null && '_id' in hotel.businessId) {
+      return hotel.businessId._id;
+    } else if (typeof hotel.businessId === 'string') {
+      return hotel.businessId;
+    }
+    
+    return null;
+  }
+
   loadServices(hotelId?: string): void {
     this.isLoading = true;
     this.serviceService.getServices(hotelId).subscribe({
@@ -147,9 +173,12 @@ export class ServiceManagementComponent implements OnInit {
         if (this.isAdmin) {
           this.hotels = data.filter(h => h.status === 'active');
         } else if (this.isBusiness && this.currentUser?.businessId) {
-          this.hotels = data.filter(h => 
-            h.businessId === this.currentUser?.businessId && h.status === 'active'
-          );
+          // Business chỉ thấy hotels thuộc business mình
+          this.hotels = data.filter(h => {
+            const hotelBusinessId = this.extractBusinessId(h);
+            const userBusinessId = this.currentUser?.businessId;
+            return hotelBusinessId === userBusinessId && h.status === 'active';
+          });
         } else if (this.isHotelManager && this.currentUser?.hotelId) {
           this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
         } else {
@@ -190,6 +219,20 @@ export class ServiceManagementComponent implements OnInit {
       return;
     }
     
+    // Kiểm tra quyền: Business chỉ có thể chọn hotels thuộc business mình
+    if (hotelId && this.isBusiness && !this.isAdmin && this.currentUser?.businessId) {
+      const selectedHotel = this.hotels.find(h => h._id === hotelId);
+      if (!selectedHotel) {
+        this.message.warning('Bạn không có quyền xem dịch vụ của khách sạn này');
+        return;
+      }
+      const hotelBusinessId = this.extractBusinessId(selectedHotel);
+      if (hotelBusinessId !== this.currentUser.businessId) {
+        this.message.warning('Bạn không có quyền xem dịch vụ của khách sạn này');
+        return;
+      }
+    }
+    
     this.selectedHotelId = hotelId;
     this.services = [];
     
@@ -202,6 +245,10 @@ export class ServiceManagementComponent implements OnInit {
       this.loadServices(hotelId);
       this.loadServiceCategories(hotelId);
     } else {
+      // Nếu là business và không chọn hotel, load tất cả dịch vụ của business
+      if (this.isBusiness && !this.isAdmin) {
+        this.loadServices(); // Load tất cả dịch vụ của business
+      }
       this.categories = [];
       this.serviceCategoryOptions = ALL_SERVICE_CATEGORIES.map(cat => ({ label: this.getCategoryLabel(cat), value: cat }));
     }
@@ -228,7 +275,10 @@ export class ServiceManagementComponent implements OnInit {
         image: serviceToEdit.image,
         isActive: serviceToEdit.isActive,
         currency: serviceToEdit.currency || 'VND',
-        isCustom: serviceToEdit.isCustom || false
+        isCustom: serviceToEdit.isCustom || false,
+        costPrice: serviceToEdit.costPrice || 0,
+        importQuantity: serviceToEdit.importQuantity || 0,
+        salesQuantity: serviceToEdit.salesQuantity || 0
       });
       if(this.selectedHotelId) this.loadServiceCategories(this.selectedHotelId);
     }
@@ -246,7 +296,10 @@ export class ServiceManagementComponent implements OnInit {
       image: '',
       isActive: true,
       currency: 'VND',
-      isCustom: false
+      isCustom: false,
+      costPrice: 0,
+      importQuantity: 0,
+      salesQuantity: 0
     });
   }
 
@@ -272,7 +325,10 @@ export class ServiceManagementComponent implements OnInit {
       image: formValue.image,
       isActive: formValue.isActive,
       currency: formValue.currency,
-      isCustom: formValue.isCustom
+      isCustom: formValue.isCustom,
+      costPrice: Number(formValue.costPrice || 0),
+      importQuantity: Number(formValue.importQuantity || 0),
+      salesQuantity: Number(formValue.salesQuantity || 0)
     };
 
     if (this.editId && this.selectedService) {
@@ -393,5 +449,60 @@ export class ServiceManagementComponent implements OnInit {
     formData.append('upload_preset', this.cloudinaryPreset);
 
     this.message.info('Hàm handleUpload cần được implement với HttpClient hoặc cấu hình nz-upload.');
+  }
+
+  // Cập nhật số lượng nhập
+  updateImportQuantity(serviceId: string, quantity: number): void {
+    const service = this.services.find(s => s._id === serviceId);
+    if (!service) return;
+
+    const newImportQuantity = (service.importQuantity || 0) + quantity;
+    if (newImportQuantity < 0) {
+      this.message.warning('Số lượng nhập không thể âm');
+      return;
+    }
+
+    // Chỉ cập nhật importQuantity, backend sẽ tự động tính inventory
+    const updateData: Partial<Service> = {
+      importQuantity: newImportQuantity
+    };
+
+    this.serviceService.updateService(serviceId, updateData as Service).subscribe({
+      next: (updatedService) => {
+        const index = this.services.findIndex(s => s._id === serviceId);
+        if (index !== -1) {
+          this.services[index] = updatedService;
+          this.services = [...this.services];
+        }
+        this.message.success('Đã cập nhật số lượng nhập');
+      },
+      error: (error) => {
+        console.error('Lỗi khi cập nhật số lượng nhập:', error);
+        this.message.error(error.error?.message || 'Không thể cập nhật số lượng nhập.');
+      }
+    });
+  }
+
+  // Tính tồn kho
+  calculateInventory(service: Service): number {
+    return Math.max(0, (service.importQuantity || 0) - (service.salesQuantity || 0));
+  }
+
+  // Nhóm dịch vụ theo category
+  getGroupedCategories(): ServiceCategory[] {
+    const categories = new Set<ServiceCategory>();
+    this.services.forEach(service => {
+      if (service.category) {
+        categories.add(service.category);
+      }
+    });
+    return Array.from(categories).sort();
+  }
+
+  // Lấy dịch vụ theo category
+  getServicesByCategory(category: ServiceCategory): Service[] {
+    return this.services.filter(s => s.category === category).sort((a, b) => {
+      return (a.name || '').localeCompare(b.name || '');
+    });
   }
 } 

@@ -15,6 +15,11 @@ export interface Service {
   isActive: boolean;
   currency?: string;
   isCustom?: boolean;
+  // Quản lý kho
+  costPrice?: number;
+  importQuantity?: number;
+  salesQuantity?: number;
+  inventory?: number;
   metadata?: any;
   createdAt?: Date;
   updatedAt?: Date;
