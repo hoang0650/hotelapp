@@ -171,7 +171,7 @@ export class SettingsComponent implements OnInit {
       enableQRPaymentForBankTransfer: [false]
     });
     
-    // Hotel Features Form (OTA, Email, Electric, PayPal, Crypto, Draft Invoice, Export Invoice)
+    // Hotel Features Form (OTA, Email, Electric, PayPal, Crypto, Draft Invoice, Export Invoice, AI Chatbox)
     this.hotelFeaturesForm = this.fb.group({
       enableOTAManagement: [false],
       enableEmailManagement: [false],
@@ -179,7 +179,8 @@ export class SettingsComponent implements OnInit {
       enablePayPalPayment: [false],
       enableCryptoPayment: [false],
       enableDraftInvoice: [false],
-      enableExportInvoice: [false]
+      enableExportInvoice: [false],
+      enableAiChatbox: [false]
     });
   }
 
@@ -722,7 +723,8 @@ export class SettingsComponent implements OnInit {
           enablePayPalPayment: this.currentHotelSettings.enablePayPalPayment || false,
           enableCryptoPayment: this.currentHotelSettings.enableCryptoPayment || false,
           enableDraftInvoice: this.currentHotelSettings.enableDraftInvoice || false,
-          enableExportInvoice: this.currentHotelSettings.enableExportInvoice || false
+          enableExportInvoice: this.currentHotelSettings.enableExportInvoice || false,
+          enableAiChatbox: this.currentHotelSettings.enableAiChatbox || false
         });
       },
       error: (error) => {
@@ -772,7 +774,8 @@ export class SettingsComponent implements OnInit {
       enablePayPalPayment: this.hotelFeaturesForm.value.enablePayPalPayment,
       enableCryptoPayment: this.hotelFeaturesForm.value.enableCryptoPayment,
       enableDraftInvoice: this.hotelFeaturesForm.value.enableDraftInvoice,
-      enableExportInvoice: this.hotelFeaturesForm.value.enableExportInvoice
+      enableExportInvoice: this.hotelFeaturesForm.value.enableExportInvoice,
+      enableAiChatbox: this.hotelFeaturesForm.value.enableAiChatbox
     };
     
     this.hotelService.updateHotelSettings(this.selectedHotelId, settings).subscribe({
@@ -796,7 +799,8 @@ export class SettingsComponent implements OnInit {
       enablePayPalPayment: value,
       enableCryptoPayment: value,
       enableDraftInvoice: value,
-      enableExportInvoice: value
+      enableExportInvoice: value,
+      enableAiChatbox: value
     });
   }
   

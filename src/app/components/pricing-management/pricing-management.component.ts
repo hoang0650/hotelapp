@@ -25,6 +25,7 @@ interface PricingPackage {
   cryptoPaymentFeature?: boolean; // Tính năng thanh toán Crypto
   draftInvoiceFeature?: boolean; // Tính năng xem hóa đơn nháp
   exportInvoiceFeature?: boolean; // Tính năng xuất hóa đơn
+  aiChatboxFeature?: boolean; // Tính năng AI Chatbox
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -130,6 +131,7 @@ export class PricingManagementComponent implements OnInit {
       cryptoPaymentFeature: [false], // Tính năng thanh toán Crypto
       draftInvoiceFeature: [false], // Tính năng xem hóa đơn nháp
       exportInvoiceFeature: [false], // Tính năng xuất hóa đơn
+      aiChatboxFeature: [false], // Tính năng AI Chatbox
       isActive: [true]
     });
     
@@ -232,6 +234,7 @@ export class PricingManagementComponent implements OnInit {
           cryptoPaymentFeature: pkg.cryptoPaymentFeature || false,
           draftInvoiceFeature: pkg.draftInvoiceFeature || false,
           exportInvoiceFeature: pkg.exportInvoiceFeature || false,
+          aiChatboxFeature: pkg.aiChatboxFeature || false,
           isActive: pkg.isActive
         });
       }
@@ -255,6 +258,7 @@ export class PricingManagementComponent implements OnInit {
         cryptoPaymentFeature: false,
         draftInvoiceFeature: false,
         exportInvoiceFeature: false,
+        aiChatboxFeature: false,
         isActive: true
       });
     }
@@ -282,6 +286,7 @@ export class PricingManagementComponent implements OnInit {
       cryptoPaymentFeature: false,
       draftInvoiceFeature: false,
       exportInvoiceFeature: false,
+      aiChatboxFeature: false,
       isActive: true
     });
     this.editingPackageId = null;
@@ -496,7 +501,8 @@ export class PricingManagementComponent implements OnInit {
       paypalPaymentFeature: value,
       cryptoPaymentFeature: value,
       draftInvoiceFeature: value,
-      exportInvoiceFeature: value
+      exportInvoiceFeature: value,
+      aiChatboxFeature: value
     });
   }
 } 

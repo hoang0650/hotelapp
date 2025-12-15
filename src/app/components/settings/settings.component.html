@@ -721,6 +721,22 @@
                 </div>
               </div>
 
+              <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                  <nz-form-item>
+                    <nz-form-control>
+                      <label nz-checkbox formControlName="enableAiChatbox">
+                        Bật AI Chatbox
+                      </label>
+                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                        Khi bật, khách sạn có thể sử dụng trợ lý AI để hỗ trợ và trả lời câu hỏi.
+                        Nếu gói đăng ký có tính năng AI Chatbox, tính năng này sẽ tự động được bật.
+                      </div>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+              </div>
+
               <div style="margin-top: 24px; text-align: right;">
                 <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelFeaturesSettings()">
                   Lưu cài đặt

@@ -19,6 +19,7 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzMessageModule } from 'ng-zorro-antd/message';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 
 import { PricingManagementComponent } from './pricing-management.component';
 
@@ -43,7 +44,8 @@ import { PricingManagementComponent } from './pricing-management.component';
     NzTabsModule,
     NzMessageModule,
     NzSelectModule,
-    NzEmptyModule
+    NzEmptyModule,
+    NzCheckboxModule
   ],
   exports: [PricingManagementComponent]
 })

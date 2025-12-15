@@ -1,4 +1,4 @@
-<div class="ai-chatbox-container" [class.minimized]="minimized">
+<div class="ai-chatbox-container" [class.minimized]="minimized" *ngIf="canUseAiChatbox">
   <button nz-button nzType="primary" nzShape="circle" class="chatbox-toggle" (click)="toggleMinimize()" [title]="minimized ? 'Mở chat' : 'Đóng chat'" [attr.aria-label]="minimized ? 'Mở chat' : 'Đóng chat'">
     <i nz-icon [nzType]="minimized ? 'message' : 'close'" nzTheme="outline"></i>
   </button>

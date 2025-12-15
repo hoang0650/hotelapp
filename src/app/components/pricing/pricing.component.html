@@ -123,8 +123,9 @@
                       nz-button
                       nzType="primary"
                       [nzSize]="'large'"
-                      [disabled]="loading"
+                      [disabled]="loading || !canUsePayPal"
                       (click)="payWithPayPal()"
+                      *ngIf="canUsePayPal"
                       style="background: linear-gradient(135deg, #0070ba 0%, #003087 100%); border: none; font-weight: 600;">
                       <i nz-icon nzType="pay-circle" nzTheme="fill" style="margin-right: 8px;"></i>
                       PayPal
@@ -140,7 +141,7 @@
                       SePay
                     </button>
                   </div>
-                  <div style="margin-top: 8px;">
+                  <div style="margin-top: 8px;" *ngIf="canUseCrypto">
                     <nz-form-item style="margin-bottom: 8px;">
                       <nz-form-label style="font-size: 12px; color: #666;">Chọn mạng Crypto:</nz-form-label>
                       <nz-form-control>

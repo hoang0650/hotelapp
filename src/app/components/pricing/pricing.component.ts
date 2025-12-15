@@ -50,6 +50,10 @@ export class PricingComponent implements OnInit, OnDestroy {
     { value: 'ERC20', label: 'ERC20 (Ethereum)', icon: '⛽' },
     { value: 'BEP20', label: 'BEP20 (BSC)', icon: '🔷' }
   ];
+  
+  // Kiểm tra tính năng thanh toán từ package
+  canUsePayPal: boolean = true; // Mặc định cho phép
+  canUseCrypto: boolean = true; // Mặc định cho phép
 
   // SePay QR code
   showSePayModal = false;
@@ -292,8 +296,13 @@ export class PricingComponent implements OnInit, OnDestroy {
           } else if (this.currentPackage?.billingType) {
             this.billingType = this.currentPackage.billingType;
           }
+          // Kiểm tra tính năng thanh toán
+          this.checkPaymentFeatures();
         } else {
           this.currentPackage = null;
+          // Reset về mặc định nếu không có package
+          this.canUsePayPal = true;
+          this.canUseCrypto = true;
         }
       },
       error: (error) => {
@@ -303,8 +312,55 @@ export class PricingComponent implements OnInit, OnDestroy {
           this.message.error(error.error?.message || 'Không thể tải thông tin gói hiện tại');
         }
         this.currentPackage = null;
+        // Reset về mặc định nếu không có package
+        this.canUsePayPal = true;
+        this.canUseCrypto = true;
       }
     });
+  }
+  
+  /**
+   * Kiểm tra tính năng thanh toán từ package đã chọn hoặc current package
+   */
+  checkPaymentFeatures(): void {
+    // Kiểm tra từ selectedPackage (gói đang chọn để thanh toán)
+    if (this.selectedPackage) {
+      const pkg = this.packages.find(p => p._id === this.selectedPackage.packageId || p._id === this.selectedPackage._id);
+      if (pkg) {
+        this.canUsePayPal = pkg.paypalPaymentFeature === true;
+        this.canUseCrypto = pkg.cryptoPaymentFeature === true;
+        return;
+      }
+      // Nếu selectedPackage có trực tiếp các fields
+      if (this.selectedPackage.paypalPaymentFeature !== undefined) {
+        this.canUsePayPal = this.selectedPackage.paypalPaymentFeature === true;
+      }
+      if (this.selectedPackage.cryptoPaymentFeature !== undefined) {
+        this.canUseCrypto = this.selectedPackage.cryptoPaymentFeature === true;
+      }
+      return;
+    }
+    
+    // Nếu không có selectedPackage, kiểm tra từ currentPackage (gói đã đăng ký)
+    if (this.currentPackage) {
+      const pkg = this.packages.find(p => p._id === this.currentPackage._id || p._id === this.currentPackage.packageId);
+      if (pkg) {
+        this.canUsePayPal = pkg.paypalPaymentFeature === true;
+        this.canUseCrypto = pkg.cryptoPaymentFeature === true;
+        return;
+      }
+      // Nếu currentPackage có trực tiếp các fields
+      if (this.currentPackage.paypalPaymentFeature !== undefined) {
+        this.canUsePayPal = this.currentPackage.paypalPaymentFeature === true;
+      }
+      if (this.currentPackage.cryptoPaymentFeature !== undefined) {
+        this.canUseCrypto = this.currentPackage.cryptoPaymentFeature === true;
+      }
+    } else {
+      // Nếu không có package nào, mặc định cho phép (để user có thể chọn gói)
+      this.canUsePayPal = true;
+      this.canUseCrypto = true;
+    }
   }
 
   subscribeToPlan(packageId: string) {
@@ -351,6 +407,9 @@ export class PricingComponent implements OnInit, OnDestroy {
       packageId: packageId,
       billingType: this.billingType
     };
+    
+    // Kiểm tra tính năng thanh toán từ package đã chọn
+    this.checkPaymentFeatures();
 
     this.message.success(`Đã chọn gói ${pkg.name} - ${billingTypeText}. Vui lòng thanh toán để hoàn tất đăng ký.`);
   }
@@ -361,6 +420,12 @@ export class PricingComponent implements OnInit, OnDestroy {
   payWithPayPal(): void {
     if (!this.selectedPackage || !this.userId) {
       this.message.warning('Vui lòng chọn gói trước khi thanh toán');
+      return;
+    }
+    
+    // Kiểm tra tính năng PayPal
+    if (!this.canUsePayPal) {
+      this.message.warning('Gói này không hỗ trợ thanh toán bằng PayPal');
       return;
     }
 
@@ -386,6 +451,12 @@ export class PricingComponent implements OnInit, OnDestroy {
   payWithCrypto(): void {
     if (!this.selectedPackage || !this.userId) {
       this.message.warning('Vui lòng chọn gói trước khi thanh toán');
+      return;
+    }
+    
+    // Kiểm tra tính năng Crypto
+    if (!this.canUseCrypto) {
+      this.message.warning('Gói này không hỗ trợ thanh toán bằng Crypto');
       return;
     }
 

@@ -220,6 +220,15 @@
           </nz-form-control>
         </nz-form-item>
 
+        <div style="margin-bottom: 16px; text-align: right;">
+          <button nz-button nzType="default" (click)="toggleAllFeatures(true)" style="margin-right: 8px;">
+            Bật tất cả
+          </button>
+          <button nz-button nzType="default" (click)="toggleAllFeatures(false)">
+            Tắt tất cả
+          </button>
+        </div>
+
         <!-- Tính năng QR thanh toán -->
         <nz-form-item>
           <nz-form-label [nzSpan]="6">Tính năng QR thanh toán</nz-form-label>
@@ -320,6 +329,19 @@
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
               Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng xuất hóa đơn ra file PDF hoặc các định dạng khác.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Tính năng AI Chatbox -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng AI Chatbox</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="aiChatboxFeature">
+              Bật tính năng AI Chatbox tự động
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng trợ lý AI để hỗ trợ và trả lời câu hỏi.
             </div>
           </nz-form-control>
         </nz-form-item>
