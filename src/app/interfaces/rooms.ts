@@ -52,6 +52,21 @@ export interface Room {
   additionalHourRate?: number;
 
   priceConfigId?: string;
+  priceSettings?: {
+    nightlyStartTime?: string; // Giờ bắt đầu tính qua đêm (HH:mm)
+    nightlyEndTime?: string; // Giờ kết thúc tính qua đêm (HH:mm)
+    dailyStartTime?: string; // Giờ bắt đầu tính theo ngày (HH:mm)
+    dailyEndTime?: string; // Giờ kết thúc tính theo ngày (HH:mm)
+    autoNightlyHours?: number; // Số giờ tự động chuyển sang tính qua đêm
+    gracePeriodMinutes?: number; // Thời gian miễn phí sau giờ thứ 2 (phút)
+    timezone?: string; // Múi giờ
+    // Phụ thu cho daily rates
+    dailyEarlyCheckinSurcharge?: number; // Phụ thu check-in sớm cho thuê theo ngày (số tiền/giờ)
+    dailyLateCheckoutFee?: number; // Phí trả phòng muộn cho thuê theo ngày (số tiền/giờ)
+    // Phụ thu cho nightly rates
+    nightlyEarlyCheckinSurcharge?: number; // Phụ thu check-in sớm cho thuê qua đêm (số tiền/giờ)
+    nightlyLateCheckoutSurcharge?: number; // Phụ thu check-out trễ cho thuê qua đêm (số tiền/giờ)
+  };
   specialPricing?: SpecialPrice[]; // Mới
   
   lastCleaned?: Date; // Mới

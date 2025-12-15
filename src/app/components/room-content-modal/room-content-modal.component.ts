@@ -2316,14 +2316,23 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     };
     
     // Lấy giá trị từ priceConfig hoặc giá trị mặc định
-    const nightlyStartTime = priceConfig?.nightlyRates?.startTime || '22:00';
-    const nightlyEndTime = priceConfig?.nightlyRates?.endTime || '12:00';
-    const dailyCheckInTime = priceConfig?.dailyRates?.checkInTime || '14:00';
-    const dailyCheckOutTime = priceConfig?.dailyRates?.checkOutTime || '12:00';
-    const nightlyEarlyCheckinSurcharge = priceConfig?.nightlyRates?.earlyCheckinSurcharge || 0;
-    const nightlyLateCheckoutSurcharge = priceConfig?.nightlyRates?.lateCheckoutSurcharge || 0;
-    const dailyEarlyCheckinSurcharge = priceConfig?.dailyRates?.earlyCheckinSurcharge || 0;
-    const dailyLateCheckoutFee = priceConfig?.dailyRates?.latecheckOutFee || 0;
+    // Ưu tiên lấy từ priceConfig, fallback về roomData.priceSettings
+    const nightlyStartTime = priceConfig?.nightlyRates?.startTime || 
+                             (this.roomData as any)?.priceSettings?.nightlyStartTime || '22:00';
+    const nightlyEndTime = priceConfig?.nightlyRates?.endTime || 
+                           (this.roomData as any)?.priceSettings?.nightlyEndTime || '12:00';
+    const dailyCheckInTime = priceConfig?.dailyRates?.checkInTime || 
+                             (this.roomData as any)?.priceSettings?.dailyStartTime || '14:00';
+    const dailyCheckOutTime = priceConfig?.dailyRates?.checkOutTime || 
+                              (this.roomData as any)?.priceSettings?.dailyEndTime || '12:00';
+    const nightlyEarlyCheckinSurcharge = priceConfig?.nightlyRates?.earlyCheckinSurcharge || 
+                                         (this.roomData as any)?.priceSettings?.nightlyEarlyCheckinSurcharge || 0;
+    const nightlyLateCheckoutSurcharge = priceConfig?.nightlyRates?.lateCheckoutSurcharge || 
+                                         (this.roomData as any)?.priceSettings?.nightlyLateCheckoutSurcharge || 0;
+    const dailyEarlyCheckinSurcharge = priceConfig?.dailyRates?.earlyCheckinSurcharge || 
+                                      (this.roomData as any)?.priceSettings?.dailyEarlyCheckinSurcharge || 0;
+    const dailyLateCheckoutFee = priceConfig?.dailyRates?.latecheckOutFee || 
+                                (this.roomData as any)?.priceSettings?.dailyLateCheckoutFee || 0;
     
     let total = 0;
     let priceDetails: any = {};
