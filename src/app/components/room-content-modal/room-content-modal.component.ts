@@ -2292,14 +2292,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       };
     };
     
-    // Helper function để tính số giờ sớm/trễ (tính chính xác theo phút, không làm tròn)
+    // Helper function để tính số giờ sớm/trễ (làm tròn lên)
     const calculateEarlyHours = (actualTime: Date, standardTime: string): number => {
       const actual = parseTime(`${actualTime.getHours()}:${actualTime.getMinutes()}`);
       const standard = parseTime(standardTime);
       const actualMinutes = actual.hour * 60 + actual.minute;
       const standardMinutes = standard.hour * 60 + standard.minute;
       if (actualMinutes < standardMinutes) {
-        return (standardMinutes - actualMinutes) / 60; // Trả về số giờ chính xác (có thể là số thập phân)
+        const earlyMinutes = standardMinutes - actualMinutes;
+        return Math.ceil(earlyMinutes / 60); // Làm tròn lên
       }
       return 0;
     };
@@ -2310,7 +2311,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       const actualMinutes = actual.hour * 60 + actual.minute;
       const standardMinutes = standard.hour * 60 + standard.minute;
       if (actualMinutes > standardMinutes) {
-        return (actualMinutes - standardMinutes) / 60; // Trả về số giờ chính xác (có thể là số thập phân)
+        const lateMinutes = actualMinutes - standardMinutes;
+        return Math.ceil(lateMinutes / 60); // Làm tròn lên
       }
       return 0;
     };
