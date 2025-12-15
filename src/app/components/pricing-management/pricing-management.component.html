@@ -220,6 +220,19 @@
           </nz-form-control>
         </nz-form-item>
 
+        <!-- Tính năng QR thanh toán -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Tính năng QR thanh toán</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="qrPaymentFeature">
+              Bật tính năng QR thanh toán tự động
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng hiển thị QR code khi thanh toán chuyển khoản trong room.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
         <!-- Trạng thái -->
         <nz-form-item>
           <nz-form-label [nzSpan]="6">Trạng thái</nz-form-label>

@@ -17,6 +17,7 @@ interface PricingPackage {
   duration: number;
   features: string[];
   maxUsers: number | null; // -1 hoặc null = không giới hạn
+  qrPaymentFeature?: boolean; // Tính năng QR thanh toán
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -114,6 +115,7 @@ export class PricingManagementComponent implements OnInit {
       permissions: [['view'], [Validators.required]],
       maxUsers: [1, [Validators.required]], // Cho phép -1 (không giới hạn)
       unlimitedUsers: [false], // Checkbox để chọn không giới hạn
+      qrPaymentFeature: [false], // Tính năng QR thanh toán
       isActive: [true]
     });
     
@@ -208,6 +210,7 @@ export class PricingManagementComponent implements OnInit {
           permissions: pkg.permissions || ['view'],
           maxUsers: isUnlimited ? 1 : pkg.maxUsers,
           unlimitedUsers: isUnlimited,
+          qrPaymentFeature: pkg.qrPaymentFeature || false,
           isActive: pkg.isActive
         });
       }
@@ -222,6 +225,8 @@ export class PricingManagementComponent implements OnInit {
         features: [],
         permissions: ['view'],
         maxUsers: 1,
+        unlimitedUsers: false,
+        qrPaymentFeature: false,
         isActive: true
       });
     }
@@ -241,6 +246,7 @@ export class PricingManagementComponent implements OnInit {
       permissions: ['view'],
       maxUsers: 1,
       unlimitedUsers: false,
+      qrPaymentFeature: false,
       isActive: true
     });
     this.editingPackageId = null;

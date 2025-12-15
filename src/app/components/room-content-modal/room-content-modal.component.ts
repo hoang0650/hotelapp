@@ -1617,8 +1617,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     // Kiểm tra nếu payment method là 'transfer' (chuyển khoản)
     if (paymentMethod === 'transfer') {
-      // Tạo payment history SePay và hiển thị QR code
-      this.handleTransferPayment(remainingAmount, invoiceData, checkoutData);
+      // Kiểm tra xem có nên hiển thị QR payment không
+      this.checkAndHandleTransferPayment(remainingAmount, invoiceData, checkoutData);
     } else {
       // Đóng modal ngay lập tức và thực hiện checkout
       if (this.modalRef) {
@@ -1670,6 +1670,112 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
   }
   
+  /**
+   * Kiểm tra và xử lý thanh toán chuyển khoản với QR (nếu được bật)
+   */
+  checkAndHandleTransferPayment(amount: number, invoiceData: any, checkoutData: any): void {
+    // Kiểm tra hotel settings và pricing package
+    if (this.roomData?.hotelId) {
+      this.hotelService.getHotelById(this.roomData.hotelId).subscribe({
+        next: (hotel: any) => {
+          const hotelSettings = hotel.settings || {};
+          const enableQRFromSettings = hotelSettings.enableQRPaymentForBankTransfer || false;
+          
+          // Kiểm tra pricing package nếu có businessId
+          if (hotel.businessId) {
+            // Lấy business để kiểm tra pricing package
+            this.checkPricingPackageAndHandlePayment(hotel.businessId, enableQRFromSettings, amount, invoiceData, checkoutData);
+          } else {
+            // Không có business, chỉ kiểm tra hotel settings
+            if (enableQRFromSettings) {
+              this.handleTransferPayment(amount, invoiceData, checkoutData);
+            } else {
+              // Không bật QR, checkout bình thường
+              this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
+            }
+          }
+        },
+        error: (error) => {
+          console.error('Error loading hotel settings:', error);
+          // Nếu lỗi, vẫn thử hiển thị QR (fallback)
+          this.handleTransferPayment(amount, invoiceData, checkoutData);
+        }
+      });
+    } else {
+      // Không có hotelId, checkout bình thường
+      this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
+    }
+  }
+  
+  /**
+   * Kiểm tra pricing package và xử lý thanh toán
+   */
+  private checkPricingPackageAndHandlePayment(businessId: string, enableQRFromSettings: boolean, amount: number, invoiceData: any, checkoutData: any): void {
+    // Kiểm tra từ businessInfo nếu có
+    if (this.businessInfo?.pricingPackage) {
+      const pricingPackage = this.businessInfo.pricingPackage;
+      const hasQRFeature = pricingPackage.qrPaymentFeature || false;
+      
+      // Nếu pricing package có QR feature hoặc hotel setting bật QR
+      if (hasQRFeature || enableQRFromSettings) {
+        this.handleTransferPayment(amount, invoiceData, checkoutData);
+      } else {
+        // Không có QR feature, checkout bình thường
+        this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
+      }
+    } else {
+      // Không có pricing package info, chỉ kiểm tra hotel settings
+      if (enableQRFromSettings) {
+        this.handleTransferPayment(amount, invoiceData, checkoutData);
+      } else {
+        this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
+      }
+    }
+  }
+  
+  /**
+   * Thực hiện checkout trực tiếp không qua QR
+   */
+  private proceedWithCheckoutDirectly(checkoutData: any, invoiceData: any): void {
+    if (this.modalRef) {
+      this.modalRef.close();
+    }
+    
+    this.roomsService.checkOutRoom(this.roomData._id, checkoutData).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        if (response.success) {
+          this.message.success('Checkout thành công');
+          // Refresh room data
+          if (this.roomData && this.roomData._id) {
+            this.roomsService.getRoomById(this.roomData._id, { 
+              limit: 1000,
+              excludeCheckedOut: true
+            }).subscribe({
+              next: (updatedRoom) => {
+                this.roomData = updatedRoom;
+                this.roomsService.notifyRoomDataUpdated();
+              },
+              error: (err) => {
+                console.error('Error reloading room data:', err);
+                this.roomsService.notifyRoomDataUpdated();
+              }
+            });
+          } else {
+            this.roomsService.notifyRoomDataUpdated();
+          }
+        } else {
+          this.message.error(response.message || 'Lỗi khi checkout');
+        }
+      },
+      error: (error) => {
+        this.isLoading = false;
+        console.error('Error during checkout:', error);
+        this.message.error('Lỗi khi checkout');
+      }
+    });
+  }
+
   /**
    * Xử lý thanh toán chuyển khoản với SePay
    */

@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SettingsService, EmailSettings } from '../../services/settings.service';
 import { NotificationsService } from '../../services/notifications.service';
+import { HotelService } from '../../services/hotel.service';
 
 @Component({
   selector: 'app-settings',
@@ -22,6 +23,7 @@ export class SettingsComponent implements OnInit {
   paymentForm!: FormGroup;
   notificationForm!: FormGroup;
   generalForm!: FormGroup;
+  hotelQRPaymentForm!: FormGroup;
   
   // Loading states
   loading = false;
@@ -29,6 +31,12 @@ export class SettingsComponent implements OnInit {
   
   // Current user
   currentUser: any = null;
+  
+  // Hotel settings
+  hotels: any[] = [];
+  selectedHotelId: string | null = null;
+  currentHotelSettings: any = null;
+  loadingHotels = false;
 
   // Email providers
   emailProviders = [
@@ -46,7 +54,8 @@ export class SettingsComponent implements OnInit {
     private authService: AuthService,
     private userService: UserService,
     private settingsService: SettingsService,
-    private notificationsService: NotificationsService
+    private notificationsService: NotificationsService,
+    private hotelService: HotelService
   ) {
     this.initForms();
   }
@@ -54,6 +63,7 @@ export class SettingsComponent implements OnInit {
   ngOnInit(): void {
     this.loadCurrentUser();
     this.loadSettings();
+    this.loadHotels();
   }
 
   private initForms(): void {
@@ -153,6 +163,11 @@ export class SettingsComponent implements OnInit {
       allowRegistration: [true],
       requireEmailVerification: [false],
       enable2FA: [false]
+    });
+    
+    // Hotel QR Payment Form
+    this.hotelQRPaymentForm = this.fb.group({
+      enableQRPaymentForBankTransfer: [false]
     });
   }
 
@@ -642,6 +657,90 @@ export class SettingsComponent implements OnInit {
     form.reset();
     this.loadSettings();
     this.message.info('Đã khôi phục cài đặt mặc định');
+  }
+
+  private loadHotels(): void {
+    // Chỉ load hotels nếu user có quyền quản lý hotel
+    if (!this.authService.isSuperAdmin() && !this.authService.isAdmin() && !this.authService.isBusiness() && !this.authService.isHotelManager()) {
+      return;
+    }
+    
+    this.loadingHotels = true;
+    this.hotelService.getHotels().subscribe({
+      next: (hotels) => {
+        this.hotels = hotels;
+        // Nếu user là hotel manager hoặc staff, chỉ hiển thị hotel của họ
+        if (this.currentUser?.hotelId) {
+          this.selectedHotelId = this.currentUser.hotelId;
+          this.loadHotelSettings(this.currentUser.hotelId);
+        } else if (hotels.length > 0) {
+          // Nếu là admin/business, chọn hotel đầu tiên
+          this.selectedHotelId = hotels[0]._id || null;
+          if (hotels[0]._id) {
+            this.loadHotelSettings(hotels[0]._id);
+          }
+        }
+        this.loadingHotels = false;
+      },
+      error: (error) => {
+        console.error('Error loading hotels:', error);
+        this.loadingHotels = false;
+      }
+    });
+  }
+  
+  onHotelChange(hotelId: string): void {
+    this.selectedHotelId = hotelId;
+    this.loadHotelSettings(hotelId);
+  }
+  
+  private loadHotelSettings(hotelId: string): void {
+    if (!hotelId) return;
+    
+    this.hotelService.getHotelById(hotelId).subscribe({
+      next: (hotel) => {
+        this.currentHotelSettings = hotel.settings || {};
+        this.hotelQRPaymentForm.patchValue({
+          enableQRPaymentForBankTransfer: this.currentHotelSettings.enableQRPaymentForBankTransfer || false
+        });
+      },
+      error: (error) => {
+        console.error('Error loading hotel settings:', error);
+        this.message.error('Lỗi khi tải cài đặt khách sạn');
+      }
+    });
+  }
+  
+  saveHotelQRPaymentSettings(): void {
+    if (!this.selectedHotelId) {
+      this.message.warning('Vui lòng chọn khách sạn');
+      return;
+    }
+    
+    this.saving = true;
+    const settings = {
+      ...this.currentHotelSettings,
+      enableQRPaymentForBankTransfer: this.hotelQRPaymentForm.value.enableQRPaymentForBankTransfer
+    };
+    
+    this.hotelService.updateHotelSettings(this.selectedHotelId, settings).subscribe({
+      next: (response) => {
+        this.saving = false;
+        this.message.success(response.message || 'Đã lưu cài đặt QR thanh toán cho khách sạn');
+        this.currentHotelSettings = response.settings || {};
+      },
+      error: (error) => {
+        this.saving = false;
+        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt QR thanh toán');
+      }
+    });
+  }
+  
+  canManageHotelSettings(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin() || 
+           this.authService.isBusiness() || 
+           this.authService.isHotelManager();
   }
 
   // Helper functions for currency formatting

@@ -501,7 +501,72 @@
         </form>
       </nz-tab>
 
-      <!-- Tab 4: Cài đặt Thông báo -->
+      <!-- Tab 4: Cài đặt QR Thanh toán cho Khách sạn -->
+      <nz-tab nzTitle="QR Thanh toán Khách sạn" nzIcon="qrcode" *ngIf="canManageHotelSettings()">
+        <div style="margin-top: 16px;">
+          <nz-alert 
+            nzType="info" 
+            nzMessage="Cài đặt QR thanh toán cho từng khách sạn" 
+            nzDescription="Bật tính năng hiển thị QR code khi thanh toán chuyển khoản trong room. Nếu gói đăng ký có tính năng QR payment, sẽ tự động bật."
+            style="margin-bottom: 16px;">
+          </nz-alert>
+
+          <div *ngIf="loadingHotels" style="text-align: center; padding: 20px;">
+            <nz-spin nzSize="large"></nz-spin>
+          </div>
+
+          <div *ngIf="!loadingHotels && hotels.length > 0">
+            <nz-form-item>
+              <nz-form-label>Chọn khách sạn</nz-form-label>
+              <nz-form-control>
+                <nz-select 
+                  [(ngModel)]="selectedHotelId" 
+                  (ngModelChange)="onHotelChange($event)"
+                  nzPlaceHolder="Chọn khách sạn"
+                  style="width: 100%;">
+                  <nz-option 
+                    *ngFor="let hotel of hotels" 
+                    [nzValue]="hotel._id" 
+                    [nzLabel]="hotel.name">
+                  </nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+
+            <form nz-form [formGroup]="hotelQRPaymentForm" nzLayout="vertical" style="margin-top: 16px;">
+              <nz-divider nzText="Cài đặt QR thanh toán"></nz-divider>
+
+              <div nz-row [nzGutter]="16">
+                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                  <nz-form-item>
+                    <nz-form-control>
+                      <label nz-checkbox formControlName="enableQRPaymentForBankTransfer">
+                        Bật QR thanh toán khi chuyển khoản trong room
+                      </label>
+                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                        Khi bật, hệ thống sẽ hiển thị QR code khi khách chọn thanh toán chuyển khoản trong room checkout.
+                        Nếu gói đăng ký có tính năng QR payment, tính năng này sẽ tự động được bật.
+                      </div>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+              </div>
+
+              <div style="margin-top: 24px; text-align: right;">
+                <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelQRPaymentSettings()">
+                  Lưu cài đặt
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div *ngIf="!loadingHotels && hotels.length === 0" style="text-align: center; padding: 40px;">
+            <nz-empty nzNotFoundContent="Chưa có khách sạn nào"></nz-empty>
+          </div>
+        </div>
+      </nz-tab>
+
+      <!-- Tab 5: Cài đặt Thông báo -->
       <nz-tab nzTitle="Cài đặt Thông báo" nzIcon="bell">
         <form nz-form [formGroup]="notificationForm" nzLayout="vertical" style="margin-top: 16px;">
           <nz-divider nzText="Bật/Tắt kênh thông báo"></nz-divider>
