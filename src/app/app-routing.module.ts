@@ -26,6 +26,7 @@ import { AboutUsComponent } from './components/about-us/about-us.component';
 import { ChatComponent } from './components/chat/chat.component';
 import { BusinessSignupComponent } from './components/business-signup/business-signup.component';
 import { ServiceManagementComponent } from './components/service-management/service-management.component';
+import { GuestManagementComponent } from './components/guest-management/guest-management.component';
 import { UserManagementComponent } from './components/user-management/user-management.component';
 import { BankTransferHistoryComponent } from './components/bank-transfer-history/bank-transfer-history.component';
 import { PricingComponent } from './components/pricing/pricing.component';
@@ -65,6 +66,7 @@ const routes: Routes = [
       { path: 'company', component: CompanyManagementComponent, canActivate: [PermissionGuard] },
       { path: 'room-management', component: RoomManagementComponent, canActivate: [PermissionGuard] },
       { path: 'service-management', component: ServiceManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'guest-management', component: GuestManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
       {
         path: 'users-management',

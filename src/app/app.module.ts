@@ -100,6 +100,7 @@ import { ChatComponent } from './components/chat/chat.component';
 import { BusinessSignupComponent } from './components/business-signup/business-signup.component';
 import { RoomServiceComponent } from './components/room-service/room-service.component';
 import { ServiceManagementComponent } from './components/service-management/service-management.component';
+import { GuestManagementComponent } from './components/guest-management/guest-management.component';
 import { InvoiceModalComponent } from './components/invoice-modal/invoice-modal.component';
 import { UserManagementComponent } from './components/user-management/user-management.component';
 import { UserFormModalComponent } from './components/user-management/user-form-modal/user-form-modal.component';
@@ -191,6 +192,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         BusinessSignupComponent,
         RoomServiceComponent,
         ServiceManagementComponent,
+        GuestManagementComponent,
         InvoiceModalComponent,
         UserManagementComponent,
         UserFormModalComponent,
