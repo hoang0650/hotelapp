@@ -1376,8 +1376,9 @@ export class RoomComponent implements OnInit, OnDestroy {
           roomPrice = dailyRate * dailyDays;
           
           // Tính phụ thu check-in sớm (nếu có)
+          // Thời gian quy định cho ngày đêm: 12:00 - 12:00 ngày hôm sau
           const priceConfigDaily = (room as any)?.priceConfig;
-          const dailyCheckInTime = priceConfigDaily?.dailyRates?.checkInTime || room.priceSettings?.dailyStartTime || '14:00';
+          const dailyStartTime = '12:00'; // Thời gian bắt đầu nhận ngày đêm
           const dailyCheckOutTime = priceConfigDaily?.dailyRates?.checkOutTime || room.priceSettings?.dailyEndTime || '12:00';
           // Ưu tiên lấy từ priceConfig, fallback về room.priceSettings
           const dailyEarlyCheckinSurcharge = priceConfigDaily?.dailyRates?.earlyCheckinSurcharge || 
@@ -1386,21 +1387,24 @@ export class RoomComponent implements OnInit, OnDestroy {
                                       room.priceSettings?.dailyLateCheckoutFee || 0;
           
           if (checkinTime && dailyEarlyCheckinSurcharge > 0) {
-            const [checkInHour, checkInMinute] = dailyCheckInTime.split(':').map(Number);
+            const [startHour, startMinute] = dailyStartTime.split(':').map(Number);
             const checkInMinutes = checkinTime.getHours() * 60 + checkinTime.getMinutes();
-            const standardCheckInMinutes = checkInHour * 60 + checkInMinute;
-            if (checkInMinutes < standardCheckInMinutes) {
-              const earlyHours = Math.ceil((standardCheckInMinutes - checkInMinutes) / 60);
+            const startTimeMinutes = startHour * 60 + startMinute;
+            if (checkInMinutes < startTimeMinutes) {
+              const earlyHours = Math.ceil((startTimeMinutes - checkInMinutes) / 60);
               roomPrice += earlyHours * dailyEarlyCheckinSurcharge;
             }
           }
           
-          // Tính phụ thu check-out trễ (nếu có)
+          // Tính phụ thu check-out trễ (nếu check-out sau 12:00 ngày hôm sau)
           if (dailyLateCheckoutFee > 0) {
+            const checkOutDateOnly = new Date();
+            checkOutDateOnly.setHours(0, 0, 0, 0);
+            const isNextDay = checkOutDateOnly.getTime() > checkInDateOnly.getTime();
             const [checkOutHour, checkOutMinute] = dailyCheckOutTime.split(':').map(Number);
             const checkOutMinutes = now.getHours() * 60 + now.getMinutes();
             const standardCheckOutMinutes = checkOutHour * 60 + checkOutMinute;
-            if (checkOutMinutes > standardCheckOutMinutes) {
+            if (isNextDay && checkOutMinutes > standardCheckOutMinutes) {
               const lateHours = Math.ceil((checkOutMinutes - standardCheckOutMinutes) / 60);
               roomPrice += lateHours * dailyLateCheckoutFee;
             }
@@ -1417,8 +1421,9 @@ export class RoomComponent implements OnInit, OnDestroy {
           roomPrice = nightlyRate * nightlyNights;
           
           // Lấy priceConfig để tính surcharges nếu có
+          // Thời gian quy định qua đêm: 20:00 - 12:00 ngày hôm sau
           const priceConfigNightly = (room as any)?.priceConfig;
-          const nightlyStartTime = priceConfigNightly?.nightlyRates?.startTime || room.priceSettings?.nightlyStartTime || '22:00';
+          const nightlyStartTime = priceConfigNightly?.nightlyRates?.startTime || room.priceSettings?.nightlyStartTime || '20:00';
           const nightlyEndTime = priceConfigNightly?.nightlyRates?.endTime || room.priceSettings?.nightlyEndTime || '12:00';
           // Ưu tiên lấy từ priceConfig, fallback về room.priceSettings
           const earlyCheckinSurcharge = priceConfigNightly?.nightlyRates?.earlyCheckinSurcharge || 
@@ -1426,7 +1431,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           const lateCheckoutSurcharge = priceConfigNightly?.nightlyRates?.lateCheckoutSurcharge || 
                                        room.priceSettings?.nightlyLateCheckoutSurcharge || 0;
           
-          // Tính phụ thu check-in sớm (nếu check-in trước nightlyStartTime)
+          // Tính phụ thu check-in sớm (nếu check-in trước nightlyStartTime - 20:00)
           if (checkinTime && earlyCheckinSurcharge > 0) {
             const [startHour, startMinute] = nightlyStartTime.split(':').map(Number);
             const checkInMinutes = checkinTime.getHours() * 60 + checkinTime.getMinutes();
@@ -1437,12 +1442,15 @@ export class RoomComponent implements OnInit, OnDestroy {
             }
           }
           
-          // Tính phụ thu check-out trễ (nếu check-out sau nightlyEndTime)
+          // Tính phụ thu check-out trễ (nếu check-out sau 12:00 ngày hôm sau)
           if (lateCheckoutSurcharge > 0) {
+            const checkOutDateOnly = new Date();
+            checkOutDateOnly.setHours(0, 0, 0, 0);
+            const isNextDay = checkOutDateOnly.getTime() > checkInDateForNightly.getTime();
             const [endHour, endMinute] = nightlyEndTime.split(':').map(Number);
             const checkOutMinutes = now.getHours() * 60 + now.getMinutes();
             const endTimeMinutes = endHour * 60 + endMinute;
-            if (checkOutMinutes > endTimeMinutes) {
+            if (isNextDay && checkOutMinutes > endTimeMinutes) {
               const lateHours = Math.ceil((checkOutMinutes - endTimeMinutes) / 60);
               roomPrice += lateHours * lateCheckoutSurcharge;
             }
