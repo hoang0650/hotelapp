@@ -9,6 +9,8 @@ import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { forkJoin } from 'rxjs';
+import * as XLSX from 'xlsx';
+import { format } from 'date-fns';
 
 @Component({
   selector: 'app-service-management',
@@ -43,6 +45,17 @@ export class ServiceManagementComponent implements OnInit {
   fileList: NzUploadFile[] = [];
   uploadUrl = 'https://api.cloudinary.com/v1_1/dxtigizsi/image/upload';
   cloudinaryPreset = 'ys0fssyu';
+
+  // Thống kê
+  isStatisticsModalVisible = false;
+  isLoadingStatistics = false;
+  isExportingStatistics = false;
+  statisticsData: any = null;
+  statisticsFilter: {
+    hotelId?: string | null;
+    startDate?: Date | null;
+    endDate?: Date | null;
+  } = {};
 
   constructor(
     private fb: FormBuilder,
@@ -504,5 +517,258 @@ export class ServiceManagementComponent implements OnInit {
     return this.services.filter(s => s.category === category).sort((a, b) => {
       return (a.name || '').localeCompare(b.name || '');
     });
+  }
+
+  // ============ THỐNG KÊ DOANH THU DỊCH VỤ ============
+
+  openStatisticsModal(): void {
+    this.isStatisticsModalVisible = true;
+    // Set default filter
+    this.statisticsFilter = {
+      hotelId: this.selectedHotelId || null,
+      startDate: null,
+      endDate: null
+    };
+    this.statisticsData = null;
+  }
+
+  closeStatisticsModal(): void {
+    this.isStatisticsModalVisible = false;
+    this.statisticsData = null;
+  }
+
+  loadStatistics(): void {
+    if (!this.statisticsFilter.hotelId) {
+      this.message.warning('Vui lòng chọn khách sạn');
+      return;
+    }
+
+    this.isLoadingStatistics = true;
+    
+    // Lấy tất cả service orders
+    this.serviceService.getAllServiceOrdersForStatistics(
+      this.statisticsFilter.hotelId,
+      this.statisticsFilter.startDate || undefined,
+      this.statisticsFilter.endDate || undefined
+    ).subscribe({
+      next: (orders) => {
+        // Lọc theo ngày nếu có
+        let filteredOrders = orders;
+        if (this.statisticsFilter.startDate || this.statisticsFilter.endDate) {
+          filteredOrders = orders.filter(order => {
+            // Backend dùng orderTime, frontend có thể dùng requestTime hoặc createdAt
+            const orderDate = (order as any).orderTime ? new Date((order as any).orderTime) : 
+                             (order as any).requestTime ? new Date((order as any).requestTime) : 
+                             (order.createdAt ? new Date(order.createdAt) : null);
+            if (!orderDate) return false;
+            
+            if (this.statisticsFilter.startDate) {
+              const start = new Date(this.statisticsFilter.startDate);
+              start.setHours(0, 0, 0, 0);
+              if (orderDate < start) return false;
+            }
+            
+            if (this.statisticsFilter.endDate) {
+              const end = new Date(this.statisticsFilter.endDate);
+              end.setHours(23, 59, 59, 999);
+              if (orderDate > end) return false;
+            }
+            
+            return true;
+          });
+        }
+
+        // Chỉ tính các đơn đã hoàn thành hoặc đã thanh toán (không hủy)
+        filteredOrders = filteredOrders.filter(order => 
+          order.status !== 'cancelled' && 
+          (order.status === 'completed' || order.status === 'delivered' || 
+           (order as any).paymentStatus === 'paid')
+        );
+
+        // Tính toán thống kê
+        const serviceStatsMap = new Map<string, any>();
+        const categoryStatsMap = new Map<string, any>();
+        let totalRevenue = 0;
+        let totalQuantity = 0;
+        let totalOrders = filteredOrders.length;
+
+        filteredOrders.forEach(order => {
+          // Backend model dùng items (serviceOrder.js), controller cũ có thể dùng services
+          const items = (order as any).items || (order as any).services || [];
+          
+          items.forEach((item: any) => {
+            // Xử lý serviceId có thể là ObjectId hoặc populated object
+            const serviceId = item.serviceId?._id || item.serviceId || 'unknown';
+            const serviceName = item.name || item.serviceName || 'Dịch vụ không tên';
+            // Lấy category từ populated serviceId (nếu có populate)
+            // Nếu không có, sẽ dùng 'custom' và có thể lookup sau
+            const category = item.serviceId?.category || 
+                            (item.serviceId && typeof item.serviceId === 'object' ? item.serviceId.category : 'custom') ||
+                            'custom';
+            const quantity = item.quantity || 0;
+            const price = item.price || 0;
+            // Backend model dùng total, controller cũ có thể dùng totalPrice
+            const totalPrice = item.total || item.totalPrice || (price * quantity);
+
+            // Thống kê theo dịch vụ
+            if (!serviceStatsMap.has(serviceId)) {
+              serviceStatsMap.set(serviceId, {
+                serviceId,
+                serviceName,
+                category,
+                quantity: 0,
+                revenue: 0,
+                orderCount: 0
+              });
+            }
+            const serviceStat = serviceStatsMap.get(serviceId);
+            serviceStat.quantity += quantity;
+            serviceStat.revenue += totalPrice;
+            serviceStat.orderCount += 1;
+
+            // Thống kê theo danh mục
+            if (!categoryStatsMap.has(category)) {
+              categoryStatsMap.set(category, {
+                category,
+                quantity: 0,
+                revenue: 0
+              });
+            }
+            const categoryStat = categoryStatsMap.get(category);
+            categoryStat.quantity += quantity;
+            categoryStat.revenue += totalPrice;
+
+            totalRevenue += totalPrice;
+            totalQuantity += quantity;
+          });
+        });
+
+        // Tính giá trị đơn trung bình
+        const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+        // Tính tỷ lệ theo danh mục
+        const categoryStats = Array.from(categoryStatsMap.values()).map(stat => ({
+          ...stat,
+          percentage: totalRevenue > 0 ? (stat.revenue / totalRevenue) * 100 : 0
+        }));
+
+        // Tính giá bán trung bình cho từng dịch vụ
+        const serviceStats = Array.from(serviceStatsMap.values()).map(stat => ({
+          ...stat,
+          averagePrice: stat.quantity > 0 ? stat.revenue / stat.quantity : 0
+        }));
+
+        this.statisticsData = {
+          totalRevenue,
+          totalOrders,
+          totalQuantity,
+          averageOrderValue,
+          serviceStats: serviceStats.sort((a, b) => b.revenue - a.revenue),
+          categoryStats: categoryStats.sort((a, b) => b.revenue - a.revenue)
+        };
+
+        this.isLoadingStatistics = false;
+      },
+      error: (error) => {
+        console.error('Lỗi khi tải thống kê:', error);
+        this.message.error(error.error?.message || 'Lỗi khi tải thống kê');
+        this.isLoadingStatistics = false;
+      }
+    });
+  }
+
+  exportStatisticsToExcel(): void {
+    if (!this.statisticsData) {
+      this.message.warning('Vui lòng xem thống kê trước khi xuất Excel');
+      return;
+    }
+
+    this.isExportingStatistics = true;
+
+    try {
+      // Tạo workbook với nhiều sheets
+      const workbook: XLSX.WorkBook = { Sheets: {}, SheetNames: [] };
+
+      // Sheet 1: Tổng quan
+      const summaryData = [
+        ['THỐNG KÊ DOANH THU DỊCH VỤ'],
+        [''],
+        ['Tổng doanh thu', this.statisticsData.totalRevenue],
+        ['Tổng số đơn', this.statisticsData.totalOrders],
+        ['Tổng số lượng', this.statisticsData.totalQuantity],
+        ['Giá trị đơn trung bình', this.statisticsData.averageOrderValue],
+        [''],
+        ['Thời gian thống kê', 
+          this.statisticsFilter.startDate ? format(new Date(this.statisticsFilter.startDate), 'dd/MM/yyyy') : 'Tất cả',
+          'đến',
+          this.statisticsFilter.endDate ? format(new Date(this.statisticsFilter.endDate), 'dd/MM/yyyy') : 'Tất cả'
+        ],
+        ['Khách sạn', this.statisticsFilter.hotelId ? this.getHotelName(this.statisticsFilter.hotelId) : 'Tất cả']
+      ];
+
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      summarySheet['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 10 }, { wch: 20 }];
+      workbook.Sheets['Tổng quan'] = summarySheet;
+      workbook.SheetNames.push('Tổng quan');
+
+      // Sheet 2: Thống kê theo dịch vụ
+      const serviceData = this.statisticsData.serviceStats.map((stat: any) => ({
+        'Tên dịch vụ': stat.serviceName,
+        'Danh mục': this.getCategoryLabel(stat.category),
+        'Số lượng bán': stat.quantity,
+        'Doanh thu': stat.revenue,
+        'Giá bán TB': stat.averagePrice,
+        'Số đơn': stat.orderCount
+      }));
+
+      if (serviceData.length > 0) {
+        const serviceSheet = XLSX.utils.json_to_sheet(serviceData);
+        serviceSheet['!cols'] = [
+          { wch: 30 }, // Tên dịch vụ
+          { wch: 15 }, // Danh mục
+          { wch: 12 }, // Số lượng bán
+          { wch: 15 }, // Doanh thu
+          { wch: 15 }, // Giá bán TB
+          { wch: 10 }  // Số đơn
+        ];
+        workbook.Sheets['Thống kê theo dịch vụ'] = serviceSheet;
+        workbook.SheetNames.push('Thống kê theo dịch vụ');
+      }
+
+      // Sheet 3: Thống kê theo danh mục
+      const categoryData = this.statisticsData.categoryStats.map((stat: any) => ({
+        'Danh mục': this.getCategoryLabel(stat.category),
+        'Số lượng bán': stat.quantity,
+        'Doanh thu': stat.revenue,
+        'Tỷ lệ (%)': stat.percentage
+      }));
+
+      if (categoryData.length > 0) {
+        const categorySheet = XLSX.utils.json_to_sheet(categoryData);
+        categorySheet['!cols'] = [
+          { wch: 20 }, // Danh mục
+          { wch: 15 }, // Số lượng bán
+          { wch: 15 }, // Doanh thu
+          { wch: 12 }  // Tỷ lệ
+        ];
+        workbook.Sheets['Thống kê theo danh mục'] = categorySheet;
+        workbook.SheetNames.push('Thống kê theo danh mục');
+      }
+
+      // Tạo tên file
+      const dateStr = format(new Date(), 'ddMMyyyy_HHmmss');
+      const hotelName = this.statisticsFilter.hotelId ? 
+        this.getHotelName(this.statisticsFilter.hotelId).replace(/\s+/g, '_') : 'Tat_ca';
+      const fileName = `Thong_ke_doanh_thu_dich_vu_${hotelName}_${dateStr}`;
+
+      // Xuất file
+      XLSX.writeFile(workbook, `${fileName}.xlsx`);
+      this.message.success('Đã xuất file Excel thống kê thành công!');
+      this.isExportingStatistics = false;
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel:', error);
+      this.message.error('Lỗi khi xuất file Excel');
+      this.isExportingStatistics = false;
+    }
   }
 } 

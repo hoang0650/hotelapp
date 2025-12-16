@@ -8,6 +8,7 @@ import { RoomContentModalComponent } from '../components/room-content-modal/room
 import { InvoiceComponent } from '../components/invoice/invoice.component';
 import { BookingModalComponent } from '../components/booking-modal/booking-modal.component';
 import { RoomContextMenuComponent } from '../components/room-context-menu/room-context-menu.component';
+import { GuestSaveModalComponent } from '../components/guest-save-modal/guest-save-modal.component';
 import { TransferRoomModalComponent } from '../components/transfer-room-modal/transfer-room-modal.component';
 import { Room } from '../interfaces/rooms';
 
@@ -219,9 +220,27 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       case 'cancel-booking':
         this.cancelBooking();
         break;
+      case 'scan-ocr':
+        this.showOCRModal();
+        break;
       default:
         console.warn('Unknown action:', action);
     }
+  }
+  
+  // Hiển thị modal OCR để quét CCCD/GPLX
+  showOCRModal(): void {
+    // Mở modal checkout/checkin với OCR enabled
+    const status = this.room.status;
+    let modalType = 'checkin';
+    
+    if (status === 'occupied') {
+      modalType = 'checkout';
+    } else if (status === 'vacant' || status === 'booked') {
+      modalType = 'checkin';
+    }
+    
+    this.showModal(this.room, modalType);
   }
   
   // Hiển thị modal khách ra ngoài
@@ -427,160 +446,46 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   
   // Hiển thị modal lưu thông tin khách
   showSaveGuestInfoModal(): void {
-    // Lấy thông tin khách hiện tại từ room.events hoặc localStorage
-    let guestInfo: any = {};
-    let advancePayment: number = 0;
+    if (!this.room || !this.room._id) {
+      this.modalService.error({
+        nzTitle: 'Lỗi',
+        nzContent: 'Không tìm thấy thông tin phòng.',
+        nzOkText: 'Đóng'
+      });
+      return;
+    }
     
+    // Lấy thông tin khách từ room nếu có
+    let guestInfo: any = null;
     if (this.room.events && this.room.events.length > 0) {
       const checkinEvents = this.room.events.filter((e: any) => e.type === 'checkin');
       if (checkinEvents.length > 0) {
         const lastCheckin = checkinEvents[checkinEvents.length - 1];
-        guestInfo = lastCheckin.guestInfo || {};
-        advancePayment = lastCheckin.advancePayment || 0;
+        guestInfo = lastCheckin.guestInfo || null;
       }
     }
     
-    // Fallback: lấy từ localStorage
-    if (!guestInfo.name || guestInfo.name === 'Khách lẻ') {
-      const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
-      if (savedCheckinData) {
-        try {
-          const checkinData = JSON.parse(savedCheckinData);
-          guestInfo = checkinData.guestInfo || {};
-          advancePayment = checkinData.advancePayment || 0;
-        } catch (e) {
-          console.error('Error parsing checkin data:', e);
-        }
+    // Mở modal GuestSaveModalComponent
+    const modalRef = this.modalService.create({
+      nzTitle: 'Lưu thông tin khách',
+      nzContent: GuestSaveModalComponent,
+      nzFooter: null,
+      nzWidth: 900,
+      nzMaskClosable: false,
+      nzData: {
+        room: this.room,
+        guestInfo: guestInfo
       }
-    }
+    });
     
-    this.modalService.create({
-      nzTitle: `Lưu thông tin khách - Phòng ${this.room.roomNumber}`,
-      nzContent: `
-        <div style="margin-bottom: 16px;">
-          <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Tên khách:</label>
-            <input type="text" id="guest-name" value="${guestInfo.name || 'Khách lẻ'}" 
-              placeholder="Nhập tên khách (mặc định: Khách lẻ)"
-              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-          </div>
-          <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Số điện thoại:</label>
-            <input type="text" id="guest-phone" value="${guestInfo.phone || ''}" 
-              placeholder="Nhập số điện thoại"
-              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-          </div>
-          <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">CCCD/CMND:</label>
-            <input type="text" id="guest-id" value="${guestInfo.idNumber || ''}" 
-              placeholder="Nhập số CCCD/CMND"
-              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-          </div>
-          <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Email:</label>
-            <input type="email" id="guest-email" value="${guestInfo.email || ''}" 
-              placeholder="Nhập email"
-              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-          </div>
-          <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Địa chỉ:</label>
-            <input type="text" id="guest-address" value="${guestInfo.address || ''}" 
-              placeholder="Nhập địa chỉ"
-              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-          </div>
-          <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Tiền đặt trước:</label>
-            <input type="number" id="advance-payment" value="${advancePayment || 0}" 
-              placeholder="Nhập số tiền đặt trước"
-              min="0"
-              style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-          </div>
-        </div>
-      `,
-      nzOkText: 'Lưu',
-      nzCancelText: 'Hủy',
-      nzOnOk: () => {
-        const nameInput = document.getElementById('guest-name') as HTMLInputElement;
-        const phoneInput = document.getElementById('guest-phone') as HTMLInputElement;
-        const idInput = document.getElementById('guest-id') as HTMLInputElement;
-        const emailInput = document.getElementById('guest-email') as HTMLInputElement;
-        const addressInput = document.getElementById('guest-address') as HTMLInputElement;
-        const advanceInput = document.getElementById('advance-payment') as HTMLInputElement;
-        
-        const updatedGuestInfo = {
-          name: (nameInput?.value || 'Khách lẻ').trim(),
-          phone: phoneInput?.value || '',
-          idNumber: idInput?.value || '',
-          email: emailInput?.value || '',
-          address: addressInput?.value || ''
-        };
-        
-        const updatedAdvancePayment = advanceInput ? parseFloat(advanceInput.value) || 0 : 0;
-        
-        // Lấy thông tin check-in hiện tại
-        const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
-        let checkinData: any = {
-          roomId: this.room._id,
-          roomNumber: this.room.roomNumber,
-          checkinTime: new Date(),
-          guestInfo: updatedGuestInfo,
-          advancePayment: updatedAdvancePayment
-        };
-        
-        if (savedCheckinData) {
-          try {
-            const existingData = JSON.parse(savedCheckinData);
-            checkinData = {
-              ...existingData,
-              guestInfo: updatedGuestInfo,
-              advancePayment: updatedAdvancePayment
-            };
-          } catch (e) {
-            console.error('Error parsing existing checkin data:', e);
-          }
+    modalRef.afterClose.subscribe((result) => {
+      if (result && result.success) {
+        this.roomsService.notifyRoomDataUpdated();
+        // Đảm bảo đóng context menu nếu còn mở
+        if (this.contextMenuModalRef) {
+          this.contextMenuModalRef.close();
+          this.contextMenuModalRef = null;
         }
-        
-        // Lưu vào localStorage
-        localStorage.setItem(`checkin_${this.room._id}`, JSON.stringify(checkinData));
-        
-        // Cập nhật vào room.events nếu có event checkin
-        if (this.room.events && this.room.events.length > 0) {
-          const checkinEvents = this.room.events.filter((e: any) => e.type === 'checkin');
-          if (checkinEvents.length > 0) {
-            // Cập nhật event checkin với thông tin mới qua API
-            this.roomsService.updateRoomCheckinInfo(
-              this.room._id,
-              updatedGuestInfo,
-              updatedAdvancePayment
-            ).pipe(take(1)).subscribe({
-              next: () => {
-                this.modalService.success({
-                  nzTitle: 'Thành công',
-                  nzContent: 'Đã lưu thông tin khách và tiền đặt trước.',
-                  nzOkText: 'Đóng'
-                });
-                this.roomsService.notifyRoomDataUpdated();
-              },
-              error: (err) => {
-                // Nếu API không có, vẫn báo thành công vì đã lưu vào localStorage
-                this.modalService.success({
-                  nzTitle: 'Thành công',
-                  nzContent: 'Đã lưu thông tin khách và tiền đặt trước vào bộ nhớ tạm.',
-                  nzOkText: 'Đóng'
-                });
-                this.roomsService.notifyRoomDataUpdated();
-              }
-            });
-            return;
-          }
-        }
-        
-        // Nếu không có event checkin, chỉ lưu vào localStorage
-        this.modalService.success({
-          nzTitle: 'Thành công',
-          nzContent: 'Đã lưu thông tin khách và tiền đặt trước vào bộ nhớ tạm.',
-          nzOkText: 'Đóng'
-        });
       }
     });
   }

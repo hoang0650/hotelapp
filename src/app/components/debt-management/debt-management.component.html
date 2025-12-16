@@ -1,0 +1,215 @@
+<div class="container">
+  <nz-card>
+    <div class="header-section">
+      <h2 class="mb-4">
+        <i nz-icon nzType="file-text" nzTheme="outline"></i>
+        Quản Lý Công Nợ
+      </h2>
+    </div>
+
+    <!-- Thông báo phân quyền -->
+    <nz-alert 
+      *ngIf="isBusiness && !isAdmin" 
+      nzType="info" 
+      nzMessage="Bạn đang xem danh sách công nợ của các khách sạn thuộc doanh nghiệp mình."
+      [nzCloseable]="true"
+      class="mb-3">
+    </nz-alert>
+    
+    <nz-alert 
+      *ngIf="isHotelManager && !isAdmin && !isBusiness" 
+      nzType="info" 
+      nzMessage="Bạn đang xem danh sách công nợ của khách sạn mình."
+      [nzCloseable]="true"
+      class="mb-3">
+    </nz-alert>
+
+    <!-- Bộ lọc -->
+    <div nz-row [nzGutter]="16" class="mb-4 filter-section">
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Khách sạn</nz-form-label>
+          <nz-form-control>
+            <nz-select 
+              nzPlaceHolder="Chọn khách sạn"
+              [ngModel]="selectedHotelId" 
+              (ngModelChange)="onHotelChange($event)"
+              nzAllowClear
+              [nzDisabled]="isHotelManager"
+              class="w-100">
+              <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Trạng thái</nz-form-label>
+          <nz-form-control>
+            <nz-select 
+              nzPlaceHolder="Tất cả"
+              [ngModel]="selectedStatus" 
+              (ngModelChange)="onStatusChange($event)"
+              nzAllowClear
+              class="w-100">
+              <nz-option nzValue="pending" nzLabel="Chưa thanh toán"></nz-option>
+              <nz-option nzValue="partial" nzLabel="Thanh toán một phần"></nz-option>
+              <nz-option nzValue="settled" nzLabel="Đã quyết toán"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Khoảng thời gian</nz-form-label>
+          <nz-form-control>
+            <nz-range-picker
+              [ngModel]="dateRange"
+              (ngModelChange)="onDateRangeChange($event)"
+              nzFormat="yyyy-MM-dd"
+              class="w-100">
+            </nz-range-picker>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+
+    <!-- Bảng danh sách công nợ -->
+    <div class="table-container table-responsive">
+      <nz-spin [nzSpinning]="isLoading">
+        <nz-table 
+          #debtTable 
+          [nzData]="debts" 
+          nzBordered 
+          [nzScroll]="{ x: 'max-content' }"
+          [nzPageSize]="pageSize"
+          [nzTotal]="total"
+          [nzPageIndex]="pageIndex"
+          (nzPageIndexChange)="onPageChange($event)"
+          (nzPageSizeChange)="onPageSizeChange($event)"
+          nzShowSizeChanger
+          [nzShowQuickJumper]="true"
+          [nzSize]="'small'">
+          <thead>
+            <tr>
+              <th nzWidth="120px">Mã hóa đơn</th>
+              <th nzWidth="150px">Khách hàng</th>
+              <th nzWidth="100px">Số phòng</th>
+              <th nzWidth="120px">Ngày tạo công nợ</th>
+              <th nzWidth="120px">Số tiền công nợ</th>
+              <th nzWidth="120px">Đã thanh toán</th>
+              <th nzWidth="120px">Còn lại</th>
+              <th nzWidth="120px">Trạng thái</th>
+              <th nzWidth="150px">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let debt of debts">
+              <td>{{ debt.invoiceNumber }}</td>
+              <td>
+                <div>{{ debt.customerName }}</div>
+                <small class="text-muted" *ngIf="debt.customerPhone">{{ debt.customerPhone }}</small>
+              </td>
+              <td>{{ debt.roomNumber }}</td>
+              <td>{{ formatDate(debt.debtDate) }}</td>
+              <td>{{ formatCurrency(debt.debtAmount) }}</td>
+              <td>{{ formatCurrency(debt.paidAmount) }}</td>
+              <td><strong>{{ formatCurrency(debt.remainingAmount) }}</strong></td>
+              <td>
+                <nz-tag [nzColor]="getStatusColor(debt.status)">
+                  {{ getStatusLabel(debt.status) }}
+                </nz-tag>
+              </td>
+              <td>
+                <nz-button-group>
+                  <button nz-button nzSize="small" nzType="primary" 
+                          (click)="openSettleModal(debt)" 
+                          *ngIf="canSettle(debt)"
+                          nz-tooltip nzTooltipTitle="Thanh toán">
+                    <i nz-icon nzType="dollar"></i>
+                  </button>
+                  <button nz-button nzSize="small" nzType="text" nzDanger
+                          *ngIf="canDelete(debt)"
+                          nz-popconfirm 
+                          nzPopconfirmTitle="Bạn có chắc muốn xóa?" 
+                          (nzOnConfirm)="deleteDebt(debt)"
+                          nz-tooltip nzTooltipTitle="Xóa">
+                    <i nz-icon nzType="delete"></i>
+                  </button>
+                </nz-button-group>
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </nz-spin>
+    </div>
+
+    <!-- Modal thanh toán công nợ -->
+    <nz-modal
+      [(nzVisible)]="isSettleModalVisible"
+      nzTitle="Thanh toán công nợ"
+      (nzOnCancel)="closeSettleModal()"
+      [nzFooter]="null"
+      [nzWidth]="600">
+      <div *nzModalContent>
+        <div class="mb-3" *ngIf="selectedDebt">
+          <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
+            <nz-descriptions-item nzTitle="Khách hàng">{{ selectedDebt.customerName }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Số phòng">{{ selectedDebt.roomNumber }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Mã hóa đơn">{{ selectedDebt.invoiceNumber }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Số tiền công nợ">{{ formatCurrency(selectedDebt.debtAmount) }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Đã thanh toán">{{ formatCurrency(selectedDebt.paidAmount) }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Còn lại">
+              <strong>{{ formatCurrency(selectedDebt.remainingAmount) }}</strong>
+            </nz-descriptions-item>
+          </nz-descriptions>
+        </div>
+
+        <form nz-form [formGroup]="settleForm">
+          <nz-form-item>
+            <nz-form-label nzRequired>Số tiền thanh toán</nz-form-label>
+            <nz-form-control nzErrorTip="Vui lòng nhập số tiền hợp lệ">
+              <nz-input-number 
+                formControlName="amount" 
+                [nzMin]="0.01"
+                [nzMax]="selectedDebt?.remainingAmount || 0"
+                [nzStep]="10000"
+                [nzFormatter]="formatterVND"
+                [nzParser]="parserVND"
+                class="w-100">
+              </nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label nzRequired>Phương thức thanh toán</nz-form-label>
+            <nz-form-control>
+              <nz-select formControlName="paymentMethod" class="w-100">
+                <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>Ghi chú</nz-form-label>
+            <nz-form-control>
+              <textarea nz-input formControlName="notes" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
+            </nz-form-control>
+          </nz-form-item>
+
+          <div class="text-right mt-3">
+            <button nz-button nzType="default" (click)="closeSettleModal()" [disabled]="isSettling">
+              Hủy
+            </button>
+            <button nz-button nzType="primary" (click)="handleSettle()" [nzLoading]="isSettling" class="ml-2">
+              Xác nhận thanh toán
+            </button>
+          </div>
+        </form>
+      </div>
+    </nz-modal>
+  </nz-card>
+</div>
+

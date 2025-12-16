@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { Service, ServiceOrder } from '../interfaces/service';
 
 export interface ServiceCheckoutResponse {
@@ -160,6 +161,35 @@ export class ServiceService {
     return this.http.get<{ orders: ServiceOrder[], totalPages: number, currentPage: number }>(
       `${this.apiUrl}/orders/hotel`, 
       { params }
+    );
+  }
+
+  /**
+   * Lấy tất cả đơn hàng theo khách sạn (không phân trang) để thống kê
+   */
+  getAllServiceOrdersForStatistics(
+    hotelId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Observable<any[]> {
+    let params = new HttpParams()
+      .set('hotelId', hotelId)
+      .set('page', '1')
+      .set('limit', '10000'); // Lấy tất cả
+    
+    if (startDate) {
+      params = params.set('startDate', startDate.toISOString());
+    }
+    
+    if (endDate) {
+      params = params.set('endDate', endDate.toISOString());
+    }
+    
+    return this.http.get<{ orders: any[], totalPages: number, currentPage: number }>(
+      `${this.apiUrl}/orders/hotel`, 
+      { params }
+    ).pipe(
+      map(response => response.orders || [])
     );
   }
 

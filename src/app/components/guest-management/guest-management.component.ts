@@ -10,6 +10,8 @@ import { AuthService, PermissionRules } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import * as XLSX from 'xlsx';
+import { format } from 'date-fns';
 
 @Component({
   selector: 'app-guest-management',
@@ -17,7 +19,7 @@ import { NzModalService } from 'ng-zorro-antd/modal';
   styleUrls: ['./guest-management.component.css']
 })
 export class GuestManagementComponent implements OnInit {
-  guestForm: FormGroup;
+  guestForm!: FormGroup;
   guests: Guest[] = [];
   hotels: Hotel[] = [];
   rooms: Room[] = [];
@@ -28,6 +30,7 @@ export class GuestManagementComponent implements OnInit {
   currentUser: User | null = null;
   permissions: PermissionRules | null = null;
   isLoading = false;
+  isExporting = false;
   total = 0;
   pageIndex = 1;
   pageSize = 20;
@@ -36,7 +39,7 @@ export class GuestManagementComponent implements OnInit {
   isAssignModalVisible = false;
   isBookingModalVisible = false;
   selectedRoomId: string | null = null;
-  bookingForm: FormGroup;
+  bookingForm!: FormGroup;
 
   // Lấy token xác thực
   get authToken(): string {
@@ -56,8 +59,7 @@ export class GuestManagementComponent implements OnInit {
       hotelId: [null, Validators.required],
       guestType: ['regular', Validators.required],
       personalInfo: this.fb.group({
-        firstName: ['', Validators.required],
-        lastName: ['', Validators.required],
+        fullName: ['', Validators.required],
         dateOfBirth: [null],
         gender: [''],
         nationality: [''],
@@ -67,7 +69,7 @@ export class GuestManagementComponent implements OnInit {
       }),
       contactInfo: this.fb.group({
         email: ['', [Validators.email]],
-        phone: ['', Validators.required],
+        phone: [''],
         alternativePhone: [''],
         address: this.fb.group({
           street: [''],
@@ -306,12 +308,13 @@ export class GuestManagementComponent implements OnInit {
   openCreateModal(): void {
     this.editId = null;
     this.selectedGuest = null;
+    
+    // Reset form với đầy đủ cấu trúc nested
     this.guestForm.reset({
       hotelId: this.selectedHotelId,
       guestType: 'regular',
       personalInfo: {
-        firstName: '',
-        lastName: '',
+        fullName: '',
         dateOfBirth: null,
         gender: '',
         nationality: '',
@@ -337,8 +340,51 @@ export class GuestManagementComponent implements OnInit {
         specialRequests: [],
         dietaryRestrictions: []
       },
-      notes: ''
+      notes: '',
+      isGroupLeader: false,
+      groupSize: 1
     });
+    
+    // Đảm bảo các nested FormGroup được reset đúng cách
+    (this.guestForm.get('personalInfo') as FormGroup)?.reset({
+      firstName: '',
+      lastName: '',
+      dateOfBirth: null,
+      gender: '',
+      nationality: '',
+      idType: 'id_card',
+      idNumber: '',
+      idExpiryDate: null
+    });
+    
+    (this.guestForm.get('contactInfo') as FormGroup)?.reset({
+      email: '',
+      phone: '',
+      alternativePhone: '',
+      address: {
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        postalCode: ''
+      }
+    });
+    
+    (this.guestForm.get('contactInfo.address') as FormGroup)?.reset({
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      postalCode: ''
+    });
+    
+    (this.guestForm.get('preferences') as FormGroup)?.reset({
+      roomType: '',
+      floor: '',
+      specialRequests: [],
+      dietaryRestrictions: []
+    });
+    
     this.isModalVisible = true;
   }
 
@@ -353,12 +399,17 @@ export class GuestManagementComponent implements OnInit {
     
     const hotelId = typeof guest.hotelId === 'string' ? guest.hotelId : guest.hotelId?._id;
     
+    // Gộp firstName và lastName thành fullName
+    const fullName = guest.personalInfo?.fullName || 
+                     (guest.personalInfo?.firstName && guest.personalInfo?.lastName 
+                       ? `${guest.personalInfo.firstName} ${guest.personalInfo.lastName}`.trim()
+                       : guest.personalInfo?.firstName || guest.personalInfo?.lastName || '');
+    
     this.guestForm.patchValue({
       hotelId: hotelId,
       guestType: guest.guestType || 'regular',
       personalInfo: {
-        firstName: guest.personalInfo?.firstName || '',
-        lastName: guest.personalInfo?.lastName || '',
+        fullName: fullName,
         dateOfBirth: guest.personalInfo?.dateOfBirth ? new Date(guest.personalInfo.dateOfBirth) : null,
         gender: guest.personalInfo?.gender || '',
         nationality: guest.personalInfo?.nationality || '',
@@ -394,66 +445,199 @@ export class GuestManagementComponent implements OnInit {
     this.isModalVisible = false;
     this.editId = null;
     this.selectedGuest = null;
-    this.guestForm.reset();
+    
+    // Reset form với đầy đủ cấu trúc nested để tránh lỗi
+    this.guestForm.reset({
+      hotelId: null,
+      guestType: 'regular',
+      personalInfo: {
+        fullName: '',
+        dateOfBirth: null,
+        gender: '',
+        nationality: '',
+        idType: 'id_card',
+        idNumber: '',
+        idExpiryDate: null
+      },
+      contactInfo: {
+        email: '',
+        phone: '',
+        alternativePhone: '',
+        address: {
+          street: '',
+          city: '',
+          state: '',
+          country: '',
+          postalCode: ''
+        }
+      },
+      preferences: {
+        roomType: '',
+        floor: '',
+        specialRequests: [],
+        dietaryRestrictions: []
+      },
+      notes: '',
+      isGroupLeader: false,
+      groupSize: 1
+    });
+    
+    // Đảm bảo các nested FormGroup được reset đúng cách
+    (this.guestForm.get('personalInfo') as FormGroup)?.reset({
+      firstName: '',
+      lastName: '',
+      dateOfBirth: null,
+      gender: '',
+      nationality: '',
+      idType: 'id_card',
+      idNumber: '',
+      idExpiryDate: null
+    });
+    
+    (this.guestForm.get('contactInfo') as FormGroup)?.reset({
+      email: '',
+      phone: '',
+      alternativePhone: '',
+      address: {
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        postalCode: ''
+      }
+    });
+    
+    (this.guestForm.get('contactInfo.address') as FormGroup)?.reset({
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      postalCode: ''
+    });
+    
+    (this.guestForm.get('preferences') as FormGroup)?.reset({
+      roomType: '',
+      floor: '',
+      specialRequests: [],
+      dietaryRestrictions: []
+    });
   }
 
   handleOk(): void {
-    if (this.guestForm.valid) {
-      this.isLoading = true;
-      const formValue = this.guestForm.value;
-
-      const guestData: Partial<Guest> = {
-        hotelId: formValue.hotelId,
-        guestType: formValue.guestType,
-        personalInfo: formValue.personalInfo,
-        contactInfo: formValue.contactInfo,
-        preferences: formValue.preferences,
-        notes: formValue.notes
-      };
-
-      // Thêm thông tin khách đoàn nếu là group
-      if (formValue.guestType === 'group') {
-        guestData.isGroupLeader = true;
-        guestData.groupSize = formValue.groupSize || 1;
+    // Validate form và nested FormGroups
+    this.markFormGroupTouched(this.guestForm);
+    
+    if (!this.guestForm.valid) {
+      // Hiển thị lỗi validation
+      const errors: string[] = [];
+      
+      if (this.guestForm.get('hotelId')?.invalid) {
+        errors.push('Vui lòng chọn khách sạn');
       }
-
-      if (this.editId) {
-        // Update
-        this.guestsService.updateGuest(this.editId, guestData).subscribe({
-          next: (response) => {
-            this.message.success(response.message || 'Cập nhật khách thành công');
-            this.loadGuests();
-            this.handleCancel();
-            this.isLoading = false;
-          },
-          error: (error) => {
-            this.message.error(error.error?.message || 'Cập nhật khách thất bại');
-            this.isLoading = false;
-          }
-        });
+      if (this.guestForm.get('guestType')?.invalid) {
+        errors.push('Vui lòng chọn loại khách');
+      }
+      
+      const personalInfo = this.guestForm.get('personalInfo') as FormGroup;
+      if (personalInfo) {
+        if (personalInfo.get('fullName')?.invalid) {
+          errors.push('Vui lòng nhập họ và tên');
+        }
+      }
+      
+      const contactInfo = this.guestForm.get('contactInfo') as FormGroup;
+      if (contactInfo) {
+        if (contactInfo.get('email')?.invalid) {
+          errors.push('Email không hợp lệ');
+        }
+      }
+      
+      if (errors.length > 0) {
+        this.message.warning(errors[0]);
       } else {
-        // Create
-        this.guestsService.createGuest(guestData).subscribe({
-          next: (response) => {
-            this.message.success(response.message || 'Tạo khách thành công');
-            this.loadGuests();
-            this.handleCancel();
-            this.isLoading = false;
-          },
-          error: (error) => {
-            this.message.error(error.error?.message || 'Tạo khách thất bại');
-            this.isLoading = false;
-          }
-        });
+        this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc');
       }
+      return;
+    }
+
+    this.isLoading = true;
+    const formValue = this.guestForm.value;
+
+    // Chuẩn bị dữ liệu gửi lên backend
+    const guestData: Partial<Guest> = {
+      hotelId: formValue.hotelId,
+      guestType: formValue.guestType || 'regular',
+      personalInfo: {
+        fullName: formValue.personalInfo?.fullName || '',
+        dateOfBirth: formValue.personalInfo?.dateOfBirth || null,
+        gender: formValue.personalInfo?.gender || '',
+        nationality: formValue.personalInfo?.nationality || '',
+        idType: formValue.personalInfo?.idType || 'id_card',
+        idNumber: formValue.personalInfo?.idNumber || '',
+        idExpiryDate: formValue.personalInfo?.idExpiryDate || null
+      },
+      contactInfo: {
+        email: formValue.contactInfo?.email || '',
+        phone: formValue.contactInfo?.phone || '',
+        alternativePhone: formValue.contactInfo?.alternativePhone || '',
+        address: formValue.contactInfo?.address || {}
+      },
+      preferences: formValue.preferences || {},
+      notes: formValue.notes || ''
+    };
+
+    // Thêm thông tin khách đoàn nếu là group
+    if (formValue.guestType === 'group') {
+      guestData.isGroupLeader = true;
+      guestData.groupSize = formValue.groupSize || 1;
+    }
+
+    if (this.editId) {
+      // Update
+      this.guestsService.updateGuest(this.editId, guestData).subscribe({
+        next: (response) => {
+          this.message.success(response.message || 'Cập nhật khách thành công');
+          this.loadGuests();
+          this.handleCancel();
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error updating guest:', error);
+          const errorMessage = error.error?.message || error.message || 'Cập nhật khách thất bại';
+          this.message.error(errorMessage);
+          this.isLoading = false;
+        }
+      });
     } else {
-      Object.values(this.guestForm.controls).forEach(control => {
-        if (control.invalid) {
-          control.markAsDirty();
-          control.updateValueAndValidity({ onlySelf: true });
+      // Create
+      this.guestsService.createGuest(guestData).subscribe({
+        next: (response) => {
+          this.message.success(response.message || 'Tạo khách thành công');
+          this.loadGuests();
+          this.handleCancel();
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error creating guest:', error);
+          const errorMessage = error.error?.message || error.message || 'Tạo khách thất bại';
+          this.message.error(errorMessage);
+          this.isLoading = false;
         }
       });
     }
+  }
+
+  // Helper method để mark tất cả controls trong FormGroup là touched
+  private markFormGroupTouched(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      if (control) {
+        control.markAsTouched();
+        if (control instanceof FormGroup) {
+          this.markFormGroupTouched(control);
+        }
+      }
+    });
   }
 
   deleteGuest(guest: Guest): void {
@@ -512,20 +696,51 @@ export class GuestManagementComponent implements OnInit {
     }
 
     this.isLoading = true;
-    this.guestsService.assignGuestToRoom(this.selectedGuest._id!, {
-      guestId: this.selectedGuest._id!,
-      roomId: this.selectedRoomId,
-      checkInTime: new Date()
+    
+    // Tự động cập nhật thông tin khách vào phòng (check-in luôn)
+    const guestInfo = {
+      name: this.getGuestName(this.selectedGuest),
+      phone: this.selectedGuest.contactInfo?.phone || '',
+      email: this.selectedGuest.contactInfo?.email || '',
+      idNumber: this.selectedGuest.personalInfo?.idNumber || '',
+      address: this.selectedGuest.contactInfo?.address?.street || 
+               (this.selectedGuest.contactInfo?.address ? 
+                 `${this.selectedGuest.contactInfo.address.street || ''}, ${this.selectedGuest.contactInfo.address.city || ''}, ${this.selectedGuest.contactInfo.address.state || ''}`.replace(/^,\s*|,\s*$/g, '') : ''),
+      guestSource: 'guest_management'
+    };
+    
+    // Gọi API để check-in khách vào phòng
+    this.roomsService.checkInRoom(this.selectedRoomId, {
+      guestInfo: guestInfo,
+      checkinTime: new Date(),
+      rateType: 'hourly' // Mặc định theo giờ, có thể để user chọn sau
     }).subscribe({
       next: (response) => {
-        this.message.success('Thông tin khách đã được chuẩn bị. Vui lòng thực hiện check-in trong quản lý phòng.');
+        this.message.success(`Đã assign và check-in khách "${this.getGuestName(this.selectedGuest!)}" vào phòng thành công`);
         this.handleAssignCancel();
         this.isLoading = false;
-        // Có thể mở modal check-in ở đây nếu cần
+        // Reload danh sách phòng để cập nhật trạng thái
+        this.loadRooms();
       },
       error: (error) => {
-        this.message.error(error.error?.message || 'Assign khách vào phòng thất bại');
-        this.isLoading = false;
+        // Nếu phòng đã có khách, vẫn cập nhật thông tin khách vào phòng
+        if (error.error?.message?.includes('đã có khách') || error.error?.message?.includes('occupied')) {
+          // Cập nhật thông tin khách vào phòng đã occupied
+          this.roomsService.updateRoomCheckinInfo(this.selectedRoomId!, guestInfo, 0).subscribe({
+            next: () => {
+              this.message.success(`Đã cập nhật thông tin khách "${this.getGuestName(this.selectedGuest!)}" vào phòng thành công`);
+              this.handleAssignCancel();
+              this.isLoading = false;
+            },
+            error: (err) => {
+              this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
+              this.isLoading = false;
+            }
+          });
+        } else {
+          this.message.error(error.error?.message || 'Assign khách vào phòng thất bại');
+          this.isLoading = false;
+        }
       }
     });
   }
@@ -628,6 +843,39 @@ export class GuestManagementComponent implements OnInit {
     return hotel?.name || 'N/A';
   }
 
+  getGenderLabel(gender?: string): string {
+    switch (gender) {
+      case 'male': return 'Nam';
+      case 'female': return 'Nữ';
+      case 'other': return 'Khác';
+      default: return '-';
+    }
+  }
+
+  formatDate(date: Date | string | null | undefined): string {
+    if (!date) return '-';
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return '-';
+      return format(dateObj, 'dd/MM/yyyy');
+    } catch (e) {
+      return '-';
+    }
+  }
+
+  getAddress(guest: Guest): string {
+    const address = guest.contactInfo?.address;
+    if (!address) return '-';
+    
+    const parts: string[] = [];
+    if (address.street) parts.push(address.street);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.country) parts.push(address.country);
+    
+    return parts.length > 0 ? parts.join(', ') : '-';
+  }
+
   onSearch(): void {
     this.pageIndex = 1;
     this.loadGuests();
@@ -644,24 +892,146 @@ export class GuestManagementComponent implements OnInit {
     this.loadGuests();
   }
 
+  // Getter methods để truy cập nested FormGroups (tránh lỗi 'as' trong template)
+  get personalInfoForm(): FormGroup {
+    return this.guestForm.get('personalInfo') as FormGroup;
+  }
+
+  get contactInfoForm(): FormGroup {
+    return this.guestForm.get('contactInfo') as FormGroup;
+  }
+
+  get addressForm(): FormGroup {
+    const contactInfo = this.guestForm.get('contactInfo') as FormGroup;
+    return contactInfo?.get('address') as FormGroup;
+  }
+
+  // Xử lý khi OCR scan hoàn thành
+  onOCRScanComplete(ocrData: any): void {
+    if (!ocrData) return;
+    
+    // OCR scanner component đã tự động điền vào form thông qua Input bindings
+    // Nhưng có thể cần xử lý thêm logic nếu cần
+    this.message.success('Đã tự động điền thông tin từ OCR. Vui lòng kiểm tra và chỉnh sửa nếu cần.');
+  }
+
   // Disable dates trước hôm nay cho check-in
   disabledStartDate = (current: Date): boolean => {
+    if (!current) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return current && current < today;
+    return current < today;
   };
 
   // Disable dates trước check-in date cho check-out
   disabledEndDate = (current: Date): boolean => {
-    const checkInDate = this.bookingForm?.get('checkInDate')?.value;
+    if (!current) return false;
+    if (!this.bookingForm) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return current < today;
+    }
+    const checkInDate = this.bookingForm.get('checkInDate')?.value;
     if (!checkInDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      return current && current < today;
+      return current < today;
     }
-    const checkIn = new Date(checkInDate);
-    checkIn.setHours(0, 0, 0, 0);
-    return current && current < checkIn;
+    try {
+      const checkIn = new Date(checkInDate);
+      checkIn.setHours(0, 0, 0, 0);
+      return current < checkIn;
+    } catch (e) {
+      return false;
+    }
   };
+
+  // Xuất Excel danh sách khách
+  exportToExcel(): void {
+    this.isExporting = true;
+    
+    // Lấy tất cả khách (không phân trang) để xuất Excel
+    const query: GuestQuery = {
+      page: 1,
+      limit: 10000, // Lấy tất cả
+      hotelId: this.selectedHotelId || undefined,
+      guestType: this.selectedGuestType || undefined,
+      search: this.searchValue || undefined
+    };
+
+    this.guestsService.getGuests(query).subscribe({
+      next: (response) => {
+        const allGuests = response.guests || [];
+        
+        if (allGuests.length === 0) {
+          this.message.warning('Không có dữ liệu để xuất Excel');
+          this.isExporting = false;
+          return;
+        }
+
+        // Chuẩn bị dữ liệu cho Excel
+        const excelData = allGuests.map(guest => ({
+          'Tên khách': this.getGuestName(guest),
+          'Giới tính': this.getGenderLabel(guest.personalInfo?.gender),
+          'Ngày sinh': this.formatDate(guest.personalInfo?.dateOfBirth),
+          'Loại khách': this.getGuestTypeLabel(guest.guestType),
+          'CMND/CCCD': guest.personalInfo?.idNumber || '',
+          'Số điện thoại': guest.contactInfo?.phone || '',
+          'Số điện thoại dự phòng': guest.contactInfo?.alternativePhone || '',
+          'Email': guest.contactInfo?.email || '',
+          'Địa chỉ': this.getAddress(guest),
+          'Khách sạn': this.getHotelName(guest),
+          'Quốc tịch': guest.personalInfo?.nationality || '',
+          'Loại giấy tờ': guest.personalInfo?.idType === 'id_card' ? 'CMND/CCCD' : 
+                         guest.personalInfo?.idType === 'passport' ? 'Hộ chiếu' :
+                         guest.personalInfo?.idType === 'driver_license' ? 'Bằng lái xe' : '',
+          'Ngày hết hạn': this.formatDate(guest.personalInfo?.idExpiryDate),
+          'Điểm tích lũy': guest.loyaltyPoints || 0,
+          'Ghi chú': guest.notes || ''
+        }));
+
+        // Tạo worksheet
+        const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(excelData);
+        
+        // Set column widths
+        const colWidths = [
+          { wch: 25 }, // Tên khách
+          { wch: 10 }, // Giới tính
+          { wch: 12 }, // Ngày sinh
+          { wch: 12 }, // Loại khách
+          { wch: 15 }, // CMND/CCCD
+          { wch: 15 }, // Số điện thoại
+          { wch: 15 }, // Số điện thoại dự phòng
+          { wch: 25 }, // Email
+          { wch: 40 }, // Địa chỉ
+          { wch: 20 }, // Khách sạn
+          { wch: 15 }, // Quốc tịch
+          { wch: 15 }, // Loại giấy tờ
+          { wch: 12 }, // Ngày hết hạn
+          { wch: 12 }, // Điểm tích lũy
+          { wch: 30 }  // Ghi chú
+        ];
+        worksheet['!cols'] = colWidths;
+
+        const workbook: XLSX.WorkBook = { 
+          Sheets: { 'Danh sách khách': worksheet }, 
+          SheetNames: ['Danh sách khách'] 
+        };
+
+        // Tạo tên file
+        const dateStr = format(new Date(), 'ddMMyyyy_HHmmss');
+        const fileName = `Danh_sach_khach_${dateStr}`;
+
+        // Xuất file
+        XLSX.writeFile(workbook, `${fileName}.xlsx`);
+        this.message.success(`Đã xuất ${allGuests.length} khách hàng ra file Excel thành công!`);
+        this.isExporting = false;
+      },
+      error: (error) => {
+        this.message.error(error.error?.message || 'Lỗi khi xuất file Excel');
+        this.isExporting = false;
+      }
+    });
+  }
 }
 

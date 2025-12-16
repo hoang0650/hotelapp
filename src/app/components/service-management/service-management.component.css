@@ -2,6 +2,18 @@
   padding: 20px;
 }
 
+@media (max-width: 768px) {
+  .container {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .container {
+    padding: 8px;
+  }
+}
+
 .w-100 {
   width: 100%;
 }
@@ -16,6 +28,24 @@
 
 .ml-2 {
   margin-left: 8px;
+}
+
+.action-btn {
+  margin-bottom: 8px;
+}
+
+.action-btn .btn-text {
+  margin-left: 8px;
+}
+
+@media (max-width: 576px) {
+  .action-btn {
+    width: 100%;
+  }
+  
+  .action-btn .btn-text {
+    margin-left: 4px;
+  }
 }
 
 nz-select {
@@ -40,6 +70,19 @@ h2 {
   margin-bottom: 24px;
   color: #1890ff;
   font-weight: 500;
+  font-size: 24px;
+}
+
+@media (max-width: 768px) {
+  h2 {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 576px) {
+  h2 {
+    font-size: 18px;
+  }
 }
 
 h3 {
@@ -58,4 +101,79 @@ button[nz-button] {
 
 nz-tag {
   margin-right: 0;
+}
+
+/* Responsive modal */
+::ng-deep .service-statistics-modal {
+  max-width: 95vw !important;
+}
+
+@media (max-width: 1200px) {
+  ::ng-deep .service-statistics-modal .ant-modal {
+    width: 95% !important;
+    max-width: 95% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  ::ng-deep .service-statistics-modal .ant-modal {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 0 auto;
+  }
+  
+  ::ng-deep .service-statistics-modal .ant-modal-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  ::ng-deep .service-statistics-modal .ant-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0;
+    top: 0;
+    padding-bottom: 0;
+  }
+  
+  ::ng-deep .service-statistics-modal .ant-modal-content {
+    padding: 12px;
+    border-radius: 0;
+  }
+  
+  ::ng-deep .service-statistics-modal .ant-modal-header {
+    padding: 12px 16px;
+  }
+  
+  ::ng-deep .service-statistics-modal .ant-modal-body {
+    padding: 12px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+  
+  ::ng-deep .service-statistics-modal .ant-modal-footer {
+    padding: 8px 12px;
+  }
+}
+
+.statistics-content {
+  padding: 0;
+}
+
+.statistics-content ::ng-deep .ant-statistic-title {
+  font-size: 14px;
+}
+
+.statistics-content ::ng-deep .ant-statistic-content {
+  font-size: 20px;
+}
+
+@media (max-width: 576px) {
+  .statistics-content ::ng-deep .ant-statistic-title {
+    font-size: 12px;
+  }
+  
+  .statistics-content ::ng-deep .ant-statistic-content {
+    font-size: 16px;
+  }
 } 

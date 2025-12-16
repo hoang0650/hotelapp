@@ -43,6 +43,7 @@ import { MaintenanceComponent } from './components/maintenance/maintenance.compo
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
 import { ShiftHandoverHistoryComponent } from './components/shift-handover-history/shift-handover-history.component';
+import { DebtManagementComponent } from './components/debt-management/debt-management.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -67,6 +68,7 @@ const routes: Routes = [
       { path: 'room-management', component: RoomManagementComponent, canActivate: [PermissionGuard] },
       { path: 'service-management', component: ServiceManagementComponent, canActivate: [PermissionGuard] },
       { path: 'guest-management', component: GuestManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'debt-management', component: DebtManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
       {
         path: 'users-management',

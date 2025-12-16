@@ -129,6 +129,23 @@ export class AdminComponent implements OnInit {
            this.authService.isHotelManager();
   }
 
+  // Guest Management - superadmin, admin, business, hotel, staff
+  canAccessGuestManagement(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin() || 
+           this.authService.isBusiness() || 
+           this.authService.isHotelManager() ||
+           this.authService.isStaff();
+  }
+
+  // Debt Management - superadmin, admin, business, hotel
+  canAccessDebtManagement(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin() || 
+           this.authService.isBusiness() || 
+           this.authService.isHotelManager();
+  }
+
   // OTA Management - superadmin, admin, business, hotel
   canAccessOTAManagement(): boolean {
     return this.authService.isSuperAdmin() || 

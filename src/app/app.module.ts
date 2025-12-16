@@ -70,6 +70,7 @@ import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzSpaceModule } from 'ng-zorro-antd/space';
+import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzResultModule } from 'ng-zorro-antd/result';
 
@@ -101,6 +102,9 @@ import { BusinessSignupComponent } from './components/business-signup/business-s
 import { RoomServiceComponent } from './components/room-service/room-service.component';
 import { ServiceManagementComponent } from './components/service-management/service-management.component';
 import { GuestManagementComponent } from './components/guest-management/guest-management.component';
+import { GuestSaveModalComponent } from './components/guest-save-modal/guest-save-modal.component';
+import { OcrScannerComponent } from './components/ocr-scanner/ocr-scanner.component';
+import { DebtManagementComponent } from './components/debt-management/debt-management.component';
 import { InvoiceModalComponent } from './components/invoice-modal/invoice-modal.component';
 import { UserManagementComponent } from './components/user-management/user-management.component';
 import { UserFormModalComponent } from './components/user-management/user-form-modal/user-form-modal.component';
@@ -193,6 +197,9 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         RoomServiceComponent,
         ServiceManagementComponent,
         GuestManagementComponent,
+        GuestSaveModalComponent,
+        OcrScannerComponent,
+        DebtManagementComponent,
         InvoiceModalComponent,
         UserManagementComponent,
         UserFormModalComponent,
@@ -265,6 +272,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         NzSpaceModule,
         NzPageHeaderModule,
         NzResultModule,
+        NzProgressModule,
         BrowserAnimationsModule,
         PricingManagementModule,
         TranslateModule.forRoot({

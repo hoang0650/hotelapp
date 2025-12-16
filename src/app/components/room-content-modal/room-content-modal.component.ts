@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { ServiceService } from '../../services/service.service';
 import { GuestsService } from '../../services/guests.service';
+import { GuestSaveModalComponent } from '../guest-save-modal/guest-save-modal.component';
 import { BusinessService } from '../../services/business.service';
 import { TuyaService } from '../../services/tuya.service';
 import { SePayService, SePayPaymentData } from '../../services/sepay.service';
@@ -1473,9 +1474,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     console.log('[processCheckoutWithPrice] Final roomTotal:', validRoomTotal);
     // Chuẩn bị dữ liệu checkout
     const paymentMethod = this.checkOutForm.get('paymentMethod')?.value;
+    const createDebt = this.checkOutForm.get('createDebt')?.value || false;
     const checkoutData = {
       status: 'dirty',
-      paymentStatus: paymentMethod === 'transfer' ? 'pending' : 'paid', // Pending nếu chuyển khoản, paid nếu tiền mặt/thẻ
+      paymentStatus: createDebt ? 'pending' : (paymentMethod === 'transfer' ? 'pending' : 'paid'), // Pending nếu đưa vào công nợ hoặc chuyển khoản, paid nếu tiền mặt/thẻ
       checkoutTime: currentTime,
       roomTotal: validRoomTotal, // Gửi validRoomTotal đã được validate
       rateType: rateType, // Gửi rateType đã được tính toán từ backend
@@ -1487,6 +1489,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       notes: this.checkOutForm.get('notes')?.value,
       reason: this.checkOutForm.get('reason')?.value,
       services: this.selectedServices,
+      createDebt: createDebt, // Flag để đưa vào công nợ
       // Gửi thông tin khách hàng để backend sử dụng
       customerName: customerName,
       customerPhone: customerPhone && customerPhone !== 'N/A' ? customerPhone : undefined,
@@ -2872,7 +2875,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       additionalCharges: [0],
       discount: [0],
       reason: [''],
-      advancePayment: [0, [Validators.min(0)]]
+      advancePayment: [0, [Validators.min(0)]],
+      createDebt: [false] // Checkbox để đưa vào công nợ
     });
     
     // Lắng nghe sự thay đổi của rateType để tính lại giá
@@ -2904,7 +2908,90 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     });
   }
   
-  // Lưu thông tin khách và tiền đặt trước
+  // Xử lý khi OCR scan hoàn thành
+  onOCRScanComplete(ocrData: any): void {
+    if (!ocrData || !this.checkOutForm) return;
+    
+    const guestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
+    if (!guestInfoFormGroup) return;
+    
+    // Điền thông tin từ OCR vào form
+    if (ocrData.idNumber) {
+      guestInfoFormGroup.patchValue({ idNumber: ocrData.idNumber });
+    }
+    
+    // Điền fullName
+    if (ocrData.fullName) {
+      guestInfoFormGroup.patchValue({ name: ocrData.fullName });
+    }
+    
+    // Fallback: nếu có firstName/lastName từ OCR cũ
+    if (!ocrData.fullName && (ocrData.firstName || ocrData.lastName)) {
+      const fullName = `${ocrData.lastName || ''} ${ocrData.firstName || ''}`.trim();
+      if (fullName) {
+        guestInfoFormGroup.patchValue({ name: fullName });
+      }
+    }
+    
+    if (ocrData.phone) {
+      guestInfoFormGroup.patchValue({ phone: ocrData.phone });
+    }
+    
+    if (ocrData.address) {
+      guestInfoFormGroup.patchValue({ address: ocrData.address });
+    }
+    
+    this.message.success('Đã tự động điền thông tin từ OCR. Vui lòng kiểm tra và chỉnh sửa nếu cần.');
+  }
+
+  // Mở modal để lưu thông tin khách vào guest-management
+  openGuestSaveModal(): void {
+    if (!this.roomData || !this.roomData._id) {
+      this.message.error('Không tìm thấy thông tin phòng.');
+      return;
+    }
+    
+    // Lấy thông tin khách từ form nếu có
+    let guestInfo: any = null;
+    if (this.checkOutForm) {
+      const guestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
+      if (guestInfoFormGroup) {
+        guestInfo = guestInfoFormGroup.disabled ? guestInfoFormGroup.getRawValue() : guestInfoFormGroup.value;
+      }
+    }
+    
+    // Mở modal GuestSaveModalComponent
+    const modalRef = this.modalService.create({
+      nzTitle: 'Lưu thông tin khách',
+      nzContent: GuestSaveModalComponent,
+      nzFooter: null,
+      nzWidth: 900,
+      nzMaskClosable: false,
+      nzData: {
+        room: this.roomData,
+        guestInfo: guestInfo
+      }
+    });
+    
+    modalRef.afterClose.subscribe((result) => {
+      if (result && result.success) {
+        this.message.success('Đã lưu và assign khách vào phòng thành công');
+        // Reload room data
+        this.roomsService.getRoomById(this.roomData._id).subscribe({
+          next: (updatedRoom) => {
+            this.roomData = updatedRoom;
+            // Reload lại dữ liệu phòng
+            this.ngOnInit();
+          },
+          error: (error) => {
+            console.error('Error reloading room:', error);
+          }
+        });
+      }
+    });
+  }
+
+  // Lưu thông tin khách và tiền đặt trước (giữ lại để tương thích)
   saveGuestInfo(): void {
     if (!this.checkOutForm) {
       console.error('checkOutForm is not initialized');

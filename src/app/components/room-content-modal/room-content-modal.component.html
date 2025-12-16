@@ -244,6 +244,15 @@
     
     <nz-divider nzText="Thông tin khách hàng"></nz-divider>
     
+    <!-- OCR Scanner -->
+    <nz-card nzTitle="Quét CCCD/GPLX (OCR)" [nzBordered]="false" class="mb-3">
+      <app-ocr-scanner
+        [showPreview]="true"
+        buttonText="Chọn ảnh CCCD/GPLX để quét"
+        (scanComplete)="onOCRScanComplete($event)">
+      </app-ocr-scanner>
+    </nz-card>
+    
     <form nz-form [formGroup]="checkOutForm">
       <div formGroupName="guestInfo">
         <nz-form-item>
@@ -493,6 +502,17 @@
           <nz-select formControlName="paymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
             <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label"></nz-option>
           </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-control [nzSpan]="16" [nzOffset]="8">
+          <label nz-checkbox formControlName="createDebt">
+            <span>Đưa vào công nợ (thanh toán sau)</span>
+          </label>
+          <div class="text-muted" style="font-size: 12px; margin-top: 4px;">
+            Khi chọn tùy chọn này, hóa đơn sẽ được đưa vào công nợ và khách hàng có thể thanh toán sau.
+          </div>
         </nz-form-control>
       </nz-form-item>
       

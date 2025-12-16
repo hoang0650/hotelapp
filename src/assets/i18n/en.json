@@ -76,6 +76,7 @@
     "STAFF_MANAGEMENT": "Staff Management",
     "USER_MANAGEMENT": "User Management",
     "SERVICE_MANAGEMENT": "Service Management",
+    "GUEST_MANAGEMENT": "Guest Management",
     "SHIFT_HANDOVER": "Shift Handover",
     "OTAS_MANAGEMENT": "OTAs Management",
     "BANK_TRANSFER_HISTORY": "Bank Transfer History",

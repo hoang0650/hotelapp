@@ -1,0 +1,88 @@
+.ocr-scanner {
+  width: 100%;
+}
+
+.upload-area {
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fafafa;
+  position: relative;
+}
+
+.upload-area:hover {
+  border-color: #1890ff;
+  background: #f0f7ff;
+}
+
+.upload-area.uploading {
+  border-color: #1890ff;
+  background: #e6f7ff;
+  cursor: wait;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #1890ff;
+}
+
+.preview-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+}
+
+.preview-container {
+  position: relative;
+  display: inline-block;
+  max-width: calc(50% - 8px);
+  min-width: 200px;
+  flex: 1;
+}
+
+.preview-label {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1890ff;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 4px;
+  display: block;
+  border: 2px solid #d9d9d9;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+}
+
+.ocr-progress {
+  width: 100%;
+}
+
+.mt-2 {
+  margin-top: 8px;
+}
+
+.text-muted {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+

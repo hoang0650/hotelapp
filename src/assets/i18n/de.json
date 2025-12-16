@@ -76,6 +76,7 @@
     "STAFF_MANAGEMENT": "Personalverwaltung",
     "USER_MANAGEMENT": "Benutzerverwaltung",
     "SERVICE_MANAGEMENT": "Serviceverwaltung",
+    "GUEST_MANAGEMENT": "Gastverwaltung",
     "SHIFT_HANDOVER": "Schichtübergabe",
     "OTAS_MANAGEMENT": "OTA-Verwaltung",
     "BANK_TRANSFER_HISTORY": "Überweisungsverlauf",

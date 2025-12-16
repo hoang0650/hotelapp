@@ -76,6 +76,7 @@
     "STAFF_MANAGEMENT": "Quản lý nhân viên",
     "USER_MANAGEMENT": "Quản lý người dùng",
     "SERVICE_MANAGEMENT": "Quản lý dịch vụ",
+    "GUEST_MANAGEMENT": "Quản lý khách",
     "SHIFT_HANDOVER": "Giao ca",
     "OTAS_MANAGEMENT": "Quản lý OTA",
     "BANK_TRANSFER_HISTORY": "Lịch sử chuyển khoản",

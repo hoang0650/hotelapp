@@ -59,6 +59,14 @@
       </div> -->
     </div>
 
+    <!-- Nút thống kê -->
+    <div class="mb-3">
+      <button nz-button nzType="default" (click)="openStatisticsModal()" class="action-btn">
+        <i nz-icon nzType="bar-chart" nzTheme="outline"></i>
+        <span class="btn-text">Thống kê doanh thu dịch vụ</span>
+      </button>
+    </div>
+
     <!-- Bảng danh sách dịch vụ -->
     <div class="table-container table-responsive">
       <div class="service-list mt-4">
@@ -292,5 +300,159 @@
         </nz-form-item>
       </form>
     </div>
+
+    <!-- Modal thống kê doanh thu dịch vụ -->
+    <nz-modal
+      [(nzVisible)]="isStatisticsModalVisible"
+      nzTitle="Thống kê doanh thu dịch vụ"
+      (nzOnCancel)="closeStatisticsModal()"
+      [nzFooter]="null"
+      [nzWidth]="1200"
+      [nzWrapClassName]="'service-statistics-modal'">
+      <div *nzModalContent>
+        <div class="statistics-content">
+          <!-- Bộ lọc thống kê -->
+          <nz-card nzTitle="Bộ lọc" [nzBordered]="false" class="mb-3">
+            <nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+                <nz-form-item>
+                  <nz-form-label>Khách sạn</nz-form-label>
+                  <nz-form-control>
+                    <nz-select 
+                      [(ngModel)]="statisticsFilter.hotelId"
+                      nzPlaceHolder="Chọn khách sạn"
+                      nzAllowClear
+                      class="w-100">
+                      <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+                <nz-form-item>
+                  <nz-form-label>Từ ngày</nz-form-label>
+                  <nz-form-control>
+                    <nz-date-picker 
+                      [(ngModel)]="statisticsFilter.startDate"
+                      nzFormat="yyyy-MM-dd"
+                      class="w-100"></nz-date-picker>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+                <nz-form-item>
+                  <nz-form-label>Đến ngày</nz-form-label>
+                  <nz-form-control>
+                    <nz-date-picker 
+                      [(ngModel)]="statisticsFilter.endDate"
+                      nzFormat="yyyy-MM-dd"
+                      class="w-100"></nz-date-picker>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </nz-row>
+            <div class="text-right mt-3">
+              <button nz-button nzType="primary" (click)="loadStatistics()" [nzLoading]="isLoadingStatistics">
+                <i nz-icon nzType="search"></i> Xem thống kê
+              </button>
+              <button nz-button nzType="default" (click)="exportStatisticsToExcel()" [nzLoading]="isExportingStatistics" class="ml-2">
+                <i nz-icon nzType="file-excel" nzTheme="outline"></i> Xuất Excel
+              </button>
+            </div>
+          </nz-card>
+
+          <!-- Tổng quan -->
+          <nz-card nzTitle="Tổng quan" [nzBordered]="false" class="mb-3" *ngIf="statisticsData">
+            <nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+                <nz-statistic 
+                  [nzValue]="statisticsData.totalRevenue || 0" 
+                  nzTitle="Tổng doanh thu"
+                  [nzPrefix]="'đ'"
+                  [nzValueStyle]="{ color: '#3f8600' }">
+                </nz-statistic>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+                <nz-statistic 
+                  [nzValue]="statisticsData.totalOrders" 
+                  nzTitle="Tổng số đơn"
+                  [nzValueStyle]="{ color: '#1890ff' }">
+                </nz-statistic>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+                <nz-statistic 
+                  [nzValue]="statisticsData.totalQuantity" 
+                  nzTitle="Tổng số lượng"
+                  [nzValueStyle]="{ color: '#722ed1' }">
+                </nz-statistic>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+                <nz-statistic 
+                  [nzValue]="statisticsData.averageOrderValue || 0" 
+                  nzTitle="Giá trị đơn TB"
+                  [nzPrefix]="'đ'"
+                  [nzValueStyle]="{ color: '#fa8c16' }">
+                </nz-statistic>
+              </div>
+            </nz-row>
+          </nz-card>
+
+          <!-- Thống kê theo dịch vụ -->
+          <nz-card nzTitle="Thống kê theo dịch vụ" [nzBordered]="false" *ngIf="statisticsData && statisticsData.serviceStats">
+            <nz-table 
+              [nzData]="statisticsData.serviceStats" 
+              nzBordered
+              [nzScroll]="{ x: 'max-content' }"
+              [nzSize]="'small'">
+              <thead>
+                <tr>
+                  <th nzWidth="200px">Tên dịch vụ</th>
+                  <th nzWidth="120px">Danh mục</th>
+                  <th nzWidth="100px">Số lượng bán</th>
+                  <th nzWidth="120px">Doanh thu</th>
+                  <th nzWidth="120px">Giá bán TB</th>
+                  <th nzWidth="100px">Số đơn</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let stat of statisticsData.serviceStats">
+                  <td>{{ stat.serviceName }}</td>
+                  <td>{{ getCategoryLabel(stat.category) }}</td>
+                  <td>{{ stat.quantity | number }}</td>
+                  <td>{{ stat.revenue | number }} đ</td>
+                  <td>{{ stat.averagePrice | number }} đ</td>
+                  <td>{{ stat.orderCount | number }}</td>
+                </tr>
+              </tbody>
+            </nz-table>
+          </nz-card>
+
+          <!-- Thống kê theo danh mục -->
+          <nz-card nzTitle="Thống kê theo danh mục" [nzBordered]="false" class="mt-3" *ngIf="statisticsData && statisticsData.categoryStats">
+            <nz-table 
+              [nzData]="statisticsData.categoryStats" 
+              nzBordered
+              [nzSize]="'small'">
+              <thead>
+                <tr>
+                  <th nzWidth="200px">Danh mục</th>
+                  <th nzWidth="100px">Số lượng bán</th>
+                  <th nzWidth="120px">Doanh thu</th>
+                  <th nzWidth="100px">Tỷ lệ (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let stat of statisticsData.categoryStats">
+                  <td>{{ getCategoryLabel(stat.category) }}</td>
+                  <td>{{ stat.quantity | number }}</td>
+                  <td>{{ stat.revenue | number }} đ</td>
+                  <td>{{ stat.percentage | number:'1.2-2' }}%</td>
+                </tr>
+              </tbody>
+            </nz-table>
+          </nz-card>
+        </div>
+      </div>
+    </nz-modal>
   </nz-card>
 </div> 

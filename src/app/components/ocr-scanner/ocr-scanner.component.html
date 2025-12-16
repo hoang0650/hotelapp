@@ -1,0 +1,55 @@
+<div class="ocr-scanner">
+  <div class="upload-area" (click)="fileInput.click()" [class.uploading]="isScanning">
+    <input 
+      #fileInput
+      type="file" 
+      accept="image/*" 
+      [multiple]="allowMultiple"
+      style="display: none;"
+      (change)="onFileSelected($event)" />
+    
+    <div *ngIf="previewImages.length === 0" class="upload-placeholder">
+      <i nz-icon nzType="camera" class="upload-icon"></i>
+      <p>{{ buttonText }}</p>
+      <small *ngIf="allowMultiple">Hỗ trợ: JPG, PNG. Có thể chọn nhiều ảnh (mặt trước và sau)</small>
+      <small *ngIf="!allowMultiple">Hỗ trợ: JPG, PNG</small>
+    </div>
+    
+    <div *ngIf="previewImages.length > 0" class="preview-list">
+      <div *ngFor="let preview of previewImages; let i = index" class="preview-container">
+        <div class="preview-label">
+          <span *ngIf="allowMultiple && previewImages.length > 1">
+            {{ i === 0 ? 'Mặt trước' : 'Mặt sau' }}
+          </span>
+        </div>
+        <img [src]="preview" alt="Preview {{ i + 1 }}" class="preview-image" />
+        <button 
+          nz-button 
+          nzType="text" 
+          nzDanger 
+          nzSize="small"
+          (click)="clearImage(i); $event.stopPropagation()"
+          class="remove-btn">
+          <i nz-icon nzType="delete"></i> Xóa
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <nz-spin [nzSpinning]="isScanning" class="mt-2">
+    <div *ngIf="isScanning" class="ocr-progress">
+      <small class="text-muted">{{ ocrStatus }}</small>
+      <nz-progress 
+        *ngIf="ocrProgress > 0" 
+        [nzPercent]="ocrProgress" 
+        [nzShowInfo]="true"
+        [nzStrokeWidth]="8"
+        class="mt-2">
+      </nz-progress>
+    </div>
+    <small *ngIf="!isScanning && previewImages.length === 0" class="text-muted">
+      Tính năng OCR sẽ tự động đọc thông tin từ ảnh. {{ allowMultiple ? 'Có thể quét cả mặt trước và sau CCCD.' : '' }}
+    </small>
+  </nz-spin>
+</div>
+

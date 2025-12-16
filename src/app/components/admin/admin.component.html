@@ -56,7 +56,7 @@
           <li nz-menu-item routerLink="/admin/bank-transfer-history">{{ 'ADMIN_SIDEBAR.BANK_TRANSFER_HISTORY' | translate }}</li>
         </ul>
       </li>
-      <li nz-submenu *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessOTAManagement() || canAccessPricingManagement()" [nzTitle]="'ADMIN_SIDEBAR.MANAGEMENT' | translate" nzIcon="team">
+      <li nz-submenu *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessGuestManagement() || canAccessOTAManagement() || canAccessPricingManagement()" [nzTitle]="'ADMIN_SIDEBAR.MANAGEMENT' | translate" nzIcon="team">
         <ul>
           <li nz-menu-item *ngIf="canAccessBusinessManagement()" routerLink="/admin/company">{{ 'ADMIN_SIDEBAR.BUSINESS_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessHotelManagement()" routerLink="/admin/hotel">{{ 'ADMIN_SIDEBAR.HOTEL_MANAGEMENT' | translate }}</li>
@@ -64,6 +64,8 @@
           <li nz-menu-item *ngIf="canAccessStaffManagement()" routerLink="/admin/staff">{{ 'ADMIN_SIDEBAR.STAFF_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessUserManagement()" routerLink="/admin/users-management">{{ 'ADMIN_SIDEBAR.USER_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessServiceManagement()" routerLink="/admin/service-management">{{ 'ADMIN_SIDEBAR.SERVICE_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessGuestManagement()" routerLink="/admin/guest-management">{{ 'ADMIN_SIDEBAR.GUEST_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessDebtManagement()" routerLink="/admin/debt-management">Quản lý công nợ</li>
           <li nz-menu-item *ngIf="canAccessOTAManagement()" routerLink="/admin/ota-management">{{ 'ADMIN_SIDEBAR.OTAS_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessPricingManagement()" routerLink="/admin/pricing-management">{{ 'ADMIN_SIDEBAR.PRICING_MANAGEMENT' | translate }}</li>
         </ul>

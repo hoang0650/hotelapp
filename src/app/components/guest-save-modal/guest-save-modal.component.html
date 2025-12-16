@@ -1,0 +1,239 @@
+<div class="guest-save-modal">
+  <!-- Tab để chọn giữa chọn khách đã có hoặc nhập mới -->
+  <nz-tabset [nzSelectedIndex]="currentTabIndex" (nzSelectChange)="onTabChange($event)">
+    <nz-tab nzTitle="Chọn khách đã có">
+      <div class="guest-list-section">
+        <nz-input-group [nzSuffix]="suffixIconSearch" class="mb-3">
+          <input 
+            type="text" 
+            nz-input 
+            placeholder="Tìm kiếm khách theo tên, số CMND/CCCD, số điện thoại..."
+            [(ngModel)]="searchValue"
+            (ngModelChange)="onSearchGuests($event)"
+            (focus)="showGuestList = true" />
+        </nz-input-group>
+        <ng-template #suffixIconSearch>
+          <i nz-icon nzType="search"></i>
+        </ng-template>
+
+        <nz-spin [nzSpinning]="isLoading">
+          <div class="guest-list" *ngIf="showGuestList || guests.length > 0">
+            <div 
+              class="guest-item" 
+              *ngFor="let guest of guests"
+              [class.selected]="selectedGuestId === guest._id"
+              (click)="selectGuest(guest)">
+              <div class="guest-info">
+                <div class="guest-name">
+                  {{ guest.personalInfo?.fullName || (guest.personalInfo?.firstName + ' ' + guest.personalInfo?.lastName) }}
+                </div>
+                <div class="guest-details">
+                  <span *ngIf="guest.contactInfo?.phone">
+                    <i nz-icon nzType="phone"></i> {{ guest.contactInfo?.phone }}
+                  </span>
+                  <span *ngIf="guest.personalInfo?.idNumber" class="ml-2">
+                    <i nz-icon nzType="idcard"></i> {{ guest.personalInfo?.idNumber }}
+                  </span>
+                </div>
+              </div>
+              <i nz-icon nzType="check-circle" *ngIf="selectedGuestId === guest._id" class="check-icon"></i>
+            </div>
+            <div *ngIf="guests.length === 0 && !isLoading" class="empty-state">
+              <i nz-icon nzType="user-delete" class="empty-icon"></i>
+              <p>Không tìm thấy khách nào</p>
+            </div>
+          </div>
+        </nz-spin>
+      </div>
+    </nz-tab>
+
+    <nz-tab nzTitle="Nhập thông tin mới">
+      <form nz-form [formGroup]="guestForm" *ngIf="guestForm && personalInfoForm && contactInfoForm">
+        <!-- OCR Scan Section -->
+        <nz-card nzTitle="Quét CCCD/GPLX (OCR)" [nzBordered]="false" class="mb-3">
+          <app-ocr-scanner
+            [personalInfoFormGroup]="personalInfoForm"
+            [contactInfoFormGroup]="contactInfoForm"
+            [showPreview]="true"
+            [allowMultiple]="true"
+            buttonText="Chọn ảnh CCCD/GPLX để quét (có thể chọn 2 mặt)"
+            (scanComplete)="onOCRScanComplete($event)">
+          </app-ocr-scanner>
+        </nz-card>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>Loại khách</nz-form-label>
+          <nz-form-control>
+            <nz-select formControlName="guestType">
+              <nz-option nzValue="regular" nzLabel="Khách lưu"></nz-option>
+              <nz-option nzValue="frequent" nzLabel="Khách quen"></nz-option>
+              <nz-option nzValue="group" nzLabel="Khách đoàn"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-divider nzText="Thông tin cá nhân"></nz-divider>
+
+        <div [formGroup]="personalInfoForm">
+          <nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="24">
+              <nz-form-item>
+                <nz-form-label nzRequired>Họ và tên</nz-form-label>
+                <nz-form-control nzErrorTip="Vui lòng nhập họ và tên">
+                  <input nz-input formControlName="fullName" placeholder="Nhập họ và tên" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </nz-row>
+
+          <nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label>Ngày sinh</nz-form-label>
+                <nz-form-control>
+                  <nz-date-picker formControlName="dateOfBirth" nzFormat="yyyy-MM-dd" class="w-100"></nz-date-picker>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label>Giới tính</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="gender">
+                    <nz-option nzValue="male" nzLabel="Nam"></nz-option>
+                    <nz-option nzValue="female" nzLabel="Nữ"></nz-option>
+                    <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </nz-row>
+
+          <nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label>Quốc tịch</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="nationality" placeholder="Nhập quốc tịch" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label>Loại giấy tờ</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="idType">
+                    <nz-option nzValue="id_card" nzLabel="CMND/CCCD"></nz-option>
+                    <nz-option nzValue="passport" nzLabel="Hộ chiếu"></nz-option>
+                    <nz-option nzValue="driver_license" nzLabel="Bằng lái xe"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </nz-row>
+
+          <nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label>Số CMND/CCCD/Hộ chiếu</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="idNumber" placeholder="Nhập số giấy tờ" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label>Ngày hết hạn</nz-form-label>
+                <nz-form-control>
+                  <nz-date-picker formControlName="idExpiryDate" nzFormat="yyyy-MM-dd" class="w-100"></nz-date-picker>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </nz-row>
+        </div>
+
+        <nz-divider nzText="Thông tin liên hệ"></nz-divider>
+
+        <div [formGroup]="contactInfoForm">
+          <nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label>Số điện thoại</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label>Số điện thoại dự phòng</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="alternativePhone" placeholder="Nhập số điện thoại dự phòng" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </nz-row>
+
+          <nz-form-item>
+            <nz-form-label>Email</nz-form-label>
+            <nz-form-control nzErrorTip="Email không hợp lệ">
+              <input nz-input formControlName="email" type="email" placeholder="Nhập email" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <div [formGroup]="addressForm">
+            <nz-form-item>
+              <nz-form-label>Địa chỉ</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="street" placeholder="Số nhà, đường" />
+              </nz-form-control>
+            </nz-form-item>
+
+            <nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="8">
+                <nz-form-item>
+                  <nz-form-label>Thành phố</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="city" placeholder="Thành phố" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="8">
+                <nz-form-item>
+                  <nz-form-label>Tỉnh/Thành phố</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="state" placeholder="Tỉnh/Thành phố" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="8">
+                <nz-form-item>
+                  <nz-form-label>Quốc gia</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="country" placeholder="Quốc gia" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </nz-row>
+          </div>
+        </div>
+
+        <nz-form-item>
+          <nz-form-label>Ghi chú</nz-form-label>
+          <nz-form-control>
+            <textarea nz-input formControlName="notes" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </nz-tab>
+  </nz-tabset>
+
+  <!-- Footer buttons -->
+  <div class="modal-footer mt-3">
+    <button nz-button nzType="default" (click)="handleCancel()">Hủy</button>
+    <button nz-button nzType="primary" (click)="handleOk()" [nzLoading]="isLoading">
+      {{ selectedGuestId ? 'Assign vào phòng' : 'Lưu và Assign vào phòng' }}
+    </button>
+  </div>
+</div>
+
