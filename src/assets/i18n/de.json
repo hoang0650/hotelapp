@@ -48,7 +48,14 @@
     "PRIVACY_POLICY": "Datenschutzrichtlinie",
     "TERMS_OF_SERVICE": "Nutzungsbedingungen",
     "CONTACT_US": "Kontakt",
-    "ABOUT": "Über"
+    "ABOUT": "Über",
+    "ABOUT_US": "Über uns",
+    "ABOUT_DESCRIPTION": "Bei PHHOTEL sind wir bestrebt, außergewöhnliche Gastfreundschaftserlebnisse mit einem Hauch von Luxus zu bieten.",
+    "QUICK_LINKS": "Schnelllinks",
+    "BLOG": "Blog",
+    "ADDRESS": "Adresse",
+    "PHONE": "Telefon",
+    "EMAIL": "E-Mail"
   },
   "LANGUAGE": {
     "EN": "Englisch",
@@ -80,6 +87,7 @@
     "SHIFT_HANDOVER": "Schichtübergabe",
     "OTAS_MANAGEMENT": "OTA-Verwaltung",
     "BANK_TRANSFER_HISTORY": "Überweisungsverlauf",
+    "FINANCIAL_SUMMARY_REPORT": "Finanzzusammenfassungsbericht",
     "PRICING_MANAGEMENT": "Preisverwaltung",
     "ELECTRIC_SETTING": "Strom Einstellung",
     "REVENUE": "Umsatz",
@@ -88,7 +96,14 @@
     "VISA": "Visa",
     "EXPAND_PAGE": "Seite erweitern",
     "EMAIL_ADMIN": "E-Mail-Administrator",
-    "FILE": "Datei"
+    "FILE": "Datei",
+    "HOTEL_OPERATIONS": "Hotelbetrieb",
+    "DATA_MANAGEMENT": "Datenverwaltung",
+    "PAYMENT_FINANCE": "Zahlung & Finanzen",
+    "INTEGRATION_CONFIG": "Integration & Konfiguration",
+    "SYSTEM_SETTINGS": "Systemeinstellungen",
+    "SHIFT_HANDOVER_HISTORY": "Schichtübergabe-Verlauf",
+    "DEBT_MANAGEMENT": "Schuldenverwaltung"
   },
   "TUYA": {
     "TITLE": "Tuya Smart Switch Steuerung",

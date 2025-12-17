@@ -14,18 +14,21 @@ export class HomeComponent implements OnInit {
   testimonials = [
     {
       name: 'Nguyễn Văn A',
-      quote: 'Phần mềm rất dễ sử dụng và hiệu quả trong quản lý khách sạn!',
-      image: 'https://randomuser.me/api/portraits/women/3.jpg'
+      quote: 'Phần mềm rất dễ sử dụng và hiệu quả trong quản lý khách sạn! Giao diện thân thiện, tính năng đầy đủ giúp tôi quản lý khách sạn một cách chuyên nghiệp.',
+      image: 'https://randomuser.me/api/portraits/women/3.jpg',
+      role: 'Chủ khách sạn'
     },
     {
       name: 'Trần Thị B',
-      quote: 'Giải pháp quản lý toàn diện, giúp tiết kiệm thời gian và công sức.',
-      image: 'https://randomuser.me/api/portraits/men/3.jpg'
+      quote: 'Giải pháp quản lý toàn diện, giúp tiết kiệm thời gian và công sức. Báo cáo tự động và chính xác, hỗ trợ tôi đưa ra quyết định kinh doanh hiệu quả.',
+      image: 'https://randomuser.me/api/portraits/men/3.jpg',
+      role: 'Quản lý khách sạn'
     },
     {
       name: 'Lê Văn C',
-      quote: 'Báo cáo chi tiết và chính xác, rất hữu ích cho việc quản lý.',
-      image: 'https://randomuser.me/api/portraits/women/4.jpg'
+      quote: 'Báo cáo chi tiết và chính xác, rất hữu ích cho việc quản lý. Đội ngũ hỗ trợ nhiệt tình, luôn sẵn sàng giải đáp mọi thắc mắc.',
+      image: 'https://randomuser.me/api/portraits/women/4.jpg',
+      role: 'Giám đốc điều hành'
     }
   ];
 

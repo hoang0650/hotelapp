@@ -44,11 +44,16 @@ import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-poli
 import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
 import { ShiftHandoverHistoryComponent } from './components/shift-handover-history/shift-handover-history.component';
 import { DebtManagementComponent } from './components/debt-management/debt-management.component';
+import { BlogManagementComponent } from './components/blog-management/blog-management.component';
+import { BlogComponent } from './components/blog/blog.component';
+import { FinancialSummaryReportComponent } from './components/financial-summary-report/financial-summary-report.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
   { path: 'pricing', component: PricingComponent },
+  { path: 'blog', component: BlogComponent },
+  { path: 'blog/:id', component: BlogComponent },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
   { path: 'business-signup', component: BusinessSignupComponent },
@@ -69,6 +74,7 @@ const routes: Routes = [
       { path: 'service-management', component: ServiceManagementComponent, canActivate: [PermissionGuard] },
       { path: 'guest-management', component: GuestManagementComponent, canActivate: [PermissionGuard] },
       { path: 'debt-management', component: DebtManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
       {
         path: 'users-management',
@@ -83,6 +89,7 @@ const routes: Routes = [
       { path: 'shift-handover', component: RoomHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'shift-handover-history', component: ShiftHandoverHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'bank-transfer-history', component: BankTransferHistoryComponent, canActivate: [PermissionGuard] },
+      { path: 'financial-summary-report', component: FinancialSummaryReportComponent, canActivate: [PermissionGuard] },
       { path: 'ota-management', component: OtaManagementComponent, canActivate: [PermissionGuard] },
       { path: 'electric-setting', component: TuyaSwitchComponent, canActivate: [PermissionGuard] },
       { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },

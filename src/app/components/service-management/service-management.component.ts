@@ -552,6 +552,9 @@ export class ServiceManagementComponent implements OnInit {
       this.statisticsFilter.endDate || undefined
     ).subscribe({
       next: (orders) => {
+        console.log('📊 Service Orders received:', orders.length);
+        console.log('📊 Sample order:', orders[0]);
+        
         // Lọc theo ngày nếu có
         let filteredOrders = orders;
         if (this.statisticsFilter.startDate || this.statisticsFilter.endDate) {
@@ -578,37 +581,70 @@ export class ServiceManagementComponent implements OnInit {
           });
         }
 
-        // Chỉ tính các đơn đã hoàn thành hoặc đã thanh toán (không hủy)
-        filteredOrders = filteredOrders.filter(order => 
-          order.status !== 'cancelled' && 
-          (order.status === 'completed' || order.status === 'delivered' || 
-           (order as any).paymentStatus === 'paid')
-        );
+        // Chỉ tính các đơn đã thanh toán hoặc đã giao (không hủy)
+        // Bao gồm: đã thanh toán (paid, included_in_room_charge) hoặc đã giao (delivered)
+        filteredOrders = filteredOrders.filter(order => {
+          const status = order.status;
+          const paymentStatus = (order as any).paymentStatus;
+          
+          // Bỏ qua các đơn đã hủy
+          if (status === 'cancelled') {
+            return false;
+          }
+          
+          // Tính các đơn đã thanh toán (paid hoặc included_in_room_charge)
+          if (paymentStatus === 'paid' || paymentStatus === 'included_in_room_charge') {
+            return true;
+          }
+          
+          // Tính các đơn đã giao (delivered) - có thể đã thanh toán nhưng chưa cập nhật paymentStatus
+          if (status === 'delivered') {
+            return true;
+          }
+          
+          return false;
+        });
 
         // Tính toán thống kê
         const serviceStatsMap = new Map<string, any>();
         const categoryStatsMap = new Map<string, any>();
+        // Map để lưu các orderId đã đếm cho mỗi service (tránh đếm trùng)
+        const serviceOrderIdsMap = new Map<string, Set<string>>();
         let totalRevenue = 0;
         let totalQuantity = 0;
         let totalOrders = filteredOrders.length;
 
+        console.log('📊 Filtered orders:', filteredOrders.length);
+        
         filteredOrders.forEach(order => {
-          // Backend model dùng items (serviceOrder.js), controller cũ có thể dùng services
-          const items = (order as any).items || (order as any).services || [];
+          const orderId = (order as any)._id?.toString() || (order as any).id?.toString() || '';
+          // Backend model dùng items (serviceOrder.js)
+          const items = (order as any).items || [];
+          
+          if (items.length === 0) {
+            console.warn('⚠️ Order has no items:', orderId);
+            return;
+          }
           
           items.forEach((item: any) => {
             // Xử lý serviceId có thể là ObjectId hoặc populated object
-            const serviceId = item.serviceId?._id || item.serviceId || 'unknown';
-            const serviceName = item.name || item.serviceName || 'Dịch vụ không tên';
+            const serviceId = item.serviceId?._id?.toString() || item.serviceId?.toString() || 'unknown';
+            const serviceName = item.name || item.serviceName || item.serviceId?.name || 'Dịch vụ không tên';
             // Lấy category từ populated serviceId (nếu có populate)
             // Nếu không có, sẽ dùng 'custom' và có thể lookup sau
             const category = item.serviceId?.category || 
                             (item.serviceId && typeof item.serviceId === 'object' ? item.serviceId.category : 'custom') ||
                             'custom';
-            const quantity = item.quantity || 0;
-            const price = item.price || 0;
+            // Đảm bảo quantity là số và > 0
+            const quantity = Number(item.quantity) || 0;
+            const price = Number(item.price) || 0;
             // Backend model dùng total, controller cũ có thể dùng totalPrice
-            const totalPrice = item.total || item.totalPrice || (price * quantity);
+            const totalPrice = Number(item.total) || Number(item.totalPrice) || (price * quantity);
+
+            // Bỏ qua nếu quantity <= 0 hoặc totalPrice <= 0
+            if (quantity <= 0 || totalPrice <= 0) {
+              return;
+            }
 
             // Thống kê theo dịch vụ
             if (!serviceStatsMap.has(serviceId)) {
@@ -620,11 +656,20 @@ export class ServiceManagementComponent implements OnInit {
                 revenue: 0,
                 orderCount: 0
               });
+              serviceOrderIdsMap.set(serviceId, new Set<string>());
             }
             const serviceStat = serviceStatsMap.get(serviceId);
+            const orderIdsSet = serviceOrderIdsMap.get(serviceId)!;
+            
+            // Cộng dồn số lượng và doanh thu
             serviceStat.quantity += quantity;
             serviceStat.revenue += totalPrice;
-            serviceStat.orderCount += 1;
+            
+            // Đếm số đơn duy nhất chứa service này (mỗi order chỉ đếm 1 lần)
+            if (orderId && !orderIdsSet.has(orderId)) {
+              orderIdsSet.add(orderId);
+              serviceStat.orderCount += 1;
+            }
 
             // Thống kê theo danh mục
             if (!categoryStatsMap.has(category)) {
@@ -657,6 +702,14 @@ export class ServiceManagementComponent implements OnInit {
           ...stat,
           averagePrice: stat.quantity > 0 ? stat.revenue / stat.quantity : 0
         }));
+
+        console.log('📊 Statistics calculated:', {
+          totalRevenue,
+          totalOrders,
+          totalQuantity,
+          serviceStatsCount: serviceStats.length,
+          categoryStatsCount: categoryStats.length
+        });
 
         this.statisticsData = {
           totalRevenue,

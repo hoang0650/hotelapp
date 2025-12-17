@@ -1,60 +1,120 @@
 <div class="about-us-container">
-  <nz-card nzTitle="About Us" [nzBordered]="false" class="about-us-card">
+  <nz-card [nzBordered]="false" class="about-us-card">
     <div class="hero-section">
-      <h1 class="hero-title">Discover Who We Are</h1>
-      <p class="hero-subtitle">Passionate About Innovation, Committed to Excellence</p>
+      <h1 class="hero-title">PHHOTEL</h1>
+      <p class="hero-subtitle">Kết nối sáng tạo, vươn tới tương lai</p>
     </div>
 
     <nz-divider></nz-divider>
 
-    <div nz-row nzAlign="middle" nzGutter="24" class="story-section">
-      <div nz-col nzSpan="12">
-        <h2 class="section-heading">Our Journey</h2>
-        <p>
-          From our humble beginnings, we've evolved into a leading name in the hospitality industry, driven by our commitment to exceptional service and guest satisfaction.
-        </p>
-        <p>
-          Our growth story is a testament to our dedication and innovative approach, ensuring that each guest enjoys an unparalleled experience with us.
-        </p>
-        <nz-button nzType="primary" nzSize="large" [routerLink]="['/book']" class="cta-button">
-          Book Your Stay Now
-        </nz-button>
-      </div>
-      <div nz-col nzSpan="12">
-        <nz-timeline>
-          <nz-timeline-item [nzColor]="'green'">Company Established - 2015</nz-timeline-item>
-          <nz-timeline-item [nzColor]="'blue'">First Hotel Opening - 2016</nz-timeline-item>
-          <nz-timeline-item [nzColor]="'purple'">Expanded to New Destinations - 2017</nz-timeline-item>
-          <nz-timeline-item [nzColor]="'red'">New Brand Launch - 2018</nz-timeline-item>
-        </nz-timeline>
-      </div>
-    </div>
-
-    <nz-divider></nz-divider>
-
-    <div nz-row nzAlign="middle" nzGutter="24" class="team-section">
-      <div nz-col nzSpan="8" *ngFor="let member of teamMembers" class="team-member">
-        <nz-avatar [nzSrc]="member.avatarUrl" nzSize="large"></nz-avatar>
-        <h3 class="team-member-name">{{ member.name }}</h3>
-        <p class="team-member-position">{{ member.position }}</p>
-        <p class="team-member-bio">{{ member.bio }}</p>
-      </div>
-    </div>
-
-    <nz-divider></nz-divider>
-
-    <div class="services-section">
-      <h2 class="section-heading">Our Services</h2>
-      <div nz-row nzGutter="24">
-        <div nz-col nzSpan="8" *ngFor="let service of services" class="service-item">
-          <div class="service-icon">
-            <i [ngClass]="service.icon"></i>
+    <div class="company-info-section">
+      <h2 class="section-heading">Thông tin công ty</h2>
+      
+      <div nz-row nzGutter="24" class="info-row">
+        <div nz-col nzXs="24" nzSm="12" nzMd="8" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="bank" nzTheme="outline"></i>
+            <strong>Tên công ty:</strong>
           </div>
-          <h3 class="service-title">{{ service.title }}</h3>
-          <p class="service-description">{{ service.description }}</p>
-          <nz-button nzType="default" [routerLink]="service.link" class="cta-button">
-            Learn More
-          </nz-button>
+          <div class="info-value">
+            CÔNG TY TNHH GIẢI PHÁP CÔNG NGHỆ PHGROUP
+          </div>
+        </div>
+
+        <div nz-col nzXs="24" nzSm="12" nzMd="8" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="file-text" nzTheme="outline"></i>
+            <strong>Mã số thuế:</strong>
+          </div>
+          <div class="info-value">
+            3703279135
+          </div>
+        </div>
+
+        <div nz-col nzXs="24" nzSm="12" nzMd="8" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="global" nzTheme="outline"></i>
+            <strong>Tên quốc tế:</strong>
+          </div>
+          <div class="info-value">
+            PHGROUP TECHNOLOGY SOLUTIONS COMPANY LIMITED
+          </div>
+        </div>
+      </div>
+
+      <div nz-row nzGutter="24" class="info-row">
+        <div nz-col nzXs="24" nzSm="12" nzMd="12" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="tag" nzTheme="outline"></i>
+            <strong>Tên viết tắt:</strong>
+          </div>
+          <div class="info-value">
+            PHGROUP TECHNOLOGY SOLUTIONS CO., LTD
+          </div>
+        </div>
+
+        <div nz-col nzXs="24" nzSm="12" nzMd="12" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="environment" nzTheme="outline"></i>
+            <strong>Địa chỉ:</strong>
+          </div>
+          <div class="info-value">
+            Lô A1-15 Đường Bình Hoà 24, khu dân cư Đồng An 4, Phường Bình Hòa, Thành phố Thuận An, Tỉnh Bình Dương, Việt Nam
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <div class="about-section">
+      <h2 class="section-heading">Về chúng tôi</h2>
+      <div nz-row nzGutter="24">
+        <div nz-col nzXs="24" nzSm="24" nzMd="12">
+          <p class="about-text">
+            PHHOTEL được điều hành bởi <strong>CÔNG TY TNHH GIẢI PHÁP CÔNG NGHỆ PHGROUP</strong>, 
+            một công ty chuyên cung cấp các giải pháp công nghệ hiện đại cho ngành khách sạn và du lịch.
+          </p>
+          <p class="about-text">
+            Với phương châm <strong>"Kết nối sáng tạo, vươn tới tương lai"</strong>, chúng tôi cam kết 
+            mang đến những giải pháp công nghệ tiên tiến, giúp các khách sạn quản lý hiệu quả và 
+            nâng cao trải nghiệm khách hàng.
+          </p>
+        </div>
+        <div nz-col nzXs="24" nzSm="24" nzMd="12">
+          <div class="mission-vision">
+            <h3 class="sub-heading">
+              <i nz-icon nzType="rocket" nzTheme="outline"></i>
+              Sứ mệnh
+            </h3>
+            <p>
+              Cung cấp các giải pháp công nghệ toàn diện, giúp các khách sạn vận hành hiệu quả 
+              và tối ưu hóa trải nghiệm khách hàng.
+            </p>
+            <h3 class="sub-heading">
+              <i nz-icon nzType="eye" nzTheme="outline"></i>
+              Tầm nhìn
+            </h3>
+            <p>
+              Trở thành đối tác công nghệ hàng đầu trong ngành khách sạn và du lịch tại Việt Nam 
+              và khu vực Đông Nam Á.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <div class="values-section">
+      <h2 class="section-heading">Giá trị cốt lõi</h2>
+      <div nz-row nzGutter="24">
+        <div nz-col nzXs="24" nzSm="12" nzMd="8" *ngFor="let value of coreValues" class="value-item">
+          <div class="value-icon">
+            <i nz-icon [nzType]="value.icon" nzTheme="outline"></i>
+          </div>
+          <h3 class="value-title">{{ value.title }}</h3>
+          <p class="value-description">{{ value.description }}</p>
         </div>
       </div>
     </div>

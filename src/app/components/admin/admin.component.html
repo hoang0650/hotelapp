@@ -47,16 +47,18 @@
   <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null">
     <div class="logo"></div>
     <ul nz-menu nzTheme="dark" nzMode="inline">
-      <li nz-submenu *ngIf="canAccessHotelMenu()" [nzTitle]="'ADMIN_SIDEBAR.HOTEL' | translate" nzIcon="table">
+      <!-- Vận hành khách sạn -->
+      <li nz-submenu *ngIf="canAccessHotelMenu()" [nzTitle]="'ADMIN_SIDEBAR.HOTEL_OPERATIONS' | translate" nzIcon="home">
         <ul>
           <li nz-menu-item routerLink="/admin/room">{{ 'ADMIN_SIDEBAR.ROOM' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/shift-handover">{{ 'ADMIN_SIDEBAR.SHIFT_HANDOVER' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessShiftHandoverHistory()" routerLink="/admin/shift-handover-history">Lịch sử giao ca</li>
           <li nz-menu-item routerLink="/admin/calendar">{{ 'ADMIN_SIDEBAR.CALENDAR' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/bank-transfer-history">{{ 'ADMIN_SIDEBAR.BANK_TRANSFER_HISTORY' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/shift-handover">{{ 'ADMIN_SIDEBAR.SHIFT_HANDOVER' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessShiftHandoverHistory()" routerLink="/admin/shift-handover-history">{{ 'ADMIN_SIDEBAR.SHIFT_HANDOVER_HISTORY' | translate }}</li>
         </ul>
       </li>
-      <li nz-submenu *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessGuestManagement() || canAccessOTAManagement() || canAccessPricingManagement()" [nzTitle]="'ADMIN_SIDEBAR.MANAGEMENT' | translate" nzIcon="team">
+
+      <!-- Quản lý dữ liệu -->
+      <li nz-submenu *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessGuestManagement() || canAccessDebtManagement()" [nzTitle]="'ADMIN_SIDEBAR.DATA_MANAGEMENT' | translate" nzIcon="database">
         <ul>
           <li nz-menu-item *ngIf="canAccessBusinessManagement()" routerLink="/admin/company">{{ 'ADMIN_SIDEBAR.BUSINESS_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessHotelManagement()" routerLink="/admin/hotel">{{ 'ADMIN_SIDEBAR.HOTEL_MANAGEMENT' | translate }}</li>
@@ -65,33 +67,43 @@
           <li nz-menu-item *ngIf="canAccessUserManagement()" routerLink="/admin/users-management">{{ 'ADMIN_SIDEBAR.USER_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessServiceManagement()" routerLink="/admin/service-management">{{ 'ADMIN_SIDEBAR.SERVICE_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessGuestManagement()" routerLink="/admin/guest-management">{{ 'ADMIN_SIDEBAR.GUEST_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessDebtManagement()" routerLink="/admin/debt-management">Quản lý công nợ</li>
+          <li nz-menu-item *ngIf="canAccessDebtManagement()" routerLink="/admin/debt-management">{{ 'ADMIN_SIDEBAR.DEBT_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessBlogManagement()" routerLink="/admin/blog-management">Quản lý Blog</li>
+        </ul>
+      </li>
+
+      <!-- Thanh toán & Tài chính -->
+      <li nz-submenu *ngIf="canAccessPaymentMenu() || canAccessHotelMenu() || canAccessFinancialSummary()" [nzTitle]="'ADMIN_SIDEBAR.PAYMENT_FINANCE' | translate" nzIcon="dollar">
+        <ul>
+          <li nz-menu-item *ngIf="canAccessFinancialSummary()" routerLink="/admin/financial-summary-report">{{ 'ADMIN_SIDEBAR.FINANCIAL_SUMMARY_REPORT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessHotelMenu()" routerLink="/admin/bank-transfer-history">{{ 'ADMIN_SIDEBAR.BANK_TRANSFER_HISTORY' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/qr-payment">{{ 'ADMIN_SIDEBAR.QR_CODE' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/visa-payment">{{ 'ADMIN_SIDEBAR.VISA' | translate }}</li>
+        </ul>
+      </li>
+
+      <!-- Tích hợp & Cấu hình -->
+      <li nz-submenu *ngIf="canAccessOTAManagement() || canAccessPricingManagement() || canAccessElectricSetting()" [nzTitle]="'ADMIN_SIDEBAR.INTEGRATION_CONFIG' | translate" nzIcon="tool">
+        <ul>
           <li nz-menu-item *ngIf="canAccessOTAManagement()" routerLink="/admin/ota-management">{{ 'ADMIN_SIDEBAR.OTAS_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessPricingManagement()" routerLink="/admin/pricing-management">{{ 'ADMIN_SIDEBAR.PRICING_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessElectricSetting()" routerLink="/admin/electric-setting">
+            <span>{{ 'ADMIN_SIDEBAR.ELECTRIC_SETTING' | translate }}</span>
+          </li>
         </ul>
       </li>
-      <li nz-menu-item *ngIf="canAccessElectricSetting()" routerLink="/admin/electric-setting">
-        <span nz-icon nzType="pie-chart"></span>
-        <span>{{ 'ADMIN_SIDEBAR.ELECTRIC_SETTING' | translate }}</span>
-      </li>
-      <li nz-submenu *ngIf="canAccessPaymentMenu()" [nzTitle]="'ADMIN_SIDEBAR.PAYMENT' | translate" nzIcon="dollar">
+
+      <!-- Cài đặt hệ thống -->
+      <li nz-submenu *ngIf="canAccessSettings() || canAccessEmailAdmin() || canAccessFile()" [nzTitle]="'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate" nzIcon="setting">
         <ul>
-          <li nz-menu-item routerLink="/admin/qr-payment">{{ 'ADMIN_SIDEBAR.QR_CODE' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/visa-payment">{{ 'ADMIN_SIDEBAR.VISA' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/settings">
+            <span>{{ 'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate }}</span>
+          </li>
+          <li nz-menu-item *ngIf="canAccessEmailAdmin()" routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessFile()" routerLink="/file">
+            <span>{{ 'ADMIN_SIDEBAR.FILE' | translate }}</span>
+          </li>
         </ul>
-      </li>
-      <li nz-submenu *ngIf="canAccessEmailAdmin()" [nzTitle]="'ADMIN_SIDEBAR.EXPAND_PAGE' | translate" nzIcon="plus">
-        <ul>
-          <li nz-menu-item routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN' | translate }}</li>
-        </ul>
-      </li>    
-      <li nz-menu-item *ngIf="canAccessFile()" routerLink="/file">
-        <span nz-icon nzType="file"></span>
-        <span>{{ 'ADMIN_SIDEBAR.FILE' | translate }}</span>
-      </li>
-      <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/settings">
-        <span nz-icon nzType="setting"></span>
-        <span>Cài đặt hệ thống</span>
       </li>
     </ul>
   </nz-sider>
@@ -109,8 +121,9 @@
     </nz-breadcrumb>
     <nz-content>
       <router-outlet></router-outlet>
+      <nz-footer></nz-footer>
     </nz-content>
-    <nz-footer></nz-footer>
+    <!-- <nz-footer></nz-footer> -->
   </nz-layout>
 </nz-layout>
   

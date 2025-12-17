@@ -1,0 +1,344 @@
+<div class="blog-container">
+  <!-- Chi tiết bài viết -->
+  <div *ngIf="selectedBlog" class="blog-detail">
+    <nz-card>
+      <button nz-button nzType="default" (click)="backToList()" class="mb-3">
+        <i nz-icon nzType="arrow-left"></i>
+        Quay lại danh sách
+      </button>
+
+      <div *nzModalContent>
+        <h1 class="blog-title">{{ selectedBlog.title }}</h1>
+        
+        <div class="blog-meta mb-3">
+          <span class="meta-item">
+            <i nz-icon nzType="user" nzTheme="outline"></i>
+            {{ selectedBlog.authorName || 'Admin' }}
+          </span>
+          <span class="meta-item">
+            <i nz-icon nzType="calendar" nzTheme="outline"></i>
+            {{ formatDate(selectedBlog.createdAt) }}
+          </span>
+          <span class="meta-item" *ngIf="selectedBlog.views">
+            <i nz-icon nzType="eye" nzTheme="outline"></i>
+            {{ selectedBlog.views }} lượt xem
+          </span>
+        </div>
+
+        <div class="blog-tags mb-3" *ngIf="selectedBlog.tags && selectedBlog.tags.length > 0">
+          <nz-tag *ngFor="let tag of selectedBlog.tags" [nzColor]="'blue'">
+            {{ tag }}
+          </nz-tag>
+        </div>
+
+        <div class="blog-featured-image mb-3" *ngIf="selectedBlog.featuredImage">
+          <img [src]="selectedBlog.featuredImage" [alt]="selectedBlog.title" />
+        </div>
+
+        <div class="blog-content" [innerHTML]="selectedBlog.content | nlToBr"></div>
+
+        <!-- Like/Dislike Blog -->
+        <div class="blog-actions mt-4 mb-4">
+          <div class="action-buttons">
+            <button 
+              nz-button 
+              nzType="default" 
+              [nzLoading]="isLikingBlog"
+              [class.active]="selectedBlog.userLiked"
+              (click)="likeBlog()">
+              <i nz-icon [nzType]="selectedBlog.userLiked ? 'like' : 'like'" [nzTheme]="selectedBlog.userLiked ? 'fill' : 'outline'"></i>
+              Thích ({{ selectedBlog.likesCount || 0 }})
+            </button>
+            <button 
+              nz-button 
+              nzType="default" 
+              [nzLoading]="isDislikingBlog"
+              [class.active]="selectedBlog.userDisliked"
+              (click)="dislikeBlog()">
+              <i nz-icon [nzType]="selectedBlog.userDisliked ? 'dislike' : 'dislike'" [nzTheme]="selectedBlog.userDisliked ? 'fill' : 'outline'"></i>
+              Không thích ({{ selectedBlog.dislikesCount || 0 }})
+            </button>
+          </div>
+        </div>
+      </div>
+    </nz-card>
+
+    <!-- Comment Section -->
+    <nz-card class="mt-3" nzTitle="Bình luận">
+      <div class="comment-section">
+        <!-- Form thêm comment -->
+        <div class="comment-form mb-4" *ngIf="isLoggedIn">
+          <form nz-form [formGroup]="commentForm" (ngSubmit)="submitComment()">
+            <nz-form-item>
+              <nz-form-control>
+                <textarea 
+                  nz-input 
+                  formControlName="content" 
+                  rows="4" 
+                  placeholder="Viết bình luận của bạn..."></textarea>
+              </nz-form-control>
+            </nz-form-item>
+            <div class="text-right">
+              <button 
+                nz-button 
+                nzType="primary" 
+                [nzLoading]="isSubmittingComment"
+                [disabled]="commentForm.invalid">
+                Gửi bình luận
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="login-prompt mb-4" *ngIf="!isLoggedIn">
+          <nz-alert 
+            nzType="info" 
+            nzMessage="Vui lòng đăng nhập để bình luận"
+            [nzShowIcon]="true">
+            <button nz-button nzType="primary" nzSize="small" (click)="$event.preventDefault(); router.navigate(['/login'])">
+              Đăng nhập
+            </button>
+          </nz-alert>
+        </div>
+
+        <!-- Danh sách comments -->
+        <nz-spin [nzSpinning]="isLoadingComments">
+          <div *ngIf="comments.length === 0 && !isLoadingComments" class="empty-comments">
+            <nz-empty nzNotFoundContent="Chưa có bình luận nào. Hãy là người đầu tiên bình luận!"></nz-empty>
+          </div>
+
+          <div class="comments-list" *ngIf="comments.length > 0">
+            <div class="comment-item" *ngFor="let comment of comments">
+              <div class="comment-header">
+                <nz-avatar [nzSrc]="comment.userAvatar" [nzText]="(comment.userName || 'U').charAt(0)" nzSize="small"></nz-avatar>
+                <div class="comment-author">
+                  <strong>{{ comment.userName }}</strong>
+                  <span class="comment-date">{{ formatCommentDate(comment.createdAt) }}</span>
+                </div>
+              </div>
+              <div class="comment-content">
+                {{ comment.content }}
+              </div>
+              <div class="comment-actions">
+                <button 
+                  nz-button 
+                  nzType="text" 
+                  nzSize="small"
+                  [class.active]="comment.userLiked"
+                  (click)="likeComment(comment._id!)">
+                  <i nz-icon [nzType]="comment.userLiked ? 'like' : 'like'" [nzTheme]="comment.userLiked ? 'fill' : 'outline'"></i>
+                  {{ comment.likesCount || 0 }}
+                </button>
+                <button 
+                  nz-button 
+                  nzType="text" 
+                  nzSize="small"
+                  [class.active]="comment.userDisliked"
+                  (click)="dislikeComment(comment._id!)">
+                  <i nz-icon [nzType]="comment.userDisliked ? 'dislike' : 'dislike'" [nzTheme]="comment.userDisliked ? 'fill' : 'outline'"></i>
+                  {{ comment.dislikesCount || 0 }}
+                </button>
+                <button 
+                  nz-button 
+                  nzType="text" 
+                  nzSize="small"
+                  (click)="toggleReplyForm(comment._id!)">
+                  <i nz-icon nzType="message" nzTheme="outline"></i>
+                  Trả lời
+                </button>
+                <button 
+                  nz-button 
+                  nzType="text" 
+                  nzSize="small"
+                  nzDanger
+                  *ngIf="canDeleteComment(comment)"
+                  nz-popconfirm
+                  nzPopconfirmTitle="Bạn có chắc muốn xóa bình luận này?"
+                  (nzOnConfirm)="deleteComment(comment._id!)">
+                  <i nz-icon nzType="delete" nzTheme="outline"></i>
+                </button>
+              </div>
+
+              <!-- Form reply -->
+              <div class="reply-form mt-2" *ngIf="comment._id && showReplyForm.get(comment._id)">
+                <form nz-form [formGroup]="replyForms.get(comment._id!)!" (ngSubmit)="submitComment(comment._id!)">
+                  <nz-form-item>
+                    <nz-form-control>
+                      <textarea 
+                        nz-input 
+                        formControlName="content" 
+                        rows="3" 
+                        placeholder="Viết phản hồi..."></textarea>
+                    </nz-form-control>
+                  </nz-form-item>
+                  <div class="text-right">
+                    <button 
+                      nz-button 
+                      nzType="default" 
+                      nzSize="small"
+                      (click)="toggleReplyForm(comment._id!)">
+                      Hủy
+                    </button>
+                    <button 
+                      nz-button 
+                      nzType="primary" 
+                      nzSize="small"
+                      [nzLoading]="isSubmittingComment"
+                      [disabled]="replyForms.get(comment._id!)?.invalid"
+                      style="margin-left: 8px;">
+                      Gửi
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Replies -->
+              <div class="replies-list" *ngIf="comment.replies && comment.replies.length > 0">
+                <div class="reply-item" *ngFor="let reply of comment.replies">
+                  <div class="comment-header">
+                    <nz-avatar [nzSrc]="reply.userAvatar" [nzText]="(reply.userName || 'U').charAt(0)" nzSize="small"></nz-avatar>
+                    <div class="comment-author">
+                      <strong>{{ reply.userName }}</strong>
+                      <span class="comment-date">{{ formatCommentDate(reply.createdAt) }}</span>
+                    </div>
+                  </div>
+                  <div class="comment-content">
+                    {{ reply.content }}
+                  </div>
+                  <div class="comment-actions">
+                    <button 
+                      nz-button 
+                      nzType="text" 
+                      nzSize="small"
+                      [class.active]="reply.userLiked"
+                      (click)="likeComment(reply._id!)">
+                      <i nz-icon [nzType]="reply.userLiked ? 'like' : 'like'" [nzTheme]="reply.userLiked ? 'fill' : 'outline'"></i>
+                      {{ reply.likesCount || 0 }}
+                    </button>
+                    <button 
+                      nz-button 
+                      nzType="text" 
+                      nzSize="small"
+                      [class.active]="reply.userDisliked"
+                      (click)="dislikeComment(reply._id!)">
+                      <i nz-icon [nzType]="reply.userDisliked ? 'dislike' : 'dislike'" [nzTheme]="reply.userDisliked ? 'fill' : 'outline'"></i>
+                      {{ reply.dislikesCount || 0 }}
+                    </button>
+                    <button 
+                      nz-button 
+                      nzType="text" 
+                      nzSize="small"
+                      nzDanger
+                      *ngIf="canDeleteComment(reply)"
+                      nz-popconfirm
+                      nzPopconfirmTitle="Bạn có chắc muốn xóa bình luận này?"
+                      (nzOnConfirm)="deleteComment(reply._id!)">
+                      <i nz-icon nzType="delete" nzTheme="outline"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nz-spin>
+      </div>
+    </nz-card>
+  </div>
+
+  <!-- Danh sách bài viết -->
+  <div *ngIf="!selectedBlog" class="blog-list">
+    <nz-card>
+      <div class="blog-header mb-4">
+        <h1 class="blog-page-title">
+          <i nz-icon nzType="file-text" nzTheme="outline"></i>
+          Blog
+        </h1>
+        <p class="blog-page-subtitle">Khám phá những bài viết mới nhất từ chúng tôi</p>
+      </div>
+
+      <!-- Bộ lọc và tìm kiếm -->
+      <div nz-row [nzGutter]="16" class="mb-4 filter-section">
+        <div nz-col [nzXs]="24" [nzSm]="16" [nzMd]="12">
+          <nz-input-group [nzSuffix]="suffixIconSearch">
+            <input 
+              type="text" 
+              nz-input 
+              [(ngModel)]="searchValue"
+              (keyup.enter)="onSearch()"
+              placeholder="Tìm kiếm bài viết..." />
+          </nz-input-group>
+          <ng-template #suffixIconSearch>
+            <i nz-icon nzType="search" (click)="onSearch()"></i>
+          </ng-template>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="8" [nzMd]="12" *ngIf="categories.length > 0">
+          <nz-select 
+            nzPlaceHolder="Lọc theo danh mục"
+            [(ngModel)]="categoryFilter"
+            (ngModelChange)="onCategoryFilter($event)"
+            nzAllowClear
+            class="w-100">
+            <nz-option *ngFor="let cat of categories" [nzValue]="cat" [nzLabel]="cat"></nz-option>
+          </nz-select>
+        </div>
+      </div>
+
+      <!-- Danh sách bài viết -->
+      <nz-spin [nzSpinning]="isLoading">
+        <div *ngIf="blogs.length === 0 && !isLoading" class="empty-state">
+          <nz-empty nzNotFoundContent="Chưa có bài viết nào"></nz-empty>
+        </div>
+
+        <div nz-row [nzGutter]="[16, 16]" *ngIf="blogs.length > 0">
+          <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngFor="let blog of blogs">
+            <nz-card 
+              class="blog-card"
+              [nzHoverable]="true"
+              (click)="viewBlogDetail(blog)"
+              style="cursor: pointer; height: 100%;">
+              <div class="blog-card-image" *ngIf="blog.featuredImage">
+                <img [src]="blog.featuredImage" [alt]="blog.title" />
+              </div>
+              <div class="blog-card-content">
+                <h3 class="blog-card-title">{{ blog.title }}</h3>
+                <p class="blog-card-excerpt" *ngIf="blog.excerpt || blog.content">
+                  {{ blog.excerpt || getExcerpt(blog.content) }}
+                </p>
+                <div class="blog-card-meta">
+                  <span class="meta-item">
+                    <i nz-icon nzType="calendar" nzTheme="outline"></i>
+                    {{ formatDate(blog.createdAt) }}
+                  </span>
+                  <span class="meta-item" *ngIf="blog.views">
+                    <i nz-icon nzType="eye" nzTheme="outline"></i>
+                    {{ blog.views }}
+                  </span>
+                </div>
+                <div class="blog-card-tags" *ngIf="blog.tags && blog.tags.length > 0">
+                  <nz-tag *ngFor="let tag of blog.tags.slice(0, 3)" [nzColor]="'blue'" style="margin: 2px;">
+                    {{ tag }}
+                  </nz-tag>
+                </div>
+                <div class="blog-card-category" *ngIf="blog.category">
+                  <nz-tag [nzColor]="'green'">{{ blog.category }}</nz-tag>
+                </div>
+              </div>
+            </nz-card>
+          </div>
+        </div>
+
+        <!-- Phân trang -->
+        <div class="pagination-section mt-4" *ngIf="total > pageSize">
+          <nz-pagination
+            [nzPageIndex]="pageIndex"
+            [nzPageSize]="pageSize"
+            [nzTotal]="total"
+            [nzShowSizeChanger]="false"
+            (nzPageIndexChange)="onPageChange($event)">
+          </nz-pagination>
+        </div>
+      </nz-spin>
+    </nz-card>
+  </div>
+</div>
+

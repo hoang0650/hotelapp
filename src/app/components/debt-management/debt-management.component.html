@@ -101,8 +101,9 @@
               <th nzWidth="120px">Số tiền công nợ</th>
               <th nzWidth="120px">Đã thanh toán</th>
               <th nzWidth="120px">Còn lại</th>
+              <th nzWidth="150px">Nhãn</th>
               <th nzWidth="120px">Trạng thái</th>
-              <th nzWidth="150px">Thao tác</th>
+              <th nzWidth="200px">Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -118,12 +119,29 @@
               <td>{{ formatCurrency(debt.paidAmount) }}</td>
               <td><strong>{{ formatCurrency(debt.remainingAmount) }}</strong></td>
               <td>
+                <div class="debt-labels">
+                  <nz-tag 
+                    *ngFor="let label of debt.labels || []" 
+                    [nzColor]="getLabelColor(label)"
+                    class="mb-1">
+                    {{ getLabelName(label) }}
+                  </nz-tag>
+                  <span *ngIf="!debt.labels || debt.labels.length === 0" class="text-muted">-</span>
+                </div>
+              </td>
+              <td>
                 <nz-tag [nzColor]="getStatusColor(debt.status)">
                   {{ getStatusLabel(debt.status) }}
                 </nz-tag>
               </td>
               <td>
                 <nz-button-group>
+                  <button nz-button nzSize="small" nzType="default" 
+                          (click)="openLabelModal(debt)"
+                          *ngIf="canManageLabels(debt)"
+                          nz-tooltip nzTooltipTitle="Quản lý nhãn">
+                    <i nz-icon nzType="tags"></i>
+                  </button>
                   <button nz-button nzSize="small" nzType="primary" 
                           (click)="openSettleModal(debt)" 
                           *ngIf="canSettle(debt)"
@@ -138,6 +156,7 @@
                           nz-tooltip nzTooltipTitle="Xóa">
                     <i nz-icon nzType="delete"></i>
                   </button>
+                  <span *ngIf="!canManageLabels(debt) && !canSettle(debt) && !canDelete(debt)" class="text-muted">-</span>
                 </nz-button-group>
               </td>
             </tr>
@@ -208,6 +227,102 @@
             </button>
           </div>
         </form>
+      </div>
+    </nz-modal>
+
+    <!-- Modal quản lý nhãn -->
+    <nz-modal
+      [(nzVisible)]="isLabelModalVisible"
+      nzTitle="Quản lý nhãn công nợ"
+      (nzOnCancel)="closeLabelModal()"
+      [nzFooter]="null"
+      [nzWidth]="500">
+      <div *nzModalContent>
+        <div class="mb-3" *ngIf="selectedDebt">
+          <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
+            <nz-descriptions-item nzTitle="Khách hàng">{{ selectedDebt.customerName }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Mã hóa đơn">{{ selectedDebt.invoiceNumber }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Số tiền còn lại">
+              <strong>{{ formatCurrency(selectedDebt.remainingAmount) }}</strong>
+            </nz-descriptions-item>
+          </nz-descriptions>
+        </div>
+
+        <div class="mb-3">
+          <nz-form-item>
+            <nz-form-label>Nhãn hiện tại</nz-form-label>
+            <nz-form-control>
+              <div class="current-labels mb-2">
+                <div *ngFor="let label of currentLabels" class="label-item mb-2">
+                  <nz-tag 
+                    [nzColor]="label.color"
+                    (nzOnClose)="removeLabel(label)"
+                    class="mr-2">
+                    {{ label.name }}
+                  </nz-tag>
+                  <nz-select
+                    [ngModel]="label.color"
+                    (ngModelChange)="updateLabelColor(label, $event)"
+                    nzSize="small"
+                    style="width: 120px;">
+                    <nz-option *ngFor="let color of availableColors" [nzValue]="color.value" [nzLabel]="color.label"></nz-option>
+                  </nz-select>
+                </div>
+                <span *ngIf="currentLabels.length === 0" class="text-muted">Chưa có nhãn</span>
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>Thêm nhãn mới</nz-form-label>
+            <nz-form-control>
+              <div class="add-label-section">
+                <nz-select
+                  nzMode="tags"
+                  nzPlaceHolder="Nhập nhãn và nhấn Enter"
+                  [(ngModel)]="newLabelInput"
+                  (ngModelChange)="onNewLabelInput($event)"
+                  [nzTokenSeparators]="[',']"
+                  class="w-100 mb-2">
+                </nz-select>
+                <nz-form-item>
+                  <nz-form-label>Chọn màu cho nhãn mới</nz-form-label>
+                  <nz-form-control>
+                    <nz-select
+                      [(ngModel)]="selectedLabelColor"
+                      class="w-100">
+                      <nz-option *ngFor="let color of availableColors" [nzValue]="color.value" [nzLabel]="color.label"></nz-option>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>Nhãn gợi ý</nz-form-label>
+            <nz-form-control>
+              <div class="suggested-labels">
+                <nz-tag 
+                  *ngFor="let label of suggestedLabels" 
+                  [nzColor]="label.color"
+                  class="cursor-pointer"
+                  (click)="addSuggestedLabel(label)">
+                  + {{ label.name }}
+                </nz-tag>
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div class="text-right mt-3">
+          <button nz-button nzType="default" (click)="closeLabelModal()" [disabled]="isUpdatingLabels">
+            Hủy
+          </button>
+          <button nz-button nzType="primary" (click)="saveLabels()" [nzLoading]="isUpdatingLabels" class="ml-2">
+            Lưu nhãn
+          </button>
+        </div>
       </div>
     </nz-modal>
   </nz-card>

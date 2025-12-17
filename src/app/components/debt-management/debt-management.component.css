@@ -103,3 +103,48 @@
   text-align: right;
 }
 
+.debt-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.current-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+  padding: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background-color: #fafafa;
+}
+
+.suggested-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.cursor-pointer:hover {
+  opacity: 0.8;
+}
+
+.label-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mr-2 {
+  margin-right: 8px;
+}
+
+.add-label-section {
+  width: 100%;
+}
+

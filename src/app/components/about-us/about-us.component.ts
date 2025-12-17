@@ -6,45 +6,36 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./about-us.component.css']
 })
 export class AboutUsComponent implements OnInit {
-  teamMembers = [
+  coreValues = [
     {
-      name: 'Jane Doe',
-      position: 'CEO',
-      avatarUrl: 'https://randomuser.me/api/portraits/women/1.jpg',
-      bio: 'Jane is the visionary behind our company, leading with passion and innovation.'
+      title: 'Sáng tạo',
+      description: 'Luôn đổi mới và sáng tạo trong mọi giải pháp công nghệ, mang đến những trải nghiệm độc đáo cho khách hàng.',
+      icon: 'bulb'
     },
     {
-      name: 'John Smith',
-      position: 'CTO',
-      avatarUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
-      bio: 'John drives our technology strategy and ensures our solutions are cutting-edge.'
+      title: 'Chất lượng',
+      description: 'Cam kết cung cấp các sản phẩm và dịch vụ chất lượng cao, đáp ứng mọi nhu cầu của khách hàng.',
+      icon: 'star'
     },
     {
-      name: 'Emily Johnson',
-      position: 'COO',
-      avatarUrl: 'https://randomuser.me/api/portraits/women/2.jpg',
-      bio: 'Emily manages operations and ensures our day-to-day activities align with our strategic goals.'
-    }
-  ];
-
-  services = [
-    {
-      title: 'Luxury Rooms',
-      description: 'Experience the best in comfort and style with our luxury rooms.',
-      icon: 'anticon anticon-star',
-      link: '/rooms'
+      title: 'Tin cậy',
+      description: 'Xây dựng mối quan hệ lâu dài dựa trên sự tin cậy và minh bạch trong mọi giao dịch.',
+      icon: 'safety-certificate'
     },
     {
-      title: 'Gourmet Dining',
-      description: 'Indulge in gourmet dining with our world-class chefs.',
-      icon: 'anticon anticon-heart',
-      link: '/dining'
+      title: 'Đổi mới',
+      description: 'Không ngừng cập nhật và phát triển công nghệ mới, đi đầu trong xu hướng số hóa ngành khách sạn.',
+      icon: 'thunderbolt'
     },
     {
-      title: 'Spa Services',
-      description: 'Relax and rejuvenate with our exclusive spa services.',
-      icon: 'anticon anticon-skin',
-      link: '/spa'
+      title: 'Hợp tác',
+      description: 'Làm việc chặt chẽ với đối tác và khách hàng để đạt được mục tiêu chung và tạo ra giá trị bền vững.',
+      icon: 'team'
+    },
+    {
+      title: 'Phục vụ',
+      description: 'Đặt khách hàng làm trung tâm, luôn lắng nghe và phục vụ với tinh thần tận tâm, chuyên nghiệp.',
+      icon: 'customer-service'
     }
   ];
 

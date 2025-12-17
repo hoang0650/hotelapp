@@ -1,0 +1,266 @@
+<div class="financial-summary-container" *ngIf="canAccess()">
+  <nz-card [nzTitle]="'Báo cáo tổng hợp tài chính' | translate" [nzBordered]="true">
+    <!-- Bộ lọc -->
+    <div class="filters-section">
+      <nz-row [nzGutter]="16">
+        <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Khách sạn</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                [(ngModel)]="selectedHotelId"
+                (ngModelChange)="onHotelChange()"
+                [nzPlaceHolder]="'Chọn khách sạn' | translate"
+                [nzLoading]="loading">
+                <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </nz-col>
+        <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Khoảng thời gian</nz-form-label>
+            <nz-form-control>
+              <nz-range-picker
+                [(ngModel)]="dateRange"
+                (ngModelChange)="onDateRangeChange()"
+                [nzFormat]="'dd/MM/yyyy'"
+                [nzPlaceHolder]="['Từ ngày', 'Đến ngày']">
+              </nz-range-picker>
+            </nz-form-control>
+          </nz-form-item>
+        </nz-col>
+        <nz-col [nzXs]="24" [nzSm]="24" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>&nbsp;</nz-form-label>
+            <nz-form-control>
+              <button nz-button nzType="primary" (click)="loadFinancialSummary()" [nzLoading]="loading">
+                <span nz-icon nzType="reload"></span>
+                {{ 'Tải lại' | translate }}
+              </button>
+            </nz-form-control>
+          </nz-form-item>
+        </nz-col>
+      </nz-row>
+    </div>
+
+    <!-- Báo cáo -->
+    <div *ngIf="financialSummary && !loading" class="summary-content">
+      <!-- Tổng quan -->
+      <nz-row [nzGutter]="16" class="summary-cards">
+        <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+          <nz-card class="summary-card revenue-card">
+            <div class="card-content">
+              <div class="card-icon">
+                <span nz-icon nzType="dollar" nzTheme="outline"></span>
+              </div>
+              <div class="card-info">
+                <div class="card-label">Tổng doanh thu</div>
+                <div class="card-value">{{ formatCurrency(financialSummary.totalRevenue) }}</div>
+              </div>
+            </div>
+          </nz-card>
+        </nz-col>
+        <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+          <nz-card class="summary-card cost-card">
+            <div class="card-content">
+              <div class="card-icon">
+                <span nz-icon nzType="shopping-cart" nzTheme="outline"></span>
+              </div>
+              <div class="card-info">
+                <div class="card-label">Tổng chi phí</div>
+                <div class="card-value">{{ formatCurrency(financialSummary.totalCosts) }}</div>
+              </div>
+            </div>
+          </nz-card>
+        </nz-col>
+        <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+          <nz-card class="summary-card profit-card">
+            <div class="card-content">
+              <div class="card-icon">
+                <span nz-icon nzType="rise" nzTheme="outline"></span>
+              </div>
+              <div class="card-info">
+                <div class="card-label">Lợi nhuận</div>
+                <div class="card-value" [class.negative]="financialSummary.profit < 0">
+                  {{ formatCurrency(financialSummary.profit) }}
+                </div>
+              </div>
+            </div>
+          </nz-card>
+        </nz-col>
+        <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+          <nz-card class="summary-card investment-card">
+            <div class="card-content">
+              <div class="card-icon">
+                <span nz-icon nzType="bank" nzTheme="outline"></span>
+              </div>
+              <div class="card-info">
+                <div class="card-label">Vốn đầu tư</div>
+                <div class="card-value">
+                  {{ formatCurrency(financialSummary.initialInvestment) }}
+                  <button nz-button nzType="link" nzSize="small" (click)="updateInitialInvestment()" title="Cập nhật">
+                    <span nz-icon nzType="edit"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </nz-card>
+        </nz-col>
+      </nz-row>
+
+      <!-- Thời gian hoàn vốn -->
+      <nz-card class="payback-card" [nzTitle]="'Thời gian hoàn vốn' | translate">
+        <div class="payback-content">
+          <div class="payback-info">
+            <div class="payback-item">
+              <span class="label">Lợi nhuận trung bình/tháng:</span>
+              <span class="value">{{ formatCurrency(financialSummary.monthlyProfit) }}</span>
+            </div>
+            <div class="payback-item">
+              <span class="label">Thời gian hoàn vốn:</span>
+              <span class="value highlight">
+                {{ financialSummary.paybackPeriod > 0 ? formatNumber(financialSummary.paybackPeriod) + ' tháng' : 'Chưa xác định' }}
+                <span *ngIf="financialSummary.paybackPeriod > 0">
+                  ({{ formatNumber(financialSummary.paybackPeriodDays) }} ngày)
+                </span>
+              </span>
+            </div>
+            <div class="payback-note" *ngIf="financialSummary.monthlyProfit <= 0">
+              <nz-alert nzType="warning" [nzMessage]="'Lợi nhuận âm hoặc bằng 0, không thể tính thời gian hoàn vốn' | translate" [nzShowIcon]="true"></nz-alert>
+            </div>
+          </div>
+        </div>
+      </nz-card>
+
+      <!-- Chi tiết doanh thu -->
+      <nz-card class="breakdown-card" [nzTitle]="'Chi tiết doanh thu' | translate">
+        <nz-row [nzGutter]="16">
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Doanh thu phòng:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.roomRevenue) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.roomRevenueDaily">
+            <div class="breakdown-item">
+              <span class="label">Doanh thu phòng/ngày:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.roomRevenueDaily) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.roomRevenueMonthly">
+            <div class="breakdown-item">
+              <span class="label">Doanh thu phòng/tháng:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.roomRevenueMonthly) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.roomRevenueYearly">
+            <div class="breakdown-item">
+              <span class="label">Doanh thu phòng/năm:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.roomRevenueYearly) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Doanh thu dịch vụ:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.serviceRevenue) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.cafeRevenue">
+            <div class="breakdown-item">
+              <span class="label">Doanh thu café:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.cafeRevenue) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.otherServiceRevenue">
+            <div class="breakdown-item">
+              <span class="label">Doanh thu dịch vụ khác:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.otherServiceRevenue) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Doanh thu khác:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.otherRevenue) }}</span>
+            </div>
+          </nz-col>
+        </nz-row>
+      </nz-card>
+
+      <!-- Chi tiết chi phí -->
+      <nz-card class="breakdown-card" [nzTitle]="'Chi tiết chi phí' | translate">
+        <nz-row [nzGutter]="16">
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Tổng chi phí:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.expenses) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Chi phí lương:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.salary) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Chi bán hàng, quảng cáo:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.marketing) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Chi phí bảo trì:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.maintenance) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.costs.training">
+            <div class="breakdown-item">
+              <span class="label">Chi phí đào tạo:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.training) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.costs.serviceCost">
+            <div class="breakdown-item">
+              <span class="label">Chi phí giá vốn (Dịch vụ):</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.serviceCost) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Chi phí hoạt động KS (điện nước, khăn):</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.utilities) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Vật tư:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.supplies) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+            <div class="breakdown-item">
+              <span class="label">Khác:</span>
+              <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.other) }}</span>
+            </div>
+          </nz-col>
+        </nz-row>
+      </nz-card>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="loading-container">
+      <nz-spin [nzSize]="'large'"></nz-spin>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!financialSummary && !loading" class="empty-container">
+      <nz-empty [nzNotFoundContent]="'Chưa có dữ liệu' | translate"></nz-empty>
+    </div>
+  </nz-card>
+</div>
+
+<div *ngIf="!canAccess()" class="unauthorized-container">
+  <nz-result nzStatus="403" [nzTitle]="'Không có quyền truy cập' | translate" [nzSubTitle]="'Bạn không có quyền xem báo cáo này' | translate"></nz-result>
+</div>
+

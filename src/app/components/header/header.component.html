@@ -16,6 +16,9 @@
         <a class="nav-link" href="/pricing" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.PRICING' | translate }}</a>
       </li>
       <li class="nav-item">
+        <a class="nav-link" [routerLink]="['/blog']" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Blog</a>
+      </li>
+      <li class="nav-item" *ngIf="isLoggedIn">
         <a class="nav-link" href="/admin/room" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.ADMIN' | translate }}</a>
       </li>  
       <!-- <li class="nav-item">

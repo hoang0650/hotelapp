@@ -35,6 +35,10 @@ export interface Debt {
   dueDate?: Date | string;
   settledDate?: Date | string;
   notes?: string;
+  labels?: Array<{
+    name: string;
+    color?: string;
+  }>;
   paymentHistory?: Array<{
     paymentDate: Date | string;
     amount: number;
@@ -127,6 +131,13 @@ export class DebtService {
    */
   deleteDebt(id: string): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
+  }
+
+  /**
+   * Cập nhật nhãn cho công nợ
+   */
+  updateDebtLabels(id: string, labels: string[] | Array<{ name: string; color?: string }>): Observable<{ message: string; debt: Debt }> {
+    return this.http.patch<{ message: string; debt: Debt }>(`${this.apiUrl}/${id}/labels`, { labels });
   }
 }
 

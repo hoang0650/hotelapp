@@ -48,7 +48,14 @@
     "PRIVACY_POLICY": "Privacy Policy",
     "TERMS_OF_SERVICE": "Terms of Service",
     "CONTACT_US": "Contact Us",
-    "ABOUT": "About"
+    "ABOUT": "About",
+    "ABOUT_US": "About Us",
+    "ABOUT_DESCRIPTION": "At PHHOTEL, we are committed to providing exceptional hospitality experiences with a touch of luxury.",
+    "QUICK_LINKS": "Quick Links",
+    "BLOG": "Blog",
+    "ADDRESS": "Address",
+    "PHONE": "Phone",
+    "EMAIL": "Email"
   },
   "LANGUAGE": {
     "EN": "English",
@@ -80,6 +87,7 @@
     "SHIFT_HANDOVER": "Shift Handover",
     "OTAS_MANAGEMENT": "OTAs Management",
     "BANK_TRANSFER_HISTORY": "Bank Transfer History",
+    "FINANCIAL_SUMMARY_REPORT": "Financial Summary Report",
     "PRICING_MANAGEMENT": "Pricing Management",
     "ELECTRIC_SETTING": "Electric Setting",
     "REVENUE": "Revenue",
@@ -88,7 +96,14 @@
     "VISA": "Visa",
     "EXPAND_PAGE": "Expand Page",
     "EMAIL_ADMIN": "Email Admin",
-    "FILE": "File"
+    "FILE": "File",
+    "HOTEL_OPERATIONS": "Hotel Operations",
+    "DATA_MANAGEMENT": "Data Management",
+    "PAYMENT_FINANCE": "Payment & Finance",
+    "INTEGRATION_CONFIG": "Integration & Configuration",
+    "SYSTEM_SETTINGS": "System Settings",
+    "SHIFT_HANDOVER_HISTORY": "Shift Handover History",
+    "DEBT_MANAGEMENT": "Debt Management"
   },
   "TUYA": {
     "TITLE": "Tuya Smart Switch Control",

@@ -1,0 +1,199 @@
+<div class="container">
+  <nz-card>
+    <div class="header-section">
+      <h2 class="mb-4">
+        <i nz-icon nzType="file-text" nzTheme="outline"></i>
+        Quản Lý Blog
+      </h2>
+    </div>
+
+    <!-- Bộ lọc và tìm kiếm -->
+    <div nz-row [nzGutter]="16" class="mb-4 filter-section">
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Tìm kiếm</nz-form-label>
+          <nz-form-control>
+            <nz-input-group [nzSuffix]="suffixIconSearch">
+              <input 
+                type="text" 
+                nz-input 
+                [(ngModel)]="searchValue"
+                (keyup.enter)="onSearch()"
+                placeholder="Tìm kiếm theo tiêu đề, nội dung..." />
+            </nz-input-group>
+            <ng-template #suffixIconSearch>
+              <i nz-icon nzType="search" (click)="onSearch()"></i>
+            </ng-template>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Trạng thái</nz-form-label>
+          <nz-form-control>
+            <nz-select 
+              nzPlaceHolder="Tất cả"
+              [ngModel]="statusFilter" 
+              (ngModelChange)="onStatusFilterChange($event)"
+              class="w-100">
+              <nz-option nzValue="all" nzLabel="Tất cả"></nz-option>
+              <nz-option nzValue="published" nzLabel="Đã xuất bản"></nz-option>
+              <nz-option nzValue="draft" nzLabel="Bản nháp"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+
+    <!-- Nút thêm mới -->
+    <div class="mb-3" *ngIf="canAccess">
+      <button nz-button nzType="primary" (click)="openCreateModal()">
+        <i nz-icon nzType="plus"></i>
+        Thêm bài viết mới
+      </button>
+    </div>
+
+    <!-- Bảng danh sách blog -->
+    <div class="table-container">
+      <nz-spin [nzSpinning]="isLoading">
+        <nz-table 
+          #blogTable 
+          [nzData]="blogs" 
+          nzBordered 
+          [nzScroll]="{ x: 'max-content' }"
+          [nzPageSize]="pageSize"
+          [nzTotal]="total"
+          [nzPageIndex]="pageIndex"
+          (nzPageIndexChange)="onPageChange($event)"
+          (nzPageSizeChange)="onPageSizeChange($event)"
+          nzShowSizeChanger
+          [nzShowQuickJumper]="true"
+          [nzSize]="'small'">
+          <thead>
+            <tr>
+              <th nzWidth="200px">Tiêu đề</th>
+              <th nzWidth="150px">Tác giả</th>
+              <th nzWidth="100px">Trạng thái</th>
+              <th nzWidth="120px">Danh mục</th>
+              <th nzWidth="100px">Lượt xem</th>
+              <th nzWidth="150px">Ngày tạo</th>
+              <th nzWidth="150px">Ngày cập nhật</th>
+              <th nzWidth="150px">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let blog of blogs">
+              <td>
+                <strong>{{ blog.title }}</strong>
+                <div *ngIf="blog.excerpt" class="text-muted" style="font-size: 12px; margin-top: 4px;">
+                  {{ blog.excerpt }}
+                </div>
+              </td>
+              <td>{{ blog.authorName || 'N/A' }}</td>
+              <td>
+                <nz-tag [nzColor]="getStatusColor(blog.status)">
+                  {{ getStatusLabel(blog.status) }}
+                </nz-tag>
+              </td>
+              <td>{{ blog.category || '-' }}</td>
+              <td>{{ blog.views || 0 }}</td>
+              <td>{{ formatDate(blog.createdAt) }}</td>
+              <td>{{ formatDate(blog.updatedAt) }}</td>
+              <td>
+                <nz-button-group>
+                  <button nz-button nzSize="small" nzType="primary" 
+                          (click)="openEditModal(blog)" 
+                          *ngIf="canAccess"
+                          nz-tooltip nzTooltipTitle="Chỉnh sửa">
+                    <i nz-icon nzType="edit"></i>
+                  </button>
+                  <button nz-button nzSize="small" nzType="text" nzDanger
+                          *ngIf="canDelete"
+                          nz-popconfirm 
+                          nzPopconfirmTitle="Bạn có chắc muốn xóa?" 
+                          (nzOnConfirm)="deleteBlog(blog._id!)"
+                          nz-tooltip nzTooltipTitle="Xóa">
+                    <i nz-icon nzType="delete"></i>
+                  </button>
+                </nz-button-group>
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </nz-spin>
+    </div>
+
+    <!-- Modal thêm/sửa blog -->
+    <nz-modal
+      [(nzVisible)]="isModalVisible"
+      [nzTitle]="editId ? 'Cập nhật bài viết' : 'Thêm bài viết mới'"
+      (nzOnCancel)="handleCancel()"
+      (nzOnOk)="handleOk()"
+      [nzOkLoading]="isLoading"
+      [nzWidth]="900"
+      [nzWrapClassName]="'blog-modal-responsive'">
+      <div *nzModalContent>
+        <form nz-form [formGroup]="blogForm">
+          <nz-form-item>
+            <nz-form-label nzRequired>Tiêu đề</nz-form-label>
+            <nz-form-control nzErrorTip="Vui lòng nhập tiêu đề">
+              <input nz-input formControlName="title" placeholder="Nhập tiêu đề bài viết" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>Mô tả ngắn</nz-form-label>
+            <nz-form-control>
+              <textarea nz-input formControlName="excerpt" rows="3" placeholder="Nhập mô tả ngắn (tối đa 500 ký tự)"></textarea>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label nzRequired>Nội dung</nz-form-label>
+            <nz-form-control nzErrorTip="Vui lòng nhập nội dung">
+              <textarea nz-input formControlName="content" rows="10" placeholder="Nhập nội dung bài viết"></textarea>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-row [nzGutter]="16">
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label nzRequired>Trạng thái</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="status">
+                    <nz-option nzValue="draft" nzLabel="Bản nháp"></nz-option>
+                    <nz-option nzValue="published" nzLabel="Đã xuất bản"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzXs]="24" [nzSm]="12">
+              <nz-form-item>
+                <nz-form-label>Danh mục</nz-form-label>
+                <nz-form-control>
+                  <input nz-input formControlName="category" placeholder="Nhập danh mục" />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </nz-row>
+
+          <nz-form-item>
+            <nz-form-label>Ảnh đại diện (URL)</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="featuredImage" placeholder="Nhập URL ảnh đại diện" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>Tags (phân cách bằng dấu phẩy)</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="tags" placeholder="Ví dụ: tag1, tag2, tag3" />
+            </nz-form-control>
+          </nz-form-item>
+        </form>
+      </div>
+    </nz-modal>
+  </nz-card>
+</div>
+

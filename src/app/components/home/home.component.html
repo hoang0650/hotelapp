@@ -166,16 +166,47 @@
 
   <!-- Testimonials Carousel -->
   <div class="testimonials-section">
-    <h2 class="section-title">What Our Guests Say</h2>
-    <nz-carousel nzEffect="fade" nzAutoPlay nzDotPosition="bottom">
-      <div nz-carousel-content *ngFor="let testimonial of testimonials">
-        <div class="testimonial-item">
-          <nz-avatar [nzSrc]="testimonial.image" nzShape="circle" [nzSize]="120" class="testimonial-avatar"></nz-avatar>
-          <h4 class="testimonial-name">{{ testimonial.name }}</h4>
-          <p class="testimonial-quote">{{ testimonial.quote }}</p>
-        </div>
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Khách hàng nói gì về chúng tôi</h2>
+        <p class="section-subtitle">Những phản hồi chân thực từ khách hàng đã sử dụng dịch vụ của chúng tôi</p>
       </div>
-    </nz-carousel>
+      
+      <div class="testimonials-carousel-wrapper">
+        <nz-carousel 
+          nzEffect="fade" 
+          [nzAutoPlay]="true"
+          nzDotPosition="bottom"
+          [nzDots]="true"
+          [nzAutoPlaySpeed]="5000">
+          <div nz-carousel-content *ngFor="let testimonial of testimonials">
+            <div class="testimonial-card">
+              <div class="testimonial-quote-icon">
+                <i nz-icon nzType="quote" nzTheme="outline"></i>
+              </div>
+              <div class="testimonial-content">
+                <p class="testimonial-quote">"{{ testimonial.quote }}"</p>
+                <div class="testimonial-rating">
+                  <i nz-icon nzType="star" nzTheme="fill" *ngFor="let star of [1,2,3,4,5]"></i>
+                </div>
+              </div>
+              <div class="testimonial-author">
+                <nz-avatar 
+                  [nzSrc]="testimonial.image" 
+                  nzShape="circle" 
+                  [nzSize]="80" 
+                  class="testimonial-avatar">
+                </nz-avatar>
+                <div class="author-info">
+                  <h4 class="testimonial-name">{{ testimonial.name }}</h4>
+                  <p class="testimonial-role" *ngIf="testimonial.role">{{ testimonial.role }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nz-carousel>
+      </div>
+    </div>
   </div>
 
   <!-- Call to Action Section -->
@@ -191,23 +222,23 @@
       <div class="row footer-content">
         <!-- Column 1 -->
         <div class="col-lg-4 col-md-6 mb-4">
-          <h5>About Us</h5>
-          <p>At PHHOTEL, we are committed to providing exceptional hospitality experiences with a touch of luxury.</p>
+          <h5>{{ 'FOOTER.ABOUT_US' | translate }}</h5>
+          <p>{{ 'FOOTER.ABOUT_DESCRIPTION' | translate }}</p>
         </div>
         <!-- Column 2 -->
         <div class="col-lg-4 col-md-6 mb-4">
-          <h5>Quick Links</h5>
+          <h5>{{ 'FOOTER.QUICK_LINKS' | translate }}</h5>
           <ul class="list-unstyled">
-            <li><a href="#" class="text-white">Home</a></li>
-            <li><a href="#" class="text-white">Rooms</a></li>
-            <li><a href="#" class="text-white">Services</a></li>
-            <li><a href="#" class="text-white">Contact</a></li>
-            <li><a href="#" class="text-white">About Us</a></li>
+            <li><a href="/home" class="text-white">{{ 'NAVBAR.HOME' | translate }}</a></li>
+            <li><a href="/about-us" class="text-white">{{ 'NAVBAR.ABOUT_US' | translate }}</a></li>
+            <li><a href="/pricing" class="text-white">{{ 'NAVBAR.PRICING' | translate }}</a></li>
+            <li><a [routerLink]="['/blog']" class="text-white">{{ 'FOOTER.BLOG' | translate }}</a></li>
+            <li><a href="/admin/room" class="text-white">{{ 'NAVBAR.ADMIN' | translate }}</a></li>
           </ul>
         </div>
         <!-- Column 3 -->
         <div class="col-lg-4 col-md-12 mb-4">
-          <h5>Contact Us</h5>
+          <h5>{{ 'FOOTER.CONTACT_US' | translate }}</h5>
           <p><i class="fas fa-map-marker-alt"></i> 123 Main Street, Anytown, USA</p>
           <p><i class="fas fa-phone"></i> +1 234 567 890</p>
           <p><i class="fas fa-envelope"></i> info&#64;example.com</p>

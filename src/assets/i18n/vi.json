@@ -48,7 +48,14 @@
     "PRIVACY_POLICY": "Chính sách bảo mật",
     "TERMS_OF_SERVICE": "Điều khoản dịch vụ",
     "CONTACT_US": "Liên hệ",
-    "ABOUT": "Giới thiệu"
+    "ABOUT": "Giới thiệu",
+    "ABOUT_US": "Về chúng tôi",
+    "ABOUT_DESCRIPTION": "Tại PHHOTEL, chúng tôi cam kết mang đến những trải nghiệm phục vụ đặc biệt với một chút sang trọng.",
+    "QUICK_LINKS": "Liên kết nhanh",
+    "BLOG": "Blog",
+    "ADDRESS": "Địa chỉ",
+    "PHONE": "Điện thoại",
+    "EMAIL": "Email"
   },
   "LANGUAGE": {
     "EN": "Tiếng Anh",
@@ -80,6 +87,7 @@
     "SHIFT_HANDOVER": "Giao ca",
     "OTAS_MANAGEMENT": "Quản lý OTA",
     "BANK_TRANSFER_HISTORY": "Lịch sử chuyển khoản",
+    "FINANCIAL_SUMMARY_REPORT": "Báo cáo tổng hợp tài chính",
     "PRICING_MANAGEMENT": "Quản lý gói giá",
     "ELECTRIC_SETTING": "Cài đặt điện",
     "REVENUE": "Doanh thu",
@@ -88,7 +96,14 @@
     "VISA": "Visa",
     "EXPAND_PAGE": "Mở rộng trang",
     "EMAIL_ADMIN": "Quản lý email",
-    "FILE": "Tệp"
+    "FILE": "Tệp",
+    "HOTEL_OPERATIONS": "Vận hành khách sạn",
+    "DATA_MANAGEMENT": "Quản lý dữ liệu",
+    "PAYMENT_FINANCE": "Thanh toán & Tài chính",
+    "INTEGRATION_CONFIG": "Tích hợp & Cấu hình",
+    "SYSTEM_SETTINGS": "Cài đặt hệ thống",
+    "SHIFT_HANDOVER_HISTORY": "Lịch sử giao ca",
+    "DEBT_MANAGEMENT": "Quản lý công nợ"
   },
   "TUYA": {
     "TITLE": "Điều khiển công tắc điện Tuya",

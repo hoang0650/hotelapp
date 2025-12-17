@@ -37,6 +37,33 @@ export class DebtManagementComponent implements OnInit {
   settleForm!: FormGroup;
   isSettling = false;
 
+  // Label modal states
+  isLabelModalVisible = false;
+  currentLabels: Array<{ name: string; color: string }> = [];
+  newLabelInput: string[] = [];
+  isUpdatingLabels = false;
+  selectedLabelColor: string = 'default';
+  suggestedLabels = [
+    { name: 'Quan trọng', color: 'red' },
+    { name: 'Cần theo dõi', color: 'orange' },
+    { name: 'Khách VIP', color: 'purple' },
+    { name: 'Quá hạn', color: 'volcano' },
+    { name: 'Đã liên hệ', color: 'blue' },
+    { name: 'Chờ xác nhận', color: 'gold' }
+  ];
+  availableColors = [
+    { value: 'default', label: 'Mặc định' },
+    { value: 'red', label: 'Đỏ' },
+    { value: 'orange', label: 'Cam' },
+    { value: 'gold', label: 'Vàng' },
+    { value: 'green', label: 'Xanh lá' },
+    { value: 'blue', label: 'Xanh dương' },
+    { value: 'purple', label: 'Tím' },
+    { value: 'volcano', label: 'Đỏ cam' },
+    { value: 'cyan', label: 'Xanh lơ' },
+    { value: 'magenta', label: 'Hồng' }
+  ];
+
   paymentMethods = [
     { value: 'cash', label: 'Tiền mặt' },
     { value: 'bank_transfer', label: 'Chuyển khoản' },
@@ -75,6 +102,14 @@ export class DebtManagementComponent implements OnInit {
 
   get isHotelManager(): boolean {
     return this.authService.isHotelManager();
+  }
+
+  get isStaff(): boolean {
+    return this.authService.isStaff();
+  }
+
+  get isGuest(): boolean {
+    return this.authService.isGuest();
   }
 
   loadHotels(): void {
@@ -289,11 +324,139 @@ export class DebtManagementComponent implements OnInit {
   }
 
   canDelete(debt: Debt): boolean {
+    // Chỉ superadmin, admin, business được xóa
+    // Và chỉ được xóa khi chưa thanh toán
     return (this.isAdmin || this.isBusiness) && debt.paidAmount === 0;
   }
 
   canSettle(debt: Debt): boolean {
+    // superadmin, admin, business, hotel-manager được thanh toán
+    // staff và guest không được thanh toán
+    if (this.isStaff || this.isGuest) {
+      return false;
+    }
     return debt.status !== 'settled' && debt.status !== 'cancelled';
+  }
+
+  canManageLabels(debt: Debt): boolean {
+    // Tất cả role có quyền xem đều được quản lý nhãn
+    return true;
+  }
+
+  // Label management methods
+  openLabelModal(debt: Debt): void {
+    this.selectedDebt = debt;
+    // Chuyển đổi labels từ format cũ (string) sang format mới (object)
+    this.currentLabels = (debt.labels || []).map(label => {
+      if (typeof label === 'string') {
+        return { name: label, color: this.getDefaultLabelColor(label) };
+      }
+      return { name: label.name, color: label.color || 'default' };
+    });
+    this.newLabelInput = [];
+    this.selectedLabelColor = 'default';
+    this.isLabelModalVisible = true;
+  }
+
+  closeLabelModal(): void {
+    this.isLabelModalVisible = false;
+    this.selectedDebt = null;
+    this.currentLabels = [];
+    this.newLabelInput = [];
+    this.selectedLabelColor = 'default';
+  }
+
+  onNewLabelInput(value: string[]): void {
+    // Khi người dùng thêm nhãn mới, thêm vào currentLabels với màu đã chọn
+    if (value && value.length > 0) {
+      value.forEach(labelName => {
+        const trimmedLabel = labelName.trim();
+        if (trimmedLabel && !this.currentLabels.some(l => l.name === trimmedLabel)) {
+          this.currentLabels.push({
+            name: trimmedLabel,
+            color: this.selectedLabelColor
+          });
+        }
+      });
+    }
+    // Clear input sau khi thêm
+    setTimeout(() => {
+      this.newLabelInput = [];
+    }, 0);
+  }
+
+  addSuggestedLabel(label: { name: string; color: string }): void {
+    if (!this.currentLabels.some(l => l.name === label.name)) {
+      this.currentLabels.push({ ...label });
+    }
+  }
+
+  removeLabel(label: { name: string; color: string }): void {
+    const index = this.currentLabels.findIndex(l => l.name === label.name);
+    if (index > -1) {
+      this.currentLabels.splice(index, 1);
+    }
+  }
+
+  updateLabelColor(label: { name: string; color: string }, newColor: string): void {
+    const index = this.currentLabels.findIndex(l => l.name === label.name);
+    if (index > -1) {
+      this.currentLabels[index].color = newColor;
+    }
+  }
+
+  saveLabels(): void {
+    if (!this.selectedDebt) return;
+
+    this.isUpdatingLabels = true;
+    this.debtService.updateDebtLabels(this.selectedDebt._id!, this.currentLabels).subscribe({
+      next: (response) => {
+        this.message.success('Cập nhật nhãn thành công');
+        this.closeLabelModal();
+        this.loadDebts();
+        this.isUpdatingLabels = false;
+      },
+      error: (error) => {
+        console.error('Lỗi khi cập nhật nhãn:', error);
+        this.message.error(error.error?.message || 'Lỗi khi cập nhật nhãn');
+        this.isUpdatingLabels = false;
+      }
+    });
+  }
+
+  getLabelName(label: string | { name: string; color?: string }): string {
+    if (!label) return '';
+    if (typeof label === 'string') {
+      return label;
+    }
+    if (typeof label === 'object' && label.name) {
+      return label.name;
+    }
+    return '';
+  }
+
+  getLabelColor(label: string | { name: string; color?: string }): string {
+    if (!label) return 'default';
+    if (typeof label === 'string') {
+      return this.getDefaultLabelColor(label);
+    }
+    if (typeof label === 'object' && label.name) {
+      return label.color || this.getDefaultLabelColor(label.name);
+    }
+    return 'default';
+  }
+
+  getDefaultLabelColor(labelName: string): string {
+    // Màu sắc mặc định dựa trên nhãn
+    const colorMap: Record<string, string> = {
+      'Quan trọng': 'red',
+      'Cần theo dõi': 'orange',
+      'Khách VIP': 'purple',
+      'Quá hạn': 'volcano',
+      'Đã liên hệ': 'blue',
+      'Chờ xác nhận': 'gold'
+    };
+    return colorMap[labelName] || 'default';
   }
 }
 

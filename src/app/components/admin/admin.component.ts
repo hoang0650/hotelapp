@@ -146,6 +146,12 @@ export class AdminComponent implements OnInit {
            this.authService.isHotelManager();
   }
 
+  // Blog Management - chỉ superadmin và admin
+  canAccessBlogManagement(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin();
+  }
+
   // OTA Management - superadmin, admin, business, hotel
   canAccessOTAManagement(): boolean {
     return this.authService.isSuperAdmin() || 
@@ -200,6 +206,14 @@ export class AdminComponent implements OnInit {
   canAccessShiftHandoverHistory(): boolean {
     const rules = this.authService.getPermissionRules();
     return rules.canViewShiftHistory;
+  }
+
+  // Financial Summary Report - superadmin, admin, business, hotel
+  canAccessFinancialSummary(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin() || 
+           this.authService.isBusiness() || 
+           this.authService.isHotelManager();
   }
 
 }

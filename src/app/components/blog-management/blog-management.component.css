@@ -1,0 +1,33 @@
+.container {
+  padding: 24px;
+}
+
+.header-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-section {
+  margin-bottom: 16px;
+}
+
+.table-container {
+  margin-top: 16px;
+}
+
+.text-muted {
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+}
+
