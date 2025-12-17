@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { FinancialSummaryService, FinancialSummary, FinancialSummaryQuery } from '../../services/financial-summary.service';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FinancialSummaryService, FinancialSummary, FinancialSummaryQuery, FinancialConfig } from '../../services/financial-summary.service';
 import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
@@ -18,12 +19,24 @@ export class FinancialSummaryReportComponent implements OnInit {
   startDate: Date = startOfMonth(subMonths(new Date(), 1));
   endDate: Date = endOfMonth(subMonths(new Date(), 1));
   dateRange: [Date, Date] = [this.startDate, this.endDate];
+  configModalVisible = false;
+  configForm: FormGroup;
 
   constructor(
     private financialSummaryService: FinancialSummaryService,
     private authService: AuthService,
-    private hotelService: HotelService
-  ) { }
+    private hotelService: HotelService,
+    private fb: FormBuilder
+  ) {
+    this.configForm = this.fb.group({
+      depreciationRate: [10, [Validators.required, Validators.min(0), Validators.max(100)]],
+      loanPercentage: [70, [Validators.required, Validators.min(0), Validators.max(100)]],
+      interestRate: [8, [Validators.required, Validators.min(0), Validators.max(100)]],
+      taxRate: [20, [Validators.required, Validators.min(0), Validators.max(100)]],
+      wacc: [9, [Validators.required, Validators.min(0), Validators.max(100)]],
+      projectionYears: [10, [Validators.required, Validators.min(1), Validators.max(50)]]
+    });
+  }
 
   ngOnInit(): void {
     this.loadHotels();
@@ -110,6 +123,58 @@ export class FinancialSummaryReportComponent implements OnInit {
     }
   }
 
+  openConfigModal(): void {
+    if (!this.financialSummary) {
+      return;
+    }
+
+    const config = this.financialSummary.financialConfig || {
+      depreciationRate: 10,
+      loanPercentage: 70,
+      interestRate: 8,
+      taxRate: 20,
+      wacc: 9,
+      projectionYears: 10
+    };
+
+    this.configForm.patchValue({
+      depreciationRate: config.depreciationRate || 10,
+      loanPercentage: config.loanPercentage || 70,
+      interestRate: config.interestRate || 8,
+      taxRate: config.taxRate || 20,
+      wacc: config.wacc || 9,
+      projectionYears: config.projectionYears || 10
+    });
+
+    this.configModalVisible = true;
+  }
+
+  closeConfigModal(): void {
+    this.configModalVisible = false;
+  }
+
+  updateFinancialConfig(): void {
+    if (!this.selectedHotelId || !this.configForm.valid) {
+      return;
+    }
+
+    const financialConfig: FinancialConfig = this.configForm.value;
+
+    this.financialSummaryService.updateFinancialConfig(
+      this.selectedHotelId,
+      financialConfig
+    ).subscribe({
+      next: (response) => {
+        this.configModalVisible = false;
+        this.loadFinancialSummary();
+      },
+      error: (error) => {
+        console.error('Error updating financial config:', error);
+        alert('Có lỗi xảy ra khi cập nhật cấu hình tài chính: ' + (error.error?.message || error.message));
+      }
+    });
+  }
+
   formatCurrency(value: number): string {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -119,6 +184,14 @@ export class FinancialSummaryReportComponent implements OnInit {
 
   formatNumber(value: number): string {
     return new Intl.NumberFormat('vi-VN').format(value);
+  }
+
+  formatPercent(value: number): string {
+    return value + '%';
+  }
+
+  parsePercent(value: string): string {
+    return value.replace('%', '');
   }
 
   canAccess(): boolean {

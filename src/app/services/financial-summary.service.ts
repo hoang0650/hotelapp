@@ -2,6 +2,15 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface FinancialConfig {
+  depreciationRate?: number;      // % khấu hao mỗi năm
+  loanPercentage?: number;        // % vốn vay
+  interestRate?: number;          // % lãi suất vay/năm
+  taxRate?: number;              // % thuế suất
+  wacc?: number;                 // % WACC
+  projectionYears?: number;      // Số năm projection cho NPV/IRR
+}
+
 export interface FinancialSummary {
   totalRevenue: number;          // Tổng doanh thu
   totalCosts: number;            // Tổng chi phí
@@ -10,6 +19,14 @@ export interface FinancialSummary {
   monthlyProfit: number;         // Lợi nhuận trung bình/tháng
   paybackPeriod: number;         // Thời gian hoàn vốn (tháng)
   paybackPeriodDays: number;      // Thời gian hoàn vốn (ngày)
+  depreciation?: number;          // Khấu hao
+  interest?: number;             // Lãi vay
+  profitBeforeTax?: number;      // Lợi nhuận trước thuế
+  tax?: number;                  // Thuế
+  profitAfterTax?: number;       // Lợi nhuận sau thuế
+  npv?: number;                  // Net Present Value (triệu đồng)
+  irr?: number;                  // Internal Rate of Return (%)
+  financialConfig?: FinancialConfig; // Cấu hình tài chính
   breakdown: {
     revenue: {
       roomRevenue: number;       // Doanh thu phòng
@@ -79,6 +96,16 @@ export class FinancialSummaryService {
     return this.http.patch<{ message: string; data: { hotelId: string; initialInvestment: number } }>(
       `${this.apiUrl}/initial-investment/${hotelId}`,
       { initialInvestment }
+    );
+  }
+
+  /**
+   * Cập nhật cấu hình tài chính cho khách sạn
+   */
+  updateFinancialConfig(hotelId: string, financialConfig: FinancialConfig): Observable<{ message: string; data: { hotelId: string; financialConfig: FinancialConfig } }> {
+    return this.http.patch<{ message: string; data: { hotelId: string; financialConfig: FinancialConfig } }>(
+      `${this.apiUrl}/financial-config/${hotelId}`,
+      { financialConfig }
     );
   }
 }

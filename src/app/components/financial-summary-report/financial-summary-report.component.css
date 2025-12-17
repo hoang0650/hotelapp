@@ -162,6 +162,115 @@
   padding: 24px;
 }
 
+.financial-details-card,
+.evaluation-card,
+.config-card {
+  margin-bottom: 24px;
+  border-radius: 8px;
+}
+
+.config-content {
+  padding: 16px 0;
+}
+
+.config-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #fafafa;
+  border-radius: 6px;
+  border-left: 3px solid #52c41a;
+}
+
+.config-item .label {
+  font-size: 14px;
+  color: #595959;
+  font-weight: 500;
+}
+
+.config-item .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.config-actions {
+  text-align: right;
+}
+
+.highlight-item {
+  background: #e6f7ff !important;
+  border-left-color: #1890ff !important;
+}
+
+.evaluation-item {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 8px;
+  border-left: 4px solid #1890ff;
+  margin-bottom: 16px;
+}
+
+.evaluation-icon {
+  font-size: 40px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  flex-shrink: 0;
+}
+
+.npv-item .evaluation-icon {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.irr-item .evaluation-icon {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.evaluation-info {
+  flex: 1;
+}
+
+.evaluation-label {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 8px;
+}
+
+.evaluation-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.evaluation-value.positive {
+  color: #52c41a;
+}
+
+.evaluation-value.negative {
+  color: #ff4d4f;
+}
+
+.evaluation-note {
+  font-size: 12px;
+  color: #595959;
+  font-style: italic;
+}
+
+.evaluation-note.negative {
+  color: #ff4d4f;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .financial-summary-container {
@@ -183,6 +292,30 @@
     flex-direction: column;
     gap: 8px;
     text-align: center;
+  }
+
+  .evaluation-item {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .evaluation-icon {
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 576px) {
+  .summary-cards nz-col {
+    margin-bottom: 16px;
+  }
+
+  .card-value {
+    font-size: 20px;
+  }
+
+  .evaluation-value {
+    font-size: 24px;
   }
 }
 

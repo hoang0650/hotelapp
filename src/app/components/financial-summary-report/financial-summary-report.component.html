@@ -103,15 +103,212 @@
                 <div class="card-label">Vốn đầu tư</div>
                 <div class="card-value">
                   {{ formatCurrency(financialSummary.initialInvestment) }}
-                  <button nz-button nzType="link" nzSize="small" (click)="updateInitialInvestment()" title="Cập nhật">
+                  <button nz-button nzType="link" nzSize="small" (click)="updateInitialInvestment()" title="Cập nhật vốn đầu tư">
                     <span nz-icon nzType="edit"></span>
                   </button>
                 </div>
               </div>
+            </nz-card>
+          </nz-col>
+        </nz-row>
+
+      <!-- Cấu hình tài chính -->
+      <nz-card class="config-card" [nzTitle]="'Cấu hình tài chính' | translate" *ngIf="financialSummary.financialConfig">
+        <div class="config-content">
+          <nz-row [nzGutter]="16">
+            <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+              <div class="config-item">
+                <span class="label">Khấu hao:</span>
+                <span class="value">{{ financialSummary.financialConfig.depreciationRate }}% /năm</span>
+              </div>
+            </nz-col>
+            <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+              <div class="config-item">
+                <span class="label">% Vốn vay:</span>
+                <span class="value">{{ financialSummary.financialConfig.loanPercentage }}%</span>
+              </div>
+            </nz-col>
+            <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+              <div class="config-item">
+                <span class="label">Lãi suất vay:</span>
+                <span class="value">{{ financialSummary.financialConfig.interestRate }}% /năm</span>
+              </div>
+            </nz-col>
+            <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+              <div class="config-item">
+                <span class="label">Thuế suất:</span>
+                <span class="value">{{ financialSummary.financialConfig.taxRate }}%</span>
+              </div>
+            </nz-col>
+            <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+              <div class="config-item">
+                <span class="label">WACC:</span>
+                <span class="value">{{ financialSummary.financialConfig.wacc }}%</span>
+              </div>
+            </nz-col>
+            <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+              <div class="config-item">
+                <span class="label">Số năm projection:</span>
+                <span class="value">{{ financialSummary.financialConfig.projectionYears }} năm</span>
+              </div>
+            </nz-col>
+          </nz-row>
+            <div class="config-actions" style="margin-top: 16px;">
+              <button nz-button nzType="default" (click)="openConfigModal()">
+                <span nz-icon nzType="setting"></span>
+                Cập nhật cấu hình
+              </button>
+            </div>
+        </div>
+      </nz-card>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+            <nz-card class="summary-card revenue-card">
+              <div class="card-content">
+                <div class="card-icon">
+                  <span nz-icon nzType="dollar" nzTheme="outline"></span>
+                </div>
+                <div class="card-info">
+                  <div class="card-label">Tổng doanh thu</div>
+                  <div class="card-value">{{ formatCurrency(financialSummary.totalRevenue) }}</div>
+                </div>
+              </div>
+            </nz-card>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+            <nz-card class="summary-card cost-card">
+              <div class="card-content">
+                <div class="card-icon">
+                  <span nz-icon nzType="shopping-cart" nzTheme="outline"></span>
+                </div>
+                <div class="card-info">
+                  <div class="card-label">Tổng chi phí</div>
+                  <div class="card-value">{{ formatCurrency(financialSummary.totalCosts) }}</div>
+                </div>
+              </div>
+            </nz-card>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+            <nz-card class="summary-card profit-card">
+              <div class="card-content">
+                <div class="card-icon">
+                  <span nz-icon nzType="rise" nzTheme="outline"></span>
+                </div>
+                <div class="card-info">
+                  <div class="card-label">Lợi nhuận</div>
+                  <div class="card-value" [class.negative]="financialSummary.profit < 0">
+                    {{ formatCurrency(financialSummary.profit) }}
+                  </div>
+                </div>
+              </div>
+            </nz-card>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
+            <nz-card class="summary-card investment-card">
+              <div class="card-content">
+                <div class="card-icon">
+                  <span nz-icon nzType="bank" nzTheme="outline"></span>
+                </div>
+                <div class="card-info">
+                  <div class="card-label">Vốn đầu tư</div>
+                  <div class="card-value">
+                    {{ formatCurrency(financialSummary.initialInvestment) }}
+                    <button nz-button nzType="link" nzSize="small" (click)="updateInitialInvestment()" title="Cập nhật vốn đầu tư">
+                      <span nz-icon nzType="edit"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </nz-card>
+          </nz-col>
+        </nz-row>
             </div>
           </nz-card>
         </nz-col>
       </nz-row>
+
+      <!-- Thông tin tài chính chi tiết -->
+      <nz-card class="financial-details-card" [nzTitle]="'Thông tin tài chính chi tiết' | translate">
+        <nz-row [nzGutter]="16">
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.depreciation !== undefined">
+            <div class="breakdown-item">
+              <span class="label">Khấu hao:</span>
+              <span class="value">{{ formatCurrency(financialSummary.depreciation) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.interest !== undefined">
+            <div class="breakdown-item">
+              <span class="label">Lãi vay:</span>
+              <span class="value">{{ formatCurrency(financialSummary.interest) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.profitBeforeTax !== undefined">
+            <div class="breakdown-item">
+              <span class="label">Lợi nhuận trước thuế:</span>
+              <span class="value" [class.negative]="financialSummary.profitBeforeTax < 0">
+                {{ formatCurrency(financialSummary.profitBeforeTax) }}
+              </span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.tax !== undefined">
+            <div class="breakdown-item">
+              <span class="label">Thuế:</span>
+              <span class="value">{{ formatCurrency(financialSummary.tax) }}</span>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.profitAfterTax !== undefined">
+            <div class="breakdown-item highlight-item">
+              <span class="label">Lợi nhuận sau thuế:</span>
+              <span class="value" [class.negative]="financialSummary.profitAfterTax < 0">
+                {{ formatCurrency(financialSummary.profitAfterTax) }}
+              </span>
+            </div>
+          </nz-col>
+        </nz-row>
+      </nz-card>
+
+      <!-- Đánh giá hiệu quả -->
+      <nz-card class="evaluation-card" [nzTitle]="'Đánh giá hiệu quả' | translate" *ngIf="financialSummary.npv !== undefined || financialSummary.irr !== undefined">
+        <nz-row [nzGutter]="16">
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" *ngIf="financialSummary.npv !== undefined">
+            <div class="evaluation-item npv-item">
+              <div class="evaluation-icon">
+                <span nz-icon nzType="line-chart" nzTheme="outline"></span>
+              </div>
+              <div class="evaluation-info">
+                <div class="evaluation-label">NPV (Net Present Value)</div>
+                <div class="evaluation-value" [class.positive]="financialSummary.npv > 0" [class.negative]="financialSummary.npv < 0">
+                  {{ formatNumber(financialSummary.npv) }} triệu đồng
+                </div>
+                <div class="evaluation-note" *ngIf="financialSummary.npv > 0">
+                  Dự án có giá trị hiện tại ròng dương, đáng đầu tư
+                </div>
+                <div class="evaluation-note negative" *ngIf="financialSummary.npv < 0">
+                  Dự án có giá trị hiện tại ròng âm, cần xem xét lại
+                </div>
+              </div>
+            </div>
+          </nz-col>
+          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" *ngIf="financialSummary.irr !== undefined">
+            <div class="evaluation-item irr-item">
+              <div class="evaluation-icon">
+                <span nz-icon nzType="rise" nzTheme="outline"></span>
+              </div>
+              <div class="evaluation-info">
+                <div class="evaluation-label">IRR (Internal Rate of Return)</div>
+                <div class="evaluation-value" [class.positive]="financialSummary.irr > 9" [class.negative]="financialSummary.irr < 9">
+                  {{ formatNumber(financialSummary.irr) }}%
+                </div>
+                <div class="evaluation-note" *ngIf="financialSummary.irr > 9">
+                  Tỷ suất sinh lời nội bộ cao hơn WACC (9%), dự án khả thi
+                </div>
+                <div class="evaluation-note negative" *ngIf="financialSummary.irr < 9">
+                  Tỷ suất sinh lời nội bộ thấp hơn WACC (9%), cần xem xét lại
+                </div>
+              </div>
+            </div>
+          </nz-col>
+        </nz-row>
+      </nz-card>
 
       <!-- Thời gian hoàn vốn -->
       <nz-card class="payback-card" [nzTitle]="'Thời gian hoàn vốn' | translate">
@@ -267,4 +464,106 @@
 <div *ngIf="!canAccess()" class="unauthorized-container">
   <nz-result nzStatus="403" [nzTitle]="'Không có quyền truy cập' | translate" [nzSubTitle]="'Bạn không có quyền xem báo cáo này' | translate"></nz-result>
 </div>
+
+<!-- Modal cấu hình tài chính -->
+<nz-modal
+  [(nzVisible)]="configModalVisible"
+  nzTitle="Cấu hình tài chính"
+  (nzOnCancel)="closeConfigModal()"
+  (nzOnOk)="updateFinancialConfig()"
+  [nzOkText]="'Lưu' | translate"
+  [nzCancelText]="'Hủy' | translate"
+  [nzWidth]="600">
+  <div *nzModalContent>
+    <form [formGroup]="configForm">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Khấu hao (%/năm)</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % khấu hao từ 0 đến 100'">
+          <nz-input-number
+            formControlName="depreciationRate"
+            [nzMin]="0"
+            [nzMax]="100"
+            [nzStep]="1"
+            [nzFormatter]="formatPercent"
+            [nzParser]="parsePercent"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">% Vốn vay</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % vốn vay từ 0 đến 100'">
+          <nz-input-number
+            formControlName="loanPercentage"
+            [nzMin]="0"
+            [nzMax]="100"
+            [nzStep]="1"
+            [nzFormatter]="formatPercent"
+            [nzParser]="parsePercent"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Lãi suất vay (%/năm)</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % lãi suất từ 0 đến 100'">
+          <nz-input-number
+            formControlName="interestRate"
+            [nzMin]="0"
+            [nzMax]="100"
+            [nzStep]="0.1"
+            [nzFormatter]="formatPercent"
+            [nzParser]="parsePercent"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Thuế suất (%)</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % thuế suất từ 0 đến 100'">
+          <nz-input-number
+            formControlName="taxRate"
+            [nzMin]="0"
+            [nzMax]="100"
+            [nzStep]="1"
+            [nzFormatter]="formatPercent"
+            [nzParser]="parsePercent"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">WACC (%)</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % WACC từ 0 đến 100'">
+          <nz-input-number
+            formControlName="wacc"
+            [nzMin]="0"
+            [nzMax]="100"
+            [nzStep]="0.1"
+            [nzFormatter]="formatPercent"
+            [nzParser]="parsePercent"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="8">Số năm projection</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập số năm từ 1 đến 50'">
+          <nz-input-number
+            formControlName="projectionYears"
+            [nzMin]="1"
+            [nzMax]="50"
+            [nzStep]="1"
+            style="width: 100%">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </div>
+</nz-modal>
 
