@@ -115,6 +115,8 @@ export class FinancialSummaryReportComponent implements OnInit {
           }
           
           // Debug log để kiểm tra
+          console.log('=== FRONTEND DEBUG: Financial Summary ===');
+          console.log('Full response:', response);
           console.log('Financial Summary Revenue Breakdown:', {
             roomRevenue: revenue.roomRevenue,
             serviceRevenue: revenue.serviceRevenue,
@@ -129,6 +131,7 @@ export class FinancialSummaryReportComponent implements OnInit {
             receiptExpenses: this.financialSummary.breakdown.costs?.receiptExpenses,
             totalCosts: this.financialSummary.totalCosts
           });
+          console.log('=== END FRONTEND DEBUG ===');
         }
         
         this.loading = false;
