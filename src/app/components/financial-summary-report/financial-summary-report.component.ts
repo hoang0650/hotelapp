@@ -79,14 +79,45 @@ export class FinancialSummaryReportComponent implements OnInit {
     this.financialSummaryService.getFinancialSummary(query).subscribe({
       next: (response) => {
         this.financialSummary = response.data;
-        // Debug: Kiểm tra receiptRevenue
+        
+        // Đảm bảo tất cả các field revenue luôn có giá trị
         if (this.financialSummary && this.financialSummary.breakdown && this.financialSummary.breakdown.revenue) {
-          console.log('Receipt Revenue:', this.financialSummary.breakdown.revenue.receiptRevenue);
-          // Đảm bảo receiptRevenue luôn có giá trị (kể cả khi là 0)
-          if (this.financialSummary.breakdown.revenue.receiptRevenue === undefined || this.financialSummary.breakdown.revenue.receiptRevenue === null) {
-            this.financialSummary.breakdown.revenue.receiptRevenue = 0;
+          const revenue = this.financialSummary.breakdown.revenue;
+          
+          // Đảm bảo receiptRevenue luôn có giá trị (kể cả khi là 0 hoặc undefined)
+          if (revenue.receiptRevenue === undefined || revenue.receiptRevenue === null) {
+            revenue.receiptRevenue = 0;
           }
+          
+          // Đảm bảo các field khác cũng có giá trị mặc định
+          if (revenue.roomRevenue === undefined || revenue.roomRevenue === null) {
+            revenue.roomRevenue = 0;
+          }
+          if (revenue.serviceRevenue === undefined || revenue.serviceRevenue === null) {
+            revenue.serviceRevenue = 0;
+          }
+          if (revenue.otherRevenue === undefined || revenue.otherRevenue === null) {
+            revenue.otherRevenue = 0;
+          }
+          if (revenue.cafeRevenue === undefined || revenue.cafeRevenue === null) {
+            revenue.cafeRevenue = 0;
+          }
+          if (revenue.otherServiceRevenue === undefined || revenue.otherServiceRevenue === null) {
+            revenue.otherServiceRevenue = 0;
+          }
+          
+          // Debug log để kiểm tra
+          console.log('Financial Summary Revenue Breakdown:', {
+            roomRevenue: revenue.roomRevenue,
+            serviceRevenue: revenue.serviceRevenue,
+            cafeRevenue: revenue.cafeRevenue,
+            otherServiceRevenue: revenue.otherServiceRevenue,
+            receiptRevenue: revenue.receiptRevenue,
+            otherRevenue: revenue.otherRevenue,
+            totalRevenue: this.financialSummary.totalRevenue
+          });
         }
+        
         this.loading = false;
       },
       error: (error) => {
@@ -183,11 +214,12 @@ export class FinancialSummaryReportComponent implements OnInit {
     });
   }
 
-  formatCurrency(value: number): string {
+  formatCurrency(value: number | null | undefined): string {
+    const numValue = value || 0;
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND'
-    }).format(value);
+    }).format(numValue);
   }
 
   formatNumber(value: number): string {

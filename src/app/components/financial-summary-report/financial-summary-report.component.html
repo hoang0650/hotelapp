@@ -319,7 +319,7 @@
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
               <span class="label">Doanh thu từ phiếu thu:</span>
-              <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.receiptRevenue || 0) }}</span>
+              <span class="value">{{ formatCurrency(financialSummary?.breakdown?.revenue?.receiptRevenue) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
