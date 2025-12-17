@@ -79,6 +79,14 @@ export class FinancialSummaryReportComponent implements OnInit {
     this.financialSummaryService.getFinancialSummary(query).subscribe({
       next: (response) => {
         this.financialSummary = response.data;
+        // Debug: Kiểm tra receiptRevenue
+        if (this.financialSummary && this.financialSummary.breakdown && this.financialSummary.breakdown.revenue) {
+          console.log('Receipt Revenue:', this.financialSummary.breakdown.revenue.receiptRevenue);
+          // Đảm bảo receiptRevenue luôn có giá trị (kể cả khi là 0)
+          if (this.financialSummary.breakdown.revenue.receiptRevenue === undefined || this.financialSummary.breakdown.revenue.receiptRevenue === null) {
+            this.financialSummary.breakdown.revenue.receiptRevenue = 0;
+          }
+        }
         this.loading = false;
       },
       error: (error) => {
