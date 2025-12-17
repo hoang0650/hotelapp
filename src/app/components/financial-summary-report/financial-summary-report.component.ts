@@ -106,6 +106,14 @@ export class FinancialSummaryReportComponent implements OnInit {
             revenue.otherServiceRevenue = 0;
           }
           
+          // Đảm bảo costs cũng có giá trị mặc định
+          if (this.financialSummary.breakdown.costs) {
+            const costs = this.financialSummary.breakdown.costs;
+            if (costs.receiptExpenses === undefined || costs.receiptExpenses === null) {
+              costs.receiptExpenses = costs.expenses || 0; // Mặc định bằng tổng expenses
+            }
+          }
+          
           // Debug log để kiểm tra
           console.log('Financial Summary Revenue Breakdown:', {
             roomRevenue: revenue.roomRevenue,
@@ -115,6 +123,11 @@ export class FinancialSummaryReportComponent implements OnInit {
             receiptRevenue: revenue.receiptRevenue,
             otherRevenue: revenue.otherRevenue,
             totalRevenue: this.financialSummary.totalRevenue
+          });
+          console.log('Financial Summary Costs Breakdown:', {
+            expenses: this.financialSummary.breakdown.costs?.expenses,
+            receiptExpenses: this.financialSummary.breakdown.costs?.receiptExpenses,
+            totalCosts: this.financialSummary.totalCosts
           });
         }
         
@@ -215,7 +228,8 @@ export class FinancialSummaryReportComponent implements OnInit {
   }
 
   formatCurrency(value: number | null | undefined): string {
-    const numValue = value || 0;
+    // Xử lý null, undefined, NaN, và các giá trị không hợp lệ
+    const numValue = (value !== null && value !== undefined && !isNaN(value)) ? value : 0;
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND'

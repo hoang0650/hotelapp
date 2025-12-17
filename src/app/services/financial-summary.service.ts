@@ -41,6 +41,7 @@ export interface FinancialSummary {
     };
     costs: {
       expenses: number;          // Chi phí (phiếu chi)
+      receiptExpenses?: number;  // Tổng phiếu chi (tương tự receiptRevenue)
       utilities: number;         // Tiện ích
       salary: number;            // Lương
       supplies: number;          // Vật tư
