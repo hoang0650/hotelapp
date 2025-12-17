@@ -208,12 +208,10 @@ export class AdminComponent implements OnInit {
     return rules.canViewShiftHistory;
   }
 
-  // Financial Summary Report - superadmin, admin, business, hotel
+  // Financial Summary Report - chỉ superadmin và business
   canAccessFinancialSummary(): boolean {
     return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager();
+           this.authService.isBusiness();
   }
 
 }

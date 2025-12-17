@@ -122,10 +122,15 @@ export class FinancialSummaryReportComponent implements OnInit {
   }
 
   canAccess(): boolean {
+    // Chỉ superadmin và business mới được xem và tải Excel
     return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager();
+           this.authService.isBusiness();
+  }
+
+  canExportExcel(): boolean {
+    // Chỉ superadmin và business mới được tải Excel
+    return this.authService.isSuperAdmin() || 
+           this.authService.isBusiness();
   }
 
   exportToExcel(): void {
@@ -146,10 +151,16 @@ export class FinancialSummaryReportComponent implements OnInit {
     // Lấy token từ localStorage
     const token = localStorage.getItem('token');
     
+    if (!token) {
+      alert('Vui lòng đăng nhập để xuất file Excel');
+      this.exporting = false;
+      return;
+    }
+    
     fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': token || ''
+        'Authorization': `Bearer ${token}`
       }
     })
     .then(response => {
