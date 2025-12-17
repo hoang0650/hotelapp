@@ -36,6 +36,7 @@ export interface FinancialSummary {
       serviceRevenue: number;     // Doanh thu dịch vụ
       cafeRevenue?: number;        // Doanh thu café
       otherServiceRevenue?: number; // Doanh thu dịch vụ khác
+      receiptRevenue?: number;     // Doanh thu từ phiếu thu
       otherRevenue: number;       // Doanh thu khác
     };
     costs: {
