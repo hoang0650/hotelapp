@@ -126,6 +126,7 @@
     "TURN_OFF_ALL": "Turn Off All",
     "NO_DEVICES": "No devices found",
     "RELOAD": "Reload",
+    "EXPORT_EXCEL": "Export Excel",
     "ROOM_NUMBER": "Room Number",
     "DEVICE_STATUS": "Status",
     "SAVE": "Save",

@@ -34,9 +34,13 @@
           <nz-form-item>
             <nz-form-label>&nbsp;</nz-form-label>
             <nz-form-control>
-              <button nz-button nzType="primary" (click)="loadFinancialSummary()" [nzLoading]="loading">
+              <button nz-button nzType="primary" (click)="loadFinancialSummary()" [nzLoading]="loading" style="margin-right: 8px;">
                 <span nz-icon nzType="reload"></span>
                 {{ 'Tải lại' | translate }}
+              </button>
+              <button nz-button nzType="default" (click)="exportToExcel()" [nzLoading]="exporting">
+                <span nz-icon nzType="download"></span>
+                {{ 'TUYA.EXPORT_EXCEL' | translate }}
               </button>
             </nz-form-control>
           </nz-form-item>

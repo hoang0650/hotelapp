@@ -11,6 +11,7 @@ import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 })
 export class FinancialSummaryReportComponent implements OnInit {
   loading = false;
+  exporting = false;
   financialSummary: FinancialSummary | null = null;
   selectedHotelId: string | null = null;
   hotels: any[] = [];
@@ -125,6 +126,54 @@ export class FinancialSummaryReportComponent implements OnInit {
            this.authService.isAdmin() || 
            this.authService.isBusiness() || 
            this.authService.isHotelManager();
+  }
+
+  exportToExcel(): void {
+    if (!this.selectedHotelId) {
+      alert('Vui lòng chọn khách sạn');
+      return;
+    }
+
+    this.exporting = true;
+    const queryParams = new URLSearchParams({
+      hotelId: this.selectedHotelId,
+      startDate: format(this.startDate, 'yyyy-MM-dd'),
+      endDate: format(this.endDate, 'yyyy-MM-dd')
+    });
+
+    const url = `https://nest-production-8106.up.railway.app/financial-summary/export-excel?${queryParams.toString()}`;
+    
+    // Lấy token từ localStorage
+    const token = localStorage.getItem('token');
+    
+    fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': token || ''
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Lỗi khi xuất file Excel');
+      }
+      return response.blob();
+    })
+    .then(blob => {
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `bao-cao-tai-chinh-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      this.exporting = false;
+    })
+    .catch(error => {
+      console.error('Error exporting Excel:', error);
+      alert('Có lỗi xảy ra khi xuất file Excel');
+      this.exporting = false;
+    });
   }
 }
 
