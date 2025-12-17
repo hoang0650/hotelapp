@@ -108,7 +108,8 @@
                   </button>
                 </div>
               </div>
-            </nz-card>
+            </div>
+          </nz-card>
           </nz-col>
         </nz-row>
 
@@ -161,70 +162,6 @@
             </div>
         </div>
       </nz-card>
-          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
-            <nz-card class="summary-card revenue-card">
-              <div class="card-content">
-                <div class="card-icon">
-                  <span nz-icon nzType="dollar" nzTheme="outline"></span>
-                </div>
-                <div class="card-info">
-                  <div class="card-label">Tổng doanh thu</div>
-                  <div class="card-value">{{ formatCurrency(financialSummary.totalRevenue) }}</div>
-                </div>
-              </div>
-            </nz-card>
-          </nz-col>
-          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
-            <nz-card class="summary-card cost-card">
-              <div class="card-content">
-                <div class="card-icon">
-                  <span nz-icon nzType="shopping-cart" nzTheme="outline"></span>
-                </div>
-                <div class="card-info">
-                  <div class="card-label">Tổng chi phí</div>
-                  <div class="card-value">{{ formatCurrency(financialSummary.totalCosts) }}</div>
-                </div>
-              </div>
-            </nz-card>
-          </nz-col>
-          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
-            <nz-card class="summary-card profit-card">
-              <div class="card-content">
-                <div class="card-icon">
-                  <span nz-icon nzType="rise" nzTheme="outline"></span>
-                </div>
-                <div class="card-info">
-                  <div class="card-label">Lợi nhuận</div>
-                  <div class="card-value" [class.negative]="financialSummary.profit < 0">
-                    {{ formatCurrency(financialSummary.profit) }}
-                  </div>
-                </div>
-              </div>
-            </nz-card>
-          </nz-col>
-          <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
-            <nz-card class="summary-card investment-card">
-              <div class="card-content">
-                <div class="card-icon">
-                  <span nz-icon nzType="bank" nzTheme="outline"></span>
-                </div>
-                <div class="card-info">
-                  <div class="card-label">Vốn đầu tư</div>
-                  <div class="card-value">
-                    {{ formatCurrency(financialSummary.initialInvestment) }}
-                    <button nz-button nzType="link" nzSize="small" (click)="updateInitialInvestment()" title="Cập nhật vốn đầu tư">
-                      <span nz-icon nzType="edit"></span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </nz-card>
-          </nz-col>
-        </nz-row>
-            </div>
-          </nz-card>
-        </nz-col>
-      </nz-row>
 
       <!-- Thông tin tài chính chi tiết -->
       <nz-card class="financial-details-card" [nzTitle]="'Thông tin tài chính chi tiết' | translate">
