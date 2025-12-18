@@ -1231,11 +1231,51 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
+    // Nếu không tìm thấy event check-in, thử reload lại room data từ backend
     if (!lastCheckinEvent) {
-      this.message.error('Không tìm thấy thông tin check-in từ RoomEvent');
+      console.warn('No unchecked out checkin event found, attempting to reload room data');
+      
+      // Thử reload room data từ backend với excludeCheckedOut = true
+      if (this.roomData && this.roomData._id) {
+        this.roomsService.getRoomById(this.roomData._id, { excludeCheckedOut: true }).subscribe({
+          next: (reloadedRoom) => {
+            if (reloadedRoom.events && reloadedRoom.events.length > 0) {
+              const reloadedCheckinEvents = this.getUncheckedOutCheckinEvents(reloadedRoom.events);
+              if (reloadedCheckinEvents.length > 0) {
+                // Cập nhật roomData với dữ liệu mới
+                this.roomData = reloadedRoom;
+                lastCheckinEvent = reloadedCheckinEvents[0];
+                checkInTime = new Date(lastCheckinEvent.checkinTime);
+                // Tiếp tục xử lý checkout với event mới
+                this.processCheckOutWithEvent(lastCheckinEvent, checkInTime);
+                return;
+              }
+            }
+            // Nếu vẫn không tìm thấy, hiển thị warning và cho phép checkout với thông tin mặc định
+            this.message.warning('Không tìm thấy thông tin check-in từ RoomEvent. Sử dụng thông tin mặc định.');
+            this.processCheckOutWithDefaultData();
+          },
+          error: (err) => {
+            console.error('Error reloading room data:', err);
+            this.message.warning('Không tìm thấy thông tin check-in từ RoomEvent. Sử dụng thông tin mặc định.');
+            this.processCheckOutWithDefaultData();
+          }
+        });
+      } else {
+        this.message.warning('Không tìm thấy thông tin check-in từ RoomEvent. Sử dụng thông tin mặc định.');
+        this.processCheckOutWithDefaultData();
+      }
       this.isLoading = false;
       return;
     }
+    
+    // Tiếp tục xử lý checkout với event tìm được
+    this.processCheckOutWithEvent(lastCheckinEvent, checkInTime);
+  }
+  
+  // Xử lý checkout với event check-in đã tìm được
+  private processCheckOutWithEvent(lastCheckinEvent: any, checkInTime: Date): void {
+    const currentTime = this.getUTCTimePlus7();
     
     // Lấy tên khách và nguồn khách từ nhiều nguồn
     let customerName = 'Khách lẻ';
@@ -1449,6 +1489,42 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     // Tạm thời return để đợi API response
     return;
+  }
+  
+  // Xử lý checkout với thông tin mặc định khi không tìm thấy event check-in
+  private processCheckOutWithDefaultData(): void {
+    const currentTime = this.getUTCTimePlus7();
+    // Sử dụng thời gian hiện tại trừ 1 giờ làm checkinTime mặc định
+    const defaultCheckInTime = new Date(currentTime.getTime() - 3600000);
+    
+    // Tạo event mặc định
+    const defaultEvent = {
+      checkinTime: defaultCheckInTime,
+      rateType: this.checkOutForm?.get('rateType')?.value || 'hourly',
+      advancePayment: Number(this.checkOutForm?.get('advancePayment')?.value) || 0,
+      guestInfo: {
+        name: 'Khách lẻ',
+        phone: '',
+        email: '',
+        guestSource: 'walkin'
+      }
+    };
+    
+    // Lấy thông tin từ form nếu có
+    const formGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
+    const formGuestInfo = formGuestInfoFormGroup ? 
+      (formGuestInfoFormGroup.disabled ? formGuestInfoFormGroup.getRawValue() : formGuestInfoFormGroup.value) : 
+      (this.checkOutForm.get('guestInfo')?.value || {});
+    
+    if (formGuestInfo.name && formGuestInfo.name !== 'Khách lẻ') {
+      defaultEvent.guestInfo.name = formGuestInfo.name;
+      defaultEvent.guestInfo.phone = formGuestInfo.phone || '';
+      defaultEvent.guestInfo.email = formGuestInfo.email || '';
+      defaultEvent.guestInfo.guestSource = formGuestInfo.guestSource || 'walkin';
+    }
+    
+    // Tiếp tục xử lý checkout với event mặc định
+    this.processCheckOutWithEvent(defaultEvent, defaultCheckInTime);
   }
 
   /**
