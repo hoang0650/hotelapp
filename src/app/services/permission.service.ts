@@ -31,7 +31,7 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/hotel': ['hotel_management'],
   '/admin/company': ['company_management'],
   '/admin/staff': ['staff_management'],
-  '/service-management': ['service_management'],
+  '/admin/service-management': ['service_management'],
   '/admin/users-management': ['user_management'],
   '/admin/pricing-management': ['pricing_management'],
   '/admin/ota-management': ['ota_management'],
@@ -43,7 +43,10 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/email-admin': ['email_admin'],
   '/admin/qr-payment': ['qr_payment'],
   '/admin/visa-payment': ['visa_payment'],
-  '/admin/electric-setting': ['electric_management']
+  '/admin/electric-setting': ['electric_management'],
+  '/admin/financial-summary-report': ['revenue_chart'],
+  '/admin/profile': [], // Profile không cần permission đặc biệt, chỉ cần đăng nhập
+  '/admin/settings': ['settings_management']
 };
 
 @Injectable({

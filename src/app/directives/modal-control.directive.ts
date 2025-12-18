@@ -401,14 +401,124 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   
   // Hiển thị modal thông tin khách
   showGuestInfoModal(): void {
-    // Lấy từ room.events nếu có
+    // Load thông tin phòng mới nhất từ backend để đảm bảo có dữ liệu chính xác
+    this.roomsService.getRoomById(this.room._id, { excludeCheckedOut: true }).subscribe({
+      next: (roomData) => {
+        let guestInfo: any = {};
+        let checkinTime: Date | null = null;
+        let rateType: string = '';
+        let advancePayment: number = 0;
+        
+        // Lấy từ room events (check-in event chưa được checkout)
+        if (roomData.events && roomData.events.length > 0) {
+          // Tìm check-in event cuối cùng chưa được checkout
+          const checkinEvents = roomData.events.filter((e: any) => e.type === 'checkin');
+          if (checkinEvents.length > 0) {
+            // Lấy check-in event cuối cùng (chưa được checkout hoặc transfer)
+            const lastCheckin = checkinEvents[checkinEvents.length - 1];
+            guestInfo = lastCheckin.guestInfo || {};
+            checkinTime = lastCheckin.checkinTime ? new Date(lastCheckin.checkinTime) : null;
+            rateType = lastCheckin.rateType || '';
+            advancePayment = lastCheckin.advancePayment || 0;
+          }
+        }
+        
+        // Nếu guestInfo không có name hoặc name là "Khách lẻ", thử lấy từ currentBooking
+        if (!guestInfo.name || guestInfo.name === 'Khách lẻ') {
+          if (roomData.currentBooking && typeof roomData.currentBooking === 'object') {
+            const currentBooking = roomData.currentBooking;
+            if (currentBooking.guestInfo?.name && currentBooking.guestInfo.name !== 'Khách lẻ') {
+              guestInfo = {
+                ...guestInfo,
+                name: currentBooking.guestInfo.name,
+                phone: currentBooking.guestInfo.phone || guestInfo.phone,
+                email: currentBooking.guestInfo.email || guestInfo.email,
+                idNumber: currentBooking.guestInfo.idNumber || guestInfo.idNumber,
+                address: currentBooking.guestInfo.address || guestInfo.address
+              };
+            }
+          }
+        }
+        
+        // Fallback: lấy từ localStorage nếu vẫn chưa có
+        if (!guestInfo.name || guestInfo.name === 'Khách lẻ') {
+          const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
+          if (savedCheckinData) {
+            try {
+              const checkinData = JSON.parse(savedCheckinData);
+              if (checkinData.guestInfo?.name && checkinData.guestInfo.name !== 'Khách lẻ') {
+                guestInfo = { ...guestInfo, ...checkinData.guestInfo };
+                if (!checkinTime) {
+                  checkinTime = checkinData.checkinTime ? new Date(checkinData.checkinTime) : null;
+                }
+                if (!rateType) {
+                  rateType = checkinData.rateType || '';
+                }
+                if (!advancePayment) {
+                  advancePayment = checkinData.advancePayment || 0;
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing checkin data:', e);
+            }
+          }
+        }
+        
+        // Đảm bảo có name, nếu không thì mặc định "Khách lẻ"
+        if (!guestInfo.name) {
+          guestInfo = { ...guestInfo, name: 'Khách lẻ' };
+        }
+        
+        const rateTypeLabels: {[key: string]: string} = {
+          'hourly': 'Theo giờ',
+          'daily': 'Ngày đêm',
+          'nightly': 'Qua đêm'
+        };
+        
+        const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+        const formatDateTime = (date: Date | null) => date ? 
+          `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}` 
+          : 'Chưa có';
+        
+        this.modalService.info({
+          nzTitle: `Thông tin khách - Phòng ${this.room.roomNumber}`,
+          nzContent: `
+            <div style="line-height: 1.8; font-size: 14px;">
+              <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                <p style="margin: 0;"><strong>👤 Tên khách:</strong> ${guestInfo.name || 'Chưa có thông tin'}</p>
+              </div>
+              <p><strong>📞 Số điện thoại:</strong> ${guestInfo.phone || 'Chưa có'}</p>
+              <p><strong>🪪 CCCD/CMND:</strong> ${guestInfo.idNumber || 'Chưa có'}</p>
+              <p><strong>📧 Email:</strong> ${guestInfo.email || 'Chưa có'}</p>
+              <p><strong>📍 Địa chỉ:</strong> ${guestInfo.address || 'Chưa có'}</p>
+              ${guestInfo.guestSource ? `<p><strong>🔗 Nguồn khách:</strong> ${guestInfo.guestSource || 'Chưa có'}</p>` : ''}
+              <hr style="border: none; border-top: 1px dashed #d9d9d9; margin: 12px 0;" />
+              <p><strong>🕐 Nhận phòng:</strong> ${formatDateTime(checkinTime)}</p>
+              <p><strong>💰 Loại giá:</strong> ${rateTypeLabels[rateType] || 'Chưa xác định'}</p>
+              <p><strong>💵 Đặt trước:</strong> ${advancePayment > 0 ? formatCurrency(advancePayment) : 'Không'}</p>
+            </div>
+          `,
+          nzOkText: 'Đóng',
+          nzWidth: 450
+        });
+      },
+      error: (error) => {
+        console.error('Error loading room data:', error);
+        // Fallback: sử dụng dữ liệu từ room hiện tại
+        this.showGuestInfoFromRoom();
+      }
+    });
+  }
+  
+  // Fallback: hiển thị thông tin khách từ room hiện tại (không load từ backend)
+  private showGuestInfoFromRoom(): void {
     let guestInfo: any = {};
     let checkinTime: Date | null = null;
     let rateType: string = '';
     let advancePayment: number = 0;
     
     if (this.room.events && this.room.events.length > 0) {
-      const checkinEvents = this.room.events.filter(e => e.type === 'checkin');
+      const checkinEvents = this.room.events.filter((e: any) => e.type === 'checkin');
       if (checkinEvents.length > 0) {
         const lastCheckin = checkinEvents[checkinEvents.length - 1];
         guestInfo = lastCheckin.guestInfo || {};
@@ -418,20 +528,23 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       }
     }
     
-    // Fallback: lấy từ localStorage
-    if (!guestInfo.name) {
-      const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
-      if (savedCheckinData) {
-        try {
-          const checkinData = JSON.parse(savedCheckinData);
-          guestInfo = checkinData.guestInfo || {};
-          checkinTime = checkinData.checkinTime ? new Date(checkinData.checkinTime) : null;
-          rateType = checkinData.rateType || '';
-          advancePayment = checkinData.advancePayment || 0;
-        } catch (e) {
-          console.error('Error parsing checkin data:', e);
-        }
+    // Thử lấy từ currentBooking
+    if ((!guestInfo.name || guestInfo.name === 'Khách lẻ') && this.room.currentBooking) {
+      const currentBooking = typeof this.room.currentBooking === 'object' ? this.room.currentBooking : null;
+      if (currentBooking?.guestInfo?.name && currentBooking.guestInfo.name !== 'Khách lẻ') {
+        guestInfo = {
+          ...guestInfo,
+          name: currentBooking.guestInfo.name,
+          phone: currentBooking.guestInfo.phone || guestInfo.phone,
+          email: currentBooking.guestInfo.email || guestInfo.email,
+          idNumber: currentBooking.guestInfo.idNumber || guestInfo.idNumber,
+          address: currentBooking.guestInfo.address || guestInfo.address
+        };
       }
+    }
+    
+    if (!guestInfo.name) {
+      guestInfo = { ...guestInfo, name: 'Khách lẻ' };
     }
     
     const rateTypeLabels: {[key: string]: string} = {
@@ -456,6 +569,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           <p><strong>🪪 CCCD/CMND:</strong> ${guestInfo.idNumber || 'Chưa có'}</p>
           <p><strong>📧 Email:</strong> ${guestInfo.email || 'Chưa có'}</p>
           <p><strong>📍 Địa chỉ:</strong> ${guestInfo.address || 'Chưa có'}</p>
+          ${guestInfo.guestSource ? `<p><strong>🔗 Nguồn khách:</strong> ${guestInfo.guestSource || 'Chưa có'}</p>` : ''}
           <hr style="border: none; border-top: 1px dashed #d9d9d9; margin: 12px 0;" />
           <p><strong>🕐 Nhận phòng:</strong> ${formatDateTime(checkinTime)}</p>
           <p><strong>💰 Loại giá:</strong> ${rateTypeLabels[rateType] || 'Chưa xác định'}</p>
@@ -478,37 +592,117 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       return;
     }
     
-    // Lấy thông tin khách từ room nếu có
-    let guestInfo: any = null;
-    if (this.room.events && this.room.events.length > 0) {
-      const checkinEvents = this.room.events.filter((e: any) => e.type === 'checkin');
-      if (checkinEvents.length > 0) {
-        const lastCheckin = checkinEvents[checkinEvents.length - 1];
-        guestInfo = lastCheckin.guestInfo || null;
-      }
-    }
-    
-    // Mở modal GuestSaveModalComponent
-    const modalRef = this.modalService.create({
-      nzTitle: 'Lưu thông tin khách',
-      nzContent: GuestSaveModalComponent,
-      nzFooter: null,
-      nzWidth: 900,
-      nzMaskClosable: false,
-      nzData: {
-        room: this.room,
-        guestInfo: guestInfo
-      }
-    });
-    
-    modalRef.afterClose.subscribe((result) => {
-      if (result && result.success) {
-        this.roomsService.notifyRoomDataUpdated();
-        // Đảm bảo đóng context menu nếu còn mở
-        if (this.contextMenuModalRef) {
-          this.contextMenuModalRef.close();
-          this.contextMenuModalRef = null;
+    // Load thông tin phòng mới nhất từ backend để đảm bảo có dữ liệu chính xác
+    this.roomsService.getRoomById(this.room._id, { excludeCheckedOut: true }).subscribe({
+      next: (roomData) => {
+        // Lấy thông tin khách từ nhiều nguồn
+        let guestInfo: any = null;
+        
+        // 1. Lấy từ room events (check-in event chưa được checkout)
+        if (roomData.events && roomData.events.length > 0) {
+          const checkinEvents = roomData.events.filter((e: any) => e.type === 'checkin');
+          if (checkinEvents.length > 0) {
+            const lastCheckin = checkinEvents[checkinEvents.length - 1];
+            guestInfo = lastCheckin.guestInfo || null;
+          }
         }
+        
+        // 2. Nếu guestInfo không có hoặc name là "Khách lẻ", thử lấy từ currentBooking
+        if (!guestInfo || !guestInfo.name || guestInfo.name === 'Khách lẻ') {
+          if (roomData.currentBooking && typeof roomData.currentBooking === 'object') {
+            const currentBooking = roomData.currentBooking;
+            if (currentBooking.guestInfo?.name && currentBooking.guestInfo.name !== 'Khách lẻ') {
+              guestInfo = {
+                ...(guestInfo || {}),
+                name: currentBooking.guestInfo.name,
+                phone: currentBooking.guestInfo.phone || guestInfo?.phone,
+                email: currentBooking.guestInfo.email || guestInfo?.email,
+                idNumber: currentBooking.guestInfo.idNumber || guestInfo?.idNumber,
+                address: currentBooking.guestInfo.address || guestInfo?.address,
+                guestSource: currentBooking.guestInfo.guestSource || guestInfo?.guestSource
+              };
+            }
+          }
+        }
+        
+        // 3. Cập nhật room với dữ liệu mới nhất
+        const updatedRoom = { ...this.room, ...roomData };
+        
+        // Mở modal GuestSaveModalComponent
+        const modalRef = this.modalService.create({
+          nzTitle: 'Lưu thông tin khách',
+          nzContent: GuestSaveModalComponent,
+          nzFooter: null,
+          nzWidth: 900,
+          nzMaskClosable: false,
+          nzData: {
+            room: updatedRoom,
+            guestInfo: guestInfo
+          }
+        });
+        
+        modalRef.afterClose.subscribe((result) => {
+          if (result && result.success) {
+            this.roomsService.notifyRoomDataUpdated();
+            // Đảm bảo đóng context menu nếu còn mở
+            if (this.contextMenuModalRef) {
+              this.contextMenuModalRef.close();
+              this.contextMenuModalRef = null;
+            }
+          }
+        });
+      },
+      error: (error) => {
+        console.error('Error loading room data:', error);
+        // Fallback: sử dụng dữ liệu từ room hiện tại
+        let guestInfo: any = null;
+        if (this.room.events && this.room.events.length > 0) {
+          const checkinEvents = this.room.events.filter((e: any) => e.type === 'checkin');
+          if (checkinEvents.length > 0) {
+            const lastCheckin = checkinEvents[checkinEvents.length - 1];
+            guestInfo = lastCheckin.guestInfo || null;
+          }
+        }
+        
+        // Thử lấy từ currentBooking
+        if ((!guestInfo || !guestInfo.name || guestInfo.name === 'Khách lẻ') && this.room.currentBooking) {
+          const currentBooking = typeof this.room.currentBooking === 'object' ? this.room.currentBooking : null;
+          if (currentBooking?.guestInfo?.name && currentBooking.guestInfo.name !== 'Khách lẻ') {
+            guestInfo = {
+              ...(guestInfo || {}),
+              name: currentBooking.guestInfo.name,
+              phone: currentBooking.guestInfo.phone || guestInfo?.phone,
+              email: currentBooking.guestInfo.email || guestInfo?.email,
+              idNumber: currentBooking.guestInfo.idNumber || guestInfo?.idNumber,
+              address: currentBooking.guestInfo.address || guestInfo?.address,
+              guestSource: currentBooking.guestInfo.guestSource || guestInfo?.guestSource
+            };
+          }
+        }
+        
+        // Mở modal GuestSaveModalComponent với dữ liệu fallback
+        const modalRef = this.modalService.create({
+          nzTitle: 'Lưu thông tin khách',
+          nzContent: GuestSaveModalComponent,
+          nzFooter: null,
+          nzWidth: 900,
+          nzMaskClosable: false,
+          nzData: {
+            room: this.room,
+            guestInfo: guestInfo
+          }
+        });
+        
+        modalRef.afterClose.subscribe((result) => {
+          if (result && result.success) {
+            this.roomsService.notifyRoomDataUpdated();
+            // Đảm bảo đóng context menu nếu còn mở
+            if (this.contextMenuModalRef) {
+              this.contextMenuModalRef.close();
+              this.contextMenuModalRef = null;
+            }
+          }
+        });
       }
     });
   }

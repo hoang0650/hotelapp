@@ -1375,7 +1375,8 @@ export class RoomComponent implements OnInit, OnDestroy {
           const dailyDays = actualDays;
           roomPrice = dailyRate * dailyDays;
           
-          // Tính phụ thu check-in sớm (nếu có)
+          // Tính phụ thu check-in sớm CHỈ NẾU check-in TRƯỚC thời gian daily (trước 12:00)
+          // Nếu check-in trong thời gian daily (sau 12:00), KHÔNG tính early check-in surcharge
           // Thời gian quy định cho ngày đêm: 12:00 - 12:00 ngày hôm sau
           const priceConfigDaily = (room as any)?.priceConfig;
           const dailyStartTime = '12:00'; // Thời gian bắt đầu nhận ngày đêm
@@ -1390,7 +1391,12 @@ export class RoomComponent implements OnInit, OnDestroy {
             const [startHour, startMinute] = dailyStartTime.split(':').map(Number);
             const checkInMinutes = checkinTime.getHours() * 60 + checkinTime.getMinutes();
             const startTimeMinutes = startHour * 60 + startMinute;
-            if (checkInMinutes < startTimeMinutes) {
+            
+            // Kiểm tra xem check-in có trong thời gian daily không (sau dailyStartTime)
+            const isInDailyTime = checkInMinutes >= startTimeMinutes;
+            
+            // CHỈ tính early check-in surcharge nếu check-in TRƯỚC thời gian daily (trước dailyStartTime)
+            if (!isInDailyTime) {
               const earlyHours = Math.ceil((startTimeMinutes - checkInMinutes) / 60);
               roomPrice += earlyHours * dailyEarlyCheckinSurcharge;
             }
@@ -1431,12 +1437,20 @@ export class RoomComponent implements OnInit, OnDestroy {
           const lateCheckoutSurcharge = priceConfigNightly?.nightlyRates?.lateCheckoutSurcharge || 
                                        room.priceSettings?.nightlyLateCheckoutSurcharge || 0;
           
-          // Tính phụ thu check-in sớm (nếu check-in trước nightlyStartTime - 20:00)
+          // Tính phụ thu check-in sớm CHỈ NẾU check-in TRƯỚC thời gian nightly (trước nightlyStartTime)
+          // Nếu check-in trong thời gian nightly (sau 20:00 hoặc trước 12:00 ngày hôm sau), KHÔNG tính early check-in surcharge
           if (checkinTime && earlyCheckinSurcharge > 0) {
             const [startHour, startMinute] = nightlyStartTime.split(':').map(Number);
-            const checkInMinutes = checkinTime.getHours() * 60 + checkinTime.getMinutes();
             const startTimeMinutes = startHour * 60 + startMinute;
-            if (checkInMinutes < startTimeMinutes) {
+            const [endHour, endMinute] = nightlyEndTime.split(':').map(Number);
+            const endTimeMinutes = endHour * 60 + endMinute;
+            const checkInMinutes = checkinTime.getHours() * 60 + checkinTime.getMinutes();
+            
+            // Thời gian nightly: từ nightlyStartTime (ví dụ 20:00) đến nightlyEndTime ngày hôm sau (ví dụ 12:00)
+            const isInNightlyTime = checkInMinutes >= startTimeMinutes || checkInMinutes <= endTimeMinutes;
+            
+            // CHỈ tính early check-in surcharge nếu check-in TRƯỚC thời gian nightly (trước nightlyStartTime)
+            if (!isInNightlyTime) {
               const earlyHours = Math.ceil((startTimeMinutes - checkInMinutes) / 60);
               roomPrice += earlyHours * earlyCheckinSurcharge;
             }

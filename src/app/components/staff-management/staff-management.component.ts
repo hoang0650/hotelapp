@@ -11,6 +11,8 @@ import { UserService } from '../../services/user.service';
 import { User } from '../../interfaces/user';
 import { Subscription } from 'rxjs';
 import * as XLSX from 'xlsx';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
 declare global {
@@ -89,7 +91,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     private userService: UserService,
     private authService: AuthService,
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private http: HttpClient
   ) {
     this.initForm();
     this.initSalaryForm();
@@ -789,7 +792,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   }
 
   // Xuất PDF phiếu tính lương
-  exportSalaryPDF(): void {
+  async exportSalaryPDF(): Promise<void> {
     if (!this.salaryCalculationResult || !this.selectedStaffForSalary) {
       this.message.warning('Vui lòng tính lương trước khi xuất PDF');
       return;
@@ -827,36 +830,22 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     const content: any[] = [];
 
-    // Logo và tên công ty
+    // Logo (không hiển thị tên công ty với background màu xanh)
     if (this.businessLogo) {
-      const logoUrl = this.getImageUrl(this.businessLogo);
-      content.push({
-        columns: [
-          {
-            width: 60,
-            image: logoUrl,
-            fit: [60, 60],
-            alignment: 'center'
-          },
-          {
-            width: '*',
-            text: businessName.toUpperCase(),
-            fontSize: 14,
-            bold: true,
-            alignment: 'center',
-            margin: [10, 20, 0, 0]
-          }
-        ],
-        margin: [0, 0, 0, 20]
-      });
-    } else {
-      content.push({
-        text: businessName.toUpperCase(),
-        fontSize: 14,
-        bold: true,
-        alignment: 'center',
-        margin: [0, 0, 0, 20]
-      });
+      try {
+        const logoUrl = this.getImageUrl(this.businessLogo);
+        const logoBase64 = await this.convertImageUrlToBase64(logoUrl);
+        if (logoBase64) {
+          content.push({
+            image: logoBase64,
+            fit: [120, 120],
+            alignment: 'left',
+            margin: [0, 0, 0, 20]
+          });
+        }
+      } catch (error) {
+        console.error('Error converting logo to base64:', error);
+      }
     }
 
     const documentDefinition = {
@@ -1202,7 +1191,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   }
 
   // Xuất PDF lịch sử payroll
-  exportPayrollHistoryPDF(): void {
+  async exportPayrollHistoryPDF(): Promise<void> {
     if (!this.selectedStaffForPayrollHistory || this.payrollHistory.length === 0) {
       this.message.warning('Không có dữ liệu để xuất PDF');
       return;
@@ -1225,36 +1214,22 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     const content: any[] = [];
 
-    // Logo và tên công ty
+    // Logo (không hiển thị tên công ty với background màu xanh)
     if (this.businessLogo) {
-      const logoUrl = this.getImageUrl(this.businessLogo);
-      content.push({
-        columns: [
-          {
-            width: 60,
-            image: logoUrl,
-            fit: [60, 60],
-            alignment: 'center'
-          },
-          {
-            width: '*',
-            text: businessName.toUpperCase(),
-            fontSize: 14,
-            bold: true,
-            alignment: 'center',
-            margin: [10, 20, 0, 0]
-          }
-        ],
-        margin: [0, 0, 0, 20]
-      });
-    } else {
-      content.push({
-        text: businessName.toUpperCase(),
-        fontSize: 14,
-        bold: true,
-        alignment: 'center',
-        margin: [0, 0, 0, 20]
-      });
+      try {
+        const logoUrl = this.getImageUrl(this.businessLogo);
+        const logoBase64 = await this.convertImageUrlToBase64(logoUrl);
+        if (logoBase64) {
+          content.push({
+            image: logoBase64,
+            fit: [120, 120],
+            alignment: 'left',
+            margin: [0, 0, 0, 20]
+          });
+        }
+      } catch (error) {
+        console.error('Error converting logo to base64:', error);
+      }
     }
 
     // Tiêu đề
@@ -1802,7 +1777,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     // Có thể thêm logic validation nếu cần
   }
 
-  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  apiBaseUrl = environment.apiUrl;
 
   getImageUrl(urlOrId: string | null | undefined): string {
     if (!urlOrId) return '';
@@ -1816,6 +1791,36 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     }
     // Nếu chỉ là ID, thêm /files/ prefix
     return `${this.apiBaseUrl}/files/${urlOrId}`;
+  }
+
+  /**
+   * Convert image URL to base64 for pdfMake
+   */
+  async convertImageUrlToBase64(imageUrl: string): Promise<string | null> {
+    if (!imageUrl) return null;
+    
+    try {
+      // Fetch image as blob
+      const blob = await this.http.get(imageUrl, { responseType: 'blob' }).toPromise();
+      if (!blob) return null;
+      
+      // Convert blob to base64
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          resolve(base64data);
+        };
+        reader.onerror = () => {
+          console.error('Error reading blob');
+          resolve(null);
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error converting image to base64:', error);
+      return null;
+    }
   }
 
   handleLogoError(event: Event): void {

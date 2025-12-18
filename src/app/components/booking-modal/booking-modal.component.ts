@@ -532,60 +532,22 @@ export class BookingModalComponent implements OnInit {
     
     const content: any[] = [];
     
-    // Logo và tên khách sạn
+    // Logo (không hiển thị tên khách sạn với background màu xanh)
     if (this.hotelLogo) {
       try {
         const logoUrl = this.getImageUrl(this.hotelLogo);
         const logoBase64 = await this.convertImageUrlToBase64(logoUrl);
         if (logoBase64) {
           content.push({
-            columns: [
-              {
-                width: 60,
-                image: logoBase64,
-                fit: [60, 60],
-                alignment: 'center'
-              },
-              {
-                width: '*',
-                text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
-                fontSize: 14,
-                bold: true,
-                alignment: 'center',
-                margin: [10, 20, 0, 0]
-              }
-            ],
-            margin: [0, 0, 0, 20]
-          });
-        } else {
-          // Nếu không convert được, chỉ hiển thị tên
-          content.push({
-            text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
-            fontSize: 14,
-            bold: true,
-            alignment: 'center',
+            image: logoBase64,
+            fit: [120, 120],
+            alignment: 'left',
             margin: [0, 0, 0, 20]
           });
         }
       } catch (error) {
         console.error('Error converting logo to base64:', error);
-        // Nếu lỗi, chỉ hiển thị tên
-        content.push({
-          text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
-          fontSize: 14,
-          bold: true,
-          alignment: 'center',
-          margin: [0, 0, 0, 20]
-        });
       }
-    } else {
-      content.push({
-        text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
-        fontSize: 14,
-        bold: true,
-        alignment: 'center',
-        margin: [0, 0, 0, 20]
-      });
     }
     
     // Tiêu đề

@@ -3,6 +3,7 @@ import * as Highcharts from 'highcharts';
 import { HotelService } from '../../services/hotel.service';
 import { ShiftHandoverService } from '../../services/shift-handover.service';
 import { TransactionService } from '../../services/transaction.service';
+import { FinancialSummaryService } from '../../services/financial-summary.service';
 import { format, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns';
 import { forkJoin } from 'rxjs';
 
@@ -31,7 +32,8 @@ export class RevenueChartComponent implements OnInit, OnChanges {
   constructor(
     private hotelService: HotelService,
     private shiftHandoverService: ShiftHandoverService,
-    private transactionService: TransactionService
+    private transactionService: TransactionService,
+    private financialSummaryService: FinancialSummaryService
   ) {}
 
   ngOnInit(): void {
@@ -117,18 +119,13 @@ export class RevenueChartComponent implements OnInit, OnChanges {
         this.expenseData = groupedData.expenseData;
         this.paymentData = groupedData.paymentData;
         
-        // Tính tổng tiền phòng từ shift-handover-history (totalRoomRevenue)
+        // Tính tổng tiền phòng từ shift-handover-history (totalRoomRevenue) - dùng cho payment
         const totalRoomRevenue = shiftHandovers.reduce((sum, record) => {
           return sum + (record.totalRoomRevenue || 0);
         }, 0);
         
-        // Tính tổng phiếu thu từ shift-handover-history (incomeAmount)
-        const totalIncome = shiftHandovers.reduce((sum, record) => {
-          return sum + (record.incomeAmount || 0);
-        }, 0);
-        
-        // Tổng doanh thu = tổng tiền phòng + phiếu thu từ lịch sử giao ca
-        this.totalRevenue = totalRoomRevenue + totalIncome;
+        // Tổng thanh toán = tổng tiền từ room history (giống totalRoomRevenue)
+        this.totalPayment = totalRoomRevenue;
         
         // Tổng chi = tổng expenseAmount từ expenses
         this.totalExpense = shiftHandovers.reduce((sum, record) => {
@@ -140,8 +137,10 @@ export class RevenueChartComponent implements OnInit, OnChanges {
           return sum + (record.expenseAmount || 0);
         }, 0);
         
-        // Tổng thanh toán = tổng tiền từ room history (giống totalRoomRevenue)
-        this.totalPayment = totalRoomRevenue;
+        // Tính tổng doanh thu từ Financial Summary Service (giống như financial-summary-report)
+        // Sử dụng cùng logic với financial-summary-report để đảm bảo tính toán nhất quán
+        // Lưu shiftHandovers để dùng trong fallback nếu cần
+        this.loadTotalRevenueFromFinancialSummary(startDate, endDate, shiftHandovers);
         
         this.updateChart();
         this.isLoading = false;
@@ -536,5 +535,49 @@ export class RevenueChartComponent implements OnInit, OnChanges {
   // Định dạng số tiền VND
   formatCurrency(value: number): string {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+  }
+
+  /**
+   * Load tổng doanh thu từ Financial Summary Service (giống như financial-summary-report)
+   * Đảm bảo tính toán nhất quán giữa revenue-chart và financial-summary-report
+   * Backend tính: totalRevenue = roomRevenue + serviceRevenue + receiptRevenue + cafeRevenue + otherServiceRevenue + otherRevenue
+   */
+  private loadTotalRevenueFromFinancialSummary(startDate: Date, endDate: Date, shiftHandovers?: any[]): void {
+    if (!this.hotelId) {
+      return;
+    }
+
+    this.financialSummaryService.getFinancialSummary({
+      hotelId: this.hotelId,
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: format(endDate, 'yyyy-MM-dd')
+    }).subscribe({
+      next: (response) => {
+        if (response && response.data) {
+          // Sử dụng totalRevenue từ financial summary (đã được tính từ backend)
+          // Backend tính: totalRevenue = roomRevenue + serviceRevenue + receiptRevenue + cafeRevenue + otherServiceRevenue + otherRevenue
+          this.totalRevenue = response.data.totalRevenue || 0;
+          // Cập nhật lại chart sau khi có totalRevenue
+          this.updateChart();
+        }
+      },
+      error: (error) => {
+        console.error('Error loading total revenue from financial summary:', error);
+        // Fallback: tính từ shift handover nếu không load được từ financial summary
+        if (shiftHandovers && shiftHandovers.length > 0) {
+          const totalRoomRevenue = shiftHandovers.reduce((sum: number, record: any) => {
+            return sum + (record.totalRoomRevenue || 0);
+          }, 0);
+          
+          const totalIncome = shiftHandovers.reduce((sum: number, record: any) => {
+            return sum + (record.incomeAmount || 0);
+          }, 0);
+          
+          // Tổng doanh thu = tổng tiền phòng + phiếu thu từ lịch sử giao ca
+          this.totalRevenue = totalRoomRevenue + totalIncome;
+          this.updateChart();
+        }
+      }
+    });
   }
 }

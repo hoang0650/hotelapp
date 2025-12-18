@@ -13,30 +13,6 @@
         <i nz-icon nzType="reload" nzTheme="outline"></i>
         Làm mới
       </button>
-      <button 
-        *ngIf="sepayRefreshToken"
-        nz-button 
-        nzType="default" 
-        nzSize="small"
-        (click)="manualRefreshToken()"
-        [nzLoading]="isLoading"
-        title="Làm mới Access Token"
-      >
-        <i nz-icon nzType="key" nzTheme="outline"></i>
-        Refresh Token
-      </button>
-      <button 
-        *ngIf="!sepayApiToken || !sepayApiToken.trim() || (!sepayRefreshToken && !sepayClientId)"
-        nz-button 
-        nzType="primary" 
-        nzSize="small"
-        (click)="startOAuth2Login()"
-        [nzLoading]="isLoading"
-        title="Đăng nhập SePay qua OAuth2"
-      >
-        <i nz-icon nzType="login" nzTheme="outline"></i>
-        Đăng nhập SePay
-      </button>
     </div>
   </div>
 
@@ -54,17 +30,6 @@
       <div>
         <p>{{ errorMessage }}</p>
         <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <button 
-            *ngIf="errorMessage.includes('hết hạn') || errorMessage.includes('không hợp lệ')"
-            nz-button 
-            nzType="primary" 
-            nzSize="small"
-            (click)="manualRefreshToken()"
-            [nzLoading]="isLoading"
-          >
-            <i nz-icon nzType="reload" nzTheme="outline"></i>
-            Làm mới Token
-          </button>
           <button 
             nz-button 
             nzType="default" 
@@ -147,7 +112,7 @@
     </nz-tab>
 
     <!-- Tab SePay -->
-    <nz-tab nzTitle="SePay">
+    <nz-tab *ngIf="enableSePayPayment" nzTitle="SePay">
       <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
         <span style="font-size: 12px; color: #999;">
           <i nz-icon nzType="info-circle" nzTheme="outline"></i>
@@ -218,7 +183,7 @@
     </nz-tab>
 
     <!-- Tab PayPal -->
-    <nz-tab nzTitle="PayPal">
+    <nz-tab *ngIf="enablePayPalPayment" nzTitle="PayPal">
       <nz-list 
         [nzDataSource]="paypalPayments"
         [nzRenderItem]="payment"
@@ -256,7 +221,7 @@
     </nz-tab>
 
     <!-- Tab Crypto -->
-    <nz-tab nzTitle="Crypto USDT">
+    <nz-tab *ngIf="enableCryptoPayment" nzTitle="Crypto USDT">
       <nz-list 
         [nzDataSource]="cryptoPayments"
         [nzRenderItem]="payment"

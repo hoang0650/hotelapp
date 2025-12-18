@@ -67,7 +67,7 @@ export class BankTransferService {
    * @param params Query parameters (date_from, date_to, page, pageSize, etc.)
    */
   getSepayTransactions(
-    token: string,
+    token: string | null,
     params?: {
       date_from?: string;
       date_to?: string;
@@ -79,8 +79,9 @@ export class BankTransferService {
       pageSize?: number;
     }
   ): Observable<SepayTransactionsResponse> {
+    // Nếu không có token, backend sẽ tự lấy token
     const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`,
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     });

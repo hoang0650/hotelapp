@@ -370,13 +370,27 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     const formValue = this.guestForm.value;
     
+    // Chuẩn bị dữ liệu gửi lên backend (giống như guest-management)
     const guestData: Partial<Guest> = {
       hotelId: formValue.hotelId,
       guestType: formValue.guestType || 'regular',
-      personalInfo: formValue.personalInfo,
-      contactInfo: formValue.contactInfo,
-      preferences: formValue.preferences,
-      notes: formValue.notes
+      personalInfo: {
+        fullName: formValue.personalInfo?.fullName || '',
+        dateOfBirth: formValue.personalInfo?.dateOfBirth || null,
+        gender: formValue.personalInfo?.gender || '',
+        nationality: formValue.personalInfo?.nationality || '',
+        idType: formValue.personalInfo?.idType || 'id_card',
+        idNumber: formValue.personalInfo?.idNumber || '',
+        idExpiryDate: formValue.personalInfo?.idExpiryDate || null
+      },
+      contactInfo: {
+        email: formValue.contactInfo?.email || '',
+        phone: formValue.contactInfo?.phone || '',
+        alternativePhone: formValue.contactInfo?.alternativePhone || '',
+        address: formValue.contactInfo?.address || {}
+      },
+      preferences: formValue.preferences || {},
+      notes: formValue.notes || ''
     };
     
     // Upload ảnh CCCD/GPLX nếu có (sẽ xử lý sau)

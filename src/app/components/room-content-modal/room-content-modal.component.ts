@@ -326,6 +326,27 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     // Load current user để lấy QR code từ profile
     this.loadCurrentUser();
+    
+    // Subscribe để reload room data khi có thay đổi (ví dụ sau khi assign khách)
+    this.roomsService.getRoomDataUpdated$().subscribe(() => {
+      if (this.roomData && this.roomData._id) {
+        // Reload room từ backend để đảm bảo dữ liệu mới nhất
+        this.roomsService.getRoomById(this.roomData._id, { 
+          limit: 1000,
+          excludeCheckedOut: true
+        }).subscribe({
+          next: (updatedRoom) => {
+            this.roomData = updatedRoom;
+            console.log('Reloaded room data after update:', updatedRoom);
+            // Reload lại thông tin check-in
+            this.fetchCurrentRoom();
+          },
+          error: (err) => {
+            console.error('Error reloading room after update:', err);
+          }
+        });
+      }
+    });
   }
   
   /**
@@ -2512,15 +2533,28 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         priceDetails.days = durationInDaysCalculated;
         priceDetails.rateType = 'daily';
         
-        // Tính phụ thu check-in sớm (nếu check-in trước 12:00 - thời gian bắt đầu nhận ngày đêm)
+        // Tính phụ thu check-in sớm CHỈ NẾU check-in TRƯỚC thời gian daily (trước dailyStartTime - 12:00)
+        // Nếu check-in trong thời gian daily (sau 12:00), KHÔNG tính early check-in surcharge
         if (checkInTime) {
-          const earlyCheckinHoursDaily = calculateEarlyHours(checkInTime, dailyStartTime);
-          if (earlyCheckinHoursDaily > 0 && dailyEarlyCheckinSurcharge > 0) {
-            const earlyCheckinSurchargeDaily = earlyCheckinHoursDaily * dailyEarlyCheckinSurcharge;
-            total += earlyCheckinSurchargeDaily;
-            priceDetails.earlyCheckinSurcharge = earlyCheckinSurchargeDaily;
-            priceDetails.earlyCheckinHours = earlyCheckinHoursDaily;
-            console.log(`Daily early check-in: ${earlyCheckinHoursDaily} hours, surcharge: ${earlyCheckinSurchargeDaily}`);
+          const checkInMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
+          const [startHour, startMinute] = dailyStartTime.split(':').map(Number);
+          const startTimeMinutes = startHour * 60 + startMinute;
+          
+          // Kiểm tra xem check-in có trong thời gian daily không (sau dailyStartTime)
+          const isInDailyTime = checkInMinutes >= startTimeMinutes;
+          
+          // CHỈ tính early check-in surcharge nếu check-in TRƯỚC thời gian daily (trước dailyStartTime)
+          if (!isInDailyTime) {
+            const earlyCheckinHoursDaily = calculateEarlyHours(checkInTime, dailyStartTime);
+            if (earlyCheckinHoursDaily > 0 && dailyEarlyCheckinSurcharge > 0) {
+              const earlyCheckinSurchargeDaily = earlyCheckinHoursDaily * dailyEarlyCheckinSurcharge;
+              total += earlyCheckinSurchargeDaily;
+              priceDetails.earlyCheckinSurcharge = earlyCheckinSurchargeDaily;
+              priceDetails.earlyCheckinHours = earlyCheckinHoursDaily;
+              console.log(`Daily early check-in: ${earlyCheckinHoursDaily} hours, surcharge: ${earlyCheckinSurchargeDaily}`);
+            }
+          } else {
+            console.log(`Daily check-in trong thời gian quy định (sau ${dailyStartTime}), không tính early check-in surcharge`);
           }
         }
         
@@ -2564,16 +2598,32 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         priceDetails.rateType = 'nightly';
         priceDetails.nights = durationInNights;
         
-        // Tính phụ thu check-in sớm (nếu check-in trước nightlyStartTime - 20:00)
+        // Tính phụ thu check-in sớm CHỈ NẾU check-in TRƯỚC thời gian nightly (trước nightlyStartTime)
         // Thời gian quy định qua đêm: 20:00 - 12:00 ngày hôm sau
+        // Nếu check-in trong thời gian này (sau 20:00 hoặc trước 12:00 ngày hôm sau), KHÔNG tính early check-in surcharge
         if (checkInTime) {
-          const earlyCheckinHoursNightly = calculateEarlyHours(checkInTime, nightlyStartTime);
-          if (earlyCheckinHoursNightly > 0 && nightlyEarlyCheckinSurcharge > 0) {
-            const earlyCheckinSurchargeNightly = earlyCheckinHoursNightly * nightlyEarlyCheckinSurcharge;
-            total += earlyCheckinSurchargeNightly;
-            priceDetails.earlyCheckinSurcharge = earlyCheckinSurchargeNightly;
-            priceDetails.earlyCheckinHours = earlyCheckinHoursNightly;
-            console.log(`Nightly early check-in: ${earlyCheckinHoursNightly} hours, surcharge: ${earlyCheckinSurchargeNightly}`);
+          const checkInMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
+          const [startHour, startMinute] = nightlyStartTime.split(':').map(Number);
+          const startTimeMinutes = startHour * 60 + startMinute;
+          const [endHour, endMinute] = nightlyEndTime.split(':').map(Number);
+          const endTimeMinutes = endHour * 60 + endMinute;
+          
+          // Kiểm tra xem check-in có trong thời gian nightly không
+          // Thời gian nightly: từ nightlyStartTime (ví dụ 20:00) đến nightlyEndTime ngày hôm sau (ví dụ 12:00)
+          const isInNightlyTime = checkInMinutes >= startTimeMinutes || checkInMinutes <= endTimeMinutes;
+          
+          // CHỈ tính early check-in surcharge nếu check-in TRƯỚC thời gian nightly (trước nightlyStartTime)
+          if (!isInNightlyTime) {
+            const earlyCheckinHoursNightly = calculateEarlyHours(checkInTime, nightlyStartTime);
+            if (earlyCheckinHoursNightly > 0 && nightlyEarlyCheckinSurcharge > 0) {
+              const earlyCheckinSurchargeNightly = earlyCheckinHoursNightly * nightlyEarlyCheckinSurcharge;
+              total += earlyCheckinSurchargeNightly;
+              priceDetails.earlyCheckinSurcharge = earlyCheckinSurchargeNightly;
+              priceDetails.earlyCheckinHours = earlyCheckinHoursNightly;
+              console.log(`Nightly early check-in: ${earlyCheckinHoursNightly} hours, surcharge: ${earlyCheckinSurchargeNightly}`);
+            }
+          } else {
+            console.log(`Nightly check-in trong thời gian quy định (${nightlyStartTime}-${nightlyEndTime}), không tính early check-in surcharge`);
           }
         }
         
@@ -2982,9 +3032,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             this.roomData = updatedRoom;
             // Reload lại dữ liệu phòng
             this.ngOnInit();
+            
+            // Thông báo cho room.component để reload
+            this.roomsService.notifyRoomDataUpdated();
           },
           error: (error) => {
             console.error('Error reloading room:', error);
+            // Vẫn thông báo để room.component reload
+            this.roomsService.notifyRoomDataUpdated();
           }
         });
       }
@@ -3166,6 +3221,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               }).subscribe({
                 next: (updatedRoom) => {
                   this.roomData = updatedRoom;
+                  
+                  // Thông báo cho room.component để reload
+                  this.roomsService.notifyRoomDataUpdated();
                   
                   // Reload lại dữ liệu từ room mới
                   if (this.roomData.events && this.roomData.events.length > 0) {
