@@ -291,7 +291,7 @@
               <td><strong class="text-success">{{ formatCurrency(income.amount || 0) }}</strong></td>
               <td>
                 <nz-tag [nzColor]="income.method === 'cash' ? 'red' : income.method === 'bank_transfer' ? 'blue' : 'green'">
-                  {{ income.method === 'cash' ? 'Tiền mặt' : income.method === 'bank_transfer' ? 'Chuyển khoản' : 'Thẻ' }}
+                  {{ income.method === 'cash' ? 'Tiền mặt' : income.method === 'bank_transfer' ? 'Chuyển khoản' : income.method === 'card' ? 'Thẻ' : 'Khác' }}
                 </nz-tag>
               </td>
               <td>{{ formatDate(income.timestamp) }}</td>

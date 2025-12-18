@@ -553,16 +553,33 @@ export class ServiceManagementComponent implements OnInit {
     ).subscribe({
       next: (orders) => {
         console.log('📊 Service Orders received:', orders.length);
-        console.log('📊 Sample order:', orders[0]);
+        console.log('📊 All orders:', orders);
+        if (orders.length > 0) {
+          console.log('📊 Sample order:', JSON.stringify(orders[0], null, 2));
+          console.log('📊 Sample order items:', orders[0].items);
+          console.log('📊 Sample order totalAmount:', orders[0].totalAmount);
+        }
+        console.log('📊 Filter params:', {
+          hotelId: this.statisticsFilter.hotelId,
+          startDate: this.statisticsFilter.startDate,
+          endDate: this.statisticsFilter.endDate
+        });
         
-        // Lọc theo ngày nếu có
+        // Backend đã filter theo ngày rồi, không cần filter lại ở frontend
+        // Nhưng vẫn giữ logic filter để đảm bảo tính chính xác
         let filteredOrders = orders;
+        
+        // Nếu backend đã filter, có thể không cần filter lại
+        // Nhưng để đảm bảo, vẫn filter lại nếu có ngày
         if (this.statisticsFilter.startDate || this.statisticsFilter.endDate) {
           filteredOrders = orders.filter(order => {
-            // Backend dùng orderTime, frontend có thể dùng requestTime hoặc createdAt
-            const orderDate = (order as any).orderTime ? new Date((order as any).orderTime) : 
-                             (order as any).requestTime ? new Date((order as any).requestTime) : 
-                             (order.createdAt ? new Date(order.createdAt) : null);
+            const orderTime = (order as any).orderTime ? new Date((order as any).orderTime) : null;
+            const createdAt = order.createdAt ? new Date(order.createdAt) : null;
+            const deliveryTime = (order as any).deliveryTime ? new Date((order as any).deliveryTime) : null;
+            const updatedAt = (order as any).updatedAt ? new Date((order as any).updatedAt) : null;
+            
+            // Lấy ngày đầu tiên có giá trị (ưu tiên orderTime)
+            const orderDate = orderTime || createdAt || deliveryTime || updatedAt;
             if (!orderDate) return false;
             
             if (this.statisticsFilter.startDate) {
@@ -580,29 +597,28 @@ export class ServiceManagementComponent implements OnInit {
             return true;
           });
         }
+        
+        console.log('📊 Orders after date filter:', filteredOrders.length);
 
-        // Chỉ tính các đơn đã thanh toán hoặc đã giao (không hủy)
-        // Bao gồm: đã thanh toán (paid, included_in_room_charge) hoặc đã giao (delivered)
+        // Tính tất cả ServiceOrder có totalAmount > 0 hoặc có items (giống logic trong getFinancialSummary)
+        // Backend không filter paymentStatus vì có thể ServiceOrder đã được tạo và có giá trị nhưng paymentStatus chưa được set
         filteredOrders = filteredOrders.filter(order => {
           const status = order.status;
-          const paymentStatus = (order as any).paymentStatus;
+          const totalAmount = (order as any).totalAmount || 0;
+          const items = (order as any).items || [];
           
           // Bỏ qua các đơn đã hủy
           if (status === 'cancelled') {
             return false;
           }
           
-          // Tính các đơn đã thanh toán (paid hoặc included_in_room_charge)
-          if (paymentStatus === 'paid' || paymentStatus === 'included_in_room_charge') {
-            return true;
+          // Phải có totalAmount > 0 hoặc có items
+          const hasAmount = totalAmount > 0 || items.length > 0;
+          if (!hasAmount) {
+            return false;
           }
           
-          // Tính các đơn đã giao (delivered) - có thể đã thanh toán nhưng chưa cập nhật paymentStatus
-          if (status === 'delivered') {
-            return true;
-          }
-          
-          return false;
+          return true;
         });
 
         // Tính toán thống kê
@@ -618,33 +634,52 @@ export class ServiceManagementComponent implements OnInit {
         
         filteredOrders.forEach(order => {
           const orderId = (order as any)._id?.toString() || (order as any).id?.toString() || '';
+          const orderTotalAmount = (order as any).totalAmount || 0;
           // Backend model dùng items (serviceOrder.js)
           const items = (order as any).items || [];
           
-          if (items.length === 0) {
-            console.warn('⚠️ Order has no items:', orderId);
+          // Tính doanh thu từ totalAmount của order hoặc tính từ items (giống backend)
+          let orderTotal = 0;
+          if (orderTotalAmount > 0) {
+            orderTotal = orderTotalAmount;
+          } else if (items && items.length > 0) {
+            items.forEach((item: any) => {
+              let itemTotal = 0;
+              if (item.total) {
+                itemTotal = item.total;
+              } else if (item.price && item.quantity) {
+                itemTotal = (item.price * item.quantity);
+              }
+              orderTotal += itemTotal;
+            });
+          }
+          
+          // Nếu order không có totalAmount và không có items, bỏ qua
+          if (orderTotal <= 0) {
             return;
           }
           
-          items.forEach((item: any) => {
-            // Xử lý serviceId có thể là ObjectId hoặc populated object
-            const serviceId = item.serviceId?._id?.toString() || item.serviceId?.toString() || 'unknown';
-            const serviceName = item.name || item.serviceName || item.serviceId?.name || 'Dịch vụ không tên';
-            // Lấy category từ populated serviceId (nếu có populate)
-            // Nếu không có, sẽ dùng 'custom' và có thể lookup sau
-            const category = item.serviceId?.category || 
-                            (item.serviceId && typeof item.serviceId === 'object' ? item.serviceId.category : 'custom') ||
-                            'custom';
-            // Đảm bảo quantity là số và > 0
-            const quantity = Number(item.quantity) || 0;
-            const price = Number(item.price) || 0;
-            // Backend model dùng total, controller cũ có thể dùng totalPrice
-            const totalPrice = Number(item.total) || Number(item.totalPrice) || (price * quantity);
+          // Nếu có items, tính chi tiết theo từng dịch vụ
+          if (items && items.length > 0) {
+            items.forEach((item: any) => {
+              // Xử lý serviceId có thể là ObjectId hoặc populated object
+              const serviceId = item.serviceId?._id?.toString() || item.serviceId?.toString() || 'unknown';
+              const serviceName = item.name || item.serviceName || item.serviceId?.name || 'Dịch vụ không tên';
+              // Lấy category từ populated serviceId (nếu có populate)
+              // Nếu không có, sẽ dùng 'custom' và có thể lookup sau
+              const category = item.serviceId?.category || 
+                              (item.serviceId && typeof item.serviceId === 'object' ? item.serviceId.category : 'custom') ||
+                              'custom';
+              // Đảm bảo quantity là số và > 0
+              const quantity = Number(item.quantity) || 0;
+              const price = Number(item.price) || 0;
+              // Backend model dùng total, controller cũ có thể dùng totalPrice
+              const totalPrice = Number(item.total) || Number(item.totalPrice) || (price * quantity);
 
-            // Bỏ qua nếu quantity <= 0 hoặc totalPrice <= 0
-            if (quantity <= 0 || totalPrice <= 0) {
-              return;
-            }
+              // Bỏ qua nếu quantity <= 0 hoặc totalPrice <= 0
+              if (quantity <= 0 || totalPrice <= 0) {
+                return;
+              }
 
             // Thống kê theo dịch vụ
             if (!serviceStatsMap.has(serviceId)) {
@@ -685,7 +720,12 @@ export class ServiceManagementComponent implements OnInit {
 
             totalRevenue += totalPrice;
             totalQuantity += quantity;
-          });
+            });
+          } else {
+            // Nếu không có items nhưng có totalAmount, tính vào doanh thu chung
+            // Không thể phân loại theo dịch vụ nên chỉ cộng vào tổng
+            totalRevenue += orderTotal;
+          }
         });
 
         // Tính giá trị đơn trung bình

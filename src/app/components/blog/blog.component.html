@@ -1,70 +1,85 @@
 <div class="blog-container">
+  <!-- Header với breadcrumb -->
+  <div class="blog-header-bar">
+    <div class="blog-breadcrumb">
+      <a routerLink="/home">Trang chủ</a>
+      <span class="separator">|</span>
+      <span>Blog</span>
+      <span class="separator" *ngIf="selectedBlog">|</span>
+      <span *ngIf="selectedBlog">{{ selectedBlog.title }}</span>
+    </div>
+    <div class="blog-date-time">
+      {{ getCurrentDateTime() }}
+    </div>
+  </div>
+
   <!-- Chi tiết bài viết -->
-  <div *ngIf="selectedBlog" class="blog-detail">
-    <nz-card>
-      <button nz-button nzType="default" (click)="backToList()" class="mb-3">
-        <i nz-icon nzType="arrow-left"></i>
-        Quay lại danh sách
-      </button>
+  <div *ngIf="selectedBlog" class="blog-detail-wrapper">
+    <nz-row [nzGutter]="24">
+      <!-- Cột trái: Nội dung chính -->
+      <nz-col [nzXs]="24" [nzSm]="24" [nzMd]="16" [nzLg]="16">
+        <nz-card>
+          <button nz-button nzType="default" (click)="backToList()" class="mb-3">
+            <i nz-icon nzType="arrow-left"></i>
+            Quay lại danh sách
+          </button>
 
-      <div *nzModalContent>
-        <h1 class="blog-title">{{ selectedBlog.title }}</h1>
-        
-        <div class="blog-meta mb-3">
-          <span class="meta-item">
-            <i nz-icon nzType="user" nzTheme="outline"></i>
-            {{ selectedBlog.authorName || 'Admin' }}
-          </span>
-          <span class="meta-item">
-            <i nz-icon nzType="calendar" nzTheme="outline"></i>
-            {{ formatDate(selectedBlog.createdAt) }}
-          </span>
-          <span class="meta-item" *ngIf="selectedBlog.views">
-            <i nz-icon nzType="eye" nzTheme="outline"></i>
-            {{ selectedBlog.views }} lượt xem
-          </span>
-        </div>
-
-        <div class="blog-tags mb-3" *ngIf="selectedBlog.tags && selectedBlog.tags.length > 0">
-          <nz-tag *ngFor="let tag of selectedBlog.tags" [nzColor]="'blue'">
-            {{ tag }}
-          </nz-tag>
-        </div>
-
-        <div class="blog-featured-image mb-3" *ngIf="selectedBlog.featuredImage">
-          <img [src]="selectedBlog.featuredImage" [alt]="selectedBlog.title" />
-        </div>
-
-        <div class="blog-content" [innerHTML]="selectedBlog.content | nlToBr"></div>
-
-        <!-- Like/Dislike Blog -->
-        <div class="blog-actions mt-4 mb-4">
-          <div class="action-buttons">
-            <button 
-              nz-button 
-              nzType="default" 
-              [nzLoading]="isLikingBlog"
-              [class.active]="selectedBlog.userLiked"
-              (click)="likeBlog()">
-              <i nz-icon [nzType]="selectedBlog.userLiked ? 'like' : 'like'" [nzTheme]="selectedBlog.userLiked ? 'fill' : 'outline'"></i>
-              Thích ({{ selectedBlog.likesCount || 0 }})
-            </button>
-            <button 
-              nz-button 
-              nzType="default" 
-              [nzLoading]="isDislikingBlog"
-              [class.active]="selectedBlog.userDisliked"
-              (click)="dislikeBlog()">
-              <i nz-icon [nzType]="selectedBlog.userDisliked ? 'dislike' : 'dislike'" [nzTheme]="selectedBlog.userDisliked ? 'fill' : 'outline'"></i>
-              Không thích ({{ selectedBlog.dislikesCount || 0 }})
-            </button>
+          <h1 class="blog-title">{{ selectedBlog.title }}</h1>
+          
+          <div class="blog-meta mb-3">
+            <span class="meta-item">
+              <i nz-icon nzType="user" nzTheme="outline"></i>
+              {{ selectedBlog.authorName || 'Admin' }}
+            </span>
+            <span class="meta-item">
+              <i nz-icon nzType="calendar" nzTheme="outline"></i>
+              {{ formatDate(selectedBlog.createdAt) }}
+            </span>
+            <span class="meta-item" *ngIf="selectedBlog.views">
+              <i nz-icon nzType="eye" nzTheme="outline"></i>
+              {{ selectedBlog.views }} lượt xem
+            </span>
           </div>
-        </div>
-      </div>
-    </nz-card>
 
-    <!-- Comment Section -->
-    <nz-card class="mt-3" nzTitle="Bình luận">
+          <div class="blog-tags mb-3" *ngIf="selectedBlog.tags && selectedBlog.tags.length > 0">
+            <nz-tag *ngFor="let tag of selectedBlog.tags" [nzColor]="'blue'">
+              {{ tag }}
+            </nz-tag>
+          </div>
+
+          <div class="blog-featured-image mb-3" *ngIf="selectedBlog.featuredImage">
+            <img [src]="selectedBlog.featuredImage" [alt]="selectedBlog.title" />
+          </div>
+
+          <div class="blog-content" [innerHTML]="selectedBlog.content | nlToBr"></div>
+
+          <!-- Like/Dislike Blog -->
+          <div class="blog-actions mt-4 mb-4">
+            <div class="action-buttons">
+              <button 
+                nz-button 
+                nzType="default" 
+                [nzLoading]="isLikingBlog"
+                [class.active]="selectedBlog.userLiked"
+                (click)="likeBlog()">
+                <i nz-icon [nzType]="selectedBlog.userLiked ? 'like' : 'like'" [nzTheme]="selectedBlog.userLiked ? 'fill' : 'outline'"></i>
+                Thích ({{ selectedBlog.likesCount || 0 }})
+              </button>
+              <button 
+                nz-button 
+                nzType="default" 
+                [nzLoading]="isDislikingBlog"
+                [class.active]="selectedBlog.userDisliked"
+                (click)="dislikeBlog()">
+                <i nz-icon [nzType]="selectedBlog.userDisliked ? 'dislike' : 'dislike'" [nzTheme]="selectedBlog.userDisliked ? 'fill' : 'outline'"></i>
+                Không thích ({{ selectedBlog.dislikesCount || 0 }})
+              </button>
+            </div>
+          </div>
+        </nz-card>
+
+        <!-- Comment Section -->
+        <nz-card class="mt-3" nzTitle="Bình luận">
       <div class="comment-section">
         <!-- Form thêm comment -->
         <div class="comment-form mb-4" *ngIf="isLoggedIn">
@@ -243,18 +258,65 @@
         </nz-spin>
       </div>
     </nz-card>
+      </nz-col>
+
+      <!-- Cột phải: Sidebar -->
+      <nz-col [nzXs]="24" [nzSm]="24" [nzMd]="8" [nzLg]="8">
+        <div class="blog-sidebar">
+          <!-- Quảng cáo -->
+          <nz-card class="sidebar-card mb-3" nzTitle="Quảng cáo">
+            <div class="advertisement-placeholder">
+              <div class="ad-content">
+                <i nz-icon nzType="picture" nzTheme="outline" style="font-size: 48px; color: #d9d9d9;"></i>
+                <p style="color: #999; margin-top: 16px;">Khu vực quảng cáo</p>
+              </div>
+            </div>
+          </nz-card>
+
+          <!-- Bài viết liên quan -->
+          <nz-card class="sidebar-card" nzTitle="Bài viết liên quan" *ngIf="relatedBlogs.length > 0">
+            <div class="related-blogs">
+              <div class="related-blog-item" *ngFor="let blog of relatedBlogs" (click)="viewBlogDetail(blog)">
+                <div class="related-blog-image" *ngIf="blog.featuredImage">
+                  <img [src]="blog.featuredImage" [alt]="blog.title" />
+                </div>
+                <div class="related-blog-content">
+                  <h4 class="related-blog-title">{{ blog.title }}</h4>
+                  <div class="related-blog-meta">
+                    <span>{{ formatDate(blog.createdAt) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nz-card>
+
+          <!-- Danh mục -->
+          <nz-card class="sidebar-card" nzTitle="Danh mục" *ngIf="categories.length > 0">
+            <div class="category-list">
+              <div class="category-item" *ngFor="let cat of categories" (click)="onCategoryFilter(cat)">
+                <span>{{ cat }}</span>
+                <i nz-icon nzType="right" nzTheme="outline"></i>
+              </div>
+            </div>
+          </nz-card>
+        </div>
+      </nz-col>
+    </nz-row>
   </div>
 
   <!-- Danh sách bài viết -->
-  <div *ngIf="!selectedBlog" class="blog-list">
-    <nz-card>
-      <div class="blog-header mb-4">
-        <h1 class="blog-page-title">
-          <i nz-icon nzType="file-text" nzTheme="outline"></i>
-          Blog
-        </h1>
-        <p class="blog-page-subtitle">Khám phá những bài viết mới nhất từ chúng tôi</p>
-      </div>
+  <div *ngIf="!selectedBlog" class="blog-list-wrapper">
+    <nz-row [nzGutter]="24">
+      <!-- Cột trái: Danh sách bài viết -->
+      <nz-col [nzXs]="24" [nzSm]="24" [nzMd]="16" [nzLg]="16">
+        <nz-card>
+          <div class="blog-header mb-4">
+            <h1 class="blog-page-title">
+              <i nz-icon nzType="file-text" nzTheme="outline"></i>
+              Blog
+            </h1>
+            <p class="blog-page-subtitle">Khám phá những bài viết mới nhất từ chúng tôi</p>
+          </div>
 
       <!-- Bộ lọc và tìm kiếm -->
       <div nz-row [nzGutter]="16" class="mb-4 filter-section">
@@ -338,7 +400,52 @@
           </nz-pagination>
         </div>
       </nz-spin>
-    </nz-card>
+        </nz-card>
+      </nz-col>
+
+      <!-- Cột phải: Sidebar -->
+      <nz-col [nzXs]="24" [nzSm]="24" [nzMd]="8" [nzLg]="8">
+        <div class="blog-sidebar">
+          <!-- Quảng cáo -->
+          <nz-card class="sidebar-card mb-3" nzTitle="Quảng cáo">
+            <div class="advertisement-placeholder">
+              <div class="ad-content">
+                <i nz-icon nzType="picture" nzTheme="outline" style="font-size: 48px; color: #d9d9d9;"></i>
+                <p style="color: #999; margin-top: 16px;">Khu vực quảng cáo</p>
+              </div>
+            </div>
+          </nz-card>
+
+          <!-- Bài viết nổi bật -->
+          <nz-card class="sidebar-card mb-3" nzTitle="Bài viết nổi bật" *ngIf="blogs.length > 0">
+            <div class="related-blogs">
+              <div class="related-blog-item" *ngFor="let blog of blogs.slice(0, 5)" (click)="viewBlogDetail(blog)">
+                <div class="related-blog-image" *ngIf="blog.featuredImage">
+                  <img [src]="blog.featuredImage" [alt]="blog.title" />
+                </div>
+                <div class="related-blog-content">
+                  <h4 class="related-blog-title">{{ blog.title }}</h4>
+                  <div class="related-blog-meta">
+                    <span>{{ formatDate(blog.createdAt) }}</span>
+                    <span *ngIf="blog.views"> • {{ blog.views }} lượt xem</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nz-card>
+
+          <!-- Danh mục -->
+          <nz-card class="sidebar-card" nzTitle="Danh mục" *ngIf="categories.length > 0">
+            <div class="category-list">
+              <div class="category-item" *ngFor="let cat of categories" (click)="onCategoryFilter(cat)">
+                <span>{{ cat }}</span>
+                <i nz-icon nzType="right" nzTheme="outline"></i>
+              </div>
+            </div>
+          </nz-card>
+        </div>
+      </nz-col>
+    </nz-row>
   </div>
 </div>
 

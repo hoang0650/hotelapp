@@ -15,6 +15,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 export class BlogComponent implements OnInit {
   blogs: Blog[] = [];
   selectedBlog: Blog | null = null;
+  relatedBlogs: Blog[] = [];
   isLoading = false;
   pageIndex = 1;
   pageSize = 9;
@@ -120,6 +121,8 @@ export class BlogComponent implements OnInit {
         this.loadComments(id);
         // Check user like/dislike status
         this.checkUserLikeStatus(blog);
+        // Load related blogs
+        this.loadRelatedBlogs(blog);
       },
       error: (error) => {
         console.error('Lỗi khi tải chi tiết blog:', error);
@@ -127,6 +130,48 @@ export class BlogComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  loadRelatedBlogs(currentBlog: Blog): void {
+    const query: any = {
+      page: 1,
+      limit: 20, // Lấy nhiều hơn để filter
+      status: 'published'
+    };
+
+    if (currentBlog.category) {
+      query.category = currentBlog.category;
+    }
+
+    this.blogService.getPublicBlogs(query).subscribe({
+      next: (response: any) => {
+        const allBlogs = response.blogs || response.data || [];
+        // Filter loại bỏ blog hiện tại và chỉ lấy 5 bài đầu tiên
+        this.relatedBlogs = allBlogs
+          .filter((blog: Blog) => blog._id !== currentBlog._id)
+          .slice(0, 5);
+      },
+      error: (error) => {
+        console.error('Lỗi khi tải bài viết liên quan:', error);
+        this.relatedBlogs = [];
+      }
+    });
+  }
+
+  getCurrentDateTime(): string {
+    const now = new Date();
+    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const dayName = days[now.getDay()];
+    const date = now.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const time = now.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return `${dayName}, ngày ${date} ${time} (GMT+7)`;
   }
 
   loadComments(blogId: string): void {

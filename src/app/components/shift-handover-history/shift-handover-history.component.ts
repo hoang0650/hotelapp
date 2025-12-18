@@ -235,12 +235,11 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     return colorMap[category] || 'default';
   }
 
-  // Tính tổng doanh thu = Tiền giao quản lý + Phiếu thu - Phiếu chi
+  // Tính tổng doanh thu = Tổng tiền phòng (totalRoomRevenue) + Phiếu thu (incomeAmount)
   getTotalRevenue(record: ShiftHandover): number {
-    const managerHandoverAmount = record.managerHandoverAmount || 0;
+    const totalRoomRevenue = record.totalRoomRevenue || 0;
     const incomeAmount = record.incomeAmount || 0;
-    const expenseAmount = record.expenseAmount || 0;
-    return managerHandoverAmount + incomeAmount - expenseAmount;
+    return totalRoomRevenue + incomeAmount;
   }
 
   // Helper methods để lấy các giá trị từ room history
