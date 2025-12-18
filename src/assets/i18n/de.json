@@ -103,7 +103,9 @@
     "INTEGRATION_CONFIG": "Integration & Konfiguration",
     "SYSTEM_SETTINGS": "Systemeinstellungen",
     "SHIFT_HANDOVER_HISTORY": "Schichtübergabe-Verlauf",
-    "DEBT_MANAGEMENT": "Schuldenverwaltung"
+    "DEBT_MANAGEMENT": "Schuldenverwaltung",
+    "CONTACT_MANAGEMENT": "Kontaktverwaltung",
+    "BLOG_MANAGEMENT": "Blog-Verwaltung"
   },
   "TUYA": {
     "TITLE": "Tuya Smart Switch Steuerung",

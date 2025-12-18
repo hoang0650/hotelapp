@@ -146,6 +146,12 @@ export class AdminComponent implements OnInit {
            this.authService.isHotelManager();
   }
 
+  // Contact Management - chỉ superadmin và admin
+  canAccessContactManagement(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin();
+  }
+
   // Blog Management - chỉ superadmin và admin
   canAccessBlogManagement(): boolean {
     return this.authService.isSuperAdmin() || 

@@ -58,7 +58,7 @@
       </li>
 
       <!-- Quản lý dữ liệu -->
-      <li nz-submenu *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessGuestManagement() || canAccessDebtManagement()" [nzTitle]="'ADMIN_SIDEBAR.DATA_MANAGEMENT' | translate" nzIcon="database">
+      <li nz-submenu *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessGuestManagement() || canAccessDebtManagement() || canAccessContactManagement() || canAccessBlogManagement()" [nzTitle]="'ADMIN_SIDEBAR.DATA_MANAGEMENT' | translate" nzIcon="database">
         <ul>
           <li nz-menu-item *ngIf="canAccessBusinessManagement()" routerLink="/admin/company">{{ 'ADMIN_SIDEBAR.BUSINESS_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessHotelManagement()" routerLink="/admin/hotel">{{ 'ADMIN_SIDEBAR.HOTEL_MANAGEMENT' | translate }}</li>
@@ -68,7 +68,8 @@
           <li nz-menu-item *ngIf="canAccessServiceManagement()" routerLink="/admin/service-management">{{ 'ADMIN_SIDEBAR.SERVICE_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessGuestManagement()" routerLink="/admin/guest-management">{{ 'ADMIN_SIDEBAR.GUEST_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessDebtManagement()" routerLink="/admin/debt-management">{{ 'ADMIN_SIDEBAR.DEBT_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessBlogManagement()" routerLink="/admin/blog-management">Quản lý Blog</li>
+          <li nz-menu-item *ngIf="canAccessContactManagement()" routerLink="/admin/contact-management">{{ 'ADMIN_SIDEBAR.CONTACT_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessBlogManagement()" routerLink="/admin/blog-management">{{ 'ADMIN_SIDEBAR.BLOG_MANAGEMENT' | translate }}</li>
         </ul>
       </li>
 

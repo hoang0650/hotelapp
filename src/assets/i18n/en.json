@@ -103,7 +103,9 @@
     "INTEGRATION_CONFIG": "Integration & Configuration",
     "SYSTEM_SETTINGS": "System Settings",
     "SHIFT_HANDOVER_HISTORY": "Shift Handover History",
-    "DEBT_MANAGEMENT": "Debt Management"
+    "DEBT_MANAGEMENT": "Debt Management",
+    "CONTACT_MANAGEMENT": "Contact Management",
+    "BLOG_MANAGEMENT": "Blog Management"
   },
   "TUYA": {
     "TITLE": "Tuya Smart Switch Control",
