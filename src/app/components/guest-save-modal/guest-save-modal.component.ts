@@ -73,7 +73,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
   }
 
   constructor(
-    @Inject(NZ_MODAL_DATA) public data: { room: Room; guestInfo?: any },
+    @Inject(NZ_MODAL_DATA) public data: { room: Room; guestInfo?: any; openWithOCR?: boolean },
     private modalRef: NzModalRef,
     private fb: FormBuilder,
     private guestsService: GuestsService,
@@ -283,6 +283,9 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     
     this.isLoading = true;
     
+    // Kiểm tra số lượng người tối đa của phòng
+    const maxCapacity = this.room.capacity?.adults || 2; // Mặc định 2 người
+    
     // Lấy thông tin khách để cập nhật vào phòng
     this.guestsService.getGuestById(this.selectedGuestId).subscribe({
       next: (guest) => {
@@ -309,8 +312,18 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
             this.isLoading = false;
           },
           error: (error: any) => {
-            // Nếu phòng đã có khách, vẫn cập nhật thông tin
-            if (error.error?.message?.includes('đã có khách') || error.error?.message?.includes('occupied')) {
+            const errorMessage = error.error?.message || error.error?.error || 'Lỗi assign khách vào phòng';
+            
+            // Kiểm tra lỗi về số lượng người tối đa
+            if (errorMessage.includes('tối đa') || errorMessage.includes('đạt số lượng')) {
+              this.message.error(errorMessage);
+              this.isLoading = false;
+              return;
+            }
+            
+            // Nếu phòng đã có khách, vẫn cập nhật thông tin (nhưng không thêm khách mới)
+            if (errorMessage.includes('đã có khách') || errorMessage.includes('occupied')) {
+              // Nếu phòng đã occupied, chỉ update thông tin khách hiện tại, không thêm khách mới
               this.roomsService.updateRoomCheckinInfo(this.room._id, guestInfo, 0).subscribe({
                 next: () => {
                   this.message.success(`Đã cập nhật thông tin khách "${this.getGuestName(guest)}" vào phòng thành công`);
@@ -323,7 +336,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
                 }
               });
             } else {
-              this.message.error(error.error?.message || 'Lỗi assign khách vào phòng');
+              this.message.error(errorMessage);
               this.isLoading = false;
             }
           }

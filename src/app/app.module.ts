@@ -75,6 +75,7 @@ import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzRateModule } from 'ng-zorro-antd/rate';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { FilterPipe } from './pipes/filter.pipe';
@@ -282,6 +283,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         NzResultModule,
         NzProgressModule,
         NzPaginationModule,
+        NzRateModule,
         BrowserAnimationsModule,
         PricingManagementModule,
         EditorModule,

@@ -230,17 +230,40 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   
   // Hiển thị modal OCR để quét CCCD/GPLX
   showOCRModal(): void {
-    // Mở modal checkout/checkin với OCR enabled
-    const status = this.room.status;
-    let modalType = 'checkin';
-    
-    if (status === 'occupied') {
-      modalType = 'checkout';
-    } else if (status === 'vacant' || status === 'booked') {
-      modalType = 'checkin';
+    // Lấy thông tin khách từ room nếu có
+    let guestInfo = null;
+    if (this.room.events && this.room.events.length > 0) {
+      const checkinEvents = this.room.events.filter((e: any) => e.type === 'checkin');
+      if (checkinEvents.length > 0) {
+        const lastCheckin = checkinEvents[checkinEvents.length - 1];
+        guestInfo = lastCheckin.guestInfo || null;
+      }
     }
     
-    this.showModal(this.room, modalType);
+    // Mở modal GuestSaveModalComponent với OCR
+    const modalRef = this.modalService.create({
+      nzTitle: 'Quét CCCD/GPLX và lưu thông tin khách',
+      nzContent: GuestSaveModalComponent,
+      nzFooter: null,
+      nzWidth: 900,
+      nzMaskClosable: false,
+      nzData: {
+        room: this.room,
+        guestInfo: guestInfo,
+        openWithOCR: true // Flag để biết mở từ action OCR
+      }
+    });
+    
+    modalRef.afterClose.subscribe((result) => {
+      if (result && result.success) {
+        this.roomsService.notifyRoomDataUpdated();
+        // Đảm bảo đóng context menu nếu còn mở
+        if (this.contextMenuModalRef) {
+          this.contextMenuModalRef.close();
+          this.contextMenuModalRef = null;
+        }
+      }
+    });
   }
   
   // Hiển thị modal khách ra ngoài

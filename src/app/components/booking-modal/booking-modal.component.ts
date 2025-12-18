@@ -6,6 +6,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { Room } from '../../interfaces/rooms';
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 declare global {
   interface Window {
@@ -29,7 +31,8 @@ export class BookingModalComponent implements OnInit {
   businessInfo: any = null;
   hotelInfo: any = null;
   hotelLogo: string | null = null;
-  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  apiBaseUrl = environment.apiUrl;
+  isLoadingHotelInfo = false;
 
   constructor(
     private fb: FormBuilder,
@@ -43,7 +46,8 @@ export class BookingModalComponent implements OnInit {
     private roomsService: RoomsService,
     private message: NzMessageService,
     private hotelService: HotelService,
-    private businessService: BusinessService
+    private businessService: BusinessService,
+    private http: HttpClient
   ) {
     this.selectedDate = data.selectedDate;
     this.hotelId = data.hotelId;
@@ -64,6 +68,28 @@ export class BookingModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadRooms();
+    
+    // Lấy hotelId từ room nếu chưa có
+    if (!this.hotelId && this.data.rooms && this.data.rooms.length > 0) {
+      const firstRoom = this.data.rooms[0];
+      if (firstRoom.hotelId) {
+        this.hotelId = typeof firstRoom.hotelId === 'string' 
+          ? firstRoom.hotelId 
+          : (firstRoom.hotelId as any)?._id || null;
+      }
+    }
+    
+    // Lấy hotelId từ roomId nếu có
+    if (!this.hotelId && this.data.roomId && this.data.rooms) {
+      const selectedRoom = this.data.rooms.find(r => r._id === this.data.roomId);
+      if (selectedRoom?.hotelId) {
+        this.hotelId = typeof selectedRoom.hotelId === 'string' 
+          ? selectedRoom.hotelId 
+          : (selectedRoom.hotelId as any)?._id || null;
+      }
+    }
+    
+    // Load hotel info nếu có hotelId
     if (this.hotelId) {
       this.loadBusinessInfo();
     }
@@ -111,9 +137,40 @@ export class BookingModalComponent implements OnInit {
   }
 
   loadBusinessInfo(): void {
-    if (!this.hotelId) return;
+    // Thử lấy hotelId từ nhiều nguồn
+    let targetHotelId = this.hotelId;
     
-    this.hotelService.getHotelById(this.hotelId).subscribe(
+    // Nếu chưa có hotelId, thử lấy từ room
+    if (!targetHotelId && this.data.rooms && this.data.rooms.length > 0) {
+      const firstRoom = this.data.rooms[0];
+      if (firstRoom.hotelId) {
+        targetHotelId = typeof firstRoom.hotelId === 'string' 
+          ? firstRoom.hotelId 
+          : (firstRoom.hotelId as any)?._id || null;
+      }
+    }
+    
+    // Lấy từ roomId nếu có
+    if (!targetHotelId && this.data.roomId && this.data.rooms) {
+      const selectedRoom = this.data.rooms.find(r => r._id === this.data.roomId);
+      if (selectedRoom?.hotelId) {
+        targetHotelId = typeof selectedRoom.hotelId === 'string' 
+          ? selectedRoom.hotelId 
+          : (selectedRoom.hotelId as any)?._id || null;
+      }
+    }
+    
+    if (!targetHotelId) {
+      console.warn('Không tìm thấy hotelId để load thông tin khách sạn');
+      return;
+    }
+    
+    // Cập nhật hotelId nếu tìm thấy từ room
+    if (targetHotelId !== this.hotelId) {
+      this.hotelId = targetHotelId;
+    }
+    
+    this.hotelService.getHotelById(targetHotelId).subscribe(
       (hotel) => {
         // Lưu thông tin hotel
         this.hotelInfo = hotel;
@@ -159,6 +216,11 @@ export class BookingModalComponent implements OnInit {
       },
       (error) => {
         console.error('Error loading hotel info:', error);
+        // Không hiển thị lỗi nếu là 403 - có thể do quyền truy cập
+        // Nhưng vẫn cho phép tạo booking vì hotelId đã có sẵn
+        if (error.status !== 403) {
+          this.message.warning('Không thể tải thông tin khách sạn. Vui lòng thử lại.');
+        }
       }
     );
   }
@@ -393,7 +455,7 @@ export class BookingModalComponent implements OnInit {
     this.modalRef.close();
   }
 
-  exportConfirmationPDF(): void {
+  async exportConfirmationPDF(): Promise<void> {
     if (this.bookingForm.invalid) {
       this.message.warning('Vui lòng điền đầy đủ thông tin trước khi xuất PDF.');
       return;
@@ -404,6 +466,59 @@ export class BookingModalComponent implements OnInit {
     if (!selectedRoom) {
       this.message.warning('Vui lòng chọn phòng.');
       return;
+    }
+    
+    // Đảm bảo hotelId được set đúng
+    if (!this.hotelId) {
+      // Thử lấy từ room
+      if (selectedRoom?.hotelId) {
+        this.hotelId = typeof selectedRoom.hotelId === 'string' 
+          ? selectedRoom.hotelId 
+          : (selectedRoom.hotelId as any)?._id || null;
+      }
+    }
+    
+    // Đảm bảo hotel info đã được load
+    if (!this.hotelInfo && this.hotelId) {
+      this.isLoadingHotelInfo = true;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.hotelService.getHotelById(this.hotelId!).subscribe(
+            (hotel) => {
+              this.hotelInfo = hotel;
+              // Lấy logo
+              if (hotel.businessId) {
+                const business = typeof hotel.businessId === 'object' ? hotel.businessId : null;
+                if (business) {
+                  const logoId = (business as any).logoId;
+                  this.hotelLogo = logoId ? `/files/${logoId}` : ((business as any).logo || null);
+                }
+              }
+              if (!this.hotelLogo && (hotel as any).logoId) {
+                this.hotelLogo = `/files/${(hotel as any).logoId}`;
+              } else if (!this.hotelLogo && (hotel as any).logo) {
+                this.hotelLogo = (hotel as any).logo;
+              }
+              resolve();
+            },
+            (error) => {
+              console.error('Error loading hotel info:', error);
+              // Nếu là lỗi 403, vẫn cho phép tiếp tục nhưng không có hotel info
+              if (error.status === 403) {
+                this.message.warning('Không thể tải thông tin khách sạn do hạn chế quyền truy cập. PDF sẽ được tạo với thông tin có sẵn.');
+                resolve(); // Resolve thay vì reject để vẫn có thể tạo PDF
+              } else {
+                reject(error);
+              }
+            }
+          );
+        });
+      } catch (error) {
+        this.message.error('Không thể tải thông tin khách sạn.');
+        this.isLoadingHotelInfo = false;
+        return;
+      }
+      this.isLoadingHotelInfo = false;
     }
     
     const checkInDate = new Date(formValue.checkInDate);
@@ -419,26 +534,50 @@ export class BookingModalComponent implements OnInit {
     
     // Logo và tên khách sạn
     if (this.hotelLogo) {
-      const logoUrl = this.getImageUrl(this.hotelLogo);
-      content.push({
-        columns: [
-          {
-            width: 60,
-            image: logoUrl,
-            fit: [60, 60],
-            alignment: 'center'
-          },
-          {
-            width: '*',
+      try {
+        const logoUrl = this.getImageUrl(this.hotelLogo);
+        const logoBase64 = await this.convertImageUrlToBase64(logoUrl);
+        if (logoBase64) {
+          content.push({
+            columns: [
+              {
+                width: 60,
+                image: logoBase64,
+                fit: [60, 60],
+                alignment: 'center'
+              },
+              {
+                width: '*',
+                text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
+                fontSize: 14,
+                bold: true,
+                alignment: 'center',
+                margin: [10, 20, 0, 0]
+              }
+            ],
+            margin: [0, 0, 0, 20]
+          });
+        } else {
+          // Nếu không convert được, chỉ hiển thị tên
+          content.push({
             text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
             fontSize: 14,
             bold: true,
             alignment: 'center',
-            margin: [10, 20, 0, 0]
-          }
-        ],
-        margin: [0, 0, 0, 20]
-      });
+            margin: [0, 0, 0, 20]
+          });
+        }
+      } catch (error) {
+        console.error('Error converting logo to base64:', error);
+        // Nếu lỗi, chỉ hiển thị tên
+        content.push({
+          text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
+          fontSize: 14,
+          bold: true,
+          alignment: 'center',
+          margin: [0, 0, 0, 20]
+        });
+      }
     } else {
       content.push({
         text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
@@ -679,6 +818,36 @@ export class BookingModalComponent implements OnInit {
     }
     // Nếu chỉ là ID, thêm /files/ prefix
     return `${this.apiBaseUrl}/files/${urlOrId}`;
+  }
+
+  /**
+   * Convert image URL to base64 for pdfMake
+   */
+  async convertImageUrlToBase64(imageUrl: string): Promise<string | null> {
+    if (!imageUrl) return null;
+    
+    try {
+      // Fetch image as blob
+      const blob = await this.http.get(imageUrl, { responseType: 'blob' }).toPromise();
+      if (!blob) return null;
+      
+      // Convert blob to base64
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          resolve(base64data);
+        };
+        reader.onerror = () => {
+          console.error('Error reading blob');
+          resolve(null);
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error converting image to base64:', error);
+      return null;
+    }
   }
 }
 

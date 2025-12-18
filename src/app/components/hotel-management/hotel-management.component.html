@@ -292,7 +292,7 @@
                   <input nz-input formControlName="logo" placeholder="Nhập URL logo khách sạn" style="width: 100%;">
                 </div>
                 <div class="upload-divider">HOẶC</div>
-                <div class="upload-option">
+                <div class="upload-option" (click)="$event.stopPropagation()">
                   <label>Tải logo lên:</label>
                   <nz-upload
                     [nzAction]="uploadUrl"
@@ -302,7 +302,7 @@
                     [nzShowUploadList]="false"
                     nzAccept="image/*"
                     nzName="image">
-                    <button nz-button nzType="default" [nzLoading]="isLoadingUpload">
+                    <button nz-button nzType="default" type="button" [nzLoading]="isLoadingUpload">
                       <i nz-icon nzType="upload"></i>
                       Chọn logo
                     </button>
@@ -334,7 +334,12 @@
         <nz-form-item>
           <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="starRating">Xếp hạng (sao)</nz-form-label>
           <nz-form-control [nzSm]="14" [nzXs]="24">
-            <nz-rate formControlName="starRating" id="starRating"></nz-rate>
+            <nz-rate 
+              [ngModel]="hotelForm.get('starRating')?.value || 0" 
+              (nzOnChange)="hotelForm.get('starRating')?.setValue($event)"
+              [ngModelOptions]="{standalone: true}"
+              id="starRating">
+            </nz-rate>
           </nz-form-control>
         </nz-form-item>
 

@@ -723,8 +723,17 @@ export class GuestManagementComponent implements OnInit {
         this.loadRooms();
       },
       error: (error) => {
-        // Nếu phòng đã có khách, vẫn cập nhật thông tin khách vào phòng
-        if (error.error?.message?.includes('đã có khách') || error.error?.message?.includes('occupied')) {
+        const errorMessage = error.error?.message || error.error?.error || 'Lỗi assign khách vào phòng';
+        
+        // Kiểm tra lỗi về số lượng người tối đa
+        if (errorMessage.includes('tối đa') || errorMessage.includes('đạt số lượng')) {
+          this.message.error(errorMessage);
+          this.isLoading = false;
+          return;
+        }
+        
+        // Nếu phòng đã có khách, vẫn cập nhật thông tin (nhưng không thêm khách mới)
+        if (errorMessage.includes('đã có khách') || errorMessage.includes('occupied')) {
           // Cập nhật thông tin khách vào phòng đã occupied
           this.roomsService.updateRoomCheckinInfo(this.selectedRoomId!, guestInfo, 0).subscribe({
             next: () => {
@@ -738,7 +747,7 @@ export class GuestManagementComponent implements OnInit {
             }
           });
         } else {
-          this.message.error(error.error?.message || 'Assign khách vào phòng thất bại');
+          this.message.error(errorMessage);
           this.isLoading = false;
         }
       }
