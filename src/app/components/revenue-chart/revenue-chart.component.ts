@@ -98,29 +98,19 @@ export class RevenueChartComponent implements OnInit, OnChanges {
         startDate = subDays(now, 6);
     }
     
-    // Lấy dữ liệu từ shift handover history và incomes
-    forkJoin({
-      shiftHandovers: this.shiftHandoverService.getShiftHandoverHistory({
-        hotelId: this.hotelId,
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd'),
-        page: 1,
-        limit: 1000 // Lấy tối đa 1000 records
-      }),
-      incomes: this.transactionService.getIncomes({
-        hotelId: this.hotelId,
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd'),
-        page: 1,
-        limit: 1000 // Lấy tối đa 1000 records
-      })
+    // Lấy dữ liệu từ shift handover history (không cần incomes API nữa)
+    this.shiftHandoverService.getShiftHandoverHistory({
+      hotelId: this.hotelId,
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: format(endDate, 'yyyy-MM-dd'),
+      page: 1,
+      limit: 1000 // Lấy tối đa 1000 records
     }).subscribe({
       next: (response) => {
-        const shiftHandovers = response.shiftHandovers.data || [];
-        const incomes = response.incomes.data || [];
+        const shiftHandovers = response.data || [];
         
-        // Nhóm dữ liệu theo period và tính toán
-        const groupedData = this.groupShiftHandoversByPeriod(shiftHandovers, this.selectedPeriod, incomes);
+        // Nhóm dữ liệu theo period và tính toán (tính incomeAmount từ shift-handover-history)
+        const groupedData = this.groupShiftHandoversByPeriod(shiftHandovers, this.selectedPeriod);
         
         this.labels = groupedData.labels;
         this.revenueData = groupedData.revenueData;
@@ -137,12 +127,12 @@ export class RevenueChartComponent implements OnInit, OnChanges {
           return sum;
         }, 0);
         
-        // Tính tổng phiếu thu
-        const totalIncome = incomes.reduce((sum: number, income: any) => {
-          return sum + (income.amount || 0);
+        // Tính tổng phiếu thu từ shift-handover-history (incomeAmount)
+        const totalIncome = shiftHandovers.reduce((sum, record) => {
+          return sum + (record.incomeAmount || 0);
         }, 0);
         
-        // Tổng doanh thu = tổng tiền phòng + phiếu thu
+        // Tổng doanh thu = tổng tiền phòng + phiếu thu từ lịch sử giao ca
         this.totalRevenue = totalRoomRevenue + totalIncome;
         
         // Tổng chi = tổng expenseAmount từ expenses
@@ -196,8 +186,7 @@ export class RevenueChartComponent implements OnInit, OnChanges {
   // Nhóm dữ liệu shift handover theo period
   private groupShiftHandoversByPeriod(
     shiftHandovers: any[], 
-    period: 'day' | 'week' | 'month',
-    incomes: any[] = []
+    period: 'day' | 'week' | 'month'
   ): { labels: string[], revenueData: number[], expenseData: number[], paymentData: number[] } {
     const grouped: { [key: string]: { revenue: number, expense: number, payment: number } } = {};
     
@@ -306,34 +295,35 @@ export class RevenueChartComponent implements OnInit, OnChanges {
       }
     });
     
-    // Xử lý incomes (phiếu thu)
-    if (incomes && Array.isArray(incomes)) {
-      incomes.forEach((income: any) => {
-        const incomeDate = income.createdAt ? new Date(income.createdAt) : new Date();
+    // Xử lý incomes từ shift-handover-history (incomeAmount)
+    shiftHandovers.forEach(record => {
+      const incomeAmount = record.incomeAmount || 0;
+      if (incomeAmount > 0) {
+        const handoverDate = new Date(record.handoverTime);
         let key: string;
         
         switch (period) {
           case 'day':
-            key = format(incomeDate, 'yyyy-MM-dd');
+            key = format(handoverDate, 'yyyy-MM-dd');
             break;
           case 'week':
-            key = format(startOfWeek(incomeDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            key = format(startOfWeek(handoverDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
             break;
           case 'month':
-            key = format(startOfMonth(incomeDate), 'yyyy-MM');
+            key = format(startOfMonth(handoverDate), 'yyyy-MM');
             break;
           default:
-            key = format(incomeDate, 'yyyy-MM-dd');
+            key = format(handoverDate, 'yyyy-MM-dd');
         }
         
         if (!grouped[key]) {
           grouped[key] = { revenue: 0, expense: 0, payment: 0 };
         }
         
-        // Thêm income vào revenue (tổng doanh thu = tổng tiền phòng + phiếu thu)
-        grouped[key].revenue += (income.amount || 0);
-      });
-    }
+        // Thêm incomeAmount vào revenue (tổng doanh thu = tổng tiền phòng + phiếu thu từ lịch sử giao ca)
+        grouped[key].revenue += incomeAmount;
+      }
+    });
     
     // Sắp xếp keys và tạo arrays
     const sortedKeys = Object.keys(grouped).sort();
