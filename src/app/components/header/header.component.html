@@ -35,8 +35,8 @@
       </li>
       <li *ngIf="isLoggedIn" class="nav-item dropdown">
         <a class="nav-link dropdown-toggle d-flex align-items-center" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-          <img src="https://mdbcdn.b-cdn.net/img/new/avatars/2.webp" class="rounded-circle me-2" style="width: 32px; height: 32px;"
-          alt="Avatar" />
+          <img [src]="getAvatarUrl()" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;"
+          alt="Avatar" (error)="handleImageError($event)" />
           <div class="d-flex flex-column align-items-start" style="line-height: 1.2;">
             <span class="fw-bold" style="font-size: 14px;">{{ displayName }}</span>
             <small class="text-white-50" style="font-size: 11px;">{{ userRole }}</small>

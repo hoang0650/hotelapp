@@ -48,7 +48,7 @@
           </div>
 
           <div class="blog-featured-image mb-3" *ngIf="selectedBlog.featuredImage">
-            <img [src]="selectedBlog.featuredImage" [alt]="selectedBlog.title" />
+            <img [src]="getImageUrl(selectedBlog.featuredImage || selectedBlog.imageUrl)" [alt]="selectedBlog.title" />
           </div>
 
           <div class="blog-content" [innerHTML]="selectedBlog.content | nlToBr"></div>
@@ -125,7 +125,7 @@
           <div class="comments-list" *ngIf="comments.length > 0">
             <div class="comment-item" *ngFor="let comment of comments">
               <div class="comment-header">
-                <nz-avatar [nzSrc]="comment.userAvatar" [nzText]="(comment.userName || 'U').charAt(0)" nzSize="small"></nz-avatar>
+                <nz-avatar [nzSrc]="getImageUrl(comment.userAvatar)" [nzText]="(comment.userName || 'U').charAt(0)" nzSize="small"></nz-avatar>
                 <div class="comment-author">
                   <strong>{{ comment.userName }}</strong>
                   <span class="comment-date">{{ formatCommentDate(comment.createdAt) }}</span>
@@ -277,8 +277,8 @@
           <nz-card class="sidebar-card" nzTitle="Bài viết liên quan" *ngIf="relatedBlogs.length > 0">
             <div class="related-blogs">
               <div class="related-blog-item" *ngFor="let blog of relatedBlogs" (click)="viewBlogDetail(blog)">
-                <div class="related-blog-image" *ngIf="blog.featuredImage">
-                  <img [src]="blog.featuredImage" [alt]="blog.title" />
+                <div class="related-blog-image" *ngIf="blog.featuredImage || blog.imageUrl">
+                  <img [src]="getImageUrl(blog.featuredImage || blog.imageUrl)" [alt]="blog.title" />
                 </div>
                 <div class="related-blog-content">
                   <h4 class="related-blog-title">{{ blog.title }}</h4>
@@ -358,8 +358,8 @@
               [nzHoverable]="true"
               (click)="viewBlogDetail(blog)"
               style="cursor: pointer; height: 100%;">
-              <div class="blog-card-image" *ngIf="blog.featuredImage">
-                <img [src]="blog.featuredImage" [alt]="blog.title" />
+              <div class="blog-card-image" *ngIf="blog.featuredImage || blog.imageUrl">
+                <img [src]="getImageUrl(blog.featuredImage || blog.imageUrl)" [alt]="blog.title" />
               </div>
               <div class="blog-card-content">
                 <h3 class="blog-card-title">{{ blog.title }}</h3>
@@ -420,8 +420,8 @@
           <nz-card class="sidebar-card mb-3" nzTitle="Bài viết nổi bật" *ngIf="blogs.length > 0">
             <div class="related-blogs">
               <div class="related-blog-item" *ngFor="let blog of blogs.slice(0, 5)" (click)="viewBlogDetail(blog)">
-                <div class="related-blog-image" *ngIf="blog.featuredImage">
-                  <img [src]="blog.featuredImage" [alt]="blog.title" />
+                <div class="related-blog-image" *ngIf="blog.featuredImage || blog.imageUrl">
+                  <img [src]="getImageUrl(blog.featuredImage || blog.imageUrl)" [alt]="blog.title" />
                 </div>
                 <div class="related-blog-content">
                   <h4 class="related-blog-title">{{ blog.title }}</h4>

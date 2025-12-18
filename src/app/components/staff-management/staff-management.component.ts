@@ -119,7 +119,9 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
                 this.businessService.getBusinessById(hotel.businessId).subscribe(
                   (business: any) => {
                     this.businessInfo = business;
-                    this.businessLogo = business.logo || '';
+                    // Ưu tiên logoId, nếu không có thì dùng logo (URL)
+                    const logoId = (business as any).logoId;
+                    this.businessLogo = logoId ? `/files/${logoId}` : (business.logo || '');
                   },
                   (error) => {
                     console.error('Error loading business info:', error);
@@ -150,7 +152,9 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
         this.businessService.getBusinessInfoOfCurrentUser().subscribe(
           (business: any) => {
             this.businessInfo = business;
-            this.businessLogo = business.logo || '';
+            // Ưu tiên logoId, nếu không có thì dùng logo (URL)
+            const logoId = (business as any).logoId;
+            this.businessLogo = logoId ? `/files/${logoId}` : (business.logo || '');
           },
           (error) => {
             console.error('Error loading business info:', error);
@@ -1793,5 +1797,29 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   onExportSummaryFilterChange(): void {
     // Có thể thêm logic validation nếu cần
+  }
+
+  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+
+  getImageUrl(urlOrId: string | null | undefined): string {
+    if (!urlOrId) return '';
+    // Nếu là URL đầy đủ (http/https), trả về nguyên
+    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
+      return urlOrId;
+    }
+    // Nếu là imageId hoặc path, thêm base URL
+    if (urlOrId.startsWith('/files/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+    // Nếu chỉ là ID, thêm /files/ prefix
+    return `${this.apiBaseUrl}/files/${urlOrId}`;
+  }
+
+  handleLogoError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) {
+      img.src = '';
+      img.style.display = 'none';
+    }
   }
 }

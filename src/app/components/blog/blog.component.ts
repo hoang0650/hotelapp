@@ -435,5 +435,21 @@ export class BlogComponent implements OnInit {
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + '...';
   }
+
+  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+
+  getImageUrl(urlOrId: string | null | undefined): string {
+    if (!urlOrId) return '';
+    // Nếu là URL đầy đủ (http/https), trả về nguyên
+    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
+      return urlOrId;
+    }
+    // Nếu là imageId hoặc path, thêm base URL
+    if (urlOrId.startsWith('/files/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+    // Nếu chỉ là ID, thêm /files/ prefix
+    return `${this.apiBaseUrl}/files/${urlOrId}`;
+  }
 }
 

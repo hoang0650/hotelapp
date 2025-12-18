@@ -174,4 +174,34 @@ export class HeaderComponent implements OnInit, OnDestroy {
     };
     return labelMap[type] || 'Thông báo';
   }
+
+  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+
+  getImageUrl(urlOrId: string | null | undefined): string {
+    if (!urlOrId) return '';
+    // Nếu là URL đầy đủ (http/https), trả về nguyên
+    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
+      return urlOrId;
+    }
+    // Nếu là imageId hoặc path, thêm base URL
+    if (urlOrId.startsWith('/files/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+    // Nếu chỉ là ID, thêm /files/ prefix
+    return `${this.apiBaseUrl}/files/${urlOrId}`;
+  }
+
+  getAvatarUrl(): string {
+    if (!this.currentUser) return 'https://mdbcdn.b-cdn.net/img/new/avatars/2.webp';
+    const avatar = this.currentUser.avatar || (this.currentUser as any).avatarId;
+    if (!avatar) return 'https://mdbcdn.b-cdn.net/img/new/avatars/2.webp';
+    return this.getImageUrl(avatar);
+  }
+
+  handleImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) {
+      img.src = 'https://mdbcdn.b-cdn.net/img/new/avatars/2.webp';
+    }
+  }
 }
