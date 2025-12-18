@@ -78,8 +78,22 @@
             </nz-form-control>
           </nz-form-item>
 
+          <!-- Accept Terms -->
+          <nz-form-item>
+            <nz-form-control nzErrorTip="Vui lòng chấp nhận điều khoản sử dụng">
+              <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                <label nz-checkbox formControlName="acceptTerms" style="margin-right: 4px;">
+                  Tôi chấp nhận
+                </label>
+                <a routerLink="/privacy-policy" target="_blank" (click)="$event.stopPropagation()" style="color: #1890ff; text-decoration: none;">
+                  Các điều khoản sử dụng chương trình
+                </a>
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+
           <!-- Submit Button -->
-          <button nz-button nzType="primary" [nzLoading]="isLoading" class="submit-btn">
+          <button nz-button nzType="primary" [nzLoading]="isLoading" [disabled]="signupForm.invalid" class="submit-btn">
             Đăng ký
           </button>
         </form>
@@ -229,8 +243,22 @@
             </div>
           </div>
 
+          <!-- Accept Terms -->
+          <nz-form-item>
+            <nz-form-control nzErrorTip="Vui lòng chấp nhận điều khoản sử dụng">
+              <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                <label nz-checkbox formControlName="acceptTerms" style="margin-right: 4px;">
+                  Tôi chấp nhận
+                </label>
+                <a routerLink="/privacy-policy" target="_blank" (click)="$event.stopPropagation()" style="color: #1890ff; text-decoration: none;">
+                  Các điều khoản sử dụng chương trình
+                </a>
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+
           <!-- Submit Button -->
-          <button nz-button nzType="primary" [nzLoading]="isLoading" class="submit-btn">
+          <button nz-button nzType="primary" [nzLoading]="isLoading" [disabled]="businessForm.invalid" class="submit-btn">
             Đăng ký doanh nghiệp
           </button>
         </form>

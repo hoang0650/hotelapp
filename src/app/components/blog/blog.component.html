@@ -390,14 +390,21 @@
         </div>
 
         <!-- Phân trang -->
-        <div class="pagination-section mt-4" *ngIf="total > pageSize">
+        <div class="pagination-section mt-4" *ngIf="total > 0">
           <nz-pagination
             [nzPageIndex]="pageIndex"
             [nzPageSize]="pageSize"
             [nzTotal]="total"
-            [nzShowSizeChanger]="false"
-            (nzPageIndexChange)="onPageChange($event)">
+            [nzShowSizeChanger]="true"
+            [nzPageSizeOptions]="[9, 18, 27, 36]"
+            [nzShowQuickJumper]="true"
+            [nzShowTotal]="totalTemplate"
+            (nzPageIndexChange)="onPageChange($event)"
+            (nzPageSizeChange)="onPageSizeChange($event)">
           </nz-pagination>
+          <ng-template #totalTemplate let-total>
+            Tổng {{ total }} bài viết
+          </ng-template>
         </div>
       </nz-spin>
         </nz-card>

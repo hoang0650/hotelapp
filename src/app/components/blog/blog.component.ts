@@ -414,6 +414,13 @@ export class BlogComponent implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  onPageSizeChange(pageSize: number): void {
+    this.pageSize = pageSize;
+    this.pageIndex = 1; // Reset về trang đầu khi đổi page size
+    this.loadBlogs();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   onCategoryFilter(category: string): void {
     this.categoryFilter = this.categoryFilter === category ? '' : category;
     this.pageIndex = 1;

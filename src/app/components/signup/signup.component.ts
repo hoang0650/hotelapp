@@ -38,7 +38,8 @@ export class SignupComponent implements OnInit {
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]],
       fullName: [''],
-      phone: ['']
+      phone: [''],
+      acceptTerms: [false, [Validators.requiredTrue]]
     }, {
       validators: this.passwordMatchValidator
     });
@@ -51,6 +52,7 @@ export class SignupComponent implements OnInit {
       confirmPassword: ['', [Validators.required]],
       fullName: ['', [Validators.required]],
       phone: ['', [Validators.required]],
+      acceptTerms: [false, [Validators.requiredTrue]],
       businessInfo: this.fb.group({
         name: ['', [Validators.required]],
         legalName: ['', [Validators.required]],

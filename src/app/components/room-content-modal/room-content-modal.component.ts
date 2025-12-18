@@ -3237,6 +3237,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
             this.isSaving = false;
             
+            // Đóng modal sau khi lưu thành công
+            if (this.modalRef) {
+              setTimeout(() => {
+                this.modalRef.close();
+              }, 500); // Đợi 500ms để user thấy thông báo thành công
+            }
+            
             // Dữ liệu đã được lưu vào RoomEvent qua backend, không cần cập nhật session nữa
             
             // Cập nhật listData ngay lập tức để hiển thị (bao gồm rateType)
