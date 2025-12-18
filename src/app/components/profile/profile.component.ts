@@ -4,6 +4,8 @@ import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { User } from '../../interfaces/user';
+import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-profile',
@@ -20,12 +22,17 @@ export class ProfileComponent implements OnInit {
   qrPaymentUrl: string = ''; // URL QR thanh toán SePay
   showQrPreview: boolean = false; // Hiển thị preview QR code
   qrBeneficiaryName: string = ''; // Tên người thụ hưởng cho QR code
+  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  uploadUrl = `${this.apiBaseUrl}/files/upload`;
+  fileList: any[] = [];
+  avatarId: string | null = null;
 
   constructor(
     private fb: FormBuilder,
     private userService: UserService,
     private authService: AuthService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private http: HttpClient
   ) {
     // Form thông tin cơ bản
     this.profileForm = this.fb.group({
@@ -101,6 +108,9 @@ export class ProfileComponent implements OnInit {
       phone: user.phone || '',
       avatar: user.avatar || ''
     });
+    
+    // Lưu avatarId nếu có
+    this.avatarId = (user as any).avatarId || null;
 
     // Thông tin ngân hàng
     if (user.bankAccount) {
@@ -153,10 +163,27 @@ export class ProfileComponent implements OnInit {
 
     this.saving = true;
 
+    // Xử lý avatar: nếu có avatarId thì dùng, nếu không dùng avatar (URL)
+    const avatarValue = this.profileForm.get('avatar')?.value;
+    const avatarData: any = {};
+    if (this.avatarId) {
+      avatarData.avatarId = this.avatarId;
+      avatarData.avatar = `${this.apiBaseUrl}/files/${this.avatarId}`;
+    } else if (avatarValue) {
+      avatarData.avatar = avatarValue;
+      // Nếu là URL từ /files/, extract imageId
+      if (avatarValue.includes('/files/')) {
+        const imageId = avatarValue.split('/files/')[1]?.split('?')[0];
+        if (imageId) {
+          avatarData.avatarId = imageId;
+        }
+      }
+    }
+    
     const profileData = {
       fullName: this.profileForm.get('fullName')?.value,
       phone: this.profileForm.get('phone')?.value,
-      avatar: this.profileForm.get('avatar')?.value,
+      ...avatarData,
       bankAccount: {
         bankName: this.bankAccountForm.get('bankName')?.value || undefined,
         accountNumber: this.bankAccountForm.get('accountNumber')?.value || undefined,
@@ -269,6 +296,68 @@ export class ProfileComponent implements OnInit {
     this.qrPaymentUrl = '';
     this.qrBeneficiaryName = '';
     this.showQrPreview = false;
+  }
+
+  get uploadHeaders(): { [key: string]: string } {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': token || ''
+    };
+  }
+
+  handleAvatarChange(info: NzUploadChangeParam): void {
+    if (info.file.status === 'uploading') {
+      this.loading = true;
+      return;
+    }
+    
+    if (info.file.status === 'done') {
+      if (info.file.response) {
+        const response = info.file.response;
+        const imageId = response.imageId;
+        const imageUrl = response.imageUrl || `${this.apiBaseUrl}/files/${imageId}`;
+        
+        this.avatarId = imageId;
+        this.profileForm.patchValue({
+          avatar: imageUrl
+        });
+        this.message.success('Tải lên ảnh đại diện thành công');
+      }
+      this.loading = false;
+    } else if (info.file.status === 'error') {
+      this.message.error(`Lỗi khi tải lên ảnh: ${info.file.error?.message || 'Không xác định'}`);
+      console.error('Upload error:', info.file.error);
+      this.loading = false;
+    }
+  }
+
+  beforeUpload = (file: NzUploadFile): boolean => {
+    const isImage = file.type?.startsWith('image/');
+    if (!isImage) {
+      this.message.error('Bạn chỉ có thể tải lên file hình ảnh!');
+      return false;
+    }
+    const isLt5M = (file.size || 0) / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      this.message.error('Hình ảnh phải nhỏ hơn 5MB!');
+      return false;
+    }
+    this.fileList = this.fileList.concat(file);
+    return true;
+  };
+
+  getImageUrl(urlOrId: string | null | undefined): string {
+    if (!urlOrId) return '';
+    // Nếu là URL đầy đủ (http/https), trả về nguyên
+    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
+      return urlOrId;
+    }
+    // Nếu là imageId hoặc path, thêm base URL
+    if (urlOrId.startsWith('/files/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+    // Nếu chỉ là ID, thêm /files/ prefix
+    return `${this.apiBaseUrl}/files/${urlOrId}`;
   }
 }
 

@@ -323,6 +323,45 @@
           </nz-form-item>
         </div>
         
+        <nz-divider nzText="Logo doanh nghiệp" nzOrientation="left"></nz-divider>
+
+        <nz-form-item>
+          <nz-form-label [nzSpan]="24" [nzSm]="6">Logo</nz-form-label>
+          <nz-form-control [nzSpan]="24" [nzSm]="14">
+            <div class="logo-upload-section">
+              <div class="upload-options">
+                <div class="upload-option">
+                  <label>Nhập link logo:</label>
+                  <input nz-input formControlName="logo" placeholder="Nhập link logo" style="width: 100%;">
+                </div>
+                <div class="upload-divider">HOẶC</div>
+                <div class="upload-option">
+                  <label>Tải logo lên:</label>
+                  <nz-upload
+                    [nzAction]="uploadUrl"
+                    [nzHeaders]="uploadHeaders"
+                    [nzBeforeUpload]="beforeUpload"
+                    (nzChange)="handleLogoChange($event)"
+                    [nzShowUploadList]="false"
+                    nzAccept="image/*"
+                    nzName="image">
+                    <button nz-button nzType="default" [nzLoading]="isLoadingUpload">
+                      <i nz-icon nzType="upload"></i>
+                      Chọn logo
+                    </button>
+                  </nz-upload>
+                </div>
+              </div>
+              <div *ngIf="businessForm.get('logo')?.value" class="logo-preview">
+                <img 
+                  [src]="getImageUrl(businessForm.get('logo')?.value)" 
+                  alt="Logo" 
+                  style="max-width: 200px; max-height: 200px; border-radius: 4px; margin-top: 8px; object-fit: contain;">
+              </div>
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
         <nz-divider nzText="Cài đặt khác" nzOrientation="left"></nz-divider>
 
         <nz-form-item>

@@ -74,3 +74,38 @@ nz-card h3 i {
 nz-form-item {
   margin-bottom: 16px;
 }
+
+.logo-upload-section {
+  width: 100%;
+}
+
+.upload-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.upload-option {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upload-option label {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.upload-divider {
+  text-align: center;
+  color: #999;
+  font-size: 12px;
+  font-weight: 500;
+  margin: 8px 0;
+}
+
+.logo-preview {
+  margin-top: 12px;
+  text-align: center;
+}

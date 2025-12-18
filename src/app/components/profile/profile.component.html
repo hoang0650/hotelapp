@@ -44,9 +44,39 @@
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label [nzSpan]="6">Ảnh đại diện (URL)</nz-form-label>
+            <nz-form-label [nzSpan]="6">Ảnh đại diện</nz-form-label>
             <nz-form-control [nzSpan]="18">
-              <input nz-input formControlName="avatar" placeholder="Nhập URL ảnh đại diện" />
+              <div class="avatar-upload-section">
+                <div class="upload-options">
+                  <div class="upload-option">
+                    <label>Nhập link ảnh:</label>
+                    <input nz-input formControlName="avatar" placeholder="Nhập link ảnh đại diện" style="width: 100%;">
+                  </div>
+                  <div class="upload-divider">HOẶC</div>
+                  <div class="upload-option">
+                    <label>Tải ảnh lên:</label>
+                    <nz-upload
+                      [nzAction]="uploadUrl"
+                      [nzHeaders]="uploadHeaders"
+                      [nzBeforeUpload]="beforeUpload"
+                      (nzChange)="handleAvatarChange($event)"
+                      [nzShowUploadList]="false"
+                      nzAccept="image/*"
+                      nzName="image">
+                      <button nz-button nzType="default" [nzLoading]="loading">
+                        <i nz-icon nzType="upload"></i>
+                        Chọn ảnh
+                      </button>
+                    </nz-upload>
+                  </div>
+                </div>
+                <div *ngIf="profileForm.get('avatar')?.value" class="avatar-preview">
+                  <img 
+                    [src]="getImageUrl(profileForm.get('avatar')?.value)" 
+                    alt="Ảnh đại diện" 
+                    style="max-width: 150px; max-height: 150px; border-radius: 50%; margin-top: 8px; object-fit: cover;">
+                </div>
+              </div>
             </nz-form-control>
           </nz-form-item>
         </form>

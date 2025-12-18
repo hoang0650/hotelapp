@@ -9,6 +9,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { UserService } from '../../services/user.service';
 import { User } from '../../interfaces/user';
+import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
+import { HttpClient } from '@angular/common/http';
 
 const businessStatusesList = ['pending', 'active', 'inactive', 'suspended'] as const;
 type BusinessStatus = typeof businessStatusesList[number];
@@ -28,6 +30,11 @@ export class CompanyManagementComponent implements OnInit {
   selectedViewBusiness: Business | null = null;
   currentUser: User | null = null;
   permissions: PermissionRules | null = null;
+  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  uploadUrl = `${this.apiBaseUrl}/files/upload`;
+  fileList: any[] = [];
+  logoId: string | null = null;
+  isLoadingUpload = false;
 
   // Trạng thái hiển thị
   statusOptions: { value: BusinessStatus, label: string }[] = [
@@ -46,7 +53,8 @@ export class CompanyManagementComponent implements OnInit {
     private authService: AuthService,
     private message: NzMessageService,
     private modal: NzModalService,
-    private userService: UserService
+    private userService: UserService,
+    private http: HttpClient
   ) { 
     this.businessForm = this.fb.group({
       name: ['', Validators.required],
@@ -65,7 +73,8 @@ export class CompanyManagementComponent implements OnInit {
         website: ['']
       }),
       hotels: [[]],
-      status: ['pending' as BusinessStatus, Validators.required]
+      status: ['pending' as BusinessStatus, Validators.required],
+      logo: ['']
     });
   }
 
@@ -230,8 +239,12 @@ export class CompanyManagementComponent implements OnInit {
         hotels: Array.isArray(this.selectedBusiness.hotels) 
           ? this.selectedBusiness.hotels.map(h => typeof h === 'string' ? h : (h as Hotel)._id) 
           : [],
-        status: this.selectedBusiness.status || 'pending'
+        status: this.selectedBusiness.status || 'pending',
+        logo: this.selectedBusiness.logo || ''
       });
+      
+      // Lưu logoId nếu có
+      this.logoId = (this.selectedBusiness as any).logoId || null;
     }
   }
   
@@ -245,8 +258,10 @@ export class CompanyManagementComponent implements OnInit {
       status: 'pending' as BusinessStatus,
       address: { street: '', city: '', state: '', country: '', postalCode: '' },
       contactInfo: { phone: '', email: '', website: '' },
-      hotels: []
+      hotels: [],
+      logo: ''
     });
+    this.logoId = null;
   }
 
   createBusiness(): void {
@@ -306,6 +321,23 @@ export class CompanyManagementComponent implements OnInit {
 
     this.isLoading = true;
     const businessDataValue = this.businessForm.value;
+    // Xử lý logo: nếu có logoId thì dùng, nếu không dùng logo (URL)
+    const logoValue = businessDataValue.logo;
+    const logoData: any = {};
+    if (this.logoId) {
+      logoData.logoId = this.logoId;
+      logoData.logo = `${this.apiBaseUrl}/files/${this.logoId}`;
+    } else if (logoValue) {
+      logoData.logo = logoValue;
+      // Nếu là URL từ /files/, extract imageId
+      if (logoValue.includes('/files/')) {
+        const imageId = logoValue.split('/files/')[1]?.split('?')[0];
+        if (imageId) {
+          logoData.logoId = imageId;
+        }
+      }
+    }
+    
     const updatedBusinessData: Partial<Business> = {
       name: businessDataValue.name,
       legalName: businessDataValue.legalName,
@@ -313,7 +345,8 @@ export class CompanyManagementComponent implements OnInit {
       address: businessDataValue.address as BusinessAddress,
       contactInfo: businessDataValue.contactInfo as BusinessContactInfo,
       hotels: businessDataValue.hotels,
-      status: this.isAdmin ? businessDataValue.status : undefined // Chỉ admin mới có thể thay đổi status
+      status: this.isAdmin ? businessDataValue.status : undefined, // Chỉ admin mới có thể thay đổi status
+      ...logoData
     };
 
     this.businessService.updateBusiness(this.editId, updatedBusinessData).subscribe({
@@ -490,5 +523,67 @@ export class CompanyManagementComponent implements OnInit {
         this.markFormGroupTouched(control);
       }
     });
+  }
+
+  get uploadHeaders(): { [key: string]: string } {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': token || ''
+    };
+  }
+
+  handleLogoChange(info: NzUploadChangeParam): void {
+    if (info.file.status === 'uploading') {
+      this.isLoadingUpload = true;
+      return;
+    }
+    
+    if (info.file.status === 'done') {
+      if (info.file.response) {
+        const response = info.file.response;
+        const imageId = response.imageId;
+        const imageUrl = response.imageUrl || `${this.apiBaseUrl}/files/${imageId}`;
+        
+        this.logoId = imageId;
+        this.businessForm.patchValue({
+          logo: imageUrl
+        });
+        this.message.success('Tải lên logo thành công');
+      }
+      this.isLoadingUpload = false;
+    } else if (info.file.status === 'error') {
+      this.message.error(`Lỗi khi tải lên logo: ${info.file.error?.message || 'Không xác định'}`);
+      console.error('Upload error:', info.file.error);
+      this.isLoadingUpload = false;
+    }
+  }
+
+  beforeUpload = (file: NzUploadFile): boolean => {
+    const isImage = file.type?.startsWith('image/');
+    if (!isImage) {
+      this.message.error('Bạn chỉ có thể tải lên file hình ảnh!');
+      return false;
+    }
+    const isLt5M = (file.size || 0) / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      this.message.error('Hình ảnh phải nhỏ hơn 5MB!');
+      return false;
+    }
+    this.fileList = this.fileList.concat(file);
+    return true;
+  };
+
+  getImageUrl(urlOrId: string | null | undefined): string {
+    if (!urlOrId) return '';
+    // Nếu là URL đầy đủ (http/https), trả về nguyên
+    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
+      return urlOrId;
+    }
+    // Nếu là imageId hoặc path, thêm base URL
+    if (urlOrId.startsWith('/files/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+    // Nếu chỉ là ID, thêm /files/ prefix
+    return `${this.apiBaseUrl}/files/${urlOrId}`;
   }
 }

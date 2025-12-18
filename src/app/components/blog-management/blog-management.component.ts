@@ -1,20 +1,29 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { BlogService } from '../../services/blog.service';
 import { AuthService } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+
+export interface BlogSection {
+  title: string;
+  content: string;
+}
 
 export interface Blog {
   _id?: string;
   title: string;
   content: string;
+  sections?: BlogSection[];
   excerpt?: string;
   authorId?: string;
   authorName?: string;
   status: 'draft' | 'published';
   featuredImage?: string;
+  imageUrl?: string;
   tags?: string[];
   category?: string;
   views?: number;
@@ -39,6 +48,10 @@ export class BlogManagementComponent implements OnInit {
   isLoading = false;
   isModalVisible = false;
   currentUser: User | null = null;
+  imageUrl: string | ArrayBuffer | null = '';
+  fileList: any[] = [];
+  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  uploadUrl = `${this.apiBaseUrl}/files/upload`;
   pageIndex = 1;
   pageSize = 10;
   total = 0;
@@ -66,7 +79,8 @@ export class BlogManagementComponent implements OnInit {
     private blogService: BlogService,
     public authService: AuthService,
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private http: HttpClient
   ) {
     this.blogForm = this.fb.group({
       title: ['', [Validators.required, Validators.maxLength(200)]],
@@ -74,9 +88,58 @@ export class BlogManagementComponent implements OnInit {
       excerpt: ['', [Validators.maxLength(500)]],
       status: ['draft', Validators.required],
       featuredImage: [''],
+      imageUrl: [''],
       tags: [[]],
-      category: ['']
+      category: [''],
+      sections: this.fb.array([])
     });
+  }
+
+  get sections(): FormArray {
+    return this.blogForm.get('sections') as FormArray;
+  }
+
+  get isEditMode(): boolean {
+    return !!this.editId;
+  }
+
+  get uploadHeaders(): { [key: string]: string } {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': token || ''
+    };
+  }
+
+  addSection(): void {
+    const sectionForm = this.fb.group({
+      title: ['', Validators.required],
+      content: ['', Validators.required]
+    });
+    this.sections.push(sectionForm);
+  }
+
+  removeSection(index: number): void {
+    this.sections.removeAt(index);
+  }
+
+  resetForm(): void {
+    this.imageUrl = '';
+    this.fileList = [];
+    this.blogForm.reset({
+      title: '',
+      content: '',
+      excerpt: '',
+      status: 'draft',
+      featuredImage: '',
+      imageUrl: '',
+      tags: [],
+      category: ''
+    });
+    // Xóa tất cả sections
+    while (this.sections.length !== 0) {
+      this.sections.removeAt(0);
+    }
+    this.handleCancel();
   }
 
   ngOnInit(): void {
@@ -120,15 +183,24 @@ export class BlogManagementComponent implements OnInit {
   openCreateModal(): void {
     this.editId = null;
     this.selectedBlog = null;
+    this.imageUrl = '';
+    this.fileList = [];
     this.blogForm.reset({
       title: '',
       content: '',
       excerpt: '',
       status: 'draft',
       featuredImage: '',
+      imageUrl: '',
       tags: [],
       category: ''
     });
+    // Xóa tất cả sections
+    while (this.sections.length !== 0) {
+      this.sections.removeAt(0);
+    }
+    // Thêm 1 section mặc định
+    this.addSection();
     this.isModalVisible = true;
   }
 
@@ -138,12 +210,44 @@ export class BlogManagementComponent implements OnInit {
     // Chuyển tags array thành string để hiển thị trong input
     const tagsString = blog.tags && blog.tags.length > 0 ? blog.tags.join(', ') : '';
     
+    // Set imageUrl preview
+    const imageUrlValue = blog.imageUrl || blog.featuredImage || '';
+    this.imageUrl = imageUrlValue;
+    this.fileList = [];
+    
+    // Xóa tất cả sections cũ
+    while (this.sections.length !== 0) {
+      this.sections.removeAt(0);
+    }
+    
+    // Load sections từ blog hoặc tạo section mặc định từ content
+    if (blog.sections && blog.sections.length > 0) {
+      blog.sections.forEach(section => {
+        const sectionForm = this.fb.group({
+          title: [section.title || '', Validators.required],
+          content: [section.content || '', Validators.required]
+        });
+        this.sections.push(sectionForm);
+      });
+    } else if (blog.content) {
+      // Nếu không có sections, tạo 1 section từ content cũ
+      const sectionForm = this.fb.group({
+        title: ['', Validators.required],
+        content: [blog.content || '', Validators.required]
+      });
+      this.sections.push(sectionForm);
+    } else {
+      // Nếu không có gì, thêm 1 section trống
+      this.addSection();
+    }
+    
     this.blogForm.patchValue({
       title: blog.title,
       content: blog.content,
       excerpt: blog.excerpt || '',
       status: blog.status,
       featuredImage: blog.featuredImage || '',
+      imageUrl: imageUrlValue,
       tags: tagsString,
       category: blog.category || ''
     });
@@ -154,7 +258,22 @@ export class BlogManagementComponent implements OnInit {
     this.isModalVisible = false;
     this.editId = null;
     this.selectedBlog = null;
-    this.blogForm.reset();
+    this.imageUrl = '';
+    this.fileList = [];
+    this.blogForm.reset({
+      title: '',
+      content: '',
+      excerpt: '',
+      status: 'draft',
+      featuredImage: '',
+      imageUrl: '',
+      tags: [],
+      category: ''
+    });
+    // Xóa tất cả sections
+    while (this.sections.length !== 0) {
+      this.sections.removeAt(0);
+    }
   }
 
   handleOk(): void {
@@ -181,12 +300,31 @@ export class BlogManagementComponent implements OnInit {
       }
     }
     
+    // Lấy sections từ formArray
+    const sections: BlogSection[] = this.sections.controls.map(control => ({
+      title: control.get('title')?.value || '',
+      content: control.get('content')?.value || ''
+    }));
+    
+    // Tạo content từ sections (nối tất cả sections lại)
+    const contentFromSections = sections.map(s => {
+      if (s.title) {
+        return `<h2>${s.title}</h2>${s.content}`;
+      }
+      return s.content;
+    }).join('<br><br>');
+    
+    // Sử dụng content từ sections nếu có, nếu không dùng content cũ
+    const finalContent = sections.length > 0 ? contentFromSections : formValue.content;
+    
     const blogData: Blog = {
       title: formValue.title,
-      content: formValue.content,
+      content: finalContent,
+      sections: sections.length > 0 ? sections : undefined,
       excerpt: formValue.excerpt,
       status: formValue.status,
-      featuredImage: formValue.featuredImage,
+      featuredImage: formValue.imageUrl || formValue.featuredImage,
+      imageUrl: formValue.imageUrl || formValue.featuredImage,
       tags: tagsArray,
       category: formValue.category
     };
@@ -309,6 +447,68 @@ export class BlogManagementComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  handleImageChange(info: NzUploadChangeParam): void {
+    if (info.file.status === 'uploading') {
+      this.isLoading = true;
+      return;
+    }
+    
+    if (info.file.status === 'done') {
+      // Xử lý khi upload thành công từ backend
+      if (info.file.response) {
+        const response = info.file.response;
+        const imageId = response.imageId;
+        const imageUrl = response.imageUrl || `${this.apiBaseUrl}/files/${imageId}`;
+        
+        this.imageUrl = imageUrl;
+        this.blogForm.patchValue({
+          imageUrl: imageUrl,
+          featuredImage: imageUrl
+        });
+        this.message.success('Tải lên hình ảnh thành công');
+      }
+      this.isLoading = false;
+    } else if (info.file.status === 'error') {
+      this.message.error(`Lỗi khi tải lên hình ảnh: ${info.file.error?.message || 'Không xác định'}`);
+      console.error('Upload error:', info.file.error);
+      this.isLoading = false;
+    }
+  }
+
+  beforeUpload = (file: NzUploadFile): boolean => {
+    const isImage = file.type?.startsWith('image/');
+    if (!isImage) {
+      this.message.error('Bạn chỉ có thể tải lên file hình ảnh!');
+      return false;
+    }
+    const isLt5M = (file.size || 0) / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      this.message.error('Hình ảnh phải nhỏ hơn 5MB!');
+      return false;
+    }
+    this.fileList = this.fileList.concat(file);
+    return true;
+  };
+
+  getImageUrl(urlOrId: string): string {
+    if (!urlOrId) return '';
+    // Nếu là URL đầy đủ (http/https), trả về nguyên
+    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
+      return urlOrId;
+    }
+    // Nếu là imageId hoặc path, thêm base URL
+    if (urlOrId.startsWith('/files/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+    // Nếu chỉ là ID, thêm /files/ prefix
+    return `${this.apiBaseUrl}/files/${urlOrId}`;
+  }
+
+  handleImageError(event: any): void {
+    // Nếu ảnh không load được, có thể là imageId cũ hoặc URL không hợp lệ
+    console.warn('Image load error:', event);
   }
 }
 

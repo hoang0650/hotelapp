@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common'; // Đảm bảo CommonModule đ�
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { EditorModule } from '@tinymce/tinymce-angular';
 
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
@@ -283,6 +284,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         NzPaginationModule,
         BrowserAnimationsModule,
         PricingManagementModule,
+        EditorModule,
         TranslateModule.forRoot({
           loader: {
             provide: TranslateLoader,

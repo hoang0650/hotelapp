@@ -129,12 +129,11 @@
       [(nzVisible)]="isModalVisible"
       [nzTitle]="editId ? 'Cập nhật bài viết' : 'Thêm bài viết mới'"
       (nzOnCancel)="handleCancel()"
-      (nzOnOk)="handleOk()"
-      [nzOkLoading]="isLoading"
-      [nzWidth]="900"
+      [nzFooter]="null"
+      [nzWidth]="1200"
       [nzWrapClassName]="'blog-modal-responsive'">
       <div *nzModalContent>
-        <form nz-form [formGroup]="blogForm">
+        <form nz-form [formGroup]="blogForm" (ngSubmit)="handleOk()">
           <nz-form-item>
             <nz-form-label nzRequired>Tiêu đề</nz-form-label>
             <nz-form-control nzErrorTip="Vui lòng nhập tiêu đề">
@@ -150,11 +149,72 @@
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label nzRequired>Nội dung</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập nội dung">
-              <textarea nz-input formControlName="content" rows="10" placeholder="Nhập nội dung bài viết"></textarea>
+            <nz-form-label>Ảnh đại diện bài viết</nz-form-label>
+            <nz-form-control>
+              <div class="image-upload-section">
+                <div class="upload-options">
+                  <div class="upload-option">
+                    <label>Nhập link ảnh:</label>
+                    <input nz-input placeholder="Nhập link ảnh bài viết" type="text" formControlName="imageUrl" style="width: 100%;">
+                  </div>
+                  <div class="upload-divider">HOẶC</div>
+                  <div class="upload-option">
+                    <label>Tải ảnh lên:</label>
+                    <nz-upload
+                      [nzAction]="uploadUrl"
+                      [nzHeaders]="uploadHeaders"
+                      [nzBeforeUpload]="beforeUpload"
+                      (nzChange)="handleImageChange($event)"
+                      [nzShowUploadList]="false"
+                      nzAccept="image/*"
+                      nzName="image">
+                      <button nz-button nzType="default" [nzLoading]="isLoading">
+                        <i nz-icon nzType="upload"></i>
+                        Chọn ảnh
+                      </button>
+                    </nz-upload>
+                  </div>
+                </div>
+                <div *ngIf="blogForm.get('imageUrl')?.value" class="image-preview">
+                  <img 
+                    [src]="getImageUrl(blogForm.get('imageUrl')?.value)" 
+                    alt="Ảnh đại diện" 
+                    style="max-width: 300px; max-height: 200px; border-radius: 4px; margin-top: 8px;"
+                    (error)="handleImageError($event)">
+                </div>
+              </div>
             </nz-form-control>
           </nz-form-item>
+
+          <div formArrayName="sections">
+            <h3>Các phần của bài viết</h3>
+            <button type="button" (click)="addSection()" class="add-section-button">Thêm phần mới</button>
+
+            <div *ngFor="let section of sections.controls; let i = index" [formGroupName]="i" class="section-form">
+              <h4>Phần {{ i + 1 }}</h4>
+              <div class="form-group">
+                <label [for]="'sectionTitle' + i">Tiêu đề phần</label>
+                <input type="text" [id]="'sectionTitle' + i" formControlName="title">
+              </div>
+              <div class="form-group">
+                <label [for]="'sectionContent' + i">Nội dung phần</label>
+                <editor [id]="'sectionContent' + i" formControlName="content"
+                  apiKey="svjwnw0epdbm6nlw5r643hpcztdphaqa7hyed3k5u87wkj8l" 
+                  [init]="{
+                    plugins: ['anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount'],
+                    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+                    tinycomments_mode: 'embedded',
+                    tinycomments_author: 'Author name',
+                    mergetags_list: [
+                      { value: 'First.Name', title: 'First Name' },
+                      { value: 'Email', title: 'Email' }
+                    ]
+                  }">
+                </editor>
+              </div>
+              <button type="button" (click)="removeSection(i)" class="remove-section-button">Xóa phần này</button>
+            </div>
+          </div>
 
           <nz-row [nzGutter]="16">
             <div nz-col [nzXs]="24" [nzSm]="12">
@@ -179,18 +239,16 @@
           </nz-row>
 
           <nz-form-item>
-            <nz-form-label>Ảnh đại diện (URL)</nz-form-label>
-            <nz-form-control>
-              <input nz-input formControlName="featuredImage" placeholder="Nhập URL ảnh đại diện" />
-            </nz-form-control>
-          </nz-form-item>
-
-          <nz-form-item>
             <nz-form-label>Tags (phân cách bằng dấu phẩy)</nz-form-label>
             <nz-form-control>
               <input nz-input formControlName="tags" placeholder="Ví dụ: tag1, tag2, tag3" />
             </nz-form-control>
           </nz-form-item>
+
+          <button type="submit" [disabled]="blogForm.invalid" class="submit-button">
+            {{ isEditMode ? 'Cập nhật' : 'Đăng bài' }}
+          </button>
+          <button type="button" (click)="resetForm()" class="reset-button">Hủy</button>
         </form>
       </div>
     </nz-modal>
