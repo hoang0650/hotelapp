@@ -26,6 +26,7 @@ export class ProfileComponent implements OnInit {
   uploadUrl = `${this.apiBaseUrl}/files/upload`;
   fileList: any[] = [];
   avatarId: string | null = null;
+  isLoadingUpload = false;
 
   constructor(
     private fb: FormBuilder,
@@ -307,7 +308,7 @@ export class ProfileComponent implements OnInit {
 
   handleAvatarChange(info: NzUploadChangeParam): void {
     if (info.file.status === 'uploading') {
-      this.loading = true;
+      this.isLoadingUpload = true;
       return;
     }
     
@@ -323,11 +324,11 @@ export class ProfileComponent implements OnInit {
         });
         this.message.success('Tải lên ảnh đại diện thành công');
       }
-      this.loading = false;
+      this.isLoadingUpload = false;
     } else if (info.file.status === 'error') {
       this.message.error(`Lỗi khi tải lên ảnh: ${info.file.error?.message || 'Không xác định'}`);
       console.error('Upload error:', info.file.error);
-      this.loading = false;
+      this.isLoadingUpload = false;
     }
   }
 

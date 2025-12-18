@@ -280,6 +280,46 @@
           </nz-form-item>
         </div>
 
+        <nz-divider nzText="Logo khách sạn" nzOrientation="left"></nz-divider>
+
+        <nz-form-item>
+          <nz-form-label [nzSm]="6" [nzXs]="24">Logo khách sạn</nz-form-label>
+          <nz-form-control [nzSm]="14" [nzXs]="24">
+            <div class="logo-upload-section">
+              <div class="upload-options">
+                <div class="upload-option">
+                  <label>Nhập link logo:</label>
+                  <input nz-input formControlName="logo" placeholder="Nhập URL logo khách sạn" style="width: 100%;">
+                </div>
+                <div class="upload-divider">HOẶC</div>
+                <div class="upload-option">
+                  <label>Tải logo lên:</label>
+                  <nz-upload
+                    [nzAction]="uploadUrl"
+                    [nzHeaders]="uploadHeaders"
+                    [nzBeforeUpload]="beforeUpload"
+                    (nzChange)="handleLogoChange($event)"
+                    [nzShowUploadList]="false"
+                    nzAccept="image/*"
+                    nzName="image">
+                    <button nz-button nzType="default" [nzLoading]="isLoadingUpload">
+                      <i nz-icon nzType="upload"></i>
+                      Chọn logo
+                    </button>
+                  </nz-upload>
+                </div>
+              </div>
+              <div *ngIf="hotelForm.get('logo')?.value" class="logo-preview">
+                <img 
+                  [src]="getImageUrl(hotelForm.get('logo')?.value)" 
+                  alt="Logo khách sạn" 
+                  style="max-width: 150px; max-height: 150px; object-fit: contain; margin-top: 8px;"
+                  (error)="handleLogoError($event)">
+              </div>
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
         <nz-divider nzText="Thông tin khác" nzOrientation="left"></nz-divider>
 
         <nz-form-item>

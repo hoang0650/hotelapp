@@ -829,11 +829,12 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     // Logo và tên công ty
     if (this.businessLogo) {
+      const logoUrl = this.getImageUrl(this.businessLogo);
       content.push({
         columns: [
           {
             width: 60,
-            image: this.businessLogo,
+            image: logoUrl,
             fit: [60, 60],
             alignment: 'center'
           },
@@ -1226,11 +1227,12 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     // Logo và tên công ty
     if (this.businessLogo) {
+      const logoUrl = this.getImageUrl(this.businessLogo);
       content.push({
         columns: [
           {
             width: 60,
-            image: this.businessLogo,
+            image: logoUrl,
             fit: [60, 60],
             alignment: 'center'
           },
@@ -1608,8 +1610,9 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     // Header với logo
     if (this.businessLogo) {
+      const logoUrl = this.getImageUrl(this.businessLogo);
       content.push({
-        image: this.businessLogo,
+        image: logoUrl,
         width: 60,
         alignment: 'center',
         margin: [0, 0, 0, 10]

@@ -92,3 +92,38 @@ nz-rate {
   display: inline-block;
   vertical-align: middle;
 }
+
+/* Logo upload section */
+.logo-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.logo-upload-section .upload-options {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.logo-upload-section .upload-option {
+  flex: 1;
+  min-width: 200px;
+}
+
+.logo-upload-section .upload-divider {
+  font-weight: bold;
+  color: #ccc;
+}
+
+.logo-preview {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.logo-preview img {
+  border: 1px solid #f0f0f0;
+  padding: 4px;
+}

@@ -12,6 +12,9 @@ import { Room } from '../../interfaces/rooms';
 import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 type HotelStatusType = 'active' | 'inactive' | 'maintenance' | 'suspended';
 
@@ -38,6 +41,13 @@ export class HotelManagementComponent implements OnInit {
   qrPaymentUrl: string = '';
   showQrPreview: boolean = false;
   qrBeneficiaryName: string = '';
+  
+  // Logo upload
+  apiBaseUrl = environment.apiUrl;
+  uploadUrl = `${this.apiBaseUrl}/files/upload`;
+  fileList: any[] = [];
+  logoId: string | null = null;
+  isLoadingUpload = false;
 
   hotelStatusOptions: { label: string, value: HotelStatusType }[] = [
     { label: 'Hoạt động', value: 'active' },
@@ -55,7 +65,8 @@ export class HotelManagementComponent implements OnInit {
     private authService: AuthService,
     private fb: FormBuilder,
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private http: HttpClient
   ) {
     this.hotelForm = this.fb.group({
       name: ['', Validators.required],
@@ -91,7 +102,8 @@ export class HotelManagementComponent implements OnInit {
         beneficiaryName: [''],
         branch: [''],
         qrPaymentUrl: ['']
-      })
+      }),
+      logo: ['']
     });
   }
 
@@ -280,8 +292,12 @@ export class HotelManagementComponent implements OnInit {
           beneficiaryName: hotel.bankAccount?.beneficiaryName || '',
           branch: hotel.bankAccount?.branch || '',
           qrPaymentUrl: hotel.bankAccount?.qrPaymentUrl || ''
-        }
+        },
+        logo: (hotel as any).logo || ''
       });
+      
+      // Lưu logoId nếu có
+      this.logoId = (hotel as any).logoId || null;
       
       // Load QR code nếu có
       if (hotel.bankAccount?.qrPaymentUrl) {
@@ -327,6 +343,8 @@ export class HotelManagementComponent implements OnInit {
     this.qrPaymentUrl = '';
     this.qrBeneficiaryName = '';
     this.showQrPreview = false;
+    this.logoId = null;
+    this.fileList = [];
     this.hotelForm.reset({
       status: 'active',
       settings: {
@@ -336,7 +354,8 @@ export class HotelManagementComponent implements OnInit {
         language: 'vi',
         taxRate: 0
       },
-      facilities: []
+      facilities: [],
+      logo: ''
     });
   }
   
@@ -404,6 +423,26 @@ export class HotelManagementComponent implements OnInit {
         hotelData[key] = value;
       }
     });
+    
+    // Xử lý logo: nếu có logoId thì dùng, nếu không dùng logo (URL)
+    if (this.logoId) {
+      hotelData.logoId = this.logoId;
+      hotelData.logo = this.getImageUrl(this.logoId);
+    } else if (hotelData.logo) {
+      if (hotelData.logo.includes('/files/')) {
+        const extractedId = hotelData.logo.split('/files/')[1]?.split('?')[0];
+        if (extractedId) {
+          hotelData.logoId = extractedId;
+        } else {
+          hotelData.logoId = null;
+        }
+      } else {
+        hotelData.logoId = null;
+      }
+    } else {
+      hotelData.logo = '';
+      hotelData.logoId = null;
+    }
     
     // Cập nhật bankAccount với QR payment URL nếu có
     if (hotelData.bankAccount) {
@@ -591,5 +630,74 @@ export class HotelManagementComponent implements OnInit {
    */
   isCascadeBlocked(hotel: Hotel): boolean {
     return hotel.status === 'suspended' || hotel.status === 'inactive';
+  }
+
+  // ============ LOGO UPLOAD ============
+
+  get uploadHeaders(): { [key: string]: string } {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': token || ''
+    };
+  }
+
+  handleLogoChange(info: NzUploadChangeParam): void {
+    if (info.file.status === 'uploading') {
+      this.isLoadingUpload = true;
+      return;
+    }
+    
+    if (info.file.status === 'done') {
+      if (info.file.response) {
+        const response = info.file.response;
+        const imageId = response.imageId;
+        const imageUrl = response.imageUrl || this.getImageUrl(imageId);
+        
+        this.logoId = imageId;
+        this.hotelForm.patchValue({
+          logo: imageUrl
+        });
+        this.message.success('Tải lên logo thành công');
+      }
+      this.isLoadingUpload = false;
+    } else if (info.file.status === 'error') {
+      this.message.error(`Lỗi khi tải lên logo: ${info.file.error?.message || 'Không xác định'}`);
+      console.error('Upload error:', info.file.error);
+      this.isLoadingUpload = false;
+    }
+  }
+
+  beforeUpload = (file: NzUploadFile): boolean => {
+    const isImage = file.type?.startsWith('image/');
+    if (!isImage) {
+      this.message.error('Bạn chỉ có thể tải lên file hình ảnh!');
+      return false;
+    }
+    const isLt5M = (file.size || 0) / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      this.message.error('Hình ảnh phải nhỏ hơn 5MB!');
+      return false;
+    }
+    this.fileList = this.fileList.concat(file);
+    return true;
+  };
+
+  getImageUrl(urlOrId: string | null | undefined): string {
+    if (!urlOrId) return '';
+    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
+      return urlOrId;
+    }
+    if (urlOrId.startsWith('/files/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+    return `${this.apiBaseUrl}/files/${urlOrId}`;
+  }
+
+  handleLogoError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) {
+      img.src = 'assets/images/default-logo.png'; // Fallback logo
+      img.style.display = 'block'; // Ensure it's visible
+    }
   }
 }

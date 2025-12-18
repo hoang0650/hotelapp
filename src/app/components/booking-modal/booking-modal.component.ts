@@ -28,6 +28,8 @@ export class BookingModalComponent implements OnInit {
   isLoading = false;
   businessInfo: any = null;
   hotelInfo: any = null;
+  hotelLogo: string | null = null;
+  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
 
   constructor(
     private fb: FormBuilder,
@@ -116,6 +118,22 @@ export class BookingModalComponent implements OnInit {
         // Lưu thông tin hotel
         this.hotelInfo = hotel;
         
+        // Lấy logo khách sạn (ưu tiên logoId từ business, sau đó từ hotel nếu có)
+        if (hotel.businessId) {
+          const business = typeof hotel.businessId === 'object' ? hotel.businessId : null;
+          if (business) {
+            const logoId = (business as any).logoId;
+            this.hotelLogo = logoId ? `/files/${logoId}` : ((business as any).logo || null);
+          }
+        }
+        
+        // Nếu chưa có logo, thử lấy từ hotel (nếu có logoId trong hotel model)
+        if (!this.hotelLogo && (hotel as any).logoId) {
+          this.hotelLogo = `/files/${(hotel as any).logoId}`;
+        } else if (!this.hotelLogo && (hotel as any).logo) {
+          this.hotelLogo = (hotel as any).logo;
+        }
+        
         if (hotel.businessId) {
           // Extract businessId nếu là object
           const businessId = typeof hotel.businessId === 'object' && hotel.businessId !== null && '_id' in hotel.businessId
@@ -126,6 +144,11 @@ export class BookingModalComponent implements OnInit {
             this.businessService.getBusinessById(businessId).subscribe(
               (business) => {
                 this.businessInfo = business;
+                // Cập nhật logo nếu chưa có
+                if (!this.hotelLogo) {
+                  const logoId = (business as any).logoId;
+                  this.hotelLogo = logoId ? `/files/${logoId}` : (business.logo || null);
+                }
               },
               (error) => {
                 console.error('Error loading business info:', error);
@@ -392,33 +415,72 @@ export class BookingModalComponent implements OnInit {
       'nightly': 'Qua đêm'
     };
     
+    const content: any[] = [];
+    
+    // Logo và tên khách sạn
+    if (this.hotelLogo) {
+      const logoUrl = this.getImageUrl(this.hotelLogo);
+      content.push({
+        columns: [
+          {
+            width: 60,
+            image: logoUrl,
+            fit: [60, 60],
+            alignment: 'center'
+          },
+          {
+            width: '*',
+            text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
+            fontSize: 14,
+            bold: true,
+            alignment: 'center',
+            margin: [10, 20, 0, 0]
+          }
+        ],
+        margin: [0, 0, 0, 20]
+      });
+    } else {
+      content.push({
+        text: (this.hotelInfo?.name || 'N/A').toUpperCase(),
+        fontSize: 14,
+        bold: true,
+        alignment: 'center',
+        margin: [0, 0, 0, 20]
+      });
+    }
+    
+    // Tiêu đề
+    content.push({
+      text: 'XÁC NHẬN ĐẶT PHÒNG',
+      style: 'header',
+      alignment: 'center',
+      margin: [0, 0, 0, 20]
+    });
+    
+    // Thông tin khách sạn và ngày xác nhận
+    content.push({
+      columns: [
+        {
+          text: [
+            { text: 'Khách sạn: ', bold: true },
+            { text: this.hotelInfo?.name || 'N/A' }
+          ],
+          margin: [0, 0, 0, 10]
+        },
+        {
+          text: [
+            { text: 'Ngày xác nhận: ', bold: true },
+            { text: new Date().toLocaleDateString('vi-VN') }
+          ],
+          alignment: 'right',
+          margin: [0, 0, 0, 10]
+        }
+      ]
+    });
+    
     const docDefinition: any = {
       content: [
-        {
-          text: 'XÁC NHẬN ĐẶT PHÒNG',
-          style: 'header',
-          alignment: 'center',
-          margin: [0, 0, 0, 20]
-        },
-        {
-          columns: [
-            {
-              text: [
-                { text: 'Khách sạn: ', bold: true },
-                { text: this.hotelInfo?.name || 'N/A' }
-              ],
-              margin: [0, 0, 0, 10]
-            },
-            {
-              text: [
-                { text: 'Ngày xác nhận: ', bold: true },
-                { text: new Date().toLocaleDateString('vi-VN') }
-              ],
-              alignment: 'right',
-              margin: [0, 0, 0, 10]
-            }
-          ]
-        },
+        ...content,
         {
           text: [
             { text: 'Địa chỉ: ', bold: true },
@@ -603,6 +665,20 @@ export class BookingModalComponent implements OnInit {
 
   parseNumber = (value: string): string => {
     return value.replace(/\$\s?|(,*)/g, '');
+  }
+
+  getImageUrl(urlOrId: string | null | undefined): string {
+    if (!urlOrId) return '';
+    // Nếu là URL đầy đủ (http/https), trả về nguyên
+    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
+      return urlOrId;
+    }
+    // Nếu là imageId hoặc path, thêm base URL
+    if (urlOrId.startsWith('/files/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+    // Nếu chỉ là ID, thêm /files/ prefix
+    return `${this.apiBaseUrl}/files/${urlOrId}`;
   }
 }
 
