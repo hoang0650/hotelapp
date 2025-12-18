@@ -1,0 +1,35 @@
+.contact-container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.contact-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.contact-form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mb-4 {
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .contact-container {
+    margin: 20px auto;
+    padding: 0 16px;
+  }
+}
+

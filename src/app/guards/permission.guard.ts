@@ -65,7 +65,8 @@ export class PermissionGuard implements CanActivate {
         '/admin/qr-payment',
         '/admin/visa-payment',
         '/admin/electric-setting',
-        '/admin/financial-summary-report'
+        '/admin/financial-summary-report',
+        '/admin/contact-management'
       ];
       
       if (blockedRoutes.includes(state.url)) {

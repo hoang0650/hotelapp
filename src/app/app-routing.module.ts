@@ -47,6 +47,8 @@ import { DebtManagementComponent } from './components/debt-management/debt-manag
 import { BlogManagementComponent } from './components/blog-management/blog-management.component';
 import { BlogComponent } from './components/blog/blog.component';
 import { FinancialSummaryReportComponent } from './components/financial-summary-report/financial-summary-report.component';
+import { ContactComponent } from './components/contact/contact.component';
+import { ContactManagementComponent } from './components/contact-management/contact-management.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -54,6 +56,7 @@ const routes: Routes = [
   { path: 'pricing', component: PricingComponent },
   { path: 'blog', component: BlogComponent },
   { path: 'blog/:id', component: BlogComponent },
+  { path: 'contact', component: ContactComponent },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
   { path: 'business-signup', component: BusinessSignupComponent },
@@ -94,6 +97,7 @@ const routes: Routes = [
       { path: 'electric-setting', component: TuyaSwitchComponent, canActivate: [PermissionGuard] },
       { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },
       { path: 'settings', component: SettingsComponent, canActivate: [PermissionGuard] },
+      { path: 'contact-management', component: ContactManagementComponent, canActivate: [PermissionGuard] },
       // Thêm các route con khác nếu cần
     ]
   },

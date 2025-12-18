@@ -1,0 +1,310 @@
+<div class="container">
+  <nz-card>
+    <div class="header-section">
+      <h2 class="mb-4">
+        <i nz-icon nzType="mail" nzTheme="outline"></i>
+        Quản Lý Liên Hệ
+      </h2>
+    </div>
+
+    <!-- Thống kê -->
+    <div nz-row [nzGutter]="16" class="mb-4">
+      <div nz-col [nzXs]="12" [nzSm]="6" [nzMd]="6">
+        <nz-statistic 
+          [nzValue]="stats.total" 
+          nzTitle="Tổng số" 
+          [nzValueStyle]="{ color: '#1890ff' }">
+        </nz-statistic>
+      </div>
+      <div nz-col [nzXs]="12" [nzSm]="6" [nzMd]="6">
+        <nz-statistic 
+          [nzValue]="stats.pending" 
+          nzTitle="Chờ xử lý" 
+          [nzValueStyle]="{ color: '#faad14' }">
+        </nz-statistic>
+      </div>
+      <div nz-col [nzXs]="12" [nzSm]="6" [nzMd]="6">
+        <nz-statistic 
+          [nzValue]="stats.read" 
+          nzTitle="Đã đọc" 
+          [nzValueStyle]="{ color: '#1890ff' }">
+        </nz-statistic>
+      </div>
+      <div nz-col [nzXs]="12" [nzSm]="6" [nzMd]="6">
+        <nz-statistic 
+          [nzValue]="stats.replied" 
+          nzTitle="Đã phản hồi" 
+          [nzValueStyle]="{ color: '#52c41a' }">
+        </nz-statistic>
+      </div>
+    </div>
+
+    <!-- Bộ lọc -->
+    <div nz-row [nzGutter]="16" class="mb-4 filter-section">
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-input-group [nzSuffix]="suffixIconSearch">
+          <input 
+            type="text" 
+            nz-input 
+            [(ngModel)]="searchValue"
+            (keyup.enter)="onSearch()"
+            placeholder="Tìm kiếm theo tên, email, chủ đề..." />
+        </nz-input-group>
+        <ng-template #suffixIconSearch>
+          <i nz-icon nzType="search" (click)="onSearch()"></i>
+        </ng-template>
+      </div>
+      
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-select 
+          nzPlaceHolder="Lọc theo trạng thái"
+          [(ngModel)]="selectedStatus"
+          (ngModelChange)="onStatusChange($event)"
+          nzAllowClear
+          class="w-100">
+          <nz-option *ngFor="let opt of statusOptions" [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+        </nz-select>
+      </div>
+
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-range-picker
+          [(ngModel)]="dateRange"
+          (ngModelChange)="onDateRangeChange($event)"
+          nzFormat="yyyy-MM-dd"
+          nzPlaceHolder="['Từ ngày', 'Đến ngày']"
+          class="w-100">
+        </nz-range-picker>
+      </div>
+    </div>
+
+    <!-- Bảng danh sách liên hệ -->
+    <nz-table 
+      #contactTable 
+      [nzData]="contacts" 
+      [nzLoading]="isLoading"
+      [nzFrontPagination]="false"
+      [nzShowPagination]="false"
+      nzSize="middle">
+      <thead>
+        <tr>
+          <th>Họ tên</th>
+          <th>Email</th>
+          <th>Số điện thoại</th>
+          <th>Chủ đề</th>
+          <th>Trạng thái</th>
+          <th>Ngày gửi</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let contact of contacts">
+          <td><strong>{{ contact.name }}</strong></td>
+          <td>{{ contact.email }}</td>
+          <td>{{ contact.phone || 'N/A' }}</td>
+          <td>{{ contact.subject }}</td>
+          <td>
+            <nz-tag [nzColor]="getStatusColor(contact.status || 'pending')">
+              {{ getStatusLabel(contact.status || 'pending') }}
+            </nz-tag>
+          </td>
+          <td>{{ formatDate(contact.createdAt) }}</td>
+          <td>
+            <button nz-button nzType="link" nzSize="small" (click)="viewDetail(contact)">
+              <i nz-icon nzType="eye" nzTheme="outline"></i>
+              Xem
+            </button>
+            <button 
+              nz-button 
+              nzType="link" 
+              nzSize="small" 
+              (click)="openReplyModal(contact)"
+              *ngIf="contact.status !== 'replied'">
+              <i nz-icon nzType="message" nzTheme="outline"></i>
+              Phản hồi
+            </button>
+            <button 
+              nz-button 
+              nzType="link" 
+              nzSize="small" 
+              nzDanger
+              nz-popconfirm
+              nzPopconfirmTitle="Bạn có chắc muốn xóa liên hệ này?"
+              (nzOnConfirm)="deleteContact(contact)">
+              <i nz-icon nzType="delete" nzTheme="outline"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </nz-table>
+
+    <!-- Phân trang -->
+    <div class="pagination-section mt-4" *ngIf="total > 0">
+      <nz-pagination
+        [nzPageIndex]="pageIndex"
+        [nzPageSize]="pageSize"
+        [nzTotal]="total"
+        [nzShowSizeChanger]="true"
+        [nzPageSizeOptions]="[10, 20, 50, 100]"
+        [nzShowQuickJumper]="true"
+        [nzShowTotal]="totalTemplate"
+        (nzPageIndexChange)="onPageChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)">
+      </nz-pagination>
+      <ng-template #totalTemplate let-total>
+        Tổng {{ total }} liên hệ
+      </ng-template>
+    </div>
+
+    <div *ngIf="contacts.length === 0 && !isLoading" class="empty-state">
+      <nz-empty nzNotFoundContent="Chưa có liên hệ nào"></nz-empty>
+    </div>
+  </nz-card>
+</div>
+
+<!-- Modal chi tiết liên hệ -->
+<nz-modal
+  [(nzVisible)]="isDetailModalVisible"
+  nzTitle="Chi tiết liên hệ"
+  (nzOnCancel)="closeDetailModal()"
+  [nzFooter]="null"
+  [nzWidth]="800">
+  <ng-container *nzModalContent>
+    <div *ngIf="selectedContact">
+      <nz-descriptions nzBordered [nzColumn]="2">
+        <nz-descriptions-item nzTitle="Họ và tên">
+          {{ selectedContact.name }}
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Email">
+          {{ selectedContact.email }}
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Số điện thoại">
+          {{ selectedContact.phone || 'N/A' }}
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Trạng thái">
+          <nz-tag [nzColor]="getStatusColor(selectedContact.status || 'pending')">
+            {{ getStatusLabel(selectedContact.status || 'pending') }}
+          </nz-tag>
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Chủ đề" [nzSpan]="2">
+          {{ selectedContact.subject }}
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Nội dung" [nzSpan]="2">
+          <div style="white-space: pre-wrap;">{{ selectedContact.message }}</div>
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Ngày gửi">
+          {{ formatDate(selectedContact.createdAt) }}
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Ngày cập nhật">
+          {{ formatDate(selectedContact.updatedAt) }}
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="Phản hồi" [nzSpan]="2" *ngIf="selectedContact.replyMessage">
+          <div style="white-space: pre-wrap; background: #f0f0f0; padding: 12px; border-radius: 4px;">
+            {{ selectedContact.replyMessage }}
+          </div>
+          <div *ngIf="selectedContact.repliedBy" style="margin-top: 8px; color: #666; font-size: 12px;">
+            Phản hồi bởi: {{ selectedContact.repliedBy.fullName || selectedContact.repliedBy.username }}
+            ({{ formatDate(selectedContact.repliedAt) }})
+          </div>
+        </nz-descriptions-item>
+      </nz-descriptions>
+
+      <!-- Cập nhật trạng thái -->
+      <div class="mt-4">
+        <h4>Thay đổi trạng thái:</h4>
+        <nz-radio-group [(ngModel)]="selectedContact.status" (ngModelChange)="updateStatus(selectedContact, $event)">
+          <label nz-radio *ngFor="let opt of statusOptions" [nzValue]="opt.value">
+            {{ opt.label }}
+          </label>
+        </nz-radio-group>
+      </div>
+
+      <!-- Ghi chú -->
+      <div class="mt-4">
+        <h4>Ghi chú:</h4>
+        <form [formGroup]="notesForm">
+          <textarea 
+            nz-input 
+            formControlName="notes" 
+            rows="3" 
+            placeholder="Thêm ghi chú..."></textarea>
+          <button 
+            nz-button 
+            nzType="primary" 
+            nzSize="small" 
+            class="mt-2"
+            [nzLoading]="isUpdatingNotes"
+            (click)="updateNotes()">
+            Lưu ghi chú
+          </button>
+        </form>
+      </div>
+
+      <!-- Actions -->
+      <div class="mt-4 text-right">
+        <button 
+          nz-button 
+          nzType="primary" 
+          (click)="openReplyModal(selectedContact)"
+          *ngIf="selectedContact.status !== 'replied'">
+          <i nz-icon nzType="message" nzTheme="outline"></i>
+          Phản hồi
+        </button>
+        <button 
+          nz-button 
+          nzType="default" 
+          (click)="closeDetailModal()"
+          style="margin-left: 8px;">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</nz-modal>
+
+<!-- Modal phản hồi -->
+<nz-modal
+  [(nzVisible)]="isReplyModalVisible"
+  nzTitle="Phản hồi liên hệ"
+  (nzOnCancel)="closeReplyModal()"
+  [nzFooter]="null"
+  [nzWidth]="600">
+  <ng-container *nzModalContent>
+    <div *ngIf="selectedContact">
+      <p><strong>Người gửi:</strong> {{ selectedContact.name }} ({{ selectedContact.email }})</p>
+      <p><strong>Chủ đề:</strong> {{ selectedContact.subject }}</p>
+      <div class="mb-3">
+        <strong>Nội dung:</strong>
+        <div style="background: #f0f0f0; padding: 12px; border-radius: 4px; margin-top: 8px; white-space: pre-wrap;">
+          {{ selectedContact.message }}
+        </div>
+      </div>
+
+      <form [formGroup]="replyForm" (ngSubmit)="submitReply()">
+        <nz-form-item>
+          <nz-form-label nzRequired>Nội dung phản hồi</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng nhập nội dung phản hồi (ít nhất 10 ký tự)">
+            <textarea 
+              nz-input 
+              formControlName="replyMessage" 
+              rows="6" 
+              placeholder="Nhập nội dung phản hồi..."></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <div class="text-right">
+          <button nz-button nzType="default" (click)="closeReplyModal()" style="margin-right: 8px;">
+            Hủy
+          </button>
+          <button 
+            nz-button 
+            nzType="primary" 
+            [nzLoading]="isReplying"
+            [disabled]="replyForm.invalid">
+            Gửi phản hồi
+          </button>
+        </div>
+      </form>
+    </div>
+  </ng-container>
+</nz-modal>
+

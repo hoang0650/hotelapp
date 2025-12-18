@@ -138,6 +138,8 @@ import { SettingsComponent } from './components/settings/settings.component';
 import { MaintenanceComponent } from './components/maintenance/maintenance.component';
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
+import { ContactComponent } from './components/contact/contact.component';
+import { ContactManagementComponent } from './components/contact-management/contact-management.component';
 
 registerLocaleData(vi);
 
@@ -227,7 +229,9 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         TuyaSwitchCompactComponent,
         ProfileComponent,
         PrivacyPolicyComponent,
-        TermsOfServiceComponent
+        TermsOfServiceComponent,
+        ContactComponent,
+        ContactManagementComponent
     ],
     bootstrap: [AppComponent],
     imports: [
