@@ -86,16 +86,19 @@ export class AdminComponent implements OnInit {
            this.authService.isStaff();
   }
 
-  // Business Management - Chỉ superadmin và admin
+  // Business Management - superadmin, admin, và business (chỉ quản lý business của mình)
   canAccessBusinessManagement(): boolean {
-    return this.authService.isSuperAdmin() || this.authService.isAdmin();
-  }
-
-  // Hotel Management - superadmin, admin, business
-  canAccessHotelManagement(): boolean {
     return this.authService.isSuperAdmin() || 
            this.authService.isAdmin() || 
            this.authService.isBusiness();
+  }
+
+  // Hotel Management - superadmin, admin, business, và hotel (chỉ quản lý hotel của mình)
+  canAccessHotelManagement(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin() || 
+           this.authService.isBusiness() ||
+           this.authService.isHotelManager();
   }
 
   // Room Management - superadmin, admin, business, hotel

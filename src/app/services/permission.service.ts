@@ -46,7 +46,9 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/electric-setting': ['electric_management'],
   '/admin/financial-summary-report': ['revenue_chart'],
   '/admin/profile': [], // Profile không cần permission đặc biệt, chỉ cần đăng nhập
-  '/admin/settings': ['settings_management']
+  '/admin/settings': ['settings_management'],
+  '/admin/guest-management': ['room_management'], // Guest management liên quan đến room management
+  '/admin/debt-management': ['room_management'] // Debt management liên quan đến room management
 };
 
 @Injectable({
@@ -126,7 +128,7 @@ export class PermissionService {
         defaultPermissions = ['view', 'edit', 'manage'];
         break;
       case 'hotel':
-        defaultPermissions = ['view', 'edit'];
+        defaultPermissions = ['view', 'edit', 'manage']; // Hotel manager có quyền edit và manage
         break;
       case 'staff':
         defaultPermissions = ['view'];
@@ -162,6 +164,61 @@ export class PermissionService {
     // Superadmin có toàn quyền
     if (user?.role === 'superadmin') {
       return true;
+    }
+
+    // Business và Hotel Manager được phép truy cập các tính năng quản lý của họ
+    if (user?.role === 'business' || user?.role === 'hotel') {
+      // Business và Hotel Manager được phép truy cập các features sau:
+      const allowedFeatures: PermissionFeature[] = [
+        'room_management', // Quản lý phòng
+        'shift_handover', // Giao ca và lịch sử giao ca
+        'calendar', // Lịch
+        'bank_transfer_history', // Lịch sử chuyển khoản
+        'staff_management', // Quản lý nhân viên
+        'service_management', // Quản lý dịch vụ
+        'ota_management', // Quản lý OTA
+        'revenue_chart', // Biểu đồ doanh thu
+        'qr_payment', // Thanh toán QR
+        'visa_payment', // Thanh toán Visa
+        'electric_management' // Quản lý điện
+      ];
+      
+      // Business được phép quản lý company của mình
+      if (user?.role === 'business' && feature === 'company_management') {
+        return true; // Business được quản lý business của mình (backend sẽ filter)
+      }
+      
+      // Hotel Manager không được phép quản lý company
+      if (user?.role === 'hotel' && feature === 'company_management') {
+        return false;
+      }
+      
+      // Hotel Manager được phép quản lý hotel của mình
+      if (user?.role === 'hotel' && feature === 'hotel_management') {
+        return true; // Hotel Manager được quản lý hotel của mình (backend sẽ filter)
+      }
+      
+      // Business được phép quản lý hotels thuộc business của mình
+      if (user?.role === 'business' && feature === 'hotel_management') {
+        return true; // Business được quản lý hotels thuộc business của mình (backend sẽ filter)
+      }
+      
+      // Chặn các features quản lý cấp cao
+      const blockedFeatures: PermissionFeature[] = [
+        'user_management', // Quản lý người dùng - chỉ superadmin, admin, business (xem)
+        'pricing_management', // Quản lý gói giá - chỉ superadmin, admin, business
+        'email_admin', // Quản lý email - chỉ superadmin và admin
+        'settings_management' // Quản lý cài đặt - chỉ superadmin và admin
+      ];
+      
+      if (blockedFeatures.includes(feature)) {
+        return false;
+      }
+      
+      // Nếu feature nằm trong allowedFeatures, cho phép
+      if (allowedFeatures.includes(feature)) {
+        return true;
+      }
     }
 
     // Staff được phép truy cập một số tính năng cơ bản

@@ -1731,6 +1731,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         .subscribe(
           (response) => {
             setTimeout(() => {
+              // Hiển thị thông báo thành công (màu xanh)
               this.message.success('Trả phòng thành công');
               
               // Dữ liệu đã được lưu vào RoomEvent qua backend, không cần xóa session nữa
@@ -1748,8 +1749,27 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                 }
               });
               
-              // Cập nhật danh sách phòng
-              this.roomsService.notifyRoomDataUpdated();
+              // Tự động reload room data sau khi checkout thành công
+              if (this.roomData && this.roomData._id) {
+                this.roomsService.getRoomById(this.roomData._id, { 
+                  limit: 1000,
+                  excludeCheckedOut: true
+                }).subscribe({
+                  next: (updatedRoom) => {
+                    this.roomData = updatedRoom;
+                    // Cập nhật danh sách phòng
+                    this.roomsService.notifyRoomDataUpdated();
+                  },
+                  error: (err) => {
+                    console.error('Error reloading room data:', err);
+                    // Vẫn cập nhật danh sách phòng dù có lỗi
+                    this.roomsService.notifyRoomDataUpdated();
+                  }
+                });
+              } else {
+                // Cập nhật danh sách phòng
+                this.roomsService.notifyRoomDataUpdated();
+              }
               
               // Chỉ hiển thị hóa đơn nếu đã thanh toán (không phải chuyển khoản pending)
               // Nếu paymentMethod là 'transfer', paymentStatus sẽ là 'pending' và không hiển thị hóa đơn
@@ -1860,6 +1880,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         if (response.success) {
           setTimeout(() => {
+            // Hiển thị thông báo thành công (màu xanh)
             this.message.success('Trả phòng thành công');
             
             // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
@@ -1874,8 +1895,27 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               }
             });
             
-            // Cập nhật danh sách phòng
-            this.roomsService.notifyRoomDataUpdated();
+            // Tự động reload room data sau khi checkout thành công
+            if (this.roomData && this.roomData._id) {
+              this.roomsService.getRoomById(this.roomData._id, { 
+                limit: 1000,
+                excludeCheckedOut: true
+              }).subscribe({
+                next: (updatedRoom) => {
+                  this.roomData = updatedRoom;
+                  // Cập nhật danh sách phòng
+                  this.roomsService.notifyRoomDataUpdated();
+                },
+                error: (err) => {
+                  console.error('Error reloading room data:', err);
+                  // Vẫn cập nhật danh sách phòng dù có lỗi
+                  this.roomsService.notifyRoomDataUpdated();
+                }
+              });
+            } else {
+              // Cập nhật danh sách phòng
+              this.roomsService.notifyRoomDataUpdated();
+            }
             
             // Hiển thị hóa đơn nếu paymentStatus = 'paid' (khi QR bị tắt và chọn chuyển khoản)
             if (shouldShowInvoice) {
@@ -2014,6 +2054,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       .subscribe(
         (response) => {
           setTimeout(() => {
+            // Hiển thị thông báo thành công (màu xanh)
             if (paymentStatus === 'pending') {
               this.message.success('Trả phòng thành công. Đang chờ xác nhận thanh toán...');
             } else {
@@ -2032,8 +2073,27 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               }
             });
             
-            // Cập nhật danh sách phòng
-            this.roomsService.notifyRoomDataUpdated();
+            // Tự động reload room data sau khi checkout thành công
+            if (this.roomData && this.roomData._id) {
+              this.roomsService.getRoomById(this.roomData._id, { 
+                limit: 1000,
+                excludeCheckedOut: true
+              }).subscribe({
+                next: (updatedRoom) => {
+                  this.roomData = updatedRoom;
+                  // Cập nhật danh sách phòng
+                  this.roomsService.notifyRoomDataUpdated();
+                },
+                error: (err) => {
+                  console.error('Error reloading room data:', err);
+                  // Vẫn cập nhật danh sách phòng dù có lỗi
+                  this.roomsService.notifyRoomDataUpdated();
+                }
+              });
+            } else {
+              // Cập nhật danh sách phòng
+              this.roomsService.notifyRoomDataUpdated();
+            }
             
             // Chỉ hiển thị hóa đơn nếu đã thanh toán (paymentStatus = 'paid')
             // Nếu chưa thanh toán (pending), hóa đơn sẽ được hiển thị sau khi webhook xác nhận
@@ -2194,8 +2254,27 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.roomsService.checkOutRoom(this.roomData._id, checkoutData)
           .subscribe(
             (response) => {
-              // Cập nhật danh sách phòng
-              this.roomsService.notifyRoomDataUpdated();
+              // Tự động reload room data sau khi checkout thành công
+              if (this.roomData && this.roomData._id) {
+                this.roomsService.getRoomById(this.roomData._id, { 
+                  limit: 1000,
+                  excludeCheckedOut: true
+                }).subscribe({
+                  next: (updatedRoom) => {
+                    this.roomData = updatedRoom;
+                    // Cập nhật danh sách phòng
+                    this.roomsService.notifyRoomDataUpdated();
+                  },
+                  error: (err) => {
+                    console.error('Error reloading room data:', err);
+                    // Vẫn cập nhật danh sách phòng dù có lỗi
+                    this.roomsService.notifyRoomDataUpdated();
+                  }
+                });
+              } else {
+                // Cập nhật danh sách phòng
+                this.roomsService.notifyRoomDataUpdated();
+              }
               
               // Hiển thị invoice sau khi checkout thành công
               setTimeout(() => {
@@ -2204,7 +2283,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             },
             (error) => {
               console.error('Error updating checkout with payment status:', error);
-              // Vẫn hiển thị invoice ngay cả khi có lỗi
+              // Vẫn cập nhật danh sách phòng và hiển thị invoice ngay cả khi có lỗi
+              this.roomsService.notifyRoomDataUpdated();
               setTimeout(() => {
                 this.showInvoice(invoiceData);
               }, 500);
