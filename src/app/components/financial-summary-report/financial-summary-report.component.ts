@@ -106,6 +106,37 @@ export class FinancialSummaryReportComponent implements OnInit {
             revenue.otherServiceRevenue = 0;
           }
           
+          // Đảm bảo serviceRevenue = cafeRevenue + otherServiceRevenue
+          const calculatedServiceRevenue = (revenue.cafeRevenue || 0) + (revenue.otherServiceRevenue || 0);
+          if (Math.abs((revenue.serviceRevenue || 0) - calculatedServiceRevenue) > 0.01) {
+            console.warn('Service revenue mismatch. Using calculated value:', {
+              serviceRevenue: revenue.serviceRevenue,
+              calculatedServiceRevenue,
+              difference: Math.abs((revenue.serviceRevenue || 0) - calculatedServiceRevenue)
+            });
+            revenue.serviceRevenue = calculatedServiceRevenue;
+          }
+          
+          // Tính lại totalRevenue từ các thành phần để đảm bảo tính nhất quán
+          // totalRevenue = roomRevenue + serviceRevenue + receiptRevenue + otherRevenue
+          const calculatedTotalRevenue = 
+            (revenue.roomRevenue || 0) + 
+            (revenue.serviceRevenue || 0) + 
+            (revenue.receiptRevenue || 0) + 
+            (revenue.otherRevenue || 0);
+          
+          // Nếu totalRevenue từ backend khác với tính toán, sử dụng giá trị tính toán
+          if (Math.abs((this.financialSummary.totalRevenue || 0) - calculatedTotalRevenue) > 0.01) {
+            console.warn('Total revenue mismatch. Using calculated value:', {
+              backendTotalRevenue: this.financialSummary.totalRevenue,
+              calculatedTotalRevenue,
+              difference: Math.abs((this.financialSummary.totalRevenue || 0) - calculatedTotalRevenue)
+            });
+            this.financialSummary.totalRevenue = calculatedTotalRevenue;
+            // Cập nhật lại profit
+            this.financialSummary.profit = this.financialSummary.totalRevenue - (this.financialSummary.totalCosts || 0);
+          }
+          
           // Đảm bảo costs cũng có giá trị mặc định
           if (this.financialSummary.breakdown.costs) {
             const costs = this.financialSummary.breakdown.costs;
@@ -124,7 +155,8 @@ export class FinancialSummaryReportComponent implements OnInit {
             otherServiceRevenue: revenue.otherServiceRevenue,
             receiptRevenue: revenue.receiptRevenue,
             otherRevenue: revenue.otherRevenue,
-            totalRevenue: this.financialSummary.totalRevenue
+            totalRevenue: this.financialSummary.totalRevenue,
+            calculatedTotalRevenue: calculatedTotalRevenue
           });
           console.log('Financial Summary Costs Breakdown:', {
             expenses: this.financialSummary.breakdown.costs?.expenses,
