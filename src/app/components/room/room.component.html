@@ -265,6 +265,14 @@
                       <span class="detail-label">Đặt trước:</span>
                       <span class="detail-value highlight">{{ displayInfo.advancePayment | number }} VNĐ</span>
                     </div>
+                    <div class="detail-row" *ngIf="displayInfo?.additionalCharges && displayInfo.additionalCharges > 0">
+                      <span class="detail-label">Phụ thu:</span>
+                      <span class="detail-value" style="color: #ff9800;">+ {{ displayInfo.additionalCharges | number }} VNĐ</span>
+                    </div>
+                    <div class="detail-row" *ngIf="displayInfo?.discount && displayInfo.discount > 0">
+                      <span class="detail-label">Khuyến mãi:</span>
+                      <span class="detail-value" style="color: #52c41a;">- {{ displayInfo.discount | number }} VNĐ</span>
+                    </div>
                     <div class="detail-row" *ngIf="displayInfo.remainingAmount !== 0">
                       <span class="detail-label">Còn thu:</span>
                       <span class="detail-value highlight">{{ displayInfo.remainingAmount | number }} VNĐ</span>

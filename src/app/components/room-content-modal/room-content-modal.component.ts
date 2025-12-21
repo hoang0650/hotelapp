@@ -506,7 +506,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.checkOutForm.patchValue({
         paymentMethod: session.paymentMethod,
         rateType: session.rateType || 'hourly',
-        advancePayment: session.advancePayment || 0
+        advancePayment: session.advancePayment || 0,
+        additionalCharges: this.initialCharges, // Patch additionalCharges từ session
+        discount: this.initialDiscount // Patch discount từ session
     });
 
     this.listData = [{
@@ -709,7 +711,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           this.checkOutForm.patchValue({ 
             paymentMethod: lastCheckinEvent.paymentMethod || 'cash',
             rateType: lastCheckinEvent.rateType || 'hourly', // Thêm rateType từ check-in event
-            advancePayment: eventAdvancePayment // Sử dụng giá trị đã đảm bảo là số
+            advancePayment: eventAdvancePayment, // Sử dụng giá trị đã đảm bảo là số
+            additionalCharges: eventAdditionalCharges, // Patch additionalCharges từ event
+            discount: eventDiscount // Patch discount từ event
           });
           console.log('Checkout form full value after patchValue:', this.checkOutForm.value);
           

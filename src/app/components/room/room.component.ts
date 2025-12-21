@@ -1177,6 +1177,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     advancePayment: number;
     remainingAmount: number;
     guestSource: string;
+    additionalCharges: number;
+    discount: number;
     transferredFrom?: string;
     transferredAt?: Date;
   } | null {
@@ -1204,6 +1206,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       advancePayment: checkinInfo.advancePayment,
       remainingAmount: checkinInfo.remainingAmount,
       guestSource: checkinInfo.guestSource || 'walkin',
+      additionalCharges: checkinInfo.additionalCharges || 0,
+      discount: checkinInfo.discount || 0,
       transferredFrom: checkinInfo.transferredFrom,
       transferredAt: checkinInfo.transferredAt
     };
