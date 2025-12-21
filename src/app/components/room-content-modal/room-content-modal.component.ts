@@ -3257,6 +3257,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // Đảm bảo advancePayment luôn là số
     const advancePayment = Number(this.checkOutForm.get('advancePayment')?.value) || 0;
     
+    // Lấy additionalCharges và discount từ form
+    const additionalCharges = Number(this.checkOutForm.get('additionalCharges')?.value) || 0;
+    const discount = Number(this.checkOutForm.get('discount')?.value) || 0;
+    
     // Lấy rateType từ form checkout (ưu tiên từ form, nếu không có thì lấy từ event)
     const rateType = this.checkOutForm?.get('rateType')?.value || 
                      (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) || 
@@ -3281,7 +3285,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestSourceValue: guestSourceValue,
       finalGuestSource: guestSource,
       rateType: rateType, // Log rateType
-      advancePayment, 
+      advancePayment,
+      additionalCharges,
+      discount,
       roomId: this.roomData._id 
     });
     
@@ -3329,12 +3335,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     if (this.roomData.events && this.roomData.events.length > 0) {
       const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
       if (checkinEvents.length > 0) {
-        // Cập nhật event checkin với thông tin mới qua API (bao gồm rateType)
+        // Cập nhật event checkin với thông tin mới qua API (bao gồm rateType, additionalCharges, discount)
         this.roomsService.updateRoomCheckinInfo(
           this.roomData._id,
           updatedGuestInfo,
           advancePayment,
-          rateType // Gửi rateType
+          rateType, // Gửi rateType
+          additionalCharges, // Gửi additionalCharges
+          discount // Gửi discount
         ).subscribe({
           next: (response) => {
             console.log('Update checkin info response:', response);

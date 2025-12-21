@@ -58,6 +58,7 @@ export class RoomsService {
     type?: string;
     startDate?: string;
     endDate?: string;
+    excludeCheckedOut?: boolean;
   }): Observable<Event[]> {
     let httpParams = new HttpParams();
     
@@ -67,6 +68,9 @@ export class RoomsService {
       if (options.type) httpParams = httpParams.set('type', options.type);
       if (options.startDate) httpParams = httpParams.set('startDate', options.startDate);
       if (options.endDate) httpParams = httpParams.set('endDate', options.endDate);
+      if (options.excludeCheckedOut !== undefined) {
+        httpParams = httpParams.set('excludeCheckedOut', options.excludeCheckedOut.toString());
+      }
     }
     
     return this.http.get<Event[]>(`${this.apiUrl}/${roomId}/events`, { params: httpParams });
@@ -318,7 +322,7 @@ export class RoomsService {
   }
 
   // Cập nhật thông tin khách và tiền đặt trước
-  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number, rateType?: string): Observable<any> {
+  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number, rateType?: string, additionalCharges?: number, discount?: number): Observable<any> {
     const body: any = {
       guestInfo,
       advancePayment
@@ -326,6 +330,13 @@ export class RoomsService {
     // Thêm rateType nếu có
     if (rateType) {
       body.rateType = rateType;
+    }
+    // Thêm additionalCharges và discount nếu có
+    if (additionalCharges !== undefined && additionalCharges !== null) {
+      body.additionalCharges = additionalCharges;
+    }
+    if (discount !== undefined && discount !== null) {
+      body.discount = discount;
     }
     return this.http.patch<any>(`${this.apiUrl}/${roomId}/checkin-info`, body);
   }

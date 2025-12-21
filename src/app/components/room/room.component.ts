@@ -1227,9 +1227,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (occupiedRooms.length === 0) return;
     
     // Fetch events cho tất cả phòng occupied cùng lúc
+    // Sử dụng excludeCheckedOut = true để chỉ lấy checkin events chưa checkout (từ RoomEvent collection)
     const eventRequests = occupiedRooms.map(room => {
       const eventType = room.status === 'occupied' ? 'checkin' : 'booking';
-      return this.roomsService.getRoomEvents(room._id!, { limit: 10, type: eventType })
+      return this.roomsService.getRoomEvents(room._id!, { 
+        limit: 10, 
+        type: eventType,
+        excludeCheckedOut: room.status === 'occupied' // Chỉ excludeCheckedOut cho phòng occupied
+      })
         .pipe(
           // Map kết quả với roomId để biết events thuộc phòng nào
           map(events => ({ roomId: room._id, events }))
@@ -1242,22 +1247,45 @@ export class RoomComponent implements OnInit, OnDestroy {
         results.forEach(({ roomId, events }) => {
           const roomIndex = this.rooms.findIndex(r => r._id === roomId);
           if (roomIndex !== -1) {
-            // Đảm bảo events có đầy đủ thông tin, bao gồm transferredFrom và transferredAt
-            this.rooms[roomIndex].events = events.map(event => ({
-              ...event,
-              // Đảm bảo transferredFrom được convert đúng sang string (có thể là ObjectId)
-              transferredFrom: event.transferredFrom 
-                ? (typeof event.transferredFrom === 'object' 
-                  ? (event.transferredFrom as any)?._id?.toString() || (event.transferredFrom as any)?.toString()
-                  : event.transferredFrom.toString())
-                : undefined,
-              transferredAt: event.transferredAt ? new Date(event.transferredAt) : undefined,
-              transferredBy: event.transferredBy
-                ? (typeof event.transferredBy === 'object'
-                  ? (event.transferredBy as any)?._id?.toString() || (event.transferredBy as any)?.toString()
-                  : event.transferredBy.toString())
-                : undefined
-            }));
+            // Đảm bảo events có đầy đủ thông tin, bao gồm transferredFrom, transferredAt, additionalCharges, discount
+            this.rooms[roomIndex].events = events.map(event => {
+              // Đảm bảo additionalCharges và discount được giữ nguyên từ RoomEvent
+              const mappedEvent = {
+                ...event,
+                // Đảm bảo transferredFrom được convert đúng sang string (có thể là ObjectId)
+                transferredFrom: event.transferredFrom 
+                  ? (typeof event.transferredFrom === 'object' 
+                    ? (event.transferredFrom as any)?._id?.toString() || (event.transferredFrom as any)?.toString()
+                    : event.transferredFrom.toString())
+                  : undefined,
+                transferredAt: event.transferredAt ? new Date(event.transferredAt) : undefined,
+                transferredBy: event.transferredBy
+                  ? (typeof event.transferredBy === 'object'
+                    ? (event.transferredBy as any)?._id?.toString() || (event.transferredBy as any)?.toString()
+                    : event.transferredBy.toString())
+                  : undefined,
+                // Đảm bảo additionalCharges và discount được giữ nguyên từ RoomEvent
+                additionalCharges: event.additionalCharges !== undefined && event.additionalCharges !== null
+                  ? (typeof event.additionalCharges === 'number' ? event.additionalCharges : Number(event.additionalCharges) || 0)
+                  : 0,
+                discount: event.discount !== undefined && event.discount !== null
+                  ? (typeof event.discount === 'number' ? event.discount : Number(event.discount) || 0)
+                  : 0
+              };
+              
+              // Log để debug nếu là checkin event
+              if (event.type === 'checkin') {
+                console.log(`Loaded checkin event for room ${this.rooms[roomIndex].roomNumber}:`, {
+                  eventId: event._id,
+                  additionalCharges: mappedEvent.additionalCharges,
+                  discount: mappedEvent.discount,
+                  originalAdditionalCharges: event.additionalCharges,
+                  originalDiscount: event.discount
+                });
+              }
+              
+              return mappedEvent;
+            });
           }
         });
       },
@@ -1524,6 +1552,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
     
     // Lấy phụ thu từ event (đồng bộ với room-content-modal)
+    // Lấy từ RoomEvent collection (không phải từ room.events trong rooms.js)
     let additionalCharges = 0;
     if (lastCheckin.additionalCharges !== undefined && lastCheckin.additionalCharges !== null) {
       additionalCharges = typeof lastCheckin.additionalCharges === 'number' 
@@ -1532,11 +1561,22 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
     
     // Lấy chiết khấu nếu có, mặc định = 0 (đồng bộ với room-content-modal)
+    // Lấy từ RoomEvent collection (không phải từ room.events trong rooms.js)
     const discount = lastCheckin.discount !== undefined && lastCheckin.discount !== null
       ? (typeof lastCheckin.discount === 'number'
         ? lastCheckin.discount
         : Number(lastCheckin.discount) || 0)
       : 0;
+    
+    // Log để debug
+    console.log(`getRoomCheckinInfo for room ${room.roomNumber}:`, {
+      lastCheckinEventId: lastCheckin._id,
+      additionalCharges: additionalCharges,
+      discount: discount,
+      originalAdditionalCharges: lastCheckin.additionalCharges,
+      originalDiscount: lastCheckin.discount,
+      eventType: lastCheckin.type
+    });
     
     // Tính tổng tiền = tiền phòng + tiền dịch vụ + phụ thu - chiết khấu (đồng bộ với room-content-modal)
     // Công thức: subtotal = roomPrice + serviceAmount, totalAmount = subtotal + additionalCharges - discount
