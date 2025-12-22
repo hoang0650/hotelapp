@@ -1194,9 +1194,19 @@ export class RoomComponent implements OnInit, OnDestroy {
       ? `${checkinInfo.checkinTime.getHours().toString().padStart(2, '0')}:${checkinInfo.checkinTime.getMinutes().toString().padStart(2, '0')} ${checkinInfo.checkinTime.getDate().toString().padStart(2, '0')}/${(checkinInfo.checkinTime.getMonth() + 1).toString().padStart(2, '0')}/${checkinInfo.checkinTime.getFullYear()}`
       : '';
     
-    // Tổng tiền = tiền phòng + tiền dịch vụ + phụ thu - chiết khấu (đồng bộ với room-content-modal)
-    const subtotal = checkinInfo.roomPrice + checkinInfo.serviceAmount;
-    const totalAmount = Math.max(0, subtotal + checkinInfo.additionalCharges - checkinInfo.discount);
+    // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu (đồng bộ với room-content-modal)
+    // Công thức: totalAmount = roomPrice + additionalCharges + serviceAmount - discount - advancePayment
+    // Lưu ý: Khi hiển thị phòng đang occupied (chưa checkout), additionalCharges và discount chỉ lấy từ check-in event
+    // Khi checkout trong room-content-modal, sẽ có thêm checkoutCharges và checkoutDiscount từ form checkout
+    // Còn thu = Tổng tiền (bằng nhau theo yêu cầu)
+    const totalAmount = Math.max(0, 
+      checkinInfo.roomPrice + 
+      checkinInfo.additionalCharges + 
+      checkinInfo.serviceAmount - 
+      checkinInfo.discount - 
+      checkinInfo.advancePayment
+    );
+    const remainingAmount = totalAmount; // Còn thu = Tổng tiền (đã trừ đặt trước trong công thức)
     
     return {
       checkinTime: checkinTimeStr,
@@ -1204,7 +1214,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       rateTypeLabel: checkinInfo.rateTypeLabel,
       totalAmount: totalAmount,
       advancePayment: checkinInfo.advancePayment,
-      remainingAmount: checkinInfo.remainingAmount,
+      remainingAmount: remainingAmount,
       guestSource: checkinInfo.guestSource || 'walkin',
       additionalCharges: checkinInfo.additionalCharges || 0,
       discount: checkinInfo.discount || 0,
@@ -1578,13 +1588,19 @@ export class RoomComponent implements OnInit, OnDestroy {
       eventType: lastCheckin.type
     });
     
-    // Tính tổng tiền = tiền phòng + tiền dịch vụ + phụ thu - chiết khấu (đồng bộ với room-content-modal)
-    // Công thức: subtotal = roomPrice + serviceAmount, totalAmount = subtotal + additionalCharges - discount
-    const subtotal = roomPrice + serviceAmount;
-    const totalAmount = Math.max(0, subtotal + additionalCharges - discount);
-
-    // Cho phép giá trị âm (khi đặt trước nhiều hơn tổng tiền)
-    const remainingAmount = totalAmount - advancePayment;
+    // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu (đồng bộ với room-content-modal)
+    // Công thức: totalAmount = roomPrice + additionalCharges + serviceAmount - discount - advancePayment
+    // Lưu ý: Khi hiển thị phòng đang occupied (chưa checkout), additionalCharges và discount chỉ lấy từ check-in event
+    // Khi checkout trong room-content-modal, sẽ có thêm checkoutCharges và checkoutDiscount từ form checkout
+    // Còn thu = Tổng tiền (bằng nhau theo yêu cầu, đã trừ đặt trước trong công thức)
+    const totalAmount = Math.max(0, 
+      roomPrice + 
+      additionalCharges + 
+      serviceAmount - 
+      discount - 
+      advancePayment
+    );
+    const remainingAmount = totalAmount; // Còn thu = Tổng tiền (đã trừ đặt trước trong công thức)
 
     // Lấy thông tin chuyển phòng từ nhiều nguồn
     let transferredFrom: string | undefined = undefined;

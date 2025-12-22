@@ -1008,15 +1008,20 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         const checkoutCharges = +(this.checkOutForm?.get('additionalCharges')?.value || 0);
         const checkoutDiscount = +(this.checkOutForm?.get('discount')?.value || 0);
         
-        // Tổng cộng = Tiền phòng + Tổng DV + Phụ thu (checkin + checkout) - Giảm giá (checkin + checkout)
-        const subtotal = roomPrice + serviceTotal;
-        this.totalPrice = Math.max(0, subtotal + this.initialCharges + checkoutCharges - this.initialDiscount - checkoutDiscount);
+        // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu
+        // Công thức mới: totalPrice = roomPrice + additionalCharges + serviceTotal - discount - advancePayment
+        // Trong đó: additionalCharges = initialCharges + checkoutCharges, discount = initialDiscount + checkoutDiscount
+        const totalAdditionalCharges = this.initialCharges + checkoutCharges;
+        const totalDiscount = this.initialDiscount + checkoutDiscount;
         
         // Lấy tiền trả trước (luôn lấy từ initial state hoặc checkin event)
         const lastCheckInEvent = this.listData && this.listData.length > 0 ? this.listData[0] : null;
         this.advancePayment = lastCheckInEvent?.advancePayment || 0;
         
-        console.log(`Final price calculation: ${roomPrice} (room) + ${serviceTotal} (services) + ${this.initialCharges} (initial charges) + ${checkoutCharges} (checkout charges) - ${this.initialDiscount} (initial discount) - ${checkoutDiscount} (checkout discount) = ${this.totalPrice}`);
+        // Tính tổng tiền theo công thức mới
+        this.totalPrice = Math.max(0, roomPrice + totalAdditionalCharges + serviceTotal - totalDiscount - this.advancePayment);
+        
+        console.log(`Final price calculation: ${roomPrice} (room) + ${totalAdditionalCharges} (total charges: ${this.initialCharges} initial + ${checkoutCharges} checkout) + ${serviceTotal} (services) - ${totalDiscount} (total discount: ${this.initialDiscount} initial + ${checkoutDiscount} checkout) - ${this.advancePayment} (advance payment) = ${this.totalPrice}`);
       },
       error: (error) => {
         console.error('[calculateTotalPrice] Error calculating room price from backend:', error);
@@ -1053,13 +1058,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         const checkoutCharges = +(this.checkOutForm?.get('additionalCharges')?.value || 0);
         const checkoutDiscount = +(this.checkOutForm?.get('discount')?.value || 0);
         
-        // Tổng cộng
-        const subtotal = roomPrice + serviceTotal;
-        this.totalPrice = Math.max(0, subtotal + this.initialCharges + checkoutCharges - this.initialDiscount - checkoutDiscount);
+        // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu
+        // Công thức mới: totalPrice = roomPrice + additionalCharges + serviceTotal - discount - advancePayment
+        const totalAdditionalCharges = this.initialCharges + checkoutCharges;
+        const totalDiscount = this.initialDiscount + checkoutDiscount;
         
         // Lấy tiền trả trước
         const lastCheckInEvent = this.listData && this.listData.length > 0 ? this.listData[0] : null;
         this.advancePayment = lastCheckInEvent?.advancePayment || 0;
+        
+        // Tính tổng tiền theo công thức mới
+        this.totalPrice = Math.max(0, roomPrice + totalAdditionalCharges + serviceTotal - totalDiscount - this.advancePayment);
       }
     });
   }
@@ -1407,9 +1416,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // Tính tổng tiền dịch vụ
     const servicesTotal = this.calculateServicesTotal();
     
-    // Lấy giá trị phụ thu và giảm giá, đảm bảo là số
-    const additionalCharges = Number(this.checkOutForm.get('additionalCharges')?.value) || 0;
-    const discount = Number(this.checkOutForm.get('discount')?.value) || 0;
+    // Lấy giá trị phụ thu và giảm giá từ form checkout, đảm bảo là số
+    const checkoutCharges = Number(this.checkOutForm.get('additionalCharges')?.value) || 0;
+    const checkoutDiscount = Number(this.checkOutForm.get('discount')?.value) || 0;
+    
+    // Tính tổng phụ thu và khuyến mãi (bao gồm cả từ check-in và checkout)
+    // initialCharges và initialDiscount đã được set khi load dữ liệu từ check-in event
+    const additionalCharges = this.initialCharges + checkoutCharges;
+    const discount = this.initialDiscount + checkoutDiscount;
     
     // Trừ tiền đã trả trước (nếu có) - lấy từ lastCheckinEvent
     const advancePayment = Number(lastCheckinEvent.advancePayment) || 0;
@@ -1435,9 +1449,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         // Sử dụng giá từ backend
         const roomTotal = priceResponse.totalPrice || 0;
         
-        // Tính tổng tiền cuối cùng
-        const grandTotal = roomTotal + servicesTotal + additionalCharges - discount;
-        const remainingAmount = grandTotal - advancePayment;
+        // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu
+        // Công thức mới: grandTotal = roomTotal + additionalCharges + servicesTotal - discount - advancePayment
+        // remainingAmount = grandTotal (bằng nhau theo yêu cầu)
+        const grandTotal = Math.max(0, roomTotal + additionalCharges + servicesTotal - discount - advancePayment);
+        const remainingAmount = grandTotal; // Còn thu = Tổng tiền
         
         // Tiếp tục xử lý checkout với giá đã tính
         this.processCheckoutWithPrice(
@@ -1465,8 +1481,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         console.error('Error calculating room price from backend:', error);
         // Fallback: sử dụng tính toán frontend
         const roomTotal = this.calculateRoomTotalByRateType(durationInHours, durationInDays, rateType, remainingMinutes);
-        const grandTotal = roomTotal + servicesTotal + additionalCharges - discount;
-        const remainingAmount = grandTotal - advancePayment;
+        // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu
+        const grandTotal = Math.max(0, roomTotal + additionalCharges + servicesTotal - discount - advancePayment);
+        const remainingAmount = grandTotal; // Còn thu = Tổng tiền
         
         this.processCheckoutWithPrice(
           roomTotal, 

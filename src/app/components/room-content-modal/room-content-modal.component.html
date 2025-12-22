@@ -539,7 +539,7 @@
              - {{ advancePayment | number }} đồng
            </nz-descriptions-item>
            <nz-descriptions-item nzTitle="Còn lại phải thanh toán" [nzSpan]="3">
-             <strong>{{ (totalPrice - advancePayment) | number }} đồng</strong>
+             <strong>{{ totalPrice | number }} đồng</strong>
            </nz-descriptions-item>
          </nz-descriptions>
        </div>
