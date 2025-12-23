@@ -322,7 +322,7 @@ export class RoomsService {
   }
 
   // Cập nhật thông tin khách và tiền đặt trước
-  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number, rateType?: string, additionalCharges?: number, discount?: number): Observable<any> {
+  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number, rateType?: string, additionalCharges?: number, discount?: number, selectedServices?: any[]): Observable<any> {
     const body: any = {
       guestInfo,
       advancePayment
@@ -337,6 +337,10 @@ export class RoomsService {
     }
     if (discount !== undefined && discount !== null) {
       body.discount = discount;
+    }
+    // Thêm selectedServices nếu có
+    if (selectedServices !== undefined && selectedServices !== null) {
+      body.selectedServices = selectedServices;
     }
     return this.http.patch<any>(`${this.apiUrl}/${roomId}/checkin-info`, body);
   }

@@ -3305,6 +3305,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       advancePayment,
       additionalCharges,
       discount,
+      selectedServices: this.selectedServices, // Log selectedServices
       roomId: this.roomData._id 
     });
     
@@ -3352,14 +3353,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     if (this.roomData.events && this.roomData.events.length > 0) {
       const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
       if (checkinEvents.length > 0) {
-        // Cập nhật event checkin với thông tin mới qua API (bao gồm rateType, additionalCharges, discount)
+        // Cập nhật event checkin với thông tin mới qua API (bao gồm rateType, additionalCharges, discount, selectedServices)
         this.roomsService.updateRoomCheckinInfo(
           this.roomData._id,
           updatedGuestInfo,
           advancePayment,
           rateType, // Gửi rateType
           additionalCharges, // Gửi additionalCharges
-          discount // Gửi discount
+          discount, // Gửi discount
+          this.selectedServices // Gửi selectedServices
         ).subscribe({
           next: (response) => {
             console.log('Update checkin info response:', response);
