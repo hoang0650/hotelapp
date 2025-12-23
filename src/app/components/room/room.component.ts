@@ -1134,7 +1134,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       };
     }
     
-    // Lấy từ events nếu có
+    // Lấy từ events (đã được load từ RoomEvent collection qua loadEventsForOccupiedRooms)
+    // CHỈ SỬ DỤNG events từ RoomEvent collection, không sử dụng room.events trong rooms.js
     if (room.events && room.events.length > 0) {
       const bookingEvent = room.events.find(e => e.type === 'booking');
       if (bookingEvent) {
@@ -1350,16 +1351,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
     
     // Nếu không có events, return null (events sẽ được load bởi loadEventsForOccupiedRooms)
+    // CHỈ SỬ DỤNG events từ RoomEvent collection, không sử dụng room.events trong rooms.js
     if (!room.events || room.events.length === 0) {
       return null;
     }
 
     // Tìm event checkin cuối cùng CHƯA CHECKOUT (sắp xếp theo thời gian để lấy mới nhất)
     // Lọc các event check-in chưa có checkout tương ứng
-    if (!room.events || room.events.length === 0) {
-      return null;
-    }
-    
+    // Events đã được load từ RoomEvent collection và gán vào room.events
     const checkinEvents = room.events
       .filter(e => {
         if (e.type !== 'checkin') return false;
@@ -1773,7 +1772,9 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Kiểm tra phòng có thể đặt được vào ngày cụ thể
   isRoomAvailableForDate(room: Room, checkInDate: Date, checkOutDate?: Date): boolean {
     // Nếu phòng đang occupied, kiểm tra xem ngày đặt có trùng không
+    // CHỈ SỬ DỤNG events từ RoomEvent collection, không sử dụng room.events trong rooms.js
     if (room.status === 'occupied') {
+      // Lấy checkin event từ room.events (đã được load từ RoomEvent collection)
       const lastCheckinEvent = room.events?.filter(e => e.type === 'checkin').pop();
       if (lastCheckinEvent && lastCheckinEvent.checkinTime) {
         const occupiedCheckIn = new Date(lastCheckinEvent.checkinTime);
@@ -1794,6 +1795,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
     
     // Kiểm tra conflict với bookings khác
+    // CHỈ SỬ DỤNG events từ RoomEvent collection, không sử dụng room.events trong rooms.js
     if (room.events && room.events.length > 0) {
       const bookingEvents = room.events.filter(e => e.type === 'booking');
       for (const booking of bookingEvents) {
