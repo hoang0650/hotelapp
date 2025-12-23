@@ -100,20 +100,24 @@ export class RoomComponent implements OnInit, OnDestroy {
       // Reload rooms khi có thay đổi dữ liệu
       if (this.selectedHotelId) {
         // Quick reload: chỉ reload rooms, không reload bookings và history
-        // Delay một chút để đảm bảo backend đã cập nhật xong (đặc biệt là guestStatus)
+        // Delay một chút để đảm bảo backend đã cập nhật xong (đặc biệt là guestStatus và room status sau khi chuyển phòng)
         setTimeout(() => {
           this.loadRooms(true);
-          // Reload events cho tất cả phòng occupied để cập nhật thông tin mới nhất (bao gồm guestSource)
+          // Reload events cho tất cả phòng occupied và dirty để cập nhật thông tin mới nhất
+          // QUAN TRỌNG: Sau khi chuyển phòng, phòng nguồn chuyển sang dirty, phòng đích chuyển sang occupied
+          // Cần reload events cho cả hai loại phòng này
           setTimeout(() => {
-            this.loadEventsForOccupiedRooms(true); // Force reload events
-          }, 200); // Đợi một chút để đảm bảo rooms đã được reload
+            this.loadEventsForOccupiedRooms(true); // Force reload events cho phòng occupied
+            // Cũng reload events cho phòng dirty (phòng nguồn sau khi chuyển) nếu cần
+            // Nhưng thường phòng dirty không cần hiển thị events, nên chỉ reload occupied là đủ
+          }, 300); // Tăng delay lên 300ms để đảm bảo backend đã lưu xong events mới
           // Reload lịch sử thanh toán sau khi có thay đổi (ví dụ: checkout)
           if (!this.isModalOpen) {
             setTimeout(() => {
               this.showRoomHistory();
-            }, 300); // Đợi một chút để đảm bảo backend đã cập nhật xong
+            }, 400); // Đợi một chút để đảm bảo backend đã cập nhật xong
           }
-        }, 150); // Delay ban đầu để đảm bảo backend đã lưu guestStatus
+        }, 200); // Tăng delay ban đầu lên 200ms để đảm bảo backend đã lưu xong room status và events
       }
     });
     
@@ -1225,13 +1229,15 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   // Load events cho các phòng đang occupied và booked
+  // QUAN TRỌNG: Sau khi chuyển phòng, phòng đích sẽ có status = 'occupied' và có event checkin mới với transferredFrom
+  // Cần load events cho phòng này để hiển thị đúng thông tin từ phòng cũ
   loadEventsForOccupiedRooms(forceReload: boolean = false): void {
     // Nếu forceReload = true, reload events cho tất cả phòng occupied/booked
     // Nếu false, chỉ load cho phòng chưa có events
     const occupiedRooms = this.rooms.filter(room => {
       if (!room._id) return false;
       if (room.status !== 'occupied' && room.status !== 'booked') return false;
-      if (forceReload) return true; // Reload tất cả nếu forceReload
+      if (forceReload) return true; // Reload tất cả nếu forceReload (quan trọng sau khi chuyển phòng)
       return !room.events || room.events.length === 0; // Chỉ load nếu chưa có events
     });
     
