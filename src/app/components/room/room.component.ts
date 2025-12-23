@@ -1257,8 +1257,31 @@ export class RoomComponent implements OnInit, OnDestroy {
         results.forEach(({ roomId, events }) => {
           const roomIndex = this.rooms.findIndex(r => r._id === roomId);
           if (roomIndex !== -1) {
+            // QUAN TRỌNG: Đảm bảo chỉ lấy events của phòng hiện tại (roomId)
+            // Lọc bỏ events không thuộc về phòng này (tránh lấy nhầm events từ phòng khác khi chuyển phòng)
+            const filteredEvents = events.filter(event => {
+              // Kiểm tra roomId của event (nếu có)
+              if (event.roomId) {
+                const eventRoomId = typeof event.roomId === 'object' 
+                  ? (event.roomId as any)?._id?.toString() || (event.roomId as any)?.toString()
+                  : event.roomId.toString();
+                const currentRoomId = roomId?.toString();
+                if (eventRoomId !== currentRoomId) {
+                  console.warn(`Filtered out event from different room:`, {
+                    eventId: event._id,
+                    eventType: event.type,
+                    eventRoomId: eventRoomId,
+                    currentRoomId: currentRoomId,
+                    roomNumber: this.rooms[roomIndex].roomNumber
+                  });
+                  return false; // Bỏ qua events không thuộc phòng này
+                }
+              }
+              return true; // Giữ lại events thuộc phòng này hoặc không có roomId (backward compatibility)
+            });
+            
             // Đảm bảo events có đầy đủ thông tin, bao gồm transferredFrom, transferredAt, additionalCharges, discount
-            this.rooms[roomIndex].events = events.map(event => {
+            this.rooms[roomIndex].events = filteredEvents.map(event => {
               // Đảm bảo additionalCharges và discount được giữ nguyên từ RoomEvent
               const mappedEvent = {
                 ...event,
@@ -1287,10 +1310,11 @@ export class RoomComponent implements OnInit, OnDestroy {
               if (event.type === 'checkin') {
                 console.log(`Loaded checkin event for room ${this.rooms[roomIndex].roomNumber}:`, {
                   eventId: event._id,
+                  eventRoomId: event.roomId,
+                  currentRoomId: roomId,
                   additionalCharges: mappedEvent.additionalCharges,
                   discount: mappedEvent.discount,
-                  originalAdditionalCharges: event.additionalCharges,
-                  originalDiscount: event.discount
+                  transferredFrom: mappedEvent.transferredFrom
                 });
               }
               
@@ -1340,9 +1364,22 @@ export class RoomComponent implements OnInit, OnDestroy {
       .filter(e => {
         if (e.type !== 'checkin') return false;
         
+        // QUAN TRỌNG: Chỉ lấy events của phòng hiện tại (room._id)
+        // Đảm bảo không lấy events từ phòng khác khi chuyển phòng
+        // Kiểm tra xem event có thuộc về phòng này không (nếu có roomId trong event)
+        if (e.roomId && e.roomId.toString() !== room._id?.toString()) {
+          return false; // Bỏ qua events không thuộc phòng này
+        }
+        
         // Kiểm tra xem có event checkout nào tương ứng với checkin này không
+        // QUAN TRỌNG: Chỉ kiểm tra checkout events của phòng hiện tại
         const hasCheckout = room.events?.some((checkoutEvent: any) => {
           if (checkoutEvent.type !== 'checkout') return false;
+          
+          // Đảm bảo checkout event thuộc về phòng hiện tại
+          if (checkoutEvent.roomId && checkoutEvent.roomId.toString() !== room._id?.toString()) {
+            return false; // Bỏ qua checkout events không thuộc phòng này
+          }
           
           // So sánh checkinTime: chuyển về Date object và so sánh timestamp
           const checkoutCheckinTime = checkoutEvent.checkinTime ? new Date(checkoutEvent.checkinTime).getTime() : null;
@@ -1356,8 +1393,27 @@ export class RoomComponent implements OnInit, OnDestroy {
           return false;
         }) || false;
         
-        // Chỉ lấy event check-in chưa có checkout
-        return !hasCheckout;
+        // Kiểm tra xem event checkin này đã được transfer đi chưa
+        // Nếu có transferredFrom và transferredFrom khác room._id, đây là event từ phòng khác chuyển đến
+        // Nếu có transferredTo trong checkout event, đây là event đã được chuyển đi
+        const isTransferredOut = room.events?.some((checkoutEvent: any) => {
+          if (checkoutEvent.type !== 'checkout') return false;
+          if (checkoutEvent.roomId && checkoutEvent.roomId.toString() !== room._id?.toString()) {
+            return false; // Chỉ kiểm tra checkout events của phòng này
+          }
+          // Kiểm tra xem có checkout event nào có transferredTo (đã chuyển sang phòng khác) không
+          if (checkoutEvent.transferredTo) {
+            const checkoutCheckinTime = checkoutEvent.checkinTime ? new Date(checkoutEvent.checkinTime).getTime() : null;
+            const eventCheckinTime = e.checkinTime ? new Date(e.checkinTime).getTime() : null;
+            if (checkoutCheckinTime && eventCheckinTime) {
+              return Math.abs(checkoutCheckinTime - eventCheckinTime) < 1000; // Khớp checkinTime
+            }
+          }
+          return false;
+        }) || false;
+        
+        // Chỉ lấy event check-in chưa có checkout và chưa được transfer đi
+        return !hasCheckout && !isTransferredOut;
       })
       .sort((a, b) => {
         const timeA = a.checkinTime ? new Date(a.checkinTime).getTime() : 0;
@@ -1381,13 +1437,16 @@ export class RoomComponent implements OnInit, OnDestroy {
     
     // Tính tiền phòng dựa trên thời gian (ước tính đơn giản để hiển thị)
     // Tính toán chính xác sẽ được thực hiện bởi backend khi checkout
+    // Lưu ý: Khi chuyển phòng, checkinTime vẫn giữ nguyên từ phòng cũ, nhưng giá phòng tính theo phòng mới
     let roomPrice = 0;
     if (checkinTime) {
       const now = new Date();
       const durationInHours = Math.ceil((now.getTime() - checkinTime.getTime()) / (1000 * 60 * 60));
       const durationInDays = Math.ceil(durationInHours / 24);
       
-      // Lấy giá từ room pricing (đã được backend cập nhật từ priceConfig nếu có)
+      // Lấy giá từ room pricing của phòng MỚI (phòng hiện tại)
+      // Khi chuyển phòng, backend đã cập nhật basePrice theo phòng mới, nhưng checkinTime vẫn từ phòng cũ
+      // Vì vậy tính tiền phòng dựa trên checkinTime từ phòng cũ nhưng giá từ phòng mới
       const hourlyRate = room.pricing?.hourly || room.firstHourRate || 0;
       const dailyRate = room.pricing?.daily || 0;
       const nightlyRate = room.pricing?.nightly || 0;
@@ -1526,14 +1585,19 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
     
     // Lấy tên khách hàng từ nhiều nguồn
+    // Ưu tiên 1: Từ lastCheckin.guestInfo (RoomEvent collection) - đảm bảo lấy đúng từ phòng cũ khi chuyển phòng
     let guestName = 'Khách lẻ';
-    
-    // Ưu tiên 1: Từ lastCheckin.guestInfo
-    if (lastCheckin.guestInfo?.name && lastCheckin.guestInfo.name !== 'Khách lẻ') {
-      guestName = lastCheckin.guestInfo.name;
+    if (lastCheckin.guestInfo) {
+      // Lấy từ guestInfo trong RoomEvent (đã được chuyển từ phòng cũ)
+      if (lastCheckin.guestInfo.name && lastCheckin.guestInfo.name !== 'Khách lẻ') {
+        guestName = lastCheckin.guestInfo.name;
+      } else if (lastCheckin.guestInfo.name === 'Khách lẻ' || !lastCheckin.guestInfo.name) {
+        // Nếu là 'Khách lẻ' hoặc không có tên, giữ nguyên
+        guestName = 'Khách lẻ';
+      }
     }
     
-    // Ưu tiên 2: Từ room.currentBooking nếu có
+    // Ưu tiên 2: Từ room.currentBooking nếu không có trong event (fallback)
     if ((!guestName || guestName === 'Khách lẻ') && room.currentBooking) {
       const currentBooking = typeof room.currentBooking === 'object' ? room.currentBooking : null;
       const bookingAny = currentBooking as any;
@@ -1546,7 +1610,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Lấy nguồn khách từ event
+    // Lấy nguồn khách từ event (ưu tiên từ RoomEvent - đã được chuyển từ phòng cũ)
     const guestSource = lastCheckin.guestInfo?.guestSource || 'walkin';
     
     // Tính tiền dịch vụ từ selectedServices (đồng bộ với room-content-modal)

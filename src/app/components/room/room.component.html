@@ -251,11 +251,21 @@
                     </div>
                     <div class="detail-row">
                       <span class="detail-label">Nhận phòng:</span>
-                      <span class="detail-value highlight">{{ displayInfo.checkinTime }}</span>
+                      <span class="detail-value highlight">
+                        {{ displayInfo.checkinTime }}
+                        <span *ngIf="displayInfo.transferredFrom" style="font-size: 0.85em; color: #999; margin-left: 4px; font-style: italic;">
+                          (từ phòng cũ)
+                        </span>
+                      </span>
                     </div>
                     <div class="detail-row">
                       <span class="detail-label">Khách hàng:</span>
-                      <span class="detail-value">{{ displayInfo.customerName }}</span>
+                      <span class="detail-value">
+                        {{ displayInfo.customerName }}
+                        <span *ngIf="displayInfo.transferredFrom" style="font-size: 0.85em; color: #999; margin-left: 4px; font-style: italic;">
+                          (chuyển từ phòng cũ)
+                        </span>
+                      </span>
                     </div>
                     <div class="detail-row">
                       <span class="detail-label">Tổng tiền:</span>

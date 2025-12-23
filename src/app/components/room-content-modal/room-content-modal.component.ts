@@ -832,7 +832,59 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.message.success(`Đã thêm ${quantity} ${selectedService.name}`);
     }
     
-    // Không lưu vào session nữa, dữ liệu sẽ được lưu vào RoomEvent khi checkout
+    // Cập nhật vào RoomEvent nếu phòng đang occupied và có event checkin
+    if (this.roomData._id && this.roomData.status === 'occupied') {
+      // Lấy thông tin từ form checkout nếu có
+      const guestInfoFormGroup = this.checkOutForm?.get('guestInfo') as FormGroup;
+      const guestInfo = guestInfoFormGroup ? 
+        (guestInfoFormGroup.disabled ? guestInfoFormGroup.getRawValue() : guestInfoFormGroup.value) : 
+        (this.checkOutForm?.get('guestInfo')?.value || {});
+      
+      // Lấy các giá trị từ form hoặc từ event hiện tại
+      const advancePayment = Number(this.checkOutForm?.get('advancePayment')?.value) || 
+                             (this.listData && this.listData.length > 0 ? this.listData[0].advancePayment : 0) || 0;
+      const rateType = this.checkOutForm?.get('rateType')?.value || 
+                      (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) || 
+                      'hourly';
+      const additionalCharges = Number(this.checkOutForm?.get('additionalCharges')?.value) || 
+                               (this.listData && this.listData.length > 0 ? this.listData[0].additionalCharges : 0) || 0;
+      const discount = Number(this.checkOutForm?.get('discount')?.value) || 
+                      (this.listData && this.listData.length > 0 ? this.listData[0].discount : 0) || 0;
+      
+      // Đảm bảo guestInfo đầy đủ
+      const updatedGuestInfo = {
+        name: guestInfo.name || 'Khách lẻ',
+        idNumber: guestInfo.idNumber || '',
+        phone: guestInfo.phone || '',
+        email: guestInfo.email || '',
+        address: guestInfo.address || '',
+        guestSource: guestInfo.guestSource || 'walkin'
+      };
+      
+      // Cập nhật RoomEvent với selectedServices mới
+      this.roomsService.updateRoomCheckinInfo(
+        this.roomData._id,
+        updatedGuestInfo,
+        advancePayment,
+        rateType,
+        additionalCharges,
+        discount,
+        this.selectedServices // Gửi selectedServices đã được cập nhật
+      ).subscribe({
+        next: (response) => {
+          console.log('Dịch vụ đã được cập nhật vào RoomEvent', response);
+          
+          // Cập nhật listData để đồng bộ
+          if (this.listData && this.listData.length > 0) {
+            this.listData[0].selectedServices = [...this.selectedServices];
+          }
+        },
+        error: (error) => {
+          console.error('Lỗi khi cập nhật dịch vụ vào RoomEvent:', error);
+          // Không hiển thị error message để không làm phiền user khi thêm dịch vụ
+        }
+      });
+    }
     
     // Reset form
     this.servicesForm.reset({
@@ -846,29 +898,74 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
   // Xóa dịch vụ
   removeService(index: number): void {
-    this.selectedServices.splice(index, 1);
-    
-    // Cập nhật session
-    sessionStorage.setItem('selectedServices', JSON.stringify(this.selectedServices));
-    
-    // Cập nhật dữ liệu phòng
-    if (this.roomData._id) {
-      const servicesUpdate: RoomUpdate = {
-        services: this.selectedServices
-      };
-      
-      this.roomsService.updateRoom(this.roomData._id, servicesUpdate as any)
-        .subscribe({
-          next: (response) => {
-            console.log('Dịch vụ đã được cập nhật', response);
-            // Cập nhật lại dữ liệu phòng
-            this.fetchCurrentRoom();
-          },
-          error: (error) => console.error('Lỗi khi cập nhật dịch vụ:', error)
-        });
+    if (index < 0 || index >= this.selectedServices.length) {
+      console.error('Invalid service index:', index);
+      return;
     }
     
-    // Không lưu vào session nữa, dữ liệu sẽ được lưu vào RoomEvent khi checkout
+    // Xóa dịch vụ khỏi danh sách
+    const removedService = this.selectedServices[index];
+    this.selectedServices.splice(index, 1);
+    
+    console.log('Removed service:', removedService);
+    
+    // Cập nhật session (nếu cần)
+    sessionStorage.setItem('selectedServices', JSON.stringify(this.selectedServices));
+    
+    // Cập nhật vào RoomEvent nếu phòng đang occupied và có event checkin
+    if (this.roomData._id && this.roomData.status === 'occupied') {
+      // Lấy thông tin từ form checkout nếu có
+      const guestInfoFormGroup = this.checkOutForm?.get('guestInfo') as FormGroup;
+      const guestInfo = guestInfoFormGroup ? 
+        (guestInfoFormGroup.disabled ? guestInfoFormGroup.getRawValue() : guestInfoFormGroup.value) : 
+        (this.checkOutForm?.get('guestInfo')?.value || {});
+      
+      // Lấy các giá trị từ form hoặc từ event hiện tại
+      const advancePayment = Number(this.checkOutForm?.get('advancePayment')?.value) || 
+                             (this.listData && this.listData.length > 0 ? this.listData[0].advancePayment : 0) || 0;
+      const rateType = this.checkOutForm?.get('rateType')?.value || 
+                      (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) || 
+                      'hourly';
+      const additionalCharges = Number(this.checkOutForm?.get('additionalCharges')?.value) || 
+                               (this.listData && this.listData.length > 0 ? this.listData[0].additionalCharges : 0) || 0;
+      const discount = Number(this.checkOutForm?.get('discount')?.value) || 
+                      (this.listData && this.listData.length > 0 ? this.listData[0].discount : 0) || 0;
+      
+      // Đảm bảo guestInfo đầy đủ
+      const updatedGuestInfo = {
+        name: guestInfo.name || 'Khách lẻ',
+        idNumber: guestInfo.idNumber || '',
+        phone: guestInfo.phone || '',
+        email: guestInfo.email || '',
+        address: guestInfo.address || '',
+        guestSource: guestInfo.guestSource || 'walkin'
+      };
+      
+      // Cập nhật RoomEvent với selectedServices mới
+      this.roomsService.updateRoomCheckinInfo(
+        this.roomData._id,
+        updatedGuestInfo,
+        advancePayment,
+        rateType,
+        additionalCharges,
+        discount,
+        this.selectedServices // Gửi selectedServices đã được cập nhật
+      ).subscribe({
+        next: (response) => {
+          console.log('Dịch vụ đã được cập nhật vào RoomEvent', response);
+          this.message.success('Đã xóa dịch vụ');
+          
+          // Cập nhật listData để đồng bộ
+          if (this.listData && this.listData.length > 0) {
+            this.listData[0].selectedServices = [...this.selectedServices];
+          }
+        },
+        error: (error) => {
+          console.error('Lỗi khi cập nhật dịch vụ vào RoomEvent:', error);
+          this.message.error('Lỗi khi cập nhật dịch vụ: ' + (error.error?.message || error.message));
+        }
+      });
+    }
     
     // Cập nhật tổng tiền
     this.calculateTotalPrice();
