@@ -158,6 +158,14 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
         }
         
         this.message.success(successMessage);
+        
+        // QUAN TRỌNG: Thông báo cho room component để reload events cho cả phòng nguồn và phòng đích
+        // Điều này đảm bảo thông tin từ phòng cũ được hiển thị đúng trên phòng mới
+        // Delay một chút để đảm bảo backend đã lưu xong event mới vào RoomEvent collection
+        setTimeout(() => {
+          this.roomsService.notifyRoomDataUpdated();
+        }, 300);
+        
         this.modalRef.close({ success: true, response });
       },
       (error) => {
