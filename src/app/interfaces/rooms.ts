@@ -116,6 +116,7 @@ export type RoomStatus = 'vacant' | 'occupied' | 'cleaning' | 'dirty' | 'mainten
 // Interface cho sự kiện trên phòng (checkin, checkout, note...)
 export interface Event {
   _id?: string; // ID của event từ RoomEvent collection
+  roomId?: string; // ID của phòng (từ RoomEvent collection) - QUAN TRỌNG: để đảm bảo chỉ lấy events của phòng hiện tại
   type: 'checkin' | 'checkout' | 'notpay' | 'maintenance' | 'service_order' | 'transfer' | 'booking' | 'cancel_booking' | 'guest_out' | 'guest_return';
   checkinTime?: Date; 
   checkoutTime?: Date;
