@@ -28,6 +28,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
   ocrStatus = '';
   scannedData: any[] = []; // Lưu dữ liệu từ các lần scan
   private ocrWorker: Worker | null = null;
+  private scanningQueue: File[] = []; // Queue để xử lý tuần tự
+  private isProcessingQueue = false; // Flag để tránh xử lý trùng
 
   constructor(
     private message: NzMessageService,
@@ -50,18 +52,23 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     // Xử lý nhiều file nếu allowMultiple = true
     const fileArray = Array.from(files) as File[];
+    const validFiles: File[] = [];
     
+    // Validate và thêm vào danh sách
     for (const file of fileArray) {
       if (!file.type.startsWith('image/')) {
-        this.message.error('Vui lòng chọn file ảnh');
+        this.message.error(`File "${file.name}" không phải là ảnh. Vui lòng chọn file ảnh.`);
         continue;
       }
+      
+      validFiles.push(file);
       
       // Thêm vào danh sách
       if (!this.allowMultiple) {
         this.selectedFiles = [file];
         this.previewImages = [];
         this.scannedData = [];
+        this.scanningQueue = [];
       } else {
         this.selectedFiles.push(file);
       }
@@ -80,13 +87,55 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         };
         reader.readAsDataURL(file);
       }
-      
-      // Tự động scan OCR
-      this.scanOCR(file);
+    }
+    
+    if (validFiles.length === 0) return;
+    
+    // Xử lý OCR: nếu allowMultiple, xử lý tuần tự để đảm bảo thứ tự
+    if (this.allowMultiple && validFiles.length > 1) {
+      // Thêm vào queue và xử lý tuần tự
+      this.scanningQueue.push(...validFiles);
+      this.processScanningQueue();
+    } else {
+      // Chỉ có 1 file, scan ngay
+      this.scanOCR(validFiles[0]);
     }
     
     // Reset input để có thể chọn lại file cùng tên
     event.target.value = '';
+  }
+
+  /**
+   * Xử lý queue scan tuần tự để đảm bảo thứ tự và tránh conflict
+   */
+  private async processScanningQueue(): Promise<void> {
+    // Tránh xử lý trùng
+    if (this.isProcessingQueue) {
+      return;
+    }
+    
+    this.isProcessingQueue = true;
+    
+    try {
+      // Xử lý từng file một cách tuần tự
+      while (this.scanningQueue.length > 0) {
+        const file = this.scanningQueue.shift();
+        if (!file) break;
+        
+        // Xác định mặt trước hay mặt sau dựa vào thứ tự
+        const index = this.selectedFiles.indexOf(file);
+        const isFrontSide = index === 0;
+        
+        if (this.selectedFiles.length > 1) {
+          this.ocrStatus = `Đang xử lý ${isFrontSide ? 'mặt trước' : 'mặt sau'} (${index + 1}/${this.selectedFiles.length})...`;
+        }
+        
+        // Scan OCR cho file này
+        await this.scanOCR(file, index);
+      }
+    } finally {
+      this.isProcessingQueue = false;
+    }
   }
 
   /**
@@ -271,83 +320,157 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     }
   }
 
-  async scanOCR(file: File): Promise<void> {
+  async scanOCR(file: File, fileIndex: number = 0): Promise<void> {
     this.isScanning = true;
     this.ocrProgress = 0;
-    this.ocrStatus = 'Đang xử lý ảnh trước OCR...';
+    
+    const isMultipleFiles = this.allowMultiple && this.selectedFiles.length > 1;
+    const sideLabel = isMultipleFiles ? (fileIndex === 0 ? 'mặt trước' : 'mặt sau') : '';
     
     try {
       // Pre-process ảnh trước khi OCR (backend hoặc client-side)
       if (this.useBackendPreprocessing) {
-        this.ocrStatus = 'Đang tối ưu ảnh trên server (sharp: grayscale, contrast, brightness, sharpen)...';
+        this.ocrStatus = sideLabel 
+          ? `Đang tối ưu ${sideLabel} trên server...`
+          : 'Đang tối ưu ảnh trên server (sharp: grayscale, contrast, brightness, sharpen)...';
       } else {
-        this.ocrStatus = 'Đang tối ưu ảnh (grayscale, contrast, brightness)...';
+        this.ocrStatus = sideLabel 
+          ? `Đang tối ưu ${sideLabel}...`
+          : 'Đang tối ưu ảnh (grayscale, contrast, brightness)...';
       }
       const processedFile = await this.preprocessImage(file);
       
-      this.ocrStatus = 'Đang khởi tạo OCR...';
-      // Tạo worker với ngôn ngữ tiếng Việt và tiếng Anh
-      this.ocrWorker = await createWorker('vie+eng', 1, {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            this.ocrProgress = Math.round(m.progress * 100);
-            this.ocrStatus = `Đang nhận dạng: ${this.ocrProgress}%`;
-          } else if (m.status === 'loading tesseract core') {
-            this.ocrStatus = 'Đang tải Tesseract core...';
-          } else if (m.status === 'initializing tesseract') {
-            this.ocrStatus = 'Đang khởi tạo Tesseract...';
-          } else if (m.status === 'loading language traineddata') {
-            this.ocrStatus = 'Đang tải dữ liệu ngôn ngữ...';
-          } else {
-            this.ocrStatus = m.status || 'Đang xử lý...';
-          }
-        }
-      });
+      this.ocrStatus = sideLabel ? `Đang khởi tạo OCR cho ${sideLabel}...` : 'Đang khởi tạo OCR...';
       
-      this.ocrStatus = 'Đang nhận dạng văn bản từ ảnh...';
+      // Tạo worker mới nếu chưa có hoặc đã bị terminate
+      if (!this.ocrWorker) {
+        this.ocrWorker = await createWorker('vie+eng', 1, {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              this.ocrProgress = Math.round(m.progress * 100);
+              this.ocrStatus = sideLabel 
+                ? `Đang nhận dạng ${sideLabel}: ${this.ocrProgress}%`
+                : `Đang nhận dạng: ${this.ocrProgress}%`;
+            } else if (m.status === 'loading tesseract core') {
+              this.ocrStatus = sideLabel ? `Đang tải Tesseract core (${sideLabel})...` : 'Đang tải Tesseract core...';
+            } else if (m.status === 'initializing tesseract') {
+              this.ocrStatus = sideLabel ? `Đang khởi tạo Tesseract (${sideLabel})...` : 'Đang khởi tạo Tesseract...';
+            } else if (m.status === 'loading language traineddata') {
+              this.ocrStatus = sideLabel ? `Đang tải dữ liệu ngôn ngữ (${sideLabel})...` : 'Đang tải dữ liệu ngôn ngữ...';
+            } else {
+              this.ocrStatus = sideLabel ? `${m.status || 'Đang xử lý...'} (${sideLabel})` : (m.status || 'Đang xử lý...');
+            }
+          }
+        });
+      }
+      
+      this.ocrStatus = sideLabel ? `Đang nhận dạng văn bản từ ${sideLabel}...` : 'Đang nhận dạng văn bản từ ảnh...';
       // Sử dụng ảnh đã được pre-process
       const { data: { text } } = await this.ocrWorker.recognize(processedFile);
       
       if (text && text.trim().length > 0) {
-        this.message.success('Đã nhận dạng văn bản thành công!');
         const parsedData = this.parseOCRText(text);
-        this.scannedData.push(parsedData);
+        // Thêm metadata về mặt nào (front/back)
+        parsedData.side = fileIndex === 0 ? 'front' : 'back';
+        parsedData.fileIndex = fileIndex;
         
-        // Nếu scan nhiều ảnh, gộp dữ liệu lại
-        if (this.allowMultiple && this.selectedFiles.length > 1 && this.scannedData.length === this.selectedFiles.length) {
-          // Gộp tất cả dữ liệu từ các lần scan
-          const mergedData = this.mergeScannedData(this.scannedData);
+        // Đảm bảo scannedData có đủ phần tử
+        while (this.scannedData.length <= fileIndex) {
+          this.scannedData.push(null);
+        }
+        this.scannedData[fileIndex] = parsedData;
+        
+        // Kiểm tra xem đã scan xong tất cả ảnh chưa
+        const allScanned = this.scannedData.filter(data => data !== null).length === this.selectedFiles.length;
+        
+        if (allScanned) {
+          // Tất cả ảnh đã được scan, gộp dữ liệu
+          const validScannedData = this.scannedData.filter(data => data !== null);
+          const mergedData = this.mergeScannedData(validScannedData);
+          
+          this.message.success(`Đã nhận dạng thành công ${this.selectedFiles.length} ${this.selectedFiles.length > 1 ? 'ảnh' : 'ảnh'}!`);
           this.scanComplete.emit(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else if (!this.allowMultiple || this.selectedFiles.length === 1) {
-          // Chỉ scan 1 ảnh hoặc đã scan xong tất cả
-          const finalData = this.allowMultiple && this.scannedData.length > 1 
-            ? this.mergeScannedData(this.scannedData)
-            : parsedData;
-          this.scanComplete.emit(finalData);
-          this.fillFormFromOCRData(finalData);
+          // Chỉ có 1 ảnh
+          this.message.success('Đã nhận dạng văn bản thành công!');
+          this.scanComplete.emit(parsedData);
+          this.fillFormFromOCRData(parsedData);
+        } else {
+          // Đang xử lý ảnh tiếp theo
+          const scannedCount = this.scannedData.filter(data => data !== null).length;
+          this.message.success(`Đã nhận dạng ${sideLabel} (${scannedCount}/${this.selectedFiles.length})`);
         }
       } else {
-        this.message.warning('Không thể nhận dạng văn bản từ ảnh. Vui lòng thử lại hoặc nhập thủ công.');
+        // Thêm null vào scannedData để đánh dấu đã xử lý nhưng không có kết quả
+        while (this.scannedData.length <= fileIndex) {
+          this.scannedData.push(null);
+        }
+        this.scannedData[fileIndex] = null;
+        
+        const warningMsg = sideLabel 
+          ? `Không thể nhận dạng văn bản từ ${sideLabel}. Vui lòng thử lại hoặc nhập thủ công.`
+          : 'Không thể nhận dạng văn bản từ ảnh. Vui lòng thử lại hoặc nhập thủ công.';
+        this.message.warning(warningMsg);
+        
+        // Kiểm tra xem còn ảnh nào chưa scan không
+        const allScanned = this.scannedData.filter(data => data !== null || data === null).length === this.selectedFiles.length;
+        if (allScanned && this.allowMultiple && this.selectedFiles.length > 1) {
+          // Tất cả đã scan xong, gộp dữ liệu từ những ảnh có kết quả
+          const validScannedData = this.scannedData.filter(data => data !== null);
+          if (validScannedData.length > 0) {
+            const mergedData = this.mergeScannedData(validScannedData);
+            this.scanComplete.emit(mergedData);
+            this.fillFormFromOCRData(mergedData);
+          }
+        }
       }
     } catch (error: any) {
       console.error('OCR Error:', error);
-      this.message.error('Lỗi khi quét OCR: ' + (error.message || 'Vui lòng thử lại'));
-    } finally {
-      this.isScanning = false;
-      this.ocrProgress = 0;
-      this.ocrStatus = '';
+      const errorMsg = sideLabel 
+        ? `Lỗi khi quét OCR ${sideLabel}: ${error.message || 'Vui lòng thử lại'}`
+        : `Lỗi khi quét OCR: ${error.message || 'Vui lòng thử lại'}`;
+      this.message.error(errorMsg);
       
-      // Terminate worker để giải phóng bộ nhớ
-      if (this.ocrWorker) {
-        await this.ocrWorker.terminate();
-        this.ocrWorker = null;
+      // Đánh dấu đã xử lý nhưng lỗi
+      while (this.scannedData.length <= fileIndex) {
+        this.scannedData.push(null);
+      }
+      this.scannedData[fileIndex] = null;
+    } finally {
+      // Chỉ set isScanning = false khi không còn file nào trong queue
+      if (this.scanningQueue.length === 0) {
+        this.isScanning = false;
+        this.ocrProgress = 0;
+        this.ocrStatus = '';
+        
+        // Terminate worker để giải phóng bộ nhớ sau khi scan xong tất cả
+        if (this.ocrWorker) {
+          await this.ocrWorker.terminate();
+          this.ocrWorker = null;
+        }
       }
     }
   }
 
   mergeScannedData(dataArray: any[]): any {
     // Gộp dữ liệu từ nhiều lần scan (mặt trước và mặt sau)
+    // Loại bỏ các phần tử null
+    const validData = dataArray.filter(data => data !== null && data !== undefined);
+    
+    if (validData.length === 0) {
+      return {
+        fullName: '',
+        idNumber: '',
+        dateOfBirth: null,
+        gender: '',
+        nationality: '',
+        permanentAddress: '',
+        phone: '',
+        address: ''
+      };
+    }
+    
     const merged: any = {
       fullName: '',
       idNumber: '',
@@ -359,16 +482,61 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       address: ''
     };
     
-    // Ưu tiên dữ liệu từ lần scan đầu (mặt trước thường có đầy đủ thông tin hơn)
-    for (const data of dataArray) {
-      if (data.fullName && !merged.fullName) merged.fullName = data.fullName;
-      if (data.idNumber && !merged.idNumber) merged.idNumber = data.idNumber;
-      if (data.dateOfBirth && !merged.dateOfBirth) merged.dateOfBirth = data.dateOfBirth;
-      if (data.gender && !merged.gender) merged.gender = data.gender;
-      if (data.nationality && !merged.nationality) merged.nationality = data.nationality;
-      if (data.permanentAddress && !merged.permanentAddress) merged.permanentAddress = data.permanentAddress;
-      if (data.address && !merged.address) merged.address = data.address;
-      if (data.phone && !merged.phone) merged.phone = data.phone;
+    // Sắp xếp theo fileIndex để ưu tiên mặt trước (index 0)
+    const sortedData = [...validData].sort((a, b) => {
+      const indexA = a.fileIndex !== undefined ? a.fileIndex : 999;
+      const indexB = b.fileIndex !== undefined ? b.fileIndex : 999;
+      return indexA - indexB;
+    });
+    
+    // Ưu tiên dữ liệu từ mặt trước (fileIndex = 0) trước, sau đó mới lấy từ mặt sau
+    // Mặt trước thường có: Họ tên, ID, Ngày sinh, Giới tính, Quốc tịch
+    // Mặt sau thường có: Nơi thường trú, Địa chỉ
+    for (const data of sortedData) {
+      // Họ và tên: ưu tiên mặt trước
+      if (data.fullName && !merged.fullName) {
+        merged.fullName = data.fullName;
+      }
+      
+      // Số CMND/CCCD: ưu tiên mặt trước
+      if (data.idNumber && !merged.idNumber) {
+        merged.idNumber = data.idNumber;
+      }
+      
+      // Ngày sinh: ưu tiên mặt trước
+      if (data.dateOfBirth && !merged.dateOfBirth) {
+        merged.dateOfBirth = data.dateOfBirth;
+      }
+      
+      // Giới tính: ưu tiên mặt trước
+      if (data.gender && !merged.gender) {
+        merged.gender = data.gender;
+      }
+      
+      // Quốc tịch: ưu tiên mặt trước
+      if (data.nationality && !merged.nationality) {
+        merged.nationality = data.nationality;
+      }
+      
+      // Nơi thường trú: ưu tiên mặt sau (thường ở mặt sau CCCD)
+      if (data.permanentAddress && !merged.permanentAddress) {
+        merged.permanentAddress = data.permanentAddress;
+      }
+      
+      // Địa chỉ: lấy từ bất kỳ mặt nào
+      if (data.address && !merged.address) {
+        merged.address = data.address;
+      }
+      
+      // Số điện thoại: lấy từ bất kỳ mặt nào
+      if (data.phone && !merged.phone) {
+        merged.phone = data.phone;
+      }
+    }
+    
+    // Nếu không có địa chỉ nhưng có nơi thường trú, dùng nơi thường trú
+    if (!merged.address && merged.permanentAddress) {
+      merged.address = merged.permanentAddress;
     }
     
     return merged;
@@ -972,11 +1140,32 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       this.selectedFiles.splice(index, 1);
       this.previewImages.splice(index, 1);
       this.scannedData.splice(index, 1);
+      
+      // Xóa khỏi queue nếu có
+      const fileToRemove = this.selectedFiles[index];
+      if (fileToRemove) {
+        const queueIndex = this.scanningQueue.indexOf(fileToRemove);
+        if (queueIndex > -1) {
+          this.scanningQueue.splice(queueIndex, 1);
+        }
+      }
     } else {
       // Xóa tất cả
       this.selectedFiles = [];
       this.previewImages = [];
       this.scannedData = [];
+      this.scanningQueue = [];
+      this.isProcessingQueue = false;
+      
+      // Terminate worker nếu đang chạy
+      if (this.ocrWorker) {
+        this.ocrWorker.terminate().catch(err => console.error('Error terminating OCR worker:', err));
+        this.ocrWorker = null;
+      }
+      
+      this.isScanning = false;
+      this.ocrProgress = 0;
+      this.ocrStatus = '';
     }
   }
 }
