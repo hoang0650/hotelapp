@@ -28,7 +28,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
   ocrStatus = '';
   scannedData: any[] = []; // Lưu dữ liệu từ các lần scan
   private ocrWorker: Worker | null = null;
-  private scanningQueue: File[] = []; // Queue để xử lý tuần tự
+  private scanningQueue: Array<{ file: File; index: number }> = []; // Queue để xử lý tuần tự với index
   private isProcessingQueue = false; // Flag để tránh xử lý trùng
 
   constructor(
@@ -51,11 +51,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     if (!files || files.length === 0) return;
     
     // Xử lý nhiều file nếu allowMultiple = true
+    // Giữ nguyên thứ tự upload: file đầu tiên = index 0 = mặt trước, file thứ hai = index 1 = mặt sau
     const fileArray = Array.from(files) as File[];
     const validFiles: File[] = [];
     
-    // Validate và thêm vào danh sách
-    for (const file of fileArray) {
+    // Validate và thêm vào danh sách theo đúng thứ tự upload
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
       if (!file.type.startsWith('image/')) {
         this.message.error(`File "${file.name}" không phải là ảnh. Vui lòng chọn file ảnh.`);
         continue;
@@ -63,13 +65,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       validFiles.push(file);
       
-      // Thêm vào danh sách
+      // Thêm vào danh sách theo đúng thứ tự
       if (!this.allowMultiple) {
         this.selectedFiles = [file];
         this.previewImages = [];
         this.scannedData = [];
         this.scanningQueue = [];
       } else {
+        // Đảm bảo thêm theo đúng thứ tự: file đầu tiên = index 0, file thứ hai = index 1
         this.selectedFiles.push(file);
       }
       
@@ -93,12 +96,20 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     // Xử lý OCR: nếu allowMultiple, xử lý tuần tự để đảm bảo thứ tự
     if (this.allowMultiple && validFiles.length > 1) {
-      // Thêm vào queue và xử lý tuần tự
-      this.scanningQueue.push(...validFiles);
+      // Reset queue và thêm file theo đúng thứ tự upload với index rõ ràng
+      this.scanningQueue = [];
+      // Thêm vào queue với index để đảm bảo thứ tự: ảnh 0 = mặt trước, ảnh 1 = mặt sau
+      for (let i = 0; i < validFiles.length; i++) {
+        this.scanningQueue.push({ file: validFiles[i], index: i });
+        console.log(`[OCR] Thêm ảnh vào queue: index=${i}, file=${validFiles[i].name}, ${i === 0 ? 'MẶT TRƯỚC' : 'MẶT SAU'}`);
+      }
+      // Reset scannedData để đảm bảo thứ tự
+      this.scannedData = [];
       this.processScanningQueue();
     } else {
-      // Chỉ có 1 file, scan ngay
-      this.scanOCR(validFiles[0]);
+      // Chỉ có 1 file, scan ngay với index 0 (mặt trước)
+      this.scannedData = [];
+      this.scanOCR(validFiles[0], 0);
     }
     
     // Reset input để có thể chọn lại file cùng tên
@@ -107,6 +118,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
 
   /**
    * Xử lý queue scan tuần tự để đảm bảo thứ tự và tránh conflict
+   * Đảm bảo: ảnh đầu tiên (index 0) = mặt trước, ảnh thứ hai (index 1) = mặt sau
    */
   private async processScanningQueue(): Promise<void> {
     // Tránh xử lý trùng
@@ -117,21 +129,24 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     this.isProcessingQueue = true;
     
     try {
-      // Xử lý từng file một cách tuần tự
+      // Xử lý từng file một cách tuần tự theo đúng thứ tự trong queue
+      // Queue được tạo theo thứ tự upload: file đầu tiên = index 0 = mặt trước
       while (this.scanningQueue.length > 0) {
-        const file = this.scanningQueue.shift();
-        if (!file) break;
+        // Lấy file đầu tiên trong queue với index đã được gán sẵn
+        const queueItem = this.scanningQueue.shift();
+        if (!queueItem || !queueItem.file) break;
         
-        // Xác định mặt trước hay mặt sau dựa vào thứ tự
-        const index = this.selectedFiles.indexOf(file);
-        const isFrontSide = index === 0;
+        const { file, index: fileIndex } = queueItem;
+        const isFrontSide = fileIndex === 0;
+        
+        console.log(`[OCR] Xử lý ảnh: fileIndex=${fileIndex}, fileName=${file.name}, ${isFrontSide ? 'MẶT TRƯỚC' : 'MẶT SAU'}`);
         
         if (this.selectedFiles.length > 1) {
-          this.ocrStatus = `Đang xử lý ${isFrontSide ? 'mặt trước' : 'mặt sau'} (${index + 1}/${this.selectedFiles.length})...`;
+          this.ocrStatus = `Đang xử lý ${isFrontSide ? 'mặt trước' : 'mặt sau'} (${fileIndex + 1}/${this.selectedFiles.length})...`;
         }
         
-        // Scan OCR cho file này
-        await this.scanOCR(file, index);
+        // Scan OCR cho file này với index chính xác (đã được gán từ queue)
+        await this.scanOCR(file, fileIndex);
       }
     } finally {
       this.isProcessingQueue = false;
@@ -371,14 +386,20 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       if (text && text.trim().length > 0) {
         const parsedData = this.parseOCRText(text);
         // Thêm metadata về mặt nào (front/back)
+        // Đảm bảo: fileIndex 0 = mặt trước, fileIndex 1 = mặt sau
         parsedData.side = fileIndex === 0 ? 'front' : 'back';
         parsedData.fileIndex = fileIndex;
+        parsedData.isFrontSide = fileIndex === 0;
+        
+        console.log(`[OCR] Kết quả scan: fileIndex=${fileIndex}, side=${parsedData.side}, fullName=${parsedData.fullName || 'N/A'}, idNumber=${parsedData.idNumber || 'N/A'}`);
         
         // Đảm bảo scannedData có đủ phần tử
         while (this.scannedData.length <= fileIndex) {
           this.scannedData.push(null);
         }
         this.scannedData[fileIndex] = parsedData;
+        
+        console.log(`[OCR] ScannedData sau khi thêm:`, this.scannedData.map((d, i) => ({ index: i, hasData: d !== null, side: d?.side })));
         
         // Kiểm tra xem đã scan xong tất cả ảnh chưa
         const allScanned = this.scannedData.filter(data => data !== null).length === this.selectedFiles.length;
@@ -489,10 +510,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       return indexA - indexB;
     });
     
+    console.log(`[OCR] Merge data: Số lượng data=${sortedData.length}, Thứ tự:`, sortedData.map(d => ({ index: d.fileIndex, side: d.side, hasName: !!d.fullName, hasAddress: !!d.permanentAddress })));
+    
     // Ưu tiên dữ liệu từ mặt trước (fileIndex = 0) trước, sau đó mới lấy từ mặt sau
     // Mặt trước thường có: Họ tên, ID, Ngày sinh, Giới tính, Quốc tịch
     // Mặt sau thường có: Nơi thường trú, Địa chỉ
     for (const data of sortedData) {
+      console.log(`[OCR] Merge: fileIndex=${data.fileIndex}, side=${data.side}, fullName=${data.fullName || 'N/A'}, permanentAddress=${data.permanentAddress || 'N/A'}`);
       // Họ và tên: ưu tiên mặt trước
       if (data.fullName && !merged.fullName) {
         merged.fullName = data.fullName;
@@ -1144,7 +1168,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       // Xóa khỏi queue nếu có
       const fileToRemove = this.selectedFiles[index];
       if (fileToRemove) {
-        const queueIndex = this.scanningQueue.indexOf(fileToRemove);
+        const queueIndex = this.scanningQueue.findIndex(item => item.file === fileToRemove);
         if (queueIndex > -1) {
           this.scanningQueue.splice(queueIndex, 1);
         }
