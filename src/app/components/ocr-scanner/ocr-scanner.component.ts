@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angu
 import { FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { createWorker, Worker } from 'tesseract.js';
+import { FileService } from '../../services/file.service';
 
 @Component({
   selector: 'app-ocr-scanner',
@@ -15,6 +16,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
   @Input() showPreview = true; // Hiển thị preview ảnh
   @Input() buttonText = 'Quét CCCD/GPLX'; // Text cho button
   @Input() allowMultiple = true; // Cho phép scan nhiều ảnh (2 mặt)
+  @Input() useBackendPreprocessing = true; // Sử dụng backend sharp (true) hoặc client-side canvas (false)
   
   @Output() scanComplete = new EventEmitter<any>(); // Emit khi scan xong với dữ liệu đã parse
   @Output() imageSelected = new EventEmitter<File>(); // Emit khi chọn ảnh
@@ -27,7 +29,10 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
   scannedData: any[] = []; // Lưu dữ liệu từ các lần scan
   private ocrWorker: Worker | null = null;
 
-  constructor(private message: NzMessageService) {}
+  constructor(
+    private message: NzMessageService,
+    private fileService: FileService
+  ) {}
 
   ngOnInit(): void {}
 
@@ -84,12 +89,203 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     event.target.value = '';
   }
 
+  /**
+   * Pre-process ảnh trước OCR sử dụng backend (sharp)
+   */
+  async preprocessImageWithBackend(file: File): Promise<File> {
+    try {
+      this.ocrStatus = 'Đang gửi ảnh lên server để xử lý...';
+      const response = await this.fileService.preprocessImageForOCR(file);
+      
+      if (!response.success || !response.processedImage) {
+        throw new Error(response.error || 'Không thể xử lý ảnh trên server');
+      }
+
+      // Chuyển data URL thành File
+      const dataUrl = response.processedImage;
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const processedFile = new File([blob], file.name, {
+        type: 'image/png',
+        lastModified: Date.now()
+      });
+
+      return processedFile;
+    } catch (error: any) {
+      console.error('Lỗi khi xử lý ảnh trên backend:', error);
+      this.message.warning('Không thể xử lý ảnh trên server, sử dụng xử lý client-side...');
+      // Fallback về client-side processing
+      return this.preprocessImageWithCanvas(file);
+    }
+  }
+
+  /**
+   * Pre-process ảnh trước OCR để cải thiện độ chính xác
+   * Sử dụng Canvas API để xử lý ảnh (tương tự sharp) - Client-side
+   */
+  async preprocessImageWithCanvas(file: File): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      
+      reader.onload = (e: any) => {
+        img.onload = () => {
+          try {
+            // Tạo canvas để xử lý ảnh
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              reject(new Error('Không thể tạo canvas context'));
+              return;
+            }
+            
+            // Tính toán kích thước mới (tối đa 2000px chiều rộng để tăng tốc OCR)
+            const maxWidth = 2000;
+            const maxHeight = 2000;
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > maxWidth || height > maxHeight) {
+              const ratio = Math.min(maxWidth / width, maxHeight / height);
+              width = Math.round(width * ratio);
+              height = Math.round(height * ratio);
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Vẽ ảnh lên canvas
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Lấy ImageData để xử lý pixel
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            
+            // Xử lý pre-processing: Grayscale + Contrast + Brightness + Denoising
+            // Bước 1: Chuyển sang grayscale và tính toán giá trị
+            const grayscaleData: number[] = [];
+            for (let i = 0; i < data.length; i += 4) {
+              // Chuyển sang grayscale (weighted average - chuẩn ITU-R BT.601)
+              const gray = Math.round(
+                0.299 * data[i] +      // Red
+                0.587 * data[i + 1] +  // Green
+                0.114 * data[i + 2]    // Blue
+              );
+              grayscaleData.push(gray);
+            }
+            
+            // Bước 2: Áp dụng denoising (simple median filter cho các pixel edge)
+            const denoisedData: number[] = [];
+            const kernelSize = 3;
+            const halfKernel = Math.floor(kernelSize / 2);
+            
+            for (let y = 0; y < height; y++) {
+              for (let x = 0; x < width; x++) {
+                const idx = y * width + x;
+                const neighbors: number[] = [];
+                
+                // Thu thập neighbors
+                for (let dy = -halfKernel; dy <= halfKernel; dy++) {
+                  for (let dx = -halfKernel; dx <= halfKernel; dx++) {
+                    const ny = y + dy;
+                    const nx = x + dx;
+                    if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+                      neighbors.push(grayscaleData[ny * width + nx]);
+                    }
+                  }
+                }
+                
+                // Median filter
+                neighbors.sort((a, b) => a - b);
+                const median = neighbors[Math.floor(neighbors.length / 2)];
+                denoisedData.push(median);
+              }
+            }
+            
+            // Bước 3: Áp dụng contrast và brightness
+            for (let i = 0; i < data.length; i += 4) {
+              const gray = denoisedData[i / 4];
+              
+              // Tăng contrast (contrast factor: 1.3 - tối ưu cho OCR)
+              let contrast = 1.3;
+              let newGray = ((gray - 128) * contrast) + 128;
+              
+              // Điều chỉnh brightness (brightness offset: +5)
+              newGray = Math.min(255, Math.max(0, newGray + 5));
+              
+              // Áp dụng lại cho RGB
+              data[i] = newGray;       // Red
+              data[i + 1] = newGray;   // Green
+              data[i + 2] = newGray;   // Blue
+              // Alpha giữ nguyên
+            }
+            
+            // Áp dụng lại ImageData đã xử lý
+            ctx.putImageData(imageData, 0, 0);
+            
+            // Chuyển canvas thành Blob, sau đó thành File
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                reject(new Error('Không thể tạo blob từ canvas'));
+                return;
+              }
+              
+              // Tạo File mới từ blob
+              const processedFile = new File([blob], file.name, {
+                type: 'image/png',
+                lastModified: Date.now()
+              });
+              
+              resolve(processedFile);
+            }, 'image/png', 1.0);
+          } catch (error) {
+            console.error('Lỗi khi xử lý ảnh:', error);
+            // Nếu lỗi, trả về file gốc
+            resolve(file);
+          }
+        };
+        
+        img.onerror = () => {
+          reject(new Error('Không thể tải ảnh'));
+        };
+        
+        img.src = e.target.result;
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Không thể đọc file'));
+      };
+      
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Pre-process ảnh - wrapper function để chọn backend hoặc client-side
+   */
+  async preprocessImage(file: File): Promise<File> {
+    if (this.useBackendPreprocessing) {
+      return this.preprocessImageWithBackend(file);
+    } else {
+      return this.preprocessImageWithCanvas(file);
+    }
+  }
+
   async scanOCR(file: File): Promise<void> {
     this.isScanning = true;
     this.ocrProgress = 0;
-    this.ocrStatus = 'Đang khởi tạo OCR...';
+    this.ocrStatus = 'Đang xử lý ảnh trước OCR...';
     
     try {
+      // Pre-process ảnh trước khi OCR (backend hoặc client-side)
+      if (this.useBackendPreprocessing) {
+        this.ocrStatus = 'Đang tối ưu ảnh trên server (sharp: grayscale, contrast, brightness, sharpen)...';
+      } else {
+        this.ocrStatus = 'Đang tối ưu ảnh (grayscale, contrast, brightness)...';
+      }
+      const processedFile = await this.preprocessImage(file);
+      
+      this.ocrStatus = 'Đang khởi tạo OCR...';
       // Tạo worker với ngôn ngữ tiếng Việt và tiếng Anh
       this.ocrWorker = await createWorker('vie+eng', 1, {
         logger: (m) => {
@@ -109,7 +305,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       });
       
       this.ocrStatus = 'Đang nhận dạng văn bản từ ảnh...';
-      const { data: { text } } = await this.ocrWorker.recognize(file);
+      // Sử dụng ảnh đã được pre-process
+      const { data: { text } } = await this.ocrWorker.recognize(processedFile);
       
       if (text && text.trim().length > 0) {
         this.message.success('Đã nhận dạng văn bản thành công!');
