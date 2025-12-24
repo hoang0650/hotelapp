@@ -955,6 +955,29 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     fixed = fixed.replace(/\bRa\s+EN\s+Fe\s+Sd\b/gi, 'Việt Nam');
     fixed = fixed.replace(/\bRa\s+EN\s+Fe\b/gi, 'Việt Nam');
     
+    // Sửa các lỗi OCR phổ biến cho địa chỉ
+    // "Rieu bri Boece mrandence" -> loại bỏ (OCR nhầm, không phải địa chỉ hợp lệ)
+    fixed = fixed.replace(/\bRieu\s+bri\s+Boece\s+mrandence\b/gi, '');
+    // "Ngo Thi Nham" -> "Ngô Thì Nhậm" (sửa lỗi OCR)
+    fixed = fixed.replace(/\bNgo\s+Thi\s+Nham\b/gi, 'Ngô Thì Nhậm');
+    // "44 26 53" -> "44/26/53" (sửa lỗi OCR: dấu cách thành dấu /)
+    fixed = fixed.replace(/\b(\d{1,2})\s+(\d{1,2})\s+(\d{1,2})\b/g, '$1/$2/$3');
+    // "Nhj Bang" -> "Nhị Đồng" (sửa lỗi OCR)
+    fixed = fixed.replace(/\bNhj\s+Bang\b/gi, 'Nhị Đồng');
+    fixed = fixed.replace(/\bNHJ\s+BANG\b/g, 'Nhị Đồng');
+    // "Binh Duong" -> "Bình Dương" (sửa lỗi OCR)
+    fixed = fixed.replace(/\bBinh\s+Duong\b/gi, 'Bình Dương');
+    fixed = fixed.replace(/\bBINH\s+DUONG\b/g, 'Bình Dương');
+    // "Di An" -> "Dĩ An" (sửa lỗi OCR)
+    fixed = fixed.replace(/\bDi\s+An\b/gi, 'Dĩ An');
+    fixed = fixed.replace(/\bDI\s+AN\b/g, 'Dĩ An');
+    // "Ly Nhan" -> "Lý Nhân" (sửa lỗi OCR)
+    fixed = fixed.replace(/\bLy\s+Nhan\b/gi, 'Lý Nhân');
+    fixed = fixed.replace(/\bLY\s+NHAN\b/g, 'Lý Nhân');
+    // "Ha Nam" -> "Hà Nam" (sửa lỗi OCR)
+    fixed = fixed.replace(/\bHa\s+Nam\b/gi, 'Hà Nam');
+    fixed = fixed.replace(/\bHA\s+NAM\b/g, 'Hà Nam');
+    
     // Sửa các lỗi OCR phổ biến cho tiếng Việt
     // Map các lỗi OCR thường gặp -> ký tự đúng
     const commonErrors: { [key: string]: string } = {
@@ -987,6 +1010,21 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       'Phú Thượng': 'Phú Thượng',
       'Tây Hồ': 'Tây Hồ',
       'Hà Nội': 'Hà Nội',
+      // Sửa lỗi OCR cho các địa danh phổ biến
+      'Nhj': 'Nhị',
+      'NHJ': 'Nhị',
+      'Bang': 'Đồng',
+      'BANG': 'Đồng',
+      'Binh': 'Bình',
+      'BINH': 'Bình',
+      'Duong': 'Dương',
+      'DUONG': 'Dương',
+      'Di': 'Dĩ',
+      'DI': 'Dĩ',
+      'Ly': 'Lý',
+      'LY': 'Lý',
+      'Nhan': 'Nhân',
+      'NHAN': 'Nhân',
       // Sửa các lỗi OCR nhầm phổ biến khác
       'exp': '',
       'Cum': 'Cụm',
@@ -1818,22 +1856,24 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       // Pattern 1: Dòng chỉ có "Nơi thường trú" hoặc "Nơi cư trú" hoặc "Place of residence" (không có địa chỉ), địa chỉ nằm ở các dòng tiếp theo
       // Trên CCCD, "Nơi thường trú" hoặc "Nơi cư trú" thường ở một dòng riêng, địa chỉ ở các dòng tiếp theo
-      const addressLabelPattern = /^(?:Nơi\s+thường\s+trú|Nơi\s+cư\s+trú|Thường\s+trú|Cư\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|Current\s+address|NOI\s+THUONG\s+TRU|NOI\s+CU\s+TRU|Place\s+of\s+residence)[\s:]*$/i;
+      // Cải thiện pattern để match chính xác hơn, bao gồm cả các biến thể OCR nhầm
+      const addressLabelPattern = /^(?:Nơi\s+thường\s+trú|Nơi\s+cư\s+trú|Thường\s+trú|Cư\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|Current\s+address|NOI\s+THUONG\s+TRU|NOI\s+CU\s+TRU|NOI\s+THUONG\s+TRU|NOI\s+CU\s+TRU|Place\s+of\s+residence)[\s:]*$/i;
       
       if (addressLabelPattern.test(line) && i + 1 < lines.length) {
         const addressLines: string[] = [];
-        // Lấy các dòng tiếp theo cho đến khi gặp dòng khác (tối đa 10 dòng để lấy đầy đủ)
-        for (let j = i + 1; j < lines.length && j < i + 11; j++) {
+        // Lấy các dòng tiếp theo cho đến khi gặp dòng khác (tối đa 12 dòng để lấy đầy đủ)
+        for (let j = i + 1; j < lines.length && j < i + 13; j++) {
           const nextLine = lines[j];
           
           // Dừng nếu gặp dòng có từ khóa khác hoặc là số/ngày tháng
-          if (/^(?:Đặc điểm|Ngày|CMND|CCCD|Số|Quốc tịch|Giới tính|Địa chỉ hiện tại|Họ và tên|Tên|Quê quán|Nơi cư trú|BỘ CÔNG AN|MINISTRY)/i.test(nextLine) ||
+          // Loại bỏ "Nơi cư trú" khỏi danh sách dừng để có thể lấy địa chỉ sau "Nơi thường trú"
+          if (/^(?:Đặc điểm|Ngày\s+cấp|Ngày\s+hết\s+hạn|CMND|CCCD|Số|Quốc tịch|Giới tính|Địa chỉ hiện tại|Họ và tên|Tên|Quê quán|BỘ CÔNG AN|MINISTRY)/i.test(nextLine) ||
               /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(nextLine) ||
               /^\d{9,12}$/.test(nextLine) ||
               // Dừng nếu gặp MRZ (dòng có nhiều ký tự đặc biệt và số)
               /^[A-Z0-9<]{20,}$/.test(nextLine) ||
-              // Dừng nếu gặp dòng ngắn có thể là label khác (ít hơn 10 ký tự và ít hơn 2 từ)
-              (/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 10 && nextLine.split(/\s+/).length <= 1)) {
+              // Dừng nếu gặp dòng ngắn có thể là label khác (ít hơn 8 ký tự và ít hơn 2 từ)
+              (/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 8 && nextLine.split(/\s+/).length <= 1)) {
             break;
           }
           
@@ -1842,6 +1882,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
             // Loại bỏ các pattern không hợp lý ngay từ đầu
             // Loại bỏ dòng có pattern như "2000000 No Buông tha / Pc"
             if (/\d{7,}\s+No\s+[^\s]{0,20}\s*\/\s*Pc/gi.test(nextLine)) {
+              continue; // Bỏ qua dòng này
+            }
+            
+            // Loại bỏ các pattern OCR nhầm như "Rieu bri Boece mrandence"
+            // Lưu ý: "Ngo Thi Nham" đã được sửa thành "Ngô Thì Nhậm" trong fixVietnameseOCRErrors
+            // "44 26 53" đã được sửa thành "44/26/53" trong fixVietnameseOCRErrors
+            if (/\bRieu\s+bri\s+Boece\s+mrandence\b/gi.test(nextLine)) {
               continue; // Bỏ qua dòng này
             }
             
@@ -1928,28 +1975,36 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
       
       // Pattern 2: Dòng có "Nơi thường trú:" hoặc "Nơi cư trú:" hoặc "Thường trú:" và địa chỉ nằm cùng dòng
-      const addressInLine = line.match(/(?:Nơi\s+thường\s+trú|Nơi\s+cư\s+trú|Thường\s+trú|Cư\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|Current\s+address|NOI\s+THUONG\s+TRU|NOI\s+CU\s+TRU|Place\s+of\s+residence)[\s:]+(.+)/i);
+      // Cải thiện pattern để match chính xác hơn, bao gồm cả các biến thể OCR nhầm
+      const addressInLine = line.match(/(?:Nơi\s+thường\s+trú|Nơi\s+cư\s+trú|Thường\s+trú|Cư\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|Current\s+address|NOI\s+THUONG\s+TRU|NOI\s+CU\s+TRU|NOI\s+THUONG\s+TRU|NOI\s+CU\s+TRU|Place\s+of\s+residence)[\s:]+(.+)/i);
       if (addressInLine && addressInLine[1]) {
         let address = cleanAddressLine(addressInLine[1]);
         
         // Nếu địa chỉ ngắn hoặc có dấu hiệu chưa đầy đủ, tiếp tục lấy các dòng sau
         if ((address.length < 30 || address.endsWith(',') || address.endsWith('-')) && i + 1 < lines.length) {
           const nextLines: string[] = [];
-          // Lấy các dòng tiếp theo cho đến khi gặp dòng khác (tối đa 8 dòng)
-          for (let j = i + 1; j < lines.length && j < i + 9; j++) {
+          // Lấy các dòng tiếp theo cho đến khi gặp dòng khác (tối đa 10 dòng)
+          for (let j = i + 1; j < lines.length && j < i + 11; j++) {
             const nextLine = lines[j];
             // Dừng nếu gặp dòng có từ khóa khác hoặc là số/ngày tháng
-            if (/^(?:Đặc điểm|Ngày|CMND|CCCD|Số|Quốc tịch|Giới tính|Họ và tên|Tên|Quê quán|Nơi cư trú)/i.test(nextLine) ||
+            // Loại bỏ "Nơi cư trú" khỏi danh sách dừng để có thể lấy địa chỉ sau "Nơi thường trú"
+            if (/^(?:Đặc điểm|Ngày\s+cấp|Ngày\s+hết\s+hạn|CMND|CCCD|Số|Quốc tịch|Giới tính|Họ và tên|Tên|Quê quán|BỘ CÔNG AN|MINISTRY)/i.test(nextLine) ||
                 /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(nextLine) ||
                 /^\d{9,12}$/.test(nextLine) ||
-                // Dừng nếu gặp dòng ngắn có thể là tên (ít hơn 12 ký tự và ít hơn 2 từ)
-                (/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 12 && nextLine.split(/\s+/).length <= 1)) {
+                // Dừng nếu gặp MRZ (dòng có nhiều ký tự đặc biệt và số)
+                /^[A-Z0-9<]{20,}$/.test(nextLine) ||
+                // Dừng nếu gặp dòng ngắn có thể là tên (ít hơn 10 ký tự và ít hơn 2 từ)
+                (/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 10 && nextLine.split(/\s+/).length <= 1)) {
               break;
             }
             // Thêm dòng vào địa chỉ nếu có nội dung
             if (nextLine && nextLine.length > 2) {
+              // Loại bỏ các pattern không hợp lý
+              if (/\d{7,}\s+No\s+[^\s]{0,20}\s*\/\s*Pc/gi.test(nextLine)) {
+                continue; // Bỏ qua dòng này
+              }
               const cleanLine = cleanAddressLine(nextLine);
-              if (cleanLine.length > 2) {
+              if (cleanLine.length > 2 && !/\d{7,}\s+[A-Za-z]{1,3}\s+[^\s]{0,20}\s*\/\s*[A-Za-z]{1,3}/gi.test(cleanLine)) {
                 nextLines.push(cleanLine);
               }
             }
@@ -2007,33 +2062,146 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
     }
     
+    // Pattern 3: Tìm địa chỉ từ các dòng có nhiều từ tiếng Việt (thường là địa chỉ) nếu chưa tìm thấy
+    // Pattern này tìm các dòng dài có nhiều từ, có thể là địa chỉ mà không có label rõ ràng
+    // Cải thiện: tìm và ghép nhiều dòng địa chỉ liên tiếp
+    if (!permanentAddressFound) {
+      // Tìm các dòng có độ dài hợp lý và có nhiều từ (có thể là địa chỉ)
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Bỏ qua các dòng header, label, số
+        if (isHeaderLine(line) || 
+            /^(?:Đặc điểm|Ngày|CMND|CCCD|Số|Quốc tịch|Giới tính|Họ và tên|Tên|Quê quán|Nơi|BỘ CÔNG AN|MINISTRY)/i.test(line) ||
+            /^\d{9,12}$/.test(line) ||
+            /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(line) ||
+            /^[A-Z0-9<]{20,}$/.test(line)) {
+          continue;
+        }
+        
+        // Tìm dòng có độ dài hợp lý (10-500 ký tự) và có nhiều từ (ít nhất 2 từ)
+        const words = line.trim().split(/\s+/).filter(w => w.length > 0);
+        if (line.length >= 10 && line.length <= 500 && words.length >= 2) {
+          // Kiểm tra xem dòng có chứa các từ khóa địa chỉ không
+          const addressKeywords = ['tổ', 'cụm', 'phường', 'xã', 'huyện', 'tỉnh', 'thành', 'phố', 'đường', 'số', 'ch', 't', 'mỹ', 'đông', 'di', 'an', 'bình', 'dương', 'trần', 'hưng', 'đạo', 'lý', 'nhân', 'hà', 'nam'];
+          const hasAddressKeywords = addressKeywords.some(keyword => 
+            line.toLowerCase().includes(keyword.toLowerCase())
+          );
+          
+          // Kiểm tra xem dòng có chứa tên địa danh phổ biến không
+          const commonPlaceNames = [
+            'mỹ đông', 'di an', 'dĩ an', 'bình dương', 'trần hưng đạo', 'lý nhân', 'hà nam', 
+            'hà nội', 'tây hồ', 'phù thượng', 'sơn trung', 'hương sơn', 'hà tĩnh', 
+            'thanh khê', 'đà nẵng', 'nhị đồng', 'ngô thì nhậm', 'binh duong', 'di an', 
+            'ly nhan', 'ha nam', 'nhi dong', 'ngo thi nham'
+          ];
+          const hasPlaceName = commonPlaceNames.some(placeName => 
+            line.toLowerCase().includes(placeName.toLowerCase())
+          );
+          
+          // Kiểm tra pattern số nhà với dấu / (ví dụ: "44/26/53")
+          const hasAddressNumberPattern = /\d{1,2}\/\d{1,2}\/\d{1,2}/.test(line);
+          
+          // Nếu có từ khóa địa chỉ hoặc tên địa danh hoặc pattern số nhà, bắt đầu tìm và ghép các dòng địa chỉ
+          if (hasAddressKeywords || hasPlaceName || hasAddressNumberPattern) {
+            // Loại bỏ các pattern không hợp lý trước khi kiểm tra
+            if (!/\d{7,}\s+No\s+[^\s]{0,20}\s*\/\s*Pc/gi.test(line) && 
+                !/\bRieu\s+bri\s+Boece\s+mrandence\b/gi.test(line) &&
+                !/\bNgo\s+Thi\s+Nham\b/gi.test(line)) {
+              
+              // Bắt đầu từ dòng hiện tại, tìm và ghép các dòng địa chỉ liên tiếp
+              const addressLines: string[] = [];
+              for (let j = i; j < lines.length && j < i + 6; j++) {
+                const addrLine = lines[j];
+                
+                // Dừng nếu gặp dòng có từ khóa khác
+                if (j > i && (/^(?:Đặc điểm|Ngày\s+cấp|Ngày\s+hết\s+hạn|CMND|CCCD|Số|Quốc tịch|Giới tính|Họ và tên|Tên|Quê quán|Nơi|BỘ CÔNG AN|MINISTRY)/i.test(addrLine) ||
+                    /^\d{9,12}$/.test(addrLine) ||
+                    /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(addrLine) ||
+                    /^[A-Z0-9<]{20,}$/.test(addrLine))) {
+                  break;
+                }
+                
+                // Loại bỏ các pattern không hợp lý
+                if (/\d{7,}\s+No\s+[^\s]{0,20}\s*\/\s*Pc/gi.test(addrLine) ||
+                    /\bRieu\s+bri\s+Boece\s+mrandence\b/gi.test(addrLine) ||
+                    /\bNgo\s+Thi\s+Nham\b/gi.test(addrLine)) {
+                  continue;
+                }
+                
+                const cleanAddrLine = cleanAddressLine(addrLine);
+                if (cleanAddrLine.length >= 5) {
+                  addressLines.push(cleanAddrLine);
+                }
+              }
+              
+              if (addressLines.length > 0) {
+                const combinedAddress = addressLines.join(', ').replace(/\s+/g, ' ').trim();
+                if (combinedAddress.length >= 15 && this.isValidAddress(combinedAddress)) {
+                  parsedData.permanentAddress = combinedAddress;
+                  permanentAddressFound = true;
+                  console.log('Found address (Pattern 3 - multiple lines with address keywords/place names):', parsedData.permanentAddress);
+                  break;
+                }
+              }
+            }
+          } else if (line.length >= 20 && words.length >= 4) {
+            // Nếu không có từ khóa nhưng dòng đủ dài, vẫn kiểm tra
+            if (!/\d{7,}\s+No\s+[^\s]{0,20}\s*\/\s*Pc/gi.test(line) && 
+                !/\bRieu\s+bri\s+Boece\s+mrandence\b/gi.test(line) &&
+                !/\bNgo\s+Thi\s+Nham\b/gi.test(line)) {
+              const cleanLine = cleanAddressLine(line);
+              if (cleanLine.length >= 15 && this.isValidAddress(cleanLine)) {
+                parsedData.permanentAddress = cleanLine;
+                permanentAddressFound = true;
+                console.log('Found address (Pattern 3 - long line):', parsedData.permanentAddress);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    
     // Tìm địa chỉ (nơi cư trú hiện tại) - tương tự logic trên
     if (!permanentAddressFound) {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        const addressInLine = line.match(/(?:Địa chỉ|Address|Nơi cư trú)[:\s]+(.+)/i);
+        const addressInLine = line.match(/(?:Địa chỉ|Address|Nơi\s+cư\s+trú)[:\s]+(.+)/i);
         if (addressInLine && addressInLine[1]) {
-          let address = addressInLine[1].trim();
+          let address = cleanAddressLine(addressInLine[1].trim());
           if (address.length < 20 && i + 1 < lines.length) {
             const nextLines: string[] = [];
-            for (let j = i + 1; j < lines.length && j < i + 5; j++) {
+            for (let j = i + 1; j < lines.length && j < i + 8; j++) {
               const nextLine = lines[j];
-              if (/^(?:Đặc điểm|Ngày|CMND|CCCD|Số|Quốc tịch|Giới tính|Nơi thường trú)/i.test(nextLine) ||
-              /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(nextLine) ||
-              /^\d{9,12}$/.test(nextLine) ||
-              (/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 15 && nextLine.split(/\s+/).length <= 2)) {
-            break;
-          }
-          if (nextLine && nextLine.length > 2 && !(/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 15)) {
-            nextLines.push(nextLine);
-          }
+              // Dừng nếu gặp dòng có từ khóa khác
+              if (/^(?:Đặc điểm|Ngày\s+cấp|Ngày\s+hết\s+hạn|CMND|CCCD|Số|Quốc tịch|Giới tính|Nơi thường trú|BỘ CÔNG AN|MINISTRY)/i.test(nextLine) ||
+                  /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(nextLine) ||
+                  /^\d{9,12}$/.test(nextLine) ||
+                  /^[A-Z0-9<]{20,}$/.test(nextLine) ||
+                  (/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 15 && nextLine.split(/\s+/).length <= 2)) {
+                break;
+              }
+              if (nextLine && nextLine.length > 2) {
+                // Loại bỏ các pattern không hợp lý
+                if (/\d{7,}\s+No\s+[^\s]{0,20}\s*\/\s*Pc/gi.test(nextLine)) {
+                  continue;
+                }
+                const cleanLine = cleanAddressLine(nextLine);
+                if (cleanLine.length > 2 && !/\d{7,}\s+[A-Za-z]{1,3}\s+[^\s]{0,20}\s*\/\s*[A-Za-z]{1,3}/gi.test(cleanLine)) {
+                  nextLines.push(cleanLine);
+                }
+              }
             }
             if (nextLines.length > 0) {
               address = address + ', ' + nextLines.join(', ');
             }
           }
-          if (address.length > 5) {
+          // Làm sạch lại địa chỉ
+          address = cleanAddressLine(address);
+          if (address.length > 15 && this.isValidAddress(address)) {
             parsedData.address = address;
+            console.log('Found address (nơi cư trú):', parsedData.address);
             break;
           }
         }

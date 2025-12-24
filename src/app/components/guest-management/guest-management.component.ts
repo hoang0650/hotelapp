@@ -706,7 +706,7 @@ export class GuestManagementComponent implements OnInit {
       address: this.selectedGuest.contactInfo?.address?.street || 
                (this.selectedGuest.contactInfo?.address ? 
                  `${this.selectedGuest.contactInfo.address.street || ''}, ${this.selectedGuest.contactInfo.address.city || ''}, ${this.selectedGuest.contactInfo.address.state || ''}`.replace(/^,\s*|,\s*$/g, '') : ''),
-      guestSource: 'guest_management'
+      guestSource: 'walkin' // Sử dụng 'walkin' vì khách được quản lý từ hệ thống guest management, enum values: ['walkin', 'booking', 'agoda', 'traveloka', 'expedia', 'trip', 'g2j', 'other']
     };
     
     // Gọi API để check-in khách vào phòng

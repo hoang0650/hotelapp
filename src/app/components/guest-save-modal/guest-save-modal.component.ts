@@ -38,22 +38,40 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
   onOCRScanComplete(ocrData: any): void {
     if (!ocrData) return;
     
+    console.log('[GuestSaveModal] OCR data received:', {
+      fullName: ocrData.fullName,
+      gender: ocrData.gender,
+      nationality: ocrData.nationality,
+      idNumber: ocrData.idNumber,
+      dateOfBirth: ocrData.dateOfBirth,
+      phone: ocrData.phone,
+      permanentAddress: ocrData.permanentAddress ? ocrData.permanentAddress.substring(0, 50) + '...' : null,
+      address: ocrData.address ? ocrData.address.substring(0, 50) + '...' : null
+    });
+    
     // Điền vào personalInfo
     if (this.personalInfoForm) {
       if (ocrData.fullName) {
         this.personalInfoForm.patchValue({ fullName: ocrData.fullName });
+        console.log('[GuestSaveModal] Set fullName:', ocrData.fullName);
       }
       if (ocrData.dateOfBirth) {
-        this.personalInfoForm.patchValue({ dateOfBirth: ocrData.dateOfBirth });
+        // Đảm bảo dateOfBirth là Date object
+        const dob = ocrData.dateOfBirth instanceof Date ? ocrData.dateOfBirth : new Date(ocrData.dateOfBirth);
+        this.personalInfoForm.patchValue({ dateOfBirth: dob });
+        console.log('[GuestSaveModal] Set dateOfBirth:', dob);
       }
-      if (ocrData.gender) {
+      if (ocrData.gender && (ocrData.gender === 'male' || ocrData.gender === 'female')) {
         this.personalInfoForm.patchValue({ gender: ocrData.gender });
+        console.log('[GuestSaveModal] Set gender:', ocrData.gender);
       }
       if (ocrData.nationality) {
         this.personalInfoForm.patchValue({ nationality: ocrData.nationality });
+        console.log('[GuestSaveModal] Set nationality:', ocrData.nationality);
       }
       if (ocrData.idNumber) {
         this.personalInfoForm.patchValue({ idNumber: ocrData.idNumber });
+        console.log('[GuestSaveModal] Set idNumber:', ocrData.idNumber);
       }
     }
     
@@ -61,11 +79,13 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     if (this.contactInfoForm) {
       if (ocrData.phone) {
         this.contactInfoForm.patchValue({ phone: ocrData.phone });
+        console.log('[GuestSaveModal] Set phone:', ocrData.phone);
       }
       // Ưu tiên nơi thường trú, nếu không có thì dùng địa chỉ
       const addressValue = ocrData.permanentAddress || ocrData.address;
       if (addressValue && this.addressForm) {
         this.addressForm.patchValue({ street: addressValue });
+        console.log('[GuestSaveModal] Set address:', addressValue.substring(0, 50) + '...');
       }
     }
     
@@ -289,16 +309,33 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     // Lấy thông tin khách để cập nhật vào phòng
     this.guestsService.getGuestById(this.selectedGuestId).subscribe({
       next: (guest) => {
+        // Lấy địa chỉ đầy đủ từ guest
+        const addressParts: string[] = [];
+        if (guest.contactInfo?.address?.street) {
+          addressParts.push(guest.contactInfo.address.street);
+        }
+        if (guest.contactInfo?.address?.city) {
+          addressParts.push(guest.contactInfo.address.city);
+        }
+        if (guest.contactInfo?.address?.state) {
+          addressParts.push(guest.contactInfo.address.state);
+        }
+        const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '';
+        
         const guestInfo = {
           name: this.getGuestName(guest),
           phone: guest.contactInfo?.phone || '',
           email: guest.contactInfo?.email || '',
           idNumber: guest.personalInfo?.idNumber || '',
-          address: guest.contactInfo?.address?.street || 
-                   (guest.contactInfo?.address ? 
-                     `${guest.contactInfo.address.street || ''}, ${guest.contactInfo.address.city || ''}, ${guest.contactInfo.address.state || ''}`.replace(/^,\s*|,\s*$/g, '') : ''),
-          guestSource: 'guest_management'
+          address: fullAddress,
+          guestSource: 'walkin' // Sử dụng 'walkin' vì khách được quản lý từ hệ thống guest management, enum values: ['walkin', 'booking', 'agoda', 'traveloka', 'expedia', 'trip', 'g2j', 'other']
         };
+        
+        console.log('[GuestSaveModal] Assigning existing guest to room:', {
+          roomId: this.room._id,
+          guestId: this.selectedGuestId,
+          guestInfo: guestInfo
+        });
         
         // Tự động cập nhật thông tin khách vào phòng (check-in luôn)
         this.roomsService.checkInRoom(this.room._id, {
@@ -307,11 +344,13 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
           rateType: 'hourly'
         }).subscribe({
           next: (response: any) => {
+            console.log('[GuestSaveModal] Check-in existing guest successful');
             this.message.success(`Đã assign và check-in khách "${this.getGuestName(guest)}" vào phòng thành công`);
             this.modalRef.close({ success: true, guestId: this.selectedGuestId });
             this.isLoading = false;
           },
           error: (error: any) => {
+            console.error('[GuestSaveModal] Check-in existing guest error:', error);
             const errorMessage = error.error?.message || error.error?.error || 'Lỗi assign khách vào phòng';
             
             // Kiểm tra lỗi về số lượng người tối đa
@@ -326,11 +365,13 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
               // Nếu phòng đã occupied, chỉ update thông tin khách hiện tại, không thêm khách mới
               this.roomsService.updateRoomCheckinInfo(this.room._id, guestInfo, 0).subscribe({
                 next: () => {
+                  console.log('[GuestSaveModal] Update room check-in info for existing guest successful');
                   this.message.success(`Đã cập nhật thông tin khách "${this.getGuestName(guest)}" vào phòng thành công`);
                   this.modalRef.close({ success: true, guestId: this.selectedGuestId });
                   this.isLoading = false;
                 },
                 error: (err: any) => {
+                  console.error('[GuestSaveModal] Update room check-in info error:', err);
                   this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
                   this.isLoading = false;
                 }
@@ -343,6 +384,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         });
       },
       error: (error: any) => {
+        console.error('[GuestSaveModal] Get guest by ID error:', error);
         this.message.error('Không thể lấy thông tin khách');
         this.isLoading = false;
       }
@@ -369,6 +411,16 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     
     this.isLoading = true;
     const formValue = this.guestForm.value;
+    
+    console.log('[GuestSaveModal] Saving guest with form data:', {
+      fullName: formValue.personalInfo?.fullName,
+      gender: formValue.personalInfo?.gender,
+      nationality: formValue.personalInfo?.nationality,
+      idNumber: formValue.personalInfo?.idNumber,
+      dateOfBirth: formValue.personalInfo?.dateOfBirth,
+      phone: formValue.contactInfo?.phone,
+      address: formValue.contactInfo?.address
+    });
     
     // Chuẩn bị dữ liệu gửi lên backend (giống như guest-management)
     const guestData: Partial<Guest> = {
@@ -397,20 +449,37 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     
     this.guestsService.createGuest(guestData).subscribe({
       next: (response) => {
+        console.log('[GuestSaveModal] Guest created successfully:', response.guest._id);
         this.message.success('Lưu thông tin khách thành công');
         
         // Tự động cập nhật thông tin khách vào phòng (check-in luôn)
         if (response.guest._id) {
+          // Lấy địa chỉ đầy đủ từ form
+          const addressParts: string[] = [];
+          if (formValue.contactInfo?.address?.street) {
+            addressParts.push(formValue.contactInfo.address.street);
+          }
+          if (formValue.contactInfo?.address?.city) {
+            addressParts.push(formValue.contactInfo.address.city);
+          }
+          if (formValue.contactInfo?.address?.state) {
+            addressParts.push(formValue.contactInfo.address.state);
+          }
+          const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '';
+          
           const guestInfo = {
             name: formValue.personalInfo?.fullName || 'Khách lẻ',
             phone: formValue.contactInfo?.phone || '',
             email: formValue.contactInfo?.email || '',
             idNumber: formValue.personalInfo?.idNumber || '',
-            address: formValue.contactInfo?.address?.street || 
-                     (formValue.contactInfo?.address ? 
-                       `${formValue.contactInfo.address.street || ''}, ${formValue.contactInfo.address.city || ''}, ${formValue.contactInfo.address.state || ''}`.replace(/^,\s*|,\s*$/g, '') : ''),
-            guestSource: 'guest_management'
+            address: fullAddress,
+            guestSource: 'walkin' // Sử dụng 'walkin' vì khách được quản lý từ hệ thống guest management, enum values: ['walkin', 'booking', 'agoda', 'traveloka', 'expedia', 'trip', 'g2j', 'other']
           };
+          
+          console.log('[GuestSaveModal] Assigning guest to room:', {
+            roomId: this.room._id,
+            guestInfo: guestInfo
+          });
           
           this.roomsService.checkInRoom(this.room._id, {
             guestInfo: guestInfo,
@@ -418,26 +487,32 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
             rateType: 'hourly'
           }).subscribe({
             next: (checkinResponse: any) => {
+              console.log('[GuestSaveModal] Check-in successful');
               this.message.success('Đã lưu và check-in khách vào phòng thành công');
               this.modalRef.close({ success: true, guestId: response.guest._id });
               this.isLoading = false;
             },
             error: (checkinError: any) => {
+              console.error('[GuestSaveModal] Check-in error:', checkinError);
               // Nếu phòng đã có khách, vẫn cập nhật thông tin
-              if (checkinError.error?.message?.includes('đã có khách') || checkinError.error?.message?.includes('occupied')) {
+              if (checkinError.error?.message?.includes('đã có khách') || 
+                  checkinError.error?.message?.includes('occupied') ||
+                  checkinError.error?.error?.includes('occupied')) {
                 this.roomsService.updateRoomCheckinInfo(this.room._id, guestInfo, 0).subscribe({
                   next: () => {
+                    console.log('[GuestSaveModal] Update room check-in info successful');
                     this.message.success('Đã lưu và cập nhật thông tin khách vào phòng thành công');
                     this.modalRef.close({ success: true, guestId: response.guest._id });
                     this.isLoading = false;
                   },
                   error: (err: any) => {
+                    console.error('[GuestSaveModal] Update room check-in info error:', err);
                     this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
                     this.isLoading = false;
                   }
                 });
               } else {
-                this.message.error(checkinError.error?.message || 'Lỗi check-in khách vào phòng');
+                this.message.error(checkinError.error?.message || checkinError.error?.error || 'Lỗi check-in khách vào phòng');
                 this.isLoading = false;
               }
             }
@@ -448,6 +523,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
+        console.error('[GuestSaveModal] Create guest error:', error);
         this.message.error(error.error?.message || 'Lỗi lưu thông tin khách');
         this.isLoading = false;
       }
