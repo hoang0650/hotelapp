@@ -1287,7 +1287,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       // Pattern 1a-1: "Họ và tên: TÊN" hoặc "Họ và tên / Full name: TÊN"
       // Cải thiện: match chính xác hơn, lấy phần sau dấu hai chấm hoặc dấu gạch chéo
-      let nameInLine = line.match(/(?:Họ\s+và\s+tên|HO\s+VA\s+TEN)[\s\/:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]{8,}?)(?:\s*\/\s*Full\s+name|$|Ngày|Date|Giới|Sex|Quốc|Nationality)/i);
+      // QUAN TRỌNG: Chỉ lấy tên, không lấy header hoặc các phần không phải tên
+      let nameInLine = line.match(/(?:Họ\s+và\s+tên|HO\s+VA\s+TEN)[\s\/:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]{8,}?)(?:\s*\/\s*Full\s+name|$|Ngày|Date|Giới|Sex|Quốc|Nationality|CỘNG|SOCIALIST|CĂN|CAN|CITIZEN)/i);
       
       // Pattern 1a-2: "Full name: TÊN" (nếu không tìm thấy ở pattern 1)
       if (!nameInLine) {
@@ -1309,6 +1310,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         let name = nameInLine[1].trim();
         
         // Loại bỏ các phần không phải tên
+        // QUAN TRỌNG: Loại bỏ TẤT CẢ header từ mặt trước
+        name = name.replace(/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/gi, '').trim();
+        name = name.replace(/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/gi, '').trim();
+        name = name.replace(/CĂN\s+CƯỚC|CAN\s+CƯỚC|CAN\s+CUOC|CITIZEN\s+IDENTITY\s+CARD/gi, '').trim();
+        name = name.replace(/CÔNG\s+DÂN|CONG\s+DAN|CONG\s+DÂN/gi, '').trim();
         // Loại bỏ "Full name" nếu có ở cuối
         name = name.replace(/\s*\/\s*Full\s+name.*/i, '').trim();
         // Loại bỏ số
@@ -1842,8 +1848,24 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     let permanentAddressFound = false;
     
     // Helper function để làm sạch dòng địa chỉ
+    // QUAN TRỌNG: Loại bỏ tất cả header từ mặt trước để không lấy vào địa chỉ mặt sau
     const cleanAddressLine = (line: string): string => {
       let clean = line;
+      
+      // Loại bỏ TẤT CẢ header từ mặt trước (quan trọng để không lấy header vào địa chỉ)
+      // Loại bỏ các header pattern từ mặt trước
+      clean = clean.replace(/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/gi, '').trim();
+      clean = clean.replace(/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/gi, '').trim();
+      clean = clean.replace(/Độc\s+lập\s+-\s+Tự\s+do\s+-\s+Hạnh\s+phúc/gi, '').trim();
+      clean = clean.replace(/INDEPENDENCE\s+-\s+FREEDOM\s+-\s+HAPPINESS/gi, '').trim();
+      clean = clean.replace(/CĂN\s+CƯỚC/gi, '').trim();
+      clean = clean.replace(/CAN\s+CƯỚC/gi, '').trim();
+      clean = clean.replace(/CAN\s+CUOC/gi, '').trim();
+      clean = clean.replace(/CITIZEN\s+IDENTITY\s+CARD/gi, '').trim();
+      clean = clean.replace(/CÔNG\s+DÂN/gi, '').trim();
+      clean = clean.replace(/CONG\s+DAN/gi, '').trim();
+      clean = clean.replace(/CONG\s+DÂN/gi, '').trim();
+      
       // Loại bỏ các phần không cần thiết
       clean = clean.replace(/\([^)]*Place\s+of\s+residence[^)]*\)/gi, '').trim();
       clean = clean.replace(/\([^)]*Có\s+gia\s+tị[^)]*\)/gi, '').trim();
@@ -1919,12 +1941,18 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           const nextLine = lines[j];
           
           // Dừng nếu gặp dòng có từ khóa khác hoặc là số/ngày tháng
+          // QUAN TRỌNG: Dừng ngay khi gặp header từ mặt trước để không lấy vào địa chỉ
           // Loại bỏ "Nơi cư trú" khỏi danh sách dừng để có thể lấy địa chỉ sau "Nơi thường trú"
           if (/^(?:Đặc điểm|Ngày\s+cấp|Ngày\s+hết\s+hạn|CMND|CCCD|Số|Quốc tịch|Giới tính|Địa chỉ hiện tại|Họ và tên|Tên|Quê quán|BỘ CÔNG AN|MINISTRY)/i.test(nextLine) ||
               /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(nextLine) ||
               /^\d{9,12}$/.test(nextLine) ||
               // Dừng nếu gặp MRZ (dòng có nhiều ký tự đặc biệt và số)
               /^[A-Z0-9<]{20,}$/.test(nextLine) ||
+              // Dừng nếu gặp header từ mặt trước (QUAN TRỌNG: để không lấy header vào địa chỉ)
+              isHeaderLine(nextLine) ||
+              /CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/i.test(nextLine) ||
+              /SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/i.test(nextLine) ||
+              /CĂN\s+CƯỚC|CAN\s+CƯỚC|CAN\s+CUOC|CITIZEN\s+IDENTITY\s+CARD/i.test(nextLine) ||
               // Dừng nếu gặp dòng ngắn có thể là label khác (ít hơn 8 ký tự và ít hơn 2 từ)
               (/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 8 && nextLine.split(/\s+/).length <= 1)) {
             break;
