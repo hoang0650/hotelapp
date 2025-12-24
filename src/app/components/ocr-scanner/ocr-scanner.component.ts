@@ -909,15 +909,22 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     let frontScore = 0;
     let backScore = 0;
     
-    // Dấu hiệu mặt trước
-    if (/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/i.test(text)) frontScore += 10;
-    if (/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/i.test(text)) frontScore += 10;
-    if (/CĂN\s+CƯỚC/i.test(text)) frontScore += 8;
-    if (/CITIZEN\s+IDENTITY\s+CARD/i.test(text)) frontScore += 8;
-    if (/HỌ\s+VÀ\s+TÊN|FULL\s+NAME/i.test(text)) frontScore += 5;
-    if (/NGÀY\s+SINH|DATE\s+OF\s+BIRTH/i.test(text)) frontScore += 5;
-    if (/GIỚI\s+TÍNH|SEX/i.test(text)) frontScore += 3;
-    if (/QUỐC\s+TỊCH|NATIONALITY/i.test(text)) frontScore += 3;
+    // Dấu hiệu mặt trước - tăng điểm để ưu tiên nhận diện chính xác
+    if (/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/i.test(text)) frontScore += 12; // Tăng từ 10 lên 12
+    if (/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/i.test(text)) frontScore += 12; // Tăng từ 10 lên 12
+    // QUAN TRỌNG: "CĂN CƯỚC" hoặc "CĂN CƯỚC CÔNG DÂN" là dấu hiệu rõ ràng của mặt trước
+    if (/CĂN\s+CƯỚC\s+CÔNG\s+DÂN/i.test(text)) frontScore += 15; // Tăng điểm cho "CĂN CƯỚC CÔNG DÂN"
+    if (/CAN\s+CƯỚC\s+CONG\s+DAN/i.test(text)) frontScore += 15; // OCR nhầm của "CĂN CƯỚC CÔNG DÂN"
+    if (/CĂN\s+CƯỚC/i.test(text)) frontScore += 12; // Tăng từ 8 lên 12 cho "CĂN CƯỚC"
+    if (/CAN\s+CƯỚC|CAN\s+CUOC/i.test(text)) frontScore += 12; // OCR nhầm của "CĂN CƯỚC"
+    if (/CITIZEN\s+IDENTITY\s+CARD/i.test(text)) frontScore += 10; // Tăng từ 8 lên 10
+    if (/HỌ\s+VÀ\s+TÊN|FULL\s+NAME/i.test(text)) frontScore += 6; // Tăng từ 5 lên 6
+    if (/NGÀY\s+SINH|DATE\s+OF\s+BIRTH/i.test(text)) frontScore += 6; // Tăng từ 5 lên 6
+    if (/GIỚI\s+TÍNH|SEX/i.test(text)) frontScore += 4; // Tăng từ 3 lên 4
+    if (/QUỐC\s+TỊCH|NATIONALITY/i.test(text)) frontScore += 4; // Tăng từ 3 lên 4
+    // Thêm dấu hiệu "Số định danh cá nhân" - chỉ có ở mặt trước
+    if (/SỐ\s+ĐỊNH\s+DANH\s+CÁ\s+NHÂN|PERSONAL\s+IDENTIFICATION\s+NUMBER/i.test(text)) frontScore += 5;
+    if (/SO\s+DINH\s+DANH\s+CA\s+NHAN/i.test(text)) frontScore += 5; // OCR nhầm
     
     // Dấu hiệu mặt sau - tăng điểm để ưu tiên nhận diện chính xác
     if (/BỘ\s+CÔNG\s+AN/i.test(text)) backScore += 15; // Tăng từ 10 lên 15
@@ -1313,8 +1320,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         // QUAN TRỌNG: Loại bỏ TẤT CẢ header từ mặt trước
         name = name.replace(/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/gi, '').trim();
         name = name.replace(/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/gi, '').trim();
+        name = name.replace(/CĂN\s+CƯỚC\s+CÔNG\s+DÂN|CAN\s+CƯỚC\s+CONG\s+DAN|CAN\s+CUOC\s+CONG\s+DAN/gi, '').trim(); // Loại bỏ "CĂN CƯỚC CÔNG DÂN"
         name = name.replace(/CĂN\s+CƯỚC|CAN\s+CƯỚC|CAN\s+CUOC|CITIZEN\s+IDENTITY\s+CARD/gi, '').trim();
         name = name.replace(/CÔNG\s+DÂN|CONG\s+DAN|CONG\s+DÂN/gi, '').trim();
+        // Loại bỏ "Số định danh cá nhân / Personal identification" - OCR có thể nhầm thành tên
+        name = name.replace(/SỐ\s+ĐỊNH\s+DANH\s+CÁ\s+NHÂN|SO\s+DINH\s+DANH\s+CA\s+NHAN|PERSONAL\s+IDENTIFICATION/gi, '').trim();
+        name = name.replace(/Sa\s+dinh\s+danh\s+ca\s+Nhân|Persona\s+entih\s+oa/gi, '').trim(); // Loại bỏ pattern OCR nhầm cụ thể
         // Loại bỏ "Full name" nếu có ở cuối
         name = name.replace(/\s*\/\s*Full\s+name.*/i, '').trim();
         // Loại bỏ số
@@ -1357,6 +1368,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
               !isHeaderLine(nextLine)) {
             
             let cleanName = nextLine.trim();
+            // QUAN TRỌNG: Loại bỏ TẤT CẢ header từ mặt trước
+            cleanName = cleanName.replace(/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/gi, '').trim();
+            cleanName = cleanName.replace(/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/gi, '').trim();
+            cleanName = cleanName.replace(/CĂN\s+CƯỚC\s+CÔNG\s+DÂN|CAN\s+CƯỚC\s+CONG\s+DAN|CAN\s+CUOC\s+CONG\s+DAN/gi, '').trim();
+            cleanName = cleanName.replace(/CĂN\s+CƯỚC|CAN\s+CƯỚC|CAN\s+CUOC|CITIZEN\s+IDENTITY\s+CARD/gi, '').trim();
+            cleanName = cleanName.replace(/CÔNG\s+DÂN|CONG\s+DAN|CONG\s+DÂN/gi, '').trim();
+            cleanName = cleanName.replace(/SỐ\s+ĐỊNH\s+DANH\s+CÁ\s+NHÂN|SO\s+DINH\s+DANH\s+CA\s+NHAN|PERSONAL\s+IDENTIFICATION/gi, '').trim();
+            cleanName = cleanName.replace(/Sa\s+dinh\s+danh\s+ca\s+Nhân|Persona\s+entih\s+oa/gi, '').trim();
             // Loại bỏ số
             cleanName = cleanName.replace(/\d+/g, '').trim();
             // Loại bỏ ký tự đặc biệt nhưng giữ chữ cái và dấu tiếng Việt
@@ -1858,6 +1877,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       clean = clean.replace(/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/gi, '').trim();
       clean = clean.replace(/Độc\s+lập\s+-\s+Tự\s+do\s+-\s+Hạnh\s+phúc/gi, '').trim();
       clean = clean.replace(/INDEPENDENCE\s+-\s+FREEDOM\s+-\s+HAPPINESS/gi, '').trim();
+      // QUAN TRỌNG: Loại bỏ "CĂN CƯỚC CÔNG DÂN" hoặc "CĂN CƯỚC" - dấu hiệu rõ ràng của mặt trước
+      clean = clean.replace(/CĂN\s+CƯỚC\s+CÔNG\s+DÂN|CAN\s+CƯỚC\s+CONG\s+DAN|CAN\s+CUOC\s+CONG\s+DAN/gi, '').trim();
       clean = clean.replace(/CĂN\s+CƯỚC/gi, '').trim();
       clean = clean.replace(/CAN\s+CƯỚC/gi, '').trim();
       clean = clean.replace(/CAN\s+CUOC/gi, '').trim();
@@ -1865,6 +1886,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       clean = clean.replace(/CÔNG\s+DÂN/gi, '').trim();
       clean = clean.replace(/CONG\s+DAN/gi, '').trim();
       clean = clean.replace(/CONG\s+DÂN/gi, '').trim();
+      // Loại bỏ "Số định danh cá nhân / Personal identification" - có thể bị OCR nhầm vào địa chỉ
+      clean = clean.replace(/SỐ\s+ĐỊNH\s+DANH\s+CÁ\s+NHÂN|SO\s+DINH\s+DANH\s+CA\s+NHAN|PERSONAL\s+IDENTIFICATION/gi, '').trim();
       
       // Loại bỏ các phần không cần thiết
       clean = clean.replace(/\([^)]*Place\s+of\s+residence[^)]*\)/gi, '').trim();
