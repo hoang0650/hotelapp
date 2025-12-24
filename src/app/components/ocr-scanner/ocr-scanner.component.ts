@@ -759,83 +759,68 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         }
       }
       
-      // Số CMND/CCCD: ưu tiên mặt trước
+      // Số CMND/CCCD: lấy từ bất kỳ mặt nào
       if (data.idNumber && !merged.idNumber) {
         merged.idNumber = data.idNumber;
+        console.log(`[OCR] Merge: Set idNumber from ${data.side} (fileIndex=${data.fileIndex}): ${data.idNumber}`);
       }
       
-      // Ngày sinh: ưu tiên mặt trước
+      // Ngày sinh: lấy từ bất kỳ mặt nào, không ưu tiên mặt trước hay mặt sau
       if (data.dateOfBirth && !merged.dateOfBirth) {
         merged.dateOfBirth = data.dateOfBirth;
+        console.log(`[OCR] Merge: Set dateOfBirth from ${data.side} (fileIndex=${data.fileIndex}): ${data.dateOfBirth}`);
       }
       
-      // Giới tính: ưu tiên mặt trước, nhưng chỉ lấy nếu hợp lệ
-      // Logic giống như merge tên: luôn ưu tiên mặt trước
+      // Giới tính: lấy từ bất kỳ mặt nào, không ưu tiên mặt trước hay mặt sau
+      // Chỉ lấy nếu hợp lệ (male hoặc female)
       if (data.gender && (data.gender === 'male' || data.gender === 'female')) {
         // Nếu chưa có giới tính, lấy giới tính mới
         if (!merged.gender) {
           merged.gender = data.gender;
           merged.genderSide = data.side; // Lưu side của giới tính để biết giới tính đến từ đâu
           console.log(`[OCR] Merge: Set gender from ${data.side} (fileIndex=${data.fileIndex}): ${data.gender}`);
-        } else {
-          // Nếu đã có giới tính, chỉ thay thế nếu:
-          // 1. Giới tính mới từ mặt trước - luôn ưu tiên mặt trước
-          // 2. Hoặc giới tính hiện tại không hợp lệ
-          if (data.side === 'front') {
-            // Luôn ưu tiên giới tính từ mặt trước, bất kể giới tính hiện tại từ đâu
-            merged.gender = data.gender;
-            merged.genderSide = data.side;
-            console.log(`[OCR] Merge: Replaced gender with gender from front (fileIndex=${data.fileIndex}): ${data.gender}`);
-          }
-          // Nếu giới tính từ mặt sau và đã có giới tính hợp lệ từ mặt trước, giữ nguyên giới tính từ mặt trước
         }
+        // Nếu đã có giới tính, giữ nguyên (không thay thế)
       }
       
-      // Quốc tịch: ưu tiên "Việt Nam" nếu có, nếu không thì lấy từ mặt trước
+      // Quốc tịch: lấy từ bất kỳ mặt nào, không ưu tiên mặt trước hay mặt sau
+      // Ưu tiên "Việt Nam" nếu có
       if (data.nationality) {
         // Luôn ưu tiên "Việt Nam" nếu có
         if (/việt\s+nam|viet\s+nam|vietnam/i.test(data.nationality)) {
           merged.nationality = 'Việt Nam';
+          console.log(`[OCR] Merge: Set nationality to "Việt Nam" from ${data.side} (fileIndex=${data.fileIndex})`);
         } else if (!merged.nationality) {
           // Chỉ lấy quốc tịch khác nếu chưa có và không phải là OCR nhầm
           const invalidNationalityPatterns = ['RA EN FE', 'RA EN', 'EN FE', 'FE SD', 'PERSONAL', 'IDENTIFICATION'];
           const upperNationality = data.nationality.toUpperCase();
           if (!invalidNationalityPatterns.some(pattern => upperNationality.includes(pattern))) {
             merged.nationality = data.nationality;
+            console.log(`[OCR] Merge: Set nationality from ${data.side} (fileIndex=${data.fileIndex}): ${data.nationality}`);
           }
         }
       }
       
-      // Nơi thường trú: ưu tiên mặt sau (thường ở mặt sau CCCD), nhưng chỉ lấy nếu hợp lệ
+      // Nơi thường trú: lấy từ bất kỳ mặt nào, không ưu tiên mặt sau hay mặt trước
+      // Chỉ lấy nếu hợp lệ
       if (data.permanentAddress && this.isValidAddress(data.permanentAddress)) {
         // Nếu chưa có nơi thường trú, lấy từ bất kỳ mặt nào
         if (!merged.permanentAddress) {
           merged.permanentAddress = data.permanentAddress;
           console.log(`[OCR] Merge: Set permanentAddress from ${data.side} (fileIndex=${data.fileIndex}): ${data.permanentAddress.substring(0, 50)}...`);
-        } else if (data.side === 'back') {
-          // Nếu nơi thường trú từ mặt sau, ưu tiên mặt sau (thay thế nếu đã có từ mặt trước)
-          merged.permanentAddress = data.permanentAddress;
-          console.log(`[OCR] Merge: Replaced permanentAddress with address from back: ${data.permanentAddress.substring(0, 50)}...`);
         }
-        // Nếu nơi thường trú từ mặt trước và đã có từ mặt sau, giữ nguyên từ mặt sau
+        // Nếu đã có nơi thường trú, giữ nguyên (không thay thế)
       }
       
-      // Địa chỉ (nơi cư trú): ưu tiên mặt sau khi có 2 ảnh, nhưng chỉ lấy nếu hợp lệ
+      // Địa chỉ (nơi cư trú): lấy từ bất kỳ mặt nào, không ưu tiên mặt sau hay mặt trước
+      // Chỉ lấy nếu hợp lệ
       if (data.address && this.isValidAddress(data.address)) {
         // Nếu chưa có địa chỉ, lấy từ bất kỳ mặt nào
         if (!merged.address) {
           merged.address = data.address;
           console.log(`[OCR] Merge: Set address from ${data.side} (fileIndex=${data.fileIndex}): ${data.address.substring(0, 50)}...`);
-        } else if (data.side === 'back') {
-          // Nếu địa chỉ từ mặt sau, LUÔN ưu tiên mặt sau (thay thế nếu đã có từ mặt trước)
-          // Không cần kiểm tra sortedData.length > 1 vì mặt sau luôn ưu tiên
-          merged.address = data.address;
-          console.log(`[OCR] Merge: Replaced address with address from back (fileIndex=${data.fileIndex}): ${data.address.substring(0, 50)}...`);
-        } else if (data.side === 'front' && merged.address) {
-          // Nếu địa chỉ từ mặt trước và đã có từ mặt sau, giữ nguyên từ mặt sau (không thay thế)
-          console.log(`[OCR] Merge: Keeping address from back, ignoring front (fileIndex=${data.fileIndex})`);
         }
-        // Nếu địa chỉ từ mặt trước và đã có từ mặt sau, giữ nguyên từ mặt sau
+        // Nếu đã có địa chỉ, giữ nguyên (không thay thế)
       }
       
       // Số điện thoại: lấy từ bất kỳ mặt nào
@@ -845,35 +830,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     }
     
     // Logic điền địa chỉ:
-    // - Nếu có 1 ảnh: dùng nơi thường trú làm địa chỉ
-    // - Nếu có 2 ảnh: ưu tiên địa chỉ (nơi cư trú) từ mặt sau, nếu không có thì dùng nơi thường trú
-    // QUAN TRỌNG: Ưu tiên địa chỉ từ mặt sau (back) hơn mặt trước (front)
-    if (!merged.address) {
-      if (sortedData.length === 1 && merged.permanentAddress) {
-        // 1 ảnh: dùng nơi thường trú
-        merged.address = merged.permanentAddress;
-        console.log('[OCR] Merge: Using permanentAddress as address (1 image)');
-      } else if (sortedData.length > 1 && merged.permanentAddress) {
-        // 2 ảnh: nếu không có địa chỉ (nơi cư trú), dùng nơi thường trú
-        // Tìm địa chỉ từ mặt sau trước
-        const backSideData = sortedData.find(d => d.side === 'back' && d.permanentAddress && this.isValidAddress(d.permanentAddress));
-        if (backSideData) {
-          merged.address = backSideData.permanentAddress;
-          console.log('[OCR] Merge: Using permanentAddress from back side as address (2 images)');
-        } else {
-          merged.address = merged.permanentAddress;
-          console.log('[OCR] Merge: Using permanentAddress as address (2 images, no back side address)');
-        }
-      }
-    } else if (sortedData.length > 1) {
-      // 2 ảnh: đã có địa chỉ (nơi cư trú), nhưng kiểm tra lại xem có địa chỉ từ mặt sau không
-      const backSideAddress = sortedData.find(d => d.side === 'back' && d.address && this.isValidAddress(d.address));
-      if (backSideAddress && merged.address !== backSideAddress.address) {
-        merged.address = backSideAddress.address;
-        console.log('[OCR] Merge: Replaced address with address from back side (2 images)');
-      } else {
-        console.log('[OCR] Merge: Using current address (2 images)');
-      }
+    // - Nếu không có địa chỉ (nơi cư trú), dùng nơi thường trú làm địa chỉ
+    // - Không ưu tiên mặt trước hay mặt sau, chỉ lấy dữ liệu hợp lệ từ bất kỳ mặt nào
+    if (!merged.address && merged.permanentAddress) {
+      // Nếu không có địa chỉ (nơi cư trú), dùng nơi thường trú
+      merged.address = merged.permanentAddress;
+      console.log('[OCR] Merge: Using permanentAddress as address');
     }
     
     // Mặc định quốc tịch là "Việt Nam" nếu không có hoặc không hợp lệ
@@ -1602,8 +1564,9 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Tìm dòng có "Ngày sinh:" và ngày nằm cùng dòng
-      const dateInLine = line.match(/(?:Ngày\s+sinh|Date\s+of\s+birth|DOB|NGAY\s+SINH|Ngay\s+sinh)[\s:]+(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/i);
+      // Pattern 1a: Tìm dòng có "Ngày sinh:" hoặc "Ngày, tháng, năm sinh:" và ngày nằm cùng dòng
+      // Hỗ trợ cả "Ngày sinh:" và "Ngày, tháng, năm sinh:" (có dấu phẩy)
+      const dateInLine = line.match(/(?:Ngày\s*,?\s*tháng\s*,?\s*năm\s+sinh|Ngày\s+sinh|Date\s+of\s+birth|DOB|NGAY\s+SINH|Ngay\s+sinh)[\s:]+(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/i);
       if (dateInLine && dateInLine[1]) {
         const dateStr = dateInLine[1].replace(/[\.\-]/g, '/');
         const dateParts = dateStr.split('/');
@@ -1616,16 +1579,16 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
             if (!isNaN(dateOfBirth.getTime())) {
               parsedData.dateOfBirth = dateOfBirth;
               dateFound = true;
-              console.log('Found date (Pattern 1a):', parsedData.dateOfBirth);
+              console.log('Found date (Pattern 1a):', parsedData.dateOfBirth, 'from line:', line);
               break;
             }
           }
         }
       }
       
-      // Tìm dòng chỉ có "Ngày sinh", ngày nằm ở dòng tiếp theo
-      if ((/^(?:Ngày\s+sinh|Date\s+of\s+birth|DOB|NGAY\s+SINH|Ngay\s+sinh)[\s:]*$/i.test(line) || 
-           /^(?:Ngày\s+sinh|Date\s+of\s+birth|DOB|NGAY\s+SINH|Ngay\s+sinh)$/i.test(line)) && 
+      // Pattern 1b: Tìm dòng chỉ có "Ngày sinh" hoặc "Ngày, tháng, năm sinh", ngày nằm ở dòng tiếp theo
+      if ((/^(?:Ngày\s*,?\s*tháng\s*,?\s*năm\s+sinh|Ngày\s+sinh|Date\s+of\s+birth|DOB|NGAY\s+SINH|Ngay\s+sinh)[\s:]*$/i.test(line) || 
+           /^(?:Ngày\s*,?\s*tháng\s*,?\s*năm\s+sinh|Ngày\s+sinh|Date\s+of\s+birth|DOB|NGAY\s+SINH|Ngay\s+sinh)$/i.test(line)) && 
           i + 1 < lines.length) {
         const nextLine = lines[i + 1];
         const dateMatch = nextLine.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/);
@@ -1641,8 +1604,54 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
               if (!isNaN(dateOfBirth.getTime())) {
                 parsedData.dateOfBirth = dateOfBirth;
                 dateFound = true;
-                console.log('Found date (Pattern 1b):', parsedData.dateOfBirth);
+                console.log('Found date (Pattern 1b):', parsedData.dateOfBirth, 'from line:', nextLine);
                 break;
+              }
+            }
+          }
+        }
+      }
+      
+      // Pattern 1c: Tìm "Ngày, tháng, năm sinh / Date of birth:" và ngày nằm cùng dòng hoặc dòng tiếp theo
+      if (/Ngày\s*,?\s*tháng\s*,?\s*năm\s+sinh\s*\/\s*Date\s+of\s+birth/i.test(line)) {
+        // Tìm ngày trong cùng dòng
+        const dateInSameLine = line.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/);
+        if (dateInSameLine && dateInSameLine[1]) {
+          const dateStr = dateInSameLine[1].replace(/[\.\-]/g, '/');
+          const dateParts = dateStr.split('/');
+          if (dateParts.length === 3) {
+            const day = parseInt(dateParts[0]);
+            const month = parseInt(dateParts[1]) - 1;
+            const year = parseInt(dateParts[2]);
+            if (year >= 1950 && year <= 2010 && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+              const dateOfBirth = new Date(year, month, day);
+              if (!isNaN(dateOfBirth.getTime())) {
+                parsedData.dateOfBirth = dateOfBirth;
+                dateFound = true;
+                console.log('Found date (Pattern 1c - same line):', parsedData.dateOfBirth, 'from line:', line);
+                break;
+              }
+            }
+          }
+        } else if (i + 1 < lines.length) {
+          // Tìm ngày ở dòng tiếp theo
+          const nextLine = lines[i + 1];
+          const dateMatch = nextLine.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/);
+          if (dateMatch && dateMatch[1]) {
+            const dateStr = dateMatch[1].replace(/[\.\-]/g, '/');
+            const dateParts = dateStr.split('/');
+            if (dateParts.length === 3) {
+              const day = parseInt(dateParts[0]);
+              const month = parseInt(dateParts[1]) - 1;
+              const year = parseInt(dateParts[2]);
+              if (year >= 1950 && year <= 2010 && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+                const dateOfBirth = new Date(year, month, day);
+                if (!isNaN(dateOfBirth.getTime())) {
+                  parsedData.dateOfBirth = dateOfBirth;
+                  dateFound = true;
+                  console.log('Found date (Pattern 1c - next line):', parsedData.dateOfBirth, 'from line:', nextLine);
+                  break;
+                }
               }
             }
           }
@@ -1651,16 +1660,27 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     }
     
     // Pattern 2: Tìm tất cả các pattern ngày tháng trong text (dd/mm/yyyy hoặc dd-mm-yyyy)
+    // Ưu tiên các ngày gần label "Ngày sinh" hoặc "Date of birth"
     if (!dateFound) {
       const datePatterns = [
         /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/g
       ];
       
+      // Tìm vị trí của label "Ngày sinh" hoặc "Date of birth" trong text
+      const dateLabelIndex = normalizedText.search(/(?:Ngày\s*,?\s*tháng\s*,?\s*năm\s+sinh|Ngày\s+sinh|Date\s+of\s+birth|DOB)/i);
+      
       for (const pattern of datePatterns) {
         const matches = normalizedText.match(pattern);
         if (matches && matches.length > 0) {
-          // Lấy ngày đầu tiên hợp lệ (ưu tiên năm từ 1950-2010 cho ngày sinh)
-          for (const match of matches) {
+          // Sắp xếp các ngày theo khoảng cách đến label "Ngày sinh" (nếu có)
+          const datesWithDistance = matches.map(match => {
+            const matchIndex = normalizedText.indexOf(match);
+            const distance = dateLabelIndex >= 0 ? Math.abs(matchIndex - dateLabelIndex) : Infinity;
+            return { match, distance, index: matchIndex };
+          }).sort((a, b) => a.distance - b.distance);
+          
+          // Lấy ngày đầu tiên hợp lệ (ưu tiên năm từ 1950-2010 cho ngày sinh, ưu tiên gần label)
+          for (const { match } of datesWithDistance) {
             const dateStr = match.replace(/[\.\-]/g, '/');
             const dateParts = dateStr.split('/');
             if (dateParts.length === 3) {
@@ -1673,7 +1693,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
                 if (!isNaN(dateOfBirth.getTime())) {
                   parsedData.dateOfBirth = dateOfBirth;
                   dateFound = true;
-                  console.log('Found date (Pattern 2):', parsedData.dateOfBirth);
+                  console.log('Found date (Pattern 2):', parsedData.dateOfBirth, 'from match:', match);
                   break;
                 }
               }
@@ -1695,19 +1715,39 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       // Pattern 1a: Dòng có "Giới tính: Nam" hoặc "Giới tính: Nữ" hoặc "Giới tính / Sex: Nam"
       // Cải thiện pattern để match chính xác hơn, bao gồm cả "Giới tính / Sex: Nam"
-      const genderInLine = line.match(/(?:Giới tính|GIOI TINH|Gender|Sex)[\s\/:]+(Nam|Nữ|Male|Female|M|F)(?:\s*\/\s*Sex|$|[\s,])/i);
+      // Hỗ trợ cả "Giới tính / Sex:" và "Giới tính:" (có hoặc không có dấu hai chấm)
+      const genderInLine = line.match(/(?:Giới tính|GIOI TINH|Gender|Sex)[\s\/:]+(Nam|Nữ|Male|Female|M|F)(?:\s*\/\s*Sex|$|[\s,\.])/i);
       if (genderInLine && genderInLine[1]) {
         const genderValue = genderInLine[1].trim().toLowerCase();
         if (/^nam$|^male$|^m$/.test(genderValue)) {
-      parsedData.gender = 'male';
+          parsedData.gender = 'male';
           genderFound = true;
           console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
         } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-      parsedData.gender = 'female';
+          parsedData.gender = 'female';
           genderFound = true;
           console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
+        }
+      }
+      
+      // Pattern 1a-1: Tìm "Giới tính / Sex:" và giá trị nằm cùng dòng (sau dấu hai chấm)
+      if (!genderFound) {
+        const genderInLineWithSlash = line.match(/(?:Giới tính|GIOI TINH|Gender|Sex)\s*\/\s*Sex\s*:?\s*(Nam|Nữ|Male|Female|M|F)\b/i);
+        if (genderInLineWithSlash && genderInLineWithSlash[1]) {
+          const genderValue = genderInLineWithSlash[1].trim().toLowerCase();
+          if (/^nam$|^male$|^m$/.test(genderValue)) {
+            parsedData.gender = 'male';
+            genderFound = true;
+            console.log('Found gender (Pattern 1a-1):', parsedData.gender, 'from line:', line);
+            break;
+          } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
+            parsedData.gender = 'female';
+            genderFound = true;
+            console.log('Found gender (Pattern 1a-1):', parsedData.gender, 'from line:', line);
+            break;
+          }
         }
       }
       
@@ -1935,9 +1975,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       // Loại bỏ các từ/cụm từ OCR nhầm phổ biến (như "ERE", "BE", "INTE", "SE", "Sh", "ce", "g")
       clean = clean.replace(/\b(ERE|BE|INTE|SE|Sh|ce|g|bro|yi|OE|exp|Buông|tha|Date\s+ofbxpiry|Date\s+of|ofbxpiry|bxpiry)\b/gi, ' ').trim();
       // QUAN TRỌNG: Loại bỏ các label như "ch dem khai sinh", "Ngay. thang. nam sinh" - không phải địa chỉ
-      clean = clean.replace(/\b(ch\s+dem\s+khai\s+sinh|CH\s+DEM\s+KHAI\s+SINH|Ch\s+dem\s+khai\s+sinh)\b/gi, ' ').trim();
-      clean = clean.replace(/\b(Ngay\.\s+thang\.\s+nam\s+sinh|Ngày\.\s+tháng\.\s+năm\s+sinh|NGAY\.\s+THANG\.\s+NAM\s+SINH)\b/gi, ' ').trim();
-      clean = clean.replace(/\b(Gigi\s+unh|GIGI\s+UNH|gigi\s+unh)\b/gi, ' ').trim(); // Loại bỏ "Gigi unh" - OCR nhầm
+      clean = clean.replace(/\b(ch\s+dem\s+khai\s+sinh|CH\s+DEM\s+KHAI\s+SINH|Ch\s+dem\s+khai\s+sinh|chii\s+dem\s+ten\s+khai\s+sinh|CHII\s+DEM\s+TEN\s+KHAI\s+SINH)\b/gi, ' ').trim();
+      clean = clean.replace(/\b(Ngay\.\s+thang\.\s+nam\s+sinh|Ngày\.\s+tháng\.\s+năm\s+sinh|NGAY\.\s+THANG\.\s+NAM\s+SINH|Neti\s+dang\s+khai\s+sinh|NETI\s+DANG\s+KHAI\s+SINH)\b/gi, ' ').trim();
+      clean = clean.replace(/\b(Gigi\s+unh|GIGI\s+UNH|gigi\s+unh|Gio\s+toh|GIO\s+TOH|Cate\s+Dev|CATE\s+DEV)\b/gi, ' ').trim(); // Loại bỏ "Gigi unh", "Gio toh", "Cate Dev" - OCR nhầm
+      clean = clean.replace(/\b(lace\s+bith|LACE\s+BITH|Place\s+of\s+birth|PLACE\s+OF\s+BIRTH)\b/gi, ' ').trim(); // Loại bỏ "lace bith" - OCR nhầm của "Place of birth"
+      clean = clean.replace(/\b(Thi\s+Nham|THI\s+NHAM)\b/gi, 'Ngô Thì Nhậm').trim(); // Sửa "Thi Nham" thành "Ngô Thì Nhậm"
+      clean = clean.replace(/\b(ị\s+Bảng|Ị\s+BẢNG)\b/gi, 'Nhị Đồng').trim(); // Sửa "ị Bảng" thành "Nhị Đồng"
+      clean = clean.replace(/\b(ì\s+ươ|Ì\s+ƯƠ)\b/gi, 'Bình Dương').trim(); // Sửa "ì ươ" thành "Bình Dương"
       
       // Loại bỏ các pattern không hợp lý như "T 40 ổ 6" (có thể là OCR nhầm)
       clean = clean.replace(/\bT\s+\d+\s+[ổộ]\s+\d+\b/gi, ' ').trim();
