@@ -577,12 +577,17 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       'CAN CUOC CONG DAN',
       'CAN CUOC',
       'CONG DAN',
+      'CAN GƯỚC CONG DAN',
+      'CAN GUOC CONG DAN',
       'EET MANY',
       'EET',
       'MANY',
       'NOD THANG',
       'AFMCHP',
-      'NOD THANG AFMCHP'
+      'NOD THANG AFMCHP',
+      'NOD THANG ADECAP',
+      'ADECAP',
+      'THANG'
     ];
     if (invalidNamePatterns.some(pattern => upperName.includes(pattern))) {
       return false;
@@ -739,9 +744,17 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         merged.dateOfBirth = data.dateOfBirth;
       }
       
-      // Giới tính: ưu tiên mặt trước
-      if (data.gender && !merged.gender) {
-        merged.gender = data.gender;
+      // Giới tính: ưu tiên mặt trước, nhưng chỉ lấy nếu hợp lệ
+      if (data.gender && (data.gender === 'male' || data.gender === 'female')) {
+        // Nếu chưa có giới tính, lấy giới tính mới
+        if (!merged.gender) {
+          merged.gender = data.gender;
+          console.log(`[OCR] Merge: Set gender from ${data.side}: ${data.gender}`);
+        } else if (data.side === 'front' && merged.gender !== data.gender) {
+          // Nếu giới tính từ mặt trước khác với giới tính hiện tại, ưu tiên mặt trước
+          merged.gender = data.gender;
+          console.log(`[OCR] Merge: Replaced gender with gender from front: ${data.gender}`);
+        }
       }
       
       // Quốc tịch: ưu tiên "Việt Nam" nếu có, nếu không thì lấy từ mặt trước
@@ -873,10 +886,15 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     // "CAN CƯỚC CONG DAN" -> loại bỏ (đây là OCR nhầm của "CĂN CƯỚC CÔNG DÂN", không phải tên)
     fixed = fixed.replace(/\bCAN\s+CƯỚC\s+CONG\s+DAN\b/gi, '');
     fixed = fixed.replace(/\bCAN\s+CUOC\s+CONG\s+DAN\b/gi, '');
+    // "CAN GƯỚC CONG DAN" -> loại bỏ (OCR nhầm khác)
+    fixed = fixed.replace(/\bCAN\s+GƯỚC\s+CONG\s+DAN\b/gi, '');
+    fixed = fixed.replace(/\bCAN\s+GUOC\s+CONG\s+DAN\b/gi, '');
     // "EET many" -> loại bỏ (đây là OCR nhầm, không phải tên)
     fixed = fixed.replace(/\bEET\s+many\b/gi, '');
     // "Nod thang afmchp" -> loại bỏ (đây là OCR nhầm, không phải tên)
     fixed = fixed.replace(/\bNod\s+thang\s+afmchp\b/gi, '');
+    // "Nod thang adecap" -> loại bỏ (đây là OCR nhầm, không phải tên)
+    fixed = fixed.replace(/\bNod\s+thang\s+adecap\b/gi, '');
     // "Ra EN Fe Sd" -> loại bỏ (đây là OCR nhầm quốc tịch)
     fixed = fixed.replace(/\bRa\s+EN\s+Fe\s+Sd\b/gi, 'Việt Nam');
     fixed = fixed.replace(/\bRa\s+EN\s+Fe\b/gi, 'Việt Nam');
@@ -1226,10 +1244,10 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           if (nameAfterId && nameAfterId[1]) {
             let name = nameAfterId[1].trim();
             
-            // Loại bỏ các header ngay từ đầu
-            if (/CAN\s+CƯỚC|CAN\s+CUOC|CONG\s+DAN|CONG\s+DÂN|CÔNG\s+DÂN/i.test(name)) {
-              continue; // Bỏ qua dòng này, không phải tên
-            }
+        // Loại bỏ các header ngay từ đầu
+        if (/CAN\s+CƯỚC|CAN\s+CUOC|CAN\s+GƯỚC|CAN\s+GUOC|CONG\s+DAN|CONG\s+DÂN|CÔNG\s+DÂN/i.test(name)) {
+          continue; // Bỏ qua dòng này, không phải tên
+        }
             
             // Loại bỏ các phần không phải tên
             name = name.replace(/\d+/g, '').trim();
@@ -1473,20 +1491,39 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       const line = lines[i];
       
       // Pattern 1a: Dòng có "Giới tính: Nam" hoặc "Giới tính: Nữ" hoặc "Giới tính / Sex: Nam"
-      // Cải thiện pattern để match chính xác hơn
-      const genderInLine = line.match(/(?:Giới tính|GIOI TINH|Gender|Sex)[\s\/:]+(Nam|Nữ|Male|Female|M|F)(?:\s*\/\s*Sex|$)/i);
+      // Cải thiện pattern để match chính xác hơn, bao gồm cả "Giới tính / Sex: Nam"
+      const genderInLine = line.match(/(?:Giới tính|GIOI TINH|Gender|Sex)[\s\/:]+(Nam|Nữ|Male|Female|M|F)(?:\s*\/\s*Sex|$|[\s,])/i);
       if (genderInLine && genderInLine[1]) {
         const genderValue = genderInLine[1].trim().toLowerCase();
         if (/^nam$|^male$|^m$/.test(genderValue)) {
-      parsedData.gender = 'male';
+          parsedData.gender = 'male';
           genderFound = true;
           console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
         } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-      parsedData.gender = 'female';
+          parsedData.gender = 'female';
           genderFound = true;
           console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
+        }
+      }
+      
+      // Pattern 1a-2: Tìm "Nam" hoặc "Nữ" ngay sau "Giới tính" trong cùng dòng (không có dấu hai chấm)
+      if (!genderFound) {
+        const genderInLine2 = line.match(/(?:Giới tính|GIOI TINH|Gender|Sex)\s+(Nam|Nữ|Male|Female|M|F)\b/i);
+        if (genderInLine2 && genderInLine2[1]) {
+          const genderValue = genderInLine2[1].trim().toLowerCase();
+          if (/^nam$|^male$|^m$/.test(genderValue)) {
+            parsedData.gender = 'male';
+            genderFound = true;
+            console.log('Found gender (Pattern 1a-2):', parsedData.gender, 'from line:', line);
+            break;
+          } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
+            parsedData.gender = 'female';
+            genderFound = true;
+            console.log('Found gender (Pattern 1a-2):', parsedData.gender, 'from line:', line);
+            break;
+          }
         }
       }
       
@@ -1514,19 +1551,50 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     // Pattern 2: Tìm trong toàn bộ text nếu chưa tìm thấy
     if (!genderFound) {
-      // Tìm "Nam" hoặc "Nữ" gần từ "Giới tính" (trong vòng 30 ký tự)
-      const genderPattern = /(?:Giới tính|GIOI TINH|Gender|Sex)[\s\/:]*([^\n]{0,30}?)(Nam|Nữ|Male|Female|M|F)\b/i;
+      // Tìm "Nam" hoặc "Nữ" gần từ "Giới tính" (trong vòng 50 ký tự)
+      const genderPattern = /(?:Giới tính|GIOI TINH|Gender|Sex)[\s\/:]*([^\n]{0,50}?)(Nam|Nữ|Male|Female|M|F)\b/i;
       const genderMatch = text.match(genderPattern);
       if (genderMatch) {
         const genderValue = (genderMatch[2] || genderMatch[1]).trim().toLowerCase();
-        if (/^nam$|^male$|^m$/.test(genderValue)) {
-          parsedData.gender = 'male';
-          genderFound = true;
-          console.log('Found gender (Pattern 2):', parsedData.gender);
-        } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-          parsedData.gender = 'female';
-          genderFound = true;
-          console.log('Found gender (Pattern 2):', parsedData.gender);
+        // Loại bỏ các từ không phải giới tính (như "Nam" trong tên "Nguyễn Văn Nam")
+        if (!/^(?:Họ|Tên|Full|name|Ngày|Date|Quốc|Nationality|Địa|Address)/i.test(genderMatch[0])) {
+          if (/^nam$|^male$|^m$/.test(genderValue)) {
+            parsedData.gender = 'male';
+            genderFound = true;
+            console.log('Found gender (Pattern 2):', parsedData.gender);
+          } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
+            parsedData.gender = 'female';
+            genderFound = true;
+            console.log('Found gender (Pattern 2):', parsedData.gender);
+          }
+        }
+      }
+    }
+    
+    // Pattern 3: Tìm "Nam" hoặc "Nữ" đứng độc lập sau các label khác (ưu tiên thấp)
+    if (!genderFound) {
+      // Tìm dòng chỉ có "Nam" hoặc "Nữ" (không có từ khác)
+      for (const line of lines) {
+        const cleanLine = line.trim().toLowerCase();
+        if (/^(nam|nữ|male|female|m|f)$/.test(cleanLine)) {
+          // Kiểm tra dòng trước đó có phải "Giới tính" không
+          const lineIndex = lines.indexOf(line);
+          if (lineIndex > 0) {
+            const prevLine = lines[lineIndex - 1].toLowerCase();
+            if (/giới tính|gioi tinh|gender|sex/i.test(prevLine)) {
+              if (/^nam$|^male$|^m$/.test(cleanLine)) {
+                parsedData.gender = 'male';
+                genderFound = true;
+                console.log('Found gender (Pattern 3):', parsedData.gender, 'from line:', line);
+                break;
+              } else if (/^nữ$|^nữ$|^female$|^f$/.test(cleanLine)) {
+                parsedData.gender = 'female';
+                genderFound = true;
+                console.log('Found gender (Pattern 3):', parsedData.gender, 'from line:', line);
+                break;
+              }
+            }
+          }
         }
       }
     }
@@ -1650,12 +1718,18 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       // Loại bỏ các pattern như "Ch B2 TN7 T.." (OCR nhầm)
       clean = clean.replace(/\bCh\s+B\d+\s+TN\d+\s+T\.\./gi, ' ').trim();
       
+      // Loại bỏ các pattern như "T.," hoặc "T." (OCR nhầm)
+      clean = clean.replace(/\bT\.\s*,?/gi, ' ').trim();
+      
       // Loại bỏ các pattern như "ú,," hoặc ",, à" (OCR nhầm)
       clean = clean.replace(/ú,,|,,/g, ' ').trim();
       clean = clean.replace(/,\s*,+/g, ',').trim(); // Loại bỏ dấu phẩy lặp lại
       
-      // Loại bỏ các từ đơn lẻ không hợp lý như "ú", "Tâ", "à", "Nai" (OCR nhầm)
-      clean = clean.replace(/\b(ú|Tâ|à|Nai|ThThượngng)\b/gi, ' ').trim();
+      // Loại bỏ các từ đơn lẻ không hợp lý như "ú", "Tâ", "à", "Nai", "ơ" (OCR nhầm)
+      clean = clean.replace(/\b(ú|Tâ|à|Nai|ThThượngng|ơ|H8)\b/gi, ' ').trim();
+      
+      // Loại bỏ các pattern như "Tâ H8" (OCR nhầm)
+      clean = clean.replace(/\bTâ\s+H\d+\b/gi, ' ').trim();
       
       // Loại bỏ các số ngày tháng không hợp lý (như "2082020", "5 29")
       clean = clean.replace(/\b\d{7,}\b/g, '').trim(); // Loại bỏ số có 7+ chữ số
@@ -1747,15 +1821,21 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           // Loại bỏ các pattern như "Ch B2 TN7 T.." (OCR nhầm)
           address = address.replace(/\bCh\s+B\d+\s+TN\d+\s+T\.\./gi, ' ').trim();
           
+          // Loại bỏ các pattern như "T.," hoặc "T." (OCR nhầm)
+          address = address.replace(/\bT\.\s*,?/gi, ' ').trim();
+          
           // Loại bỏ các pattern như "ú,," hoặc ",, à" (OCR nhầm)
           address = address.replace(/ú,,|,,/g, ' ').trim();
           address = address.replace(/,\s*,+/g, ',').trim(); // Loại bỏ dấu phẩy lặp lại
           
-          // Loại bỏ các từ đơn lẻ không hợp lý như "ú", "Tâ", "à", "Nai" (OCR nhầm)
-          address = address.replace(/\b(ú|Tâ|à|Nai|ThThượngng)\b/gi, ' ').trim();
+          // Loại bỏ các từ đơn lẻ không hợp lý như "ú", "Tâ", "à", "Nai", "ơ" (OCR nhầm)
+          address = address.replace(/\b(ú|Tâ|à|Nai|ThThượngng|ơ|H8)\b/gi, ' ').trim();
           
-          // Loại bỏ các pattern như ", à" ở cuối (OCR nhầm)
-          address = address.replace(/,\s*à\s*$/gi, '').trim();
+          // Loại bỏ các pattern như ", à" hoặc ", à ơ" ở cuối (OCR nhầm)
+          address = address.replace(/,\s*à(\s+ơ)?\s*$/gi, '').trim();
+          
+          // Loại bỏ các pattern như "Tâ H8" (OCR nhầm)
+          address = address.replace(/\bTâ\s+H\d+\b/gi, ' ').trim();
           
           // Loại bỏ các số ngày tháng không hợp lý
           address = address.replace(/\b\d{7,}\b/g, '').trim();
