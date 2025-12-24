@@ -435,11 +435,27 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           const sortedData = this.sortByCardSide(validScannedData);
           
           // Cập nhật lại fileIndex sau khi sắp xếp
+          // QUAN TRỌNG: Giữ nguyên side đã detect, chỉ cập nhật fileIndex
           sortedData.forEach((data, index) => {
             data.fileIndex = index;
-            data.side = index === 0 ? 'front' : 'back';
-            data.isFrontSide = index === 0;
+            // Chỉ cập nhật side nếu chưa có hoặc là 'unknown'
+            if (!data.side || data.side === 'unknown') {
+              data.side = index === 0 ? 'front' : 'back';
+            }
+            // Lưu detectedSide để biết side thực tế đã detect
+            if (!data.detectedSide) {
+              data.detectedSide = data.side;
+            }
+            data.isFrontSide = data.side === 'front';
           });
+          
+          console.log(`[OCR] After sorting:`, sortedData.map((d, i) => ({ 
+            index: i, 
+            fileIndex: d.fileIndex, 
+            side: d.side, 
+            detectedSide: d.detectedSide,
+            hasAddress: !!d.permanentAddress 
+          })));
           
           const mergedData = this.mergeScannedData(sortedData);
           
@@ -810,10 +826,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         if (!merged.address) {
           merged.address = data.address;
           console.log(`[OCR] Merge: Set address from ${data.side} (fileIndex=${data.fileIndex}): ${data.address.substring(0, 50)}...`);
-        } else if (data.side === 'back' && sortedData.length > 1) {
-          // Nếu địa chỉ từ mặt sau và có 2 ảnh, ưu tiên mặt sau (thay thế nếu đã có từ mặt trước)
+        } else if (data.side === 'back') {
+          // Nếu địa chỉ từ mặt sau, LUÔN ưu tiên mặt sau (thay thế nếu đã có từ mặt trước)
+          // Không cần kiểm tra sortedData.length > 1 vì mặt sau luôn ưu tiên
           merged.address = data.address;
-          console.log(`[OCR] Merge: Replaced address with address from back (2 images): ${data.address.substring(0, 50)}...`);
+          console.log(`[OCR] Merge: Replaced address with address from back (fileIndex=${data.fileIndex}): ${data.address.substring(0, 50)}...`);
+        } else if (data.side === 'front' && merged.address) {
+          // Nếu địa chỉ từ mặt trước và đã có từ mặt sau, giữ nguyên từ mặt sau (không thay thế)
+          console.log(`[OCR] Merge: Keeping address from back, ignoring front (fileIndex=${data.fileIndex})`);
         }
         // Nếu địa chỉ từ mặt trước và đã có từ mặt sau, giữ nguyên từ mặt sau
       }
@@ -827,6 +847,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     // Logic điền địa chỉ:
     // - Nếu có 1 ảnh: dùng nơi thường trú làm địa chỉ
     // - Nếu có 2 ảnh: ưu tiên địa chỉ (nơi cư trú) từ mặt sau, nếu không có thì dùng nơi thường trú
+    // QUAN TRỌNG: Ưu tiên địa chỉ từ mặt sau (back) hơn mặt trước (front)
     if (!merged.address) {
       if (sortedData.length === 1 && merged.permanentAddress) {
         // 1 ảnh: dùng nơi thường trú
@@ -834,12 +855,25 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         console.log('[OCR] Merge: Using permanentAddress as address (1 image)');
       } else if (sortedData.length > 1 && merged.permanentAddress) {
         // 2 ảnh: nếu không có địa chỉ (nơi cư trú), dùng nơi thường trú
-        merged.address = merged.permanentAddress;
-        console.log('[OCR] Merge: Using permanentAddress as address (2 images, no current address)');
+        // Tìm địa chỉ từ mặt sau trước
+        const backSideData = sortedData.find(d => d.side === 'back' && d.permanentAddress && this.isValidAddress(d.permanentAddress));
+        if (backSideData) {
+          merged.address = backSideData.permanentAddress;
+          console.log('[OCR] Merge: Using permanentAddress from back side as address (2 images)');
+        } else {
+          merged.address = merged.permanentAddress;
+          console.log('[OCR] Merge: Using permanentAddress as address (2 images, no back side address)');
+        }
       }
     } else if (sortedData.length > 1) {
-      // 2 ảnh: đã có địa chỉ (nơi cư trú), giữ nguyên
-      console.log('[OCR] Merge: Using current address (2 images)');
+      // 2 ảnh: đã có địa chỉ (nơi cư trú), nhưng kiểm tra lại xem có địa chỉ từ mặt sau không
+      const backSideAddress = sortedData.find(d => d.side === 'back' && d.address && this.isValidAddress(d.address));
+      if (backSideAddress && merged.address !== backSideAddress.address) {
+        merged.address = backSideAddress.address;
+        console.log('[OCR] Merge: Replaced address with address from back side (2 images)');
+      } else {
+        console.log('[OCR] Merge: Using current address (2 images)');
+      }
     }
     
     // Mặc định quốc tịch là "Việt Nam" nếu không có hoặc không hợp lệ
@@ -885,28 +919,47 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     if (/GIỚI\s+TÍNH|SEX/i.test(text)) frontScore += 3;
     if (/QUỐC\s+TỊCH|NATIONALITY/i.test(text)) frontScore += 3;
     
-    // Dấu hiệu mặt sau
-    if (/BỘ\s+CÔNG\s+AN/i.test(text)) backScore += 10;
-    if (/MINISTRY\s+OF\s+PUBLIC\s+SECURITY/i.test(text)) backScore += 10;
-    if (/IDVNM/i.test(text)) backScore += 15; // MRZ bắt đầu bằng IDVNM
-    if (/\<\<\</.test(text)) backScore += 10; // MRZ có nhiều dấu <<<
-    if (/NƠI\s+THƯỜNG\s+TRÚ|PLACE\s+OF\s+RESIDENCE/i.test(text)) backScore += 8;
-    if (/CÓ\s+GIÁ\s+TRỊ\s+ĐẾN|DATE\s+OF\s+EXPIRY/i.test(text)) backScore += 5;
-    if (/QUÊ\s+QUÁN|PLACE\s+OF\s+ORIGIN/i.test(text)) backScore += 5;
+    // Dấu hiệu mặt sau - tăng điểm để ưu tiên nhận diện chính xác
+    if (/BỘ\s+CÔNG\s+AN/i.test(text)) backScore += 15; // Tăng từ 10 lên 15
+    if (/MINISTRY\s+OF\s+PUBLIC\s+SECURITY/i.test(text)) backScore += 15; // Tăng từ 10 lên 15
+    if (/IDVNM/i.test(text)) backScore += 20; // MRZ bắt đầu bằng IDVNM - tăng từ 15 lên 20
+    if (/\<\<\</.test(text)) backScore += 15; // MRZ có nhiều dấu <<< - tăng từ 10 lên 15
+    if (/NƠI\s+THƯỜNG\s+TRÚ|PLACE\s+OF\s+RESIDENCE/i.test(text)) backScore += 10; // Tăng từ 8 lên 10
+    if (/CÓ\s+GIÁ\s+TRỊ\s+ĐẾN|DATE\s+OF\s+EXPIRY/i.test(text)) backScore += 8; // Tăng từ 5 lên 8
+    if (/QUÊ\s+QUÁN|PLACE\s+OF\s+ORIGIN/i.test(text)) backScore += 8; // Tăng từ 5 lên 8
     
     // Kiểm tra MRZ pattern (3 dòng, mỗi dòng ~30 ký tự, có <<<)
     const mrzPattern = /[A-Z0-9<]{20,}/g;
     const mrzMatches = text.match(mrzPattern);
     if (mrzMatches && mrzMatches.length >= 2) {
-      backScore += 15; // MRZ thường có 2-3 dòng
+      backScore += 20; // MRZ thường có 2-3 dòng - tăng từ 15 lên 20
     }
     
-    console.log(`[OCR] Detect side: frontScore=${frontScore}, backScore=${backScore}`);
+    // Kiểm tra pattern địa chỉ phổ biến (thường ở mặt sau)
+    const addressPatterns = [
+      /\d{1,2}\/\d{1,2}\/\d{1,2}/, // Pattern số nhà như "44/26/53"
+      /(?:Tổ|Cụm|Phường|Xã|Huyện|Tỉnh|Thành|Phố)/i, // Từ khóa địa chỉ
+      /(?:Bình\s+Dương|Dĩ\s+An|Hà\s+Nam|Lý\s+Nhân|Trần\s+Hưng\s+Đạo)/i // Địa danh phổ biến
+    ];
+    const hasAddressPattern = addressPatterns.some(pattern => pattern.test(text));
+    if (hasAddressPattern) {
+      backScore += 8; // Có pattern địa chỉ - thường ở mặt sau
+    }
+    
+    // Kiểm tra pattern ngày cấp/hết hạn (thường ở mặt sau)
+    if (/\d{1,2}\/\d{1,2}\/\d{4}/.test(text) && /(?:Cấp|Hết\s+hạn|Expiry)/i.test(text)) {
+      backScore += 5; // Có ngày cấp/hết hạn - thường ở mặt sau
+    }
+    
+    console.log(`[OCR] Detect side: frontScore=${frontScore}, backScore=${backScore}, text preview: ${text.substring(0, 100)}...`);
+    
+    // Ưu tiên back nếu có MRZ hoặc "BỘ CÔNG AN" (dấu hiệu rõ ràng của mặt sau)
+    if (backScore >= 20 || (backScore > frontScore && backScore >= 15)) {
+      return 'back';
+    }
     
     if (frontScore > backScore && frontScore >= 10) {
       return 'front';
-    } else if (backScore > frontScore && backScore >= 10) {
-      return 'back';
     }
     
     return 'unknown';
