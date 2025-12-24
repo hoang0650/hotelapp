@@ -568,7 +568,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       'AYN DARE',
       'HAL GANG',
       'KY KHAI',
-      'IND PINE'
+      'IND PINE',
+      'IN DANH',
+      'CD SEN',
+      'IN DANH CD SEN',
+      'IN DANH CD SEN IDENTIFICATION'
     ];
     if (invalidNamePatterns.some(pattern => upperName.includes(pattern))) {
       return false;
@@ -647,14 +651,23 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       address: ''
     };
     
-    // Sắp xếp theo fileIndex để ưu tiên mặt trước (index 0)
-    // Nhưng ưu tiên dữ liệu hợp lệ hơn (kiểm tra isValidName, isValidAddress)
+    // Sắp xếp theo fileIndex và side để ưu tiên mặt trước (index 0, side='front')
+    // Ưu tiên: front > back > unknown, và dữ liệu hợp lệ hơn dữ liệu không hợp lệ
     const sortedData = [...validData].sort((a, b) => {
       const indexA = a.fileIndex !== undefined ? a.fileIndex : 999;
       const indexB = b.fileIndex !== undefined ? b.fileIndex : 999;
       
-      // Nếu cùng index, ưu tiên dữ liệu hợp lệ hơn
+      // Ưu tiên mặt trước (front) hơn mặt sau (back)
+      const sideOrder: { [key: string]: number } = { 'front': 0, 'back': 1, 'unknown': 2 };
+      const sideA = sideOrder[a.side || 'unknown'] ?? 2;
+      const sideB = sideOrder[b.side || 'unknown'] ?? 2;
+      
+      // Nếu cùng index, ưu tiên front > back
       if (indexA === indexB) {
+        if (sideA !== sideB) {
+          return sideA - sideB;
+        }
+        // Nếu cùng side, ưu tiên dữ liệu hợp lệ hơn
         const aValid = (a.fullName && this.isValidName(a.fullName)) || (a.permanentAddress && this.isValidAddress(a.permanentAddress));
         const bValid = (b.fullName && this.isValidName(b.fullName)) || (b.permanentAddress && this.isValidAddress(b.permanentAddress));
         if (aValid && !bValid) return -1;
@@ -680,10 +693,23 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     for (const data of sortedData) {
       console.log(`[OCR] Merge: fileIndex=${data.fileIndex}, side=${data.side}, fullName=${data.fullName || 'N/A'}, permanentAddress=${data.permanentAddress || 'N/A'}`);
       
-      // Họ và tên: ưu tiên mặt trước, nhưng chỉ lấy nếu hợp lệ
-      if (data.fullName && (!merged.fullName || !this.isValidName(merged.fullName))) {
-        if (this.isValidName(data.fullName)) {
+      // Họ và tên: ưu tiên mặt trước (front) hơn mặt sau (back)
+      // Chỉ lấy nếu hợp lệ, và ưu tiên front hơn back
+      if (data.fullName && this.isValidName(data.fullName)) {
+        // Nếu chưa có tên hoặc tên hiện tại không hợp lệ, lấy tên mới
+        if (!merged.fullName || !this.isValidName(merged.fullName)) {
           merged.fullName = data.fullName;
+        } else {
+          // Nếu đã có tên hợp lệ, chỉ thay thế nếu tên mới từ mặt trước (front)
+          if (data.side === 'front' && merged.fullName && this.isValidName(merged.fullName)) {
+            // Kiểm tra xem tên hiện tại có từ mặt sau không
+            const currentData = sortedData.find(d => d.fullName === merged.fullName);
+            if (currentData && currentData.side === 'back') {
+              // Thay thế tên từ mặt sau bằng tên từ mặt trước
+              merged.fullName = data.fullName;
+              console.log(`[OCR] Merge: Replaced name from back with name from front: ${data.fullName}`);
+            }
+          }
         }
       }
       
@@ -826,6 +852,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     fixed = fixed.replace(/\bNghy\s+Pang\s+nko\s+Mt\s+Ayn\s+Dare\b/gi, '');
     // "Personal identification" -> loại bỏ (đây là label, không phải tên)
     fixed = fixed.replace(/\bPersonal\s+identification\b/gi, '');
+    // "in danh cd sen identification" -> loại bỏ (đây là OCR nhầm, không phải tên)
+    fixed = fixed.replace(/\bin\s+danh\s+cd\s+sen\s+identification\b/gi, '');
     // "Ra EN Fe Sd" -> loại bỏ (đây là OCR nhầm quốc tịch)
     fixed = fixed.replace(/\bRa\s+EN\s+Fe\s+Sd\b/gi, 'Việt Nam');
     fixed = fixed.replace(/\bRa\s+EN\s+Fe\b/gi, 'Việt Nam');
@@ -1130,19 +1158,23 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     // Pattern 1.5: Tìm tên dựa trên số CMND/CCCD (tên thường nằm gần số này)
     // Trên CCCD, tên thường nằm ngay sau số CMND/CCCD trong cùng dòng hoặc dòng tiếp theo
+    // Hỗ trợ cả CCCD cũ và mới
     if (!nameFound && parsedData.idNumber) {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         
-        // Tìm dòng có chứa số CMND/CCCD
+        // Tìm dòng có chứa số CMND/CCCD (có thể có "CĂN CƯỚC" hoặc "Số" trước số)
         if (line.includes(parsedData.idNumber)) {
           // Pattern 1.5a: Tên nằm cùng dòng với số CMND/CCCD
           // Ví dụ: "CĂN CƯỚC 082188007080 ĐỖ THỊ TRÚC LAN"
+          // Hoặc: "Số / No.: 049300006573 PHAN VŨ TRÂM ANH"
           const nameAfterId = line.match(new RegExp(`${parsedData.idNumber}\\s+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\\s]{8,})`, 'i'));
           if (nameAfterId && nameAfterId[1]) {
             let name = nameAfterId[1].trim();
             // Loại bỏ các phần không phải tên
             name = name.replace(/\d+/g, '').trim();
+            // Loại bỏ các label như "Full name", "Họ và tên"
+            name = name.replace(/\s*(?:Full\s+name|Họ\s+và\s+tên|HO\s+VA\s+TEN).*/i, '').trim();
             name = name.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
             name = name.replace(/\s+/g, ' ').trim();
             
@@ -1151,20 +1183,29 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
               const nameParts = name.split(/\s+/).filter(part => part.length >= 2);
               if (nameParts.length >= 2 && name.length >= 8) {
                 parsedData.fullName = nameParts.join(' ');
-          nameFound = true;
+                nameFound = true;
                 console.log('Found name (Pattern 1.5a - same line as ID):', parsedData.fullName, 'from line:', line);
-          break;
-        }
-      }
-    }
-    
+                break;
+              }
+            }
+          }
+          
           // Pattern 1.5b: Tên nằm ở dòng tiếp theo sau dòng có số CMND/CCCD
+          // Có thể bỏ qua 1-2 dòng nếu chúng là label hoặc header
           if (!nameFound && i + 1 < lines.length) {
-            for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+            for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
               const nextLine = lines[j];
+              
+              // Bỏ qua các dòng label
+              if (/^(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name)[\s\/:]*$/i.test(nextLine)) {
+                continue; // Bỏ qua dòng label, lấy dòng tiếp theo
+              }
+              
               if (nextLine && isValidNameLine(nextLine) && !isHeaderLine(nextLine)) {
                 let cleanName = nextLine.trim();
                 cleanName = cleanName.replace(/\d+/g, '').trim();
+                // Loại bỏ các label nếu có
+                cleanName = cleanName.replace(/\s*(?:Full\s+name|Họ\s+và\s+tên|HO\s+VA\s+TEN).*/i, '').trim();
                 cleanName = cleanName.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
                 cleanName = cleanName.replace(/\s+/g, ' ').trim();
                 
@@ -1180,6 +1221,56 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
               }
             }
             if (nameFound) break;
+          }
+        }
+      }
+    }
+    
+    // Pattern 1.6: Tìm tên từ MRZ (Machine Readable Zone) ở mặt sau CCCD
+    // MRZ format: Dòng 3 thường có format "HỌ<<TÊN<<<<<<<<<<<<<"
+    // Ví dụ: "PHAN<<VU<TRAM<ANH<<<<<<<<<<<<<"
+    if (!nameFound) {
+      for (const line of lines) {
+        // Tìm dòng MRZ có format: chữ cái + << + chữ cái + < + chữ cái + < + chữ cái + <<
+        // Pattern: [A-Z]+<<[A-Z]+<[A-Z]+<[A-Z]+
+        const mrzPattern = /^([A-Z]+)<<([A-Z]+)<([A-Z]+)<([A-Z]+)/;
+        const mrzMatch = line.match(mrzPattern);
+        if (mrzMatch) {
+          // MRZ format: HỌ<<TÊN1<TÊN2<TÊN3
+          const ho = mrzMatch[1];
+          const ten1 = mrzMatch[2];
+          const ten2 = mrzMatch[3];
+          const ten3 = mrzMatch[4];
+          
+          // Gộp lại thành tên đầy đủ
+          const fullName = `${ho} ${ten1} ${ten2} ${ten3}`.trim();
+          
+          // Kiểm tra tên hợp lệ
+          if (this.isValidName(fullName)) {
+            parsedData.fullName = fullName;
+          nameFound = true;
+            console.log('Found name (Pattern 1.6 - from MRZ):', parsedData.fullName, 'from line:', line);
+          break;
+          }
+        }
+        
+        // Pattern khác: Tìm dòng có format "HỌ<<TÊN" hoặc "HỌ<TÊN"
+        const mrzPattern2 = /^([A-Z]{2,})[<]+([A-Z]{2,})[<]+/;
+        const mrzMatch2 = line.match(mrzPattern2);
+        if (mrzMatch2 && !nameFound) {
+          const ho2 = mrzMatch2[1];
+          const tenFull = mrzMatch2[2];
+          
+          // Tách tên thành các phần (có thể có < giữa các từ)
+          const tenParts = tenFull.split('<').filter(part => part.length >= 2);
+          if (tenParts.length >= 2) {
+            const fullName2 = `${ho2} ${tenParts.join(' ')}`.trim();
+            if (this.isValidName(fullName2)) {
+              parsedData.fullName = fullName2;
+              nameFound = true;
+              console.log('Found name (Pattern 1.6b - from MRZ):', parsedData.fullName, 'from line:', line);
+              break;
+            }
           }
         }
       }
@@ -1440,7 +1531,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     if (!nationalityFound) {
       const nationalityPattern = /(?:Quốc tịch|QUOC TICH|Nationality)[\s:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐa-z\s]{1,50})/i;
       const nationalityMatch = text.match(nationalityPattern);
-      if (nationalityMatch && nationalityMatch[1]) {
+    if (nationalityMatch && nationalityMatch[1]) {
         let nationality = nationalityMatch[1].trim();
         nationality = nationality.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
         nationality = nationality.replace(/\s+/g, ' ').trim();
