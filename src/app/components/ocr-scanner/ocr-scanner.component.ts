@@ -738,7 +738,37 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     // Helper function để kiểm tra xem dòng có phải header không
     const isHeaderLine = (line: string): boolean => {
-      return headerPatterns.some(pattern => pattern.test(line));
+      // Kiểm tra các pattern chính xác
+      if (headerPatterns.some(pattern => pattern.test(line))) {
+        return true;
+      }
+      
+      // Kiểm tra các từ khóa header trong dòng (OCR có thể nhầm)
+      const headerKeywords = [
+        'SOCIALIST', 'REPUBLIC', 'VIET NAM', 'VIETNAM',
+        'CỘNG HÒA', 'XÃ HỘI', 'CHỦ NGHĨA',
+        'INDEPENDENCE', 'FREEDOM', 'HAPPINESS',
+        'CĂN CƯỚC', 'CÔNG DÂN', 'CITIZEN', 'IDENTITY', 'CARD',
+        'BỘ CÔNG AN', 'MINISTRY', 'PUBLIC', 'SECURITY'
+      ];
+      
+      const upperLine = line.toUpperCase();
+      // Nếu dòng chứa 2 hoặc nhiều từ khóa header, coi như header
+      const keywordCount = headerKeywords.filter(keyword => 
+        upperLine.includes(keyword.toUpperCase())
+      ).length;
+      
+      if (keywordCount >= 2) {
+        return true;
+      }
+      
+      // Nếu dòng chứa "SOCIALIST" hoặc "REPUBLIC" kèm "VIET" hoặc "NAM", coi như header
+      if ((upperLine.includes('SOCIALIST') || upperLine.includes('REPUBLIC')) &&
+          (upperLine.includes('VIET') || upperLine.includes('NAM'))) {
+        return true;
+      }
+      
+      return false;
     };
     
     // Helper function để kiểm tra xem dòng có phải tên hợp lệ không
@@ -748,6 +778,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       // Loại bỏ các dòng có label
       if (/^(?:Ngày sinh|Date|Giới tính|Quốc tịch|Địa chỉ|Nơi|CMND|CCCD|Số|Quê quán|Họ và tên|HO VA TEN|Full name|Place|Residence)/i.test(line)) {
+        return false;
+      }
+      
+      // Loại bỏ các dòng có chứa từ khóa header (OCR có thể nhầm)
+      if (/SOCIALIST|REPUBLIC|VIET\s+NAM|VIETNAM|CỘNG\s+HÒA|XÃ\s+HỘI|CHỦ\s+NGHĨA|INDEPENDENCE|FREEDOM|HAPPINESS|CĂN\s+CƯỚC|CÔNG\s+DÂN|CITIZEN|IDENTITY/i.test(line)) {
         return false;
       }
       
@@ -766,6 +801,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         return false;
       }
       
+      // Đảm bảo dòng chỉ chứa chữ cái, khoảng trắng và dấu tiếng Việt (không có ký tự đặc biệt lạ)
+      if (!/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/i.test(line)) {
+        return false;
+      }
+      
       return true;
     };
     
@@ -778,13 +818,27 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       // Pattern 1a: Dòng có "Họ và tên:" hoặc "Họ và tên / Full name:" và tên nằm cùng dòng
       // Pattern này phải match chính xác label và lấy phần sau dấu hai chấm hoặc dấu gạch chéo
-      const nameInLine = line.match(/(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name)[\s\/:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+)/i);
+      // Cải thiện: tìm pattern chính xác hơn, loại bỏ các phần không phải tên
+      
+      // Pattern 1a-1: "Họ và tên: TÊN" hoặc "Họ và tên / Full name: TÊN"
+      let nameInLine = line.match(/(?:Họ\s+và\s+tên|HO\s+VA\s+TEN)[\s\/:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+?)(?:\s*\/\s*Full\s+name|$)/i);
+      
+      // Pattern 1a-2: "Full name: TÊN" (nếu không tìm thấy ở pattern 1)
+      if (!nameInLine) {
+        nameInLine = line.match(/Full\s+name[\s:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+)/i);
+      }
+      
       if (nameInLine && nameInLine[1]) {
         let name = nameInLine[1].trim();
         
-        // Loại bỏ các phần không phải tên (như "Full name" nếu có)
+        // Loại bỏ các phần không phải tên
+        // Loại bỏ "Full name" nếu có ở cuối
         name = name.replace(/\s*\/\s*Full\s+name.*/i, '').trim();
-        name = name.replace(/\d+/g, '').replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
+        // Loại bỏ số
+        name = name.replace(/\d+/g, '').trim();
+        // Loại bỏ ký tự đặc biệt nhưng giữ chữ cái và dấu tiếng Việt
+        name = name.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
+        // Chuẩn hóa khoảng trắng
         name = name.replace(/\s+/g, ' ').trim();
         
         // Kiểm tra tên hợp lệ (ít nhất 2 từ, mỗi từ ít nhất 2 ký tự, không phải header)
@@ -800,27 +854,45 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
       
       // Pattern 1b: Dòng chỉ có "Họ và tên" hoặc "Họ và tên / Full name", tên nằm ở dòng tiếp theo
+      // Cải thiện: kiểm tra chặt chẽ hơn để đảm bảo lấy đúng dòng tên
       if ((/^(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name)[\s\/:]*$/i.test(line) || 
            /^(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name)$/i.test(line)) && 
           i + 1 < lines.length) {
-        const nextLine = lines[i + 1];
-        if (nextLine && isValidNameLine(nextLine) &&
-            /^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐa-z\s]+$/i.test(nextLine) && 
-            !/^\d{9,12}$/.test(nextLine)) {
-          let cleanName = nextLine.replace(/\d+/g, '').replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
-          cleanName = cleanName.replace(/\s+/g, ' ').trim();
+        // Tìm dòng tên tiếp theo, có thể bỏ qua 1-2 dòng nếu chúng là header hoặc label
+        for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+          const nextLine = lines[j];
           
-          // Kiểm tra không phải header
-          if (!isHeaderLine(cleanName)) {
-            const nameParts = cleanName.split(/\s+/).filter(part => part.length >= 2);
-            if (nameParts.length >= 2 && cleanName.length >= 8) {
-              parsedData.fullName = nameParts.join(' ');
-              nameFound = true;
-              console.log('Found name (Pattern 1b - next line):', parsedData.fullName, 'from line:', nextLine);
-              break;
+          // Kiểm tra dòng tiếp theo có phải tên không
+          if (nextLine && 
+              isValidNameLine(nextLine) &&
+              /^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐa-z\s]+$/i.test(nextLine) && 
+              !/^\d{9,12}$/.test(nextLine) &&
+              // Đảm bảo không phải là label khác
+              !/^(?:Ngày sinh|Date|Giới tính|Quốc tịch|Địa chỉ|Nơi|CMND|CCCD|Số|Quê quán)/i.test(nextLine) &&
+              // Đảm bảo không phải header
+              !isHeaderLine(nextLine)) {
+            
+            let cleanName = nextLine.trim();
+            // Loại bỏ số
+            cleanName = cleanName.replace(/\d+/g, '').trim();
+            // Loại bỏ ký tự đặc biệt nhưng giữ chữ cái và dấu tiếng Việt
+            cleanName = cleanName.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
+            // Chuẩn hóa khoảng trắng
+            cleanName = cleanName.replace(/\s+/g, ' ').trim();
+            
+            // Kiểm tra không phải header và có ít nhất 2 từ
+            if (!isHeaderLine(cleanName) && cleanName.length >= 8) {
+              const nameParts = cleanName.split(/\s+/).filter(part => part.length >= 2);
+              if (nameParts.length >= 2) {
+                parsedData.fullName = nameParts.join(' ');
+                nameFound = true;
+                console.log('Found name (Pattern 1b - next line):', parsedData.fullName, 'from line:', nextLine);
+                break;
+              }
             }
           }
         }
+        if (nameFound) break;
       }
     }
     
@@ -958,37 +1030,41 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Pattern 1a: Dòng có "Giới tính: Nam" hoặc "Giới tính: Nữ"
-      const genderInLine = line.match(/(?:Giới tính|GIOI TINH|Gender|Sex)[\s:]+(Nam|Nữ|Male|Female|M|F)/i);
+      // Pattern 1a: Dòng có "Giới tính: Nam" hoặc "Giới tính: Nữ" hoặc "Giới tính / Sex: Nam"
+      // Cải thiện pattern để match chính xác hơn
+      const genderInLine = line.match(/(?:Giới tính|GIOI TINH|Gender|Sex)[\s\/:]+(Nam|Nữ|Male|Female|M|F)(?:\s*\/\s*Sex|$)/i);
       if (genderInLine && genderInLine[1]) {
-        const genderValue = genderInLine[1].toLowerCase();
-        if (/nam|male|m/.test(genderValue)) {
+        const genderValue = genderInLine[1].trim().toLowerCase();
+        if (/^nam$|^male$|^m$/.test(genderValue)) {
           parsedData.gender = 'male';
           genderFound = true;
-          console.log('Found gender (Pattern 1a):', parsedData.gender);
+          console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
-        } else if (/nữ|nữ|female|f/.test(genderValue)) {
+        } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
           parsedData.gender = 'female';
           genderFound = true;
-          console.log('Found gender (Pattern 1a):', parsedData.gender);
+          console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
         }
       }
       
-      // Pattern 1b: Dòng chỉ có "Giới tính", giá trị nằm ở dòng tiếp theo
-      if ((/^(?:Giới tính|GIOI TINH|Gender|Sex)[\s:]*$/i.test(line) || 
+      // Pattern 1b: Dòng chỉ có "Giới tính" hoặc "Giới tính / Sex", giá trị nằm ở dòng tiếp theo
+      if ((/^(?:Giới tính|GIOI TINH|Gender|Sex)[\s\/:]*$/i.test(line) || 
            /^(?:Giới tính|GIOI TINH|Gender|Sex)$/i.test(line)) && 
           i + 1 < lines.length) {
-        const nextLine = lines[i + 1].trim().toLowerCase();
-        if (/^nam|^male|^m$/.test(nextLine)) {
+        const nextLine = lines[i + 1].trim();
+        // Loại bỏ phần "Sex" nếu có
+        let genderValue = nextLine.replace(/\s*\/\s*Sex.*/i, '').trim().toLowerCase();
+        
+        if (/^nam$|^male$|^m$/.test(genderValue)) {
           parsedData.gender = 'male';
           genderFound = true;
-          console.log('Found gender (Pattern 1b):', parsedData.gender);
+          console.log('Found gender (Pattern 1b):', parsedData.gender, 'from line:', nextLine);
           break;
-        } else if (/^nữ|^nữ|^female|^f$/.test(nextLine)) {
+        } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
           parsedData.gender = 'female';
           genderFound = true;
-          console.log('Found gender (Pattern 1b):', parsedData.gender);
+          console.log('Found gender (Pattern 1b):', parsedData.gender, 'from line:', nextLine);
           break;
         }
       }
@@ -996,26 +1072,28 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     // Pattern 2: Tìm trong toàn bộ text nếu chưa tìm thấy
     if (!genderFound) {
-      // Tìm "Nam" hoặc "Nữ" gần từ "Giới tính"
-      const genderPattern = /(?:Giới tính|GIOI TINH|Gender)[\s:]*([^\n]{0,20}?)(Nam|Nữ|Male|Female)/i;
+      // Tìm "Nam" hoặc "Nữ" gần từ "Giới tính" (trong vòng 30 ký tự)
+      const genderPattern = /(?:Giới tính|GIOI TINH|Gender|Sex)[\s\/:]*([^\n]{0,30}?)(Nam|Nữ|Male|Female|M|F)\b/i;
       const genderMatch = text.match(genderPattern);
       if (genderMatch) {
-        const genderValue = (genderMatch[2] || genderMatch[1]).toLowerCase();
-        if (/nam|male|m/.test(genderValue)) {
+        const genderValue = (genderMatch[2] || genderMatch[1]).trim().toLowerCase();
+        if (/^nam$|^male$|^m$/.test(genderValue)) {
           parsedData.gender = 'male';
           genderFound = true;
-        } else if (/nữ|nữ|female|f/.test(genderValue)) {
+          console.log('Found gender (Pattern 2):', parsedData.gender);
+        } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
           parsedData.gender = 'female';
           genderFound = true;
-        }
-      } else {
-        // Fallback: tìm "Nam" hoặc "Nữ" đơn lẻ (ưu tiên "Nữ" vì "Nam" có thể là tên)
-        if (/Nữ|Female|F\b/i.test(normalizedText) && !/Nam\s+[A-Z]/.test(normalizedText)) {
-          parsedData.gender = 'female';
-        } else if (/\bNam\b|Male|M\b/i.test(normalizedText)) {
-          parsedData.gender = 'male';
+          console.log('Found gender (Pattern 2):', parsedData.gender);
         }
       }
+    }
+    
+    // Log kết quả giới tính
+    if (parsedData.gender) {
+      console.log('Gender found:', parsedData.gender);
+    } else {
+      console.log('Gender not found');
     }
     
     // Tìm quốc tịch - cải thiện logic
@@ -1098,10 +1176,33 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       clean = clean.replace(/Place\s+of\s+residence[^,]*/gi, '').trim();
       clean = clean.replace(/Có\s+gia\s+tị\s+đến\s+\d+/gi, '').trim();
       clean = clean.replace(/Có\s+giá\s+trị\s+đến\s+\d+/gi, '').trim();
+      
+      // Loại bỏ các từ/cụm từ OCR nhầm phổ biến (như "ERE", "BE", "INTE", "SE", "Sh", "ce", "g")
+      clean = clean.replace(/\b(ERE|BE|INTE|SE|Sh|ce|g|bro|yi|OE)\b/gi, ' ').trim();
+      
+      // Loại bỏ các số ngày tháng không hợp lý (như "2082020", "5 29")
+      clean = clean.replace(/\b\d{7,}\b/g, '').trim(); // Loại bỏ số có 7+ chữ số
+      clean = clean.replace(/\b\d{1,2}\s+\d{1,2}\b/g, '').trim(); // Loại bỏ số đơn lẻ cách nhau
+      
+      // Loại bỏ các từ đơn lẻ không hợp lý (1-2 ký tự, không phải từ tiếng Việt phổ biến)
+      clean = clean.replace(/\b[a-z]{1,2}\b/gi, (match) => {
+        // Giữ lại các từ tiếng Việt phổ biến như "T.", "Ch", "Cụm"
+        const validShortWords = ['t', 'ch', 'cụm', 'tổ', 'phường', 'xã', 'huyện', 'tỉnh', 'thành'];
+        if (validShortWords.includes(match.toLowerCase())) {
+          return match;
+        }
+        return '';
+      }).trim();
+      
       // Loại bỏ ký tự đặc biệt không cần thiết nhưng giữ lại dấu phẩy, chấm, gạch ngang
-      clean = clean.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s,\.\-]/gi, '').trim();
+      clean = clean.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s,\.\-]/gi, ' ').trim();
+      
       // Loại bỏ các ký tự đặc biệt ở đầu/cuối
       clean = clean.replace(/^[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]+|[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s,\.\-]+$/gi, '').trim();
+      
+      // Chuẩn hóa khoảng trắng
+      clean = clean.replace(/\s+/g, ' ').trim();
+      
       return clean;
     };
     
@@ -1114,42 +1215,71 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       if (addressLabelPattern.test(line) && i + 1 < lines.length) {
         const addressLines: string[] = [];
-        // Lấy các dòng tiếp theo cho đến khi gặp dòng khác (tối đa 8 dòng)
-        for (let j = i + 1; j < lines.length && j < i + 9; j++) {
+        // Lấy các dòng tiếp theo cho đến khi gặp dòng khác (tối đa 10 dòng để lấy đầy đủ)
+        for (let j = i + 1; j < lines.length && j < i + 11; j++) {
           const nextLine = lines[j];
+          
           // Dừng nếu gặp dòng có từ khóa khác hoặc là số/ngày tháng
-          if (/^(?:Đặc điểm|Ngày|CMND|CCCD|Số|Quốc tịch|Giới tính|Địa chỉ hiện tại|Họ và tên|Tên|Quê quán|Nơi cư trú)/i.test(nextLine) ||
+          if (/^(?:Đặc điểm|Ngày|CMND|CCCD|Số|Quốc tịch|Giới tính|Địa chỉ hiện tại|Họ và tên|Tên|Quê quán|Nơi cư trú|BỘ CÔNG AN|MINISTRY)/i.test(nextLine) ||
               /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(nextLine) ||
               /^\d{9,12}$/.test(nextLine) ||
-              // Dừng nếu gặp dòng ngắn có thể là tên (ít hơn 12 ký tự và ít hơn 2 từ)
-              (/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 12 && nextLine.split(/\s+/).length <= 1)) {
+              // Dừng nếu gặp MRZ (dòng có nhiều ký tự đặc biệt và số)
+              /^[A-Z0-9<]{20,}$/.test(nextLine) ||
+              // Dừng nếu gặp dòng ngắn có thể là label khác (ít hơn 10 ký tự và ít hơn 2 từ)
+              (/^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(nextLine) && nextLine.length < 10 && nextLine.split(/\s+/).length <= 1)) {
             break;
           }
-          // Thêm dòng vào địa chỉ nếu có nội dung
-          if (nextLine && nextLine.length > 2) {
+          
+          // Thêm dòng vào địa chỉ nếu có nội dung và không phải là dòng trống
+          if (nextLine && nextLine.length > 3) {
             const cleanLine = cleanAddressLine(nextLine);
-            if (cleanLine.length > 2) {
+            // Chỉ thêm nếu dòng có ít nhất 5 ký tự sau khi làm sạch
+            if (cleanLine.length > 4) {
               addressLines.push(cleanLine);
             }
           }
         }
+        
         if (addressLines.length > 0) {
           let address = addressLines.join(', ').replace(/\s+/g, ' ').trim();
-          // Làm sạch lại sau khi gộp
+          
+          // Làm sạch lại sau khi gộp - loại bỏ các phần không cần thiết
           address = address.replace(/\([^)]*Place\s+of\s+residence[^)]*\)/gi, '').trim();
           address = address.replace(/\([^)]*Có\s+gia\s+tị[^)]*\)/gi, '').trim();
           address = address.replace(/\([^)]*Có\s+giá\s+trị[^)]*\)/gi, '').trim();
           address = address.replace(/Place\s+of\s+residence[^,]*/gi, '').trim();
           address = address.replace(/Có\s+gia\s+tị\s+đến\s+\d+/gi, '').trim();
           address = address.replace(/Có\s+giá\s+trị\s+đến\s+\d+/gi, '').trim();
-          // Loại bỏ các từ đơn lẻ không hợp lý
-          address = address.replace(/\b[ôioa]\b/gi, '').trim();
+          
+          // Loại bỏ các từ/cụm từ OCR nhầm phổ biến
+          address = address.replace(/\b(ERE|BE|INTE|SE|Sh|ce|g|bro|yi|OE|gia\s+đền)\b/gi, ' ').trim();
+          
+          // Loại bỏ các số ngày tháng không hợp lý
+          address = address.replace(/\b\d{7,}\b/g, '').trim();
+          address = address.replace(/\b\d{1,2}\s+\d{1,2}\b/g, '').trim();
+          
+          // Loại bỏ các từ đơn lẻ không hợp lý (nhưng giữ lại các từ tiếng Việt phổ biến)
+          address = address.replace(/\b[a-z]{1,2}\b/gi, (match) => {
+            const validShortWords = ['t', 'ch', 'cụm', 'tổ', 'phường', 'xã', 'huyện', 'tỉnh', 'thành'];
+            if (validShortWords.includes(match.toLowerCase())) {
+              return match;
+            }
+            return '';
+          }).trim();
+          
+          // Loại bỏ các ký tự đặc biệt không hợp lý
+          address = address.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s,\.\-]/gi, ' ').trim();
+          
           // Loại bỏ dấu phẩy thừa ở đầu/cuối
           address = address.replace(/^[,\.\s]+|[,\.\s]+$/g, '').trim();
+          
           // Chuẩn hóa lại khoảng trắng
           address = address.replace(/\s+/g, ' ').trim();
           
-          if (address.length > 10) { // Tăng yêu cầu độ dài tối thiểu
+          // Loại bỏ các từ/cụm từ lặp lại không hợp lý
+          address = address.replace(/\b(\w+)\s+\1\b/gi, '$1').trim();
+          
+          if (address.length > 15) { // Tăng yêu cầu độ dài tối thiểu lên 15 ký tự
             parsedData.permanentAddress = address;
             permanentAddressFound = true;
             console.log('Found address (Pattern 1 - next lines):', parsedData.permanentAddress);
@@ -1192,6 +1322,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         
         // Làm sạch địa chỉ cuối cùng
         address = address.replace(/\s+/g, ' ').trim();
+        
         // Loại bỏ lại các phần không cần thiết sau khi gộp
         address = address.replace(/\([^)]*Place\s+of\s+residence[^)]*\)/gi, '').trim();
         address = address.replace(/\([^)]*Có\s+gia\s+tị[^)]*\)/gi, '').trim();
@@ -1199,12 +1330,36 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         address = address.replace(/Place\s+of\s+residence[^,]*/gi, '').trim();
         address = address.replace(/Có\s+gia\s+tị\s+đến\s+\d+/gi, '').trim();
         address = address.replace(/Có\s+giá\s+trị\s+đến\s+\d+/gi, '').trim();
-        // Loại bỏ các từ đơn lẻ không hợp lý
-        address = address.replace(/\b[ôioa]\b/gi, '').trim();
+        
+        // Loại bỏ các từ/cụm từ OCR nhầm phổ biến
+        address = address.replace(/\b(ERE|BE|INTE|SE|Sh|ce|g|bro|yi|OE|gia\s+đền)\b/gi, ' ').trim();
+        
+        // Loại bỏ các số ngày tháng không hợp lý
+        address = address.replace(/\b\d{7,}\b/g, '').trim();
+        address = address.replace(/\b\d{1,2}\s+\d{1,2}\b/g, '').trim();
+        
+        // Loại bỏ các từ đơn lẻ không hợp lý (nhưng giữ lại các từ tiếng Việt phổ biến)
+        address = address.replace(/\b[a-z]{1,2}\b/gi, (match) => {
+          const validShortWords = ['t', 'ch', 'cụm', 'tổ', 'phường', 'xã', 'huyện', 'tỉnh', 'thành'];
+          if (validShortWords.includes(match.toLowerCase())) {
+            return match;
+          }
+          return '';
+        }).trim();
+        
+        // Loại bỏ các ký tự đặc biệt không hợp lý
+        address = address.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s,\.\-]/gi, ' ').trim();
+        
         // Loại bỏ dấu phẩy thừa ở đầu/cuối
         address = address.replace(/^[,\.\s]+|[,\.\s]+$/g, '').trim();
         
-        if (address.length > 10) { // Tăng yêu cầu độ dài tối thiểu
+        // Chuẩn hóa lại khoảng trắng
+        address = address.replace(/\s+/g, ' ').trim();
+        
+        // Loại bỏ các từ/cụm từ lặp lại không hợp lý
+        address = address.replace(/\b(\w+)\s+\1\b/gi, '$1').trim();
+        
+        if (address.length > 15) { // Tăng yêu cầu độ dài tối thiểu lên 15 ký tự
           parsedData.permanentAddress = address;
           permanentAddressFound = true;
           console.log('Found address (Pattern 2 - same line):', parsedData.permanentAddress);
