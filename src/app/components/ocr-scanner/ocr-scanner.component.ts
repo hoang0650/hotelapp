@@ -447,10 +447,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           this.scanComplete.emit(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else if (!this.allowMultiple || this.selectedFiles.length === 1) {
-          // Chỉ có 1 ảnh
+          // Chỉ có 1 ảnh - vẫn sử dụng mergeScannedData để đảm bảo logic nhất quán
+          // Đảm bảo parsedData có side đúng (ưu tiên mặt trước nếu detect được)
+          const singleDataArray = [parsedData];
+          const mergedData = this.mergeScannedData(singleDataArray);
           this.message.success('Đã nhận dạng văn bản thành công!');
-          this.scanComplete.emit(parsedData);
-          this.fillFormFromOCRData(parsedData);
+          this.scanComplete.emit(mergedData);
+          this.fillFormFromOCRData(mergedData);
         } else {
           // Đang xử lý ảnh tiếp theo
           const scannedCount = this.scannedData.filter(data => data !== null).length;
@@ -677,19 +680,23 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       const sideA = sideOrder[a.side || 'unknown'] ?? 2;
       const sideB = sideOrder[b.side || 'unknown'] ?? 2;
       
-      // Nếu cùng index, ưu tiên front > back
-      if (indexA === indexB) {
-        if (sideA !== sideB) {
-          return sideA - sideB;
-        }
-        // Nếu cùng side, ưu tiên dữ liệu hợp lệ hơn
-        const aValid = (a.fullName && this.isValidName(a.fullName)) || (a.permanentAddress && this.isValidAddress(a.permanentAddress));
-        const bValid = (b.fullName && this.isValidName(b.fullName)) || (b.permanentAddress && this.isValidAddress(b.permanentAddress));
-        if (aValid && !bValid) return -1;
-        if (!aValid && bValid) return 1;
+      // Ưu tiên side trước (front > back > unknown)
+      if (sideA !== sideB) {
+        return sideA - sideB;
       }
       
-      return indexA - indexB;
+      // Nếu cùng side, ưu tiên index nhỏ hơn (0 trước 1)
+      if (indexA !== indexB) {
+        return indexA - indexB;
+      }
+      
+      // Nếu cùng side và cùng index, ưu tiên dữ liệu hợp lệ hơn
+      const aValid = (a.fullName && this.isValidName(a.fullName)) || (a.permanentAddress && this.isValidAddress(a.permanentAddress));
+      const bValid = (b.fullName && this.isValidName(b.fullName)) || (b.permanentAddress && this.isValidAddress(b.permanentAddress));
+      if (aValid && !bValid) return -1;
+      if (!aValid && bValid) return 1;
+      
+      return 0;
     });
     
     console.log(`[OCR] Merge data: Số lượng data=${sortedData.length}, Thứ tự:`, sortedData.map(d => ({ 
@@ -697,6 +704,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       side: d.side, 
       hasName: !!d.fullName, 
       nameValid: d.fullName ? this.isValidName(d.fullName) : false,
+      hasGender: !!d.gender,
+      gender: d.gender || 'N/A',
       hasAddress: !!d.permanentAddress,
       addressValid: d.permanentAddress ? this.isValidAddress(d.permanentAddress) : false
     })));
@@ -706,7 +715,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     // Mặt sau thường có: Nơi thường trú, Địa chỉ
     // Nhưng chỉ lấy dữ liệu hợp lệ (isValidName, isValidAddress)
     for (const data of sortedData) {
-      console.log(`[OCR] Merge: fileIndex=${data.fileIndex}, side=${data.side}, fullName=${data.fullName || 'N/A'}, permanentAddress=${data.permanentAddress || 'N/A'}`);
+      console.log(`[OCR] Merge: fileIndex=${data.fileIndex}, side=${data.side}, fullName=${data.fullName || 'N/A'}, gender=${data.gender || 'N/A'}, permanentAddress=${data.permanentAddress || 'N/A'}`);
       
       // Họ và tên: ưu tiên mặt trước (front) hơn mặt sau (back)
       // Chỉ lấy nếu hợp lệ, và ưu tiên front hơn back
@@ -714,23 +723,23 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         // Nếu chưa có tên, lấy tên mới
         if (!merged.fullName) {
           merged.fullName = data.fullName;
-          console.log(`[OCR] Merge: Set name from ${data.side}: ${data.fullName}`);
+          merged.side = data.side; // Lưu side của tên để biết tên đến từ đâu
+          console.log(`[OCR] Merge: Set name from ${data.side} (fileIndex=${data.fileIndex}): ${data.fullName}`);
         } else {
           // Nếu đã có tên, chỉ thay thế nếu:
-          // 1. Tên mới từ mặt trước (front) và tên hiện tại từ mặt sau (back)
+          // 1. Tên mới từ mặt trước (front) - luôn ưu tiên mặt trước
           // 2. Hoặc tên hiện tại không hợp lệ
           if (!this.isValidName(merged.fullName)) {
             merged.fullName = data.fullName;
+            merged.side = data.side;
             console.log(`[OCR] Merge: Replaced invalid name with name from ${data.side}: ${data.fullName}`);
           } else if (data.side === 'front') {
-            // Kiểm tra xem tên hiện tại có từ mặt sau không
-            const currentData = sortedData.find(d => d.fullName === merged.fullName);
-            if (currentData && currentData.side === 'back') {
-              // Thay thế tên từ mặt sau bằng tên từ mặt trước
-              merged.fullName = data.fullName;
-              console.log(`[OCR] Merge: Replaced name from back with name from front: ${data.fullName}`);
-            }
+            // Luôn ưu tiên tên từ mặt trước, bất kể tên hiện tại từ đâu
+            merged.fullName = data.fullName;
+            merged.side = data.side;
+            console.log(`[OCR] Merge: Replaced name with name from front (fileIndex=${data.fileIndex}): ${data.fullName}`);
           }
+          // Nếu tên từ mặt sau và đã có tên hợp lệ từ mặt trước, giữ nguyên tên từ mặt trước
         }
       }
       
@@ -745,15 +754,24 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
       
       // Giới tính: ưu tiên mặt trước, nhưng chỉ lấy nếu hợp lệ
+      // Logic giống như merge tên: luôn ưu tiên mặt trước
       if (data.gender && (data.gender === 'male' || data.gender === 'female')) {
         // Nếu chưa có giới tính, lấy giới tính mới
         if (!merged.gender) {
           merged.gender = data.gender;
-          console.log(`[OCR] Merge: Set gender from ${data.side}: ${data.gender}`);
-        } else if (data.side === 'front' && merged.gender !== data.gender) {
-          // Nếu giới tính từ mặt trước khác với giới tính hiện tại, ưu tiên mặt trước
-          merged.gender = data.gender;
-          console.log(`[OCR] Merge: Replaced gender with gender from front: ${data.gender}`);
+          merged.genderSide = data.side; // Lưu side của giới tính để biết giới tính đến từ đâu
+          console.log(`[OCR] Merge: Set gender from ${data.side} (fileIndex=${data.fileIndex}): ${data.gender}`);
+        } else {
+          // Nếu đã có giới tính, chỉ thay thế nếu:
+          // 1. Giới tính mới từ mặt trước - luôn ưu tiên mặt trước
+          // 2. Hoặc giới tính hiện tại không hợp lệ
+          if (data.side === 'front') {
+            // Luôn ưu tiên giới tính từ mặt trước, bất kể giới tính hiện tại từ đâu
+            merged.gender = data.gender;
+            merged.genderSide = data.side;
+            console.log(`[OCR] Merge: Replaced gender with gender from front (fileIndex=${data.fileIndex}): ${data.gender}`);
+          }
+          // Nếu giới tính từ mặt sau và đã có giới tính hợp lệ từ mặt trước, giữ nguyên giới tính từ mặt trước
         }
       }
       
@@ -773,17 +791,31 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
       
       // Nơi thường trú: ưu tiên mặt sau (thường ở mặt sau CCCD), nhưng chỉ lấy nếu hợp lệ
-      if (data.permanentAddress && (!merged.permanentAddress || !this.isValidAddress(merged.permanentAddress))) {
-        if (this.isValidAddress(data.permanentAddress)) {
+      if (data.permanentAddress && this.isValidAddress(data.permanentAddress)) {
+        // Nếu chưa có nơi thường trú, lấy từ bất kỳ mặt nào
+        if (!merged.permanentAddress) {
           merged.permanentAddress = data.permanentAddress;
+          console.log(`[OCR] Merge: Set permanentAddress from ${data.side} (fileIndex=${data.fileIndex}): ${data.permanentAddress.substring(0, 50)}...`);
+        } else if (data.side === 'back') {
+          // Nếu nơi thường trú từ mặt sau, ưu tiên mặt sau (thay thế nếu đã có từ mặt trước)
+          merged.permanentAddress = data.permanentAddress;
+          console.log(`[OCR] Merge: Replaced permanentAddress with address from back: ${data.permanentAddress.substring(0, 50)}...`);
         }
+        // Nếu nơi thường trú từ mặt trước và đã có từ mặt sau, giữ nguyên từ mặt sau
       }
       
-      // Địa chỉ: lấy từ bất kỳ mặt nào, nhưng chỉ lấy nếu hợp lệ
-      if (data.address && (!merged.address || !this.isValidAddress(merged.address))) {
-        if (this.isValidAddress(data.address)) {
+      // Địa chỉ (nơi cư trú): ưu tiên mặt sau khi có 2 ảnh, nhưng chỉ lấy nếu hợp lệ
+      if (data.address && this.isValidAddress(data.address)) {
+        // Nếu chưa có địa chỉ, lấy từ bất kỳ mặt nào
+        if (!merged.address) {
           merged.address = data.address;
+          console.log(`[OCR] Merge: Set address from ${data.side} (fileIndex=${data.fileIndex}): ${data.address.substring(0, 50)}...`);
+        } else if (data.side === 'back' && sortedData.length > 1) {
+          // Nếu địa chỉ từ mặt sau và có 2 ảnh, ưu tiên mặt sau (thay thế nếu đã có từ mặt trước)
+          merged.address = data.address;
+          console.log(`[OCR] Merge: Replaced address with address from back (2 images): ${data.address.substring(0, 50)}...`);
         }
+        // Nếu địa chỉ từ mặt trước và đã có từ mặt sau, giữ nguyên từ mặt sau
       }
       
       // Số điện thoại: lấy từ bất kỳ mặt nào
@@ -792,9 +824,22 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Nếu không có địa chỉ nhưng có nơi thường trú, dùng nơi thường trú
-    if (!merged.address && merged.permanentAddress) {
-      merged.address = merged.permanentAddress;
+    // Logic điền địa chỉ:
+    // - Nếu có 1 ảnh: dùng nơi thường trú làm địa chỉ
+    // - Nếu có 2 ảnh: ưu tiên địa chỉ (nơi cư trú) từ mặt sau, nếu không có thì dùng nơi thường trú
+    if (!merged.address) {
+      if (sortedData.length === 1 && merged.permanentAddress) {
+        // 1 ảnh: dùng nơi thường trú
+        merged.address = merged.permanentAddress;
+        console.log('[OCR] Merge: Using permanentAddress as address (1 image)');
+      } else if (sortedData.length > 1 && merged.permanentAddress) {
+        // 2 ảnh: nếu không có địa chỉ (nơi cư trú), dùng nơi thường trú
+        merged.address = merged.permanentAddress;
+        console.log('[OCR] Merge: Using permanentAddress as address (2 images, no current address)');
+      }
+    } else if (sortedData.length > 1) {
+      // 2 ảnh: đã có địa chỉ (nơi cư trú), giữ nguyên
+      console.log('[OCR] Merge: Using current address (2 images)');
     }
     
     // Mặc định quốc tịch là "Việt Nam" nếu không có hoặc không hợp lệ
@@ -803,6 +848,17 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       merged.nationality = 'Việt Nam';
       console.log('[OCR] Merge: Set default nationality to "Việt Nam"');
     }
+    
+    // Log kết quả merge cuối cùng
+    console.log('[OCR] Merge result:', {
+      fullName: merged.fullName || 'N/A',
+      gender: merged.gender || 'N/A',
+      nationality: merged.nationality || 'N/A',
+      permanentAddress: merged.permanentAddress ? merged.permanentAddress.substring(0, 50) + '...' : 'N/A',
+      address: merged.address ? merged.address.substring(0, 50) + '...' : 'N/A',
+      idNumber: merged.idNumber || 'N/A',
+      dateOfBirth: merged.dateOfBirth || 'N/A'
+    });
     
     return merged;
   }
@@ -1496,12 +1552,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       if (genderInLine && genderInLine[1]) {
         const genderValue = genderInLine[1].trim().toLowerCase();
         if (/^nam$|^male$|^m$/.test(genderValue)) {
-          parsedData.gender = 'male';
+      parsedData.gender = 'male';
           genderFound = true;
           console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
         } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-          parsedData.gender = 'female';
+      parsedData.gender = 'female';
           genderFound = true;
           console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
@@ -1760,9 +1816,9 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Pattern 1: Dòng chỉ có "Nơi thường trú" hoặc "Place of residence" (không có địa chỉ), địa chỉ nằm ở các dòng tiếp theo
-      // Trên CCCD, "Nơi thường trú" thường ở một dòng riêng, địa chỉ ở các dòng tiếp theo
-      const addressLabelPattern = /^(?:Nơi\s+thường\s+trú|Thường\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|NOI\s+THUONG\s+TRU|Place\s+of\s+residence)[\s:]*$/i;
+      // Pattern 1: Dòng chỉ có "Nơi thường trú" hoặc "Nơi cư trú" hoặc "Place of residence" (không có địa chỉ), địa chỉ nằm ở các dòng tiếp theo
+      // Trên CCCD, "Nơi thường trú" hoặc "Nơi cư trú" thường ở một dòng riêng, địa chỉ ở các dòng tiếp theo
+      const addressLabelPattern = /^(?:Nơi\s+thường\s+trú|Nơi\s+cư\s+trú|Thường\s+trú|Cư\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|Current\s+address|NOI\s+THUONG\s+TRU|NOI\s+CU\s+TRU|Place\s+of\s+residence)[\s:]*$/i;
       
       if (addressLabelPattern.test(line) && i + 1 < lines.length) {
         const addressLines: string[] = [];
@@ -1871,8 +1927,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         }
       }
       
-      // Pattern 2: Dòng có "Nơi thường trú:" hoặc "Thường trú:" và địa chỉ nằm cùng dòng
-      const addressInLine = line.match(/(?:Nơi\s+thường\s+trú|Thường\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|NOI\s+THUONG\s+TRU|Place\s+of\s+residence)[\s:]+(.+)/i);
+      // Pattern 2: Dòng có "Nơi thường trú:" hoặc "Nơi cư trú:" hoặc "Thường trú:" và địa chỉ nằm cùng dòng
+      const addressInLine = line.match(/(?:Nơi\s+thường\s+trú|Nơi\s+cư\s+trú|Thường\s+trú|Cư\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|Current\s+address|NOI\s+THUONG\s+TRU|NOI\s+CU\s+TRU|Place\s+of\s+residence)[\s:]+(.+)/i);
       if (addressInLine && addressInLine[1]) {
         let address = cleanAddressLine(addressInLine[1]);
         
@@ -2039,14 +2095,18 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         const invalidNames = ['Khách lẻ', 'Khách lư', 'Khách', 'lẻ', 'lư', 'CAN CƯỚC CONG DAN', 'CAN CUOC CONG DAN'];
         const upperName = data.fullName.toUpperCase();
         if (!invalidNames.some(invalid => upperName.includes(invalid.toUpperCase()))) {
-          this.personalInfoFormGroup.patchValue({ fullName: data.fullName });
+        this.personalInfoFormGroup.patchValue({ fullName: data.fullName });
         }
       }
       if (data.dateOfBirth) {
         this.personalInfoFormGroup.patchValue({ dateOfBirth: data.dateOfBirth });
       }
-      if (data.gender) {
+      // Điền giới tính nếu có (male hoặc female)
+      if (data.gender && (data.gender === 'male' || data.gender === 'female')) {
         this.personalInfoFormGroup.patchValue({ gender: data.gender });
+        console.log('[OCR] Fill form: Set gender =', data.gender);
+      } else {
+        console.log('[OCR] Fill form: Gender not set, value =', data.gender);
       }
       if (data.nationality) {
         this.personalInfoFormGroup.patchValue({ nationality: data.nationality });
@@ -2069,8 +2129,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           const addressGroup = this.contactInfoFormGroup.get('address') as FormGroup;
           if (addressGroup) {
             addressGroup.patchValue({ street: cleanAddress });
+            console.log('[OCR] Fill form: Set address =', cleanAddress.substring(0, 50) + '...');
           }
+        } else {
+          console.log('[OCR] Fill form: Address invalid, skipped:', cleanAddress.substring(0, 50) + '...');
         }
+      } else {
+        console.log('[OCR] Fill form: Address not set, permanentAddress =', data.permanentAddress ? data.permanentAddress.substring(0, 50) + '...' : 'N/A', ', address =', data.address ? data.address.substring(0, 50) + '...' : 'N/A');
       }
     }
     
