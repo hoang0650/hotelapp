@@ -550,7 +550,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     if (!name || name.length < 8 || name.length > 100) return false;
     
     // Loại bỏ các tên có chứa header
-    const headerKeywords = ['VIỆT NAM', 'VIETNAM', 'SOCIALIST', 'REPUBLIC', 'CỘNG HÒA', 'XÃ HỘI', 'CHỦ NGHĨA', 'CĂN CƯỚC', 'CÔNG DÂN'];
+    const headerKeywords = ['VIỆT NAM', 'VIETNAM', 'SOCIALIST', 'REPUBLIC', 'CỘNG HÒA', 'XÃ HỘI', 'CHỦ NGHĨA', 'CĂN CƯỚC', 'CÔNG DÂN', 'CAN CƯỚC', 'CONG DAN', 'CONG DAN'];
     const upperName = name.toUpperCase();
     if (headerKeywords.some(keyword => upperName.includes(keyword))) {
       return false;
@@ -572,7 +572,17 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       'IN DANH',
       'CD SEN',
       'IN DANH CD SEN',
-      'IN DANH CD SEN IDENTIFICATION'
+      'IN DANH CD SEN IDENTIFICATION',
+      'CAN CƯỚC CONG DAN',
+      'CAN CUOC CONG DAN',
+      'CAN CUOC',
+      'CONG DAN',
+      'EET MANY',
+      'EET',
+      'MANY',
+      'NOD THANG',
+      'AFMCHP',
+      'NOD THANG AFMCHP'
     ];
     if (invalidNamePatterns.some(pattern => upperName.includes(pattern))) {
       return false;
@@ -696,12 +706,18 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       // Họ và tên: ưu tiên mặt trước (front) hơn mặt sau (back)
       // Chỉ lấy nếu hợp lệ, và ưu tiên front hơn back
       if (data.fullName && this.isValidName(data.fullName)) {
-        // Nếu chưa có tên hoặc tên hiện tại không hợp lệ, lấy tên mới
-        if (!merged.fullName || !this.isValidName(merged.fullName)) {
+        // Nếu chưa có tên, lấy tên mới
+        if (!merged.fullName) {
           merged.fullName = data.fullName;
+          console.log(`[OCR] Merge: Set name from ${data.side}: ${data.fullName}`);
         } else {
-          // Nếu đã có tên hợp lệ, chỉ thay thế nếu tên mới từ mặt trước (front)
-          if (data.side === 'front' && merged.fullName && this.isValidName(merged.fullName)) {
+          // Nếu đã có tên, chỉ thay thế nếu:
+          // 1. Tên mới từ mặt trước (front) và tên hiện tại từ mặt sau (back)
+          // 2. Hoặc tên hiện tại không hợp lệ
+          if (!this.isValidName(merged.fullName)) {
+            merged.fullName = data.fullName;
+            console.log(`[OCR] Merge: Replaced invalid name with name from ${data.side}: ${data.fullName}`);
+          } else if (data.side === 'front') {
             // Kiểm tra xem tên hiện tại có từ mặt sau không
             const currentData = sortedData.find(d => d.fullName === merged.fullName);
             if (currentData && currentData.side === 'back') {
@@ -854,6 +870,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     fixed = fixed.replace(/\bPersonal\s+identification\b/gi, '');
     // "in danh cd sen identification" -> loại bỏ (đây là OCR nhầm, không phải tên)
     fixed = fixed.replace(/\bin\s+danh\s+cd\s+sen\s+identification\b/gi, '');
+    // "CAN CƯỚC CONG DAN" -> loại bỏ (đây là OCR nhầm của "CĂN CƯỚC CÔNG DÂN", không phải tên)
+    fixed = fixed.replace(/\bCAN\s+CƯỚC\s+CONG\s+DAN\b/gi, '');
+    fixed = fixed.replace(/\bCAN\s+CUOC\s+CONG\s+DAN\b/gi, '');
+    // "EET many" -> loại bỏ (đây là OCR nhầm, không phải tên)
+    fixed = fixed.replace(/\bEET\s+many\b/gi, '');
+    // "Nod thang afmchp" -> loại bỏ (đây là OCR nhầm, không phải tên)
+    fixed = fixed.replace(/\bNod\s+thang\s+afmchp\b/gi, '');
     // "Ra EN Fe Sd" -> loại bỏ (đây là OCR nhầm quốc tịch)
     fixed = fixed.replace(/\bRa\s+EN\s+Fe\s+Sd\b/gi, 'Việt Nam');
     fixed = fixed.replace(/\bRa\s+EN\s+Fe\b/gi, 'Việt Nam');
@@ -1007,7 +1030,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         'SOCIALIST', 'REPUBLIC', 'VIET NAM', 'VIETNAM',
         'CỘNG HÒA', 'XÃ HỘI', 'CHỦ NGHĨA',
         'INDEPENDENCE', 'FREEDOM', 'HAPPINESS',
-        'CĂN CƯỚC', 'CÔNG DÂN', 'CITIZEN', 'IDENTITY', 'CARD',
+        'CĂN CƯỚC', 'CAN CƯỚC', 'CAN CUOC', 'CÔNG DÂN', 'CONG DAN', 'CONG DÂN',
+        'CITIZEN', 'IDENTITY', 'CARD',
         'BỘ CÔNG AN', 'MINISTRY', 'PUBLIC', 'SECURITY'
       ];
       
@@ -1027,6 +1051,17 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         return true;
       }
       
+      // Nếu dòng chứa "CAN CƯỚC" hoặc "CAN CUOC" kèm "CONG DAN" hoặc "CONG DÂN", coi như header
+      if ((upperLine.includes('CAN CƯỚC') || upperLine.includes('CAN CUOC')) &&
+          (upperLine.includes('CONG DAN') || upperLine.includes('CONG DÂN') || upperLine.includes('CÔNG DÂN'))) {
+        return true;
+      }
+      
+      // Nếu dòng chỉ chứa "CAN CƯỚC" hoặc "CONG DAN" (OCR nhầm của header), coi như header
+      if (/^(CAN\s+CƯỚC|CAN\s+CUOC|CONG\s+DAN|CONG\s+DÂN|CÔNG\s+DÂN)$/i.test(line.trim())) {
+        return true;
+      }
+      
       return false;
     };
     
@@ -1041,7 +1076,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
       
       // Loại bỏ các dòng có chứa từ khóa header (OCR có thể nhầm)
-      if (/SOCIALIST|REPUBLIC|VIET\s+NAM|VIETNAM|CỘNG\s+HÒA|XÃ\s+HỘI|CHỦ\s+NGHĨA|INDEPENDENCE|FREEDOM|HAPPINESS|CĂN\s+CƯỚC|CÔNG\s+DÂN|CITIZEN|IDENTITY/i.test(line)) {
+      // Bao gồm cả các biến thể OCR nhầm như "CAN CƯỚC CONG DAN"
+      if (/SOCIALIST|REPUBLIC|VIET\s+NAM|VIETNAM|CỘNG\s+HÒA|XÃ\s+HỘI|CHỦ\s+NGHĨA|INDEPENDENCE|FREEDOM|HAPPINESS|CĂN\s+CƯỚC|CAN\s+CƯỚC|CAN\s+CUOC|CÔNG\s+DÂN|CONG\s+DAN|CONG\s+DÂN|CITIZEN|IDENTITY/i.test(line)) {
+        return false;
+      }
+      
+      // Loại bỏ các dòng có pattern "CAN CƯỚC CONG DAN" hoặc tương tự
+      if (/CAN\s+CƯỚC\s+CONG\s+DAN|CAN\s+CUOC\s+CONG\s+DAN/i.test(line)) {
         return false;
       }
       
@@ -1080,11 +1121,23 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       // Cải thiện: tìm pattern chính xác hơn, loại bỏ các phần không phải tên
       
       // Pattern 1a-1: "Họ và tên: TÊN" hoặc "Họ và tên / Full name: TÊN"
-      let nameInLine = line.match(/(?:Họ\s+và\s+tên|HO\s+VA\s+TEN)[\s\/:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+?)(?:\s*\/\s*Full\s+name|$)/i);
+      // Cải thiện: match chính xác hơn, lấy phần sau dấu hai chấm hoặc dấu gạch chéo
+      let nameInLine = line.match(/(?:Họ\s+và\s+tên|HO\s+VA\s+TEN)[\s\/:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]{8,}?)(?:\s*\/\s*Full\s+name|$|Ngày|Date|Giới|Sex|Quốc|Nationality)/i);
       
       // Pattern 1a-2: "Full name: TÊN" (nếu không tìm thấy ở pattern 1)
       if (!nameInLine) {
-        nameInLine = line.match(/Full\s+name[\s:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+)/i);
+        nameInLine = line.match(/Full\s+name[\s:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]{8,})/i);
+      }
+      
+      // Pattern 1a-3: "Số / No.: ID TÊN" - tên nằm sau số CMND/CCCD
+      if (!nameInLine && parsedData.idNumber && line.includes(parsedData.idNumber)) {
+        const idNameMatch = line.match(new RegExp(`${parsedData.idNumber}\\s+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\\s]{8,})`, 'i'));
+        if (idNameMatch && idNameMatch[1]) {
+          // Kiểm tra không phải header
+          if (!/CAN\s+CƯỚC|CAN\s+CUOC|CONG\s+DAN|CONG\s+DÂN|CÔNG\s+DÂN/i.test(idNameMatch[1])) {
+            nameInLine = idNameMatch;
+          }
+        }
       }
       
       if (nameInLine && nameInLine[1]) {
@@ -1168,13 +1221,22 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           // Pattern 1.5a: Tên nằm cùng dòng với số CMND/CCCD
           // Ví dụ: "CĂN CƯỚC 082188007080 ĐỖ THỊ TRÚC LAN"
           // Hoặc: "Số / No.: 049300006573 PHAN VŨ TRÂM ANH"
+          // Loại bỏ các header như "CAN CƯỚC CONG DAN" trước khi tìm tên
           const nameAfterId = line.match(new RegExp(`${parsedData.idNumber}\\s+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\\s]{8,})`, 'i'));
           if (nameAfterId && nameAfterId[1]) {
             let name = nameAfterId[1].trim();
+            
+            // Loại bỏ các header ngay từ đầu
+            if (/CAN\s+CƯỚC|CAN\s+CUOC|CONG\s+DAN|CONG\s+DÂN|CÔNG\s+DÂN/i.test(name)) {
+              continue; // Bỏ qua dòng này, không phải tên
+            }
+            
             // Loại bỏ các phần không phải tên
             name = name.replace(/\d+/g, '').trim();
             // Loại bỏ các label như "Full name", "Họ và tên"
             name = name.replace(/\s*(?:Full\s+name|Họ\s+và\s+tên|HO\s+VA\s+TEN).*/i, '').trim();
+            // Loại bỏ các header như "CAN CƯỚC CONG DAN"
+            name = name.replace(/\s*(?:CAN\s+CƯỚC|CAN\s+CUOC|CONG\s+DAN|CONG\s+DÂN|CÔNG\s+DÂN).*/i, '').trim();
             name = name.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
             name = name.replace(/\s+/g, ' ').trim();
             
@@ -1580,7 +1642,20 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       clean = clean.replace(/\d{7,}\s+[A-Za-z]{1,3}\s+[^\s]{0,20}\s*\/\s*[A-Za-z]{1,3}/gi, '').trim();
       
       // Loại bỏ các từ/cụm từ OCR nhầm phổ biến (như "ERE", "BE", "INTE", "SE", "Sh", "ce", "g")
-      clean = clean.replace(/\b(ERE|BE|INTE|SE|Sh|ce|g|bro|yi|OE|exp|Buông|tha)\b/gi, ' ').trim();
+      clean = clean.replace(/\b(ERE|BE|INTE|SE|Sh|ce|g|bro|yi|OE|exp|Buông|tha|Date\s+ofbxpiry|Date\s+of|ofbxpiry|bxpiry)\b/gi, ' ').trim();
+      
+      // Loại bỏ các pattern không hợp lý như "T 40 ổ 6" (có thể là OCR nhầm)
+      clean = clean.replace(/\bT\s+\d+\s+[ổộ]\s+\d+\b/gi, ' ').trim();
+      
+      // Loại bỏ các pattern như "Ch B2 TN7 T.." (OCR nhầm)
+      clean = clean.replace(/\bCh\s+B\d+\s+TN\d+\s+T\.\./gi, ' ').trim();
+      
+      // Loại bỏ các pattern như "ú,," hoặc ",, à" (OCR nhầm)
+      clean = clean.replace(/ú,,|,,/g, ' ').trim();
+      clean = clean.replace(/,\s*,+/g, ',').trim(); // Loại bỏ dấu phẩy lặp lại
+      
+      // Loại bỏ các từ đơn lẻ không hợp lý như "ú", "Tâ", "à", "Nai" (OCR nhầm)
+      clean = clean.replace(/\b(ú|Tâ|à|Nai|ThThượngng)\b/gi, ' ').trim();
       
       // Loại bỏ các số ngày tháng không hợp lý (như "2082020", "5 29")
       clean = clean.replace(/\b\d{7,}\b/g, '').trim(); // Loại bỏ số có 7+ chữ số
@@ -1664,7 +1739,23 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           address = address.replace(/\d{7,}\s+[A-Za-z]{1,3}\s+[^\s]{0,20}\s*\/\s*[A-Za-z]{1,3}/gi, '').trim();
           
           // Loại bỏ các từ/cụm từ OCR nhầm phổ biến
-          address = address.replace(/\b(ERE|BE|INTE|SE|Sh|ce|g|bro|yi|OE|gia\s+đền|Buông|tha)\b/gi, ' ').trim();
+          address = address.replace(/\b(ERE|BE|INTE|SE|Sh|ce|g|bro|yi|OE|gia\s+đền|Buông|tha|Date\s+ofbxpiry|Date\s+of|ofbxpiry|bxpiry)\b/gi, ' ').trim();
+          
+          // Loại bỏ các pattern không hợp lý như "T 40 ổ 6" (có thể là OCR nhầm)
+          address = address.replace(/\bT\s+\d+\s+[ổộ]\s+\d+\b/gi, ' ').trim();
+          
+          // Loại bỏ các pattern như "Ch B2 TN7 T.." (OCR nhầm)
+          address = address.replace(/\bCh\s+B\d+\s+TN\d+\s+T\.\./gi, ' ').trim();
+          
+          // Loại bỏ các pattern như "ú,," hoặc ",, à" (OCR nhầm)
+          address = address.replace(/ú,,|,,/g, ' ').trim();
+          address = address.replace(/,\s*,+/g, ',').trim(); // Loại bỏ dấu phẩy lặp lại
+          
+          // Loại bỏ các từ đơn lẻ không hợp lý như "ú", "Tâ", "à", "Nai" (OCR nhầm)
+          address = address.replace(/\b(ú|Tâ|à|Nai|ThThượngng)\b/gi, ' ').trim();
+          
+          // Loại bỏ các pattern như ", à" ở cuối (OCR nhầm)
+          address = address.replace(/,\s*à\s*$/gi, '').trim();
           
           // Loại bỏ các số ngày tháng không hợp lý
           address = address.replace(/\b\d{7,}\b/g, '').trim();
@@ -1862,8 +1953,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       if (data.idNumber) {
         this.personalInfoFormGroup.patchValue({ idNumber: data.idNumber });
       }
-      if (data.fullName) {
-        this.personalInfoFormGroup.patchValue({ fullName: data.fullName });
+      // Chỉ điền tên nếu hợp lệ (không phải "Khách lẻ" hoặc các giá trị không hợp lý)
+      if (data.fullName && this.isValidName(data.fullName)) {
+        // Loại bỏ các giá trị không hợp lý như "Khách lẻ", "Khách lư"
+        const invalidNames = ['Khách lẻ', 'Khách lư', 'Khách', 'lẻ', 'lư', 'CAN CƯỚC CONG DAN', 'CAN CUOC CONG DAN'];
+        const upperName = data.fullName.toUpperCase();
+        if (!invalidNames.some(invalid => upperName.includes(invalid.toUpperCase()))) {
+          this.personalInfoFormGroup.patchValue({ fullName: data.fullName });
+        }
       }
       if (data.dateOfBirth) {
         this.personalInfoFormGroup.patchValue({ dateOfBirth: data.dateOfBirth });
@@ -1882,11 +1979,17 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         this.contactInfoFormGroup.patchValue({ phone: data.phone });
       }
       // Ưu tiên nơi thường trú, nếu không có thì dùng địa chỉ
+      // Chỉ điền nếu địa chỉ hợp lệ
       const addressValue = data.permanentAddress || data.address;
-      if (addressValue) {
-        const addressGroup = this.contactInfoFormGroup.get('address') as FormGroup;
-        if (addressGroup) {
-          addressGroup.patchValue({ street: addressValue });
+      if (addressValue && this.isValidAddress(addressValue)) {
+        // Loại bỏ các pattern không hợp lý
+        let cleanAddress = addressValue;
+        // Loại bỏ các pattern như "Ch B2 TN7 T.., T 40 ổ 6,ú,, à"
+        if (!/Ch\s+B\d+\s+TN\d+\s+T\.\.|T\s+\d+\s+[ổộ]\s+\d+|ú,,|à$/.test(cleanAddress)) {
+          const addressGroup = this.contactInfoFormGroup.get('address') as FormGroup;
+          if (addressGroup) {
+            addressGroup.patchValue({ street: cleanAddress });
+          }
         }
       }
     }
