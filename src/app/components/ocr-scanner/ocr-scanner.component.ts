@@ -910,13 +910,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     let backScore = 0;
     
     // Dấu hiệu mặt trước - tăng điểm để ưu tiên nhận diện chính xác
-    if (/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/i.test(text)) frontScore += 12; // Tăng từ 10 lên 12
-    if (/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/i.test(text)) frontScore += 12; // Tăng từ 10 lên 12
-    // QUAN TRỌNG: "CĂN CƯỚC" hoặc "CĂN CƯỚC CÔNG DÂN" là dấu hiệu rõ ràng của mặt trước
-    if (/CĂN\s+CƯỚC\s+CÔNG\s+DÂN/i.test(text)) frontScore += 15; // Tăng điểm cho "CĂN CƯỚC CÔNG DÂN"
-    if (/CAN\s+CƯỚC\s+CONG\s+DAN/i.test(text)) frontScore += 15; // OCR nhầm của "CĂN CƯỚC CÔNG DÂN"
-    if (/CĂN\s+CƯỚC/i.test(text)) frontScore += 12; // Tăng từ 8 lên 12 cho "CĂN CƯỚC"
-    if (/CAN\s+CƯỚC|CAN\s+CUOC/i.test(text)) frontScore += 12; // OCR nhầm của "CĂN CƯỚC"
+    if (/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/i.test(text)) frontScore += 15; // Tăng từ 12 lên 15
+    if (/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/i.test(text)) frontScore += 15; // Tăng từ 12 lên 15
+    // QUAN TRỌNG: "CĂN CƯỚC" hoặc "CĂN CƯỚC CÔNG DÂN" là dấu hiệu rõ ràng của mặt trước - TĂNG ĐIỂM MẠNH
+    if (/CĂN\s+CƯỚC\s+CÔNG\s+DÂN/i.test(text)) frontScore += 25; // Tăng từ 15 lên 25 - dấu hiệu rõ ràng nhất
+    if (/CAN\s+CƯỚC\s+CONG\s+DAN/i.test(text)) frontScore += 25; // OCR nhầm của "CĂN CƯỚC CÔNG DÂN" - tăng từ 15 lên 25
+    if (/CĂN\s+CƯỚC/i.test(text)) frontScore += 20; // Tăng từ 12 lên 20 cho "CĂN CƯỚC"
+    if (/CAN\s+CƯỚC|CAN\s+CUOC/i.test(text)) frontScore += 20; // OCR nhầm của "CĂN CƯỚC" - tăng từ 12 lên 20
     if (/CITIZEN\s+IDENTITY\s+CARD/i.test(text)) frontScore += 10; // Tăng từ 8 lên 10
     if (/HỌ\s+VÀ\s+TÊN|FULL\s+NAME/i.test(text)) frontScore += 6; // Tăng từ 5 lên 6
     if (/NGÀY\s+SINH|DATE\s+OF\s+BIRTH/i.test(text)) frontScore += 6; // Tăng từ 5 lên 6
@@ -959,6 +959,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     }
     
     console.log(`[OCR] Detect side: frontScore=${frontScore}, backScore=${backScore}, text preview: ${text.substring(0, 100)}...`);
+    
+    // QUAN TRỌNG: Ưu tiên mặt trước nếu có "CĂN CƯỚC" hoặc "CĂN CƯỚC CÔNG DÂN" (dấu hiệu rõ ràng nhất)
+    if (frontScore >= 20 || (frontScore > backScore && frontScore >= 15)) {
+      return 'front';
+    }
     
     // Ưu tiên back nếu có MRZ hoặc "BỘ CÔNG AN" (dấu hiệu rõ ràng của mặt sau)
     if (backScore >= 20 || (backScore > frontScore && backScore >= 15)) {
@@ -1330,10 +1335,18 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         name = name.replace(/\s*\/\s*Full\s+name.*/i, '').trim();
         // Loại bỏ số
         name = name.replace(/\d+/g, '').trim();
+        // QUAN TRỌNG: Loại bỏ các ký tự lặp lại (như "PHANSSHUYHOANGKKLLLLL" -> "PHAN HUY HOANG")
+        // Loại bỏ các ký tự lặp lại liên tiếp (2+ lần) - giữ lại 1 ký tự
+        name = name.replace(/([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\1{2,}/gi, '$1').trim();
+        // Loại bỏ các từ lặp lại (như "LLLLL" -> "L")
+        name = name.replace(/\b([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\1{2,}\b/gi, '$1').trim();
         // Loại bỏ ký tự đặc biệt nhưng giữ chữ cái và dấu tiếng Việt
         name = name.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
         // Chuẩn hóa khoảng trắng
         name = name.replace(/\s+/g, ' ').trim();
+        // Tách tên thành các từ và loại bỏ các từ chỉ có 1 ký tự (trừ khi là từ hợp lệ)
+        const nameParts = name.split(/\s+/).filter(part => part.length >= 2 || /^[A-ZĐ]$/i.test(part));
+        name = nameParts.join(' ').trim();
         
         // Kiểm tra tên hợp lệ (ít nhất 2 từ, mỗi từ ít nhất 2 ký tự, không phải header)
         // Loại bỏ các tên không hợp lý như "IAVIỆT NAM", "Hal Gang ky khai ind Pine"
@@ -1378,10 +1391,16 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
             cleanName = cleanName.replace(/Sa\s+dinh\s+danh\s+ca\s+Nhân|Persona\s+entih\s+oa/gi, '').trim();
             // Loại bỏ số
             cleanName = cleanName.replace(/\d+/g, '').trim();
+            // QUAN TRỌNG: Loại bỏ các ký tự lặp lại (như "PHANSSHUYHOANGKKLLLLL" -> "PHAN HUY HOANG")
+            cleanName = cleanName.replace(/([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\1{2,}/gi, '$1').trim();
+            cleanName = cleanName.replace(/\b([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\1{2,}\b/gi, '$1').trim();
             // Loại bỏ ký tự đặc biệt nhưng giữ chữ cái và dấu tiếng Việt
             cleanName = cleanName.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
             // Chuẩn hóa khoảng trắng
           cleanName = cleanName.replace(/\s+/g, ' ').trim();
+          // Tách tên thành các từ và loại bỏ các từ chỉ có 1 ký tự (trừ khi là từ hợp lệ)
+          const nameParts = cleanName.split(/\s+/).filter(part => part.length >= 2 || /^[A-ZĐ]$/i.test(part));
+          cleanName = nameParts.join(' ').trim();
             
             // Kiểm tra không phải header và có ít nhất 2 từ, và tên hợp lệ
             if (!isHeaderLine(cleanName) && cleanName.length >= 8 && this.isValidName(cleanName)) {
@@ -1427,8 +1446,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
             name = name.replace(/\s*(?:Full\s+name|Họ\s+và\s+tên|HO\s+VA\s+TEN).*/i, '').trim();
             // Loại bỏ các header như "CAN CƯỚC CONG DAN"
             name = name.replace(/\s*(?:CAN\s+CƯỚC|CAN\s+CUOC|CONG\s+DAN|CONG\s+DÂN|CÔNG\s+DÂN).*/i, '').trim();
+            // QUAN TRỌNG: Loại bỏ các ký tự lặp lại (như "PHANSSHUYHOANGKKLLLLL" -> "PHAN HUY HOANG")
+            name = name.replace(/([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\1{2,}/gi, '$1').trim();
+            name = name.replace(/\b([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\1{2,}\b/gi, '$1').trim();
             name = name.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
             name = name.replace(/\s+/g, ' ').trim();
+            // Tách tên thành các từ và loại bỏ các từ chỉ có 1 ký tự (trừ khi là từ hợp lệ)
+            const nameParts = name.split(/\s+/).filter(part => part.length >= 2 || /^[A-ZĐ]$/i.test(part));
+            name = nameParts.join(' ').trim();
             
             // Kiểm tra tên hợp lệ
             if (!isHeaderLine(name) && isValidNameLine(name) && this.isValidName(name)) {
@@ -1458,8 +1483,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
                 cleanName = cleanName.replace(/\d+/g, '').trim();
                 // Loại bỏ các label nếu có
                 cleanName = cleanName.replace(/\s*(?:Full\s+name|Họ\s+và\s+tên|HO\s+VA\s+TEN).*/i, '').trim();
+                // QUAN TRỌNG: Loại bỏ các ký tự lặp lại (như "PHANSSHUYHOANGKKLLLLL" -> "PHAN HUY HOANG")
+                cleanName = cleanName.replace(/([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\1{2,}/gi, '$1').trim();
+                cleanName = cleanName.replace(/\b([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ])\1{2,}\b/gi, '$1').trim();
                 cleanName = cleanName.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
                 cleanName = cleanName.replace(/\s+/g, ' ').trim();
+                // Tách tên thành các từ và loại bỏ các từ chỉ có 1 ký tự (trừ khi là từ hợp lệ)
+                const nameParts = cleanName.split(/\s+/).filter(part => part.length >= 2 || /^[A-ZĐ]$/i.test(part));
+                cleanName = nameParts.join(' ').trim();
                 
                 if (cleanName.length >= 8 && this.isValidName(cleanName)) {
                   const nameParts = cleanName.split(/\s+/).filter(part => part.length >= 2);
@@ -1903,6 +1934,10 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       // Loại bỏ các từ/cụm từ OCR nhầm phổ biến (như "ERE", "BE", "INTE", "SE", "Sh", "ce", "g")
       clean = clean.replace(/\b(ERE|BE|INTE|SE|Sh|ce|g|bro|yi|OE|exp|Buông|tha|Date\s+ofbxpiry|Date\s+of|ofbxpiry|bxpiry)\b/gi, ' ').trim();
+      // QUAN TRỌNG: Loại bỏ các label như "ch dem khai sinh", "Ngay. thang. nam sinh" - không phải địa chỉ
+      clean = clean.replace(/\b(ch\s+dem\s+khai\s+sinh|CH\s+DEM\s+KHAI\s+SINH|Ch\s+dem\s+khai\s+sinh)\b/gi, ' ').trim();
+      clean = clean.replace(/\b(Ngay\.\s+thang\.\s+nam\s+sinh|Ngày\.\s+tháng\.\s+năm\s+sinh|NGAY\.\s+THANG\.\s+NAM\s+SINH)\b/gi, ' ').trim();
+      clean = clean.replace(/\b(Gigi\s+unh|GIGI\s+UNH|gigi\s+unh)\b/gi, ' ').trim(); // Loại bỏ "Gigi unh" - OCR nhầm
       
       // Loại bỏ các pattern không hợp lý như "T 40 ổ 6" (có thể là OCR nhầm)
       clean = clean.replace(/\bT\s+\d+\s+[ổộ]\s+\d+\b/gi, ' ').trim();
@@ -1966,7 +2001,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           // Dừng nếu gặp dòng có từ khóa khác hoặc là số/ngày tháng
           // QUAN TRỌNG: Dừng ngay khi gặp header từ mặt trước để không lấy vào địa chỉ
           // Loại bỏ "Nơi cư trú" khỏi danh sách dừng để có thể lấy địa chỉ sau "Nơi thường trú"
+          // QUAN TRỌNG: Dừng khi gặp các header từ mặt trước như "CĂN CƯỚC", "CĂN CƯỚC CÔNG DÂN", "CỘNG HÒA..."
           if (/^(?:Đặc điểm|Ngày\s+cấp|Ngày\s+hết\s+hạn|CMND|CCCD|Số|Quốc tịch|Giới tính|Địa chỉ hiện tại|Họ và tên|Tên|Quê quán|BỘ CÔNG AN|MINISTRY)/i.test(nextLine) ||
+              /CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/i.test(nextLine) ||
+              /CĂN\s+CƯỚC\s+CÔNG\s+DÂN|CAN\s+CƯỚC\s+CONG\s+DAN|CAN\s+CUOC\s+CONG\s+DAN/i.test(nextLine) ||
+              /CĂN\s+CƯỚC|CAN\s+CƯỚC|CAN\s+CUOC|CITIZEN\s+IDENTITY\s+CARD/i.test(nextLine) ||
               /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(nextLine) ||
               /^\d{9,12}$/.test(nextLine) ||
               // Dừng nếu gặp MRZ (dòng có nhiều ký tự đặc biệt và số)
