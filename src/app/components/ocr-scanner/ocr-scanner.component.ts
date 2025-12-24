@@ -556,6 +556,24 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       return false;
     }
     
+    // Loại bỏ các tên không hợp lý (OCR nhầm)
+    const invalidNamePatterns = [
+      'PERSONAL IDENTIFICATION',
+      'IDENTIFICATION',
+      'PERSONAL',
+      'IDENTITY',
+      'CARD',
+      'NGHY PANG',
+      'NKO MT',
+      'AYN DARE',
+      'HAL GANG',
+      'KY KHAI',
+      'IND PINE'
+    ];
+    if (invalidNamePatterns.some(pattern => upperName.includes(pattern))) {
+      return false;
+    }
+    
     // Tên phải có ít nhất 2 từ, mỗi từ ít nhất 2 ký tự
     const nameParts = name.split(/\s+/).filter(part => part.length >= 2);
     if (nameParts.length < 2) return false;
@@ -563,6 +581,22 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     // Tên không được chứa quá nhiều số
     const digitCount = (name.match(/\d/g) || []).length;
     if (digitCount > name.length * 0.3) return false;
+    
+    // Tên không được có quá nhiều ký tự đặc biệt (trừ dấu tiếng Việt)
+    const specialCharCount = (name.match(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi) || []).length;
+    if (specialCharCount > name.length * 0.2) return false;
+    
+    // Tên phải có ít nhất một từ có dấu tiếng Việt hoặc là tên phổ biến
+    // Nếu không có dấu tiếng Việt, kiểm tra xem có phải là tên tiếng Anh hợp lý không
+    const hasVietnameseChars = /[ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/.test(name);
+    if (!hasVietnameseChars) {
+      // Nếu không có dấu tiếng Việt, kiểm tra xem có phải là tên tiếng Anh hợp lý không
+      // Loại bỏ các tên có quá nhiều từ ngắn (có thể là OCR nhầm)
+      const shortWords = nameParts.filter(part => part.length <= 3);
+      if (shortWords.length > nameParts.length * 0.5) {
+        return false; // Quá nhiều từ ngắn, có thể là OCR nhầm
+      }
+    }
     
     return true;
   }
@@ -668,9 +702,19 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         merged.gender = data.gender;
       }
       
-      // Quốc tịch: ưu tiên mặt trước
-      if (data.nationality && !merged.nationality) {
-        merged.nationality = data.nationality;
+      // Quốc tịch: ưu tiên "Việt Nam" nếu có, nếu không thì lấy từ mặt trước
+      if (data.nationality) {
+        // Luôn ưu tiên "Việt Nam" nếu có
+        if (/việt\s+nam|viet\s+nam|vietnam/i.test(data.nationality)) {
+          merged.nationality = 'Việt Nam';
+        } else if (!merged.nationality) {
+          // Chỉ lấy quốc tịch khác nếu chưa có và không phải là OCR nhầm
+          const invalidNationalityPatterns = ['RA EN FE', 'RA EN', 'EN FE', 'FE SD', 'PERSONAL', 'IDENTIFICATION'];
+          const upperNationality = data.nationality.toUpperCase();
+          if (!invalidNationalityPatterns.some(pattern => upperNationality.includes(pattern))) {
+            merged.nationality = data.nationality;
+          }
+        }
       }
       
       // Nơi thường trú: ưu tiên mặt sau (thường ở mặt sau CCCD), nhưng chỉ lấy nếu hợp lệ
@@ -696,6 +740,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     // Nếu không có địa chỉ nhưng có nơi thường trú, dùng nơi thường trú
     if (!merged.address && merged.permanentAddress) {
       merged.address = merged.permanentAddress;
+    }
+    
+    // Mặc định quốc tịch là "Việt Nam" nếu không có hoặc không hợp lệ
+    // Vì đây là CCCD Việt Nam, quốc tịch luôn là "Việt Nam"
+    if (!merged.nationality || !/việt\s+nam|viet\s+nam|vietnam/i.test(merged.nationality)) {
+      merged.nationality = 'Việt Nam';
+      console.log('[OCR] Merge: Set default nationality to "Việt Nam"');
     }
     
     return merged;
@@ -771,6 +822,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     fixed = fixed.replace(/\bI[AV]IỆT\s+NAM\b/gi, 'VIỆT NAM');
     // "Hal Gang ky khai ind Pine" -> loại bỏ (đây là OCR nhầm, không phải tên)
     fixed = fixed.replace(/\bHal\s+Gang\s+ky\s+khai\s+ind\s+Pine\b/gi, '');
+    // "Nghy Pang nko Mt Ayn Dare" -> loại bỏ (đây là OCR nhầm, không phải tên)
+    fixed = fixed.replace(/\bNghy\s+Pang\s+nko\s+Mt\s+Ayn\s+Dare\b/gi, '');
+    // "Personal identification" -> loại bỏ (đây là label, không phải tên)
+    fixed = fixed.replace(/\bPersonal\s+identification\b/gi, '');
+    // "Ra EN Fe Sd" -> loại bỏ (đây là OCR nhầm quốc tịch)
+    fixed = fixed.replace(/\bRa\s+EN\s+Fe\s+Sd\b/gi, 'Việt Nam');
+    fixed = fixed.replace(/\bRa\s+EN\s+Fe\b/gi, 'Việt Nam');
     
     // Sửa các lỗi OCR phổ biến cho tiếng Việt
     // Map các lỗi OCR thường gặp -> ký tự đúng
@@ -1382,15 +1440,33 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     if (!nationalityFound) {
       const nationalityPattern = /(?:Quốc tịch|QUOC TICH|Nationality)[\s:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐa-z\s]{1,50})/i;
       const nationalityMatch = text.match(nationalityPattern);
-    if (nationalityMatch && nationalityMatch[1]) {
+      if (nationalityMatch && nationalityMatch[1]) {
         let nationality = nationalityMatch[1].trim();
         nationality = nationality.replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
         nationality = nationality.replace(/\s+/g, ' ').trim();
         if (/việt\s+nam|viet\s+nam|vietnam/i.test(nationality)) {
           parsedData.nationality = 'Việt Nam';
+          nationalityFound = true;
         } else if (nationality.length > 0 && nationality.length < 50) {
-          parsedData.nationality = nationality;
+          // Loại bỏ các kết quả OCR nhầm như "Ra EN Fe Sd"
+          const invalidNationalityPatterns = ['RA EN FE', 'RA EN', 'EN FE', 'FE SD', 'PERSONAL', 'IDENTIFICATION'];
+          const upperNationality = nationality.toUpperCase();
+          if (!invalidNationalityPatterns.some(pattern => upperNationality.includes(pattern))) {
+            parsedData.nationality = nationality;
+            nationalityFound = true;
+          }
         }
+      }
+    }
+    
+    // Pattern 3: Nếu vẫn chưa tìm thấy, tìm "Việt Nam" trong toàn bộ text (ưu tiên cao nhất)
+    // Vì đây là CCCD Việt Nam, quốc tịch luôn là "Việt Nam"
+    if (!nationalityFound || (parsedData.nationality && !/việt\s+nam|viet\s+nam|vietnam/i.test(parsedData.nationality))) {
+      // Tìm "Việt Nam" hoặc "Viet Nam" trong text
+      if (/việt\s+nam|viet\s+nam|vietnam/i.test(text)) {
+        parsedData.nationality = 'Việt Nam';
+        nationalityFound = true;
+        console.log('Found nationality (Pattern 3 - default to Việt Nam):', parsedData.nationality);
       }
     }
     
