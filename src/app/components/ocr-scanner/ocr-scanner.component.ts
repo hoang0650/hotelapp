@@ -385,13 +385,30 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       if (text && text.trim().length > 0) {
         const parsedData = this.parseOCRText(text);
-        // Thêm metadata về mặt nào (front/back)
-        // Đảm bảo: fileIndex 0 = mặt trước, fileIndex 1 = mặt sau
-        parsedData.side = fileIndex === 0 ? 'front' : 'back';
-        parsedData.fileIndex = fileIndex;
-        parsedData.isFrontSide = fileIndex === 0;
         
-        console.log(`[OCR] Kết quả scan: fileIndex=${fileIndex}, side=${parsedData.side}, fullName=${parsedData.fullName || 'N/A'}, idNumber=${parsedData.idNumber || 'N/A'}`);
+        // Tự động phát hiện mặt trước/mặt sau dựa vào nội dung OCR
+        const detectedSide = this.detectCardSide(text);
+        const detectedIsFront = detectedSide === 'front';
+        
+        // Thêm metadata về mặt nào (front/back)
+        // Ưu tiên phát hiện tự động, nếu không chắc chắn thì dùng thứ tự upload
+        if (detectedSide !== 'unknown') {
+          parsedData.side = detectedSide;
+          parsedData.isFrontSide = detectedIsFront;
+          parsedData.detectedSide = detectedSide;
+          console.log(`[OCR] Phát hiện tự động: ${detectedSide} (frontScore vs backScore)`);
+        } else {
+          // Nếu không phát hiện được, dùng thứ tự upload
+          parsedData.side = fileIndex === 0 ? 'front' : 'back';
+          parsedData.isFrontSide = fileIndex === 0;
+          parsedData.detectedSide = 'unknown';
+          console.log(`[OCR] Không phát hiện được, dùng thứ tự upload: fileIndex=${fileIndex}`);
+        }
+        
+        parsedData.fileIndex = fileIndex;
+        parsedData.uploadIndex = fileIndex; // Lưu index gốc từ upload
+        
+        console.log(`[OCR] Kết quả scan: fileIndex=${fileIndex}, detectedSide=${detectedSide}, side=${parsedData.side}, fullName=${parsedData.fullName || 'N/A'}, idNumber=${parsedData.idNumber || 'N/A'}`);
         
         // Đảm bảo scannedData có đủ phần tử
         while (this.scannedData.length <= fileIndex) {
@@ -405,9 +422,20 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         const allScanned = this.scannedData.filter(data => data !== null).length === this.selectedFiles.length;
         
         if (allScanned) {
-          // Tất cả ảnh đã được scan, gộp dữ liệu
+          // Tất cả ảnh đã được scan, sắp xếp lại theo mặt trước/mặt sau
           const validScannedData = this.scannedData.filter(data => data !== null);
-          const mergedData = this.mergeScannedData(validScannedData);
+          
+          // Sắp xếp lại: mặt trước trước, mặt sau sau
+          const sortedData = this.sortByCardSide(validScannedData);
+          
+          // Cập nhật lại fileIndex sau khi sắp xếp
+          sortedData.forEach((data, index) => {
+            data.fileIndex = index;
+            data.side = index === 0 ? 'front' : 'back';
+            data.isFrontSide = index === 0;
+          });
+          
+          const mergedData = this.mergeScannedData(sortedData);
           
           this.message.success(`Đã nhận dạng thành công ${this.selectedFiles.length} ${this.selectedFiles.length > 1 ? 'ảnh' : 'ảnh'}!`);
           this.scanComplete.emit(mergedData);
@@ -472,6 +500,41 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         }
       }
     }
+  }
+
+  /**
+   * Sắp xếp dữ liệu scan theo mặt trước/mặt sau
+   * Mặt trước (front) sẽ đứng trước, mặt sau (back) đứng sau
+   */
+  sortByCardSide(dataArray: any[]): any[] {
+    const sorted = [...dataArray];
+    
+    // Sắp xếp: mặt trước trước, mặt sau sau, unknown cuối
+    sorted.sort((a, b) => {
+      const sideA = (a.detectedSide || a.side || 'unknown') as 'front' | 'back' | 'unknown';
+      const sideB = (b.detectedSide || b.side || 'unknown') as 'front' | 'back' | 'unknown';
+      
+      // Ưu tiên: front > back > unknown
+      const order: { [key: string]: number } = { 'front': 0, 'back': 1, 'unknown': 2 };
+      const orderA = order[sideA] !== undefined ? order[sideA] : 2;
+      const orderB = order[sideB] !== undefined ? order[sideB] : 2;
+      
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // Nếu cùng loại, giữ nguyên thứ tự upload
+      return (a.uploadIndex || 0) - (b.uploadIndex || 0);
+    });
+    
+    console.log(`[OCR] Sắp xếp dữ liệu:`, sorted.map(d => ({ 
+      uploadIndex: d.uploadIndex, 
+      detectedSide: d.detectedSide, 
+      side: d.side,
+      newIndex: sorted.indexOf(d)
+    })));
+    
+    return sorted;
   }
 
   mergeScannedData(dataArray: any[]): any {
@@ -566,6 +629,55 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     return merged;
   }
 
+  /**
+   * Phát hiện mặt trước hay mặt sau dựa vào nội dung OCR
+   * Mặt trước: có quốc huy, "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", "CĂN CƯỚC", thông tin cá nhân
+   * Mặt sau: có MRZ, "BỘ CÔNG AN", chip, QR code, địa chỉ chi tiết
+   */
+  detectCardSide(text: string): 'front' | 'back' | 'unknown' {
+    const normalizedText = text.toUpperCase();
+    const lines = text.split(/\r?\n/).map(line => line.trim().toUpperCase());
+    
+    let frontScore = 0;
+    let backScore = 0;
+    
+    // Dấu hiệu mặt trước
+    if (/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/i.test(text)) frontScore += 10;
+    if (/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/i.test(text)) frontScore += 10;
+    if (/CĂN\s+CƯỚC/i.test(text)) frontScore += 8;
+    if (/CITIZEN\s+IDENTITY\s+CARD/i.test(text)) frontScore += 8;
+    if (/HỌ\s+VÀ\s+TÊN|FULL\s+NAME/i.test(text)) frontScore += 5;
+    if (/NGÀY\s+SINH|DATE\s+OF\s+BIRTH/i.test(text)) frontScore += 5;
+    if (/GIỚI\s+TÍNH|SEX/i.test(text)) frontScore += 3;
+    if (/QUỐC\s+TỊCH|NATIONALITY/i.test(text)) frontScore += 3;
+    
+    // Dấu hiệu mặt sau
+    if (/BỘ\s+CÔNG\s+AN/i.test(text)) backScore += 10;
+    if (/MINISTRY\s+OF\s+PUBLIC\s+SECURITY/i.test(text)) backScore += 10;
+    if (/IDVNM/i.test(text)) backScore += 15; // MRZ bắt đầu bằng IDVNM
+    if (/\<\<\</.test(text)) backScore += 10; // MRZ có nhiều dấu <<<
+    if (/NƠI\s+THƯỜNG\s+TRÚ|PLACE\s+OF\s+RESIDENCE/i.test(text)) backScore += 8;
+    if (/CÓ\s+GIÁ\s+TRỊ\s+ĐẾN|DATE\s+OF\s+EXPIRY/i.test(text)) backScore += 5;
+    if (/QUÊ\s+QUÁN|PLACE\s+OF\s+ORIGIN/i.test(text)) backScore += 5;
+    
+    // Kiểm tra MRZ pattern (3 dòng, mỗi dòng ~30 ký tự, có <<<)
+    const mrzPattern = /[A-Z0-9<]{20,}/g;
+    const mrzMatches = text.match(mrzPattern);
+    if (mrzMatches && mrzMatches.length >= 2) {
+      backScore += 15; // MRZ thường có 2-3 dòng
+    }
+    
+    console.log(`[OCR] Detect side: frontScore=${frontScore}, backScore=${backScore}`);
+    
+    if (frontScore > backScore && frontScore >= 10) {
+      return 'front';
+    } else if (backScore > frontScore && backScore >= 10) {
+      return 'back';
+    }
+    
+    return 'unknown';
+  }
+
   parseOCRText(text: string): any {
     // Parse text từ OCR để lấy thông tin CCCD/GPLX
     // Giữ nguyên các dòng để parse chính xác hơn
@@ -609,82 +721,139 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
     }
     
+    // Danh sách các dòng header cần loại bỏ (không phải tên)
+    const headerPatterns = [
+      /^CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/i,
+      /^SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/i,
+      /^Độc\s+lập\s+-\s+Tự\s+do\s+-\s+Hạnh\s+phúc/i,
+      /^Independence\s+-\s+Freedom\s+-\s+Happiness/i,
+      /^CĂN\s+CƯỚC\s+CÔNG\s+DÂN/i,
+      /^CITIZEN\s+IDENTITY\s+CARD/i,
+      /^CỘNG\s+HÒA/i,
+      /^REPUBLIC/i,
+      /^VIỆT\s+NAM$/i,
+      /^VIET\s+NAM$/i,
+      /^VIETNAM$/i
+    ];
+    
+    // Helper function để kiểm tra xem dòng có phải header không
+    const isHeaderLine = (line: string): boolean => {
+      return headerPatterns.some(pattern => pattern.test(line));
+    };
+    
+    // Helper function để kiểm tra xem dòng có phải tên hợp lệ không
+    const isValidNameLine = (line: string): boolean => {
+      // Loại bỏ các dòng header
+      if (isHeaderLine(line)) return false;
+      
+      // Loại bỏ các dòng có label
+      if (/^(?:Ngày sinh|Date|Giới tính|Quốc tịch|Địa chỉ|Nơi|CMND|CCCD|Số|Quê quán|Họ và tên|HO VA TEN|Full name|Place|Residence)/i.test(line)) {
+        return false;
+      }
+      
+      // Loại bỏ các dòng có ngày tháng
+      if (/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(line)) {
+        return false;
+      }
+      
+      // Loại bỏ các dòng chỉ có số
+      if (/^\d{9,12}$/.test(line)) {
+        return false;
+      }
+      
+      // Loại bỏ các dòng quá ngắn hoặc quá dài
+      if (line.length < 8 || line.length > 100) {
+        return false;
+      }
+      
+      return true;
+    };
+    
     // Tìm họ và tên - cải thiện logic với nhiều pattern
     let nameFound = false;
     
-    // Pattern 1: Tìm dòng có "Họ và tên:" hoặc "Họ và tên" và tên nằm ở dòng tiếp theo (ưu tiên cao nhất)
+    // Pattern 1: Tìm dòng có "Họ và tên:" hoặc "Họ và tên / Full name:" và tên nằm ở dòng tiếp theo (ưu tiên cao nhất)
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Pattern 1a: Dòng có "Họ và tên:" và tên nằm cùng dòng
-      const nameInLine = line.match(/(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name|Tên)[\s:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐa-z\s]+)/i);
+      // Pattern 1a: Dòng có "Họ và tên:" hoặc "Họ và tên / Full name:" và tên nằm cùng dòng
+      // Pattern này phải match chính xác label và lấy phần sau dấu hai chấm hoặc dấu gạch chéo
+      const nameInLine = line.match(/(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name)[\s\/:]+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+)/i);
       if (nameInLine && nameInLine[1]) {
         let name = nameInLine[1].trim();
-        // Loại bỏ các phần không phải tên
+        
+        // Loại bỏ các phần không phải tên (như "Full name" nếu có)
+        name = name.replace(/\s*\/\s*Full\s+name.*/i, '').trim();
         name = name.replace(/\d+/g, '').replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
         name = name.replace(/\s+/g, ' ').trim();
-        // Kiểm tra tên hợp lệ (ít nhất 2 từ, mỗi từ ít nhất 2 ký tự)
-        const nameParts = name.split(/\s+/).filter(part => part.length >= 2);
-        if (nameParts.length >= 2 && name.length >= 8) {
-          parsedData.fullName = nameParts.join(' ');
-          nameFound = true;
-          console.log('Found name (Pattern 1a - same line):', parsedData.fullName);
-          break;
+        
+        // Kiểm tra tên hợp lệ (ít nhất 2 từ, mỗi từ ít nhất 2 ký tự, không phải header)
+        if (!isHeaderLine(name) && isValidNameLine(name)) {
+          const nameParts = name.split(/\s+/).filter(part => part.length >= 2);
+          if (nameParts.length >= 2 && name.length >= 8) {
+            parsedData.fullName = nameParts.join(' ');
+            nameFound = true;
+            console.log('Found name (Pattern 1a - same line):', parsedData.fullName, 'from line:', line);
+            break;
+          }
         }
       }
       
-      // Pattern 1b: Dòng chỉ có "Họ và tên", tên nằm ở dòng tiếp theo
-      if ((/^(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name|Tên)[\s:]*$/i.test(line) || 
-           /^(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name|Tên)$/i.test(line)) && 
+      // Pattern 1b: Dòng chỉ có "Họ và tên" hoặc "Họ và tên / Full name", tên nằm ở dòng tiếp theo
+      if ((/^(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name)[\s\/:]*$/i.test(line) || 
+           /^(?:Họ\s+và\s+tên|HO\s+VA\s+TEN|Full\s+name)$/i.test(line)) && 
           i + 1 < lines.length) {
         const nextLine = lines[i + 1];
-        if (nextLine && 
+        if (nextLine && isValidNameLine(nextLine) &&
             /^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐa-z\s]+$/i.test(nextLine) && 
-            !/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(nextLine) && 
-            !/^(?:Ngày|Giới|Quốc|Địa|CMND|CCCD|Số|Nơi|Quê|Đặc)/i.test(nextLine) &&
-            nextLine.length > 5 && 
             !/^\d{9,12}$/.test(nextLine)) {
           let cleanName = nextLine.replace(/\d+/g, '').replace(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/gi, '').trim();
           cleanName = cleanName.replace(/\s+/g, ' ').trim();
-          const nameParts = cleanName.split(/\s+/).filter(part => part.length >= 2);
-          if (nameParts.length >= 2 && cleanName.length >= 8) {
-            parsedData.fullName = nameParts.join(' ');
-            nameFound = true;
-            console.log('Found name (Pattern 1b - next line):', parsedData.fullName);
-            break;
+          
+          // Kiểm tra không phải header
+          if (!isHeaderLine(cleanName)) {
+            const nameParts = cleanName.split(/\s+/).filter(part => part.length >= 2);
+            if (nameParts.length >= 2 && cleanName.length >= 8) {
+              parsedData.fullName = nameParts.join(' ');
+              nameFound = true;
+              console.log('Found name (Pattern 1b - next line):', parsedData.fullName, 'from line:', nextLine);
+              break;
+            }
           }
         }
       }
     }
     
     // Pattern 2: Tìm dòng có nhiều chữ cái in hoa (thường là tên trên CCCD) - ưu tiên dòng dài nhất
+    // Nhưng phải loại bỏ các dòng header
     if (!nameFound) {
       let bestName = '';
       let bestScore = 0;
       
       for (const line of lines) {
-        // Bỏ qua các dòng không phải tên
-        if (/^(?:Ngày sinh|Date|Giới tính|Quốc tịch|Địa chỉ|Nơi|CMND|CCCD|Số|Quê quán|Họ và tên|HO VA TEN)/i.test(line) ||
-            /\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4}/.test(line) ||
-            /^\d{9,12}$/.test(line)) {
+        // Bỏ qua các dòng không phải tên (sử dụng helper function)
+        if (!isValidNameLine(line)) {
           continue;
         }
         
-        // Kiểm tra dòng có phải tên không
+        // Kiểm tra dòng có phải tên không (toàn chữ cái, không có số)
         if (line.length >= 8 && 
             /^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/i.test(line)) {
-          const nameParts = line.trim().split(/\s+/).filter(part => part.length >= 2);
-          if (nameParts.length >= 2) {
-            const score = nameParts.length * 10 + line.length; // Điểm = số từ * 10 + độ dài
-            if (score > bestScore) {
-              bestScore = score;
-              bestName = nameParts.join(' ');
+          // Loại bỏ header một lần nữa để chắc chắn
+          if (!isHeaderLine(line)) {
+            const nameParts = line.trim().split(/\s+/).filter(part => part.length >= 2);
+            if (nameParts.length >= 2) {
+              const score = nameParts.length * 10 + line.length; // Điểm = số từ * 10 + độ dài
+              if (score > bestScore) {
+                bestScore = score;
+                bestName = nameParts.join(' ');
+              }
             }
           }
         }
       }
       
-      if (bestName) {
+      if (bestName && !isHeaderLine(bestName)) {
         parsedData.fullName = bestName;
         nameFound = true;
         console.log('Found name (Pattern 2 - best match):', parsedData.fullName);
@@ -1156,6 +1325,44 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     }
     
     this.message.success('Đã tự động điền thông tin từ OCR. Vui lòng kiểm tra và chỉnh sửa nếu cần.');
+  }
+
+  /**
+   * Lấy label cho mặt (trước/sau) dựa vào index và dữ liệu đã scan
+   * Sử dụng phát hiện tự động để hiển thị đúng, không phụ thuộc vào thứ tự upload
+   */
+  getSideLabel(index: number): string {
+    if (!this.allowMultiple || this.selectedFiles.length <= 1) {
+      return '';
+    }
+    
+    // Tìm dữ liệu scan tương ứng với file tại index này
+    // scannedData có thể không khớp với index nếu đã sắp xếp lại
+    // Nên tìm theo uploadIndex
+    if (this.scannedData && this.scannedData.length > index) {
+      const data = this.scannedData[index];
+      if (data && data.detectedSide) {
+        // Dùng phát hiện tự động
+        if (data.detectedSide === 'front') {
+          return 'Mặt trước';
+        } else if (data.detectedSide === 'back') {
+          return 'Mặt sau';
+        }
+      }
+      
+      // Nếu có side nhưng không có detectedSide, dùng side
+      if (data && data.side) {
+        if (data.side === 'front' || data.isFrontSide) {
+          return 'Mặt trước';
+        } else if (data.side === 'back') {
+          return 'Mặt sau';
+        }
+      }
+    }
+    
+    // Nếu chưa có dữ liệu scan, dùng thứ tự upload (tạm thời)
+    // Sẽ được cập nhật sau khi scan xong
+    return index === 0 ? 'Mặt trước (đang quét...)' : 'Mặt sau (đang quét...)';
   }
 
   clearImage(index?: number): void {

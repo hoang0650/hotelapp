@@ -19,7 +19,7 @@
       <div *ngFor="let preview of previewImages; let i = index" class="preview-container">
         <div class="preview-label">
           <span *ngIf="allowMultiple && previewImages.length > 1">
-            {{ i === 0 ? 'Mặt trước' : 'Mặt sau' }}
+            {{ getSideLabel(i) }}
           </span>
         </div>
         <img [src]="preview" alt="Preview {{ i + 1 }}" class="preview-image" />
