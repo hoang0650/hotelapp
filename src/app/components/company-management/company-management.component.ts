@@ -146,6 +146,21 @@ export class CompanyManagementComponent implements OnInit {
 
   // ============ LOAD DATA ============
 
+  // Helper function để extract businessId từ hotel (xử lý cả populated và non-populated)
+  private extractBusinessId(hotel: Hotel): string | null {
+    if (!hotel || !hotel.businessId) {
+      return null;
+    }
+    
+    if (typeof hotel.businessId === 'object' && hotel.businessId !== null && '_id' in hotel.businessId) {
+      return hotel.businessId._id;
+    } else if (typeof hotel.businessId === 'string') {
+      return hotel.businessId;
+    }
+    
+    return null;
+  }
+
   loadHotels(): void {
     this.isLoading = true;
     this.hotelService.getHotels().subscribe({
@@ -154,10 +169,11 @@ export class CompanyManagementComponent implements OnInit {
           this.availableHotels = data;
         } else if (this.isBusiness && this.currentUser?.businessId) {
           // Business chỉ thấy hotels thuộc business của mình
-          const businessHotelIds = this.getBusinessHotelIds();
-          this.availableHotels = data.filter(hotel => 
-            hotel._id && businessHotelIds.includes(hotel._id)
-          );
+          this.availableHotels = data.filter(hotel => {
+            const hotelBusinessId = this.extractBusinessId(hotel);
+            const userBusinessId = this.currentUser?.businessId;
+            return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString();
+          });
         } else {
           this.availableHotels = [];
         }

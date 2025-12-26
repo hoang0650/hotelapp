@@ -13,6 +13,9 @@ export interface Announcement {
   endDate?: Date | string;
   isActive: boolean;
   targetRoles?: string[];
+  targetBusinesses?: string[]; // Array of business IDs
+  targetHotels?: string[]; // Array of hotel IDs
+  targetType?: 'system' | 'business' | 'hotel'; // Type of target
   createdAt: Date | string;
   createdBy?: string;
 }

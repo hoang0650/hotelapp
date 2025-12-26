@@ -263,9 +263,10 @@ export class PricingComponent implements OnInit, OnDestroy {
 
   /**
    * Load QR code từ settings (nếu có)
+   * Lấy từ paymentSettings thay vì generalSettings
    */
   loadQRCodeFromSettings(): void {
-    this.settingsService.getSettingsByType('general').subscribe({
+    this.settingsService.getSettingsByType('payment').subscribe({
       next: (response: any) => {
         if (response.success && response.data) {
           const settings = response.data;
@@ -285,7 +286,7 @@ export class PricingComponent implements OnInit, OnDestroy {
         this.checkCurrentUserQRCode();
       },
       error: (error: any) => {
-        console.error('Error loading settings:', error);
+        console.error('Error loading payment settings:', error);
         this.checkCurrentUserQRCode();
       }
     });
@@ -587,22 +588,92 @@ export class PricingComponent implements OnInit, OnDestroy {
     const packagePrice = this.getPackagePrice(pkg);
     const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
 
-    // Lấy QR code từ superadmin hoặc settings (ưu tiên)
-    // Nếu không có, mới lấy từ currentUser
-    let qrPaymentUrl = this.systemQRCode || '';
-    let beneficiaryName = this.systemBeneficiaryName || '';
+    // Luôn load lại QR code từ superadmin profile trước khi thanh toán
+    // Ưu tiên: superadmin profile > settings > currentUser
+    this.loadQRCodeFromSuperadminForPayment(packagePrice, packageId, pkg, billingTypeText);
+  }
+
+  /**
+   * Load QR code từ superadmin profile để thanh toán
+   * Ưu tiên: superadmin profile > settings > currentUser
+   */
+  loadQRCodeFromSuperadminForPayment(packagePrice: number, packageId: string, pkg: any, billingTypeText: string): void {
+    // Bước 1: Ưu tiên lấy từ superadmin profile
+    this.userService.getUsersByRole('superadmin').subscribe({
+      next: (superadmins: any[]) => {
+        if (superadmins && superadmins.length > 0) {
+          const superadmin = superadmins[0]; // Lấy superadmin đầu tiên
+          const qrUrl = superadmin?.bankAccount?.qrPaymentUrl || '';
+          const beneficiaryName = superadmin?.bankAccount?.beneficiaryName || superadmin?.bankAccount?.accountHolderName || '';
+          
+          if (qrUrl) {
+            // Tìm thấy QR code từ superadmin, sử dụng ngay
+            this.proceedWithSePayPayment(qrUrl, beneficiaryName, packagePrice, packageId, pkg, billingTypeText);
+            return;
+          }
+        }
+        
+        // Bước 2: Nếu không có từ superadmin, thử lấy từ settings
+        this.loadQRCodeFromSettingsForPayment(packagePrice, packageId, pkg, billingTypeText);
+      },
+      error: (error: any) => {
+        console.error('Error loading superadmin for payment:', error);
+        // Nếu không lấy được superadmin, thử lấy từ settings
+        this.loadQRCodeFromSettingsForPayment(packagePrice, packageId, pkg, billingTypeText);
+      }
+    });
+  }
+
+  /**
+   * Load QR code từ settings (fallback)
+   * Lấy từ paymentSettings thay vì generalSettings
+   */
+  loadQRCodeFromSettingsForPayment(packagePrice: number, packageId: string, pkg: any, billingTypeText: string): void {
+    this.settingsService.getSettingsByType('payment').subscribe({
+      next: (response: any) => {
+        if (response.success && response.data) {
+          const settings = response.data;
+          const qrUrl = settings.bankAccount?.qrPaymentUrl || '';
+          const beneficiaryName = settings.bankAccount?.beneficiaryName || settings.bankAccount?.accountHolderName || '';
+          
+          if (qrUrl) {
+            // Tìm thấy QR code từ settings, sử dụng
+            this.proceedWithSePayPayment(qrUrl, beneficiaryName, packagePrice, packageId, pkg, billingTypeText);
+            return;
+          }
+        }
+        
+        // Bước 3: Nếu không có từ settings, thử lấy từ currentUser (fallback cuối cùng)
+        this.loadQRCodeFromCurrentUserForPayment(packagePrice, packageId, pkg, billingTypeText);
+      },
+      error: (error: any) => {
+        console.error('Error loading payment settings for payment:', error);
+        // Nếu không lấy được settings, thử lấy từ currentUser
+        this.loadQRCodeFromCurrentUserForPayment(packagePrice, packageId, pkg, billingTypeText);
+      }
+    });
+  }
+
+  /**
+   * Load QR code từ currentUser (fallback cuối cùng)
+   */
+  loadQRCodeFromCurrentUserForPayment(packagePrice: number, packageId: string, pkg: any, billingTypeText: string): void {
+    const qrUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
+    const beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
     
-    // Fallback: Nếu không có từ system, lấy từ currentUser
-    if (!qrPaymentUrl) {
-      qrPaymentUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
-      beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
+    if (qrUrl) {
+      // Tìm thấy QR code từ currentUser, sử dụng
+      this.proceedWithSePayPayment(qrUrl, beneficiaryName, packagePrice, packageId, pkg, billingTypeText);
+    } else {
+      // Không tìm thấy QR code ở bất kỳ đâu
+      this.message.warning('Chưa có QR code thanh toán. Vui lòng liên hệ quản trị viên để cập nhật thông tin thanh toán.');
     }
+  }
 
-    if (!qrPaymentUrl) {
-      this.message.warning('Chưa có QR code thanh toán trong profile. Vui lòng cập nhật thông tin ngân hàng trong profile trước khi thanh toán.');
-      return;
-    }
-
+  /**
+   * Tiến hành thanh toán SePay với QR code đã lấy được
+   */
+  proceedWithSePayPayment(qrPaymentUrl: string, beneficiaryName: string, packagePrice: number, packageId: string, pkg: any, billingTypeText: string): void {
     // Tạo payment history
     const sepayPaymentData: SePayPaymentData = {
       packageId: packageId,
@@ -620,11 +691,16 @@ export class PricingComponent implements OnInit, OnDestroy {
       next: (response: any) => {
         this.loading = false;
         if (response.success) {
-          // Lưu thông tin payment và hiển thị modal với QR code (không lưu paymentCode vì không cần hiển thị)
+          // Lưu thông tin payment và hiển thị modal với QR code
           this.sepayAmount = packagePrice;
           this.sepayQrUrl = qrPaymentUrl;
           this.sepayBeneficiaryName = beneficiaryName;
           this.sepayPaymentHistoryId = response.paymentHistoryId || ''; // Lưu paymentHistoryId để kiểm tra trạng thái
+          
+          // Cập nhật systemQRCode để lần sau không cần load lại
+          this.systemQRCode = qrPaymentUrl;
+          this.systemBeneficiaryName = beneficiaryName;
+          this.hasQRCode = true;
           
           // Hiển thị modal với QR code
           this.showSePayModal = true;

@@ -5,8 +5,9 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SettingsService, EmailSettings } from '../../services/settings.service';
-import { NotificationsService } from '../../services/notifications.service';
+import { NotificationsService, Announcement } from '../../services/notifications.service';
 import { HotelService } from '../../services/hotel.service';
+import { BusinessService } from '../../services/business.service';
 
 @Component({
   selector: 'app-settings',
@@ -25,6 +26,7 @@ export class SettingsComponent implements OnInit {
   generalForm!: FormGroup;
   hotelQRPaymentForm!: FormGroup;
   hotelFeaturesForm!: FormGroup;
+  hotelNotificationForm!: FormGroup;
   
   // Loading states
   loading = false;
@@ -38,6 +40,19 @@ export class SettingsComponent implements OnInit {
   selectedHotelId: string | null = null;
   currentHotelSettings: any = null;
   loadingHotels = false;
+  
+  // Announcements management
+  announcements: Announcement[] = [];
+  announcementForm!: FormGroup;
+  isAnnouncementModalVisible = false;
+  editingAnnouncement: Announcement | null = null;
+  businesses: any[] = [];
+  loadingAnnouncements = false;
+
+  // QR Payment
+  qrPaymentUrl: string = ''; // URL QR thanh toán SePay
+  showQrPreview: boolean = false; // Hiển thị preview QR code
+  qrBeneficiaryName: string = ''; // Tên người thụ hưởng cho QR code
 
   // Email providers
   emailProviders = [
@@ -52,11 +67,12 @@ export class SettingsComponent implements OnInit {
     private fb: FormBuilder,
     private message: NzMessageService,
     private router: Router,
-    private authService: AuthService,
+    public authService: AuthService,
     private userService: UserService,
     private settingsService: SettingsService,
     private notificationsService: NotificationsService,
-    private hotelService: HotelService
+    private hotelService: HotelService,
+    private businessService: BusinessService
   ) {
     this.initForms();
   }
@@ -65,6 +81,10 @@ export class SettingsComponent implements OnInit {
     this.loadCurrentUser();
     this.loadSettings();
     this.loadHotels();
+    if (this.authService.isSuperAdmin() || this.authService.isAdmin()) {
+      this.loadAnnouncements();
+      this.loadBusinesses();
+    }
   }
 
   private initForms(): void {
@@ -130,7 +150,18 @@ export class SettingsComponent implements OnInit {
       autoReconcile: [false],
       reconcileFrequency: ['daily'],
       minimumBalanceAlert: [0, [Validators.min(0)]],
-      paymentTimeout: [300, [Validators.min(30), Validators.max(3600)]]
+      paymentTimeout: [300, [Validators.min(30), Validators.max(3600)]],
+      // Bank Account for QR Payment
+      bankAccount: this.fb.group({
+        bankName: [''],
+        accountNumber: [''],
+        accountHolderName: [''],
+        beneficiaryName: [''], // Tên người thụ hưởng (hiển thị trên QR code)
+        branch: [''],
+        swiftCode: [''],
+        iban: [''],
+        qrPaymentUrl: [''] // Link QR thanh toán SePay
+      })
     });
 
     // Notification Settings Form
@@ -163,18 +194,7 @@ export class SettingsComponent implements OnInit {
       maintenanceMessage: ['Hệ thống đang bảo trì. Vui lòng quay lại sau.'],
       allowRegistration: [true],
       requireEmailVerification: [false],
-      enable2FA: [false],
-      // Bank Account for QR Payment
-      bankAccount: this.fb.group({
-        bankName: [''],
-        accountNumber: [''],
-        accountHolderName: [''],
-        beneficiaryName: [''], // Tên người thụ hưởng (hiển thị trên QR code)
-        branch: [''],
-        swiftCode: [''],
-        iban: [''],
-        qrPaymentUrl: [''] // Link QR thanh toán SePay
-      })
+      enable2FA: [false]
     });
     
     // Hotel QR Payment Form
@@ -192,6 +212,36 @@ export class SettingsComponent implements OnInit {
       enableDraftInvoice: [false],
       enableExportInvoice: [false],
       enableAiChatbox: [false]
+    });
+    
+    // Hotel Notification Settings Form
+    this.hotelNotificationForm = this.fb.group({
+      enableEmailNotifications: [true],
+      enableSMSNotifications: [false],
+      enablePushNotifications: [true],
+      notifyOnBooking: [true],
+      notifyOnCheckin: [true],
+      notifyOnCheckout: [true],
+      notifyOnPayment: [true],
+      notifyOnCancellation: [true],
+      notifyOnLowInventory: [true],
+      notifyOnSystemError: [true],
+      notificationEmail: ['', Validators.email]
+    });
+    
+    // Announcement Form
+    this.announcementForm = this.fb.group({
+      type: ['info', Validators.required],
+      title: ['', Validators.required],
+      message: ['', Validators.required],
+      priority: ['medium', Validators.required],
+      startDate: [new Date()],
+      endDate: [null],
+      isActive: [true],
+      targetType: ['system', Validators.required],
+      targetRoles: [[]],
+      targetBusinesses: [[]],
+      targetHotels: [[]]
     });
   }
 
@@ -236,12 +286,26 @@ export class SettingsComponent implements OnInit {
           // Load general settings
           if (settings.generalSettings) {
             const generalData = { ...settings.generalSettings };
-            // Nếu có bankAccount, patch riêng
+            // Nếu có bankAccount, patch riêng để đảm bảo FormGroup được cập nhật đúng
             if (generalData.bankAccount) {
               const bankAccountData = generalData.bankAccount;
               delete generalData.bankAccount;
+              // Patch các field khác trước
               this.generalForm.patchValue(generalData);
-              this.generalForm.patchValue({ bankAccount: bankAccountData });
+              // Sau đó patch bankAccount vào FormGroup con
+              const bankAccountFormGroup = this.generalForm.get('bankAccount');
+              if (bankAccountFormGroup) {
+                bankAccountFormGroup.patchValue(bankAccountData);
+              } else {
+                // Nếu FormGroup chưa có, patch trực tiếp
+                this.generalForm.patchValue({ bankAccount: bankAccountData });
+              }
+              
+              console.log('Loaded bankAccount from settings:', {
+                qrPaymentUrl: bankAccountData.qrPaymentUrl,
+                beneficiaryName: bankAccountData.beneficiaryName,
+                bankName: bankAccountData.bankName
+              });
             } else {
               this.generalForm.patchValue(generalData);
             }
@@ -376,7 +440,27 @@ export class SettingsComponent implements OnInit {
     }
 
     this.saving = true;
-    const settings = this.paymentForm.value;
+    const formValue = this.paymentForm.value;
+    
+    // Đảm bảo bankAccount được lưu đúng vào paymentSettings
+    // Nếu có QR code đã tạo, lưu vào bankAccount
+    const bankAccountData = {
+      ...(formValue.bankAccount || {}),
+      qrPaymentUrl: this.qrPaymentUrl || formValue.bankAccount?.qrPaymentUrl || '',
+      beneficiaryName: this.qrBeneficiaryName || formValue.bankAccount?.beneficiaryName || ''
+    };
+    
+    const settings = {
+      ...formValue,
+      // Đảm bảo bankAccount được giữ nguyên cấu trúc với QR code
+      bankAccount: bankAccountData
+    };
+    
+    console.log('Saving payment settings with bankAccount:', {
+      hasBankAccount: !!settings.bankAccount,
+      qrPaymentUrl: settings.bankAccount?.qrPaymentUrl,
+      beneficiaryName: settings.bankAccount?.beneficiaryName
+    });
     
     this.settingsService.updatePaymentSettings(settings).subscribe({
       next: (response) => {
@@ -389,6 +473,7 @@ export class SettingsComponent implements OnInit {
       },
       error: (error) => {
         this.saving = false;
+        console.error('Error saving payment settings:', error);
         this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt thanh toán');
       }
     });
@@ -428,12 +513,32 @@ export class SettingsComponent implements OnInit {
     }
 
     this.saving = true;
-    const settings = this.generalForm.value;
+    const formValue = this.generalForm.value;
+    
+    // Đảm bảo bankAccount được lưu đúng vào generalSettings
+    // Nếu có QR code đã tạo, lưu vào bankAccount
+    const bankAccountData = {
+      ...(formValue.bankAccount || {}),
+      qrPaymentUrl: this.qrPaymentUrl || formValue.bankAccount?.qrPaymentUrl || '',
+      beneficiaryName: this.qrBeneficiaryName || formValue.bankAccount?.beneficiaryName || ''
+    };
+    
+    const settings = {
+      ...formValue,
+      // Đảm bảo bankAccount được giữ nguyên cấu trúc với QR code
+      bankAccount: bankAccountData
+    };
     
     // Lấy giá trị maintenance mode hiện tại từ localStorage hoặc form
     const previousMaintenanceMode = localStorage.getItem('maintenanceMode') === 'true' || 
                                      this.generalForm.get('maintenanceMode')?.value === true;
     const newMaintenanceMode = settings.maintenanceMode;
+    
+    console.log('Saving general settings with bankAccount:', {
+      hasBankAccount: !!settings.bankAccount,
+      qrPaymentUrl: settings.bankAccount?.qrPaymentUrl,
+      beneficiaryName: settings.bankAccount?.beneficiaryName
+    });
     
     this.settingsService.updateGeneralSettings(settings).subscribe({
       next: (response) => {
@@ -458,6 +563,7 @@ export class SettingsComponent implements OnInit {
       },
       error: (error) => {
         this.saving = false;
+        console.error('Error saving general settings:', error);
         this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt chung');
       }
     });
@@ -746,6 +852,20 @@ export class SettingsComponent implements OnInit {
           enableExportInvoice: this.currentHotelSettings.enableExportInvoice || false,
           enableAiChatbox: this.currentHotelSettings.enableAiChatbox || false
         });
+        
+        // Load hotel notification settings
+        if (this.currentHotelSettings.notificationSettings) {
+          this.hotelNotificationForm.patchValue(this.currentHotelSettings.notificationSettings);
+        } else {
+          // Nếu không có, sử dụng giá trị mặc định từ system notification settings
+          this.settingsService.getAllSettings().subscribe({
+            next: (response) => {
+              if (response.success && response.data?.notificationSettings) {
+                this.hotelNotificationForm.patchValue(response.data.notificationSettings);
+              }
+            }
+          });
+        }
       },
       error: (error) => {
         console.error('Error loading hotel settings:', error);
@@ -824,11 +944,281 @@ export class SettingsComponent implements OnInit {
     });
   }
   
+  saveHotelNotificationSettings(): void {
+    if (!this.selectedHotelId) {
+      this.message.warning('Vui lòng chọn khách sạn');
+      return;
+    }
+    
+    if (this.hotelNotificationForm.invalid) {
+      this.markFormGroupTouched(this.hotelNotificationForm);
+      this.message.error('Vui lòng kiểm tra lại các trường bắt buộc');
+      return;
+    }
+    
+    this.saving = true;
+    const settings = {
+      ...this.currentHotelSettings,
+      notificationSettings: this.hotelNotificationForm.value
+    };
+    
+    this.hotelService.updateHotelSettings(this.selectedHotelId, settings).subscribe({
+      next: (response) => {
+        this.saving = false;
+        this.message.success(response.message || 'Đã lưu cài đặt thông báo cho khách sạn');
+        this.currentHotelSettings = response.settings || {};
+      },
+      error: (error) => {
+        this.saving = false;
+        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt thông báo');
+      }
+    });
+  }
+  
   canManageHotelSettings(): boolean {
     return this.authService.isSuperAdmin() || 
            this.authService.isAdmin() || 
            this.authService.isBusiness() || 
            this.authService.isHotelManager();
+  }
+  
+  // ============ ANNOUNCEMENTS MANAGEMENT ============
+  
+  loadAnnouncements(): void {
+    this.loadingAnnouncements = true;
+    this.notificationsService.getAnnouncements().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.announcements = response.data;
+        }
+        this.loadingAnnouncements = false;
+      },
+      error: (error) => {
+        console.error('Error loading announcements:', error);
+        this.loadingAnnouncements = false;
+      }
+    });
+  }
+  
+  loadBusinesses(): void {
+    this.businessService.getBusinesses().subscribe({
+      next: (businesses) => {
+        this.businesses = businesses;
+      },
+      error: (error) => {
+        console.error('Error loading businesses:', error);
+      }
+    });
+  }
+  
+  openAnnouncementModal(announcement?: Announcement): void {
+    this.editingAnnouncement = announcement || null;
+    
+    if (announcement) {
+      // Edit mode
+      this.announcementForm.patchValue({
+        type: announcement.type,
+        title: announcement.title,
+        message: announcement.message,
+        priority: announcement.priority,
+        startDate: announcement.startDate ? new Date(announcement.startDate) : new Date(),
+        endDate: announcement.endDate ? new Date(announcement.endDate) : null,
+        isActive: announcement.isActive,
+        targetType: announcement.targetType || 'system',
+        targetRoles: announcement.targetRoles || [],
+        targetBusinesses: announcement.targetBusinesses || [],
+        targetHotels: announcement.targetHotels || []
+      });
+    } else {
+      // Create mode
+      this.announcementForm.reset({
+        type: 'info',
+        title: '',
+        message: '',
+        priority: 'medium',
+        startDate: new Date(),
+        endDate: null,
+        isActive: true,
+        targetType: 'system',
+        targetRoles: [],
+        targetBusinesses: [],
+        targetHotels: []
+      });
+    }
+    
+    this.isAnnouncementModalVisible = true;
+  }
+  
+  closeAnnouncementModal(): void {
+    this.isAnnouncementModalVisible = false;
+    this.editingAnnouncement = null;
+    this.announcementForm.reset();
+  }
+  
+  saveAnnouncement(): void {
+    if (this.announcementForm.invalid) {
+      this.markFormGroupTouched(this.announcementForm);
+      this.message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      return;
+    }
+    
+    const formValue = this.announcementForm.value;
+    const announcementData: Partial<Announcement> = {
+      type: formValue.type,
+      title: formValue.title,
+      message: formValue.message,
+      priority: formValue.priority,
+      startDate: formValue.startDate,
+      endDate: formValue.endDate || null,
+      isActive: formValue.isActive,
+      targetType: formValue.targetType,
+      targetRoles: formValue.targetRoles || [],
+      targetBusinesses: formValue.targetBusinesses || [],
+      targetHotels: formValue.targetHotels || []
+    };
+    
+    if (this.editingAnnouncement) {
+      // Update
+      this.notificationsService.updateAnnouncement(this.editingAnnouncement.id, announcementData).subscribe({
+        next: () => {
+          this.message.success('Đã cập nhật thông báo thành công');
+          this.closeAnnouncementModal();
+          this.loadAnnouncements();
+        },
+        error: (error) => {
+          this.message.error(error.error?.message || 'Lỗi khi cập nhật thông báo');
+        }
+      });
+    } else {
+      // Create
+      this.notificationsService.createAnnouncement(announcementData).subscribe({
+        next: () => {
+          this.message.success('Đã tạo thông báo thành công');
+          this.closeAnnouncementModal();
+          this.loadAnnouncements();
+        },
+        error: (error) => {
+          this.message.error(error.error?.message || 'Lỗi khi tạo thông báo');
+        }
+      });
+    }
+  }
+  
+  deleteAnnouncement(announcement: Announcement): void {
+    this.notificationsService.deleteAnnouncement(announcement.id).subscribe({
+      next: () => {
+        this.message.success('Đã xóa thông báo thành công');
+        this.loadAnnouncements();
+      },
+      error: (error) => {
+        this.message.error(error.error?.message || 'Lỗi khi xóa thông báo');
+      }
+    });
+  }
+  
+  getAnnouncementTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'maintenance': 'Bảo trì',
+      'update': 'Cập nhật',
+      'info': 'Thông tin',
+      'warning': 'Cảnh báo',
+      'success': 'Thành công'
+    };
+    return labels[type] || type;
+  }
+  
+  getTargetTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'system': 'Hệ thống (Tất cả)',
+      'business': 'Doanh nghiệp',
+      'hotel': 'Khách sạn'
+    };
+    return labels[type] || type;
+  }
+  
+  onTargetTypeChange(targetType: string): void {
+    // Reset selections when changing target type
+    if (targetType === 'system') {
+      this.announcementForm.patchValue({
+        targetBusinesses: [],
+        targetHotels: []
+      });
+    } else if (targetType === 'business') {
+      this.announcementForm.patchValue({
+        targetHotels: []
+      });
+    } else if (targetType === 'hotel') {
+      this.announcementForm.patchValue({
+        targetBusinesses: []
+      });
+    }
+  }
+  
+  getBusinessName(businessId: string): string {
+    const business = this.businesses.find(b => b._id === businessId);
+    return business ? business.name : businessId;
+  }
+  
+  getHotelName(hotelId: string): string {
+    const hotel = this.hotels.find(h => h._id === hotelId);
+    return hotel ? hotel.name : hotelId;
+  }
+
+  /**
+   * Tạo QR thanh toán SePay từ số tài khoản và tên ngân hàng
+   * Tương tự như trong profile component
+   */
+  generateQrPayment(): void {
+    const bankAccountFormGroup = this.paymentForm.get('bankAccount');
+    if (!bankAccountFormGroup) {
+      this.message.warning('Không tìm thấy form thông tin ngân hàng');
+      return;
+    }
+
+    const bankName = bankAccountFormGroup.get('bankName')?.value?.trim();
+    const accountNumber = bankAccountFormGroup.get('accountNumber')?.value?.trim();
+    const beneficiaryName = bankAccountFormGroup.get('beneficiaryName')?.value?.trim() || '';
+
+    if (!bankName || !accountNumber) {
+      this.message.warning('Vui lòng nhập tên ngân hàng và số tài khoản');
+      return;
+    }
+
+    // Tạo URL QR thanh toán SePay
+    // Format: https://qr.sepay.vn/img?acc=SO_TAI_KHOAN&bank=NGAN_HANG
+    const encodedAccount = encodeURIComponent(accountNumber);
+    const encodedBank = encodeURIComponent(bankName);
+    this.qrPaymentUrl = `https://qr.sepay.vn/img?acc=${encodedAccount}&bank=${encodedBank}`;
+    
+    // Lưu tên người thụ hưởng
+    this.qrBeneficiaryName = beneficiaryName || bankAccountFormGroup.get('accountHolderName')?.value?.trim() || '';
+    
+    // Cập nhật vào form
+    bankAccountFormGroup.patchValue({
+      qrPaymentUrl: this.qrPaymentUrl,
+      beneficiaryName: this.qrBeneficiaryName
+    });
+    
+    this.showQrPreview = true;
+    this.message.success('Đã tạo QR thanh toán thành công. Vui lòng bấm "Lưu cài đặt" để lưu vào hệ thống.');
+  }
+
+  /**
+   * Xóa QR preview
+   */
+  clearQrPreview(): void {
+    this.qrPaymentUrl = '';
+    this.qrBeneficiaryName = '';
+    this.showQrPreview = false;
+    
+    // Xóa trong form
+    const bankAccountFormGroup = this.paymentForm.get('bankAccount');
+    if (bankAccountFormGroup) {
+      bankAccountFormGroup.patchValue({
+        qrPaymentUrl: '',
+        beneficiaryName: ''
+      });
+    }
   }
 
   // Helper functions for currency formatting

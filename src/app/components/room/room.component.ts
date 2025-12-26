@@ -525,42 +525,70 @@ export class RoomComponent implements OnInit, OnDestroy {
     return result;
   }
 
+  // Helper function để extract businessId từ hotel (xử lý cả populated và non-populated)
+  private extractBusinessId(hotel: Hotel): string | null {
+    if (!hotel || !hotel.businessId) {
+      return null;
+    }
+    
+    if (typeof hotel.businessId === 'object' && hotel.businessId !== null && '_id' in hotel.businessId) {
+      return hotel.businessId._id;
+    } else if (typeof hotel.businessId === 'string') {
+      return hotel.businessId;
+    }
+    
+    return null;
+  }
+
   loadHotels(): void {
     this.isLoading = true;
     this.hotelService.getHotels().subscribe(data => {
-      this.hotels = data;
+      const currentUser = this.authService.getCurrentUser();
       
-      // Nếu là staff, tự động set hotelId từ currentUser và không cho phép thay đổi
-      if (this.authService.isStaff()) {
-        const currentUser = this.authService.getCurrentUser();
-        // Lấy hotelId từ user hoặc từ hotels list (nếu backend đã filter)
+      // Filter hotels theo role
+      if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
+        // Admin/Superadmin thấy tất cả
+        this.hotels = data;
+      } else if (this.authService.isBusiness() && currentUser?.businessId) {
+        // Business chỉ thấy hotels thuộc business của mình
+        this.hotels = data.filter(hotel => {
+          const hotelBusinessId = this.extractBusinessId(hotel);
+          const userBusinessId = currentUser.businessId;
+          // So sánh string để đảm bảo đúng
+          return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString();
+        });
+      } else if (this.authService.isHotelManager() && currentUser?.hotelId) {
+        // Hotel manager chỉ thấy hotel của mình
+        this.hotels = data.filter(hotel => hotel._id === currentUser.hotelId);
+      } else if (this.authService.isStaff()) {
+        // Staff chỉ thấy hotel của mình
         const staffHotelId = currentUser?.hotelId || (data.length > 0 ? data[0]._id : null);
-        
         if (staffHotelId) {
           this.selectedHotelId = staffHotelId;
-          // Chỉ load hotel của staff (backend đã filter, nhưng đảm bảo frontend cũng filter)
           this.hotels = data.filter(hotel => hotel._id === staffHotelId);
-          if (this.selectedHotelId) {
-            // Load rooms ngay sau khi set hotelId
-            this.onHotelChange(this.selectedHotelId);
-          }
         } else {
-          // Nếu không có hotelId, thử load lại từ API
           console.warn('Staff không có hotelId, kiểm tra lại thông tin nhân viên');
           this.selectedHotelId = null;
           this.rooms = [];
           this.floors = [];
           this.message.warning('Không tìm thấy khách sạn của bạn. Vui lòng liên hệ quản trị viên.');
+          this.isLoading = false;
+          return;
         }
-      } else if (data && data.length > 0) {
-        // Các role khác: chọn hotel đầu tiên
-        this.selectedHotelId = data[0]._id!;
-        this.onHotelChange(this.selectedHotelId);
       } else {
+        this.hotels = [];
+      }
+      
+      // Auto-select hotel
+      if (this.hotels.length > 0 && !this.selectedHotelId) {
+        this.selectedHotelId = this.hotels[0]._id!;
+        this.onHotelChange(this.selectedHotelId);
+      } else if (this.hotels.length === 0) {
         this.selectedHotelId = null;
         this.rooms = [];
         this.floors = [];
       }
+      
       this.isLoading = false;
     }, error => {
       this.message.error('Lỗi khi tải danh sách khách sạn: ' + (error.error?.message || error.message));

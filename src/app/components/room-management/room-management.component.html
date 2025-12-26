@@ -45,7 +45,14 @@
 
   <!-- Bảng danh sách phòng -->
   <div class="table-container table-responsive">
-    <nz-table #roomTable nzBordered [nzData]="rooms" [nzScroll]="{ x: '1200px' }">
+    <nz-table 
+      #roomTable 
+      nzBordered 
+      [nzData]="paginatedRooms" 
+      [nzScroll]="{ x: '1200px' }"
+      [nzShowPagination]="false"
+      [nzPageSize]="pageSize"
+      [nzTotal]="total">
       <thead>
         <tr>
           <th nzWidth="100px">Số Phòng</th>
@@ -60,7 +67,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let room of rooms" class="editable-row">
+        <tr *ngFor="let room of paginatedRooms" class="editable-row">
           <td>{{ room.roomNumber }}</td>
           <td>{{ room.floor }}</td>
           <td>{{ room.type }}</td>
@@ -96,6 +103,18 @@
         </tr>
       </tbody>
     </nz-table>
+    
+    <!-- Phân trang -->
+    <nz-pagination
+      [nzPageIndex]="pageIndex"
+      [nzPageSize]="pageSize"
+      [nzTotal]="total"
+      [nzShowSizeChanger]="false"
+      [nzShowQuickJumper]="true"
+      [nzPageSizeOptions]="[10]"
+      (nzPageIndexChange)="onPageIndexChange($event)"
+      style="margin-top: 16px; text-align: right;">
+    </nz-pagination>
   </div>
 
   <!-- Form tạo hoặc cập nhật phòng -->

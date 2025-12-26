@@ -19,12 +19,36 @@ export interface HotelContactInfo {
   website?: string;
 }
 
+export interface HotelNotificationSettings {
+  enableEmailNotifications?: boolean;
+  enableSMSNotifications?: boolean;
+  enablePushNotifications?: boolean;
+  notifyOnBooking?: boolean;
+  notifyOnCheckin?: boolean;
+  notifyOnCheckout?: boolean;
+  notifyOnPayment?: boolean;
+  notifyOnCancellation?: boolean;
+  notifyOnLowInventory?: boolean;
+  notifyOnSystemError?: boolean;
+  notificationEmail?: string;
+}
+
 export interface HotelSettings {
   checkInTime?: string;
   checkOutTime?: string;
   currency?: string;
   language?: string;
   taxRate?: number;
+  enableQRPaymentForBankTransfer?: boolean;
+  enableOTAManagement?: boolean;
+  enableEmailManagement?: boolean;
+  enableElectricManagement?: boolean;
+  enablePayPalPayment?: boolean;
+  enableCryptoPayment?: boolean;
+  enableDraftInvoice?: boolean;
+  enableExportInvoice?: boolean;
+  enableAiChatbox?: boolean;
+  notificationSettings?: HotelNotificationSettings;
 }
 
 export interface HotelBankAccount {

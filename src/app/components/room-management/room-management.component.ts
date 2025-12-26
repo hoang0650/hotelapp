@@ -22,6 +22,11 @@ export class RoomManagementComponent implements OnInit {
   floors: string[] = [];
   selectedHotelId: string | null = null;
 
+  // Phân trang
+  pageIndex: number = 1;
+  pageSize: number = 10; // Tối đa 10 phòng mỗi trang
+  total: number = 0;
+
   roomStatusOptions: { label: string, value: Room['status'] }[] = [
     { label: 'Trống', value: 'vacant' },
     { label: 'Có khách', value: 'occupied' },
@@ -173,6 +178,9 @@ export class RoomManagementComponent implements OnInit {
     this.roomService.getRooms(params).subscribe(
       data => {
         this.rooms = data;
+        this.total = data.length;
+        // Reset về trang 1 khi load lại
+        this.pageIndex = 1;
       },
       error => {
         console.error('Lỗi khi tải danh sách phòng:', error);
@@ -181,11 +189,73 @@ export class RoomManagementComponent implements OnInit {
     );
   }
 
+  /**
+   * Lấy danh sách phòng hiển thị trên trang hiện tại
+   */
+  get paginatedRooms(): Room[] {
+    const startIndex = (this.pageIndex - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    return this.rooms.slice(startIndex, endIndex);
+  }
+
+  /**
+   * Xử lý thay đổi trang
+   */
+  onPageIndexChange(pageIndex: number): void {
+    this.pageIndex = pageIndex;
+  }
+
+  /**
+   * Xử lý thay đổi số lượng mỗi trang (không cho phép thay đổi, giữ cố định 10)
+   */
+  onPageSizeChange(pageSize: number): void {
+    // Không cho phép thay đổi, giữ cố định 10
+    this.pageSize = 10;
+    this.pageIndex = 1;
+  }
+
+  // Helper function để extract businessId từ hotel (xử lý cả populated và non-populated)
+  private extractBusinessId(hotel: Hotel): string | null {
+    if (!hotel || !hotel.businessId) {
+      return null;
+    }
+    
+    if (typeof hotel.businessId === 'object' && hotel.businessId !== null && '_id' in hotel.businessId) {
+      return hotel.businessId._id;
+    } else if (typeof hotel.businessId === 'string') {
+      return hotel.businessId;
+    }
+    
+    return null;
+  }
+
   loadHotels(): void {
     this.hotelService.getHotels().subscribe(
       data => {
-        this.hotels = data;
-        if (data && data.length > 0 && !this.selectedHotelId) {
+        // Filter hotels theo role
+        if (this.isAdmin) {
+          // Admin thấy tất cả
+          this.hotels = data;
+        } else if (this.isBusiness && this.currentUser?.businessId) {
+          // Business chỉ thấy hotels thuộc business của mình
+          this.hotels = data.filter(hotel => {
+            const hotelBusinessId = this.extractBusinessId(hotel);
+            const userBusinessId = this.currentUser?.businessId;
+            return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString();
+          });
+        } else if (this.isHotelManager && this.currentUser?.hotelId) {
+          // Hotel manager chỉ thấy hotel của mình
+          this.hotels = data.filter(hotel => hotel._id === this.currentUser?.hotelId);
+        } else {
+          this.hotels = [];
+        }
+        
+        // Auto-select hotel nếu chỉ có 1
+        if (this.hotels.length === 1 && !this.selectedHotelId) {
+          this.selectedHotelId = this.hotels[0]._id!;
+          this.onHotelChange(this.selectedHotelId);
+        } else if (this.hotels.length > 0 && !this.selectedHotelId) {
+          this.selectedHotelId = this.hotels[0]._id!;
         }
       },
       error => {
@@ -200,6 +270,9 @@ export class RoomManagementComponent implements OnInit {
     this.floors = [];
     this.rooms = [];
     this.roomForm.get('floor')?.reset(1);
+    // Reset phân trang về trang 1
+    this.pageIndex = 1;
+    this.total = 0;
 
     if (hotelId) {
       this.loadRooms(hotelId);
@@ -500,6 +573,8 @@ export class RoomManagementComponent implements OnInit {
           if (index !== -1) {
             this.rooms[index] = updatedRoom;
             this.rooms = [...this.rooms];
+            // Cập nhật total sau khi cập nhật
+            this.total = this.rooms.length;
           }
           this.message.success('Đã cập nhật phòng thành công');
           this.stopEdit();
@@ -515,6 +590,13 @@ export class RoomManagementComponent implements OnInit {
         (newRoom: Room) => {
           this.rooms.push(newRoom);
           this.rooms = [...this.rooms];
+          // Cập nhật total sau khi tạo mới
+          this.total = this.rooms.length;
+          // Nếu số phòng vượt quá pageSize, chuyển sang trang cuối
+          const totalPages = Math.ceil(this.total / this.pageSize);
+          if (totalPages > 0) {
+            this.pageIndex = totalPages;
+          }
           this.message.success('Đã tạo phòng thành công');
           this.stopEdit();
           this.roomForm.reset({
@@ -554,6 +636,15 @@ export class RoomManagementComponent implements OnInit {
     this.roomService.deleteRoom(id).subscribe(
       () => {
         this.rooms = this.rooms.filter(r => r._id !== id);
+        // Cập nhật total sau khi xóa
+        this.total = this.rooms.length;
+        // Nếu trang hiện tại không còn dữ liệu, chuyển về trang trước
+        const totalPages = Math.ceil(this.total / this.pageSize);
+        if (this.pageIndex > totalPages && totalPages > 0) {
+          this.pageIndex = totalPages;
+        } else if (totalPages === 0) {
+          this.pageIndex = 1;
+        }
         this.message.success('Đã xóa phòng thành công');
         if (this.editId === id) {
           this.stopEdit();
@@ -568,10 +659,14 @@ export class RoomManagementComponent implements OnInit {
 
   filterRoomsByFloor(floor: number | string | null): void {
     if (this.selectedHotelId) {
+      // Reset phân trang về trang 1 khi filter
+      this.pageIndex = 1;
+      
       if (floor !== null && floor !== '') {
         this.roomService.getRoomsByFloor(this.selectedHotelId, Number(floor)).subscribe(
           data => {
             this.rooms = data;
+            this.total = data.length;
           },
           error => {
             console.error('Lỗi khi lọc phòng theo tầng:', error);
@@ -584,6 +679,7 @@ export class RoomManagementComponent implements OnInit {
     } else {
       this.message.warning('Vui lòng chọn khách sạn trước');
       this.rooms = [];
+      this.total = 0;
     }
   }
 

@@ -207,7 +207,7 @@ export class GuestManagementComponent implements OnInit {
           this.hotels = data.filter(h => {
             const hotelBusinessId = this.extractBusinessId(h);
             const userBusinessId = this.currentUser?.businessId;
-            return hotelBusinessId === userBusinessId && h.status === 'active';
+            return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString() && h.status === 'active';
           });
         } else if (this.isHotelManager && this.currentUser?.hotelId) {
           this.hotels = data.filter(h => h._id === this.currentUser?.hotelId && h.status === 'active');

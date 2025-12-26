@@ -298,11 +298,44 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   // ============ LOAD DATA ============
 
+  // Helper function để extract businessId từ hotel (xử lý cả populated và non-populated)
+  private extractBusinessId(hotel: any): string | null {
+    if (!hotel || !hotel.businessId) {
+      return null;
+    }
+    
+    if (typeof hotel.businessId === 'object' && hotel.businessId !== null && '_id' in hotel.businessId) {
+      return hotel.businessId._id;
+    } else if (typeof hotel.businessId === 'string') {
+      return hotel.businessId;
+    }
+    
+    return null;
+  }
+
   loadHotels(): void {
     this.subscriptions.add(
       this.hotelService.getHotels().subscribe(
         (hotels) => {
-          this.hotels = hotels;
+          const currentUser = this.authService.getCurrentUser();
+          
+          // Filter hotels theo role
+          if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
+            // Admin/Superadmin thấy tất cả
+            this.hotels = hotels;
+          } else if (this.authService.isBusiness() && currentUser?.businessId) {
+            // Business chỉ thấy hotels thuộc business của mình
+            this.hotels = hotels.filter((hotel: any) => {
+              const hotelBusinessId = this.extractBusinessId(hotel);
+              const userBusinessId = currentUser.businessId;
+              return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString();
+            });
+          } else if (this.authService.isHotelManager() && currentUser?.hotelId) {
+            // Hotel manager chỉ thấy hotel của mình
+            this.hotels = hotels.filter((hotel: any) => hotel._id === currentUser.hotelId);
+          } else {
+            this.hotels = hotels; // Fallback: giữ nguyên nếu không match
+          }
         },
         (error) => {
           console.error('Error loading hotels:', error);

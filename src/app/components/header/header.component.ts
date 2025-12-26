@@ -2,10 +2,13 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { NotificationsService } from '../../services/notifications.service';
+import { SettingsService, NotificationSettings } from '../../services/settings.service';
+import { HotelService } from '../../services/hotel.service';
 import { User } from '../../interfaces/user';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin, of } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { Announcement } from '../../services/notifications.service';
+import { catchError, map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-header',
@@ -20,11 +23,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
   notifications: Announcement[] = [];
   unreadCount = 0;
   isNotificationDrawerVisible = false;
+  notificationSettings: NotificationSettings | null = null;
+  areNotificationsEnabled = true; // Mặc định bật
 
   constructor(
     private userService: UserService,
     public authService: AuthService, // Đổi thành public để sử dụng trong template
     private notificationsService: NotificationsService,
+    private settingsService: SettingsService,
+    private hotelService: HotelService,
     public translate: TranslateService
   ) {
     // Set default language
@@ -50,25 +57,27 @@ export class HeaderComponent implements OnInit, OnDestroy {
       })
     );
     
-    // Load notifications ngay khi component khởi tạo
+    // Load notification settings và notifications
+    this.loadNotificationSettings();
     this.notificationsService.loadAnnouncements();
     
     // Đăng ký lắng nghe notifications
     this.subscriptions.add(
       this.notificationsService.announcements$.subscribe(announcements => {
-        this.notifications = this.notificationsService.getAllNotifications();
+        this.updateNotifications();
       })
     );
     
     this.subscriptions.add(
       this.notificationsService.unreadCount$.subscribe(count => {
-        this.unreadCount = count;
+        this.updateUnreadCount();
       })
     );
     
     // Load notifications mỗi 5 phút
     setInterval(() => {
       this.notificationsService.loadAnnouncements();
+      this.loadNotificationSettings();
     }, 5 * 60 * 1000);
   }
 
@@ -121,6 +130,149 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   markAllAsRead(): void {
     this.notificationsService.markAllAsRead();
+  }
+
+  /**
+   * Load notification settings từ system hoặc hotel
+   */
+  private loadNotificationSettings(): void {
+    // Nếu user có hotelId, ưu tiên load từ hotel settings
+    if (this.currentUser?.hotelId) {
+      forkJoin({
+        hotel: this.hotelService.getHotelById(this.currentUser.hotelId).pipe(
+          catchError(() => of(null))
+        ),
+        system: this.settingsService.getSettingsByType('notification').pipe(
+          catchError(() => of({ success: false, data: null }))
+        )
+      }).subscribe({
+        next: ({ hotel, system }) => {
+          // Ưu tiên hotel settings, nếu không có thì dùng system settings
+          if (hotel?.settings?.notificationSettings) {
+            // Convert HotelNotificationSettings (optional) to NotificationSettings (required)
+            const hotelNotif = hotel.settings.notificationSettings;
+            this.notificationSettings = {
+              enableEmailNotifications: hotelNotif.enableEmailNotifications ?? true,
+              enableSMSNotifications: hotelNotif.enableSMSNotifications ?? false,
+              enablePushNotifications: hotelNotif.enablePushNotifications ?? true,
+              notifyOnBooking: hotelNotif.notifyOnBooking ?? true,
+              notifyOnCheckin: hotelNotif.notifyOnCheckin ?? true,
+              notifyOnCheckout: hotelNotif.notifyOnCheckout ?? true,
+              notifyOnPayment: hotelNotif.notifyOnPayment ?? true,
+              notifyOnCancellation: hotelNotif.notifyOnCancellation ?? true,
+              notifyOnLowInventory: hotelNotif.notifyOnLowInventory ?? true,
+              notifyOnSystemError: hotelNotif.notifyOnSystemError ?? true,
+              notificationEmail: hotelNotif.notificationEmail ?? ''
+            };
+          } else if (system?.success && system?.data) {
+            this.notificationSettings = system.data;
+          } else {
+            // Mặc định: bật tất cả
+            this.notificationSettings = {
+              enableEmailNotifications: true,
+              enableSMSNotifications: false,
+              enablePushNotifications: true,
+              notifyOnBooking: true,
+              notifyOnCheckin: true,
+              notifyOnCheckout: true,
+              notifyOnPayment: true,
+              notifyOnCancellation: true,
+              notifyOnLowInventory: true,
+              notifyOnSystemError: true,
+              notificationEmail: ''
+            };
+          }
+          this.updateNotificationsEnabled();
+          this.updateNotifications();
+        }
+      });
+    } else {
+      // Load từ system settings
+      this.settingsService.getSettingsByType('notification').subscribe({
+        next: (response) => {
+          if (response.success && response.data) {
+            this.notificationSettings = response.data;
+          } else {
+            // Mặc định: bật tất cả
+            this.notificationSettings = {
+              enableEmailNotifications: true,
+              enableSMSNotifications: false,
+              enablePushNotifications: true,
+              notifyOnBooking: true,
+              notifyOnCheckin: true,
+              notifyOnCheckout: true,
+              notifyOnPayment: true,
+              notifyOnCancellation: true,
+              notifyOnLowInventory: true,
+              notifyOnSystemError: true,
+              notificationEmail: ''
+            };
+          }
+          this.updateNotificationsEnabled();
+          this.updateNotifications();
+        },
+        error: () => {
+          // Mặc định: bật tất cả
+          this.notificationSettings = {
+            enableEmailNotifications: true,
+            enableSMSNotifications: false,
+            enablePushNotifications: true,
+            notifyOnBooking: true,
+            notifyOnCheckin: true,
+            notifyOnCheckout: true,
+            notifyOnPayment: true,
+            notifyOnCancellation: true,
+            notifyOnLowInventory: true,
+            notifyOnSystemError: true,
+            notificationEmail: ''
+          };
+          this.updateNotificationsEnabled();
+          this.updateNotifications();
+        }
+      });
+    }
+  }
+
+  /**
+   * Cập nhật trạng thái notifications enabled dựa trên cài đặt
+   */
+  private updateNotificationsEnabled(): void {
+    if (!this.notificationSettings) {
+      this.areNotificationsEnabled = true;
+      return;
+    }
+    
+    // Nếu ít nhất một kênh được bật, thì hiển thị thông báo
+    this.areNotificationsEnabled = 
+      this.notificationSettings.enableEmailNotifications ||
+      this.notificationSettings.enableSMSNotifications ||
+      this.notificationSettings.enablePushNotifications;
+  }
+
+  /**
+   * Cập nhật danh sách notifications (lọc dựa trên cài đặt)
+   */
+  private updateNotifications(): void {
+    if (!this.areNotificationsEnabled) {
+      this.notifications = [];
+      this.unreadCount = 0;
+      return;
+    }
+    
+    this.notifications = this.notificationsService.getAllNotifications();
+    this.updateUnreadCount();
+  }
+
+  /**
+   * Cập nhật số lượng thông báo chưa đọc
+   */
+  private updateUnreadCount(): void {
+    if (!this.areNotificationsEnabled) {
+      this.unreadCount = 0;
+      return;
+    }
+    
+    this.unreadCount = this.notificationsService.getUnreadCount();
   }
 
   getNotificationIcon(type: string): string {

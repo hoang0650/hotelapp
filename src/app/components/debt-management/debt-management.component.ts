@@ -120,7 +120,8 @@ export class DebtManagementComponent implements OnInit {
         } else if (this.isBusiness && this.currentUser?.businessId) {
           this.hotels = data.filter(h => {
             const hotelBusinessId = typeof h.businessId === 'object' ? h.businessId?._id : h.businessId;
-            return hotelBusinessId === this.currentUser?.businessId && h.status === 'active';
+            const userBusinessId = this.currentUser?.businessId;
+            return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString() && h.status === 'active';
           });
         } else if (this.isHotelManager && this.currentUser?.hotelId) {
           this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
