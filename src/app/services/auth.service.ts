@@ -224,9 +224,9 @@ export class AuthService {
       case 'business':
         return {
           canManageAll: false,
-          canManageBusinesses: false,  // Chỉ business của mình
-          canManageHotels: true,       // Hotels thuộc business
-          canManageRooms: true,        // Rooms thuộc hotels của business
+          canManageBusinesses: false,  // Business KHÔNG thể tạo/cập nhật doanh nghiệp, chỉ xem
+          canManageHotels: false,      // Business KHÔNG thể tạo/cập nhật khách sạn, chỉ xem
+          canManageRooms: false,       // Business KHÔNG thể tạo/cập nhật phòng, chỉ xem
           canManageStaff: true,        // Staff thuộc hotels của business
           canViewShiftHistory: true,   // Được xem lịch sử giao ca
           canAskAIAboutStaff: true,    // Được hỏi AI về staff thuộc business

@@ -183,9 +183,9 @@ export class PermissionService {
         'electric_management' // Quản lý điện
       ];
       
-      // Business được phép quản lý company của mình
+      // Business KHÔNG được phép quản lý company (chỉ xem)
       if (user?.role === 'business' && feature === 'company_management') {
-        return true; // Business được quản lý business của mình (backend sẽ filter)
+        return false; // Business chỉ xem, không thể tạo/cập nhật
       }
       
       // Hotel Manager không được phép quản lý company
@@ -193,12 +193,22 @@ export class PermissionService {
         return false;
       }
       
-      // Hotel Manager được phép quản lý hotel của mình
+      // Hotel Manager được phép quản lý hotel của mình (chỉ xem, không tạo/cập nhật)
       if (user?.role === 'hotel' && feature === 'hotel_management') {
-        return true; // Hotel Manager được quản lý hotel của mình (backend sẽ filter)
+        return true; // Hotel Manager được xem hotel của mình (backend sẽ filter)
       }
       
-      // Business được phép quản lý hotels thuộc business của mình
+      // Business KHÔNG được phép quản lý hotels (chỉ xem)
+      if (user?.role === 'business' && feature === 'hotel_management') {
+        return false; // Business chỉ xem, không thể tạo/cập nhật
+      }
+      
+      // Business KHÔNG được phép quản lý rooms (chỉ xem)
+      if (user?.role === 'business' && feature === 'room_management') {
+        return false; // Business chỉ xem, không thể tạo/cập nhật
+      }
+      
+      // Business được phép quản lý hotels thuộc business của mình (chỉ xem)
       if (user?.role === 'business' && feature === 'hotel_management') {
         return true; // Business được quản lý hotels thuộc business của mình (backend sẽ filter)
       }

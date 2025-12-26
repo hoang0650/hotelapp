@@ -80,11 +80,11 @@
           <td>{{ room.pricing?.daily | currency: 'VND':'đ' }}</td>
           <td>{{ room.capacity?.adults }}/{{ room.capacity?.children || 0 }}</td>
           <td>
-            <button nz-button nzType="primary" nzShape="circle" (click)="startEdit(room._id)" *ngIf="editId !== room._id" title="Chỉnh sửa phòng">
+            <button nz-button nzType="primary" nzShape="circle" (click)="startEdit(room._id)" *ngIf="editId !== room._id && canEditRoom && canManage(room._id)" title="Chỉnh sửa phòng">
               <i nz-icon nzType="edit"></i>
             </button>
-            <nz-divider nzType="vertical" *ngIf="editId !== room._id"></nz-divider>
-            <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa?" (nzOnConfirm)="deleteRoom(room._id)" *ngIf="editId !== room._id" title="Xóa phòng">
+            <nz-divider nzType="vertical" *ngIf="editId !== room._id && canEditRoom && canManage(room._id)"></nz-divider>
+            <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa?" (nzOnConfirm)="deleteRoom(room._id)" *ngIf="editId !== room._id && canManage(room._id)" title="Xóa phòng">
               <button nz-button nzType="primary" nzDanger nzShape="circle" title="Xóa phòng">
                 <i nz-icon nzType="delete"></i>
               </button>
@@ -99,7 +99,7 @@
   </div>
 
   <!-- Form tạo hoặc cập nhật phòng -->
-  <div class="mt-4">
+  <div class="mt-4" *ngIf="canCreateRoom || canEditRoom">
     <h3>{{ editId ? 'Cập nhật phòng' : 'Thêm phòng mới' }}</h3>
     <form nz-form [formGroup]="roomForm" (ngSubmit)="submitForm()">
       <div nz-row [nzGutter]="16">

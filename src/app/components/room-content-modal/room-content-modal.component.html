@@ -21,68 +21,85 @@
       <nz-divider nzText="Thông tin khách hàng"></nz-divider>
       
       <div formGroupName="guestInfo">
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Tên khách hàng</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <input nz-input formControlName="name" placeholder="Nhập tên khách hàng" />
-          </nz-form-control>
-        </nz-form-item>
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Tên khách hàng</nz-form-label>
+              <nz-form-control [nzSpan]="16">
+                <input nz-input formControlName="name" placeholder="Nhập tên khách hàng" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Số CMND/CCCD</nz-form-label>
+              <nz-form-control [nzSpan]="16">
+                <input nz-input formControlName="idNumber" placeholder="Nhập số CMND/CCCD" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
         
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Số CMND/CCCD</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <input nz-input formControlName="idNumber" placeholder="Nhập số CMND/CCCD" />
-          </nz-form-control>
-        </nz-form-item>
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Số điện thoại</nz-form-label>
+              <nz-form-control [nzSpan]="16" nzErrorTip="Số điện thoại không hợp lệ">
+                <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Email</nz-form-label>
+              <nz-form-control [nzSpan]="16" nzErrorTip="Email không hợp lệ">
+                <input nz-input formControlName="email" placeholder="Nhập email" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
         
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Số điện thoại</nz-form-label>
-          <nz-form-control [nzSpan]="16" nzErrorTip="Số điện thoại không hợp lệ">
-            <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Email</nz-form-label>
-          <nz-form-control [nzSpan]="16" nzErrorTip="Email không hợp lệ">
-            <input nz-input formControlName="email" placeholder="Nhập email" />
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Địa chỉ</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <input nz-input formControlName="address" placeholder="Nhập địa chỉ" />
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Nguồn khách</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <nz-select 
-              formControlName="guestSource" 
-              nzPlaceHolder="Chọn nguồn khách" 
-              style="width: 100%"
-              nzAllowClear="false">
-              <nz-option nzValue="walkin" nzLabel="Walk-in"></nz-option>
-              <nz-option nzValue="booking" nzLabel="Booking"></nz-option>
-              <nz-option nzValue="agoda" nzLabel="Agoda"></nz-option>
-              <nz-option nzValue="traveloka" nzLabel="Traveloka"></nz-option>
-              <nz-option nzValue="expedia" nzLabel="Expedia"></nz-option>
-              <nz-option nzValue="trip" nzLabel="Trip.com"></nz-option>
-              <nz-option nzValue="g2j" nzLabel="G2J"></nz-option>
-              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
-            </nz-select>
-          </nz-form-control>
-        </nz-form-item>
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Địa chỉ</nz-form-label>
+              <nz-form-control [nzSpan]="16">
+                <input nz-input formControlName="address" placeholder="Nhập địa chỉ" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Nguồn khách</nz-form-label>
+              <nz-form-control [nzSpan]="16">
+                <nz-select 
+                  formControlName="guestSource" 
+                  nzPlaceHolder="Chọn nguồn khách" 
+                  style="width: 100%"
+                  nzAllowClear="false">
+                  <nz-option nzValue="walkin" nzLabel="Walk-in"></nz-option>
+                  <nz-option nzValue="booking" nzLabel="Booking"></nz-option>
+                  <nz-option nzValue="agoda" nzLabel="Agoda"></nz-option>
+                  <nz-option nzValue="traveloka" nzLabel="Traveloka"></nz-option>
+                  <nz-option nzValue="expedia" nzLabel="Expedia"></nz-option>
+                  <nz-option nzValue="trip" nzLabel="Trip.com"></nz-option>
+                  <nz-option nzValue="g2j" nzLabel="G2J"></nz-option>
+                  <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
       </div>
       
       <nz-divider nzText="Thông tin thanh toán"></nz-divider>
       
       <nz-form-item>
-        <nz-form-label [nzSpan]="8">Hình thức tính tiền</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-radio-group formControlName="rateType">
+        <nz-form-control>
+          <nz-radio-group formControlName="rateType" style="display: flex; justify-content: center;">
             <label nz-radio-button nzValue="hourly">Theo giờ</label>
             <label nz-radio-button nzValue="daily">Theo ngày</label>
             <label nz-radio-button nzValue="nightly">Qua đêm</label>
@@ -90,71 +107,95 @@
         </nz-form-control>
       </nz-form-item>
       
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Phương thức thanh toán</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-select formControlName="paymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
-            <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label"></nz-option>
-          </nz-select>
-        </nz-form-control>
-      </nz-form-item>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">
+              <span style="color: #ff9800;">
+                <i nz-icon nzType="plus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+                Phụ thu
+              </span>
+            </nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-input-number
+                formControlName="additionalCharges"
+                [nzMin]="0"
+                [nzStep]="10000"
+                [nzFormatter]="formatterVND"
+                [nzParser]="parserVND"
+                nzPlaceHolder="Nhập phụ thu (nếu có)"
+                style="width: 100%">
+              </nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">
+              <span style="color: #52c41a;">
+                <i nz-icon nzType="minus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+                Khuyến mãi
+              </span>
+            </nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-input-number
+                formControlName="discount"
+                [nzMin]="0"
+                [nzStep]="10000"
+                [nzFormatter]="formatterVND"
+                [nzParser]="parserVND"
+                nzPlaceHolder="Nhập khuyến mãi (nếu có)"
+                style="width: 100%">
+              </nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
       
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Thanh toán trước</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-input-number 
-            formControlName="advancePayment" 
-            [nzMin]="0" 
-            [nzStep]="10000" 
-            [nzFormatter]="formatterVND" 
-            [nzParser]="parserVND"
-            style="width: 100%">
-          </nz-input-number>
-        </nz-form-control>
-      </nz-form-item>
-      
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Phụ thu</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-input-number
-            formControlName="additionalCharges"
-            [nzMin]="0"
-            [nzStep]="10000"
-            [nzFormatter]="formatterVND"
-            [nzParser]="parserVND"
-            style="width: 100%">
-          </nz-input-number>
-        </nz-form-control>
-      </nz-form-item>
-
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Khuyến mãi</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-input-number
-            formControlName="discount"
-            [nzMin]="0"
-            [nzStep]="10000"
-            [nzFormatter]="formatterVND"
-            [nzParser]="parserVND"
-            style="width: 100%">
-          </nz-input-number>
-        </nz-form-control>
-      </nz-form-item>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">Thanh toán</nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-select formControlName="paymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+                <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">Thanh toán trước</nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-input-number 
+                formControlName="advancePayment" 
+                [nzMin]="0" 
+                [nzStep]="10000" 
+                [nzFormatter]="formatterVND" 
+                [nzParser]="parserVND"
+                style="width: 100%">
+              </nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
       
       <nz-divider nzText="Dịch vụ đi kèm"></nz-divider>
       
       <div class="service-selection">
         <nz-form-item [formGroup]="servicesForm">
-          <nz-form-label [nzSpan]="8">Dịch vụ</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <div nz-row [nzGutter]="8">
+          <nz-form-label [nzSpan]="8" style="text-align: left;">Dịch vụ</nz-form-label>
+          <nz-form-control [nzSpan]="16" style="text-align: left;">
+            <div nz-row [nzGutter]="8" style="justify-content: flex-start;">
               <div nz-col [nzSpan]="14">
-                <nz-select formControlName="serviceId" style="width: 100%">
+                <nz-select formControlName="serviceId" style="width: 100%; text-align: left;">
                   <nz-option *ngFor="let service of services" [nzValue]="service.id" [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'"></nz-option>
                 </nz-select>
               </div>
               <div nz-col [nzSpan]="6">
-                <nz-input-number formControlName="quantity" [nzMin]="1" [nzMax]="100" style="width: 100%"></nz-input-number>
+                <nz-input-number formControlName="quantity" [nzMin]="1" [nzMax]="100" style="width: 100%; text-align: left;"></nz-input-number>
               </div>
               <div nz-col [nzSpan]="4">
                 <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" title="Thêm dịch vụ">
@@ -199,9 +240,9 @@
       </div>
       
       <nz-form-item>
-        <nz-form-label [nzSpan]="8">Ghi chú</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <textarea nz-input formControlName="notes" rows="2" placeholder="Nhập ghi chú"></textarea>
+        <nz-form-label [nzSpan]="8" style="text-align: left;">Ghi chú</nz-form-label>
+        <nz-form-control [nzSpan]="16" style="text-align: left;">
+          <textarea nz-input formControlName="notes" rows="2" placeholder="Nhập ghi chú" style="text-align: left;"></textarea>
         </nz-form-control>
       </nz-form-item>
       
@@ -255,84 +296,87 @@
     
     <form nz-form [formGroup]="checkOutForm">
       <div formGroupName="guestInfo">
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Tên khách hàng</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <input nz-input formControlName="name" placeholder="Nhập tên khách hàng" />
-          </nz-form-control>
-        </nz-form-item>
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Tên khách hàng</nz-form-label>
+              <nz-form-control [nzSpan]="16">
+                <input nz-input formControlName="name" placeholder="Nhập tên khách hàng" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Số CMND/CCCD</nz-form-label>
+              <nz-form-control [nzSpan]="16">
+                <input nz-input formControlName="idNumber" placeholder="Nhập số CMND/CCCD" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
         
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Số CMND/CCCD</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <input nz-input formControlName="idNumber" placeholder="Nhập số CMND/CCCD" />
-          </nz-form-control>
-        </nz-form-item>
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Số điện thoại</nz-form-label>
+              <nz-form-control [nzSpan]="16" nzErrorTip="Số điện thoại không hợp lệ">
+                <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Email</nz-form-label>
+              <nz-form-control [nzSpan]="16" nzErrorTip="Email không hợp lệ">
+                <input nz-input formControlName="email" placeholder="Nhập email" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
         
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Số điện thoại</nz-form-label>
-          <nz-form-control [nzSpan]="16" nzErrorTip="Số điện thoại không hợp lệ">
-            <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Email</nz-form-label>
-          <nz-form-control [nzSpan]="16" nzErrorTip="Email không hợp lệ">
-            <input nz-input formControlName="email" placeholder="Nhập email" />
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Địa chỉ</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <input nz-input formControlName="address" placeholder="Nhập địa chỉ" />
-          </nz-form-control>
-        </nz-form-item>
-        
-        <nz-form-item>
-          <nz-form-label [nzSpan]="8">Nguồn khách</nz-form-label>
-          <nz-form-control [nzSpan]="16">
-            <nz-select 
-              formControlName="guestSource" 
-              nzPlaceHolder="Chọn nguồn khách" 
-              style="width: 100%"
-              nzAllowClear="false">
-              <nz-option nzValue="walkin" nzLabel="Walk-in"></nz-option>
-              <nz-option nzValue="booking" nzLabel="Booking"></nz-option>
-              <nz-option nzValue="agoda" nzLabel="Agoda"></nz-option>
-              <nz-option nzValue="traveloka" nzLabel="Traveloka"></nz-option>
-              <nz-option nzValue="expedia" nzLabel="Expedia"></nz-option>
-              <nz-option nzValue="trip" nzLabel="Trip.com"></nz-option>
-              <nz-option nzValue="g2j" nzLabel="G2J"></nz-option>
-              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
-            </nz-select>
-          </nz-form-control>
-        </nz-form-item>
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Địa chỉ</nz-form-label>
+              <nz-form-control [nzSpan]="16">
+                <input nz-input formControlName="address" placeholder="Nhập địa chỉ" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          
+          <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+            <nz-form-item>
+              <nz-form-label [nzSpan]="8">Nguồn khách</nz-form-label>
+              <nz-form-control [nzSpan]="16">
+                <nz-select 
+                  formControlName="guestSource" 
+                  nzPlaceHolder="Chọn nguồn khách" 
+                  style="width: 100%"
+                  nzAllowClear="false">
+                  <nz-option nzValue="walkin" nzLabel="Walk-in"></nz-option>
+                  <nz-option nzValue="booking" nzLabel="Booking"></nz-option>
+                  <nz-option nzValue="agoda" nzLabel="Agoda"></nz-option>
+                  <nz-option nzValue="traveloka" nzLabel="Traveloka"></nz-option>
+                  <nz-option nzValue="expedia" nzLabel="Expedia"></nz-option>
+                  <nz-option nzValue="trip" nzLabel="Trip.com"></nz-option>
+                  <nz-option nzValue="g2j" nzLabel="G2J"></nz-option>
+                  <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
       </div>
-      
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Tiền đặt trước</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-input-number 
-            formControlName="advancePayment" 
-            [nzMin]="0" 
-            [nzStep]="10000" 
-            [nzFormatter]="formatterVND" 
-            [nzParser]="parserVND"
-            style="width: 100%">
-          </nz-input-number>
-        </nz-form-control>
-      </nz-form-item>
     </form>
     
     <nz-divider nzText="Cách tính tiền phòng"></nz-divider>
     
     <form nz-form [formGroup]="checkOutForm">
       <nz-form-item>
-        <nz-form-label [nzSpan]="8">Hình thức tính tiền</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-radio-group formControlName="rateType">
+        <nz-form-control>
+          <nz-radio-group formControlName="rateType" style="display: flex; justify-content: center;">
             <label nz-radio-button nzValue="hourly">Theo giờ</label>
             <label nz-radio-button nzValue="daily">Theo ngày</label>
             <label nz-radio-button nzValue="nightly">Qua đêm</label>
@@ -408,11 +452,32 @@
     <nz-divider nzText="Thông tin thanh toán"></nz-divider>
     
     <form nz-form [formGroup]="checkOutForm" (ngSubmit)="submitForm()">
-      <div class="totals-summary mb-3">
-        <p><strong>Tổng tiền phòng:</strong> {{ roomPriceTotal | number }} đồng</p>
+      <div class="totals-summary mb-3" style="background: #f5f5f5; padding: 12px; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <strong style="font-size: 14px;">Tổng tiền phòng:</strong>
+          <span style="font-size: 14px; font-weight: 600;">{{ roomPriceTotal | number }} đ</span>
+        </div>
+        
+        <!-- Hiển thị phụ thu từ check-in event nếu có -->
+        <div *ngIf="initialCharges > 0" style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 6px; background: #fff3e0; border-radius: 4px; border-left: 3px solid #ff9800;">
+          <span style="color: #ff9800; font-size: 13px;">
+            <i nz-icon nzType="plus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+            <strong>Phụ thu:</strong>
+          </span>
+          <span style="color: #ff9800; font-size: 13px; font-weight: 600;">+ {{ initialCharges | number }} đ</span>
+        </div>
+        
+        <!-- Hiển thị khuyến mãi từ check-in event nếu có -->
+        <div *ngIf="initialDiscount > 0" style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 6px; background: #f6ffed; border-radius: 4px; border-left: 3px solid #52c41a;">
+          <span style="color: #52c41a; font-size: 13px;">
+            <i nz-icon nzType="minus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+            <strong>Khuyến mãi:</strong>
+          </span>
+          <span style="color: #52c41a; font-size: 13px; font-weight: 600;">- {{ initialDiscount | number }} đ</span>
+        </div>
         
         <!-- Hiển thị chi tiết phụ thu sớm/trễ nếu có -->
-        <div *ngIf="roomPriceDetails" style="margin-left: 20px; margin-top: 8px; font-size: 13px; color: #666;">
+        <div *ngIf="roomPriceDetails" style="margin-top: 8px; padding: 8px; background: #fff; border-radius: 4px; font-size: 12px; color: #666;">
           <!-- Phụ thu check-in sớm -->
           <div *ngIf="roomPriceDetails.earlyCheckinHours && roomPriceDetails.earlyCheckinHours > 0">
             <span style="color: #1890ff;">
@@ -465,83 +530,133 @@
           </div>
         </div>
         
-        <p style="margin-top: 8px;"><strong>Tổng tiền dịch vụ:</strong> {{ servicesPriceTotal | number }} đồng</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
+          <strong style="font-size: 14px;">Tổng tiền dịch vụ:</strong>
+          <span style="font-size: 14px; font-weight: 600;">{{ servicesPriceTotal | number }} đ</span>
+        </div>
       </div>
       
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Phụ thu</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-input-number
-            formControlName="additionalCharges"
-            [nzMin]="0"
-            [nzStep]="10000"
-            [nzFormatter]="formatterVND"
-            [nzParser]="parserVND"
-            style="width: 100%">
-          </nz-input-number>
-        </nz-form-control>
-      </nz-form-item>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">
+              <span style="color: #ff9800;">
+                <i nz-icon nzType="plus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+                Phụ thu:
+              </span>
+            </nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-input-number
+                formControlName="additionalCharges"
+                [nzMin]="0"
+                [nzStep]="10000"
+                [nzFormatter]="formatterVND"
+                [nzParser]="parserVND"
+                nzPlaceHolder="Nhập phụ thu thêm (nếu có)"
+                style="width: 100%">
+              </nz-input-number>
+              <div *ngIf="initialCharges > 0" style="font-size: 12px; color: #999; margin-top: 4px;">
+                Đã có phụ thu từ check-in: {{ initialCharges | number }} đ
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">
+              <span style="color: #52c41a;">
+                <i nz-icon nzType="minus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+                Khuyến mãi:
+              </span>
+            </nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-input-number
+                formControlName="discount"
+                [nzMin]="0"
+                [nzStep]="10000"
+                [nzFormatter]="formatterVND"
+                [nzParser]="parserVND"
+                nzPlaceHolder="Nhập khuyến mãi thêm (nếu có)"
+                style="width: 100%">
+              </nz-input-number>
+              <div *ngIf="initialDiscount > 0" style="font-size: 12px; color: #999; margin-top: 4px;">
+                Đã có khuyến mãi từ check-in: {{ initialDiscount | number }} đ
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
       
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Khuyến mãi</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-input-number
-            formControlName="discount"
-            [nzMin]="0"
-            [nzStep]="10000"
-            [nzFormatter]="formatterVND"
-            [nzParser]="parserVND"
-            style="width: 100%">
-          </nz-input-number>
-        </nz-form-control>
-      </nz-form-item>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">Thanh toán</nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-select formControlName="paymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+                <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">Tiền đặt trước</nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-input-number 
+                formControlName="advancePayment" 
+                [nzMin]="0" 
+                [nzStep]="10000" 
+                [nzFormatter]="formatterVND" 
+                [nzParser]="parserVND"
+                style="width: 100%">
+              </nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
       
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Phương thức thanh toán</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <nz-select formControlName="paymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
-            <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label"></nz-option>
-          </nz-select>
-        </nz-form-control>
-      </nz-form-item>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">Ghi chú</nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <textarea nz-input formControlName="notes" rows="2" placeholder="Nhập ghi chú"></textarea>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8"></nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <label nz-checkbox formControlName="createDebt">
+                <span>Đưa vào công nợ (thanh toán sau)</span>
+              </label>
+              <div class="text-muted" style="font-size: 12px; margin-top: 4px;">
+                Khi chọn tùy chọn này, hóa đơn sẽ được đưa vào công nợ và khách hàng có thể thanh toán sau.
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
       
-      <nz-form-item>
-        <nz-form-control [nzSpan]="16" [nzOffset]="8">
-          <label nz-checkbox formControlName="createDebt">
-            <span>Đưa vào công nợ (thanh toán sau)</span>
-          </label>
-          <div class="text-muted" style="font-size: 12px; margin-top: 4px;">
-            Khi chọn tùy chọn này, hóa đơn sẽ được đưa vào công nợ và khách hàng có thể thanh toán sau.
-          </div>
-        </nz-form-control>
-      </nz-form-item>
-      
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Lý do phụ thu/giảm giá</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <input nz-input formControlName="reason" placeholder="Nhập lý do phụ thu/giảm giá">
-        </nz-form-control>
-      </nz-form-item>
-      
-      <nz-form-item>
-        <nz-form-label [nzSpan]="8">Ghi chú</nz-form-label>
-        <nz-form-control [nzSpan]="16">
-          <textarea nz-input formControlName="notes" rows="2" placeholder="Nhập ghi chú"></textarea>
-        </nz-form-control>
-      </nz-form-item>
-      
-      <div class="final-totals mt-3">
-         <nz-descriptions nzBordered>
-           <nz-descriptions-item nzTitle="Tổng cộng" [nzSpan]="3">
-             <strong>{{ totalPrice | number }} đồng</strong>
-           </nz-descriptions-item>
-           <nz-descriptions-item *ngIf="advancePayment > 0" nzTitle="Đã trả trước" [nzSpan]="3">
-             - {{ advancePayment | number }} đồng
-           </nz-descriptions-item>
-           <nz-descriptions-item nzTitle="Còn lại phải thanh toán" [nzSpan]="3">
-             <strong>{{ totalPrice | number }} đồng</strong>
-           </nz-descriptions-item>
-         </nz-descriptions>
+      <div class="final-totals mt-3" style="padding: 16px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+         <div style="background: white; border-radius: 4px; padding: 12px;">
+           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+             <strong style="font-size: 18px;">Tổng cộng:</strong>
+             <strong style="font-size: 18px; color: #1890ff; text-align: right;">{{ totalPrice | number }} đ</strong>
+           </div>
+           <div *ngIf="advancePayment > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+             <span style="font-size: 16px;">Đã trả trước:</span>
+             <span style="font-size: 16px; color: #52c41a; text-align: right;">- {{ advancePayment | number }} đ</span>
+           </div>
+           <div style="display: flex; justify-content: space-between; align-items: center;">
+             <strong style="font-size: 20px;">Còn lại phải thanh toán:</strong>
+             <strong [style.color]="remainingAmount < 0 ? '#52c41a' : '#ff4d4f'" style="font-size: 20px; text-align: right;">{{ remainingAmount | number }} đ</strong>
+           </div>
+         </div>
        </div>
       
       <div class="footer-actions text-right mt-3">

@@ -15,3 +15,20 @@
     margin-bottom: 3px;
     font-size: 0.95em;
   }
+  
+  /* Viền trắng cho tổng cộng và còn lại phải thanh toán */
+  ::ng-deep .final-totals .ant-descriptions-item {
+    border: 1px solid white !important;
+  }
+  
+  ::ng-deep .final-totals .ant-descriptions-item:not(:last-child) {
+    border-bottom: 1px solid white !important;
+  }
+  
+  ::ng-deep .final-totals .ant-descriptions-item-label {
+    border-right: 1px solid white !important;
+  }
+  
+  ::ng-deep .final-totals .ant-descriptions-item-content {
+    border-left: none !important;
+  }

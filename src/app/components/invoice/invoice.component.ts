@@ -100,9 +100,10 @@ export class InvoiceComponent implements OnInit {
   today: Date = new Date();
   
   // Các trường tính toán mới
-  subtotal: number = 0; // Tổng tiền hàng (products)
+  subtotal: number = 0; // Tổng tiền hàng (products) = tiền phòng
   serviceTotal: number = 0; // Tổng tiền dịch vụ
-  finalTotalAmount: number = 0; // Tổng tiền cuối cùng phải trả
+  totalAmount: number = 0; // Tổng cộng = tiền phòng + phụ thu + tiền dịch vụ (không trừ khuyến mãi và đặt trước)
+  finalTotalAmount: number = 0; // Còn lại phải thanh toán = tổng cộng - đặt trước - khuyến mãi (cho phép số âm)
   
   // Thêm các trường tính toán
   get totalWithoutDiscount(): number {
@@ -506,34 +507,26 @@ export class InvoiceComponent implements OnInit {
   
   // Tính tổng tiền cuối cùng
   calculateFinalTotal(): void {
+    // Công thức mới:
+    // Tổng cộng = Tiền phòng (subtotal) + Phụ thu + Tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
+    // ĐỒNG BỘ: Công thức này phải khớp với room-content-modal.component.ts và room.component.ts
+    this.totalAmount = this.subtotal + (this.invoiceData.additionalCharges || 0) + this.serviceTotal;
+    
     // Ưu tiên 1: Sử dụng remainingAmount từ dữ liệu (đã được tính từ room-content-modal)
     if (this.invoiceData.remainingAmount !== undefined && this.invoiceData.remainingAmount !== null) {
       this.finalTotalAmount = this.invoiceData.remainingAmount;
     }
-    // Ưu tiên 2: Nếu có totalAmount từ dữ liệu, tính remainingAmount từ đó
-    else if (this.invoiceData.totalAmount && this.invoiceData.totalAmount > 0) {
-      // Trừ tiền đã trả trước nếu có
-      const advancePayment = this.invoiceData.advancePayment || 0;
-      this.finalTotalAmount = this.invoiceData.totalAmount - advancePayment;
-    } 
-    // Ưu tiên 3: Tính từ subtotal nếu không có totalAmount
+    // Ưu tiên 2: Tính từ totalAmount (công thức mới)
     else {
-      let currentTotal = this.subtotal + this.serviceTotal;
+      const advancePayment = this.invoiceData.advancePayment || 0;
+      const discount = this.invoiceData.discount || 0;
       
-      // Cộng phụ thu
-      currentTotal += this.invoiceData.additionalCharges || 0;
-      
-      // Trừ giảm giá
-      currentTotal -= this.invoiceData.discount || 0;
-      
-      // Trừ tiền trả trước
-      currentTotal -= this.invoiceData.advancePayment || 0;
-      
-      this.finalTotalAmount = currentTotal;
+      // Còn lại phải thanh toán = Tổng cộng - Đặt trước - Khuyến mãi (cho phép số âm)
+      this.finalTotalAmount = this.totalAmount - advancePayment - discount;
     }
     
-    // Đảm bảo không âm
-    this.finalTotalAmount = Math.max(0, this.finalTotalAmount);
+    // KHÔNG giới hạn số âm (cho phép số âm để hiển thị khách đã trả thừa)
+    // this.finalTotalAmount = Math.max(0, this.finalTotalAmount); // Đã bỏ dòng này
   }
 
   // Định dạng tiền tệ
@@ -982,17 +975,31 @@ export class InvoiceComponent implements OnInit {
                 { text: 'Tổng tiền dịch vụ(Total Service):', bold: true },
                 { text: this.formatCurrency(serviceTotal), alignment: 'right' }
               ]] : []),
-              [
+              ...(this.invoiceData.additionalCharges && this.invoiceData.additionalCharges > 0 ? [[
                 { text: 'Phụ thu (Charges):', bold: true },
-                { text: this.formatCurrency(this.invoiceData.additionalCharges || 0), alignment: 'right' }
-              ],
+                { text: this.formatCurrency(this.invoiceData.additionalCharges), alignment: 'right' }
+              ]] : []),
               [
+                { text: 'Tổng cộng (Total):', bold: true, fontSize: 11 },
+                { text: this.formatCurrency(this.totalAmount), alignment: 'right', bold: true, fontSize: 11 }
+              ],
+              ...(this.invoiceData.advancePayment && this.invoiceData.advancePayment > 0 ? [[
+                { text: 'Đã thanh toán trước:', bold: true },
+                { text: '- ' + this.formatCurrency(this.invoiceData.advancePayment), alignment: 'right', color: '#52c41a' }
+              ]] : []),
+              ...(this.invoiceData.discount && this.invoiceData.discount > 0 ? [[
                 { text: 'Khuyến mãi (Discount):', bold: true },
-                { text: this.formatCurrency(-(this.invoiceData.discount || 0)), alignment: 'right' }
-              ],
+                { text: '- ' + this.formatCurrency(this.invoiceData.discount), alignment: 'right', color: '#52c41a' }
+              ]] : []),
               [
-                { text: 'Tổng tiền (Total):', bold: true, fontSize: 11 },
-                { text: this.formatCurrency(this.finalTotalAmount), alignment: 'right', bold: true, fontSize: 11 }
+                { text: 'Còn lại phải thanh toán:', bold: true, fontSize: 11 },
+                { 
+                  text: this.formatCurrency(this.finalTotalAmount), 
+                  alignment: 'right', 
+                  bold: true, 
+                  fontSize: 11,
+                  color: this.finalTotalAmount < 0 ? '#52c41a' : '#ff4d4f'
+                }
               ]
             ]
           },
@@ -1356,11 +1363,17 @@ export class InvoiceComponent implements OnInit {
       idNumber: this.invoiceData['customerIdNumber'] || this.invoiceData.guestInfo?.idNumber || ''
     };
 
-    // Tính tổng tiền
+    // Tính tổng tiền theo công thức mới
+    // Tổng cộng = Tiền phòng (subtotal) + Phụ thu + Tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
     const subtotal = items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
     const additionalCharges = this.invoiceData.additionalCharges || 0;
+    const serviceTotal = this.serviceTotal || 0;
+    const totalAmount = subtotal + additionalCharges + serviceTotal;
+    
+    // Còn lại phải thanh toán = Tổng cộng - Đặt trước - Khuyến mãi (cho phép số âm)
     const discount = this.invoiceData.discount || 0;
-    const totalAmount = subtotal + additionalCharges - discount;
+    const advancePayment = this.invoiceData.advancePayment || 0;
+    const remainingAmount = totalAmount - advancePayment - discount;
 
     return {
       // Thông tin công ty
@@ -1383,7 +1396,9 @@ export class InvoiceComponent implements OnInit {
       subtotal: subtotal,
       additionalCharges: additionalCharges,
       discount: discount,
-      totalAmount: totalAmount,
+      totalAmount: totalAmount, // Tổng cộng = tiền phòng + phụ thu + dịch vụ
+      remainingAmount: remainingAmount, // Còn lại phải thanh toán = tổng cộng - đặt trước - khuyến mãi
+      advancePayment: advancePayment,
       
       // Thông tin bổ sung
       roomNumber: this.invoiceData.roomNumber || '',

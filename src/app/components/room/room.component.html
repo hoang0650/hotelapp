@@ -285,7 +285,7 @@
                     </div>
                     <div class="detail-row" *ngIf="displayInfo.remainingAmount !== 0">
                       <span class="detail-label">Còn thu:</span>
-                      <span class="detail-value highlight">{{ displayInfo.remainingAmount | number }} VNĐ</span>
+                      <span class="detail-value highlight" [style.color]="displayInfo.remainingAmount < 0 ? '#52c41a' : '#ffd700'">{{ displayInfo.remainingAmount | number }} VNĐ</span>
                     </div>
                   </div>
                 </ng-container>

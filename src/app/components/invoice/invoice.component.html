@@ -159,37 +159,49 @@
             </td>
           </tr>
           
+          <!-- Hiển thị phụ thu -->
+          <tr *ngIf="invoiceData.additionalCharges && invoiceData.additionalCharges > 0">
+            <td><strong>Phụ thu (Charges):</strong></td>
+            <td class="text-center"></td>
+            <td class="text-center"></td>
+            <td class="text-right">
+              <p>{{ formatCurrency(invoiceData.additionalCharges) }}</p>
+            </td>
+          </tr>
+          
+          <!-- Tổng cộng = Tiền phòng + Phụ thu + Tiền dịch vụ -->
+          <tr class="total-row">
+            <td><strong>Tổng cộng (Total):</strong></td>
+            <td class="text-center"></td>
+            <td class="text-center"></td>
+            <td class="text-right">
+              <p><strong>{{ formatCurrency(totalAmount) }}</strong></p>
+            </td>
+          </tr>
+          
           <!-- Hiển thị tiền trả trước nếu có -->
           <tr *ngIf="invoiceData.advancePayment && invoiceData.advancePayment > 0">
             <td><strong>Đã thanh toán trước:</strong></td>
             <td class="text-center"></td>
             <td class="text-center"></td>
             <td class="text-right">
-              <p>{{ formatCurrency(invoiceData.advancePayment) }}</p>
+              <p>- {{ formatCurrency(invoiceData.advancePayment) }}</p>
             </td>
           </tr>
           
-          <!-- Hiển thị phụ thu và giảm giá -->
-          <tr>
-            <td><strong>Phụ thu (Charges):</strong></td>
-            <td class="text-center"></td>
-            <td class="text-center"></td>
-            <td class="text-right">
-              <p>{{ formatCurrency(invoiceData.additionalCharges || 0) }}</p>
-            </td>
-          </tr>
-          <tr>
+          <!-- Hiển thị khuyến mãi nếu có -->
+          <tr *ngIf="invoiceData.discount && invoiceData.discount > 0">
             <td><strong>Khuyến mãi (Discount):</strong></td>
             <td class="text-center"></td>
             <td class="text-center"></td>
             <td class="text-right">
-              <p>{{ formatCurrency(-(invoiceData.discount || 0)) }}</p>
+              <p>- {{ formatCurrency(invoiceData.discount) }}</p>
             </td>
           </tr>
           
-          <!-- Tổng cộng -->
-          <tr class="total-row">
-            <td><strong>Tổng tiền (Total):</strong></td>
+          <!-- Còn lại phải thanh toán = Tổng cộng - Đặt trước - Khuyến mãi -->
+          <tr class="total-row" style="border-top: 2px solid #000;">
+            <td><strong>Còn lại phải thanh toán:</strong></td>
             <td class="text-center"></td>
             <td class="text-center"></td>
             <td class="text-right">

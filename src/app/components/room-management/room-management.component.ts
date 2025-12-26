@@ -4,6 +4,8 @@ import { Room, RoomCapacity, RoomPricing, SpecialPrice, RoomRevenue } from '../.
 import { Hotel } from '../../interfaces/hotel';
 import { RoomsService } from '../../services/rooms.service';
 import { HotelService } from '../../services/hotel.service';
+import { AuthService } from '../../services/auth.service';
+import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 
 @Component({
@@ -28,10 +30,15 @@ export class RoomManagementComponent implements OnInit {
     { label: 'Bảo trì', value: 'maintenance' }
   ];
 
+  priceConfigId: string | null = null;
+  hasPriceConfig: boolean = false;
+  currentUser: User | null = null;
+
   constructor(
     private fb: FormBuilder, 
     private roomService: RoomsService, 
     private hotelService: HotelService,
+    private authService: AuthService,
     private message: NzMessageService
   ) {
     this.roomForm = this.fb.group({
@@ -80,13 +87,6 @@ export class RoomManagementComponent implements OnInit {
       description: [''],
       notes: ['']
     });
-  }
-
-  priceConfigId: string | null = null;
-  hasPriceConfig: boolean = false;
-
-  ngOnInit(): void {
-    this.loadHotels();
     
     // Lắng nghe thay đổi priceConfigId để disable/enable các field giá
     this.roomForm.get('priceConfigId')?.valueChanges.subscribe((priceConfigId) => {
@@ -94,6 +94,58 @@ export class RoomManagementComponent implements OnInit {
       this.hasPriceConfig = !!priceConfigId && priceConfigId !== '';
       this.updatePriceFieldsDisabledState();
     });
+  }
+
+  ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
+    this.loadHotels();
+  }
+
+  // ============ KIỂM TRA QUYỀN ============
+
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  get isBusiness(): boolean {
+    return this.authService.isBusiness();
+  }
+
+  get isHotelManager(): boolean {
+    return this.authService.isHotelManager();
+  }
+
+  get canCreateRoom(): boolean {
+    // Chỉ admin và hotel manager có thể tạo phòng
+    // Business KHÔNG thể tạo phòng, chỉ xem
+    return this.isAdmin || this.isHotelManager;
+  }
+
+  get canEditRoom(): boolean {
+    // Chỉ admin và hotel manager có thể cập nhật phòng
+    // Business KHÔNG thể cập nhật phòng, chỉ xem
+    return this.isAdmin || this.isHotelManager;
+  }
+
+  canManage(roomId?: string): boolean {
+    if (!roomId) return false;
+    if (!this.currentUser) return false;
+    
+    // Admin có quyền quản lý tất cả
+    if (this.isAdmin) return true;
+    
+    // Business KHÔNG thể quản lý phòng, chỉ xem
+    if (this.isBusiness) {
+      return false;
+    }
+    
+    // Hotel manager chỉ quản lý được phòng thuộc hotel của mình
+    if (this.isHotelManager) {
+      const room = this.rooms.find(r => r._id === roomId);
+      return !!room && room.hotelId === this.currentUser.hotelId;
+    }
+    
+    return false;
   }
 
   // Cập nhật trạng thái disable của các field giá
@@ -164,6 +216,11 @@ export class RoomManagementComponent implements OnInit {
   }
 
   startEdit(id: string): void {
+    if (!this.canManage(id)) {
+      this.message.warning('Bạn không có quyền chỉnh sửa phòng này');
+      return;
+    }
+    
     this.editId = id;
     const roomToEdit = this.rooms.find(r => r._id === id);
     if (roomToEdit) {
@@ -328,6 +385,19 @@ export class RoomManagementComponent implements OnInit {
   }
 
   submitForm(): void {
+    // Kiểm tra quyền trước khi submit
+    if (this.editId && this.editId !== 'new') {
+      if (!this.canEditRoom || !this.canManage(this.editId)) {
+        this.message.warning('Bạn không có quyền cập nhật phòng này');
+        return;
+      }
+    } else {
+      if (!this.canCreateRoom) {
+        this.message.warning('Bạn không có quyền tạo phòng mới');
+        return;
+      }
+    }
+
     if (this.roomForm.invalid) {
       this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
       Object.values(this.roomForm.controls).forEach(control => {
@@ -476,6 +546,11 @@ export class RoomManagementComponent implements OnInit {
   }
 
   deleteRoom(id: string): void {
+    if (!this.canManage(id)) {
+      this.message.warning('Bạn không có quyền xóa phòng này');
+      return;
+    }
+    
     this.roomService.deleteRoom(id).subscribe(
       () => {
         this.rooms = this.rooms.filter(r => r._id !== id);

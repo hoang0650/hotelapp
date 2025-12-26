@@ -37,12 +37,12 @@ export class PermissionGuard implements CanActivate {
       return true;
     }
 
-    // Business và Hotel Manager được phép truy cập các routes quản lý của họ
+    // Business và Hotel Manager được phép truy cập các routes quản lý của họ (chỉ xem)
     if (user.role === 'business' || user.role === 'hotel') {
-      // Business được phép truy cập company để quản lý business của mình
+      // Business được phép truy cập company để XEM business của mình (KHÔNG thể tạo/cập nhật)
       // Hotel Manager không được phép truy cập company
       if (user.role === 'business' && state.url === '/admin/company') {
-        return true; // Business được quản lý business của mình (backend sẽ filter)
+        return true; // Business được XEM business của mình (backend sẽ filter)
       }
       
       // Hotel Manager không được phép truy cập company
@@ -51,9 +51,14 @@ export class PermissionGuard implements CanActivate {
         return false;
       }
       
-      // Hotel Manager được phép truy cập hotel để quản lý hotel của mình
+      // Hotel Manager được phép truy cập hotel để XEM hotel của mình (KHÔNG thể tạo/cập nhật)
       if (user.role === 'hotel' && state.url === '/admin/hotel') {
-        return true; // Hotel Manager được quản lý hotel của mình (backend sẽ filter)
+        return true; // Hotel Manager được XEM hotel của mình (backend sẽ filter)
+      }
+      
+      // Business được phép truy cập hotel để XEM hotels thuộc business (KHÔNG thể tạo/cập nhật)
+      if (user.role === 'business' && state.url === '/admin/hotel') {
+        return true; // Business được XEM hotels thuộc business (backend sẽ filter)
       }
       
       // Business và Hotel Manager được phép truy cập các routes sau:

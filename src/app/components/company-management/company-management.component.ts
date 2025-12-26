@@ -105,12 +105,14 @@ export class CompanyManagementComponent implements OnInit {
 
   get canCreateBusiness(): boolean {
     // Chỉ admin mới có thể tạo business mới
+    // Business KHÔNG thể tạo doanh nghiệp
     return this.isAdmin;
   }
 
   get canEditBusiness(): boolean {
-    // Admin có thể sửa tất cả, business chỉ sửa của mình
-    return this.isAdmin || this.isBusiness;
+    // Chỉ admin mới có thể sửa business
+    // Business KHÔNG thể cập nhật doanh nghiệp, chỉ xem
+    return this.isAdmin;
   }
 
   /**

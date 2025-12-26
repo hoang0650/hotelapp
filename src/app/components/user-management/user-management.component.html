@@ -19,7 +19,7 @@
   <nz-alert 
     *ngIf="isBusiness && !isAdmin" 
     nzType="info" 
-    nzMessage="Bạn đang xem danh sách tài khoản được tạo hoặc thuộc doanh nghiệp của mình. Bạn có thể tạo tài khoản mới theo giới hạn của gói đăng ký."
+    nzMessage="Bạn đang xem danh sách tài khoản thuộc doanh nghiệp của mình. Bạn chỉ có quyền xem, không thể tạo hoặc chỉnh sửa tài khoản."
     [nzCloseable]="true"
     class="mb-3">
   </nz-alert>
@@ -27,7 +27,7 @@
   <nz-alert 
     *ngIf="isHotelManager && !isAdmin && !isBusiness" 
     nzType="info" 
-    nzMessage="Bạn đang xem danh sách nhân viên thuộc khách sạn của mình."
+    nzMessage="Bạn đang xem danh sách nhân viên thuộc khách sạn của mình. Bạn chỉ có quyền xem, không thể tạo hoặc chỉnh sửa tài khoản."
     [nzCloseable]="true"
     class="mb-3">
   </nz-alert>

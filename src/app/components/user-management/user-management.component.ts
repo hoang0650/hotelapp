@@ -74,9 +74,11 @@ export class UserManagementComponent implements OnInit {
   }
 
   // ============ QUYỀN HẠN ============
+  // Phân quyền theo cấp bậc: superadmin > admin > business > hotel > staff
+  // Tương tự như pricing-management component
 
   get isAdmin(): boolean {
-    return this.authService.isAdmin();
+    return this.authService.isSuperAdmin() || this.authService.isAdmin();
   }
 
   get isSuperAdmin(): boolean {
@@ -92,21 +94,32 @@ export class UserManagementComponent implements OnInit {
   }
 
   get canManageUsers(): boolean {
-    return this.permissions?.canManageStaff || this.permissions?.canManageAll || false;
+    // Chỉ admin (superadmin + admin) mới có thể quản lý users
+    return this.isAdmin;
   }
 
   get canCreateUser(): boolean {
-    // Admin và business có thể tạo user mới
-    // Business chỉ có thể tạo hotel và staff
-    return this.isAdmin || this.isBusiness;
+    // Chỉ admin (superadmin + admin) mới có thể tạo user mới
+    // Business và Hotel Manager KHÔNG thể tạo user, chỉ xem
+    return this.isAdmin;
+  }
+
+  get canEditUser(): boolean {
+    // Chỉ admin (superadmin + admin) mới có thể chỉnh sửa user
+    return this.isAdmin;
+  }
+
+  get canDeleteUserPermission(): boolean {
+    // Chỉ admin (superadmin + admin) mới có thể xóa user
+    return this.isAdmin;
   }
 
   /**
-   * Setup roles mà user hiện tại có thể quản lý
+   * Setup roles mà user hiện tại có thể xem (filter)
    * - Superadmin: tất cả roles
    * - Admin: tất cả trừ superadmin
-   * - Business: chỉ hotel, staff thuộc business
-   * - Hotel: chỉ staff thuộc hotel
+   * - Business: chỉ hotel, staff (chỉ xem, không quản lý)
+   * - Hotel: chỉ staff (chỉ xem, không quản lý)
    */
   private setupManageableRoles(): void {
     if (this.isSuperAdmin) {
@@ -114,10 +127,12 @@ export class UserManagementComponent implements OnInit {
     } else if (this.isAdmin) {
       this.manageableRoles = this.userRoles.filter(r => r.value !== 'superadmin');
     } else if (this.isBusiness) {
+      // Business chỉ xem hotel và staff, không quản lý
       this.manageableRoles = this.userRoles.filter(r => 
         r.value === 'hotel' || r.value === 'staff'
       );
     } else if (this.isHotelManager) {
+      // Hotel manager chỉ xem staff, không quản lý
       this.manageableRoles = this.userRoles.filter(r => r.value === 'staff');
     } else {
       this.manageableRoles = [];
@@ -126,7 +141,11 @@ export class UserManagementComponent implements OnInit {
 
   /**
    * Kiểm tra có thể quản lý user cụ thể không
-   * Business có thể quản lý (edit/block) users thuộc business của mình (trừ superadmin, admin)
+   * Phân quyền theo cấp bậc: superadmin > admin > business > hotel > staff
+   * - Superadmin: Quản lý tất cả users (trừ chính mình)
+   * - Admin: Quản lý tất cả users (trừ superadmin và chính mình)
+   * - Business: Chỉ xem users thuộc business của mình (KHÔNG thể quản lý)
+   * - Hotel Manager: Chỉ xem staff thuộc hotel của mình (KHÔNG thể quản lý)
    */
   canManageUser(user: User): boolean {
     if (!this.currentUser) return false;
@@ -134,49 +153,37 @@ export class UserManagementComponent implements OnInit {
     // Không thể tự quản lý chính mình
     if (user._id === this.currentUser._id) return false;
     
-    // Không thể quản lý superadmin và admin
-    if (user.role === 'superadmin' || user.role === 'admin') {
-      return false;
-    }
-    
-    // Superadmin quản lý tất cả (đã loại bỏ superadmin và admin ở trên)
+    // Superadmin quản lý tất cả (trừ chính mình)
     if (this.isSuperAdmin) {
-      return true;
+      return user.role !== 'superadmin'; // Không thể quản lý superadmin khác
     }
     
-    // Admin có thể quản lý tất cả (đã loại bỏ superadmin và admin ở trên)
-    if (this.isAdmin) {
-      return true;
+    // Admin quản lý tất cả (trừ superadmin và chính mình)
+    if (this.authService.isAdmin() && !this.isSuperAdmin) {
+      return user.role !== 'superadmin' && user.role !== 'admin';
     }
     
-    // Business có thể quản lý users thuộc business của mình (hotel, staff)
-    if (this.isBusiness) {
-      return (user.role === 'hotel' || user.role === 'staff') && 
-             user.businessId === this.currentUser.businessId;
-    }
-    
-    // Hotel manager chỉ quản lý staff thuộc hotel
-    if (this.isHotelManager) {
-      return user.role === 'staff' && user.hotelId === this.currentUser.hotelId;
-    }
-    
+    // Business và Hotel Manager KHÔNG thể quản lý user, chỉ xem
     return false;
   }
 
   /**
    * Kiểm tra có thể block user không
-   * - Admin/Superadmin không thể bị block
-   * - Business có thể block users thuộc business của mình
+   * - Chỉ admin mới có thể block user
+   * - Không thể block superadmin
    */
   canBlockUser(user: User): boolean {
+    if (!this.isAdmin) return false;
     if (!this.canManageUser(user)) return false;
     
-    // Không thể block admin hoặc superadmin
-    return user.role !== 'admin' && user.role !== 'superadmin';
+    // Không thể block superadmin
+    return user.role !== 'superadmin';
   }
 
   /**
    * Kiểm tra có thể xóa user không
+   * - Chỉ admin mới có thể xóa user
+   * - Không thể xóa superadmin
    */
   canDeleteUser(user: User): boolean {
     if (!this.isAdmin) return false;
@@ -340,7 +347,7 @@ export class UserManagementComponent implements OnInit {
 
   showCreateModal(): void {
     if (!this.canCreateUser) {
-      this.message.warning('Bạn không có quyền tạo người dùng mới');
+      this.message.warning('Bạn không có quyền tạo người dùng mới. Chỉ Admin mới có thể tạo người dùng.');
       return;
     }
     
@@ -360,16 +367,8 @@ export class UserManagementComponent implements OnInit {
     this.userForm.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
     this.userForm.get('password')?.updateValueAndValidity();
     
-    // Auto-set businessId/hotelId cho business/hotel user
-    if (this.isBusiness && this.currentUser?.businessId) {
-      this.userForm.patchValue({ businessId: this.currentUser.businessId });
-    }
-    if (this.isHotelManager && this.currentUser?.hotelId) {
-      this.userForm.patchValue({ 
-        hotelId: this.currentUser.hotelId,
-        businessId: this.currentUser.businessId
-      });
-    }
+    // Chỉ admin mới có thể tạo user, không cần auto-set businessId/hotelId
+    // Admin sẽ tự chọn businessId/hotelId khi tạo
   }
 
   showEditModal(user: User): void {
