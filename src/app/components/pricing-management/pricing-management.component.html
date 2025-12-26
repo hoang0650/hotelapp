@@ -9,7 +9,7 @@
 
     <nz-tabset [nzAnimated]="false">
       <!-- Tab Danh sách gói -->
-      <nz-tab nzTitle="{{ isAdmin ? 'Danh sách gói' : 'Gói của tôi' }}">
+      <nz-tab nzTitle="{{ isAdmin ? 'Danh sách gói' : 'Gói dịch vụ' }}">
         <nz-table #packagesTable [nzData]="packages" [nzLoading]="loading">
           <thead>
             <tr>
@@ -28,8 +28,14 @@
             <tr *ngFor="let pkg of packagesTable.data">
               <td>{{ pkg.name }}</td>
               <td>{{ pkg.description }}</td>
-              <td>{{ formatCurrency(pkg.monthlyPrice || pkg.price || 0) }}</td>
-              <td>{{ formatCurrency(pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0)) }}</td>
+              <td>
+                <span *ngIf="(pkg.monthlyPrice || 0) === 0 && (pkg.yearlyPrice || 0) === 0" style="color: #52c41a; font-weight: bold;">FREE</span>
+                <span *ngIf="(pkg.monthlyPrice || 0) !== 0 || (pkg.yearlyPrice || 0) !== 0">{{ formatCurrency(pkg.monthlyPrice || pkg.price || 0) }}</span>
+              </td>
+              <td>
+                <span *ngIf="(pkg.monthlyPrice || 0) === 0 && (pkg.yearlyPrice || 0) === 0" style="color: #52c41a; font-weight: bold;">FREE</span>
+                <span *ngIf="(pkg.monthlyPrice || 0) !== 0 || (pkg.yearlyPrice || 0) !== 0">{{ formatCurrency(pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0)) }}</span>
+              </td>
               <td>{{ pkg.yearlyDiscount || 0 }}%</td>
               <td>{{ pkg.duration }}</td>
               <td>{{ pkg.maxUsers === -1 || pkg.maxUsers === null ? 'Không giới hạn' : pkg.maxUsers }}</td>
@@ -47,12 +53,39 @@
                   <i nz-icon nzType="delete"></i>
                 </a>
                 <nz-divider *ngIf="canDeletePackage()" nzType="vertical"></nz-divider>
-                <button *ngIf="!isAdmin" nz-button nzType="primary" (click)="subscribeToPackage(pkg._id || pkg.id, 'monthly')">
-                  Đăng ký tháng
-                </button>
-                <button *ngIf="!isAdmin" nz-button nzType="default" style="margin-left: 8px;" (click)="subscribeToPackage(pkg._id || pkg.id, 'yearly')">
-                  Đăng ký năm
-                </button>
+                <!-- Non-admin: Hiển thị nút đăng ký/nâng cấp/hạ cấp -->
+                <ng-container *ngIf="!isAdmin">
+                  <button 
+                    *ngIf="!currentUserPackage || (currentUserPackage._id !== pkg._id && currentUserPackage.id !== pkg.id)"
+                    nz-button 
+                    nzType="primary" 
+                    (click)="subscribeToPackage(pkg._id || pkg.id, 'monthly')">
+                    Đăng ký tháng
+                  </button>
+                  <button 
+                    *ngIf="!currentUserPackage || (currentUserPackage._id !== pkg._id && currentUserPackage.id !== pkg.id)"
+                    nz-button 
+                    nzType="default" 
+                    style="margin-left: 8px;" 
+                    (click)="subscribeToPackage(pkg._id || pkg.id, 'yearly')">
+                    Đăng ký năm
+                  </button>
+                  <button 
+                    *ngIf="currentUserPackage && (currentUserPackage._id === pkg._id || currentUserPackage.id === pkg.id)"
+                    nz-button 
+                    nzType="primary" 
+                    (click)="upgradeOrDowngradePackage(pkg._id || pkg.id, 'monthly')">
+                    Nâng/Hạ cấp (Tháng)
+                  </button>
+                  <button 
+                    *ngIf="currentUserPackage && (currentUserPackage._id === pkg._id || currentUserPackage.id === pkg.id)"
+                    nz-button 
+                    nzType="default" 
+                    style="margin-left: 8px;" 
+                    (click)="upgradeOrDowngradePackage(pkg._id || pkg.id, 'yearly')">
+                    Nâng/Hạ cấp (Năm)
+                  </button>
+                </ng-container>
                 <button *ngIf="isAdmin" nz-button nzType="default" (click)="onAdminSubscribe(pkg._id || pkg.id)">Đăng ký (Test)</button>
               </td>
             </tr>

@@ -99,6 +99,8 @@ export class PricingManagementComponent implements OnInit {
       this.loadPackages();
       this.loadSubscribers();
     } else {
+      // Non-admin: load tất cả packages để có thể đăng ký/nâng cấp/hạ cấp
+      this.loadPackages();
       this.loadCurrentUserPackage();
     }
     
@@ -106,6 +108,7 @@ export class PricingManagementComponent implements OnInit {
       if (this.isAdmin) {
         this.loadSubscribers();
       } else {
+        this.loadPackages();
         this.loadCurrentUserPackage();
       }
     });
@@ -156,6 +159,14 @@ export class PricingManagementComponent implements OnInit {
     this.pricingService.getAllPackages().subscribe({
       next: (response) => {
         this.packages = response.data || [];
+        
+        // Đánh dấu gói free (giá = 0) bằng cách thêm flag isFree
+        this.packages = this.packages.map((pkg: any) => ({
+          ...pkg,
+          isFree: (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) || 
+                  (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
+        }));
+        
         this.loading = false;
       },
       error: (error) => {
@@ -450,17 +461,23 @@ export class PricingManagementComponent implements OnInit {
       return;
     }
 
+    // Non-admin chỉ có thể đăng ký cho chính mình
+    const selectedPackage = this.packages.find(p => (p._id === packageId || p.id === packageId));
+    const packageName = selectedPackage?.name || 'gói này';
+    
     this.modal.confirm({
       nzTitle: 'Xác nhận đăng ký',
-      nzContent: `Bạn có chắc chắn muốn đăng ký gói này?`,
+      nzContent: `Bạn có chắc chắn muốn đăng ký ${packageName} ${billingType === 'yearly' ? 'theo năm' : 'theo tháng'}?`,
       nzOkText: 'Đăng ký',
       nzCancelText: 'Hủy',
       nzOnOk: () => {
         this.loading = true;
+        // Non-admin chỉ có thể subscribe cho chính mình
         this.pricingService.subscribe(this.currentUser._id, packageId, billingType).subscribe({
           next: (response) => {
             if (response.success) {
               this.message.success(response.message || 'Đăng ký gói thành công');
+              this.loadPackages();
               this.loadCurrentUserPackage();
             } else {
               this.message.error(response.message || 'Đăng ký gói thất bại');
@@ -469,6 +486,65 @@ export class PricingManagementComponent implements OnInit {
           },
           error: (error) => {
             this.message.error(error.error?.message || 'Đăng ký gói thất bại');
+            this.loading = false;
+          }
+        });
+      }
+    });
+  }
+
+  upgradeOrDowngradePackage(packageId: string, billingType: 'monthly' | 'yearly' = 'monthly'): void {
+    if (!this.currentUser?._id) {
+      this.message.error('Không tìm thấy thông tin người dùng');
+      return;
+    }
+
+    if (!this.currentUserPackage) {
+      this.message.warning('Bạn chưa đăng ký gói nào');
+      return;
+    }
+
+    const selectedPackage = this.packages.find(p => (p._id === packageId || p.id === packageId));
+    if (!selectedPackage) {
+      this.message.error('Không tìm thấy gói');
+      return;
+    }
+
+    const currentPackageId = this.currentUserPackage._id || this.currentUserPackage.id;
+    const isUpgrade = selectedPackage.monthlyPrice > (this.currentUserPackage.monthlyPrice || 0);
+    const isDowngrade = selectedPackage.monthlyPrice < (this.currentUserPackage.monthlyPrice || 0);
+    const isSamePackage = currentPackageId === packageId;
+    
+    let actionText = 'cập nhật';
+    if (isSamePackage && this.currentUserPackage.billingType !== billingType) {
+      actionText = 'cập nhật';
+    } else if (isUpgrade) {
+      actionText = 'nâng cấp';
+    } else if (isDowngrade) {
+      actionText = 'hạ cấp';
+    }
+
+    this.modal.confirm({
+      nzTitle: `Xác nhận ${actionText} gói`,
+      nzContent: `Bạn có chắc chắn muốn ${actionText} lên ${selectedPackage.name} ${billingType === 'yearly' ? 'theo năm' : 'theo tháng'}?`,
+      nzOkText: actionText === 'nâng cấp' ? 'Nâng cấp' : actionText === 'hạ cấp' ? 'Hạ cấp' : 'Cập nhật',
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        this.loading = true;
+        // Non-admin chỉ có thể subscribe cho chính mình (nâng cấp/hạ cấp cũng là subscribe)
+        this.pricingService.subscribe(this.currentUser._id, packageId, billingType).subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.message.success(response.message || `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} gói thành công`);
+              this.loadPackages();
+              this.loadCurrentUserPackage();
+            } else {
+              this.message.error(response.message || `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} gói thất bại`);
+            }
+            this.loading = false;
+          },
+          error: (error) => {
+            this.message.error(error.error?.message || `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} gói thất bại`);
             this.loading = false;
           }
         });

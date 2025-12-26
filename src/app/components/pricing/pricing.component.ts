@@ -175,11 +175,13 @@ export class PricingComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Load user trước để kiểm tra role
+    this.loadCurrentUser();
+    
     this.loadPackages();
     if (this.userId) {
       this.loadCurrentPackage();
       this.loadPaymentHistory();
-      this.loadCurrentUser(); // Load user để lấy QR code
       this.loadSystemQRCode(); // Load QR code từ superadmin hoặc settings
     } else {
       this.currentPackage = null;
@@ -374,6 +376,29 @@ export class PricingComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.success !== false) {
           this.packages = response.data || response || [];
+          
+          // Nếu user là guest và chưa có package, tự động map với gói free (giá = 0)
+          if (this.currentUser && this.currentUser.role === 'guest' && !this.currentPackage) {
+            const freePackage = this.packages.find((pkg: any) => 
+              (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) || 
+              (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
+            );
+            
+            if (freePackage && this.userId) {
+              // Tự động subscribe gói free cho guest
+              this.pricingService.subscribe(this.userId, freePackage._id || freePackage.id, 'monthly').subscribe({
+                next: (subscribeResponse: any) => {
+                  if (subscribeResponse.success !== false) {
+                    console.log('Auto-subscribed guest to free package');
+                    this.loadCurrentPackage();
+                  }
+                },
+                error: (subscribeError: any) => {
+                  console.error('Error auto-subscribing guest to free package:', subscribeError);
+                }
+              });
+            }
+          }
         } else {
           this.packages = [];
           // Không hiển thị lỗi nếu chỉ là response format khác
@@ -411,6 +436,30 @@ export class PricingComponent implements OnInit, OnDestroy {
           this.checkPaymentFeatures();
         } else {
           this.currentPackage = null;
+          
+          // Nếu user là guest và chưa có package, tự động map với gói free
+          if (this.currentUser && this.currentUser.role === 'guest' && this.packages.length > 0) {
+            const freePackage = this.packages.find((pkg: any) => 
+              (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) || 
+              (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
+            );
+            
+            if (freePackage) {
+              // Tự động subscribe gói free cho guest
+              this.pricingService.subscribe(this.userId, freePackage._id || freePackage.id, 'monthly').subscribe({
+                next: (subscribeResponse: any) => {
+                  if (subscribeResponse.success !== false) {
+                    console.log('Auto-subscribed guest to free package');
+                    this.loadCurrentPackage(); // Reload để lấy package mới
+                  }
+                },
+                error: (subscribeError: any) => {
+                  console.error('Error auto-subscribing guest to free package:', subscribeError);
+                }
+              });
+            }
+          }
+          
           // Reset về mặc định nếu không có package
           this.canUsePayPal = true;
           this.canUseCrypto = true;
@@ -423,6 +472,30 @@ export class PricingComponent implements OnInit, OnDestroy {
           this.message.error(error.error?.message || 'Không thể tải thông tin gói hiện tại');
         }
         this.currentPackage = null;
+        
+        // Nếu user là guest và chưa có package, tự động map với gói free
+        if (this.currentUser && this.currentUser.role === 'guest' && this.packages.length > 0) {
+          const freePackage = this.packages.find((pkg: any) => 
+            (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) || 
+            (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
+          );
+          
+          if (freePackage) {
+            // Tự động subscribe gói free cho guest
+            this.pricingService.subscribe(this.userId, freePackage._id || freePackage.id, 'monthly').subscribe({
+              next: (subscribeResponse: any) => {
+                if (subscribeResponse.success !== false) {
+                  console.log('Auto-subscribed guest to free package');
+                  this.loadCurrentPackage(); // Reload để lấy package mới
+                }
+              },
+              error: (subscribeError: any) => {
+                console.error('Error auto-subscribing guest to free package:', subscribeError);
+              }
+            });
+          }
+        }
+        
         // Reset về mặc định nếu không có package
         this.canUsePayPal = true;
         this.canUseCrypto = true;
