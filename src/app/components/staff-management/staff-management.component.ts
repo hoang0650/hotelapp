@@ -304,10 +304,28 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       return null;
     }
     
-    if (typeof hotel.businessId === 'object' && hotel.businessId !== null && '_id' in hotel.businessId) {
-      return hotel.businessId._id;
-    } else if (typeof hotel.businessId === 'string') {
+    // Nếu là string, trả về trực tiếp
+    if (typeof hotel.businessId === 'string') {
       return hotel.businessId;
+    }
+    
+    // Nếu là object
+    if (typeof hotel.businessId === 'object' && hotel.businessId !== null) {
+      const businessIdObj = hotel.businessId as { _id?: string | { toString(): string }; [key: string]: any };
+      
+      // Nếu có _id
+      if ('_id' in businessIdObj && businessIdObj._id) {
+        if (typeof businessIdObj._id === 'string') {
+          return businessIdObj._id;
+        } else if (typeof businessIdObj._id === 'object' && 'toString' in businessIdObj._id) {
+          return businessIdObj._id.toString();
+        }
+      }
+      
+      // Nếu object có method toString
+      if (typeof (businessIdObj as any).toString === 'function') {
+        return (businessIdObj as any).toString();
+      }
     }
     
     return null;
@@ -325,10 +343,24 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
             this.hotels = hotels;
           } else if (this.authService.isBusiness() && currentUser?.businessId) {
             // Business chỉ thấy hotels thuộc business của mình
+            let userBusinessIdStr: string | null = null;
+            
+            if (typeof currentUser.businessId === 'string') {
+              userBusinessIdStr = currentUser.businessId;
+            } else if (typeof currentUser.businessId === 'object' && currentUser.businessId !== null) {
+              const businessIdObj = currentUser.businessId as any;
+              if (businessIdObj._id) {
+                userBusinessIdStr = typeof businessIdObj._id === 'string' 
+                  ? businessIdObj._id 
+                  : businessIdObj._id.toString();
+              } else if (typeof businessIdObj.toString === 'function') {
+                userBusinessIdStr = businessIdObj.toString();
+              }
+            }
+            
             this.hotels = hotels.filter((hotel: any) => {
               const hotelBusinessId = this.extractBusinessId(hotel);
-              const userBusinessId = currentUser.businessId;
-              return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString();
+              return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString();
             });
           } else if (this.authService.isHotelManager() && currentUser?.hotelId) {
             // Hotel manager chỉ thấy hotel của mình
