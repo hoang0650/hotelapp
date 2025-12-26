@@ -74,7 +74,8 @@ export class PermissionGuard implements CanActivate {
         '/admin/guest-management',
         '/admin/debt-management',
         '/admin/profile',
-        '/admin/settings'
+        '/admin/settings',
+        '/admin/pricing-management' // Cho phép tất cả role truy cập
       ];
       
       // Chặn các routes quản lý cấp cao mà business/hotel không được phép
@@ -116,7 +117,8 @@ export class PermissionGuard implements CanActivate {
         '/admin/calendar',
         '/admin/bank-transfer-history', // Được xem lịch sử chuyển khoản (giao tiền)
         '/admin/profile', // Được xem profile của mình
-        '/admin/settings' // Được xem settings
+        '/admin/settings', // Được xem settings
+        '/admin/pricing-management' // Cho phép tất cả role truy cập
       ];
       
       // Chặn các routes quản lý cấp cao
@@ -150,6 +152,16 @@ export class PermissionGuard implements CanActivate {
       // Nếu route không nằm trong allowedRoutes và không bị block, 
       // mặc định không cho phép (staff chỉ được truy cập routes được liệt kê rõ ràng)
       // Chuyển đến trang unauthorized
+      this.router.navigate(['/admin/unauthorized']);
+      return false;
+    }
+
+    // Guest được phép truy cập pricing-management
+    if (user.role === 'guest') {
+      if (state.url === '/admin/pricing-management') {
+        return true;
+      }
+      // Guest chỉ được truy cập pricing-management, các route khác bị chặn
       this.router.navigate(['/admin/unauthorized']);
       return false;
     }

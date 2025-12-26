@@ -141,54 +141,69 @@ export class UserManagementComponent implements OnInit {
 
   /**
    * Kiểm tra có thể quản lý user cụ thể không
-   * Phân quyền theo cấp bậc: superadmin > admin > business > hotel > staff
-   * - Superadmin: Quản lý tất cả users (trừ chính mình)
-   * - Admin: Quản lý tất cả users (trừ superadmin và chính mình)
-   * - Business: Chỉ xem users thuộc business của mình (KHÔNG thể quản lý)
-   * - Hotel Manager: Chỉ xem staff thuộc hotel của mình (KHÔNG thể quản lý)
+   * - Superadmin: Quản lý tất cả users bao gồm admin (có thể chỉnh sửa role, khóa, xóa admin)
+   * - Admin: Quản lý tất cả users trừ superadmin (không thể xem/quản lý superadmin)
+   * - Business: KHÔNG được phép quản lý người dùng
    */
   canManageUser(user: User): boolean {
     if (!this.currentUser) return false;
     
-    // Không thể tự quản lý chính mình
-    if (user._id === this.currentUser._id) return false;
+    // Business không được phép quản lý người dùng
+    if (this.isBusiness || this.isHotelManager) {
+      return false;
+    }
     
-    // Superadmin quản lý tất cả (trừ chính mình)
+    // Superadmin quản lý tất cả users (bao gồm admin, có thể chỉnh sửa role, khóa, xóa)
     if (this.isSuperAdmin) {
-      return user.role !== 'superadmin'; // Không thể quản lý superadmin khác
+      return true; // Superadmin có thể quản lý tất cả, kể cả admin
     }
     
-    // Admin quản lý tất cả (trừ superadmin và chính mình)
+    // Admin quản lý tất cả users trừ superadmin
     if (this.authService.isAdmin() && !this.isSuperAdmin) {
-      return user.role !== 'superadmin' && user.role !== 'admin';
+      return user.role !== 'superadmin';
     }
     
-    // Business và Hotel Manager KHÔNG thể quản lý user, chỉ xem
     return false;
   }
 
   /**
    * Kiểm tra có thể block user không
-   * - Chỉ admin mới có thể block user
-   * - Không thể block superadmin
+   * - Superadmin: có thể block tất cả users (bao gồm admin)
+   * - Admin: có thể block tất cả users trừ superadmin
    */
   canBlockUser(user: User): boolean {
     if (!this.isAdmin) return false;
     if (!this.canManageUser(user)) return false;
     
-    // Không thể block superadmin
+    // Superadmin có thể block tất cả
+    if (this.isSuperAdmin) {
+      return true;
+    }
+    
+    // Admin không thể block superadmin
     return user.role !== 'superadmin';
   }
 
   /**
    * Kiểm tra có thể xóa user không
-   * - Chỉ admin mới có thể xóa user
-   * - Không thể xóa superadmin
+   * - Superadmin: có thể xóa tất cả users (bao gồm admin)
+   * - Admin: có thể xóa tất cả users trừ superadmin và không thể tự xóa chính mình
    */
   canDeleteUser(user: User): boolean {
     if (!this.isAdmin) return false;
+    if (!this.canManageUser(user)) return false;
     
-    // Không thể xóa superadmin
+    // Không thể tự xóa chính mình
+    if (user._id === this.currentUser?._id) {
+      return false;
+    }
+    
+    // Superadmin có thể xóa tất cả (bao gồm admin)
+    if (this.isSuperAdmin) {
+      return true;
+    }
+    
+    // Admin không thể xóa superadmin
     return user.role !== 'superadmin';
   }
 
@@ -224,48 +239,33 @@ export class UserManagementComponent implements OnInit {
   loadUsers(): void {
     this.isLoading = true;
     
-    // Xác định role để load dựa trên quyền của user hiện tại
+    // Chỉ superadmin và admin mới được phép quản lý người dùng
+    // Business không được phép quản lý người dùng
     if (this.isAdmin) {
-      // Admin load tất cả users
+      // Admin load users (backend sẽ filter: superadmin xem tất cả, admin không xem superadmin)
       this.userService.getAllUsers().subscribe({
         next: (users) => this.handleUsersLoaded(users),
         error: (error) => this.handleError('Không thể tải danh sách người dùng', error)
       });
-    } else if (this.isBusiness && this.currentUser?.businessId) {
-      // Business chỉ load users thuộc business
-      this.userService.getUsersByBusiness(this.currentUser.businessId).subscribe({
-        next: (users) => this.handleUsersLoaded(users),
-        error: (error) => this.handleError('Không thể tải danh sách người dùng', error)
-      });
-    } else if (this.isHotelManager && this.currentUser?.hotelId) {
-      // Hotel manager chỉ load staff thuộc hotel
-      this.userService.getUsersByHotel(this.currentUser.hotelId).subscribe({
-        next: (users) => this.handleUsersLoaded(users),
-        error: (error) => this.handleError('Không thể tải danh sách người dùng', error)
-      });
     } else {
+      // Business và các role khác không được phép quản lý người dùng
       this.users = [];
       this.filteredUsers = [];
       this.isLoading = false;
+      this.message.warning('Bạn không có quyền quản lý người dùng. Chỉ Superadmin và Admin mới có quyền này.');
     }
   }
 
   private handleUsersLoaded(users: User[]): void {
     // Backend đã filter đúng, nhưng đảm bảo frontend cũng filter lại để chắc chắn
-    // Business chỉ thấy users thuộc business của mình (bao gồm cả chính business owner)
-    // Business KHÔNG được thấy superadmin và admin
-    if (this.isBusiness && this.currentUser?.businessId && !this.isAdmin) {
-      this.users = users.filter(user => {
-        if (!this.currentUser) return false;
-        // Loại bỏ superadmin và admin
-        if (user.role === 'superadmin' || user.role === 'admin') {
-          return false;
-        }
-        // User thuộc business của mình
-        return (user.businessId && user.businessId.toString() === this.currentUser.businessId?.toString()) ||
-               // Hoặc chính business owner
-               (user._id === this.currentUser._id && user.role === 'business');
-      });
+    // Superadmin: xem tất cả users (bao gồm admin)
+    // Admin: không xem superadmin (backend đã filter, nhưng frontend cũng filter lại để chắc chắn)
+    if (this.isSuperAdmin) {
+      // Superadmin xem tất cả
+      this.users = users;
+    } else if (this.authService.isAdmin() && !this.isSuperAdmin) {
+      // Admin không xem superadmin
+      this.users = users.filter(user => user.role !== 'superadmin');
     } else {
       this.users = users;
     }

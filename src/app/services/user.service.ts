@@ -94,8 +94,9 @@ export class UserService {
     });
   }
 
-  signUp(userData: SignUpRequest): Observable<User> {
-    return this.http.post<User>(`${this.apiUrl}/signup`, userData);
+  signUp(userData: SignUpRequest): Observable<any> {
+    // Sử dụng route /register cho đăng ký công khai (không yêu cầu authentication)
+    return this.http.post<any>(`${this.apiUrl}/register`, userData);
   }
 
   signUpBusiness(userData: BusinessSignUpRequest): Observable<{user: User, business: any}> {

@@ -51,8 +51,6 @@
       <li nz-submenu *ngIf="canAccessHotelMenu()" [nzTitle]="'ADMIN_SIDEBAR.HOTEL_OPERATIONS' | translate" nzIcon="home">
         <ul>
           <li nz-menu-item routerLink="/admin/room">{{ 'ADMIN_SIDEBAR.ROOM' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/calendar">{{ 'ADMIN_SIDEBAR.CALENDAR' | translate }}</li>
-          <li nz-menu-item routerLink="/admin/shift-handover">{{ 'ADMIN_SIDEBAR.SHIFT_HANDOVER' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessShiftHandoverHistory()" routerLink="/admin/shift-handover-history">{{ 'ADMIN_SIDEBAR.SHIFT_HANDOVER_HISTORY' | translate }}</li>
         </ul>
       </li>

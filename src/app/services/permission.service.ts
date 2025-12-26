@@ -180,7 +180,8 @@ export class PermissionService {
         'revenue_chart', // Biểu đồ doanh thu
         'qr_payment', // Thanh toán QR
         'visa_payment', // Thanh toán Visa
-        'electric_management' // Quản lý điện
+        'electric_management', // Quản lý điện
+        'pricing_management' // Cho phép tất cả role truy cập
       ];
       
       // Business KHÔNG được phép quản lý company (chỉ xem)
@@ -216,7 +217,6 @@ export class PermissionService {
       // Chặn các features quản lý cấp cao
       const blockedFeatures: PermissionFeature[] = [
         'user_management', // Quản lý người dùng - chỉ superadmin, admin, business (xem)
-        'pricing_management', // Quản lý gói giá - chỉ superadmin, admin, business
         'email_admin', // Quản lý email - chỉ superadmin và admin
         'settings_management' // Quản lý cài đặt - chỉ superadmin và admin
       ];
@@ -238,7 +238,8 @@ export class PermissionService {
         'room_management', // Được xem và thao tác với phòng
         'shift_handover', // Được giao ca và xem lịch sử giao ca
         'calendar', // Được xem lịch
-        'bank_transfer_history' // Được xem lịch sử chuyển khoản (giao tiền)
+        'bank_transfer_history', // Được xem lịch sử chuyển khoản (giao tiền)
+        'pricing_management' // Cho phép tất cả role truy cập
       ];
       
       // Chặn các features quản lý cấp cao
@@ -248,7 +249,6 @@ export class PermissionService {
         'staff_management',
         'service_management',
         'user_management',
-        'pricing_management',
         'ota_management',
         'revenue_chart',
         'email_admin',
@@ -265,6 +265,11 @@ export class PermissionService {
       if (allowedFeatures.includes(feature)) {
         return true;
       }
+    }
+
+    // Guest được phép truy cập pricing_management
+    if (user?.role === 'guest' && feature === 'pricing_management') {
+      return true;
     }
 
     // Kiểm tra permissions từ package

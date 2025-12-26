@@ -16,7 +16,7 @@ interface PricingPackage {
   yearlyDiscount: number;
   duration: number;
   features: string[];
-  maxUsers: number | null; // -1 hoặc null = không giới hạn
+  maxUsers: number | null; // 0 hoặc null = không giới hạn
   qrPaymentFeature?: boolean; // Tính năng QR thanh toán
   otaManagementFeature?: boolean; // Tính năng quản lý OTA
   emailManagementFeature?: boolean; // Tính năng quản lý email
@@ -56,6 +56,7 @@ export class PricingManagementComponent implements OnInit {
   currentUser: any = null;
   currentUserPackage: any = null;
   isAdmin = false;
+  isSuperAdmin = false;
   availableFeatures: { value: PermissionFeature; label: string }[] = [
     { value: 'room_management', label: 'Quản lý phòng' },
     { value: 'hotel_management', label: 'Quản lý khách sạn' },
@@ -94,6 +95,7 @@ export class PricingManagementComponent implements OnInit {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.isAdmin = this.authService.isSuperAdmin() || this.authService.isAdmin();
+    this.isSuperAdmin = this.authService.isSuperAdmin();
     
     if (this.isAdmin) {
       this.loadPackages();
@@ -121,10 +123,12 @@ export class PricingManagementComponent implements OnInit {
       monthlyPrice: [0, [Validators.required, Validators.min(0)]],
       yearlyPrice: [0, [Validators.required, Validators.min(0)]],
       yearlyDiscount: [0, [Validators.min(0), Validators.max(100)]],
-      duration: [1, [Validators.required, Validators.min(1)]],
+      duration: [1, [Validators.required, Validators.min(1)]], // Giữ lại để tương thích
+      monthlyDuration: [1, [Validators.required, Validators.min(1)]], // Thời hạn gói tháng (tháng)
+      yearlyDuration: [12, [Validators.required, Validators.min(1)]], // Thời hạn gói năm (tháng)
       features: [[]],
       permissions: [['view'], [Validators.required]],
-      maxUsers: [1, [Validators.required]], // Cho phép -1 (không giới hạn)
+      maxUsers: [1, [Validators.required]], // Cho phép 0 (không giới hạn)
       unlimitedUsers: [false], // Checkbox để chọn không giới hạn
       qrPaymentFeature: [false], // Tính năng QR thanh toán
       otaManagementFeature: [false], // Tính năng quản lý OTA
@@ -142,11 +146,11 @@ export class PricingManagementComponent implements OnInit {
     this.packageForm.get('unlimitedUsers')?.valueChanges.subscribe(unlimited => {
       const maxUsersControl = this.packageForm.get('maxUsers');
       if (unlimited) {
-        maxUsersControl?.setValue(-1, { emitEvent: false });
+        maxUsersControl?.setValue(0, { emitEvent: false }); // 0 = không giới hạn
         maxUsersControl?.clearValidators();
       } else {
         maxUsersControl?.setValidators([Validators.required, Validators.min(1)]);
-        if (maxUsersControl?.value === -1) {
+        if (maxUsersControl?.value === 0) {
           maxUsersControl?.setValue(1);
         }
       }
@@ -225,14 +229,16 @@ export class PricingManagementComponent implements OnInit {
     if (packageId) {
       const pkg = this.packages.find(p => p._id === packageId || p.id === packageId);
       if (pkg) {
-        const isUnlimited = pkg.maxUsers === -1 || pkg.maxUsers === null;
+        const isUnlimited = pkg.maxUsers === 0 || pkg.maxUsers === null;
         this.packageForm.patchValue({
           name: pkg.name,
           description: pkg.description,
           monthlyPrice: pkg.monthlyPrice || pkg.price || 0,
           yearlyPrice: pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0),
           yearlyDiscount: pkg.yearlyDiscount || 0,
-          duration: pkg.duration,
+          duration: pkg.duration || 1, // Giữ lại để tương thích
+          monthlyDuration: pkg.monthlyDuration || pkg.duration || 1, // Thời hạn gói tháng
+          yearlyDuration: pkg.yearlyDuration || pkg.duration || 12, // Thời hạn gói năm
           features: pkg.features || [],
           permissions: pkg.permissions || ['view'],
           maxUsers: isUnlimited ? 1 : pkg.maxUsers,
@@ -256,7 +262,9 @@ export class PricingManagementComponent implements OnInit {
         monthlyPrice: 0,
         yearlyPrice: 0,
         yearlyDiscount: 0,
-        duration: 1,
+        duration: 1, // Giữ lại để tương thích
+        monthlyDuration: 1, // Thời hạn gói tháng
+        yearlyDuration: 12, // Thời hạn gói năm
         features: [],
         permissions: ['view'],
         maxUsers: 1,
@@ -284,7 +292,9 @@ export class PricingManagementComponent implements OnInit {
       monthlyPrice: 0,
       yearlyPrice: 0,
       yearlyDiscount: 0,
-      duration: 1,
+      duration: 1, // Giữ lại để tương thích
+      monthlyDuration: 1, // Thời hạn gói tháng
+      yearlyDuration: 12, // Thời hạn gói năm
       features: [],
       permissions: ['view'],
       maxUsers: 1,
@@ -308,14 +318,22 @@ export class PricingManagementComponent implements OnInit {
       this.loading = true;
       const formData = this.packageForm.value;
 
-      // Nếu unlimitedUsers được chọn, set maxUsers = -1
-      const maxUsers = formData.unlimitedUsers ? -1 : formData.maxUsers;
+      // Nếu unlimitedUsers được chọn, set maxUsers = 0
+      const maxUsers = formData.unlimitedUsers ? 0 : formData.maxUsers;
 
       const payload: any = {
         ...formData,
         maxUsers: maxUsers,
         features: formData.features || [],
-        permissions: formData.permissions || ['view']
+        permissions: formData.permissions || ['view'],
+        // Nếu là superadmin, gửi monthlyDuration và yearlyDuration
+        // Nếu không, giữ lại duration để tương thích
+        ...(this.authService.isSuperAdmin() ? {
+          monthlyDuration: formData.monthlyDuration || formData.duration || 1,
+          yearlyDuration: formData.yearlyDuration || formData.duration || 12
+        } : {
+          duration: formData.duration || 1
+        })
       };
       
       // Xóa unlimitedUsers khỏi payload vì không cần gửi lên backend
@@ -579,6 +597,32 @@ export class PricingManagementComponent implements OnInit {
       draftInvoiceFeature: value,
       exportInvoiceFeature: value,
       aiChatboxFeature: value
+    });
+  }
+
+  sendPaymentReminder(subscriber: any): void {
+    if (!subscriber.userId) {
+      this.message.error('Không tìm thấy thông tin người dùng');
+      return;
+    }
+
+    // Set loading state
+    subscriber.sendingReminder = true;
+
+    this.pricingService.sendPaymentReminder(subscriber.userId).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.message.success(`Đã gửi thông báo nhắc nhở thanh toán đến ${subscriber.username}`);
+        } else {
+          this.message.error(response.message || 'Gửi thông báo thất bại');
+        }
+        subscriber.sendingReminder = false;
+      },
+      error: (error) => {
+        console.error('Error sending payment reminder:', error);
+        this.message.error(error.error?.message || 'Gửi thông báo thất bại');
+        subscriber.sendingReminder = false;
+      }
     });
   }
 } 

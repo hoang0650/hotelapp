@@ -17,17 +17,9 @@
 
   <!-- Thông báo phân quyền -->
   <nz-alert 
-    *ngIf="isBusiness && !isAdmin" 
-    nzType="info" 
-    nzMessage="Bạn đang xem danh sách tài khoản thuộc doanh nghiệp của mình. Bạn chỉ có quyền xem, không thể tạo hoặc chỉnh sửa tài khoản."
-    [nzCloseable]="true"
-    class="mb-3">
-  </nz-alert>
-  
-  <nz-alert 
-    *ngIf="isHotelManager && !isAdmin && !isBusiness" 
-    nzType="info" 
-    nzMessage="Bạn đang xem danh sách nhân viên thuộc khách sạn của mình. Bạn chỉ có quyền xem, không thể tạo hoặc chỉnh sửa tài khoản."
+    *ngIf="!isAdmin" 
+    nzType="warning" 
+    nzMessage="Bạn không có quyền quản lý người dùng. Chỉ Superadmin và Admin mới có quyền này."
     [nzCloseable]="true"
     class="mb-3">
   </nz-alert>
@@ -103,6 +95,7 @@
         <th nzWidth="120px">Trạng thái</th>
         <th nzWidth="150px" *ngIf="isAdmin">Business/Hotel</th>
         <th nzWidth="150px">Đăng nhập cuối</th>
+        <th nzWidth="150px">Địa chỉ IP</th>
         <th nzWidth="140px">Thao tác</th>
       </tr>
     </thead>
@@ -140,6 +133,12 @@
           <span *ngIf="!user.businessId && !user.hotelId">-</span>
         </td>
         <td>{{ formatDate(user.lastLogin) }}</td>
+        <td>
+          <span *ngIf="user.lastLoginIp" nz-tooltip [nzTooltipTitle]="'IP đăng nhập lần cuối: ' + user.lastLoginIp">
+            {{ user.lastLoginIp }}
+          </span>
+          <span *ngIf="!user.lastLoginIp" class="text-muted">-</span>
+        </td>
         <td>
           <nz-button-group>
             <!-- Edit -->

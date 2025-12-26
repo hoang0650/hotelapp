@@ -85,4 +85,8 @@ export class PricingService {
   getCurrentUserPackage(userId: string): Observable<PricingPackage> {
     return this.http.get<PricingPackage>(`${this.apiUrl}/user/${userId}`);
   }
+
+  sendPaymentReminder(userId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/send-payment-reminder`, { userId });
+  }
 } 

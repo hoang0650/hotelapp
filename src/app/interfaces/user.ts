@@ -11,6 +11,7 @@ export interface User {
   status: 'active' | 'inactive' | 'suspended' | 'deleted';
   avatar?: string;
   lastLogin?: Date;
+  lastLoginIp?: string; // Địa chỉ IP lúc đăng nhập cuối cùng
   createdAt: Date;
   updatedAt: Date;
   twoFactorEnabled?: boolean;

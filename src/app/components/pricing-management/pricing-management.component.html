@@ -18,7 +18,7 @@
               <th>Giá tháng</th>
               <th>Giá năm</th>
               <th>Giảm giá (%)</th>
-              <th>Thời hạn (tháng)</th>
+              <th>Thời hạn</th>
               <th>Số người dùng tối đa</th>
               <th>Trạng thái</th>
               <th>Thao tác</th>
@@ -37,8 +37,16 @@
                 <span *ngIf="(pkg.monthlyPrice || 0) !== 0 || (pkg.yearlyPrice || 0) !== 0">{{ formatCurrency(pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0)) }}</span>
               </td>
               <td>{{ pkg.yearlyDiscount || 0 }}%</td>
-              <td>{{ pkg.duration }}</td>
-              <td>{{ pkg.maxUsers === -1 || pkg.maxUsers === null ? 'Không giới hạn' : pkg.maxUsers }}</td>
+              <td>
+                <span *ngIf="pkg.monthlyDuration || pkg.yearlyDuration">
+                  Tháng: {{ pkg.monthlyDuration || pkg.duration }} tháng<br>
+                  Năm: {{ pkg.yearlyDuration || pkg.duration }} tháng
+                </span>
+                <span *ngIf="!pkg.monthlyDuration && !pkg.yearlyDuration">
+                  {{ pkg.duration }} tháng
+                </span>
+              </td>
+              <td>{{ pkg.maxUsers === 0 || pkg.maxUsers === null ? 'Không giới hạn' : pkg.maxUsers }}</td>
               <td>
                 <nz-tag [nzColor]="pkg.isActive ? 'success' : 'error'">
                   {{ pkg.isActive ? 'Đang hoạt động' : 'Đã tắt' }}
@@ -106,7 +114,10 @@
               <th>Người dùng</th>
               <th>Email</th>
               <th>Gói đăng ký</th>
+              <th>Ngày đăng ký</th>
               <th>Ngày hết hạn</th>
+              <th>Số lượng người dùng</th>
+              <th>Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -114,7 +125,27 @@
               <td>{{ sub.username }}</td>
               <td>{{ sub.email }}</td>
               <td>{{ sub.packageName }}</td>
+              <td>{{ sub.subscriptionDate ? (sub.subscriptionDate | date:'dd/MM/yyyy') : 'N/A' }}</td>
               <td>{{ sub.expiryDate | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <span *ngIf="sub.maxUsers === 0 || sub.maxUsers === null">
+                  {{ sub.staffCount || 0 }} / Không giới hạn
+                </span>
+                <span *ngIf="sub.maxUsers !== 0 && sub.maxUsers !== null">
+                  {{ sub.staffCount || 0 }} / {{ sub.maxUsers }}
+                </span>
+              </td>
+              <td>
+                <button 
+                  nz-button 
+                  nzType="default" 
+                  nzSize="small"
+                  (click)="sendPaymentReminder(sub)"
+                  [nzLoading]="sub.sendingReminder">
+                  <i nz-icon nzType="notification"></i>
+                  Gửi thông báo
+                </button>
+              </td>
             </tr>
           </tbody>
         </nz-table>
@@ -195,8 +226,33 @@
           </nz-form-control>
         </nz-form-item>
 
-        <!-- Thời hạn -->
-        <nz-form-item>
+        <!-- Thời hạn - Chỉ hiển thị cho superadmin -->
+        <ng-container *ngIf="isSuperAdmin">
+          <!-- Thời hạn gói tháng -->
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6" nzRequired>Thời hạn gói tháng (tháng)</nz-form-label>
+            <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập thời hạn hợp lệ">
+              <nz-input-number formControlName="monthlyDuration" [nzMin]="1" [nzStep]="1" style="width: 100%"></nz-input-number>
+              <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+                Số tháng gói sẽ có hiệu lực khi người dùng đăng ký theo tháng
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+
+          <!-- Thời hạn gói năm -->
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6" nzRequired>Thời hạn gói năm (tháng)</nz-form-label>
+            <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập thời hạn hợp lệ">
+              <nz-input-number formControlName="yearlyDuration" [nzMin]="1" [nzStep]="1" style="width: 100%"></nz-input-number>
+              <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+                Số tháng gói sẽ có hiệu lực khi người dùng đăng ký theo năm
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+        </ng-container>
+
+        <!-- Thời hạn - Cho admin và các role khác (tương thích) -->
+        <nz-form-item *ngIf="!isSuperAdmin">
           <nz-form-label [nzSpan]="6" nzRequired>Thời hạn (tháng)</nz-form-label>
           <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập thời hạn hợp lệ">
             <nz-input-number formControlName="duration" [nzMin]="1" [nzStep]="1" style="width: 100%"></nz-input-number>
