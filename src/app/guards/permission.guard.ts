@@ -80,7 +80,6 @@ export class PermissionGuard implements CanActivate {
       // Chặn các routes quản lý cấp cao mà business/hotel không được phép
       const blockedRoutes = [
         '/admin/users-management', // User management - chỉ superadmin, admin, business (xem)
-        '/admin/pricing-management', // Pricing management - chỉ superadmin, admin, business
         '/admin/ota-management', // OTA management - business và hotel được phép
         '/admin/chart', // Revenue chart - business và hotel được phép
         '/admin/email-admin', // Email admin - chỉ superadmin và admin
@@ -128,7 +127,6 @@ export class PermissionGuard implements CanActivate {
         '/admin/staff',
         '/admin/service-management',
         '/admin/users-management',
-        '/admin/pricing-management',
         '/admin/ota-management',
         '/admin/chart',
         '/admin/email-admin',

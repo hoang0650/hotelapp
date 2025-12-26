@@ -169,11 +169,9 @@ export class AdminComponent implements OnInit {
            this.authService.isHotelManager();
   }
 
-  // Pricing Management - superadmin, admin, business
+  // Pricing Management - tất cả các role đều có thể truy cập
   canAccessPricingManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness();
+    return true; // Cho phép tất cả role truy cập
   }
 
   // Electric Setting - superadmin, admin, business, hotel
