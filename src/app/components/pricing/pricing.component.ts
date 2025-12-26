@@ -1641,7 +1641,7 @@ export class PricingComponent implements OnInit, OnDestroy {
       }
 
       // Lấy userId của currentUser
-      let currentUserId: string | null = null;
+      let currentUserId: string | undefined = undefined;
       if (currentUser._id) {
         currentUserId = typeof currentUser._id === 'string' ? currentUser._id : (currentUser._id as any).toString();
       }
