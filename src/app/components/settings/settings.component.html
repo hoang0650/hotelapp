@@ -950,6 +950,95 @@
             </div>
           </div>
 
+          <nz-divider nzText="Thông tin ngân hàng (QR thanh toán)"></nz-divider>
+          <nz-alert 
+            nzType="info" 
+            nzMessage="Thông tin ngân hàng cho QR thanh toán" 
+            nzDescription="Thông tin này sẽ được sử dụng làm mặc định cho QR code thanh toán trong pricing. Ưu tiên: Superadmin > Settings > User profile."
+            style="margin-bottom: 16px;">
+          </nz-alert>
+
+          <div formGroupName="bankAccount">
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label>Tên ngân hàng</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="bankName" placeholder="Ví dụ: Vietcombank" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label>Số tài khoản</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="accountNumber" placeholder="Số tài khoản ngân hàng" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label>Tên chủ tài khoản</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="accountHolderName" placeholder="Tên chủ tài khoản" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label>Tên người thụ hưởng</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="beneficiaryName" placeholder="Tên hiển thị trên QR code" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label>Chi nhánh</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="branch" placeholder="Chi nhánh ngân hàng" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label>QR Code URL (SePay)</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="qrPaymentUrl" placeholder="URL QR code thanh toán từ SePay" />
+                    <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                      Link QR code thanh toán từ SePay. Đây là URL quan trọng để hiển thị QR code khi thanh toán.
+                    </div>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+
+            <div nz-row [nzGutter]="16">
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label>SWIFT Code</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="swiftCode" placeholder="SWIFT Code (nếu có)" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                <nz-form-item>
+                  <nz-form-label>IBAN</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input formControlName="iban" placeholder="IBAN (nếu có)" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+          </div>
+
           <nz-divider nzText="Bảo trì và Bảo mật"></nz-divider>
 
           <div nz-row [nzGutter]="16">

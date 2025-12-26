@@ -89,6 +89,17 @@ export interface GeneralSettings {
   allowRegistration: boolean;
   requireEmailVerification: boolean;
   enable2FA: boolean;
+  // Bank Account for QR Payment
+  bankAccount?: {
+    bankName?: string;
+    accountNumber?: string;
+    accountHolderName?: string;
+    beneficiaryName?: string; // Tên người thụ hưởng (hiển thị trên QR code)
+    branch?: string;
+    swiftCode?: string;
+    iban?: string;
+    qrPaymentUrl?: string; // Link QR thanh toán SePay
+  };
 }
 
 export interface SettingsResponse {

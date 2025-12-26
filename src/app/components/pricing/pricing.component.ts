@@ -8,6 +8,7 @@ import { SePayService, SePayPaymentData } from '../../services/sepay.service';
 import { PayPalService } from '../../services/paypal.service';
 import { CryptoService, CryptoPaymentData } from '../../services/crypto.service';
 import { UserService } from '../../services/user.service';
+import { SettingsService } from '../../services/settings.service';
 import { forkJoin } from 'rxjs';
 
 interface PricingPlan {
@@ -63,6 +64,9 @@ export class PricingComponent implements OnInit, OnDestroy {
   sepayBeneficiaryName = '';
   sepayPaymentHistoryId = ''; // Lưu paymentHistoryId để kiểm tra trạng thái
   currentUser: any = null;
+  systemQRCode: string = ''; // QR code từ superadmin hoặc settings
+  systemBeneficiaryName: string = ''; // Tên người thụ hưởng từ superadmin hoặc settings
+  hasQRCode: boolean = false; // Kiểm tra có QR code không
   private paymentStatusCheckInterval: any = null; // Interval để kiểm tra trạng thái thanh toán
 
   plans: PricingPlan[] = [
@@ -159,7 +163,8 @@ export class PricingComponent implements OnInit, OnDestroy {
     private sepayService: SePayService,
     private paypalService: PayPalService,
     private cryptoService: CryptoService,
-    private userService: UserService
+    private userService: UserService,
+    private settingsService: SettingsService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -173,6 +178,7 @@ export class PricingComponent implements OnInit, OnDestroy {
       this.loadCurrentPackage();
       this.loadPaymentHistory();
       this.loadCurrentUser(); // Load user để lấy QR code
+      this.loadSystemQRCode(); // Load QR code từ superadmin hoặc settings
     } else {
       this.currentPackage = null;
     }
@@ -182,7 +188,7 @@ export class PricingComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Load thông tin user hiện tại để lấy QR code từ profile
+   * Load thông tin user hiện tại
    */
   loadCurrentUser(): void {
     // Lấy user từ AuthService
@@ -209,8 +215,91 @@ export class PricingComponent implements OnInit, OnDestroy {
       this.authService.currentUser$.subscribe({
         next: (user) => {
           this.currentUser = user;
+          // Kiểm tra QR code từ currentUser sau khi load xong
+          if (!this.hasQRCode && !this.systemQRCode) {
+            this.checkCurrentUserQRCode();
+          }
         }
       });
+    } else {
+      // Nếu đã có currentUser, kiểm tra QR code
+      if (!this.hasQRCode && !this.systemQRCode) {
+        this.checkCurrentUserQRCode();
+      }
+    }
+  }
+
+  /**
+   * Load QR code từ superadmin hoặc settings
+   * Ưu tiên: superadmin > settings
+   */
+  loadSystemQRCode(): void {
+    // Lấy superadmin user
+    this.userService.getUsersByRole('superadmin').subscribe({
+      next: (superadmins: any[]) => {
+        if (superadmins && superadmins.length > 0) {
+          const superadmin = superadmins[0]; // Lấy superadmin đầu tiên
+          const qrUrl = superadmin?.bankAccount?.qrPaymentUrl || '';
+          const beneficiaryName = superadmin?.bankAccount?.beneficiaryName || superadmin?.bankAccount?.accountHolderName || '';
+          
+          if (qrUrl) {
+            this.systemQRCode = qrUrl;
+            this.systemBeneficiaryName = beneficiaryName;
+            this.hasQRCode = true;
+            return;
+          }
+        }
+        
+        // Nếu không có QR code từ superadmin, thử lấy từ settings
+        this.loadQRCodeFromSettings();
+      },
+      error: (error: any) => {
+        console.error('Error loading superadmin:', error);
+        // Nếu không lấy được superadmin, thử lấy từ settings
+        this.loadQRCodeFromSettings();
+      }
+    });
+  }
+
+  /**
+   * Load QR code từ settings (nếu có)
+   */
+  loadQRCodeFromSettings(): void {
+    this.settingsService.getSettingsByType('general').subscribe({
+      next: (response: any) => {
+        if (response.success && response.data) {
+          const settings = response.data;
+          // Kiểm tra xem settings có chứa QR code trong bankAccount không
+          const qrUrl = settings.bankAccount?.qrPaymentUrl || '';
+          const beneficiaryName = settings.bankAccount?.beneficiaryName || settings.bankAccount?.accountHolderName || '';
+          
+          if (qrUrl) {
+            this.systemQRCode = qrUrl;
+            this.systemBeneficiaryName = beneficiaryName;
+            this.hasQRCode = true;
+            return;
+          }
+        }
+        
+        // Nếu không có QR code từ settings, kiểm tra currentUser
+        this.checkCurrentUserQRCode();
+      },
+      error: (error: any) => {
+        console.error('Error loading settings:', error);
+        this.checkCurrentUserQRCode();
+      }
+    });
+  }
+
+  /**
+   * Kiểm tra QR code từ currentUser (fallback)
+   */
+  checkCurrentUserQRCode(): void {
+    const qrUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
+    if (qrUrl) {
+      this.hasQRCode = true;
+    } else {
+      this.hasQRCode = false;
     }
   }
 
@@ -498,9 +587,16 @@ export class PricingComponent implements OnInit, OnDestroy {
     const packagePrice = this.getPackagePrice(pkg);
     const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
 
-    // Lấy QR code từ profile
-    const qrPaymentUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
-    const beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
+    // Lấy QR code từ superadmin hoặc settings (ưu tiên)
+    // Nếu không có, mới lấy từ currentUser
+    let qrPaymentUrl = this.systemQRCode || '';
+    let beneficiaryName = this.systemBeneficiaryName || '';
+    
+    // Fallback: Nếu không có từ system, lấy từ currentUser
+    if (!qrPaymentUrl) {
+      qrPaymentUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
+      beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
+    }
 
     if (!qrPaymentUrl) {
       this.message.warning('Chưa có QR code thanh toán trong profile. Vui lòng cập nhật thông tin ngân hàng trong profile trước khi thanh toán.');

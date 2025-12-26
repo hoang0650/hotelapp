@@ -163,7 +163,18 @@ export class SettingsComponent implements OnInit {
       maintenanceMessage: ['Hệ thống đang bảo trì. Vui lòng quay lại sau.'],
       allowRegistration: [true],
       requireEmailVerification: [false],
-      enable2FA: [false]
+      enable2FA: [false],
+      // Bank Account for QR Payment
+      bankAccount: this.fb.group({
+        bankName: [''],
+        accountNumber: [''],
+        accountHolderName: [''],
+        beneficiaryName: [''], // Tên người thụ hưởng (hiển thị trên QR code)
+        branch: [''],
+        swiftCode: [''],
+        iban: [''],
+        qrPaymentUrl: [''] // Link QR thanh toán SePay
+      })
     });
     
     // Hotel QR Payment Form
@@ -224,7 +235,16 @@ export class SettingsComponent implements OnInit {
           
           // Load general settings
           if (settings.generalSettings) {
-            this.generalForm.patchValue(settings.generalSettings);
+            const generalData = { ...settings.generalSettings };
+            // Nếu có bankAccount, patch riêng
+            if (generalData.bankAccount) {
+              const bankAccountData = generalData.bankAccount;
+              delete generalData.bankAccount;
+              this.generalForm.patchValue(generalData);
+              this.generalForm.patchValue({ bankAccount: bankAccountData });
+            } else {
+              this.generalForm.patchValue(generalData);
+            }
           }
         }
         this.loading = false;
