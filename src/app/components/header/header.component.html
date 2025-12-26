@@ -118,20 +118,34 @@
 >
   <ng-container *nzDrawerContent>
     <div class="notification-drawer">
+      <!-- Tabs phân loại -->
+      <nz-tabset 
+        [nzSelectedIndex]="activeTab === 'all' ? 0 : (activeTab === 'system' ? 1 : 2)" 
+        (nzSelectChange)="onTabChange($event)"
+        style="margin-bottom: 16px;">
+        <nz-tab [nzTitle]="'Tất cả' + (unreadCounts.total > 0 ? ' (' + unreadCounts.total + ')' : '')">
+        </nz-tab>
+        <nz-tab [nzTitle]="'Hệ thống' + (unreadCounts.system > 0 ? ' (' + unreadCounts.system + ')' : '')">
+        </nz-tab>
+        <nz-tab [nzTitle]="'Khách sạn' + (unreadCounts.hotel > 0 ? ' (' + unreadCounts.hotel + ')' : '')">
+        </nz-tab>
+      </nz-tabset>
+      
       <!-- Header Actions -->
-      <div class="notification-actions" *ngIf="notifications.length > 0">
+      <div class="notification-actions" *ngIf="filteredNotifications.length > 0" style="padding: 12px 0;">
         <button nz-button nzType="link" nzSize="small" (click)="markAllAsRead()">
           {{ 'NOTIFICATIONS.MARK_ALL_READ' | translate }}
         </button>
       </div>
       
       <!-- Notifications List -->
-      <div class="notification-list" *ngIf="notifications.length > 0; else noNotifications">
+      <div class="notification-list" *ngIf="filteredNotifications.length > 0; else noNotifications">
         <div 
-          *ngFor="let notification of notifications" 
+          *ngFor="let notification of filteredNotifications" 
           class="notification-item"
-          [class.unread]="!isRead(notification.id)"
+          [class.unread]="!notification.isRead"
           (click)="markAsRead(notification)"
+          style="cursor: pointer;"
         >
           <div class="notification-header">
             <nz-tag [nzColor]="getNotificationColor(notification.type)">

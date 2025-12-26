@@ -21,7 +21,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   
   // Notifications
   notifications: Announcement[] = [];
+  filteredNotifications: Announcement[] = [];
   unreadCount = 0;
+  unreadCounts = { total: 0, system: 0, hotel: 0 };
+  activeTab: 'all' | 'system' | 'hotel' = 'all';
   isNotificationDrawerVisible = false;
   notificationSettings: NotificationSettings | null = null;
   areNotificationsEnabled = true; // Mặc định bật
@@ -65,12 +68,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.notificationsService.announcements$.subscribe(announcements => {
         this.updateNotifications();
-      })
-    );
-    
-    this.subscriptions.add(
-      this.notificationsService.unreadCount$.subscribe(count => {
-        this.updateUnreadCount();
       })
     );
     
@@ -125,11 +122,31 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   markAsRead(announcement: Announcement): void {
-    this.notificationsService.markAsRead(announcement.id);
+    this.notificationsService.markAsRead(announcement.id).subscribe({
+      next: () => {
+        // Cập nhật trạng thái local
+        announcement.isRead = true;
+        this.loadUnreadCounts();
+        this.filterNotificationsByTab();
+      },
+      error: (error) => {
+        console.error('Error marking as read:', error);
+      }
+    });
   }
 
   markAllAsRead(): void {
-    this.notificationsService.markAllAsRead();
+    this.notificationsService.markAllAsRead().subscribe({
+      next: () => {
+        // Cập nhật trạng thái local
+        this.notifications.forEach(n => n.isRead = true);
+        this.loadUnreadCounts();
+        this.filterNotificationsByTab();
+      },
+      error: (error) => {
+        console.error('Error marking all as read:', error);
+      }
+    });
   }
 
   /**
@@ -255,24 +272,108 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private updateNotifications(): void {
     if (!this.areNotificationsEnabled) {
       this.notifications = [];
+      this.filteredNotifications = [];
       this.unreadCount = 0;
       return;
     }
     
-    this.notifications = this.notificationsService.getAllNotifications();
-    this.updateUnreadCount();
+    const allNotifications = this.notificationsService.getAllNotifications();
+    
+    // Filter notifications dựa trên notificationType và notifyOn* settings
+    if (this.notificationSettings) {
+      this.notifications = allNotifications.filter(notification => {
+        // Nếu notificationType là 'general', hiển thị luôn (không phụ thuộc vào notifyOn*)
+        if (!notification.notificationType || notification.notificationType === 'general') {
+          return true;
+        }
+        
+        // Map notificationType với notifyOn* settings
+        const notificationTypeMap: { [key: string]: keyof NotificationSettings } = {
+          'booking': 'notifyOnBooking',
+          'checkin': 'notifyOnCheckin',
+          'checkout': 'notifyOnCheckout',
+          'payment': 'notifyOnPayment',
+          'cancellation': 'notifyOnCancellation',
+          'lowInventory': 'notifyOnLowInventory',
+          'systemError': 'notifyOnSystemError'
+        };
+        
+        const notifyOnKey = notificationTypeMap[notification.notificationType];
+        if (notifyOnKey && this.notificationSettings) {
+          // Chỉ hiển thị nếu notifyOn* tương ứng được bật
+          return this.notificationSettings[notifyOnKey] === true;
+        }
+        
+        // Nếu không map được, hiển thị luôn (fallback)
+        return true;
+      });
+    } else {
+      // Nếu không có notificationSettings, hiển thị tất cả
+      this.notifications = allNotifications;
+    }
+    
+    this.filterNotificationsByTab();
+    this.loadUnreadCounts();
   }
-
+  
   /**
-   * Cập nhật số lượng thông báo chưa đọc
+   * Filter notifications theo tab hiện tại
    */
-  private updateUnreadCount(): void {
-    if (!this.areNotificationsEnabled) {
-      this.unreadCount = 0;
+  filterNotificationsByTab(): void {
+    if (!this.notifications) {
+      this.filteredNotifications = [];
       return;
     }
-    
-    this.unreadCount = this.notificationsService.getUnreadCount();
+    if (this.activeTab === 'all') {
+      this.filteredNotifications = this.notifications;
+    } else if (this.activeTab === 'system') {
+      this.filteredNotifications = this.notifications.filter(n => 
+        !n.targetType || n.targetType === 'system'
+      );
+    } else if (this.activeTab === 'hotel') {
+      this.filteredNotifications = this.notifications.filter(n => 
+        n.targetType === 'hotel'
+      );
+    }
+  }
+  
+  /**
+   * Chuyển tab
+   */
+  switchTab(tab: 'all' | 'system' | 'hotel'): void {
+    this.activeTab = tab;
+    this.filterNotificationsByTab();
+  }
+  
+  /**
+   * Chuyển tab từ index (dùng cho nz-tabset)
+   */
+  onTabChange(event: any): void {
+    const index = typeof event === 'number' ? event : (event?.index ?? 0);
+    if (index === 0) {
+      this.switchTab('all');
+    } else if (index === 1) {
+      this.switchTab('system');
+    } else if (index === 2) {
+      this.switchTab('hotel');
+    }
+  }
+  
+  /**
+   * Load số lượng chưa đọc từ backend
+   */
+  loadUnreadCounts(): void {
+    this.notificationsService.getUnreadCount().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.unreadCounts = response.data;
+          this.unreadCount = response.data.total;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading unread counts:', error);
+      }
+    });
   }
 
   getNotificationIcon(type: string): string {
@@ -309,12 +410,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     });
   }
 
-  isRead(announcementId: string): boolean {
-    // Lấy danh sách đã đọc từ localStorage
-    const stored = localStorage.getItem('readAnnouncements');
-    const readAnnouncements = stored ? JSON.parse(stored) : [];
-    return readAnnouncements.includes(announcementId);
-  }
 
   getNotificationTypeLabel(type: string): string {
     const labelMap: { [key: string]: string } = {

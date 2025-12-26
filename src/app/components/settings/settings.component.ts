@@ -241,7 +241,8 @@ export class SettingsComponent implements OnInit {
       targetType: ['system', Validators.required],
       targetRoles: [[]],
       targetBusinesses: [[]],
-      targetHotels: [[]]
+      targetHotels: [[]],
+      notificationType: ['general', Validators.required] // Loại thông báo để map với notifyOn* settings
     });
   }
 
@@ -1027,7 +1028,8 @@ export class SettingsComponent implements OnInit {
         targetType: announcement.targetType || 'system',
         targetRoles: announcement.targetRoles || [],
         targetBusinesses: announcement.targetBusinesses || [],
-        targetHotels: announcement.targetHotels || []
+        targetHotels: announcement.targetHotels || [],
+        notificationType: announcement.notificationType || 'general'
       });
     } else {
       // Create mode
@@ -1042,7 +1044,8 @@ export class SettingsComponent implements OnInit {
         targetType: 'system',
         targetRoles: [],
         targetBusinesses: [],
-        targetHotels: []
+        targetHotels: [],
+        notificationType: 'general'
       });
     }
     
@@ -1074,7 +1077,8 @@ export class SettingsComponent implements OnInit {
       targetType: formValue.targetType,
       targetRoles: formValue.targetRoles || [],
       targetBusinesses: formValue.targetBusinesses || [],
-      targetHotels: formValue.targetHotels || []
+      targetHotels: formValue.targetHotels || [],
+      notificationType: formValue.notificationType || 'general'
     };
     
     if (this.editingAnnouncement) {
@@ -1132,6 +1136,20 @@ export class SettingsComponent implements OnInit {
       'system': 'Hệ thống (Tất cả)',
       'business': 'Doanh nghiệp',
       'hotel': 'Khách sạn'
+    };
+    return labels[type] || type;
+  }
+  
+  getNotificationTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'general': 'Chung',
+      'booking': 'Đặt phòng',
+      'checkin': 'Check-in',
+      'checkout': 'Check-out',
+      'payment': 'Thanh toán',
+      'cancellation': 'Hủy đặt phòng',
+      'lowInventory': 'Hết hàng',
+      'systemError': 'Lỗi hệ thống'
     };
     return labels[type] || type;
   }

@@ -9,6 +9,7 @@ import { PayPalService } from '../../services/paypal.service';
 import { CryptoService, CryptoPaymentData } from '../../services/crypto.service';
 import { UserService } from '../../services/user.service';
 import { SettingsService } from '../../services/settings.service';
+import { NotificationsService, Announcement } from '../../services/notifications.service';
 import { forkJoin } from 'rxjs';
 
 interface PricingPlan {
@@ -164,7 +165,8 @@ export class PricingComponent implements OnInit, OnDestroy {
     private paypalService: PayPalService,
     private cryptoService: CryptoService,
     private userService: UserService,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private notificationsService: NotificationsService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -323,10 +325,29 @@ export class PricingComponent implements OnInit, OnDestroy {
     if (paymentStatus === 'success') {
       // Thanh toán thành công - webhook sẽ tự động xử lý đăng ký gói
       this.message.success('Thanh toán thành công! Hệ thống đang xử lý đăng ký gói. Vui lòng đợi vài giây...');
+      
+      // Lưu thông tin package trước khi reset để tạo thông báo
+      const packageInfo = this.selectedPackage ? { ...this.selectedPackage } : null;
       this.selectedPackage = null; // Reset selected package
       
       // Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
       this.loadLatestPaymentAndPlaySound();
+      
+      // Tạo thông báo hệ thống cho thanh toán thành công
+      if (packageInfo) {
+        const billingTypeText = packageInfo.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+        // Kiểm tra xem có phải nâng cấp/cập nhật gói không
+        const isUpgrade = this.currentPackage && this.currentPackage.packageId && this.currentPackage.packageId !== packageInfo.packageId;
+        const isUpdate = this.currentPackage && this.currentPackage.packageId === packageInfo.packageId && this.currentPackage.billingType !== packageInfo.billingType;
+        
+        if (isUpgrade) {
+          this.createSubscriptionAnnouncement(packageInfo.name, billingTypeText, 'upgrade');
+        } else if (isUpdate) {
+          this.createSubscriptionAnnouncement(packageInfo.name, billingTypeText, 'update');
+        } else {
+          this.createSubscriptionAnnouncement(packageInfo.name, billingTypeText, 'payment');
+        }
+      }
       
       // Reload package sau 2 giây để kiểm tra xem đã đăng ký chưa
       setTimeout(() => {
@@ -471,12 +492,24 @@ export class PricingComponent implements OnInit, OnDestroy {
     if (this.isFreePackage(pkg)) {
       // Đăng ký trực tiếp không cần thanh toán
       this.loading = true;
+      // Kiểm tra xem có phải nâng cấp/cập nhật gói không
+      const isUpgrade = this.currentPackage && this.currentPackage.packageId && this.currentPackage.packageId !== packageId;
+      const isUpdate = this.currentPackage && this.currentPackage.packageId === packageId && this.currentPackage.billingType !== this.billingType;
+      
       this.pricingService.subscribe(this.userId, packageId, this.billingType).subscribe({
         next: (response: any) => {
           if (response.success !== false) {
             this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công`);
             this.loadCurrentPackage();
             this.selectedPackage = null;
+            // Tạo thông báo hệ thống
+            if (isUpgrade) {
+              this.createSubscriptionAnnouncement(pkg.name, billingTypeText, 'upgrade');
+            } else if (isUpdate) {
+              this.createSubscriptionAnnouncement(pkg.name, billingTypeText, 'update');
+            } else {
+              this.createSubscriptionAnnouncement(pkg.name, billingTypeText, 'subscribe');
+            }
           } else {
             this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
           }
@@ -984,6 +1017,10 @@ export class PricingComponent implements OnInit, OnDestroy {
     // Sau khi thanh toán thành công, đăng ký gói
     if (event.paymentData && event.paymentData.packageId) {
       this.loading = true;
+      // Kiểm tra xem có phải nâng cấp/cập nhật gói không
+      const isUpgrade = this.currentPackage && this.currentPackage.packageId && this.currentPackage.packageId !== event.paymentData.packageId;
+      const isUpdate = this.currentPackage && this.currentPackage.packageId === event.paymentData.packageId && this.currentPackage.billingType !== event.paymentData.billingType;
+      
       this.pricingService.subscribe(
         this.userId, 
         event.paymentData.packageId, 
@@ -995,6 +1032,17 @@ export class PricingComponent implements OnInit, OnDestroy {
             const billingTypeText = event.paymentData.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
             this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công`);
             this.loadCurrentPackage();
+            // Tạo thông báo hệ thống cho thanh toán và đăng ký gói thành công
+            const pkg = this.packages.find(p => (p._id || p.id) === event.paymentData.packageId);
+            if (pkg) {
+              if (isUpgrade) {
+                this.createSubscriptionAnnouncement(pkg.name, billingTypeText, 'upgrade');
+              } else if (isUpdate) {
+                this.createSubscriptionAnnouncement(pkg.name, billingTypeText, 'update');
+              } else {
+                this.createSubscriptionAnnouncement(pkg.name, billingTypeText, 'payment');
+              }
+            }
           } else {
             this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
           }
@@ -1021,6 +1069,10 @@ export class PricingComponent implements OnInit, OnDestroy {
     if (event.success && this.selectedPackage) {
       this.loading = true;
       // Gọi subscribe với paymentMethod='crypto_usdt'
+      // Kiểm tra xem có phải nâng cấp/cập nhật gói không
+      const isUpgrade = this.currentPackage && this.currentPackage.packageId && this.currentPackage.packageId !== this.selectedPackage.packageId;
+      const isUpdate = this.currentPackage && this.currentPackage.packageId === this.selectedPackage.packageId && this.currentPackage.billingType !== this.selectedPackage.billingType;
+      
       this.pricingService.subscribe(
         this.userId,
         this.selectedPackage.packageId,
@@ -1033,6 +1085,14 @@ export class PricingComponent implements OnInit, OnDestroy {
             const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
             this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công. Đang chờ xác nhận thanh toán.`);
             this.loadCurrentPackage();
+            // Tạo thông báo hệ thống cho thanh toán và đăng ký gói thành công
+            if (isUpgrade) {
+              this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'upgrade');
+            } else if (isUpdate) {
+              this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'update');
+            } else {
+              this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'payment');
+            }
             this.selectedPackage = null;
           } else {
             this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
@@ -1488,11 +1548,134 @@ export class PricingComponent implements OnInit, OnDestroy {
     // Hiển thị thông báo thành công
     this.message.success('Thanh toán thành công! Hệ thống đang xử lý đăng ký gói...');
     
+    // Tạo thông báo hệ thống cho thanh toán thành công
+    if (this.selectedPackage) {
+      const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+      // Kiểm tra xem có phải nâng cấp/cập nhật gói không
+      const isUpgrade = this.currentPackage && this.currentPackage.packageId && this.currentPackage.packageId !== this.selectedPackage.packageId;
+      const isUpdate = this.currentPackage && this.currentPackage.packageId === this.selectedPackage.packageId && this.currentPackage.billingType !== this.selectedPackage.billingType;
+      
+      if (isUpgrade) {
+        this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'upgrade');
+      } else if (isUpdate) {
+        this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'update');
+      } else {
+        this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'payment');
+      }
+    }
+    
     // Reload package sau 2 giây để kiểm tra xem đã đăng ký chưa
     setTimeout(() => {
       this.loadCurrentPackage();
       this.loadPaymentHistory();
     }, 2000);
+  }
+
+  /**
+   * Tạo thông báo hệ thống cho subscription/payment
+   */
+  private createSubscriptionAnnouncement(packageName: string, billingTypeText: string, actionType: 'subscribe' | 'payment' | 'upgrade' | 'update'): void {
+    try {
+      const currentUser = this.authService.getCurrentUser();
+      if (!currentUser) return;
+
+      // Xác định title và message dựa trên actionType
+      let title = '';
+      let message = '';
+      let notificationType: 'payment' | 'general' = 'payment';
+
+      switch (actionType) {
+        case 'subscribe':
+          title = `Đăng ký gói: ${packageName}`;
+          message = `Đã đăng ký gói ${packageName} ${billingTypeText} thành công.`;
+          notificationType = 'payment';
+          break;
+        case 'payment':
+          title = `Thanh toán gói: ${packageName}`;
+          message = `Thanh toán gói ${packageName} ${billingTypeText} thành công. Hệ thống đang xử lý đăng ký gói.`;
+          notificationType = 'payment';
+          break;
+        case 'upgrade':
+          title = `Nâng cấp gói: ${packageName}`;
+          message = `Đã nâng cấp lên gói ${packageName} ${billingTypeText} thành công.`;
+          notificationType = 'payment';
+          break;
+        case 'update':
+          title = `Cập nhật gói: ${packageName}`;
+          message = `Đã cập nhật gói ${packageName} ${billingTypeText} thành công.`;
+          notificationType = 'payment';
+          break;
+      }
+
+      // Xác định targetType và targetBusinesses/targetHotels
+      let targetType: 'system' | 'business' | 'hotel' = 'system';
+      let targetBusinesses: string[] = [];
+      let targetHotels: string[] = [];
+
+      // Nếu user có businessId, tạo thông báo cho business
+      if (currentUser.businessId) {
+        targetType = 'business';
+        let businessId: string | null = null;
+        if (typeof currentUser.businessId === 'string') {
+          businessId = currentUser.businessId;
+        } else if (currentUser.businessId && typeof currentUser.businessId === 'object') {
+          businessId = (currentUser.businessId as any)._id || (currentUser.businessId as any).toString();
+        }
+        if (businessId) {
+          targetBusinesses = [businessId.toString()];
+        }
+      }
+
+      // Nếu user có hotelId, tạo thông báo cho hotel
+      if (currentUser.hotelId) {
+        targetType = 'hotel';
+        let hotelId: string | null = null;
+        if (typeof currentUser.hotelId === 'string') {
+          hotelId = currentUser.hotelId;
+        } else if (currentUser.hotelId && typeof currentUser.hotelId === 'object') {
+          hotelId = (currentUser.hotelId as any)._id || (currentUser.hotelId as any).toString();
+        }
+        if (hotelId) {
+          targetHotels = [hotelId.toString()];
+        }
+      }
+
+      // Lấy userId của currentUser
+      let currentUserId: string | null = null;
+      if (currentUser._id) {
+        currentUserId = typeof currentUser._id === 'string' ? currentUser._id : (currentUser._id as any).toString();
+      }
+
+      // Tạo announcement
+      const announcement: Partial<Announcement> = {
+        type: 'success',
+        title: title,
+        message: message,
+        priority: 'medium',
+        startDate: new Date().toISOString(),
+        isActive: true,
+        targetRoles: ['business', 'hotel'], // Chỉ gửi cho business và hotel manager
+        targetBusinesses: targetBusinesses,
+        targetHotels: targetHotels,
+        targetType: targetType,
+        notificationType: notificationType,
+        userId: currentUserId // Lưu userId để chỉ user đó và admin/superadmin thấy
+      };
+
+      // Gọi API tạo announcement (không cần đợi response)
+      this.notificationsService.createAnnouncement(announcement).subscribe({
+        next: () => {
+          console.log('[createSubscriptionAnnouncement] Created announcement successfully');
+        },
+        error: (error) => {
+          console.error('[createSubscriptionAnnouncement] Error creating announcement:', error);
+          // Không hiển thị lỗi cho user, chỉ log
+        }
+      });
+    } catch (error) {
+      console.error('[createSubscriptionAnnouncement] Error:', error);
+      // Không throw error để không ảnh hưởng đến flow chính
+    }
   }
 
   /**

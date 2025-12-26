@@ -16,8 +16,20 @@ export interface Announcement {
   targetBusinesses?: string[]; // Array of business IDs
   targetHotels?: string[]; // Array of hotel IDs
   targetType?: 'system' | 'business' | 'hotel'; // Type of target
+  notificationType?: 'booking' | 'checkin' | 'checkout' | 'payment' | 'cancellation' | 'lowInventory' | 'systemError' | 'general' | 'registration' | 'contact'; // Loại thông báo để map với notifyOn* settings
+  userId?: string; // User ID của người dùng liên quan (cho thông báo gói, đăng ký, liên hệ)
+  isRead?: boolean; // Trạng thái đã đọc (từ backend)
   createdAt: Date | string;
   createdBy?: string;
+}
+
+export interface UnreadCountResponse {
+  success: boolean;
+  data: {
+    total: number;
+    system: number;
+    hotel: number;
+  };
 }
 
 export interface NotificationResponse {
@@ -90,39 +102,38 @@ export class NotificationsService {
     });
   }
 
-  // Lấy số lượng thông báo chưa đọc
-  getUnreadCount(): number {
-    const announcements = this.announcementsSubject.value;
-    const readAnnouncements = this.getReadAnnouncements();
-    return announcements.filter(a => !readAnnouncements.includes(a.id)).length;
+  // Lấy số lượng thông báo chưa đọc từ backend
+  getUnreadCount(): Observable<UnreadCountResponse> {
+    return this.http.get<UnreadCountResponse>(`${this.apiUrl}/announcements/unread-count`, { 
+      headers: this.getHeaders() 
+    });
   }
 
-  // Đánh dấu đã đọc
-  markAsRead(announcementId: string): void {
-    const readAnnouncements = this.getReadAnnouncements();
-    if (!readAnnouncements.includes(announcementId)) {
-      readAnnouncements.push(announcementId);
-      localStorage.setItem('readAnnouncements', JSON.stringify(readAnnouncements));
-      this.updateUnreadCount();
-    }
+  // Đánh dấu đã đọc (gọi API backend)
+  markAsRead(announcementId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/announcements/${announcementId}/read`, {}, { 
+      headers: this.getHeaders() 
+    });
   }
 
-  // Đánh dấu tất cả đã đọc
-  markAllAsRead(): void {
-    const announcements = this.announcementsSubject.value;
-    const readAnnouncements = announcements.map(a => a.id);
-    localStorage.setItem('readAnnouncements', JSON.stringify(readAnnouncements));
-    this.updateUnreadCount();
-  }
-
-  private getReadAnnouncements(): string[] {
-    const stored = localStorage.getItem('readAnnouncements');
-    return stored ? JSON.parse(stored) : [];
+  // Đánh dấu tất cả đã đọc (gọi API backend)
+  markAllAsRead(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/announcements/read-all`, {}, { 
+      headers: this.getHeaders() 
+    });
   }
 
   private updateUnreadCount(): void {
-    const count = this.getUnreadCount();
-    this.unreadCountSubject.next(count);
+    this.getUnreadCount().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.unreadCountSubject.next(response.data.total);
+        }
+      },
+      error: (error) => {
+        console.error('Error updating unread count:', error);
+      }
+    });
   }
 
   // Lấy thông báo maintenance mode từ settings

@@ -1368,6 +1368,20 @@
                   </nz-tag>
                 </td>
                 <td>
+                  <nz-tag [nzColor]="
+                    announcement.notificationType === 'general' ? 'cyan' :
+                    announcement.notificationType === 'booking' ? 'blue' :
+                    announcement.notificationType === 'checkin' ? 'green' :
+                    announcement.notificationType === 'checkout' ? 'orange' :
+                    announcement.notificationType === 'payment' ? 'purple' :
+                    announcement.notificationType === 'cancellation' ? 'red' :
+                    announcement.notificationType === 'lowInventory' ? 'gold' :
+                    announcement.notificationType === 'systemError' ? 'volcano' : 'default'
+                  ">
+                    {{ getNotificationTypeLabel(announcement.notificationType || 'general') }}
+                  </nz-tag>
+                </td>
+                <td>
                   <nz-tag>{{ getTargetTypeLabel(announcement.targetType || 'system') }}</nz-tag>
                   <div *ngIf="announcement.targetBusinesses && announcement.targetBusinesses.length > 0" style="margin-top: 4px; font-size: 12px;">
                     <span *ngFor="let businessId of announcement.targetBusinesses; let last = last">
@@ -1479,6 +1493,26 @@
           </nz-form-item>
         </div>
       </div>
+
+      <nz-form-item>
+        <nz-form-label nzRequired>Loại thông báo (Áp dụng cài đặt)</nz-form-label>
+        <nz-form-control>
+          <nz-select formControlName="notificationType">
+            <nz-option nzValue="general" nzLabel="Chung (Luôn hiển thị)"></nz-option>
+            <nz-option nzValue="booking" nzLabel="Đặt phòng (Chỉ Business & Hotel Manager)"></nz-option>
+            <nz-option nzValue="checkin" nzLabel="Check-in (Chỉ Business & Hotel Manager)"></nz-option>
+            <nz-option nzValue="checkout" nzLabel="Check-out (Chỉ Business & Hotel Manager)"></nz-option>
+            <nz-option nzValue="payment" nzLabel="Thanh toán"></nz-option>
+            <nz-option nzValue="cancellation" nzLabel="Hủy đặt phòng (Chỉ Business & Hotel Manager)"></nz-option>
+            <nz-option nzValue="lowInventory" nzLabel="Hết hàng (Chỉ Business & Hotel Manager)"></nz-option>
+            <nz-option nzValue="systemError" nzLabel="Lỗi hệ thống (Chỉ Business & Hotel Manager)"></nz-option>
+          </nz-select>
+          <div style="margin-top: 8px; color: #666; font-size: 12px;">
+            Chọn loại thông báo để áp dụng cài đặt bật/tắt tương ứng. "Chung" sẽ luôn hiển thị bất kể cài đặt.
+            <br><strong>Lưu ý:</strong> Các thông báo "Đặt phòng", "Check-in", "Check-out", "Hủy đặt phòng", "Hết hàng", "Lỗi hệ thống" chỉ được gửi đến Business và Hotel Manager sau khi Superadmin/Admin bật thông báo chung hoặc từng khách sạn.
+          </div>
+        </nz-form-control>
+      </nz-form-item>
 
       <nz-form-item>
         <nz-form-label nzRequired>Đối tượng nhận</nz-form-label>
