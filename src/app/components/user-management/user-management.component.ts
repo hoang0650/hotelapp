@@ -5,6 +5,7 @@ import { NzModalService } from 'ng-zorro-antd/modal';
 import { UserService } from '../../services/user.service';
 import { AuthService, PermissionRules } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
+import { PermissionFeature } from '../../services/permission.service';
 
 type UserRole = 'superadmin' | 'admin' | 'business' | 'hotel' | 'staff' | 'guest';
 type UserStatus = 'active' | 'inactive' | 'suspended' | 'deleted';
@@ -35,6 +36,39 @@ export class UserManagementComponent implements OnInit {
   selectedStatusFilter: UserStatus | 'all' = 'all';
   searchText = '';
   passwordVisible = false;
+  
+  // Available features (tương tự pricing-management)
+  availableFeatures: { value: PermissionFeature; label: string }[] = [
+    { value: 'room_management', label: 'Quản lý phòng' },
+    { value: 'hotel_management', label: 'Quản lý khách sạn' },
+    { value: 'company_management', label: 'Quản lý doanh nghiệp' },
+    { value: 'staff_management', label: 'Quản lý nhân viên' },
+    { value: 'service_management', label: 'Quản lý dịch vụ' },
+    { value: 'user_management', label: 'Quản lý người dùng' },
+    { value: 'pricing_management', label: 'Quản lý gói giá' },
+    { value: 'ota_management', label: 'Quản lý OTA' },
+    { value: 'revenue_chart', label: 'Biểu đồ doanh thu' },
+    { value: 'shift_handover', label: 'Giao ca' },
+    { value: 'bank_transfer_history', label: 'Lịch sử chuyển khoản' },
+    { value: 'calendar', label: 'Lịch' },
+    { value: 'email_admin', label: 'Quản lý email' },
+    { value: 'qr_payment', label: 'Thanh toán QR' },
+    { value: 'visa_payment', label: 'Thanh toán Visa' },
+    { value: 'electric_management', label: 'Quản lý điện' }
+  ];
+  
+  // Feature flags (tương tự pricing-management)
+  availableFeatureFlags: { value: string; label: string; description: string }[] = [
+    { value: 'qrPaymentFeature', label: 'QR thanh toán', description: 'Bật tính năng QR thanh toán tự động' },
+    { value: 'otaManagementFeature', label: 'Quản lý OTA', description: 'Bật tính năng quản lý OTA' },
+    { value: 'emailManagementFeature', label: 'Quản lý email', description: 'Bật tính năng quản lý email' },
+    { value: 'electricManagementFeature', label: 'Quản lý điện', description: 'Bật tính năng quản lý điện' },
+    { value: 'paypalPaymentFeature', label: 'Thanh toán PayPal', description: 'Bật tính năng thanh toán PayPal' },
+    { value: 'cryptoPaymentFeature', label: 'Thanh toán Crypto', description: 'Bật tính năng thanh toán Crypto' },
+    { value: 'draftInvoiceFeature', label: 'Xem hóa đơn nháp', description: 'Bật tính năng xem hóa đơn nháp' },
+    { value: 'exportInvoiceFeature', label: 'Xuất hóa đơn', description: 'Bật tính năng xuất hóa đơn' },
+    { value: 'aiChatboxFeature', label: 'AI Chatbox', description: 'Bật tính năng AI Chatbox' }
+  ];
 
   // Role và Status options
   readonly userRoles: { label: string; value: UserRole }[] = [
@@ -222,6 +256,18 @@ export class UserManagementComponent implements OnInit {
       businessId: [''],
       hotelId: [''],
       permissions: [[]],
+      // Tính năng (features) - tương tự pricing-management
+      features: [[]],
+      // Feature flags - tương tự pricing-management
+      qrPaymentFeature: [false],
+      otaManagementFeature: [false],
+      emailManagementFeature: [false],
+      electricManagementFeature: [false],
+      paypalPaymentFeature: [false],
+      cryptoPaymentFeature: [false],
+      draftInvoiceFeature: [false],
+      exportInvoiceFeature: [false],
+      aiChatboxFeature: [false],
       preferences: this.fb.group({
         language: ['vi'],
         theme: ['light'],
@@ -392,6 +438,18 @@ export class UserManagementComponent implements OnInit {
       businessId: user.businessId,
       hotelId: user.hotelId,
       permissions: user.permissions || [],
+      // Tính năng (features) - từ user hoặc từ pricing package
+      features: user.features || [],
+      // Feature flags - từ user hoặc từ pricing package
+      qrPaymentFeature: user.qrPaymentFeature || false,
+      otaManagementFeature: user.otaManagementFeature || false,
+      emailManagementFeature: user.emailManagementFeature || false,
+      electricManagementFeature: user.electricManagementFeature || false,
+      paypalPaymentFeature: user.paypalPaymentFeature || false,
+      cryptoPaymentFeature: user.cryptoPaymentFeature || false,
+      draftInvoiceFeature: user.draftInvoiceFeature || false,
+      exportInvoiceFeature: user.exportInvoiceFeature || false,
+      aiChatboxFeature: user.aiChatboxFeature || false,
       preferences: user.preferences || {
         language: 'vi',
         theme: 'light',
@@ -434,6 +492,25 @@ export class UserManagementComponent implements OnInit {
     // Xóa permissions nếu là array rỗng
     if (Array.isArray(userData.permissions) && userData.permissions.length === 0) {
       delete userData.permissions;
+    }
+    
+    // Xóa features nếu là array rỗng (chỉ khi không phải admin)
+    if (!this.isAdmin && Array.isArray(userData.features) && userData.features.length === 0) {
+      delete userData.features;
+    }
+    
+    // Giữ lại các feature flags nếu là admin (cho phép phân quyền trực tiếp)
+    // Nếu không phải admin, xóa các feature flags (không được phép phân quyền)
+    if (!this.isAdmin) {
+      delete userData.qrPaymentFeature;
+      delete userData.otaManagementFeature;
+      delete userData.emailManagementFeature;
+      delete userData.electricManagementFeature;
+      delete userData.paypalPaymentFeature;
+      delete userData.cryptoPaymentFeature;
+      delete userData.draftInvoiceFeature;
+      delete userData.exportInvoiceFeature;
+      delete userData.aiChatboxFeature;
     }
 
     console.log('Sending user data:', userData);

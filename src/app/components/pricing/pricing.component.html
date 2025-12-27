@@ -345,11 +345,14 @@
           />
         </div>
         <div style="margin-top: 12px; font-size: 12px; color: #666;">
-          <p style="margin: 4px 0;">
-            <strong>Ngân hàng:</strong> {{ currentUser?.bankAccount?.bankName || 'N/A' }}
+          <p style="margin: 4px 0;" *ngIf="systemBeneficiaryName">
+            <strong>Người thụ hưởng:</strong> {{ systemBeneficiaryName }}
           </p>
-          <p style="margin: 4px 0;">
-            <strong>Số tài khoản:</strong> {{ currentUser?.bankAccount?.accountNumber || 'N/A' }}
+          <p style="margin: 4px 0;" *ngIf="systemBankName">
+            <strong>Ngân hàng:</strong> {{ systemBankName }}
+          </p>
+          <p style="margin: 4px 0;" *ngIf="systemAccountNumber">
+            <strong>Số tài khoản:</strong> {{ systemAccountNumber }}
           </p>
         </div>
       </div>

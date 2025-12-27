@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { TranslationService } from './services/translation.service';
 import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { SettingsService } from './services/settings.service';
@@ -20,6 +21,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor(
     private translate: TranslateService,
+    private translationService: TranslationService,
     private router: Router,
     private authService: AuthService,
     private settingsService: SettingsService,

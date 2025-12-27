@@ -3,7 +3,7 @@
     <div class="header-section">
       <h2 class="mb-4">
         <i nz-icon nzType="user" nzTheme="outline"></i>
-        Quản Lý Khách
+        {{ 'GUEST_MANAGEMENT.TITLE' | translate }}
       </h2>
     </div>
 
@@ -11,7 +11,7 @@
     <nz-alert 
       *ngIf="isBusiness && !isAdmin" 
       nzType="info" 
-      nzMessage="Bạn đang xem danh sách khách của các khách sạn thuộc doanh nghiệp mình."
+      [nzMessage]="'GUEST_MANAGEMENT.VIEW_BUSINESS_GUESTS' | translate"
       [nzCloseable]="true"
       class="mb-3">
     </nz-alert>
@@ -19,7 +19,7 @@
     <nz-alert 
       *ngIf="(isHotelManager || isStaff) && !isAdmin && !isBusiness" 
       nzType="info" 
-      nzMessage="Bạn đang xem danh sách khách của khách sạn mình."
+      [nzMessage]="'GUEST_MANAGEMENT.VIEW_HOTEL_GUESTS' | translate"
       [nzCloseable]="true"
       class="mb-3">
     </nz-alert>
@@ -28,10 +28,10 @@
     <div nz-row [nzGutter]="16" class="mb-4 filter-section">
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Khách sạn</nz-form-label>
+          <nz-form-label>{{ 'GUEST_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Chọn khách sạn"
+              [nzPlaceHolder]="'GUEST_MANAGEMENT.SELECT_HOTEL' | translate"
               [ngModel]="selectedHotelId" 
               (ngModelChange)="onHotelChange($event)"
               nzAllowClear
@@ -45,17 +45,17 @@
       
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Loại khách</nz-form-label>
+          <nz-form-label>{{ 'GUEST_MANAGEMENT.GUEST_TYPE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Tất cả"
+              [nzPlaceHolder]="'GUEST_MANAGEMENT.ALL' | translate"
               [ngModel]="selectedGuestType" 
               (ngModelChange)="onGuestTypeChange($event)"
               nzAllowClear
               class="w-100">
-              <nz-option nzValue="regular" nzLabel="Khách lưu"></nz-option>
-              <nz-option nzValue="frequent" nzLabel="Khách quen"></nz-option>
-              <nz-option nzValue="group" nzLabel="Khách đoàn"></nz-option>
+              <nz-option nzValue="regular" [nzLabel]="'GUEST_MANAGEMENT.REGULAR_GUEST' | translate"></nz-option>
+              <nz-option nzValue="frequent" [nzLabel]="'GUEST_MANAGEMENT.FREQUENT_GUEST' | translate"></nz-option>
+              <nz-option nzValue="group" [nzLabel]="'GUEST_MANAGEMENT.GROUP_GUEST' | translate"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
@@ -63,7 +63,7 @@
 
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Tìm kiếm</nz-form-label>
+          <nz-form-label>{{ 'GUEST_MANAGEMENT.SEARCH' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-group [nzSuffix]="suffixIconSearch">
               <input 
@@ -71,7 +71,7 @@
                 nz-input 
                 [(ngModel)]="searchValue"
                 (keyup.enter)="onSearch()"
-                placeholder="Tên, CMND/CCCD, SĐT, Email" />
+                [placeholder]="'GUEST_MANAGEMENT.SEARCH_PLACEHOLDER' | translate" />
             </nz-input-group>
             <ng-template #suffixIconSearch>
               <i nz-icon nzType="search" (click)="onSearch()"></i>
@@ -85,11 +85,11 @@
     <div class="mb-3 action-buttons" *ngIf="canCreateGuest">
       <button nz-button nzType="primary" (click)="openCreateModal()" class="action-btn">
         <i nz-icon nzType="plus"></i>
-        <span class="btn-text">Thêm khách mới</span>
+        <span class="btn-text">{{ 'GUEST_MANAGEMENT.ADD_NEW_GUEST' | translate }}</span>
       </button>
       <button nz-button nzType="default" (click)="exportToExcel()" [nzLoading]="isExporting" class="action-btn">
         <i nz-icon nzType="file-excel" nzTheme="outline"></i>
-        <span class="btn-text">Xuất Excel</span>
+        <span class="btn-text">{{ 'GUEST_MANAGEMENT.EXPORT_EXCEL' | translate }}</span>
       </button>
     </div>
 
@@ -111,17 +111,17 @@
           [nzSize]="'small'">
           <thead>
             <tr>
-              <th nzWidth="150px">Tên khách</th>
-              <th nzWidth="100px">Giới tính</th>
-              <th nzWidth="120px">Ngày sinh</th>
-              <th nzWidth="120px">Loại khách</th>
-              <th nzWidth="120px">CMND/CCCD</th>
-              <th nzWidth="120px">Số điện thoại</th>
-              <th nzWidth="150px">Email</th>
-              <th nzWidth="200px">Địa chỉ</th>
-              <th nzWidth="120px">Khách sạn</th>
-              <th nzWidth="100px">Điểm tích lũy</th>
-              <th nzWidth="150px">Thao tác</th>
+              <th nzWidth="150px">{{ 'GUEST_MANAGEMENT.GUEST_NAME' | translate }}</th>
+              <th nzWidth="100px">{{ 'GUEST_MANAGEMENT.GENDER' | translate }}</th>
+              <th nzWidth="120px">{{ 'GUEST_MANAGEMENT.DATE_OF_BIRTH' | translate }}</th>
+              <th nzWidth="120px">{{ 'GUEST_MANAGEMENT.GUEST_TYPE' | translate }}</th>
+              <th nzWidth="120px">{{ 'GUEST_MANAGEMENT.ID_NUMBER' | translate }}</th>
+              <th nzWidth="120px">{{ 'GUEST_MANAGEMENT.PHONE' | translate }}</th>
+              <th nzWidth="150px">{{ 'GUEST_MANAGEMENT.EMAIL' | translate }}</th>
+              <th nzWidth="200px">{{ 'GUEST_MANAGEMENT.ADDRESS' | translate }}</th>
+              <th nzWidth="120px">{{ 'GUEST_MANAGEMENT.HOTEL' | translate }}</th>
+              <th nzWidth="100px">{{ 'GUEST_MANAGEMENT.LOYALTY_POINTS' | translate }}</th>
+              <th nzWidth="150px">{{ 'GUEST_MANAGEMENT.ACTIONS' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -145,27 +145,27 @@
                   <button nz-button nzSize="small" nzType="primary" 
                           (click)="openEditModal(guest)" 
                           *ngIf="canEdit(guest)"
-                          nz-tooltip nzTooltipTitle="Chỉnh sửa">
+                          nz-tooltip [nzTooltipTitle]="'GUEST_MANAGEMENT.EDIT' | translate">
                     <i nz-icon nzType="edit"></i>
                   </button>
                   <button nz-button nzSize="small" nzType="default" 
                           (click)="openBookingModal(guest)" 
                           *ngIf="canAssign(guest)"
-                          nz-tooltip nzTooltipTitle="Đặt phòng trước">
+                          nz-tooltip [nzTooltipTitle]="'GUEST_MANAGEMENT.PRE_BOOK' | translate">
                     <i nz-icon nzType="calendar"></i>
                   </button>
                   <button nz-button nzSize="small" nzType="default" 
                           (click)="openAssignModal(guest)" 
                           *ngIf="canAssign(guest)"
-                          nz-tooltip nzTooltipTitle="Assign vào phòng">
+                          nz-tooltip [nzTooltipTitle]="'GUEST_MANAGEMENT.ASSIGN_ROOM' | translate">
                     <i nz-icon nzType="home"></i>
                   </button>
                   <button nz-button nzSize="small" nzType="text" nzDanger
                           *ngIf="canDelete(guest)"
                           nz-popconfirm 
-                          nzPopconfirmTitle="Bạn có chắc muốn xóa?" 
+                          [nzPopconfirmTitle]="'GUEST_MANAGEMENT.CONFIRM_DELETE' | translate" 
                           (nzOnConfirm)="deleteGuest(guest)"
-                          nz-tooltip nzTooltipTitle="Xóa">
+                          nz-tooltip [nzTooltipTitle]="'GUEST_MANAGEMENT.DELETE' | translate">
                     <i nz-icon nzType="delete"></i>
                   </button>
                 </nz-button-group>
@@ -180,7 +180,7 @@
     <!-- Modal thêm/sửa khách -->
     <nz-modal
       [(nzVisible)]="isModalVisible"
-      [nzTitle]="editId ? 'Cập nhật khách' : 'Thêm khách mới'"
+      [nzTitle]="(editId ? 'GUEST_MANAGEMENT.UPDATE_GUEST' : 'GUEST_MANAGEMENT.ADD_GUEST') | translate"
       (nzOnCancel)="handleCancel()"
       (nzOnOk)="handleOk()"
       [nzOkLoading]="isLoading"
@@ -189,11 +189,11 @@
       <div *nzModalContent>
         <form nz-form [formGroup]="guestForm" *ngIf="guestForm && personalInfoForm && contactInfoForm">
           <nz-form-item>
-            <nz-form-label nzRequired>Khách sạn</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng chọn khách sạn">
+            <nz-form-label nzRequired>{{ 'GUEST_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'GUEST_MANAGEMENT.REQUIRED_HOTEL' | translate">
               <nz-select 
                 formControlName="hotelId" 
-                nzPlaceHolder="Chọn khách sạn"
+                [nzPlaceHolder]="'GUEST_MANAGEMENT.SELECT_HOTEL' | translate"
                 [nzDisabled]="isHotelManager || isStaff || editId !== null">
                 <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
               </nz-select>
@@ -201,43 +201,43 @@
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label nzRequired>Loại khách</nz-form-label>
+            <nz-form-label nzRequired>{{ 'GUEST_MANAGEMENT.GUEST_TYPE' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-select formControlName="guestType">
-                <nz-option nzValue="regular" nzLabel="Khách lưu"></nz-option>
-                <nz-option nzValue="frequent" nzLabel="Khách quen"></nz-option>
-                <nz-option nzValue="group" nzLabel="Khách đoàn"></nz-option>
+                <nz-option nzValue="regular" [nzLabel]="'GUEST_MANAGEMENT.REGULAR_GUEST' | translate"></nz-option>
+                <nz-option nzValue="frequent" [nzLabel]="'GUEST_MANAGEMENT.FREQUENT_GUEST' | translate"></nz-option>
+                <nz-option nzValue="group" [nzLabel]="'GUEST_MANAGEMENT.GROUP_GUEST' | translate"></nz-option>
               </nz-select>
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item *ngIf="guestForm && guestForm.get('guestType')?.value === 'group'">
-            <nz-form-label>Số lượng người trong đoàn</nz-form-label>
+            <nz-form-label>{{ 'GUEST_MANAGEMENT.GROUP_SIZE' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-input-number formControlName="groupSize" [nzMin]="1" [nzMax]="50" class="w-100"></nz-input-number>
             </nz-form-control>
           </nz-form-item>
 
           <!-- OCR Scanner -->
-          <nz-card nzTitle="Quét CCCD/GPLX (OCR)" [nzBordered]="false" class="mb-3">
+          <nz-card [nzTitle]="'GUEST_MANAGEMENT.OCR_SCAN' | translate" [nzBordered]="false" class="mb-3">
             <app-ocr-scanner
               [personalInfoFormGroup]="personalInfoForm"
               [contactInfoFormGroup]="contactInfoForm"
               [showPreview]="true"
-              buttonText="Chọn ảnh CCCD/GPLX để quét"
+              [buttonText]="'GUEST_MANAGEMENT.OCR_BUTTON' | translate"
               (scanComplete)="onOCRScanComplete($event)">
             </app-ocr-scanner>
           </nz-card>
 
-          <nz-divider nzText="Thông tin cá nhân"></nz-divider>
+          <nz-divider [nzText]="'GUEST_MANAGEMENT.PERSONAL_INFO' | translate"></nz-divider>
 
           <div [formGroup]="personalInfoForm">
             <nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="24">
                 <nz-form-item>
-                  <nz-form-label nzRequired>Họ và tên</nz-form-label>
-                  <nz-form-control nzErrorTip="Vui lòng nhập họ và tên">
-                    <input nz-input formControlName="fullName" placeholder="Nhập họ và tên" />
+                  <nz-form-label nzRequired>{{ 'GUEST_MANAGEMENT.FULL_NAME' | translate }}</nz-form-label>
+                  <nz-form-control [nzErrorTip]="'GUEST_MANAGEMENT.REQUIRED_FULL_NAME' | translate">
+                    <input nz-input formControlName="fullName" [placeholder]="'GUEST_MANAGEMENT.ENTER_FULL_NAME' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
@@ -246,7 +246,7 @@
             <nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Ngày sinh</nz-form-label>
+                  <nz-form-label>{{ 'GUEST_MANAGEMENT.DATE_OF_BIRTH' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-date-picker formControlName="dateOfBirth" nzFormat="yyyy-MM-dd" class="w-100"></nz-date-picker>
                   </nz-form-control>
@@ -254,12 +254,12 @@
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Giới tính</nz-form-label>
+                  <nz-form-label>{{ 'GUEST_MANAGEMENT.GENDER' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="gender">
-                      <nz-option nzValue="male" nzLabel="Nam"></nz-option>
-                      <nz-option nzValue="female" nzLabel="Nữ"></nz-option>
-                      <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+                      <nz-option nzValue="male" [nzLabel]="'GUEST_MANAGEMENT.MALE' | translate"></nz-option>
+                      <nz-option nzValue="female" [nzLabel]="'GUEST_MANAGEMENT.FEMALE' | translate"></nz-option>
+                      <nz-option nzValue="other" [nzLabel]="'GUEST_MANAGEMENT.OTHER' | translate"></nz-option>
                     </nz-select>
                   </nz-form-control>
                 </nz-form-item>
@@ -269,20 +269,20 @@
             <nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Quốc tịch</nz-form-label>
+                  <nz-form-label>{{ 'GUEST_MANAGEMENT.NATIONALITY' | translate }}</nz-form-label>
                   <nz-form-control>
-                    <input nz-input formControlName="nationality" placeholder="Nhập quốc tịch" />
+                    <input nz-input formControlName="nationality" [placeholder]="'GUEST_MANAGEMENT.ENTER_NATIONALITY' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Loại giấy tờ</nz-form-label>
+                  <nz-form-label>{{ 'GUEST_MANAGEMENT.ID_TYPE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="idType">
-                      <nz-option nzValue="id_card" nzLabel="CMND/CCCD"></nz-option>
-                      <nz-option nzValue="passport" nzLabel="Hộ chiếu"></nz-option>
-                      <nz-option nzValue="driver_license" nzLabel="Bằng lái xe"></nz-option>
+                      <nz-option nzValue="id_card" [nzLabel]="'GUEST_MANAGEMENT.ID_CARD' | translate"></nz-option>
+                      <nz-option nzValue="passport" [nzLabel]="'GUEST_MANAGEMENT.PASSPORT' | translate"></nz-option>
+                      <nz-option nzValue="driver_license" [nzLabel]="'GUEST_MANAGEMENT.DRIVER_LICENSE' | translate"></nz-option>
                     </nz-select>
                   </nz-form-control>
                 </nz-form-item>
@@ -292,15 +292,15 @@
             <nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Số CMND/CCCD</nz-form-label>
+                  <nz-form-label>{{ 'GUEST_MANAGEMENT.ID_NUMBER' | translate }}</nz-form-label>
                   <nz-form-control>
-                    <input nz-input formControlName="idNumber" placeholder="Nhập số CMND/CCCD" />
+                    <input nz-input formControlName="idNumber" [placeholder]="'GUEST_MANAGEMENT.ENTER_ID_NUMBER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Ngày hết hạn</nz-form-label>
+                  <nz-form-label>{{ 'GUEST_MANAGEMENT.ID_EXPIRY_DATE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-date-picker formControlName="idExpiryDate" nzFormat="yyyy-MM-dd" class="w-100"></nz-date-picker>
                   </nz-form-control>
@@ -309,64 +309,64 @@
             </nz-row>
           </div>
 
-          <nz-divider nzText="Thông tin liên hệ"></nz-divider>
+          <nz-divider [nzText]="'GUEST_MANAGEMENT.CONTACT_INFO' | translate"></nz-divider>
 
           <div [formGroup]="contactInfoForm">
             <nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Số điện thoại</nz-form-label>
+                  <nz-form-label>{{ 'GUEST_MANAGEMENT.PHONE' | translate }}</nz-form-label>
                   <nz-form-control>
-                    <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+                    <input nz-input formControlName="phone" [placeholder]="'GUEST_MANAGEMENT.ENTER_PHONE' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Số điện thoại dự phòng</nz-form-label>
+                  <nz-form-label>{{ 'GUEST_MANAGEMENT.ALTERNATIVE_PHONE' | translate }}</nz-form-label>
                   <nz-form-control>
-                    <input nz-input formControlName="alternativePhone" placeholder="Nhập số điện thoại dự phòng" />
+                    <input nz-input formControlName="alternativePhone" [placeholder]="'GUEST_MANAGEMENT.ENTER_ALTERNATIVE_PHONE' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
             </nz-row>
 
             <nz-form-item>
-              <nz-form-label>Email</nz-form-label>
-              <nz-form-control nzErrorTip="Email không hợp lệ">
-                <input nz-input formControlName="email" type="email" placeholder="Nhập email" />
+              <nz-form-label>{{ 'GUEST_MANAGEMENT.EMAIL' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'GUEST_MANAGEMENT.INVALID_EMAIL' | translate">
+                <input nz-input formControlName="email" type="email" [placeholder]="'GUEST_MANAGEMENT.ENTER_EMAIL' | translate" />
               </nz-form-control>
             </nz-form-item>
             <div [formGroup]="addressForm">
               <nz-form-item>
-                <nz-form-label>Địa chỉ</nz-form-label>
+                <nz-form-label>{{ 'GUEST_MANAGEMENT.ADDRESS' | translate }}</nz-form-label>
                 <nz-form-control>
-                  <input nz-input formControlName="street" placeholder="Số nhà, đường" />
+                  <input nz-input formControlName="street" [placeholder]="'GUEST_MANAGEMENT.STREET' | translate" />
                 </nz-form-control>
               </nz-form-item>
 
               <nz-row [nzGutter]="16">
                 <div nz-col [nzXs]="24" [nzSm]="8">
                   <nz-form-item>
-                    <nz-form-label>Thành phố</nz-form-label>
+                    <nz-form-label>{{ 'GUEST_MANAGEMENT.CITY' | translate }}</nz-form-label>
                     <nz-form-control>
-                      <input nz-input formControlName="city" placeholder="Thành phố" />
+                      <input nz-input formControlName="city" [placeholder]="'GUEST_MANAGEMENT.CITY' | translate" />
                     </nz-form-control>
                   </nz-form-item>
                 </div>
                 <div nz-col [nzXs]="24" [nzSm]="8">
                   <nz-form-item>
-                    <nz-form-label>Tỉnh/Thành</nz-form-label>
+                    <nz-form-label>{{ 'GUEST_MANAGEMENT.STATE' | translate }}</nz-form-label>
                     <nz-form-control>
-                      <input nz-input formControlName="state" placeholder="Tỉnh/Thành" />
+                      <input nz-input formControlName="state" [placeholder]="'GUEST_MANAGEMENT.STATE' | translate" />
                     </nz-form-control>
                   </nz-form-item>
                 </div>
                 <div nz-col [nzXs]="24" [nzSm]="8">
                   <nz-form-item>
-                    <nz-form-label>Quốc gia</nz-form-label>
+                    <nz-form-label>{{ 'GUEST_MANAGEMENT.COUNTRY' | translate }}</nz-form-label>
                     <nz-form-control>
-                      <input nz-input formControlName="country" placeholder="Quốc gia" />
+                      <input nz-input formControlName="country" [placeholder]="'GUEST_MANAGEMENT.COUNTRY' | translate" />
                     </nz-form-control>
                   </nz-form-item>
                 </div>
@@ -375,9 +375,9 @@
           </div>
 
           <nz-form-item>
-            <nz-form-label>Ghi chú</nz-form-label>
+            <nz-form-label>{{ 'GUEST_MANAGEMENT.NOTES' | translate }}</nz-form-label>
             <nz-form-control>
-              <textarea nz-input formControlName="notes" rows="3" placeholder="Nhập ghi chú"></textarea>
+              <textarea nz-input formControlName="notes" rows="3" [placeholder]="'GUEST_MANAGEMENT.ENTER_NOTES' | translate"></textarea>
             </nz-form-control>
           </nz-form-item>
         </form>
@@ -387,7 +387,7 @@
     <!-- Modal assign vào phòng -->
     <nz-modal
       [(nzVisible)]="isAssignModalVisible"
-      nzTitle="Assign khách vào phòng"
+      [nzTitle]="'GUEST_MANAGEMENT.ASSIGN_GUEST_TO_ROOM' | translate"
       (nzOnCancel)="handleAssignCancel()"
       (nzOnOk)="handleAssignOk()"
       [nzOkLoading]="isLoading"
@@ -395,14 +395,14 @@
       [nzWrapClassName]="'guest-modal-responsive'">
       <div *nzModalContent>
         <div class="mb-3">
-          <strong>Khách:</strong> {{ selectedGuest ? getGuestName(selectedGuest) : '' }}
+          <strong>{{ 'GUEST_MANAGEMENT.GUEST' | translate }}:</strong> {{ selectedGuest ? getGuestName(selectedGuest) : '' }}
         </div>
         <nz-form-item>
-          <nz-form-label nzRequired>Chọn phòng</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng chọn phòng">
+          <nz-form-label nzRequired>{{ 'GUEST_MANAGEMENT.SELECT_ROOM' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'GUEST_MANAGEMENT.REQUIRED_ROOM' | translate">
             <nz-select 
               [(ngModel)]="selectedRoomId"
-              nzPlaceHolder="Chọn phòng"
+              [nzPlaceHolder]="'GUEST_MANAGEMENT.SELECT_ROOM' | translate"
               class="w-100">
               <nz-option *ngFor="let room of rooms" [nzValue]="room._id" [nzLabel]="room.roomNumber"></nz-option>
             </nz-select>
@@ -410,7 +410,7 @@
         </nz-form-item>
         <nz-alert 
           nzType="info" 
-          nzMessage="Sau khi assign, bạn cần thực hiện check-in trong quản lý phòng."
+          [nzMessage]="'GUEST_MANAGEMENT.ASSIGN_INFO' | translate"
           class="mt-3">
         </nz-alert>
       </div>
@@ -419,7 +419,7 @@
     <!-- Modal đặt phòng trước -->
     <nz-modal
       [(nzVisible)]="isBookingModalVisible"
-      nzTitle="Đặt phòng trước"
+      [nzTitle]="'GUEST_MANAGEMENT.PRE_BOOKING' | translate"
       (nzOnCancel)="handleBookingCancel()"
       (nzOnOk)="handleBookingOk()"
       [nzOkLoading]="isLoading"
@@ -427,15 +427,15 @@
       [nzWrapClassName]="'guest-modal-responsive'">
       <div *nzModalContent>
         <div class="mb-3">
-          <strong>Khách:</strong> {{ selectedGuest ? getGuestName(selectedGuest) : '' }}
+          <strong>{{ 'GUEST_MANAGEMENT.GUEST' | translate }}:</strong> {{ selectedGuest ? getGuestName(selectedGuest) : '' }}
         </div>
         <form nz-form [formGroup]="bookingForm" *ngIf="bookingForm">
           <nz-form-item>
-            <nz-form-label nzRequired>Chọn phòng</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng chọn phòng">
+            <nz-form-label nzRequired>{{ 'GUEST_MANAGEMENT.SELECT_ROOM' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'GUEST_MANAGEMENT.REQUIRED_ROOM' | translate">
               <nz-select 
                 formControlName="roomId"
-                nzPlaceHolder="Chọn phòng"
+                [nzPlaceHolder]="'GUEST_MANAGEMENT.SELECT_ROOM' | translate"
                 class="w-100">
                 <nz-option *ngFor="let room of rooms" [nzValue]="room._id" [nzLabel]="room.roomNumber"></nz-option>
               </nz-select>
@@ -445,8 +445,8 @@
           <nz-row [nzGutter]="16">
             <div nz-col [nzXs]="24" [nzSm]="12">
               <nz-form-item>
-                <nz-form-label nzRequired>Ngày check-in</nz-form-label>
-                <nz-form-control nzErrorTip="Vui lòng chọn ngày check-in">
+                <nz-form-label nzRequired>{{ 'GUEST_MANAGEMENT.CHECK_IN_DATE' | translate }}</nz-form-label>
+                <nz-form-control [nzErrorTip]="'GUEST_MANAGEMENT.REQUIRED_CHECK_IN' | translate">
                   <nz-date-picker 
                     formControlName="checkInDate" 
                     nzFormat="yyyy-MM-dd HH:mm"
@@ -458,7 +458,7 @@
             </div>
             <div nz-col [nzXs]="24" [nzSm]="12">
               <nz-form-item>
-                <nz-form-label>Ngày check-out</nz-form-label>
+                <nz-form-label>{{ 'GUEST_MANAGEMENT.CHECK_OUT_DATE' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-date-picker 
                     formControlName="checkOutDate" 
@@ -474,19 +474,19 @@
           <nz-row [nzGutter]="16">
             <div nz-col [nzXs]="24" [nzSm]="12">
               <nz-form-item>
-                <nz-form-label nzRequired>Loại giá</nz-form-label>
+                <nz-form-label nzRequired>{{ 'GUEST_MANAGEMENT.RATE_TYPE' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-select formControlName="rateType">
-                    <nz-option nzValue="hourly" nzLabel="Theo giờ"></nz-option>
-                    <nz-option nzValue="daily" nzLabel="Theo ngày đêm"></nz-option>
-                    <nz-option nzValue="nightly" nzLabel="Qua đêm"></nz-option>
+                    <nz-option nzValue="hourly" [nzLabel]="'GUEST_MANAGEMENT.HOURLY' | translate"></nz-option>
+                    <nz-option nzValue="daily" [nzLabel]="'GUEST_MANAGEMENT.DAILY' | translate"></nz-option>
+                    <nz-option nzValue="nightly" [nzLabel]="'GUEST_MANAGEMENT.NIGHTLY' | translate"></nz-option>
                   </nz-select>
                 </nz-form-control>
               </nz-form-item>
             </div>
             <div nz-col [nzXs]="24" [nzSm]="12">
               <nz-form-item>
-                <nz-form-label>Tiền đặt cọc</nz-form-label>
+                <nz-form-label>{{ 'GUEST_MANAGEMENT.ADVANCE_PAYMENT' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="advancePayment" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -497,7 +497,7 @@
           <nz-row [nzGutter]="16">
             <div nz-col [nzXs]="24" [nzSm]="12">
               <nz-form-item>
-                <nz-form-label>Số người lớn</nz-form-label>
+                <nz-form-label>{{ 'GUEST_MANAGEMENT.ADULTS' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="adults" [nzMin]="1" [nzMax]="10" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -505,7 +505,7 @@
             </div>
             <div nz-col [nzXs]="24" [nzSm]="12">
               <nz-form-item>
-                <nz-form-label>Số trẻ em</nz-form-label>
+                <nz-form-label>{{ 'GUEST_MANAGEMENT.CHILDREN' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="children" [nzMin]="0" [nzMax]="10" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -514,9 +514,9 @@
           </nz-row>
 
           <nz-form-item>
-            <nz-form-label>Ghi chú</nz-form-label>
+            <nz-form-label>{{ 'GUEST_MANAGEMENT.NOTES' | translate }}</nz-form-label>
             <nz-form-control>
-              <textarea nz-input formControlName="notes" rows="3" placeholder="Nhập ghi chú"></textarea>
+              <textarea nz-input formControlName="notes" rows="3" [placeholder]="'GUEST_MANAGEMENT.ENTER_NOTES' | translate"></textarea>
             </nz-form-control>
           </nz-form-item>
         </form>

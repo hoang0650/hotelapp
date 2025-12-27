@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, NavigationEnd, Params } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
+import { NzMarks } from 'ng-zorro-antd/slider';
+import { RoomsService } from '../../services/rooms.service';
 
 @Component({
   selector: 'app-admin',
@@ -13,10 +15,29 @@ export class AdminComponent implements OnInit {
   breadcrumbs: Array<{ label: string, url: string }> = []; //dành cho route kiểu admin/hotel
   isCollapsed = false;
   showModal: boolean = false;
+  
+  // Modal states cho lọc tầng và số cột
+  isFloorFilterModalVisible = false;
+  isColumnsModalVisible = false;
+  tempSelectedFloor: string | null = null;
+  tempColumnCount: number = 6;
+  availableFloors: string[] = [];
+  selectedHotelIdForFilter: string | null = null;
+  isLoadingFloors = false;
+  columnMarks: NzMarks = {
+    2: '2',
+    3: '3',
+    4: '4',
+    6: '6',
+    8: '8',
+    12: '12'
+  };
+  
   constructor(
     private router: Router, 
     private activatedRoute: ActivatedRoute,
-    private authService: AuthService
+    private authService: AuthService,
+    private roomsService: RoomsService
   ) { }
 
   ngOnInit(): void {
@@ -219,6 +240,102 @@ export class AdminComponent implements OnInit {
   canAccessFinancialSummary(): boolean {
     return this.authService.isSuperAdmin() || 
            this.authService.isBusiness();
+  }
+
+  // Mở trang Settings
+  openSettings(): void {
+    if (this.canAccessSettings()) {
+      this.router.navigate(['/admin/settings']);
+    }
+  }
+
+  // Navigate đến Pricing Management
+  navigateToPricing(): void {
+    this.router.navigate(['/admin/pricing-management']);
+  }
+
+  // Navigate đến Electric Setting
+  navigateToElectric(): void {
+    this.router.navigate(['/admin/electric-setting']);
+  }
+
+  // Mở modal lọc theo tầng
+  openFloorFilterModal(): void {
+    // Lấy selectedHotelId từ localStorage
+    const selectedHotelId = localStorage.getItem('selectedHotelId');
+    this.selectedHotelIdForFilter = selectedHotelId;
+    
+    // Lấy giá trị hiện tại từ localStorage
+    const savedFloor = localStorage.getItem('selectedFloor');
+    this.tempSelectedFloor = savedFloor || null;
+    
+    if (selectedHotelId) {
+      this.isLoadingFloors = true;
+      this.availableFloors = [];
+      
+      this.roomsService.getHotelFloors(selectedHotelId).subscribe(
+        data => {
+          // Convert number[] sang string[] như trong room component
+          this.availableFloors = data.floors.map(f => String(f));
+          // Sắp xếp floors: tầng trệt (0) lên đầu, sau đó sắp xếp số
+          this.availableFloors.sort((a, b) => {
+            if (a === '0' || a === '') return -1;
+            if (b === '0' || b === '') return 1;
+            return parseInt(a, 10) - parseInt(b, 10);
+          });
+          this.isLoadingFloors = false;
+          this.isFloorFilterModalVisible = true;
+        },
+        error => {
+          console.error('Error loading floors:', error);
+          this.availableFloors = [];
+          this.isLoadingFloors = false;
+          this.isFloorFilterModalVisible = true;
+        }
+      );
+    } else {
+      // Nếu chưa chọn hotel, vẫn mở modal nhưng hiển thị cảnh báo
+      this.availableFloors = [];
+      this.isFloorFilterModalVisible = true;
+    }
+  }
+
+  // Áp dụng lọc tầng
+  applyFloorFilter(): void {
+    // Lưu vào localStorage (room component sẽ đọc từ đây)
+    if (this.tempSelectedFloor) {
+      localStorage.setItem('selectedFloor', this.tempSelectedFloor);
+    } else {
+      localStorage.removeItem('selectedFloor');
+    }
+    // Emit event để room component cập nhật ngay lập tức (trigger onFloorChange)
+    window.dispatchEvent(new CustomEvent('floorFilterChanged', { detail: this.tempSelectedFloor }));
+    this.isFloorFilterModalVisible = false;
+  }
+
+  // Mở modal số cột
+  openColumnsModal(): void {
+    // Lấy giá trị hiện tại từ localStorage
+    const savedCount = localStorage.getItem('roomColumnsCount');
+    this.tempColumnCount = savedCount ? parseInt(savedCount, 10) : 6;
+    this.isColumnsModalVisible = true;
+  }
+
+  // Áp dụng số cột
+  applyColumns(): void {
+    // Lưu vào localStorage (room component sẽ đọc từ đây)
+    localStorage.setItem('roomColumnsCount', this.tempColumnCount.toString());
+    // Emit event để room component cập nhật ngay lập tức (trigger reGenerateArray)
+    window.dispatchEvent(new CustomEvent('columnsCountChanged', { detail: this.tempColumnCount }));
+    this.isColumnsModalVisible = false;
+  }
+
+  // Helper để hiển thị tên tầng
+  getFloorDisplayName(floor: string): string {
+    if (floor === '0' || floor === '') {
+      return 'Tầng trệt';
+    }
+    return `Tầng ${floor}`;
   }
 
 }

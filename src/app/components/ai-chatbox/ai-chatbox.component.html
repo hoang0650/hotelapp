@@ -2,7 +2,21 @@
   <button nz-button nzType="primary" nzShape="circle" class="chatbox-toggle" (click)="toggleMinimize()" [title]="minimized ? 'Mở chat' : 'Đóng chat'" [attr.aria-label]="minimized ? 'Mở chat' : 'Đóng chat'">
     <i nz-icon [nzType]="minimized ? 'message' : 'close'" nzTheme="outline"></i>
   </button>
-  <nz-card *ngIf="!minimized" nzTitle="Trợ lý AI" [nzBodyStyle]="{padding: '8px 0 0 0'}" class="ai-chatbox-card">
+  <nz-card *ngIf="!minimized" [nzBodyStyle]="{padding: '8px 0 0 0'}" class="ai-chatbox-card">
+    <div class="ai-chatbox-header">
+      <span class="ai-chatbox-title">Trợ lý AI</span>
+      <button 
+        nz-button 
+        nzType="text" 
+        nzSize="small" 
+        (click)="clearChatHistory()" 
+        [disabled]="messages.length === 0"
+        title="Xóa lịch sử chat"
+        class="clear-history-btn">
+        <i nz-icon nzType="delete" nzTheme="outline"></i>
+        <span class="clear-history-text">Xóa lịch sử</span>
+      </button>
+    </div>
     <div class="ai-chatbox-messages" #messagesEnd>
       <div *ngFor="let msg of messages" class="chat-message-row" [ngClass]="msg.role">
         <div class="chat-message-bubble-group" [ngClass]="msg.role">

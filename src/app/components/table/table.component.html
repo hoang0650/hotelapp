@@ -1,7 +1,7 @@
 <div class="settings-container" *ngIf="settingValue.title">
-  <nz-card class="settings-card" [nzTitle]="'Cài đặt hiển thị'" [nzExtra]="extraTemplate">
+  <nz-card class="settings-card" [nzTitle]="'TABLE.DISPLAY_SETTINGS' | translate" [nzExtra]="extraTemplate">
     <ng-template #extraTemplate>
-      <button nz-button nzType="text" nzShape="circle" (click)="switchValue = !switchValue" aria-label="Chuyển đổi hiển thị cài đặt">
+      <button nz-button nzType="text" nzShape="circle" (click)="switchValue = !switchValue" [attr.aria-label]="'TABLE.TOGGLE_DISPLAY_SETTINGS' | translate">
         <i nz-icon [nzType]="switchValue ? 'up' : 'down'"></i>
       </button>
     </ng-template>
@@ -39,61 +39,61 @@
 
 <div class="control-bar nz-card">
   <div class="left-controls">
-    <button nz-button nzType="default" (click)="switchValue = !switchValue" nz-tooltip nzTooltipTitle="Cài đặt hiển thị" aria-label="Cài đặt hiển thị" class="btn-icon-only">
+    <button nz-button nzType="default" (click)="switchValue = !switchValue" [nz-tooltip]="'TABLE.DISPLAY_SETTINGS' | translate" [attr.aria-label]="'TABLE.DISPLAY_SETTINGS' | translate" class="btn-icon-only">
       <i nz-icon nzType="setting"></i>
-      <span class="btn-text">Cài đặt</span>
+      <span class="btn-text">{{ 'TABLE.SETTINGS' | translate }}</span>
     </button>
-    <button nz-button [nzLoading]="exported" nzType="primary" (click)="exportToExcel()" nz-tooltip nzTooltipTitle="Xuất Excel" aria-label="Xuất Excel" class="btn-icon-only">
+    <button nz-button [nzLoading]="exported" nzType="primary" (click)="exportToExcel()" [nz-tooltip]="'TABLE.EXPORT_EXCEL' | translate" [attr.aria-label]="'TABLE.EXPORT_EXCEL' | translate" class="btn-icon-only">
       <i nz-icon nzType="file-excel"></i>
-      <span class="btn-text">Xuất Excel</span>
+      <span class="btn-text">{{ 'TABLE.EXPORT_EXCEL' | translate }}</span>
     </button>
-    <button nz-button nzType="default" nzDanger (click)="openManagerHandoverModal()" nz-tooltip nzTooltipTitle="Giao tiền quản lý" aria-label="Giao tiền quản lý" class="btn-icon-only">
+    <button nz-button nzType="default" nzDanger (click)="openManagerHandoverModal()" [nz-tooltip]="'TABLE.MANAGER_HANDOVER' | translate" [attr.aria-label]="'TABLE.MANAGER_HANDOVER' | translate" class="btn-icon-only">
       <i nz-icon nzType="dollar"></i>
-      <span class="btn-text">Giao tiền QL</span>
+      <span class="btn-text">{{ 'TABLE.MANAGER_HANDOVER' | translate }}</span>
     </button>
-    <button nz-button nzType="primary" nzDanger (click)="openShiftHandoverModal()" nz-tooltip nzTooltipTitle="Giao ca" aria-label="Giao ca" class="btn-icon-only">
+    <button nz-button nzType="primary" nzDanger (click)="openShiftHandoverModal()" [nz-tooltip]="'TABLE.SHIFT_HANDOVER' | translate" [attr.aria-label]="'TABLE.SHIFT_HANDOVER' | translate" class="btn-icon-only">
       <i nz-icon nzType="sync"></i>
-      <span class="btn-text">Giao ca</span>
+      <span class="btn-text">{{ 'TABLE.SHIFT_HANDOVER' | translate }}</span>
     </button>
-    <button nz-button nzType="default" (click)="openShiftHandoverHistory()" nz-tooltip nzTooltipTitle="Lịch sử giao ca" aria-label="Lịch sử giao ca" class="btn-icon-only">
+    <button nz-button nzType="default" (click)="openShiftHandoverHistory()" [nz-tooltip]="'TABLE.SHIFT_HANDOVER_HISTORY' | translate" [attr.aria-label]="'TABLE.SHIFT_HANDOVER_HISTORY' | translate" class="btn-icon-only">
       <i nz-icon nzType="history"></i>
-      <span class="btn-text">Lịch sử</span>
+      <span class="btn-text">{{ 'TABLE.HISTORY' | translate }}</span>
     </button>
     
     <!-- Nút lọc dữ liệu -->
     <nz-select 
       [ngModel]="currentFilterType" 
       (ngModelChange)="onFilterChange($event)" 
-      nzPlaceHolder="Lọc lịch sử"
+      [nzPlaceHolder]="'TABLE.FILTER_HISTORY' | translate"
       class="filter-select"
     >
-      <nz-option nzValue="all" nzLabel="Tất cả lịch sử"></nz-option>
-      <nz-option nzValue="checkout" nzLabel="Checkout mới nhất"></nz-option>
-      <nz-option nzValue="checkin" nzLabel="Check-in"></nz-option>
-      <nz-option nzValue="maintenance" nzLabel="Bảo trì"></nz-option>
+      <nz-option nzValue="all" [nzLabel]="'TABLE.ALL_HISTORY' | translate"></nz-option>
+      <nz-option nzValue="checkout" [nzLabel]="'TABLE.LATEST_CHECKOUT' | translate"></nz-option>
+      <nz-option nzValue="checkin" [nzLabel]="'TABLE.CHECKIN' | translate"></nz-option>
+      <nz-option nzValue="maintenance" [nzLabel]="'TABLE.MAINTENANCE' | translate"></nz-option>
     </nz-select>
     
     <!-- Bộ lọc trạng thái thanh toán -->
     <nz-select 
       [ngModel]="paymentStatusFilter" 
       (ngModelChange)="onPaymentStatusFilterChange($event)" 
-      nzPlaceHolder="Trạng thái thanh toán"
+      [nzPlaceHolder]="'TABLE.PAYMENT_STATUS' | translate"
       class="filter-select"
     >
-      <nz-option nzValue="all" nzLabel="Tất cả"></nz-option>
-      <nz-option nzValue="paid" nzLabel="Đã thanh toán"></nz-option>
-      <nz-option nzValue="pending" nzLabel="Chờ thanh toán"></nz-option>
-      <nz-option nzValue="unpaid" nzLabel="Chưa thanh toán"></nz-option>
+      <nz-option nzValue="all" [nzLabel]="'TABLE.ALL' | translate"></nz-option>
+      <nz-option nzValue="paid" [nzLabel]="'TABLE.PAID' | translate"></nz-option>
+      <nz-option nzValue="pending" [nzLabel]="'TABLE.PENDING' | translate"></nz-option>
+      <nz-option nzValue="unpaid" [nzLabel]="'TABLE.UNPAID' | translate"></nz-option>
     </nz-select>
     
     <!-- Nút tải lại dữ liệu -->
-    <button nz-button nzType="default" (click)="loadHistory(currentFilterType)" [nzLoading]="settingValue.loading" nz-tooltip nzTooltipTitle="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" class="btn-icon-only">
+    <button nz-button nzType="default" (click)="loadHistory(currentFilterType)" [nzLoading]="settingValue.loading" [nz-tooltip]="'TABLE.RELOAD_DATA' | translate" [attr.aria-label]="'TABLE.RELOAD_DATA' | translate" class="btn-icon-only">
       <i nz-icon nzType="reload"></i>
     </button>
   </div>
   <div class="right-controls">
     <nz-input-group [nzSuffix]="suffixIconSearch">
-      <input type="text" nz-input placeholder="Tìm kiếm phòng, khách hàng..." [(ngModel)]="searchText" aria-label="Tìm kiếm" />
+      <input type="text" nz-input [placeholder]="'TABLE.SEARCH_PLACEHOLDER' | translate" [(ngModel)]="searchText" [attr.aria-label]="'TABLE.SEARCH' | translate" />
     </nz-input-group>
     <ng-template #suffixIconSearch>
       <i nz-icon nzType="search"></i>
@@ -104,20 +104,20 @@
 <div class="status-summary nz-card" *ngIf="settingValue.totalPayment">
   <nz-statistic 
     [nzValue]="paidCount" 
-    nzTitle="Đã thanh toán" 
+    [nzTitle]="'TABLE.PAID' | translate" 
     [nzValueStyle]="{ color: '#52c41a' }">
   </nz-statistic>
   <nz-statistic 
     [nzValue]="pendingCount" 
-    nzTitle="Chờ thanh toán" 
+    [nzTitle]="'TABLE.PENDING' | translate" 
     [nzValueStyle]="{ color: '#1890ff' }">
   </nz-statistic>
   <nz-statistic 
     [nzValue]="unpaidCount" 
-    nzTitle="Chưa thanh toán" 
+    [nzTitle]="'TABLE.UNPAID' | translate" 
     [nzValueStyle]="{ color: '#faad14' }">
   </nz-statistic>
-  <nz-statistic [nzValue]="totalPayment" nzTitle="Tổng tiền" [nzSuffix]="'đ'" [nzValueStyle]="{ color: '#722ed1' }"></nz-statistic>
+  <nz-statistic [nzValue]="totalPayment" [nzTitle]="'TABLE.TOTAL_PAYMENT' | translate" [nzSuffix]="'đ'" [nzValueStyle]="{ color: '#722ed1' }"></nz-statistic>
 </div>
 
 <nz-table
@@ -136,14 +136,14 @@
   [nzScroll]="{ x: scrollX, y: scrollY }"
   (nzCurrentPageDataChange)="currentPageDataChange($event)"
   [nzFooter]="settingValue.footer ? footerTemplate : null"
-  [nzTitle]="settingValue.title ? 'Lịch sử đã thanh toán' : null"
+  [nzTitle]="settingValue.title ? ('TABLE.PAID_HISTORY' | translate) : null"
 >
   <ng-template #totalTemplate let-total let-range="range">
-    Hiển thị {{ range[0] }}-{{ range[1] }} của {{ total }} mục
+    {{ 'TABLE.SHOWING_RANGE' | translate: { start: range[0], end: range[1], total: total } }}
   </ng-template>
   
   <ng-template #footerTemplate>
-    <strong *ngIf="settingValue.totalPayment">Tổng tiền: {{ totalPayment | currency:'VND':'symbol-narrow':'1.0-0' }}</strong>
+    <strong *ngIf="settingValue.totalPayment">{{ 'TABLE.TOTAL_PAYMENT' | translate }}: {{ totalPayment | currency:'VND':'symbol-narrow':'1.0-0' }}</strong>
   </ng-template>
 
   <thead>
@@ -163,15 +163,15 @@
         [nzWidth]="'60px'"
         [nzLeft]="fixedColumn">
       </th>
-      <th [nzWidth]="'80px'" [nzLeft]="fixedColumn">Phòng</th>
-      <th [nzWidth]="'180px'">Khách hàng</th>
-      <th [nzWidth]="'100px'">Nguồn</th>
-      <th [nzWidth]="'200px'">Thời gian</th>
-      <th [nzWidth]="'200px'">Chi tiết</th>
-      <th [nzWidth]="'130px'">Hình thức</th>
-      <th [nzWidth]="'150px'">Tổng tiền</th>
-      <th [nzWidth]="'150px'">Ghi chú</th>
-      <th [nzWidth]="'100px'" [nzRight]="fixedColumn">Thao tác</th>
+      <th [nzWidth]="'80px'" [nzLeft]="fixedColumn">{{ 'TABLE.ROOM' | translate }}</th>
+      <th [nzWidth]="'180px'">{{ 'TABLE.CUSTOMER' | translate }}</th>
+      <th [nzWidth]="'100px'">{{ 'TABLE.SOURCE' | translate }}</th>
+      <th [nzWidth]="'200px'">{{ 'TABLE.TIME' | translate }}</th>
+      <th [nzWidth]="'200px'">{{ 'TABLE.DETAILS' | translate }}</th>
+      <th [nzWidth]="'130px'">{{ 'TABLE.PAYMENT_FORM' | translate }}</th>
+      <th [nzWidth]="'150px'">{{ 'TABLE.TOTAL_AMOUNT' | translate }}</th>
+      <th [nzWidth]="'150px'">{{ 'TABLE.NOTES' | translate }}</th>
+      <th [nzWidth]="'100px'" [nzRight]="fixedColumn">{{ 'TABLE.ACTIONS' | translate }}</th>
     </tr>
   </thead>
   <tbody>
@@ -189,7 +189,7 @@
             nzType="text"
             nzShape="circle"
             (click)="data.expand = !data.expand"
-            aria-label="Mở rộng dòng">
+            [attr.aria-label]="'TABLE.EXPAND_ROW' | translate">
             <i nz-icon [nzType]="data.expand ? 'up' : 'down'"></i>
           </button>
         </td>
@@ -200,7 +200,7 @@
           <div class="customer-info">
             <div class="customer-name">
               <i nz-icon nzType="user" nzTheme="outline"></i>
-              {{ data.customerName || data.guestInfo?.name || 'Khách lẻ' }}
+              {{ data.customerName || data.guestInfo?.name || ('TABLE.WALK_IN' | translate) }}
             </div>
             <div class="customer-phone" *ngIf="data.customerPhone || data.guestInfo?.phone">
               <i nz-icon nzType="phone" nzTheme="outline"></i>
@@ -220,11 +220,11 @@
         <td>
           <div class="time-info">
             <div class="checkin-time">
-              <span class="time-label">Nhận:</span> 
+              <span class="time-label">{{ 'TABLE.RECEIVE' | translate }}</span> 
               {{ formatDateTime(data.checkInTime || data.checkinTime) }}
             </div>
             <div class="checkout-time">
-              <span class="time-label">Trả:</span> 
+              <span class="time-label">{{ 'TABLE.RETURN' | translate }}</span> 
               {{ formatDateTime(data.checkOutTime || data.checkoutTime || data.date) }}
             </div>
             <div class="duration" *ngIf="(data.checkInTime || data.checkinTime) && (data.checkOutTime || data.checkoutTime || data.date)">
@@ -237,19 +237,19 @@
         <td>
           <div class="detail-info">
             <div class="room-total" *ngIf="data.roomTotal > 0">
-              Phòng: {{ data.roomTotal | currency:'VND':'symbol-narrow':'1.0-0' }}
+              {{ 'TABLE.ROOM_LABEL' | translate }} {{ data.roomTotal | currency:'VND':'symbol-narrow':'1.0-0' }}
             </div>
             <div class="service-total" *ngIf="data.servicesTotal > 0">
-              DV: {{ data.servicesTotal | currency:'VND':'symbol-narrow':'1.0-0' }}
+              {{ 'TABLE.SERVICE_LABEL' | translate }} {{ data.servicesTotal | currency:'VND':'symbol-narrow':'1.0-0' }}
             </div>
             <div class="additional" *ngIf="data.additionalCharges > 0">
-              <span style="color: #fa8c16">+Phụ thu: {{ data.additionalCharges | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+              <span style="color: #fa8c16">{{ 'TABLE.ADDITIONAL_CHARGES' | translate }} {{ data.additionalCharges | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
             </div>
             <div class="discount" *ngIf="data.discount > 0">
-              <span style="color: #52c41a">-KM: {{ data.discount | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+              <span style="color: #52c41a">{{ 'TABLE.DISCOUNT' | translate }} {{ data.discount | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
             </div>
             <div class="advance" *ngIf="data.advancePayment > 0">
-              <span style="color: #1890ff">Đặt trước: {{ data.advancePayment | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+              <span style="color: #1890ff">{{ 'TABLE.ADVANCE_PAYMENT' | translate }} {{ data.advancePayment | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
             </div>
           </div>
         </td>
@@ -281,8 +281,8 @@
               nzShape="circle"
               (click)="viewInvoice(data)"
               nz-tooltip
-              nzTooltipTitle="Xem hóa đơn"
-              aria-label="Xem hóa đơn">
+              [nzTooltipTitle]="'TABLE.VIEW_INVOICE' | translate"
+              [attr.aria-label]="'TABLE.VIEW_INVOICE' | translate">
               <i nz-icon nzType="file-text"></i>
             </button>
             <button
@@ -292,8 +292,8 @@
               nzShape="circle"
               (click)="recheckin(data)"
               nz-tooltip
-              nzTooltipTitle="Check-in lại"
-              aria-label="Check-in lại">
+              [nzTooltipTitle]="'TABLE.RE_CHECKIN' | translate"
+              [attr.aria-label]="'TABLE.RE_CHECKIN' | translate">
               <i nz-icon nzType="redo"></i>
             </button>
             <button

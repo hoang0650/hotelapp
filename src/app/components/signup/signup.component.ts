@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { UserService, SignUpRequest, BusinessSignUpRequest, BusinessInfo } from '../../services/user.service';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-signup',
@@ -23,7 +24,8 @@ export class SignupComponent implements OnInit {
     private fb: FormBuilder,
     private userService: UserService,
     private router: Router,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {
     this.initForms();
   }
@@ -102,12 +104,12 @@ export class SignupComponent implements OnInit {
 
     this.userService.signUp(userData).subscribe({
       next: () => {
-        this.message.success('Đăng ký tài khoản thành công!');
+        this.message.success(this.translate.instant('SIGNUP.SIGNUP_SUCCESS'));
         this.router.navigate(['/login']);
       },
       error: (error) => {
         this.isLoading = false;
-        this.message.error(error.error?.message || 'Đăng ký thất bại');
+        this.message.error(error.error?.message || this.translate.instant('SIGNUP.SIGNUP_FAILED'));
       },
       complete: () => {
         this.isLoading = false;
@@ -149,12 +151,12 @@ export class SignupComponent implements OnInit {
 
     this.userService.signUpBusiness(businessData).subscribe({
       next: () => {
-        this.message.success('Đăng ký tài khoản doanh nghiệp thành công!');
+        this.message.success(this.translate.instant('SIGNUP.BUSINESS_SIGNUP_SUCCESS'));
         this.router.navigate(['/login']);
       },
       error: (error) => {
         this.isLoading = false;
-        this.message.error(error.error?.message || 'Đăng ký thất bại');
+        this.message.error(error.error?.message || this.translate.instant('SIGNUP.SIGNUP_FAILED'));
       },
       complete: () => {
         this.isLoading = false;

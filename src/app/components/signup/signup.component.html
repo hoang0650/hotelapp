@@ -1,10 +1,10 @@
 <div class="signup-container">
   <nz-card class="signup-card">
-    <h2 class="text-center">Đăng ký tài khoản</h2>
+    <h2 class="text-center">{{ 'SIGNUP.TITLE' | translate }}</h2>
     
     <nz-tabset (nzSelectedIndexChange)="onTabChange($event)">
       <!-- Tab đăng ký thường -->
-      <nz-tab nzTitle="Cá nhân">
+      <nz-tab [nzTitle]="'SIGNUP.PERSONAL' | translate">
         <form [formGroup]="signupForm" class="signup-form" (ngSubmit)="submitNormalSignup()">
           <!-- Username -->
           <nz-form-item>
@@ -94,13 +94,13 @@
 
           <!-- Submit Button -->
           <button nz-button nzType="primary" [nzLoading]="isLoading" [disabled]="signupForm.invalid" class="submit-btn">
-            Đăng ký
+            {{ 'SIGNUP.SIGNUP_BUTTON' | translate }}
           </button>
         </form>
       </nz-tab>
 
       <!-- Tab đăng ký doanh nghiệp -->
-      <nz-tab nzTitle="Doanh nghiệp">
+      <nz-tab [nzTitle]="'SIGNUP.BUSINESS' | translate">
         <form [formGroup]="businessForm" class="signup-form" (ngSubmit)="submitBusinessSignup()">
           <!-- Username -->
           <nz-form-item>

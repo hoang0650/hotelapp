@@ -7,6 +7,7 @@ import { HotelService } from '../../services/hotel.service';
 import { User } from '../../interfaces/user';
 import { Subscription, forkJoin, of } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
+import { TranslationService } from '../../services/translation.service';
 import { Announcement } from '../../services/notifications.service';
 import { catchError, map } from 'rxjs/operators';
 
@@ -35,7 +36,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private notificationsService: NotificationsService,
     private settingsService: SettingsService,
     private hotelService: HotelService,
-    public translate: TranslateService
+    public translate: TranslateService,
+    public translationService: TranslationService
   ) {
     // Set default language
     const savedLang = localStorage.getItem('language') || 'vi';
@@ -101,10 +103,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
     return this.translate.instant(roleKey) || role;
   }
 
-  // Chuyển đổi ngôn ngữ
+  // Chuyển đổi ngôn ngữ - sử dụng TranslationService để đảm bảo tất cả component được cập nhật
   switchLanguage(lang: string): void {
-    this.translate.use(lang);
-    localStorage.setItem('language', lang);
+    this.translationService.switchLanguage(lang);
+    // Trigger change detection để cập nhật tất cả component
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+    }, 100);
   }
 
   logout(): void {

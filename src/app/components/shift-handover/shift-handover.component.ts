@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { ShiftHandoverService } from '../../services/shift-handover.service';
 import { StaffService } from '../../services/staff.service';
 import { AuthService } from '../../services/auth.service';
+import { TranslateService } from '@ngx-translate/core';
 import { 
   ShiftHandover, 
   ShiftHandoverCreateRequest,
@@ -59,7 +60,8 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     private staffService: StaffService,
     private authService: AuthService,
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private translate: TranslateService
   ) {
     this.initForm();
   }
@@ -119,7 +121,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
           this.staffList = staffList.filter(staff => staff.userId !== currentUserId);
         },
         (error) => {
-          this.message.error('Không thể tải danh sách nhân viên');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER.LOAD_STAFF_ERROR'));
           console.error(error);
         }
       )
@@ -161,7 +163,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
 
   loadShiftHistory(): void {
     if (!this.canViewHistory) {
-      this.message.warning('Bạn không có quyền xem lịch sử giao ca');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER.HISTORY_TITLE'));
       return;
     }
 
@@ -181,7 +183,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
         },
         (error) => {
           this.isLoading = false;
-          this.message.error('Không thể tải lịch sử giao ca');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER.HISTORY_TITLE'));
           console.error(error);
         }
       )
@@ -234,15 +236,15 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
           control.updateValueAndValidity();
         }
       });
-      this.message.warning('Vui lòng điền đầy đủ thông tin');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER.SELECT_STAFF_ERROR'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận giao ca',
-      nzContent: `Bạn sắp giao ca với số tiền: ${this.formatCurrency(this.handoverAmount)}. Tiếp tục?`,
-      nzOkText: 'Xác nhận',
-      nzCancelText: 'Hủy',
+      nzTitle: this.translate.instant('SHIFT_HANDOVER.SUBMIT'),
+      nzContent: this.translate.instant('SHIFT_HANDOVER.HANDOVER_AMOUNT_CALCULATION') + ' ' + this.formatCurrency(this.handoverAmount) + '. ' + this.translate.instant('COMMON.CONTINUE'),
+      nzOkText: this.translate.instant('SHIFT_HANDOVER.SUBMIT'),
+      nzCancelText: this.translate.instant('SHIFT_HANDOVER.CANCEL'),
       nzOnOk: () => this.performHandover()
     });
   }
@@ -252,7 +254,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     const fromStaffId = this.authService.getUserId();
     
     if (!hotelId || !fromStaffId) {
-      this.message.error('Không tìm thấy thông tin nhân viên');
+      this.message.error(this.translate.instant('SHIFT_HANDOVER.SELECT_STAFF_ERROR'));
       return;
     }
 
@@ -269,12 +271,12 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
         (response: ShiftHandoverResponse) => {
           this.isLoading = false;
           this.isModalVisible = false;
-          this.message.success('Giao ca thành công!');
+          this.message.success(this.translate.instant('SHIFT_HANDOVER.SUBMIT'));
           
           // Nếu có thông tin login mới, cập nhật auth
           if (response.login) {
             this.authService.loginFromShiftHandover(response.login.token, response.login.user as any);
-            this.message.info(`Đã đăng nhập với tài khoản: ${response.login.user.username}`);
+            this.message.info(this.translate.instant('COMMON.LOGGED_IN_AS', { username: response.login.user.username }));
           }
           
           // Reload data
@@ -285,7 +287,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
         },
         (error) => {
           this.isLoading = false;
-          this.message.error(error.error?.message || 'Giao ca thất bại');
+          this.message.error(error.error?.message || this.translate.instant('SHIFT_HANDOVER.SUBMIT'));
           console.error(error);
         }
       )
@@ -316,7 +318,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     const amount = this.handoverForm.value.managerHandoverAmount || 0;
     
     if (!hotelId || !staffId || amount <= 0) {
-      this.message.warning('Vui lòng nhập số tiền giao quản lý');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER.MANAGER_HANDOVER_AMOUNT_LABEL'));
       return;
     }
 
@@ -332,10 +334,10 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
         notes: ''
       }).subscribe(
         (response) => {
-          this.message.success('Giao tiền quản lý thành công');
+          this.message.success(this.translate.instant('SHIFT_HANDOVER.MANAGER_HANDOVER_AMOUNT_LABEL'));
         },
         (error) => {
-          this.message.error('Giao tiền quản lý thất bại');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER.MANAGER_HANDOVER_AMOUNT_LABEL'));
           console.error(error);
         }
       )
@@ -346,7 +348,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
 
   viewHistory(): void {
     if (!this.canViewHistory) {
-      this.message.warning('Chỉ admin hoặc business mới được xem lịch sử giao ca');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER.HISTORY_TITLE'));
       return;
     }
     this.isHistoryVisible = true;

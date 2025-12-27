@@ -6,6 +6,8 @@ import { HotelService } from '../../services/hotel.service';
 import { Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { NzMessageService } from 'ng-zorro-antd/message';
 
 // Mở rộng ChatMessage để hỗ trợ file
 interface ChatMessage extends BaseChatMessage {
@@ -41,7 +43,9 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     private aiService: AiAssistantService,
     private authService: AuthService,
     private pricingService: PricingService,
-    private hotelService: HotelService
+    private hotelService: HotelService,
+    private modal: NzModalService,
+    private message: NzMessageService
   ) {}
 
   ngOnInit(): void {
@@ -179,5 +183,33 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.selectedFileType = undefined;
     this.selectedFilePreview = undefined;
     this.selectedFileName = undefined;
+  }
+
+  /**
+   * Xóa lịch sử chat với xác nhận
+   */
+  clearChatHistory(): void {
+    if (this.messages.length === 0) {
+      this.message.info('Không có lịch sử chat để xóa');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: 'Xác nhận xóa lịch sử chat',
+      nzContent: 'Bạn có chắc chắn muốn xóa toàn bộ lịch sử chat? Hành động này không thể hoàn tác.',
+      nzOkText: 'Xóa',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzCancelText: 'Hủy',
+      nzOnOk: async () => {
+        try {
+          await this.aiService.clearChatHistory();
+          this.message.success('Đã xóa lịch sử chat thành công');
+        } catch (error) {
+          console.error('Error clearing chat history:', error);
+          this.message.error('Có lỗi xảy ra khi xóa lịch sử chat');
+        }
+      }
+    });
   }
 }

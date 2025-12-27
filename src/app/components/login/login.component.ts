@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { UserService, LoginRequest } from '../../services/user.service';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-login',
@@ -22,7 +23,8 @@ export class LoginComponent implements OnInit {
     private fb: FormBuilder,
     private userService: UserService,
     private router: Router,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {
     this.initForm();
   }
@@ -79,15 +81,15 @@ export class LoginComponent implements OnInit {
         if (response.requireTwoFactor) {
           this.showTwoFactorInput = true;
           this.userId = response.userId || null;
-          this.message.info('Vui lòng nhập mã xác thực hai yếu tố');
+          this.message.info(this.translate.instant('LOGIN.ENTER_TWO_FACTOR'));
         } else {
-          this.message.success('Đăng nhập thành công!');
+          this.message.success(this.translate.instant('COMMON.SUCCESS'));
           window.location.href = '/admin/room';
         }
       },
       error: (error) => {
         this.isLoading = false;
-        this.message.error(error.error?.message || 'Đăng nhập thất bại');
+        this.message.error(error.error?.message || this.translate.instant('COMMON.ERROR_OCCURRED'));
       },
       complete: () => {
         this.isLoading = false;

@@ -6,6 +6,7 @@ import { TransactionService } from '../../services/transaction.service';
 import { FinancialSummaryService } from '../../services/financial-summary.service';
 import { format, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns';
 import { forkJoin } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-revenue-chart',
@@ -33,7 +34,8 @@ export class RevenueChartComponent implements OnInit, OnChanges {
     private hotelService: HotelService,
     private shiftHandoverService: ShiftHandoverService,
     private transactionService: TransactionService,
-    private financialSummaryService: FinancialSummaryService
+    private financialSummaryService: FinancialSummaryService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -270,7 +272,8 @@ export class RevenueChartComponent implements OnInit, OnChanges {
   }
 
   updateChart(): void {
-    const title = `Tổng Thu và Tổng Chi ${this.getHotelTitle()}`;
+    const periodTitle = this.getPeriodTitle(this.selectedPeriod);
+    const title = `${this.translate.instant('REVENUE_CHART.CHART_TITLE')} ${this.translate.instant('REVENUE_CHART.BY_PERIOD', { period: periodTitle })}`;
     
     // Đảm bảo expenseData có cùng độ dài với revenueData và không có giá trị âm
     const processedExpenseData = this.expenseData.length > 0 
@@ -285,6 +288,10 @@ export class RevenueChartComponent implements OnInit, OnChanges {
     const maxValue = Math.max(...allValues, 0);
     const minValue = Math.min(...allValues, 0);
     const yAxisMax = maxValue > 0 ? maxValue * 1.2 : 100000; // Thêm 20% padding
+    
+    const totalRevenueLabel = this.translate.instant('REVENUE_CHART.TOTAL_REVENUE_SERIES');
+    const totalExpenseLabel = this.translate.instant('REVENUE_CHART.TOTAL_EXPENSE_SERIES');
+    const profitLabel = this.translate.instant('REVENUE_CHART.PROFIT');
     
     this.chartOptions = {
       chart: { 
@@ -326,7 +333,7 @@ export class RevenueChartComponent implements OnInit, OnChanges {
       },
       yAxis: { 
         title: { 
-          text: 'Số Tiền (VNĐ)',
+          text: this.translate.instant('REVENUE_CHART.AMOUNT_LABEL'),
           style: {
             fontSize: '14px',
             color: '#595959'
@@ -377,7 +384,7 @@ export class RevenueChartComponent implements OnInit, OnChanges {
             const value = Math.abs(point.y || 0);
             const formattedValue = Highcharts.numberFormat(value, 0, ',', '.');
             const color = point.color;
-            const icon = point.series.name === 'Tổng Thu' ? '▲' : '▼';
+            const icon = point.series.name === totalRevenueLabel ? '▲' : '▼';
             
             tooltip += `<div style="display: flex; align-items: center; margin-bottom: 6px;">
               <span style="display: inline-block; width: 12px; height: 12px; background-color: ${color}; border-radius: 2px; margin-right: 8px;"></span>
@@ -396,7 +403,7 @@ export class RevenueChartComponent implements OnInit, OnChanges {
             const formattedProfit = Highcharts.numberFormat(Math.abs(profit), 0, ',', '.');
             
             tooltip += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0f0f0; display: flex; align-items: center;">
-              <span style="color: #595959; margin-right: 8px; font-weight: 500;">Lợi nhuận:</span>
+              <span style="color: #595959; margin-right: 8px; font-weight: 500;">${profitLabel}</span>
               <span style="font-weight: 600; color: ${profitColor}; font-size: 14px;">${profitIcon} ${formattedProfit} đ</span>
             </div>`;
           }
@@ -444,7 +451,7 @@ export class RevenueChartComponent implements OnInit, OnChanges {
       },
       series: [
         {
-          name: 'Tổng Thu',
+          name: totalRevenueLabel,
           data: processedRevenueData,
           type: 'column',
           color: {
@@ -464,7 +471,7 @@ export class RevenueChartComponent implements OnInit, OnChanges {
           }
         },
         {
-          name: 'Tổng Chi',
+          name: totalExpenseLabel,
           data: processedExpenseData,
           type: 'column',
           color: {
@@ -518,18 +525,31 @@ export class RevenueChartComponent implements OnInit, OnChanges {
     this.loadHotelRevenue();
   }
 
+  reload(): void {
+    // Reset dữ liệu trước khi tải lại
+    this.labels = [];
+    this.revenueData = [];
+    this.paymentData = [];
+    this.expenseData = [];
+    this.totalRevenue = 0;
+    this.totalPayment = 0;
+    this.totalExpense = 0;
+    // Tải lại dữ liệu
+    this.loadHotelRevenue();
+  }
+
   getPeriodTitle(period: 'day' | 'week' | 'month'): string {
     switch (period) {
-      case 'day': return 'Ngày';
-      case 'week': return 'Tuần';
-      case 'month': return 'Tháng';
+      case 'day': return this.translate.instant('REVENUE_CHART.DAY');
+      case 'week': return this.translate.instant('REVENUE_CHART.WEEK');
+      case 'month': return this.translate.instant('REVENUE_CHART.MONTH');
       default: return '';
     }
   }
   
   getHotelTitle(): string {
     if (!this.hotelId) return '';
-    return `Theo ${this.getPeriodTitle(this.selectedPeriod)}`;
+    return this.translate.instant('REVENUE_CHART.BY_PERIOD', { period: this.getPeriodTitle(this.selectedPeriod) });
   }
   
   // Định dạng số tiền VND

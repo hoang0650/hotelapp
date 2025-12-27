@@ -118,6 +118,21 @@
         <a [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a>
       </nz-breadcrumb-item>
     </nz-breadcrumb>
+    
+    <!-- Nút Settings cố định -->
+    <button 
+      class="fixed-settings-btn" 
+      nz-button 
+      nzType="default" 
+      nzShape="circle"
+      nz-dropdown
+      [nzDropdownMenu]="settingsMenu"
+      [nzTrigger]="'click'"
+      [nzPlacement]="'bottomRight'"
+      title="Cài đặt">
+      <i nz-icon nzType="setting" nzTheme="outline"></i>
+    </button>
+    
     <nz-content>
       <router-outlet></router-outlet>
       <nz-footer></nz-footer>
@@ -125,6 +140,99 @@
     <!-- <nz-footer></nz-footer> -->
   </nz-layout>
 </nz-layout>
+  
+  <!-- Settings Dropdown Menu Template -->
+  <nz-dropdown-menu #settingsMenu="nzDropdownMenu">
+    <ul nz-menu nzSelectable class="settings-dropdown-menu">
+      <li nz-menu-item *ngIf="canAccessSettings()" (click)="openSettings()">
+        <i nz-icon nzType="setting" nzTheme="outline"></i>
+        <span>Cài đặt hệ thống</span>
+      </li>
+      <li nz-menu-item (click)="navigateToPricing()">
+        <i nz-icon nzType="dollar" nzTheme="outline"></i>
+        <span>Quản lý gói đăng ký</span>
+      </li>
+      <li nz-menu-item *ngIf="canAccessElectricSetting()" (click)="navigateToElectric()">
+        <i nz-icon nzType="thunderbolt" nzTheme="outline"></i>
+        <span>Cài đặt điện</span>
+      </li>
+      <li nz-menu-divider></li>
+      <li nz-submenu nzTitle="Lọc phòng" nzIcon="filter">
+        <ul>
+          <li nz-menu-item (click)="openFloorFilterModal()">
+            <i nz-icon nzType="home" nzTheme="outline"></i>
+            <span>Lọc theo tầng</span>
+          </li>
+          <li nz-menu-item (click)="openColumnsModal()">
+            <i nz-icon nzType="appstore" nzTheme="outline"></i>
+            <span>Số cột hiển thị</span>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </nz-dropdown-menu>
+  
+  <!-- Modal lọc theo tầng -->
+  <nz-modal
+    [(nzVisible)]="isFloorFilterModalVisible"
+    nzTitle="Lọc theo tầng"
+    (nzOnCancel)="isFloorFilterModalVisible = false"
+    (nzOnOk)="applyFloorFilter()"
+    [nzOkText]="'Áp dụng'"
+    [nzCancelText]="'Hủy'"
+    [nzOkDisabled]="isLoadingFloors">
+    <div *nzModalContent>
+      <div *ngIf="!selectedHotelIdForFilter" class="filter-warning">
+        <nz-alert nzType="warning" nzMessage="Vui lòng chọn khách sạn trước khi lọc theo tầng" [nzShowIcon]="true"></nz-alert>
+      </div>
+      <div *ngIf="selectedHotelIdForFilter">
+        <nz-spin [nzSpinning]="isLoadingFloors">
+          <nz-form-item>
+            <nz-form-label>Tầng</nz-form-label>
+            <nz-form-control>
+              <nz-select 
+                nzPlaceHolder="Tất cả tầng" 
+                [(ngModel)]="tempSelectedFloor"
+                class="w-100"
+                nzAllowClear
+                [nzDisabled]="isLoadingFloors || availableFloors.length === 0">
+                <nz-option [nzValue]="null" [nzLabel]="'Tất cả tầng'"></nz-option>
+                <nz-option *ngFor="let floor of availableFloors" [nzValue]="floor" [nzLabel]="getFloorDisplayName(floor)"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </nz-spin>
+      </div>
+    </div>
+  </nz-modal>
+  
+  <!-- Modal số cột -->
+  <nz-modal
+    [(nzVisible)]="isColumnsModalVisible"
+    nzTitle="Số cột hiển thị"
+    (nzOnCancel)="isColumnsModalVisible = false"
+    (nzOnOk)="applyColumns()"
+    [nzOkText]="'Áp dụng'"
+    [nzCancelText]="'Hủy'">
+    <div *nzModalContent>
+      <nz-form-item>
+        <nz-form-label>Số cột</nz-form-label>
+        <nz-form-control>
+          <nz-slider 
+            [nzMarks]="columnMarks" 
+            [nzStep]="null" 
+            [nzMin]="2" 
+            [nzMax]="12" 
+            [(ngModel)]="tempColumnCount"
+            [nzTooltipVisible]="'never'">
+          </nz-slider>
+          <div style="text-align: center; margin-top: 8px;">
+            <span>{{ tempColumnCount }} cột</span>
+          </div>
+        </nz-form-control>
+      </nz-form-item>
+    </div>
+  </nz-modal>
   
   <!-- <app-room (showModal)="toggleModal(showModal)"></app-room> -->
 

@@ -247,6 +247,14 @@ export class SePayService {
   }
 
   /**
+   * Lấy QR code thanh toán cho pricing payment (từ superadmin/settings)
+   * Không yêu cầu quyền đặc biệt, chỉ cần đăng nhập
+   */
+  getPricingQRCode(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/pricing-qr-code`);
+  }
+
+  /**
    * Lấy lịch sử thanh toán SePay
    */
   getPaymentHistory(params?: {

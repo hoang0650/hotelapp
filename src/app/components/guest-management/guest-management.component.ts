@@ -12,6 +12,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-guest-management',
@@ -53,7 +54,8 @@ export class GuestManagementComponent implements OnInit {
     private roomsService: RoomsService,
     public authService: AuthService,
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private translate: TranslateService
   ) {
     this.guestForm = this.fb.group({
       hotelId: [null, Validators.required],
@@ -230,7 +232,7 @@ export class GuestManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error fetching hotels:', error);
-        this.message.error('Không thể tải danh sách khách sạn.');
+        this.message.error(this.translate.instant('GUEST_MANAGEMENT.LOAD_HOTELS_ERROR'));
         this.isLoading = false;
       }
     });
@@ -279,7 +281,7 @@ export class GuestManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error fetching guests:', error);
-        this.message.error('Không thể tải danh sách khách.');
+        this.message.error(this.translate.instant('GUEST_MANAGEMENT.LOAD_GUESTS_ERROR'));
         this.isLoading = false;
       }
     });
@@ -298,7 +300,7 @@ export class GuestManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error fetching rooms:', error);
-        this.message.error('Không thể tải danh sách phòng.');
+        this.message.error(this.translate.instant('GUEST_MANAGEMENT.LOAD_ROOMS_ERROR'));
       }
     });
   }
@@ -390,7 +392,7 @@ export class GuestManagementComponent implements OnInit {
 
   openEditModal(guest: Guest): void {
     if (!this.canEdit(guest)) {
-      this.message.warning('Bạn không có quyền chỉnh sửa khách này');
+      this.message.warning(this.translate.instant('GUEST_MANAGEMENT.NO_PERMISSION_EDIT'));
       return;
     }
 
@@ -532,30 +534,30 @@ export class GuestManagementComponent implements OnInit {
       const errors: string[] = [];
       
       if (this.guestForm.get('hotelId')?.invalid) {
-        errors.push('Vui lòng chọn khách sạn');
+        errors.push(this.translate.instant('GUEST_MANAGEMENT.REQUIRED_HOTEL'));
       }
       if (this.guestForm.get('guestType')?.invalid) {
-        errors.push('Vui lòng chọn loại khách');
+        errors.push(this.translate.instant('GUEST_MANAGEMENT.REQUIRED_GUEST_TYPE'));
       }
       
       const personalInfo = this.guestForm.get('personalInfo') as FormGroup;
       if (personalInfo) {
         if (personalInfo.get('fullName')?.invalid) {
-          errors.push('Vui lòng nhập họ và tên');
+          errors.push(this.translate.instant('GUEST_MANAGEMENT.REQUIRED_FULL_NAME'));
         }
       }
       
       const contactInfo = this.guestForm.get('contactInfo') as FormGroup;
       if (contactInfo) {
         if (contactInfo.get('email')?.invalid) {
-          errors.push('Email không hợp lệ');
+          errors.push(this.translate.instant('GUEST_MANAGEMENT.INVALID_EMAIL'));
         }
       }
       
       if (errors.length > 0) {
         this.message.warning(errors[0]);
       } else {
-        this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc');
+        this.message.warning(this.translate.instant('GUEST_MANAGEMENT.FILL_REQUIRED_FIELDS'));
       }
       return;
     }
@@ -596,14 +598,14 @@ export class GuestManagementComponent implements OnInit {
       // Update
       this.guestsService.updateGuest(this.editId, guestData).subscribe({
         next: (response) => {
-          this.message.success(response.message || 'Cập nhật khách thành công');
+          this.message.success(response.message || this.translate.instant('GUEST_MANAGEMENT.UPDATE_SUCCESS'));
           this.loadGuests();
           this.handleCancel();
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error updating guest:', error);
-          const errorMessage = error.error?.message || error.message || 'Cập nhật khách thất bại';
+          const errorMessage = error.error?.message || error.message || this.translate.instant('GUEST_MANAGEMENT.UPDATE_FAILED');
           this.message.error(errorMessage);
           this.isLoading = false;
         }
@@ -612,14 +614,14 @@ export class GuestManagementComponent implements OnInit {
       // Create
       this.guestsService.createGuest(guestData).subscribe({
         next: (response) => {
-          this.message.success(response.message || 'Tạo khách thành công');
+          this.message.success(response.message || this.translate.instant('GUEST_MANAGEMENT.CREATE_SUCCESS'));
           this.loadGuests();
           this.handleCancel();
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error creating guest:', error);
-          const errorMessage = error.error?.message || error.message || 'Tạo khách thất bại';
+          const errorMessage = error.error?.message || error.message || this.translate.instant('GUEST_MANAGEMENT.CREATE_FAILED');
           this.message.error(errorMessage);
           this.isLoading = false;
         }
@@ -642,26 +644,26 @@ export class GuestManagementComponent implements OnInit {
 
   deleteGuest(guest: Guest): void {
     if (!this.canDelete(guest)) {
-      this.message.warning('Bạn không có quyền xóa khách này');
+      this.message.warning(this.translate.instant('GUEST_MANAGEMENT.NO_PERMISSION_DELETE'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận xóa',
-      nzContent: `Bạn có chắc chắn muốn xóa khách "${this.getGuestName(guest)}"?`,
-      nzOkText: 'Xóa',
+      nzTitle: this.translate.instant('GUEST_MANAGEMENT.CONFIRM_DELETE'),
+      nzContent: this.translate.instant('GUEST_MANAGEMENT.CONFIRM_DELETE_MESSAGE', { name: this.getGuestName(guest) }),
+      nzOkText: this.translate.instant('GUEST_MANAGEMENT.DELETE_BUTTON'),
       nzOkDanger: true,
-      nzCancelText: 'Hủy',
+      nzCancelText: this.translate.instant('GUEST_MANAGEMENT.CANCEL'),
       nzOnOk: () => {
         this.isLoading = true;
         this.guestsService.deleteGuest(guest._id!).subscribe({
           next: (response) => {
-            this.message.success(response.message || 'Xóa khách thành công');
+            this.message.success(response.message || this.translate.instant('GUEST_MANAGEMENT.DELETE_SUCCESS'));
             this.loadGuests();
             this.isLoading = false;
           },
           error: (error) => {
-            this.message.error(error.error?.message || 'Xóa khách thất bại');
+            this.message.error(error.error?.message || this.translate.instant('GUEST_MANAGEMENT.DELETE_FAILED'));
             this.isLoading = false;
           }
         });
@@ -673,7 +675,7 @@ export class GuestManagementComponent implements OnInit {
 
   openAssignModal(guest: Guest): void {
     if (!this.canAssign(guest)) {
-      this.message.warning('Bạn không có quyền assign khách này');
+      this.message.warning(this.translate.instant('GUEST_MANAGEMENT.NO_PERMISSION_ASSIGN'));
       return;
     }
 
@@ -691,7 +693,7 @@ export class GuestManagementComponent implements OnInit {
 
   handleAssignOk(): void {
     if (!this.selectedGuest || !this.selectedRoomId) {
-      this.message.warning('Vui lòng chọn phòng');
+      this.message.warning(this.translate.instant('GUEST_MANAGEMENT.REQUIRED_ROOM'));
       return;
     }
 
@@ -716,14 +718,14 @@ export class GuestManagementComponent implements OnInit {
       rateType: 'hourly' // Mặc định theo giờ, có thể để user chọn sau
     }).subscribe({
       next: (response) => {
-        this.message.success(`Đã assign và check-in khách "${this.getGuestName(this.selectedGuest!)}" vào phòng thành công`);
+        this.message.success(this.translate.instant('GUEST_MANAGEMENT.ASSIGN_SUCCESS', { name: this.getGuestName(this.selectedGuest!) }));
         this.handleAssignCancel();
         this.isLoading = false;
         // Reload danh sách phòng để cập nhật trạng thái
         this.loadRooms();
       },
       error: (error) => {
-        const errorMessage = error.error?.message || error.error?.error || 'Lỗi assign khách vào phòng';
+        const errorMessage = error.error?.message || error.error?.error || this.translate.instant('GUEST_MANAGEMENT.ASSIGN_ERROR');
         
         // Kiểm tra lỗi về số lượng người tối đa
         if (errorMessage.includes('tối đa') || errorMessage.includes('đạt số lượng')) {
@@ -737,12 +739,12 @@ export class GuestManagementComponent implements OnInit {
           // Cập nhật thông tin khách vào phòng đã occupied
           this.roomsService.updateRoomCheckinInfo(this.selectedRoomId!, guestInfo, 0).subscribe({
             next: () => {
-              this.message.success(`Đã cập nhật thông tin khách "${this.getGuestName(this.selectedGuest!)}" vào phòng thành công`);
+              this.message.success(this.translate.instant('GUEST_MANAGEMENT.UPDATE_GUEST_INFO_SUCCESS', { name: this.getGuestName(this.selectedGuest!) }));
               this.handleAssignCancel();
               this.isLoading = false;
             },
             error: (err) => {
-              this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
+              this.message.error(err.error?.message || this.translate.instant('GUEST_MANAGEMENT.UPDATE_GUEST_INFO_FAILED'));
               this.isLoading = false;
             }
           });
@@ -758,7 +760,7 @@ export class GuestManagementComponent implements OnInit {
 
   openBookingModal(guest: Guest): void {
     if (!this.canAssign(guest)) {
-      this.message.warning('Bạn không có quyền đặt phòng cho khách này');
+      this.message.warning(this.translate.instant('GUEST_MANAGEMENT.NO_PERMISSION_BOOK'));
       return;
     }
 
@@ -786,7 +788,7 @@ export class GuestManagementComponent implements OnInit {
   handleBookingOk(): void {
     if (this.bookingForm.valid) {
       if (!this.selectedGuest) {
-        this.message.warning('Không tìm thấy thông tin khách');
+        this.message.warning(this.translate.instant('GUEST_MANAGEMENT.GUEST_NOT_FOUND'));
         return;
       }
 
@@ -804,12 +806,12 @@ export class GuestManagementComponent implements OnInit {
         children: formValue.children || 0
       }).subscribe({
         next: (response) => {
-          this.message.success(response.message || 'Đặt phòng thành công');
+          this.message.success(response.message || this.translate.instant('GUEST_MANAGEMENT.BOOKING_SUCCESS'));
           this.handleBookingCancel();
           this.isLoading = false;
         },
         error: (error) => {
-          this.message.error(error.error?.message || 'Đặt phòng thất bại');
+          this.message.error(error.error?.message || this.translate.instant('GUEST_MANAGEMENT.BOOKING_FAILED'));
           this.isLoading = false;
         }
       });
@@ -832,15 +834,15 @@ export class GuestManagementComponent implements OnInit {
     if (guest.personalInfo?.firstName && guest.personalInfo?.lastName) {
       return `${guest.personalInfo.firstName} ${guest.personalInfo.lastName}`;
     }
-    return 'Khách không tên';
+    return this.translate.instant('GUEST_MANAGEMENT.NO_NAME_GUEST');
   }
 
   getGuestTypeLabel(guestType?: string): string {
     switch (guestType) {
-      case 'regular': return 'Khách lưu';
-      case 'frequent': return 'Khách quen';
-      case 'group': return 'Khách đoàn';
-      default: return 'Khách lưu';
+      case 'regular': return this.translate.instant('GUEST_MANAGEMENT.REGULAR_GUEST');
+      case 'frequent': return this.translate.instant('GUEST_MANAGEMENT.FREQUENT_GUEST');
+      case 'group': return this.translate.instant('GUEST_MANAGEMENT.GROUP_GUEST');
+      default: return this.translate.instant('GUEST_MANAGEMENT.REGULAR_GUEST');
     }
   }
 
@@ -854,9 +856,9 @@ export class GuestManagementComponent implements OnInit {
 
   getGenderLabel(gender?: string): string {
     switch (gender) {
-      case 'male': return 'Nam';
-      case 'female': return 'Nữ';
-      case 'other': return 'Khác';
+      case 'male': return this.translate.instant('GUEST_MANAGEMENT.MALE');
+      case 'female': return this.translate.instant('GUEST_MANAGEMENT.FEMALE');
+      case 'other': return this.translate.instant('GUEST_MANAGEMENT.OTHER');
       default: return '-';
     }
   }
@@ -921,7 +923,7 @@ export class GuestManagementComponent implements OnInit {
     
     // OCR scanner component đã tự động điền vào form thông qua Input bindings
     // Nhưng có thể cần xử lý thêm logic nếu cần
-    this.message.success('Đã tự động điền thông tin từ OCR. Vui lòng kiểm tra và chỉnh sửa nếu cần.');
+    this.message.success(this.translate.instant('GUEST_MANAGEMENT.OCR_SUCCESS'));
   }
 
   // Disable dates trước hôm nay cho check-in
@@ -973,30 +975,30 @@ export class GuestManagementComponent implements OnInit {
         const allGuests = response.guests || [];
         
         if (allGuests.length === 0) {
-          this.message.warning('Không có dữ liệu để xuất Excel');
+          this.message.warning(this.translate.instant('GUEST_MANAGEMENT.NO_DATA_EXPORT'));
           this.isExporting = false;
           return;
         }
 
         // Chuẩn bị dữ liệu cho Excel
         const excelData = allGuests.map(guest => ({
-          'Tên khách': this.getGuestName(guest),
-          'Giới tính': this.getGenderLabel(guest.personalInfo?.gender),
-          'Ngày sinh': this.formatDate(guest.personalInfo?.dateOfBirth),
-          'Loại khách': this.getGuestTypeLabel(guest.guestType),
-          'CMND/CCCD': guest.personalInfo?.idNumber || '',
-          'Số điện thoại': guest.contactInfo?.phone || '',
-          'Số điện thoại dự phòng': guest.contactInfo?.alternativePhone || '',
-          'Email': guest.contactInfo?.email || '',
-          'Địa chỉ': this.getAddress(guest),
-          'Khách sạn': this.getHotelName(guest),
-          'Quốc tịch': guest.personalInfo?.nationality || '',
-          'Loại giấy tờ': guest.personalInfo?.idType === 'id_card' ? 'CMND/CCCD' : 
-                         guest.personalInfo?.idType === 'passport' ? 'Hộ chiếu' :
-                         guest.personalInfo?.idType === 'driver_license' ? 'Bằng lái xe' : '',
-          'Ngày hết hạn': this.formatDate(guest.personalInfo?.idExpiryDate),
-          'Điểm tích lũy': guest.loyaltyPoints || 0,
-          'Ghi chú': guest.notes || ''
+          [this.translate.instant('GUEST_MANAGEMENT.GUEST_NAME_COLUMN')]: this.getGuestName(guest),
+          [this.translate.instant('GUEST_MANAGEMENT.GENDER_COLUMN')]: this.getGenderLabel(guest.personalInfo?.gender),
+          [this.translate.instant('GUEST_MANAGEMENT.DATE_OF_BIRTH_COLUMN')]: this.formatDate(guest.personalInfo?.dateOfBirth),
+          [this.translate.instant('GUEST_MANAGEMENT.GUEST_TYPE_COLUMN')]: this.getGuestTypeLabel(guest.guestType),
+          [this.translate.instant('GUEST_MANAGEMENT.ID_NUMBER_COLUMN')]: guest.personalInfo?.idNumber || '',
+          [this.translate.instant('GUEST_MANAGEMENT.PHONE_COLUMN')]: guest.contactInfo?.phone || '',
+          [this.translate.instant('GUEST_MANAGEMENT.ALTERNATIVE_PHONE_COLUMN')]: guest.contactInfo?.alternativePhone || '',
+          [this.translate.instant('GUEST_MANAGEMENT.EMAIL_COLUMN')]: guest.contactInfo?.email || '',
+          [this.translate.instant('GUEST_MANAGEMENT.ADDRESS_COLUMN')]: this.getAddress(guest),
+          [this.translate.instant('GUEST_MANAGEMENT.HOTEL_COLUMN')]: this.getHotelName(guest),
+          [this.translate.instant('GUEST_MANAGEMENT.NATIONALITY_COLUMN')]: guest.personalInfo?.nationality || '',
+          [this.translate.instant('GUEST_MANAGEMENT.ID_TYPE_COLUMN')]: guest.personalInfo?.idType === 'id_card' ? this.translate.instant('GUEST_MANAGEMENT.ID_CARD') : 
+                         guest.personalInfo?.idType === 'passport' ? this.translate.instant('GUEST_MANAGEMENT.PASSPORT') :
+                         guest.personalInfo?.idType === 'driver_license' ? this.translate.instant('GUEST_MANAGEMENT.DRIVER_LICENSE') : '',
+          [this.translate.instant('GUEST_MANAGEMENT.ID_EXPIRY_DATE_COLUMN')]: this.formatDate(guest.personalInfo?.idExpiryDate),
+          [this.translate.instant('GUEST_MANAGEMENT.LOYALTY_POINTS_COLUMN')]: guest.loyaltyPoints || 0,
+          [this.translate.instant('GUEST_MANAGEMENT.NOTES_COLUMN')]: guest.notes || ''
         }));
 
         // Tạo worksheet
@@ -1023,8 +1025,8 @@ export class GuestManagementComponent implements OnInit {
         worksheet['!cols'] = colWidths;
 
         const workbook: XLSX.WorkBook = { 
-          Sheets: { 'Danh sách khách': worksheet }, 
-          SheetNames: ['Danh sách khách'] 
+          Sheets: { [this.translate.instant('GUEST_MANAGEMENT.EXCEL_SHEET_NAME')]: worksheet }, 
+          SheetNames: [this.translate.instant('GUEST_MANAGEMENT.EXCEL_SHEET_NAME')] 
         };
 
         // Tạo tên file
@@ -1033,11 +1035,11 @@ export class GuestManagementComponent implements OnInit {
 
         // Xuất file
         XLSX.writeFile(workbook, `${fileName}.xlsx`);
-        this.message.success(`Đã xuất ${allGuests.length} khách hàng ra file Excel thành công!`);
+        this.message.success(this.translate.instant('GUEST_MANAGEMENT.EXPORT_SUCCESS', { count: allGuests.length }));
         this.isExporting = false;
       },
       error: (error) => {
-        this.message.error(error.error?.message || 'Lỗi khi xuất file Excel');
+        this.message.error(error.error?.message || this.translate.instant('GUEST_MANAGEMENT.EXPORT_ERROR'));
         this.isExporting = false;
       }
     });

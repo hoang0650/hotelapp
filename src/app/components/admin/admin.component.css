@@ -94,6 +94,59 @@ nz-footer {
   text-align: center;
 }
 
+/* Nút Settings cố định - nằm dưới header */
+.fixed-settings-btn {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 1000;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s;
+}
+
+.fixed-settings-btn:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transform: scale(1.1);
+}
+
+.fixed-settings-btn i {
+  font-size: 18px;
+}
+
+/* Settings Dropdown Menu */
+::ng-deep .settings-dropdown-menu {
+  min-width: 200px;
+}
+
+::ng-deep .settings-dropdown-menu li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+::ng-deep .settings-dropdown-menu i {
+  font-size: 16px;
+}
+
+/* Responsive cho nút settings */
+@media (max-width: 768px) {
+  .fixed-settings-btn {
+    top: 70px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .fixed-settings-btn i {
+    font-size: 16px;
+  }
+}
+
 /* Responsive Layout Adjustments */
 @media (max-width: 768px) {
   nz-content {

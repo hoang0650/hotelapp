@@ -1,17 +1,20 @@
 <div class="room-container">
   <!-- Header với bộ lọc phòng -->
   <div class="page-header">
-    <div nz-row [nzGutter]="16">
+    <div nz-row [nzGutter]="[16, 16]">
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="6" *ngIf="!authService.isStaff()">
         <nz-form-item>
-          <nz-form-label>Khách sạn</nz-form-label>
+          <nz-form-label nzRequired>{{ 'ROOM.HOTEL' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Chọn khách sạn" 
+              [nzPlaceHolder]="'ROOM.SELECT_HOTEL' | translate" 
               [(ngModel)]="selectedHotelId" 
               (ngModelChange)="onHotelChange($event)"
-              class="w-100">
-              <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+              class="w-100"
+              nzShowSearch
+              nzAllowClear
+              [nzFilterOption]="filterHotelOption">
+              <nz-option *ngFor="let hotel of hotels; trackBy: trackByHotelId" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
@@ -24,30 +27,30 @@
               [ngModel]="selectedHotelId"
               [nzDisabled]="true"
               class="w-100">
-              <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+              <nz-option *ngFor="let hotel of hotels; trackBy: trackByHotelId" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
             </nz-select>
-            <div style="font-size: 12px; color: #999; margin-top: 4px;">Bạn chỉ có thể xem khách sạn của mình</div>
+            <div class="helper-text">{{ 'ROOM.STAFF_ONLY_HOTEL' | translate }}</div>
           </nz-form-control>
         </nz-form-item>
       </div>
       <div nz-col [nzXs]="12" [nzSm]="12" [nzMd]="8" [nzLg]="6">
         <nz-form-item>
-          <nz-form-label>Tầng</nz-form-label>
+          <nz-form-label>{{ 'ROOM.FLOOR' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Chọn tầng" 
+              [nzPlaceHolder]="'ROOM.ALL_FLOORS' | translate" 
               [(ngModel)]="selectedFloor"
               (ngModelChange)="onFloorChange($event)"
               class="w-100"
               nzAllowClear>
-              <nz-option *ngFor="let floor of floors" [nzValue]="floor" [nzLabel]="getFloorDisplayName(floor)"></nz-option>
+              <nz-option *ngFor="let floor of floors; trackBy: trackByFloor" [nzValue]="floor" [nzLabel]="(floor === '0' || floor === '' ? ('ROOM.GROUND_FLOOR' | translate) : (('ROOM.FLOOR_DISPLAY' | translate) + ' ' + floor))"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
       </div>
       <div nz-col [nzXs]="12" [nzSm]="12" [nzMd]="8" [nzLg]="6">
         <nz-form-item>
-          <nz-form-label>Hiển thị</nz-form-label>
+          <nz-form-label>{{ 'ROOM.COLUMNS' | translate }}</nz-form-label>
           <nz-form-control>
             <div class="display-controls">
               <nz-slider 
@@ -56,20 +59,23 @@
                 [nzMin]="2" 
                 [nzMax]="12" 
                 [(ngModel)]="count"
-                (ngModelChange)="reGenerateArray($event)">
+                (ngModelChange)="reGenerateArray($event)"
+                [nzTooltipVisible]="'never'">
               </nz-slider>
             </div>
           </nz-form-control>
         </nz-form-item>
       </div>
       <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="6">
-        <div class="action-buttons text-right">
-          <button nz-button nzType="primary" (click)="openIncomeModal()" title="Tạo phiếu thu" class="mr-2">
-            <i nz-icon nzType="plus-circle" nzTheme="outline"></i> Tạo phiếu thu
+        <div class="action-buttons">
+          <button nz-button nzType="primary" (click)="openIncomeModal()" nzSize="default" class="action-btn income-btn" [nzBlock]="true">
+            <i nz-icon nzType="plus-circle" nzTheme="outline"></i>
+            <span class="btn-text">{{ 'ROOM.INCOME' | translate }}</span>
           </button>
           
-          <button nz-button nzType="default" (click)="openExpenseModal()" title="Tạo phiếu chi">
-            <i nz-icon nzType="minus-circle" nzTheme="outline"></i> Tạo phiếu chi
+          <button nz-button nzType="default" (click)="openExpenseModal()" nzSize="default" class="action-btn expense-btn" [nzBlock]="true">
+            <i nz-icon nzType="minus-circle" nzTheme="outline"></i>
+            <span class="btn-text">{{ 'ROOM.EXPENSE' | translate }}</span>
           </button>
         </div>
       </div>
@@ -77,57 +83,39 @@
     
   <!-- Banner Thống kê phòng -->
   <div class="room-stats-banner" *ngIf="selectedHotelId && rooms.length > 0">
-    <div class="banner-header">
-      <h3 class="banner-title">
-        <i nz-icon nzType="dashboard" nzTheme="outline"></i>
-        Thống kê phòng
-      </h3>
-      <div class="banner-total">
-        <span class="total-label">Tổng:</span>
-        <span class="total-value">{{ rooms.length }}</span>
+    <div class="banner-content-single-row">
+      <div class="banner-title-section">
+        <h3 class="banner-title">
+          <i nz-icon nzType="dashboard" nzTheme="outline"></i>
+          {{ 'ROOM.STATISTICS' | translate }}
+        </h3>
       </div>
-    </div>
-    <div class="banner-content">
+      <div class="stat-item stat-total">
+        <span class="stat-label">{{ 'ROOM.TOTAL' | translate }}</span>
+        <span class="stat-value total">{{ rooms.length }}</span>
+      </div>
       <div class="stat-item">
-        <!--<div class="stat-icon vacant">
-          <i nz-icon nzType="home" nzTheme="outline"></i>
-        </div>-->
-        <span class="stat-label">Trống</span>
+        <span class="stat-label">{{ 'ROOM.VACANT' | translate }}</span>
         <span class="stat-value vacant">{{ getVacantRoomCount() }}</span>
       </div>
       <div class="stat-item">
-        <!--<div class="stat-icon occupied">
-          <i nz-icon nzType="user" nzTheme="outline"></i>
-        </div>-->
-        <span class="stat-label">Đang ở</span>
+        <span class="stat-label">{{ 'ROOM.OCCUPIED' | translate }}</span>
         <span class="stat-value occupied">{{ getOccupiedRoomCount() }}</span>
       </div>
       <div class="stat-item">
-        <!--<div class="stat-icon dirty">
-          <i nz-icon nzType="clear" nzTheme="outline"></i>
-        </div>-->
-        <span class="stat-label">Đang bẩn</span>
+        <span class="stat-label">{{ 'ROOM.DIRTY' | translate }}</span>
         <span class="stat-value dirty">{{ getDirtyRoomCount() }}</span>
       </div>
       <div class="stat-item">
-        <!--<div class="stat-icon maintenance">
-          <i nz-icon nzType="setting" nzTheme="outline"></i>
-        </div>-->
-        <span class="stat-label">Sửa chữa</span>
+        <span class="stat-label">{{ 'ROOM.MAINTENANCE' | translate }}</span>
         <span class="stat-value maintenance">{{ getMaintenanceRoomCount() }}</span>
       </div>
       <div class="stat-item">
-        <!--<div class="stat-icon booked">
-          <i nz-icon nzType="calendar" nzTheme="outline"></i>
-        </div>-->
-        <span class="stat-label">Đã đặt</span>
+        <span class="stat-label">{{ 'ROOM.BOOKED' | translate }}</span>
         <span class="stat-value booked">{{ getBookedRoomCount() }}</span>
       </div>
       <div class="stat-item">
-        <!--<div class="stat-icon guest-out">
-          <i nz-icon nzType="logout" nzTheme="outline"></i>
-        </div>-->
-        <span class="stat-label">Khách ra ngoài</span>
+        <span class="stat-label">{{ 'ROOM.GUEST_OUT' | translate }}</span>
         <span class="stat-value guest-out">{{ getGuestOutRoomCount() }}</span>
       </div>
     </div>
@@ -135,11 +123,15 @@
 
   <!-- Hiển thị phòng theo từng tầng -->
   <div class="rooms-by-floor-container" *ngIf="selectedHotelId">
-    <nz-spin [nzSpinning]="isLoading">
+    <nz-spin [nzSpinning]="isLoading" [nzTip]="'ROOM.LOADING_ROOMS' | translate">
       <!-- Lặp qua từng tầng -->
-      <div class="floor-section" *ngFor="let floor of getSortedFloors()">
+      <div class="floor-section" *ngFor="let floor of getSortedFloors(); trackBy: trackByFloor">
         <div class="floor-header">
-          <h3 class="floor-title">{{ getFloorDisplayName(floor) }}</h3>
+          <h3 class="floor-title">
+            <i nz-icon nzType="bank" nzTheme="outline" class="floor-icon"></i>
+            {{ floor === '0' || floor === '' ? ('ROOM.GROUND_FLOOR' | translate) : (('ROOM.FLOOR_DISPLAY' | translate) + ' ' + floor) }}
+            <span class="floor-room-count">({{ (getRoomsByFloor()[floor] || []).length }} {{ 'ROOM.ROOM_COUNT' | translate }})</span>
+          </h3>
         </div>
         
         <div class="floor-rooms">
@@ -147,23 +139,27 @@
             <div 
               nz-col 
               [nzSpan]="24 / count"
-              *ngFor="let room of getRoomsByFloor()[floor]"
+              [nzXs]="24"
+              [nzSm]="12"
+              [nzMd]="24 / count"
+              *ngFor="let room of getRoomsByFloor()[floor]; trackBy: trackByRoomId"
               class="room-col">
               <div 
                 class="room-item" 
                 [ngClass]="getRoomStatusClass(room.status, room.guestStatus)"
                 appModalControl 
-                [room]="room">
+                [room]="room"
+                [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.status === 'occupied' ? ('ROOM.OCCUPIED' | translate) : getRoomStatusLabelAndColor(room.status).label)"
+                role="button"
+                tabindex="0">
                 
                 <!-- Icon phòng -->
                 <div class="room-icon">
                   <i nz-icon [nzType]="getRoomIcon(room)" nzTheme="outline"></i>
                 </div>
                 
-                <!-- Số phòng -->
-                <div class="room-number">{{ room.roomNumber }}</div>
                 <!-- Công tắc điện compact -->
-                <div class="room-switch" *ngIf="selectedHotelId">
+                <div class="room-switch" *ngIf="selectedHotelId" (click)="$event.stopPropagation()">
                   <app-tuya-switch-compact 
                     [roomId]="room._id" 
                     [roomNumber]="room.roomNumber"
@@ -171,37 +167,54 @@
                   </app-tuya-switch-compact>
                 </div>
                 
+                <!-- Header phòng -->
+                <div class="room-header">
+                  <!-- Số phòng -->
+                  <div class="room-number">{{ room.roomNumber }}</div>
+                </div>
+                
                 <!-- Loại phòng -->
                 <div class="room-type">{{ room.type }}</div>
                 
-                <!-- Hình thức (chỉ hiển thị khi phòng đang có khách) -->
-                <ng-container *ngIf="room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
-                  <div class="room-status-label">{{ displayInfo.rateTypeLabel }}</div>
-                </ng-container>
-                
-                <!-- Trạng thái phòng (hiển thị khi không phải occupied) -->
-                <ng-container *ngIf="room.status !== 'occupied'">
-                  <div class="room-status-label">{{ getRoomStatusLabelAndColor(room.status).label }}</div>
-                </ng-container>
-                
-                <!-- Nguồn khách (chỉ hiển thị khi phòng đang có khách) -->
-                <ng-container *ngIf="room.status === 'occupied'">
-                  <div class="room-guest-source-label" [ngClass]="'source-' + getGuestSourceLabelAndColor(getRoomGuestSource(room)).color">
-                    {{ getGuestSourceLabelAndColor(getRoomGuestSource(room)).label }}
-                  </div>
-                  <!-- Trạng thái khách (ra ngoài/quay lại) -->
-                  <div class="room-guest-status-label" *ngIf="room.guestStatus === 'out'" 
-                       style="background-color: #e6fffb; color: #13c2c2; border: 1px solid #87e8de; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; margin-top: 4px; text-align: center;">
-                    Khách ra ngoài
-                  </div>
-                </ng-container>
+                <!-- Badges và labels -->
+                <div class="room-badges">
+                  <!-- Hình thức (chỉ hiển thị khi phòng đang có khách) -->
+                  <ng-container *ngIf="room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
+                    <nz-tag [nzColor]="'blue'" class="room-badge">{{ displayInfo.rateTypeLabel }}</nz-tag>
+                  </ng-container>
+                  
+                  <!-- Trạng thái phòng (hiển thị khi không phải occupied) -->
+                  <ng-container *ngIf="room.status !== 'occupied'">
+                    <nz-tag [nzColor]="getRoomStatusLabelAndColor(room.status).color" class="room-badge">
+                      {{ getRoomStatusLabelAndColor(room.status).label }}
+                    </nz-tag>
+                  </ng-container>
+                  
+                  <!-- Nguồn khách (chỉ hiển thị khi phòng đang có khách) -->
+                  <ng-container *ngIf="room.status === 'occupied'">
+                    <nz-tag 
+                      [nzColor]="getGuestSourceLabelAndColor(getRoomGuestSource(room)).color" 
+                      class="room-badge source-badge">
+                      {{ getGuestSourceLabelAndColor(getRoomGuestSource(room)).label }}
+                    </nz-tag>
+                    
+                    <!-- Trạng thái khách (ra ngoài/quay lại) -->
+                      <nz-tag 
+                      *ngIf="room.guestStatus === 'out'" 
+                      nzColor="cyan"
+                      class="room-badge guest-status-badge">
+                      <i nz-icon nzType="logout" nzTheme="outline"></i>
+                      {{ 'ROOM.GUEST_OUT_STATUS' | translate }}
+                    </nz-tag>
+                  </ng-container>
+                </div>
                 
                 <!-- Thông tin booking cho phòng đã đặt -->
                 <ng-container *ngIf="room.status === 'booked' && getRoomBookingInfo(room) as bookingInfo">
                   <div class="room-details">
                     <!-- Hiển thị thông tin chuyển phòng nếu có -->
                     <div class="detail-row" *ngIf="getBookingTransferInfo(room)">
-                      <span class="detail-label">Chuyển từ:</span>
+                      <span class="detail-label">{{ 'ROOM.TRANSFERRED_FROM' | translate }}:</span>
                       <span class="detail-value highlight" style="color: #ff9800;">
                         Phòng {{ getBookingTransferInfo(room)?.fromRoomNumber || 'N/A' }}
                         <span *ngIf="getBookingTransferInfo(room)?.transferredAt" style="font-size: 0.85em; color: #999; margin-left: 4px;">
@@ -210,19 +223,19 @@
                       </span>
                     </div>
                     <div class="detail-row">
-                      <span class="detail-label">Khách đặt:</span>
+                      <span class="detail-label">{{ 'ROOM.BOOKING_GUEST' | translate }}:</span>
                       <span class="detail-value highlight">{{ bookingInfo.guestName }}</span>
                     </div>
                     <div class="detail-row">
-                      <span class="detail-label">Ngày đến:</span>
+                      <span class="detail-label">{{ 'ROOM.CHECKIN_DATE' | translate }}:</span>
                       <span class="detail-value">{{ bookingInfo.checkInDate }}</span>
                     </div>
                     <div class="detail-row" *ngIf="bookingInfo.checkOutDate">
-                      <span class="detail-label">Ngày đi:</span>
+                      <span class="detail-label">{{ 'ROOM.CHECKOUT_DATE' | translate }}:</span>
                       <span class="detail-value">{{ bookingInfo.checkOutDate }}</span>
                     </div>
                     <div class="detail-row">
-                      <span class="detail-label">Hình thức:</span>
+                      <span class="detail-label">{{ 'ROOM.RATE_TYPE' | translate }}:</span>
                       <span class="detail-value">{{ bookingInfo.rateTypeLabel }}</span>
                     </div>
                   </div>
@@ -233,7 +246,7 @@
                   <div class="room-details">
                     <!-- Hiển thị thông tin chuyển phòng từ nhiều nguồn -->
                     <div class="detail-row" *ngIf="displayInfo.transferredFrom || getBookingTransferInfo(room)">
-                      <span class="detail-label">Chuyển từ:</span>
+                      <span class="detail-label">{{ 'ROOM.TRANSFERRED_FROM' | translate }}:</span>
                       <span class="detail-value highlight" style="color: #ff9800;">
                         <ng-container *ngIf="getBookingTransferInfo(room) as transferInfo">
                           Phòng {{ transferInfo.fromRoomNumber || getRoomNumberById(transferInfo.fromRoomId || '') || 'N/A' }}
@@ -250,41 +263,41 @@
                       </span>
                     </div>
                     <div class="detail-row">
-                      <span class="detail-label">Nhận phòng:</span>
+                      <span class="detail-label">{{ 'ROOM.CHECKIN_TIME' | translate }}:</span>
                       <span class="detail-value highlight">
                         {{ displayInfo.checkinTime }}
                         <span *ngIf="displayInfo.transferredFrom" style="font-size: 0.85em; color: #999; margin-left: 4px; font-style: italic;">
-                          (từ phòng cũ)
+                          {{ 'ROOM.FROM_OLD_ROOM' | translate }}
                         </span>
                       </span>
                     </div>
                     <div class="detail-row">
-                      <span class="detail-label">Khách hàng:</span>
+                      <span class="detail-label">{{ 'ROOM.CUSTOMER' | translate }}:</span>
                       <span class="detail-value">
                         {{ displayInfo.customerName }}
                         <span *ngIf="displayInfo.transferredFrom" style="font-size: 0.85em; color: #999; margin-left: 4px; font-style: italic;">
-                          (chuyển từ phòng cũ)
+                          {{ 'ROOM.TRANSFERRED_FROM_OLD_ROOM' | translate }}
                         </span>
                       </span>
                     </div>
                     <div class="detail-row">
-                      <span class="detail-label">Tổng tiền:</span>
+                      <span class="detail-label">{{ 'ROOM.TOTAL_AMOUNT' | translate }}:</span>
                       <span class="detail-value highlight">{{ displayInfo.totalAmount | number }} VNĐ</span>
                     </div>
                     <div class="detail-row" *ngIf="displayInfo.advancePayment > 0">
-                      <span class="detail-label">Đặt trước:</span>
+                      <span class="detail-label">{{ 'ROOM.ADVANCE_PAYMENT' | translate }}:</span>
                       <span class="detail-value highlight">{{ displayInfo.advancePayment | number }} VNĐ</span>
                     </div>
                     <div class="detail-row" *ngIf="displayInfo?.additionalCharges && displayInfo.additionalCharges > 0">
-                      <span class="detail-label">Phụ thu:</span>
+                      <span class="detail-label">{{ 'ROOM.ADDITIONAL_CHARGES' | translate }}:</span>
                       <span class="detail-value" style="color: #ff9800;">+ {{ displayInfo.additionalCharges | number }} VNĐ</span>
                     </div>
                     <div class="detail-row" *ngIf="displayInfo?.discount && displayInfo.discount > 0">
-                      <span class="detail-label">Khuyến mãi:</span>
+                      <span class="detail-label">{{ 'ROOM.DISCOUNT' | translate }}:</span>
                       <span class="detail-value" style="color: #52c41a;">- {{ displayInfo.discount | number }} VNĐ</span>
                     </div>
                     <div class="detail-row" *ngIf="displayInfo.remainingAmount !== 0">
-                      <span class="detail-label">Còn thu:</span>
+                      <span class="detail-label">{{ 'ROOM.REMAINING_AMOUNT' | translate }}:</span>
                       <span class="detail-value highlight" [style.color]="displayInfo.remainingAmount < 0 ? '#52c41a' : '#ffd700'">{{ displayInfo.remainingAmount | number }} VNĐ</span>
                     </div>
                   </div>
@@ -294,16 +307,7 @@
                 <ng-container *ngIf="room.status === 'cleaning'">
                   <div class="room-details">
                     <div class="detail-row center">
-                      <span class="detail-value">Phòng đang dọn...</span>
-                    </div>
-                  </div>
-                </ng-container>
-                
-                <!-- Thông tin cho phòng bẩn -->
-                <ng-container *ngIf="room.status === 'dirty'">
-                  <div class="room-details">
-                    <div class="detail-row center">
-                      <span class="detail-value">Phòng bẩn</span>
+                      <span class="detail-value">{{ 'ROOM.CLEANING' | translate }}</span>
                     </div>
                   </div>
                 </ng-container>
@@ -316,8 +320,14 @@
       <!-- Hiển thị khi không có phòng -->
       <div class="empty-state" *ngIf="rooms.length === 0 && !isLoading">
         <nz-empty 
-          [nzNotFoundContent]="selectedHotelId ? 'Không tìm thấy phòng nào' : 'Vui lòng chọn khách sạn'"
+          [nzNotFoundContent]="selectedHotelId ? ('ROOM.NO_ROOMS_FOUND' | translate) : ('ROOM.SELECT_HOTEL' | translate)"
           [nzNotFoundImage]="'simple'">
+          <ng-container *nzStringTemplateOutlet="null">
+            <div class="empty-content">
+              <i nz-icon nzType="home" nzTheme="outline" class="empty-icon"></i>
+              <p class="empty-text">{{ selectedHotelId ? ('ROOM.NO_ROOMS_FOUND' | translate) : ('ROOM.SELECT_HOTEL_TO_VIEW' | translate) }}</p>
+            </div>
+          </ng-container>
         </nz-empty>
       </div>
     </nz-spin>
@@ -328,17 +338,17 @@
     <div class="collapse-actions mb-2">
       <button nz-button nzType="link" nzSize="small" (click)="expandAllCollapse()">
         <i nz-icon nzType="down" nzTheme="outline"></i>
-        Mở tất cả
+        {{ 'ROOM.EXPAND_ALL' | translate }}
       </button>
       <button nz-button nzType="link" nzSize="small" (click)="collapseAllCollapse()">
         <i nz-icon nzType="up" nzTheme="outline"></i>
-        Đóng tất cả
+        {{ 'ROOM.COLLAPSE_ALL' | translate }}
       </button>
     </div>
     <nz-collapse [nzBordered]="false">
       <!-- Biểu đồ doanh thu -->
       <nz-collapse-panel 
-        nzHeader="Doanh thu khách sạn {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}"
+        [nzHeader]="('ROOM.REVENUE_CHART_TITLE' | translate) + (selectedHotelId ? ' - ' + getHotelName(selectedHotelId) : '')"
         [nzActive]="isRevenuePanelActive"
         [nzShowArrow]="true"
         [nzExtra]="revenueExtra"
@@ -361,7 +371,7 @@
       
       <!-- Calendar đặt phòng -->
       <nz-collapse-panel 
-        nzHeader="Lịch đặt phòng {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}"
+        [nzHeader]="('ROOM.BOOKING_CALENDAR_TITLE' | translate) + (selectedHotelId ? ' - ' + getHotelName(selectedHotelId) : '')"
         [nzActive]="isCalendarPanelActive"
         [nzShowArrow]="true"
         (nzActiveChange)="onCalendarPanelChange($event)">
@@ -376,7 +386,7 @@
 
       <!-- Bảng lịch sử phòng -->
       <nz-collapse-panel 
-        nzHeader="Lịch sử phòng {{ selectedHotelId ? '- ' + getHotelName(selectedHotelId) : '' }}"
+        [nzHeader]="('ROOM.ROOM_HISTORY_TITLE' | translate) + (selectedHotelId ? ' - ' + getHotelName(selectedHotelId) : '')"
         [nzActive]="isHistoryPanelActive"
         [nzShowArrow]="true"
         (nzActiveChange)="onHistoryPanelChange($event)">
@@ -394,28 +404,19 @@
   
   <!-- Template cho extra button trong revenue panel -->
   <ng-template #revenueExtra>
-    <button 
-      nz-button 
-      nzType="primary" 
-      nzSize="small"
-      (click)="openExpenseModal(); $event.stopPropagation()"
-      title="Tạo phiếu chi">
-      <i nz-icon nzType="plus" nzTheme="outline"></i>
-      Tạo phiếu chi
-    </button>
   </ng-template>
 </div>
 
 <!-- Modal phiếu chi -->
 <nz-modal
   [(nzVisible)]="isExpenseModalVisible"
-  nzTitle="Quản lý phiếu chi"
+  [nzTitle]="'ROOM.MANAGE_EXPENSE' | translate"
   [nzWidth]="900"
   (nzOnCancel)="isExpenseModalVisible = false"
   [nzFooter]="null">
   <div *nzModalContent>
     <!-- Form tạo phiếu chi -->
-    <nz-card nzTitle="Tạo phiếu chi mới" style="margin-bottom: 16px;">
+    <nz-card [nzTitle]="'ROOM.CREATE_EXPENSE' | translate" style="margin-bottom: 16px;">
       <form [formGroup]="expenseForm" (ngSubmit)="submitExpense()">
         <nz-form-item>
           <nz-form-label [nzSpan]="6" nzRequired>Số tiền</nz-form-label>
@@ -431,56 +432,56 @@
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Phương thức thanh toán</nz-form-label>
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'ROOM.PAYMENT_METHOD' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <nz-select formControlName="method" style="width: 100%">
-              <nz-option nzValue="cash" nzLabel="Tiền mặt"></nz-option>
-              <nz-option nzValue="bank_transfer" nzLabel="Chuyển khoản"></nz-option>
-              <nz-option nzValue="card" nzLabel="Thẻ"></nz-option>
-              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+              <nz-option nzValue="cash" [nzLabel]="'ROOM.CASH' | translate"></nz-option>
+              <nz-option nzValue="bank_transfer" [nzLabel]="'ROOM.BANK_TRANSFER' | translate"></nz-option>
+              <nz-option nzValue="card" [nzLabel]="'ROOM.CARD' | translate"></nz-option>
+              <nz-option nzValue="other" [nzLabel]="'ROOM.OTHER' | translate"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Danh mục</nz-form-label>
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'ROOM.CATEGORY' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <nz-select formControlName="expenseCategory" style="width: 100%">
-              <nz-option nzValue="supplies" nzLabel="Vật tư"></nz-option>
-              <nz-option nzValue="utilities" nzLabel="Tiện ích (điện, nước)"></nz-option>
-              <nz-option nzValue="salary" nzLabel="Lương"></nz-option>
-              <nz-option nzValue="maintenance" nzLabel="Bảo trì"></nz-option>
-              <nz-option nzValue="marketing" nzLabel="Marketing"></nz-option>
-              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+              <nz-option nzValue="supplies" [nzLabel]="'ROOM.SUPPLIES' | translate"></nz-option>
+              <nz-option nzValue="utilities" [nzLabel]="'ROOM.UTILITIES' | translate"></nz-option>
+              <nz-option nzValue="salary" [nzLabel]="'ROOM.SALARY' | translate"></nz-option>
+              <nz-option nzValue="maintenance" [nzLabel]="'ROOM.MAINTENANCE' | translate"></nz-option>
+              <nz-option nzValue="marketing" [nzLabel]="'ROOM.MARKETING' | translate"></nz-option>
+              <nz-option nzValue="other" [nzLabel]="'ROOM.OTHER' | translate"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Mô tả</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập mô tả">
-            <input nz-input formControlName="description" placeholder="Nhập mô tả chi tiết">
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'ROOM.DESCRIPTION' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'COMMON.PLEASE_FILL_ALL' | translate">
+            <input nz-input formControlName="description" [placeholder]="'ROOM.DESCRIPTION' | translate">
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Người nhận</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'ROOM.RECIPIENT' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
-            <input nz-input formControlName="recipient" placeholder="Tên người nhận (nếu có)">
+            <input nz-input formControlName="recipient" [placeholder]="'ROOM.RECIPIENT' | translate">
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Ghi chú</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'COMMON.NOTES' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
-            <textarea nz-input formControlName="notes" rows="3" placeholder="Ghi chú thêm (nếu có)"></textarea>
+            <textarea nz-input formControlName="notes" rows="3" [placeholder]="'COMMON.NOTES' | translate"></textarea>
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
           <nz-form-control [nzOffset]="6" [nzSpan]="18">
             <button nz-button nzType="primary" [nzLoading]="expenseLoading" type="submit">
-              Tạo phiếu chi
+              {{ 'ROOM.CREATE' | translate }} {{ 'ROOM.EXPENSE' | translate }}
             </button>
           </nz-form-control>
         </nz-form-item>
@@ -488,7 +489,7 @@
     </nz-card>
 
     <!-- Danh sách phiếu chi -->
-    <nz-card nzTitle="Danh sách phiếu chi">
+    <nz-card [nzTitle]="'ROOM.EXPENSE_LIST' | translate">
       <nz-table
         #expenseTable
         [nzData]="expenseList"
@@ -498,13 +499,13 @@
         [nzTotal]="expenseList.length">
         <thead>
           <tr>
-            <th>Ngày</th>
-            <th>Mô tả</th>
-            <th>Danh mục</th>
-            <th>Số tiền</th>
-            <th>Phương thức</th>
-            <th>Người nhận</th>
-            <th>Thao tác</th>
+            <th>{{ 'COMMON.DATE' | translate }}</th>
+            <th>{{ 'ROOM.DESCRIPTION' | translate }}</th>
+            <th>{{ 'ROOM.CATEGORY' | translate }}</th>
+            <th>{{ 'ROOM.AMOUNT' | translate }}</th>
+            <th>{{ 'ROOM.PAYMENT_METHOD' | translate }}</th>
+            <th>{{ 'ROOM.RECIPIENT' | translate }}</th>
+            <th>{{ 'COMMON.ACTIONS' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -513,23 +514,23 @@
             <td>{{ expense.description }}</td>
             <td>
               <nz-tag [nzColor]="'blue'">
-                {{ expense.expenseCategory === 'supplies' ? 'Vật tư' :
-                   expense.expenseCategory === 'utilities' ? 'Tiện ích' :
-                   expense.expenseCategory === 'salary' ? 'Lương' :
-                   expense.expenseCategory === 'maintenance' ? 'Bảo trì' :
-                   expense.expenseCategory === 'marketing' ? 'Marketing' : 'Khác' }}
+                {{ expense.expenseCategory === 'supplies' ? ('ROOM.SUPPLIES' | translate) :
+                   expense.expenseCategory === 'utilities' ? ('ROOM.UTILITIES' | translate) :
+                   expense.expenseCategory === 'salary' ? ('ROOM.SALARY' | translate) :
+                   expense.expenseCategory === 'maintenance' ? ('ROOM.MAINTENANCE' | translate) :
+                   expense.expenseCategory === 'marketing' ? ('ROOM.MARKETING' | translate) : ('ROOM.OTHER' | translate) }}
               </nz-tag>
             </td>
             <td>{{ expense.amount | number:'1.0-0' }} đ</td>
             <td>
-              {{ expense.method === 'cash' ? 'Tiền mặt' :
-                 expense.method === 'bank_transfer' ? 'Chuyển khoản' :
-                 expense.method === 'card' ? 'Thẻ' : 'Khác' }}
+              {{ expense.method === 'cash' ? ('ROOM.CASH' | translate) :
+                 expense.method === 'bank_transfer' ? ('ROOM.BANK_TRANSFER' | translate) :
+                 expense.method === 'card' ? ('ROOM.CARD' | translate) : ('ROOM.OTHER' | translate) }}
             </td>
             <td>{{ expense.details?.recipient || '-' }}</td>
             <td>
               <button nz-button nzType="link" nzDanger (click)="deleteExpense(expense._id!)" [disabled]="expense.shiftHandoverId">
-                Xóa
+                {{ 'COMMON.DELETE' | translate }}
               </button>
             </td>
           </tr>
@@ -542,17 +543,17 @@
 <!-- Modal phiếu thu -->
 <nz-modal
   [(nzVisible)]="isIncomeModalVisible"
-  nzTitle="Quản lý phiếu thu"
+  [nzTitle]="'ROOM.MANAGE_INCOME' | translate"
   [nzWidth]="900"
   (nzOnCancel)="isIncomeModalVisible = false"
   [nzFooter]="null">
   <div *nzModalContent>
     <!-- Form tạo phiếu thu -->
-    <nz-card nzTitle="Tạo phiếu thu mới" style="margin-bottom: 16px;">
+    <nz-card [nzTitle]="'ROOM.CREATE_INCOME' | translate" style="margin-bottom: 16px;">
       <form [formGroup]="incomeForm" (ngSubmit)="submitIncome()">
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Số tiền</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập số tiền lớn hơn 0">
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'ROOM.AMOUNT' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'COMMON.PLEASE_FILL_ALL' | translate">
             <nz-input-number
               formControlName="amount"
               [nzMin]="1"
@@ -564,53 +565,53 @@
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Phương thức thanh toán</nz-form-label>
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'ROOM.PAYMENT_METHOD' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <nz-select formControlName="method" style="width: 100%">
-              <nz-option nzValue="cash" nzLabel="Tiền mặt"></nz-option>
-              <nz-option nzValue="bank_transfer" nzLabel="Chuyển khoản"></nz-option>
-              <nz-option nzValue="card" nzLabel="Thẻ"></nz-option>
-              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+              <nz-option nzValue="cash" [nzLabel]="'ROOM.CASH' | translate"></nz-option>
+              <nz-option nzValue="bank_transfer" [nzLabel]="'ROOM.BANK_TRANSFER' | translate"></nz-option>
+              <nz-option nzValue="card" [nzLabel]="'ROOM.CARD' | translate"></nz-option>
+              <nz-option nzValue="other" [nzLabel]="'ROOM.OTHER' | translate"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Danh mục</nz-form-label>
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'ROOM.CATEGORY' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <nz-select formControlName="incomeCategory" style="width: 100%">
-              <nz-option nzValue="service" nzLabel="Dịch vụ"></nz-option>
-              <nz-option nzValue="rental" nzLabel="Cho thuê"></nz-option>
-              <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+              <nz-option nzValue="service" [nzLabel]="'ROOM.SERVICE' | translate"></nz-option>
+              <nz-option nzValue="rental" [nzLabel]="'ROOM.RENTAL' | translate"></nz-option>
+              <nz-option nzValue="other" [nzLabel]="'ROOM.OTHER' | translate"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Mô tả</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập mô tả">
-            <input nz-input formControlName="description" placeholder="Nhập mô tả chi tiết">
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'ROOM.DESCRIPTION' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'COMMON.PLEASE_FILL_ALL' | translate">
+            <input nz-input formControlName="description" [placeholder]="'ROOM.DESCRIPTION' | translate">
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Người nộp</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'ROOM.PAYER' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
-            <input nz-input formControlName="payer" placeholder="Tên người nộp (nếu có)">
+            <input nz-input formControlName="payer" [placeholder]="'ROOM.PAYER' | translate">
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Ghi chú</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'COMMON.NOTES' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
-            <textarea nz-input formControlName="notes" rows="3" placeholder="Ghi chú thêm (nếu có)"></textarea>
+            <textarea nz-input formControlName="notes" rows="3" [placeholder]="'COMMON.NOTES' | translate"></textarea>
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
           <nz-form-control [nzOffset]="6" [nzSpan]="18">
             <button nz-button nzType="primary" [nzLoading]="incomeLoading" type="submit">
-              Tạo phiếu thu
+              {{ 'ROOM.CREATE' | translate }} {{ 'ROOM.INCOME' | translate }}
             </button>
           </nz-form-control>
         </nz-form-item>
@@ -618,7 +619,7 @@
     </nz-card>
 
     <!-- Danh sách phiếu thu -->
-    <nz-card nzTitle="Danh sách phiếu thu">
+    <nz-card [nzTitle]="'ROOM.INCOME_LIST' | translate">
       <nz-table
         #incomeTable
         [nzData]="incomeList"
@@ -628,13 +629,13 @@
         [nzTotal]="incomeList.length">
         <thead>
           <tr>
-            <th>Ngày</th>
-            <th>Mô tả</th>
-            <th>Danh mục</th>
-            <th>Số tiền</th>
-            <th>Phương thức</th>
-            <th>Người nộp</th>
-            <th>Thao tác</th>
+            <th>{{ 'COMMON.DATE' | translate }}</th>
+            <th>{{ 'ROOM.DESCRIPTION' | translate }}</th>
+            <th>{{ 'ROOM.CATEGORY' | translate }}</th>
+            <th>{{ 'ROOM.AMOUNT' | translate }}</th>
+            <th>{{ 'ROOM.PAYMENT_METHOD' | translate }}</th>
+            <th>{{ 'ROOM.PAYER' | translate }}</th>
+            <th>{{ 'COMMON.ACTIONS' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -643,23 +644,23 @@
             <td>{{ income.description }}</td>
             <td>
               <nz-tag [nzColor]="'green'">
-                {{ income.incomeCategory === 'service' ? 'Dịch vụ' :
-                   income.incomeCategory === 'rental' ? 'Cho thuê' : 'Khác' }}
+                {{ income.incomeCategory === 'service' ? ('ROOM.SERVICE' | translate) :
+                   income.incomeCategory === 'rental' ? ('ROOM.RENTAL' | translate) : ('ROOM.OTHER' | translate) }}
               </nz-tag>
             </td>
             <td>{{ income.amount | number:'1.0-0' }} đ</td>
             <td>
-              {{ income.method === 'cash' ? 'Tiền mặt' :
-                 income.method === 'bank_transfer' ? 'Chuyển khoản' :
-                 income.method === 'card' ? 'Thẻ' : 'Khác' }}
+              {{ income.method === 'cash' ? ('ROOM.CASH' | translate) :
+                 income.method === 'bank_transfer' ? ('ROOM.BANK_TRANSFER' | translate) :
+                 income.method === 'card' ? ('ROOM.CARD' | translate) : ('ROOM.OTHER' | translate) }}
             </td>
             <td>{{ income.payer || '-' }}</td>
             <td>
               <button nz-button nzType="link" nzDanger (click)="deleteIncome(income._id!)" [disabled]="income.shiftHandoverId">
-                Xóa
+                {{ 'COMMON.DELETE' | translate }}
               </button>
               <span *ngIf="income.shiftHandoverId" class="text-muted" style="font-size: 12px; margin-left: 8px;">
-                (Đã giao ca)
+                {{ 'ROOM.SHIFT_HANDOVERED' | translate }}
               </span>
             </td>
           </tr>
@@ -872,7 +873,7 @@
   .banner-amount {
     font-size: 20px;
     font-weight: 700;
-    color: #ffd700;
+    color: white;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
   
@@ -931,7 +932,236 @@
   }
   
   .action-buttons {
-    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 0;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s;
+  }
+
+  .action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-text {
+    font-weight: 500;
+  }
+
+  .action-btn.settings-btn {
+    background: #f0f0f0;
+    border-color: #d9d9d9;
+  }
+
+  .action-btn.settings-btn:hover {
+    background: #e6f7ff;
+    border-color: #1890ff;
+    color: #1890ff;
+  }
+
+  /* Settings Dropdown Menu */
+  ::ng-deep .settings-dropdown-menu {
+    min-width: 200px;
+  }
+
+  ::ng-deep .settings-dropdown-menu li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  ::ng-deep .settings-dropdown-menu i {
+    font-size: 16px;
+  }
+
+  .helper-text {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+  }
+
+  /* Banner Thống kê phòng */
+  .room-stats-banner {
+    background-color: white;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+  }
+
+  .banner-content-single-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .banner-title-section {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+
+  .banner-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.85);
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 8px;
+    width: 75px;
+    height: 70px;
+    border-radius: 6px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .stat-item.stat-total {
+    background: transparent;
+  }
+
+  .stat-item .stat-value {
+    padding: 4px 10px;
+    border-radius: 6px;
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 18px;
+  }
+
+  .stat-value.total {
+    background: #1890ff;
+  }
+
+  .stat-value.vacant {
+    background: #52c41a;
+  }
+
+  .stat-value.occupied {
+    background: #f5222d;
+  }
+
+  .stat-value.dirty {
+    background: #fa8c16;
+  }
+
+  .stat-value.maintenance {
+    background: #722ed1;
+  }
+
+  .stat-value.booked {
+    background: #2f54eb;
+  }
+
+  .stat-value.guest-out {
+    background: #13c2c2;
+  }
+
+
+  .stat-label {
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.65);
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+  }
+
+  /* Floor Header - Cải thiện */
+  .floor-icon {
+    margin-right: 8px;
+    color: #1890ff;
+  }
+
+  .floor-room-count {
+    font-size: 16px;
+    font-weight: 400;
+    color: #999;
+    margin-left: 8px;
+  }
+
+  /* Room Header */
+  .room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  /* Room Badges */
+  .room-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    width: 100%;
+  }
+
+  .room-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .source-badge {
+    font-size: 10px;
+  }
+
+  .guest-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Empty State - Cải thiện */
+  .empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+  }
+
+  .empty-icon {
+    font-size: 64px;
+    color: #d9d9d9;
+    margin-bottom: 16px;
+  }
+
+  .empty-text {
+    font-size: 16px;
+    color: #999;
+    margin: 0;
   }
   
   /* Room Item Styling */
@@ -973,6 +1203,13 @@
     right: 12px;
     font-size: 32px;
     opacity: 0.3;
+  }
+
+  .room-switch {
+    position: absolute;
+    top: 50px;
+    right: 12px;
+    z-index: 10;
   }
   
   .room-number {
@@ -1129,10 +1366,83 @@
   }
   
   /* Responsive styles */
-  @media (max-width: 575px) {
-    .room-item {
-      min-height: 160px;
+  @media (max-width: 768px) {
+    .room-stats-banner {
       padding: 12px;
+    }
+
+    .banner-content-single-row {
+      gap: 12px;
+    }
+
+    .banner-title {
+      font-size: 16px;
+    }
+
+    .stat-item {
+      width: 90px;
+      height: 75px;
+      padding: 6px 10px;
+    }
+
+    .stat-value {
+      font-size: 18px;
+    }
+
+    .floor-title {
+      font-size: 20px;
+    }
+
+    .action-buttons {
+      margin-top: 16px;
+    }
+  }
+
+  @media (max-width: 575px) {
+    .room-container {
+      padding: 12px;
+    }
+
+    .page-header {
+      padding: 12px;
+    }
+
+    .room-stats-banner {
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .banner-title {
+      font-size: 18px;
+    }
+
+    .banner-content {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .stat-item {
+      flex-direction: column;
+      text-align: center;
+      padding: 8px;
+      width: 80px;
+      height: 70px;
+    }
+
+    .stat-icon-wrapper {
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+    }
+
+    .stat-value {
+      font-size: 16px;
+    }
+
+    .room-item {
+      min-height: 180px;
+      padding: 12px;
+      margin-bottom: 12px;
     }
     
     .room-number {
@@ -1146,23 +1456,34 @@
     .detail-row {
       font-size: 11px;
     }
-    
-    .legend {
-      justify-content: space-between;
-      gap: 8px;
+
+    .room-badges {
+      gap: 4px;
+    }
+
+    .room-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+    }
+
+    .floor-title {
+      font-size: 18px;
+    }
+
+    .floor-room-count {
+      font-size: 14px;
     }
     
     .action-buttons {
-      text-align: left;
-      margin-top: 16px;
+      margin-top: 12px;
     }
-    
-    .banner-label {
-      font-size: 16px;
+
+    .empty-icon {
+      font-size: 48px;
     }
-    
-    .banner-amount {
-      font-size: 18px;
+
+    .empty-text {
+      font-size: 14px;
     }
   }
 </style>

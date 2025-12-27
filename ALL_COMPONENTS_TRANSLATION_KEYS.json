@@ -1,0 +1,147 @@
+{
+  "REVENUE_CHART": {
+    "TITLE": "Biểu đồ doanh thu",
+    "TOTAL_REVENUE": "Tổng doanh thu",
+    "TOTAL_PAYMENT": "Tổng thanh toán",
+    "TOTAL_EXPENSE": "Tổng chi",
+    "PERIOD": "Khoảng thời gian",
+    "DAY": "Ngày",
+    "WEEK": "Tuần",
+    "MONTH": "Tháng",
+    "SELECT_PERIOD": "Chọn khoảng thời gian"
+  },
+  "TABLE": {
+    "TITLE": "Lịch sử phòng",
+    "ROOM_NUMBER": "Số phòng",
+    "CUSTOMER_NAME": "Tên khách hàng",
+    "CHECKIN_TIME": "Thời gian nhận phòng",
+    "CHECKOUT_TIME": "Thời gian trả phòng",
+    "TOTAL_AMOUNT": "Tổng tiền",
+    "PAYMENT_METHOD": "Phương thức thanh toán",
+    "VIEW_INVOICE": "Xem hóa đơn",
+    "NO_DATA": "Không có dữ liệu",
+    "SEARCH": "Tìm kiếm",
+    "FILTER": "Lọc",
+    "DATE": "Ngày",
+    "EVENT": "Sự kiện",
+    "STAFF": "Nhân viên"
+  },
+  "SHIFT_HANDOVER": {
+    "TITLE": "Giao ca",
+    "FROM_STAFF": "Nhân viên giao ca",
+    "TO_STAFF": "Nhân viên nhận ca",
+    "CASH_AMOUNT": "Số tiền mặt",
+    "NOTES": "Ghi chú",
+    "SUBMIT": "Xác nhận giao ca",
+    "CANCEL": "Hủy"
+  },
+  "CALENDAR": {
+    "TITLE": "Lịch đặt phòng",
+    "BOOKING": "Đặt phòng",
+    "AVAILABLE": "Trống",
+    "OCCUPIED": "Đã đặt",
+    "SELECT_DATE": "Chọn ngày"
+  },
+  "COMPANY_MANAGEMENT": {
+    "TITLE": "Quản lý doanh nghiệp",
+    "ADD": "Thêm doanh nghiệp",
+    "EDIT": "Sửa doanh nghiệp",
+    "DELETE": "Xóa doanh nghiệp",
+    "COMPANY_NAME": "Tên doanh nghiệp",
+    "OWNER": "Chủ sở hữu",
+    "ADDRESS": "Địa chỉ",
+    "PHONE": "Điện thoại",
+    "EMAIL": "Email"
+  },
+  "HOTEL_MANAGEMENT": {
+    "TITLE": "Quản lý khách sạn",
+    "ADD": "Thêm khách sạn",
+    "EDIT": "Sửa khách sạn",
+    "DELETE": "Xóa khách sạn",
+    "HOTEL_NAME": "Tên khách sạn",
+    "ADDRESS": "Địa chỉ",
+    "PHONE": "Điện thoại",
+    "EMAIL": "Email"
+  },
+  "ROOM_MANAGEMENT": {
+    "TITLE": "Quản lý phòng",
+    "ADD": "Thêm phòng",
+    "EDIT": "Sửa phòng",
+    "DELETE": "Xóa phòng",
+    "ROOM_NUMBER": "Số phòng",
+    "ROOM_TYPE": "Loại phòng",
+    "FLOOR": "Tầng",
+    "PRICE": "Giá"
+  },
+  "STAFF_MANAGEMENT": {
+    "TITLE": "Quản lý nhân viên",
+    "ADD": "Thêm nhân viên",
+    "EDIT": "Sửa nhân viên",
+    "DELETE": "Xóa nhân viên",
+    "FULL_NAME": "Họ và tên",
+    "USERNAME": "Tên đăng nhập",
+    "EMAIL": "Email",
+    "PHONE": "Điện thoại",
+    "ROLE": "Vai trò"
+  },
+  "GUEST_MANAGEMENT": {
+    "TITLE": "Quản lý khách",
+    "ADD": "Thêm khách",
+    "EDIT": "Sửa khách",
+    "DELETE": "Xóa khách",
+    "GUEST_NAME": "Tên khách",
+    "PHONE": "Điện thoại",
+    "EMAIL": "Email",
+    "ID_NUMBER": "Số CMND/CCCD"
+  },
+  "SERVICE_MANAGEMENT": {
+    "TITLE": "Quản lý dịch vụ",
+    "ADD": "Thêm dịch vụ",
+    "EDIT": "Sửa dịch vụ",
+    "DELETE": "Xóa dịch vụ",
+    "SERVICE_NAME": "Tên dịch vụ",
+    "PRICE": "Giá",
+    "UNIT": "Đơn vị"
+  },
+  "SETTINGS": {
+    "TITLE": "Cài đặt hệ thống",
+    "GENERAL": "Cài đặt chung",
+    "PAYMENT": "Thanh toán",
+    "EMAIL": "Email",
+    "SAVE": "Lưu",
+    "CANCEL": "Hủy"
+  },
+  "PRICING_MANAGEMENT": {
+    "TITLE": "Quản lý gói giá",
+    "PACKAGE_NAME": "Tên gói",
+    "PRICE": "Giá",
+    "FEATURES": "Tính năng",
+    "ADD": "Thêm gói",
+    "EDIT": "Sửa gói",
+    "DELETE": "Xóa gói"
+  },
+  "DEBT_MANAGEMENT": {
+    "TITLE": "Quản lý công nợ",
+    "CUSTOMER": "Khách hàng",
+    "AMOUNT": "Số tiền",
+    "DATE": "Ngày",
+    "STATUS": "Trạng thái"
+  },
+  "BANK_TRANSFER_HISTORY": {
+    "TITLE": "Lịch sử chuyển khoản",
+    "DATE": "Ngày",
+    "AMOUNT": "Số tiền",
+    "FROM": "Từ",
+    "TO": "Đến",
+    "STATUS": "Trạng thái"
+  },
+  "EMAIL_ADMIN": {
+    "TITLE": "Quản lý email",
+    "SEND_EMAIL": "Gửi email",
+    "TO": "Đến",
+    "SUBJECT": "Tiêu đề",
+    "CONTENT": "Nội dung",
+    "SEND": "Gửi"
+  }
+}
+

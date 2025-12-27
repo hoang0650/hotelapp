@@ -24,6 +24,7 @@ import { BusinessService } from '../../services/business.service';
 import { TransactionService } from '../../services/transaction.service';
 import { take } from 'rxjs/operators';
 import { forkJoin } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
 
 type TableScroll = 'unset' | 'scroll' | 'fixed';
 
@@ -262,7 +263,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     private modalService: NzModalService,
     private hotelService: HotelService,
     private businessService: BusinessService,
-    private transactionService: TransactionService
+    private transactionService: TransactionService,
+    public translate: TranslateService
   ) {}
 
   ngOnInit(): void {

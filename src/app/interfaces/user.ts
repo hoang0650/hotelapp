@@ -27,6 +27,18 @@ export interface User {
     };
   };
   permissions?: Array<'view' | 'create' | 'edit' | 'delete' | 'manage_revenue'>;
+  // Tính năng (features) - tương tự pricing-management
+  features?: string[];
+  // Feature flags - tương tự pricing-management
+  qrPaymentFeature?: boolean;
+  otaManagementFeature?: boolean;
+  emailManagementFeature?: boolean;
+  electricManagementFeature?: boolean;
+  paypalPaymentFeature?: boolean;
+  cryptoPaymentFeature?: boolean;
+  draftInvoiceFeature?: boolean;
+  exportInvoiceFeature?: boolean;
+  aiChatboxFeature?: boolean;
   metadata?: any;
   bankAccount?: {
     bankName?: string;

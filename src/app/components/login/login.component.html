@@ -3,23 +3,23 @@
     <div class="col-sm-6 col-md-4">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title text-center mb-4">Đăng nhập tài khoản</h5>
+          <h5 class="card-title text-center mb-4">{{ 'LOGIN.TITLE' | translate }}</h5>
           <form nz-form [formGroup]="loginForm" class="login-form" (ngSubmit)="submitForm()">
             <nz-form-item>
-              <nz-form-control nzErrorTip="Vui lòng nhập tên đăng nhập hoặc email!">
+              <nz-form-control [nzErrorTip]="'COMMON.PLEASE_FILL_ALL' | translate">
                 <nz-input-group nzPrefixIcon="user">
-                  <input type="text" nz-input formControlName="emailOrUsername" placeholder="Tên đăng nhập hoặc Email" />
+                  <input type="text" nz-input formControlName="emailOrUsername" [placeholder]="'LOGIN.ENTER_USERNAME' | translate" />
                 </nz-input-group>
               </nz-form-control>
             </nz-form-item>
             
             <nz-form-item>
-              <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu!">
+              <nz-form-control [nzErrorTip]="'COMMON.PLEASE_FILL_ALL' | translate">
                 <nz-input-group nzPrefixIcon="lock" [nzSuffix]="suffixTemplate">
                   <input [type]="passwordVisible ? 'text' : 'password'" 
                          nz-input 
                          formControlName="password" 
-                         placeholder="Mật khẩu" />
+                         [placeholder]="'LOGIN.ENTER_PASSWORD' | translate" />
                   <span nz-icon 
                         [nzType]="passwordVisible ? 'eye-invisible' : 'eye'"
                         (click)="passwordVisible = !passwordVisible">
@@ -44,11 +44,11 @@
             <div nz-row class="login-form-margin">
               <div nz-col [nzSpan]="12">
                 <label nz-checkbox formControlName="remember">
-                  <span>Ghi nhớ đăng nhập</span>
+                  <span>{{ 'LOGIN.REMEMBER_ME' | translate }}</span>
                 </label>
               </div>
               <div nz-col [nzSpan]="12">
-                <a class="login-form-forgot" routerLink="/forgot-password">Quên mật khẩu?</a>
+                <a class="login-form-forgot" routerLink="/forgot-password">{{ 'LOGIN.FORGOT_PASSWORD' | translate }}</a>
               </div>
             </div>
 
@@ -56,12 +56,11 @@
                     [nzType]="'primary'" 
                     [nzLoading]="isLoading"
                     class="login-form-button login-form-margin">
-              Đăng nhập
+              {{ 'LOGIN.LOGIN_BUTTON' | translate }}
             </button>
             
             <div nz-row class="login-form-margin">
-              <span>Chưa có tài khoản? </span>
-              <a routerLink="/signup">Đăng ký ngay!</a>
+              <span>{{ 'LOGIN.SIGNUP_LINK' | translate }}</span>
             </div>
           </form>
           <div class=" social-login">

@@ -18,6 +18,7 @@ import { TuyaService } from '../../services/tuya.service';
 import { SePayService, SePayPaymentData } from '../../services/sepay.service';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
+import { TranslateService } from '@ngx-translate/core';
 
 // Interface cho dữ liệu cập nhật phòng
 interface RoomUpdate {
@@ -40,10 +41,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   services: any[] = []; // Load từ API
   selectedServices: OrderedService[] = [];
   paymentMethods = [
-    { value: 'cash', label: 'Tiền mặt' },
-    { value: 'card', label: 'Thẻ ngân hàng' },
-    { value: 'transfer', label: 'Chuyển khoản' }
+    { value: 'cash', label: 'ROOM_CONTENT_MODAL.CASH' },
+    { value: 'card', label: 'ROOM_CONTENT_MODAL.CARD' },
+    { value: 'transfer', label: 'ROOM_CONTENT_MODAL.BANK_TRANSFER' }
   ];
+  
+  // Get translated payment method label
+  getPaymentMethodLabel(method: any): string {
+    return this.translate.instant(method.label);
+  }
   isLoading = false;
   isSaving = false;
   totalPrice = 0; // Tổng cộng = tiền phòng + phụ thu + tiền dịch vụ
@@ -213,6 +219,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
   // Thêm thuộc tính businessInfo
   businessInfo: any = {};
+  businessOwner: any = null; // Thông tin chủ doanh nghiệp (business owner)
 
   initialCharges: number = 0;
   initialDiscount: number = 0;
@@ -236,7 +243,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     private sepayService: SePayService,
     private userService: UserService,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private translate: TranslateService
   ) {
     // Log dữ liệu nhận được từ directive để debug
     console.log('Room Content Modal received data:', data);
@@ -769,6 +777,33 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             // Sử dụng QR code từ manager nếu hotel không có
             this.hotelBankAccount = manager.bankAccount;
             console.log('Sử dụng QR code từ manager vì hotel chưa có:', this.hotelBankAccount);
+          }
+        }
+        
+        // Load thông tin business owner nếu có businessId
+        if (data.businessId) {
+          // Đảm bảo businessId là string
+          const businessId = typeof data.businessId === 'string' ? data.businessId : (data.businessId._id || data.businessId.toString());
+          if (businessId) {
+            this.businessService.getBusinessById(businessId).subscribe({
+              next: (business: any) => {
+                // Lấy thông tin owner từ business (ownerId có thể đã được populate)
+                if (business.ownerId) {
+                  if (typeof business.ownerId === 'object' && business.ownerId._id) {
+                    // Đã được populate, lấy trực tiếp
+                    this.businessOwner = business.ownerId;
+                    console.log('Thông tin business owner (populated):', this.businessOwner);
+                  } else {
+                    // Chưa được populate, lưu ownerId để dùng sau
+                    this.businessOwner = { _id: business.ownerId };
+                    console.log('Lưu ownerId để dùng sau:', this.businessOwner);
+                  }
+                }
+              },
+              error: (err) => {
+                console.error('Lỗi khi tải thông tin business:', err);
+              }
+            });
           }
         }
       },
@@ -2002,7 +2037,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           (response) => {
             setTimeout(() => {
               // Hiển thị thông báo thành công (màu xanh)
-              this.message.success('Trả phòng thành công');
+              this.message.success('Check-out thành công');
+              
+              // Tự động reload danh sách phòng ngay lập tức
+              this.roomsService.notifyRoomDataUpdated();
               
               // Dữ liệu đã được lưu vào RoomEvent qua backend, không cần xóa session nữa
               
@@ -2123,9 +2161,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       
       // Nếu pricing package có QR feature hoặc hotel setting bật QR
       if (hasQRFeature || enableQRFromSettings) {
+        // Gọi handleTransferPayment - nó sẽ tự kiểm tra có QR code không
+        // Nếu không có QR code, sẽ tự động bỏ qua modal và checkout trực tiếp
         this.handleTransferPayment(amount, invoiceData, checkoutData);
       } else {
-        // Không có QR feature, set paymentStatus = 'paid' và checkout với xuất hóa đơn
+        // Không có QR feature và không bật trong settings, set paymentStatus = 'paid' và checkout với xuất hóa đơn
         checkoutData.paymentStatus = 'paid';
         invoiceData.paymentStatus = 'paid';
         this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
@@ -2133,6 +2173,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     } else {
       // Không có pricing package info, chỉ kiểm tra hotel settings
       if (enableQRFromSettings) {
+        // Gọi handleTransferPayment - nó sẽ tự kiểm tra có QR code không
+        // Nếu không có QR code, sẽ tự động bỏ qua modal và checkout trực tiếp
         this.handleTransferPayment(amount, invoiceData, checkoutData);
       } else {
         // Không bật QR, set paymentStatus = 'paid' và checkout với xuất hóa đơn
@@ -2161,7 +2203,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         if (response.success) {
           setTimeout(() => {
             // Hiển thị thông báo thành công (màu xanh)
-            this.message.success('Trả phòng thành công');
+            this.message.success('Check-out thành công');
+            
+            // Tự động reload danh sách phòng ngay lập tức
+            this.roomsService.notifyRoomDataUpdated();
             
             // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
             this.tuyaService.autoTurnOffOnCheckOut(this.roomData._id).subscribe({
@@ -2183,17 +2228,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               }).subscribe({
                 next: (updatedRoom) => {
                   this.roomData = updatedRoom;
-                  // Cập nhật danh sách phòng
+                  // Tự động reload danh sách phòng lại một lần nữa để đảm bảo
                   this.roomsService.notifyRoomDataUpdated();
                 },
                 error: (err) => {
                   console.error('Error reloading room data:', err);
-                  // Vẫn cập nhật danh sách phòng dù có lỗi
+                  // Vẫn reload danh sách phòng dù có lỗi
                   this.roomsService.notifyRoomDataUpdated();
                 }
               });
             } else {
-              // Cập nhật danh sách phòng
+              // Tự động reload danh sách phòng
               this.roomsService.notifyRoomDataUpdated();
             }
             
@@ -2228,21 +2273,28 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // ƯU TIÊN 1: Lấy QR code từ hotel (doanh nghiệp)
+    // ƯU TIÊN 1: Lấy QR code từ business owner (chủ doanh nghiệp)
     let qrPaymentUrl = '';
     let beneficiaryName = '';
     let bankName = '';
     let accountNumber = '';
     
-    if (this.hotelBankAccount?.qrPaymentUrl) {
-      // Hotel có QR code
+    if (this.businessOwner?.bankAccount?.qrPaymentUrl) {
+      // Business owner có QR code
+      qrPaymentUrl = this.businessOwner.bankAccount.qrPaymentUrl;
+      beneficiaryName = this.businessOwner.bankAccount.beneficiaryName || this.businessOwner.bankAccount.accountHolderName || '';
+      bankName = this.businessOwner.bankAccount.bankName || '';
+      accountNumber = this.businessOwner.bankAccount.accountNumber || '';
+      console.log('Sử dụng QR code từ business owner (chủ doanh nghiệp):', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
+    } else if (this.hotelBankAccount?.qrPaymentUrl) {
+      // ƯU TIÊN 2: Lấy QR code từ hotel (doanh nghiệp)
       qrPaymentUrl = this.hotelBankAccount.qrPaymentUrl;
       beneficiaryName = this.hotelBankAccount.beneficiaryName || this.hotelBankAccount.accountHolderName || '';
       bankName = this.hotelBankAccount.bankName || '';
       accountNumber = this.hotelBankAccount.accountNumber || '';
       console.log('Sử dụng QR code từ hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
     } else {
-      // ƯU TIÊN 2: Lấy QR code từ manager của hotel (nếu có)
+      // ƯU TIÊN 3: Lấy QR code từ manager của hotel (nếu có)
       const manager = this.businessInfo?.managerId;
       if (manager && typeof manager === 'object' && manager.bankAccount?.qrPaymentUrl) {
         qrPaymentUrl = manager.bankAccount.qrPaymentUrl;
@@ -2251,7 +2303,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         accountNumber = manager.bankAccount.accountNumber || '';
         console.log('Sử dụng QR code từ manager của hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
       } else {
-        // ƯU TIÊN 3: Lấy QR code từ user hiện tại (admin/staff của hotel)
+        // ƯU TIÊN 4: Lấy QR code từ user hiện tại (admin/staff của hotel)
         qrPaymentUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
         beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
         bankName = this.currentUser?.bankAccount?.bankName || '';
@@ -2260,10 +2312,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
+    // Nếu không có QR code, bỏ qua modal và checkout trực tiếp
     if (!qrPaymentUrl) {
-      this.message.warning('Chưa có QR code thanh toán. Vui lòng cập nhật thông tin ngân hàng cho khách sạn hoặc trong profile.');
-      // Vẫn tiếp tục checkout nhưng không hiển thị QR
-      this.proceedWithCheckout(checkoutData, invoiceData);
+      console.log('Không có QR code, bỏ qua modal và checkout trực tiếp');
+      checkoutData.paymentStatus = 'paid';
+      invoiceData.paymentStatus = 'paid';
+      this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
       return;
     }
     
@@ -2336,9 +2390,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           setTimeout(() => {
             // Hiển thị thông báo thành công (màu xanh)
             if (paymentStatus === 'pending') {
-              this.message.success('Trả phòng thành công. Đang chờ xác nhận thanh toán...');
+              this.message.success('Check-out thành công. Đang chờ xác nhận thanh toán...');
             } else {
-              this.message.success('Trả phòng thành công');
+              this.message.success('Check-out thành công');
             }
             
             // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
@@ -2520,8 +2574,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       // Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
       this.loadLatestPaymentAndPlaySound();
       
-      // Hiển thị thông báo thành công
-      this.message.success('Thanh toán thành công! Đang hiển thị hóa đơn...');
+      // Hiển thị thông báo thành công (màu xanh)
+      this.message.success('Check-out thành công');
       
       // Đợi một chút để modal QR đóng hoàn toàn trước khi đóng modal checkout
       setTimeout(() => {
@@ -2542,17 +2596,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                 }).subscribe({
                   next: (updatedRoom) => {
                     this.roomData = updatedRoom;
-                    // Cập nhật danh sách phòng
+                    // Tự động reload danh sách phòng
                     this.roomsService.notifyRoomDataUpdated();
                   },
                   error: (err) => {
                     console.error('Error reloading room data:', err);
-                    // Vẫn cập nhật danh sách phòng dù có lỗi
+                    // Vẫn reload danh sách phòng dù có lỗi
                     this.roomsService.notifyRoomDataUpdated();
                   }
                 });
               } else {
-                // Cập nhật danh sách phòng
+                // Tự động reload danh sách phòng
                 this.roomsService.notifyRoomDataUpdated();
               }
               
@@ -2563,7 +2617,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             },
             (error) => {
               console.error('Error updating checkout with payment status:', error);
-              // Vẫn cập nhật danh sách phòng và hiển thị invoice ngay cả khi có lỗi
+              // Vẫn reload danh sách phòng và hiển thị invoice ngay cả khi có lỗi
               this.roomsService.notifyRoomDataUpdated();
               setTimeout(() => {
                 this.showInvoice(invoiceData);

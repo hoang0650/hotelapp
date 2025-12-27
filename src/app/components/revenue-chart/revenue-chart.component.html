@@ -1,13 +1,23 @@
 <nz-card [nzLoading]="isLoading" [nzBodyStyle]="{ padding: '20px' }">
   <div class="chart-header">
     <div class="chart-title">
-      <h3 class="main-title">Thống kê doanh thu</h3>
+      <h3 class="main-title">{{ 'REVENUE_CHART.REVENUE_STATISTICS' | translate }}</h3>
       <div class="chart-controls">
         <nz-radio-group [(ngModel)]="selectedPeriod" (ngModelChange)="onPeriodChange($event)" [nzButtonStyle]="'solid'">
-          <label nz-radio-button nzValue="day">Ngày</label>
-          <label nz-radio-button nzValue="week">Tuần</label>
-          <label nz-radio-button nzValue="month">Tháng</label>
+          <label nz-radio-button nzValue="day">{{ 'REVENUE_CHART.DAY' | translate }}</label>
+          <label nz-radio-button nzValue="week">{{ 'REVENUE_CHART.WEEK' | translate }}</label>
+          <label nz-radio-button nzValue="month">{{ 'REVENUE_CHART.MONTH' | translate }}</label>
         </nz-radio-group>
+        <button 
+          nz-button 
+          nzType="default" 
+          nzSize="small"
+          (click)="reload()"
+          [title]="'REVENUE_CHART.RELOAD_DATA' | translate"
+          [nzLoading]="isLoading">
+          <i nz-icon nzType="reload" nzTheme="outline"></i>
+          {{ 'REVENUE_CHART.RELOAD' | translate }}
+        </button>
       </div>
     </div>
     
@@ -17,7 +27,7 @@
           <i nz-icon nzType="fund" nzTheme="outline"></i>
         </div>
         <div class="summary-content">
-          <div class="summary-label">Tổng doanh thu</div>
+          <div class="summary-label">{{ 'REVENUE_CHART.TOTAL_REVENUE' | translate }}</div>
           <div class="summary-value">{{ formatCurrency(totalRevenue) }}</div>
         </div>
       </div>
@@ -27,7 +37,7 @@
           <i nz-icon nzType="minus-circle" nzTheme="outline"></i>
         </div>
         <div class="summary-content">
-          <div class="summary-label">Tổng chi</div>
+          <div class="summary-label">{{ 'REVENUE_CHART.TOTAL_EXPENSE' | translate }}</div>
           <div class="summary-value">{{ formatCurrency(totalExpense) }}</div>
         </div>
       </div>
@@ -46,23 +56,23 @@
     <div class="chart-info-card">
       <div class="info-header">
         <i nz-icon nzType="info-circle" nzTheme="outline"></i>
-        <span class="info-title">Thông tin biểu đồ</span>
+        <span class="info-title">{{ 'REVENUE_CHART.CHART_INFO' | translate }}</span>
       </div>
       <div class="info-content">
         <p class="info-text">
-          Biểu đồ hiển thị tổng thu và tổng chi theo <strong>{{ getPeriodTitle(selectedPeriod).toLowerCase() }}</strong>.
+          {{ 'REVENUE_CHART.CHART_DESCRIPTION' | translate: { period: getPeriodTitle(selectedPeriod).toLowerCase() } }}
         </p>
         <div class="info-stats">
           <div class="info-stat-item">
-            <span class="stat-label">Tổng thu:</span>
+            <span class="stat-label">{{ 'REVENUE_CHART.TOTAL_REVENUE_LABEL' | translate }}</span>
             <span class="stat-value revenue-value">{{ formatCurrency(totalRevenue) }}</span>
           </div>
           <div class="info-stat-item">
-            <span class="stat-label">Tổng chi:</span>
+            <span class="stat-label">{{ 'REVENUE_CHART.TOTAL_EXPENSE_LABEL' | translate }}</span>
             <span class="stat-value expense-value">{{ formatCurrency(totalExpense) }}</span>
           </div>
           <div class="info-stat-item">
-            <span class="stat-label">Lợi nhuận:</span>
+            <span class="stat-label">{{ 'REVENUE_CHART.PROFIT' | translate }}</span>
             <span class="stat-value" [ngClass]="{'profit-value': (totalRevenue - totalExpense) >= 0, 'loss-value': (totalRevenue - totalExpense) < 0}">
               {{ formatCurrency(totalRevenue - totalExpense) }}
             </span>

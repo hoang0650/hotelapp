@@ -19,6 +19,7 @@ import { BookingModalComponent } from '../booking-modal/booking-modal.component'
 import { CalendarComponent } from '../calendar/calendar.component';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-room',
@@ -81,12 +82,12 @@ export class RoomComponent implements OnInit, OnDestroy {
   private roomPriceMap = new Map<string, number>();
 
   roomStatusDisplayOptions: { value: RoomStatus, label: string, color: string }[] = [
-    { value: 'vacant', label: 'Trống', color: 'green' },
-    { value: 'occupied', label: 'Có khách', color: 'red' },
-    { value: 'cleaning', label: 'Đang dọn', color: 'blue' },
-    { value: 'dirty', label: 'Bẩn', color: 'orange' },
-    { value: 'maintenance', label: 'Bảo trì', color: 'purple' },
-    { value: 'booked', label: 'Đã đặt', color: 'geekblue' }
+    { value: 'vacant', label: '', color: 'green' }, // Label sẽ được translate trong getRoomStatusLabelAndColor
+    { value: 'occupied', label: '', color: 'red' },
+    { value: 'cleaning', label: '', color: 'blue' },
+    { value: 'dirty', label: '', color: 'orange' },
+    { value: 'maintenance', label: '', color: 'purple' },
+    { value: 'booked', label: '', color: 'geekblue' }
   ];
 
   constructor(
@@ -100,7 +101,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     private transactionService: TransactionService,
     public authService: AuthService, // Đổi thành public để sử dụng trong template
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private translate: TranslateService
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
       // Reload rooms khi có thay đổi dữ liệu
@@ -154,7 +156,41 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Đọc selectedHotelId từ localStorage trước khi loadHotels
+    const savedHotelId = localStorage.getItem('selectedHotelId');
+    if (savedHotelId) {
+      this.selectedHotelId = savedHotelId;
+    }
+    
     this.loadHotels();
+    
+    // KHÔNG đọc selectedFloor từ localStorage ở đây
+    // selectedFloor sẽ được set sau khi load floors trong onHotelChange
+    // để đảm bảo tầng đó tồn tại trong hotel hiện tại
+    
+    const savedCount = localStorage.getItem('roomColumnsCount');
+    if (savedCount) {
+      const count = parseInt(savedCount, 10);
+      if (count >= 2 && count <= 12) {
+        this.count = count;
+      }
+    }
+    
+    // Lắng nghe events từ admin component
+    window.addEventListener('floorFilterChanged', ((event: CustomEvent) => {
+      // Gọi onFloorChange để đảm bảo logic đầy đủ được thực thi (lưu localStorage, etc.)
+      this.onFloorChange(event.detail);
+      this.cdr.detectChanges();
+    }) as EventListener);
+    
+    window.addEventListener('columnsCountChanged', ((event: CustomEvent) => {
+      const newCount = event.detail;
+      if (newCount >= 2 && newCount <= 12) {
+        // Gọi reGenerateArray để đảm bảo logic đầy đủ được thực thi (lưu localStorage, etc.)
+        this.reGenerateArray(newCount);
+        this.cdr.detectChanges();
+      }
+    }) as EventListener);
   }
 
   // Collapse panel change handlers
@@ -218,12 +254,12 @@ export class RoomComponent implements OnInit, OnDestroy {
           control.updateValueAndValidity({ onlySelf: true });
         }
       });
-      this.message.warning('Vui lòng điền đầy đủ thông tin giao ca.');
+      this.message.warning(this.translate.instant('COMMON.PLEASE_FILL_ALL'));
       return;
     }
     
     if (!this.selectedHotelId) {
-      this.message.error('Chưa chọn khách sạn để giao ca.');
+      this.message.error(this.translate.instant('ROOM.SELECT_HOTEL'));
       return;
     }
 
@@ -257,7 +293,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   
   showRoomHistory(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Vui lòng chọn khách sạn');
+      this.message.warning(this.translate.instant('ROOM.SELECT_HOTEL'));
       return;
     }
     
@@ -311,7 +347,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Mở modal phiếu chi
   openExpenseModal(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Vui lòng chọn khách sạn');
+      this.message.warning(this.translate.instant('ROOM.SELECT_HOTEL'));
       return;
     }
     this.expenseForm.reset({
@@ -329,7 +365,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Mở modal phiếu thu
   openIncomeModal(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Vui lòng chọn khách sạn');
+      this.message.warning(this.translate.instant('ROOM.SELECT_HOTEL'));
       return;
     }
     this.incomeForm.reset({
@@ -368,12 +404,12 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Tạo phiếu thu
   submitIncome(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Vui lòng chọn khách sạn');
+      this.message.warning(this.translate.instant('ROOM.SELECT_HOTEL'));
       return;
     }
     
     if (this.incomeForm.invalid) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin');
+      this.message.warning(this.translate.instant('COMMON.PLEASE_FILL_ALL'));
       return;
     }
     
@@ -385,7 +421,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.incomeLoading = true;
     this.transactionService.createIncome(incomeData).subscribe(
       (response) => {
-        this.message.success('Tạo phiếu thu thành công');
+        this.message.success(this.translate.instant('COMMON.CREATE_SUCCESS'));
         this.isIncomeModalVisible = false;
         this.loadIncomes();
         this.showRoomHistory(); // Reload để cập nhật biểu đồ
@@ -413,7 +449,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       nzOnOk: () => {
         this.transactionService.deleteIncome(incomeId).subscribe(
           () => {
-            this.message.success('Xóa phiếu thu thành công');
+            this.message.success(this.translate.instant('COMMON.DELETE_SUCCESS'));
             this.loadIncomes();
             this.showRoomHistory(); // Reload để cập nhật biểu đồ
             // Cập nhật lại totalRevenue từ table sau khi xóa phiếu thu
@@ -432,12 +468,12 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Tạo phiếu chi
   submitExpense(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Vui lòng chọn khách sạn');
+      this.message.warning(this.translate.instant('ROOM.SELECT_HOTEL'));
       return;
     }
     
     if (this.expenseForm.invalid) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin');
+      this.message.warning(this.translate.instant('COMMON.PLEASE_FILL_ALL'));
       return;
     }
     
@@ -449,7 +485,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.expenseLoading = true;
     this.transactionService.createExpense(expenseData).subscribe(
       (response) => {
-        this.message.success('Tạo phiếu chi thành công');
+        this.message.success(this.translate.instant('COMMON.CREATE_SUCCESS'));
         this.isExpenseModalVisible = false;
         this.loadExpenses();
         this.showRoomHistory(); // Reload để cập nhật biểu đồ
@@ -477,7 +513,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       nzOnOk: () => {
         this.transactionService.deleteExpense(expenseId).subscribe(
           () => {
-            this.message.success('Xóa phiếu chi thành công');
+            this.message.success(this.translate.instant('COMMON.DELETE_SUCCESS'));
             this.loadExpenses();
             this.showRoomHistory(); // Reload để cập nhật biểu đồ
             // Cập nhật lại totalRevenue từ table sau khi xóa phiếu chi
@@ -681,10 +717,35 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.hotels = [];
       }
       
-      // Auto-select hotel
-      if (this.hotels.length > 0 && !this.selectedHotelId) {
-        this.selectedHotelId = this.hotels[0]._id!;
-        this.onHotelChange(this.selectedHotelId);
+      // Auto-select hotel hoặc load rooms cho hotel đã chọn
+      if (this.hotels.length > 0) {
+        if (!this.selectedHotelId) {
+          // Nếu chưa có selectedHotelId, chọn hotel đầu tiên
+          this.selectedHotelId = this.hotels[0]._id!;
+          this.onHotelChange(this.selectedHotelId);
+        } else {
+          // Nếu đã có selectedHotelId (từ localStorage), kiểm tra xem hotel đó có trong danh sách không
+          const hotelExists = this.hotels.some(h => {
+            let hotelId: string | null = null;
+            if (h._id) {
+              if (typeof h._id === 'string') {
+                hotelId = h._id;
+              } else if (typeof h._id === 'object' && h._id !== null) {
+                const hotelIdObj = h._id as any;
+                hotelId = hotelIdObj._id ? String(hotelIdObj._id) : String(hotelIdObj);
+              }
+            }
+            return hotelId === this.selectedHotelId;
+          });
+          if (hotelExists) {
+            // Nếu hotel tồn tại, load rooms cho hotel đó
+            this.onHotelChange(this.selectedHotelId);
+          } else {
+            // Nếu hotel không tồn tại, chọn hotel đầu tiên
+            this.selectedHotelId = this.hotels[0]._id!;
+            this.onHotelChange(this.selectedHotelId);
+          }
+        }
       } else if (this.hotels.length === 0) {
         this.selectedHotelId = null;
         this.rooms = [];
@@ -790,12 +851,21 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.authService.isStaff()) {
       const currentUser = this.authService.getCurrentUser();
       if (currentUser?.hotelId && hotelId !== currentUser.hotelId) {
-        this.message.warning('Bạn chỉ có thể xem khách sạn của mình');
+        this.message.warning(this.translate.instant('ROOM.STAFF_ONLY_HOTEL'));
         this.selectedHotelId = currentUser.hotelId;
         return;
       }
     }
     this.selectedHotelId = hotelId;
+    // Lưu vào localStorage để admin component có thể đọc
+    if (hotelId) {
+      localStorage.setItem('selectedHotelId', hotelId);
+    } else {
+      localStorage.removeItem('selectedHotelId');
+    }
+    
+    // Reset selectedFloor khi chuyển hotel (sẽ set lại sau khi load floors)
+    const previousSelectedFloor = this.selectedFloor;
     this.selectedFloor = null;
     this.floors = [];
     
@@ -804,6 +874,24 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.roomsService.getHotelFloors(hotelId).subscribe(
         (data) => {
           this.floors = data.floors.map(f => String(f));
+          
+          // Kiểm tra selectedFloor từ localStorage sau khi đã load floors
+          const savedFloor = localStorage.getItem('selectedFloor');
+          if (savedFloor) {
+            // Normalize savedFloor để so sánh
+            const normalizedSavedFloor = String(savedFloor);
+            if (this.floors.includes(normalizedSavedFloor)) {
+              // Chỉ set selectedFloor nếu tầng đó tồn tại trong hotel hiện tại
+              this.selectedFloor = normalizedSavedFloor;
+            } else {
+              // Nếu tầng không tồn tại, xóa selectedFloor và localStorage
+              this.selectedFloor = null;
+              localStorage.removeItem('selectedFloor');
+            }
+          } else {
+            this.selectedFloor = null;
+          }
+          
           this.loadRooms();
         },
         (error) => {
@@ -815,11 +903,20 @@ export class RoomComponent implements OnInit, OnDestroy {
     } else {
       this.rooms = [];
       this.roomTableData = [];
+      // Xóa selectedFloor khi không có hotel
+      this.selectedFloor = null;
+      localStorage.removeItem('selectedFloor');
     }
   }
 
   onFloorChange(floor: string | null): void {
     this.selectedFloor = floor;
+    // Lưu vào localStorage
+    if (floor) {
+      localStorage.setItem('selectedFloor', floor);
+    } else {
+      localStorage.removeItem('selectedFloor');
+    }
     // Không cần reload rooms, chỉ cần filter ở frontend
   }
 
@@ -906,9 +1003,14 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   getRoomStatusLabelAndColor(status: RoomStatus | undefined): { label: string, color: string } {
-    if (!status) return { label: 'Không xác định', color: 'default' };
+    if (!status) return { label: this.translate.instant('COMMON.NO_DATA'), color: 'default' };
     const option = this.roomStatusDisplayOptions.find(opt => opt.value === status);
-    return option ? { label: option.label, color: option.color } : { label: status, color: 'default' };
+    // Sử dụng translate cho label
+    if (option) {
+      const translatedLabel = this.translate.instant(`ROOM.${option.value.toUpperCase()}`);
+      return { label: translatedLabel, color: option.color };
+    }
+    return { label: status, color: 'default' };
   }
 
   // Lấy label và màu cho nguồn khách
@@ -953,6 +1055,8 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   reGenerateArray(count: number): void {
     this.count = count;
+    // Lưu vào localStorage
+    localStorage.setItem('roomColumnsCount', count.toString());
   }
 
   switchValue = false;
@@ -1025,7 +1129,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Error creating modal:', error);
       this.isModalOpen = false;
-      this.message.error('Không thể mở modal. Vui lòng thử lại.');
+      this.message.error(this.translate.instant('COMMON.ERROR_OCCURRED'));
     }
   }
 
@@ -1103,13 +1207,21 @@ export class RoomComponent implements OnInit, OnDestroy {
   getRoomsByFloor(): { [floor: string]: Room[] } {
     const grouped: { [floor: string]: Room[] } = {};
     
+    // Normalize selectedFloor thành string để so sánh
+    const normalizedSelectedFloor = this.selectedFloor ? String(this.selectedFloor) : null;
+    
     // Filter rooms theo selectedFloor nếu có
-    const filteredRooms = this.selectedFloor 
-      ? this.rooms.filter(room => (room.floor || '0') === this.selectedFloor)
+    const filteredRooms = normalizedSelectedFloor 
+      ? this.rooms.filter(room => {
+          // Normalize room.floor thành string để so sánh
+          const roomFloor = room.floor ? String(room.floor) : '0';
+          return roomFloor === normalizedSelectedFloor;
+        })
       : this.rooms;
     
     filteredRooms.forEach(room => {
-      const floor = room.floor || '0';
+      // Normalize floor thành string
+      const floor = room.floor ? String(room.floor) : '0';
       if (!grouped[floor]) {
         grouped[floor] = [];
       }
@@ -1130,22 +1242,43 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   // Lấy danh sách tầng đã sắp xếp (có filter theo selectedFloor nếu có)
+  // TrackBy functions để tối ưu performance
+  trackByHotelId(index: number, hotel: Hotel): string {
+    return hotel._id || index.toString();
+  }
+
+  trackByFloor(index: number, floor: string): string {
+    return floor || index.toString();
+  }
+
+  trackByRoomId(index: number, room: Room): string {
+    return room._id || index.toString();
+  }
+
+  // Filter function cho hotel select
+  filterHotelOption = (input: string, option: any): boolean => {
+    return option.nzLabel.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+  };
+
   getSortedFloors(): string[] {
     // Nếu đã chọn tầng, chỉ trả về tầng đó
     if (this.selectedFloor) {
+      // Normalize selectedFloor thành string
+      const normalizedSelectedFloor = String(this.selectedFloor);
       // Kiểm tra xem tầng đã chọn có phòng không
-      const hasRooms = this.rooms.some(room => (room.floor || '0') === this.selectedFloor);
-      return hasRooms ? [this.selectedFloor] : [];
+      const hasRooms = this.rooms.some(room => {
+        const roomFloor = room.floor ? String(room.floor) : '0';
+        return roomFloor === normalizedSelectedFloor;
+      });
+      return hasRooms ? [normalizedSelectedFloor] : [];
     }
     
     // Nếu chưa chọn tầng, trả về tất cả tầng có phòng
     const floors = new Set<string>();
     this.rooms.forEach(room => {
-      if (room.floor) {
-        floors.add(room.floor);
-      } else {
-        floors.add('0');
-      }
+      // Normalize floor thành string
+      const floor = room.floor ? String(room.floor) : '0';
+      floors.add(floor);
     });
     return Array.from(floors).sort((a, b) => {
       const numA = parseInt(a) || 0;
@@ -1156,17 +1289,20 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   // Lấy tên hiển thị cho tầng
   getFloorDisplayName(floor: string): string {
+    // Import TranslateService nếu chưa có
+    // Sử dụng translate pipe trong template thay vì method này
     if (floor === '0' || floor === '') {
-      return 'Trệt';
+      return 'Trệt'; // Sẽ được translate trong template
     }
-    return `Tầng ${floor}`;
+    return `Tầng ${floor}`; // Sẽ được translate trong template
   }
 
   // Cập nhật danh sách tầng từ phòng thực tế
   updateFloorsFromRooms(): void {
     const floorsSet = new Set<string>();
     this.rooms.forEach(room => {
-      const floor = room.floor || '0';
+      // Normalize floor thành string
+      const floor = room.floor ? String(room.floor) : '0';
       floorsSet.add(floor);
     });
     this.floors = Array.from(floorsSet).sort((a, b) => {
@@ -1174,6 +1310,13 @@ export class RoomComponent implements OnInit, OnDestroy {
       const numB = parseInt(b) || 0;
       return numA - numB;
     });
+    
+    // Kiểm tra lại selectedFloor sau khi cập nhật floors từ rooms
+    // Nếu selectedFloor không còn tồn tại trong floors, reset nó
+    if (this.selectedFloor && !this.floors.includes(this.selectedFloor)) {
+      this.selectedFloor = null;
+      localStorage.removeItem('selectedFloor');
+    }
   }
 
   // Lấy thông tin chuyển phòng từ Booking
@@ -2103,6 +2246,39 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  // Kiểm tra quyền truy cập Settings
+  canAccessSettings(): boolean {
+    return this.authService.isSuperAdmin() || this.authService.isAdmin();
+  }
+
+  // Kiểm tra quyền truy cập Pricing Management
+  canAccessPricingManagement(): boolean {
+    return true; // Tất cả role đều có thể truy cập
+  }
+
+  // Kiểm tra quyền truy cập Electric Setting
+  canAccessElectricSetting(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin() || 
+           this.authService.isBusiness() || 
+           this.authService.isHotelManager();
+  }
+
+  // Navigate đến Settings
+  navigateToSettings(): void {
+    this.router.navigate(['/admin/settings']);
+  }
+
+  // Navigate đến Pricing Management
+  navigateToPricing(): void {
+    this.router.navigate(['/admin/pricing-management']);
+  }
+
+  // Navigate đến Electric Setting
+  navigateToElectric(): void {
+    this.router.navigate(['/admin/electric-setting']);
   }
 }
 

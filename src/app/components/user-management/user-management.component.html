@@ -312,6 +312,51 @@
           </nz-form-control>
         </nz-form-item>
 
+        <!-- Phân quyền tính năng - Chỉ hiển thị cho Admin/Superadmin -->
+        <nz-divider *ngIf="isAdmin" nzText="Phân quyền tính năng" nzOrientation="left"></nz-divider>
+
+        <!-- Tính năng (Features) - Tương tự pricing-management -->
+        <nz-form-item *ngIf="isAdmin">
+          <nz-form-label>Tính năng</nz-form-label>
+          <nz-form-control>
+            <nz-select 
+              formControlName="features" 
+              nzMode="multiple" 
+              nzPlaceHolder="Chọn các tính năng"
+              [nzMaxTagCount]="3"
+              nzShowSearch>
+              <nz-option 
+                *ngFor="let feature of availableFeatures" 
+                [nzLabel]="feature.label" 
+                [nzValue]="feature.value">
+              </nz-option>
+            </nz-select>
+            <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+              Chọn các tính năng mà người dùng này sẽ có quyền truy cập
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Feature Flags - Tương tự pricing-management -->
+        <nz-form-item *ngIf="isAdmin">
+          <nz-form-label>Tính năng đặc biệt</nz-form-label>
+          <nz-form-control>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div *ngFor="let flag of availableFeatureFlags" style="border: 1px solid #f0f0f0; border-radius: 4px; padding: 12px;">
+                <label nz-checkbox [formControlName]="flag.value" style="margin-bottom: 4px;">
+                  <span style="font-weight: 500;">{{ flag.label }}</span>
+                </label>
+                <div style="margin-top: 4px; color: #666; font-size: 12px; margin-left: 24px;">
+                  {{ flag.description }}
+                </div>
+              </div>
+            </div>
+            <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+              Bật/tắt các tính năng đặc biệt cho người dùng này. Các tính năng này tương đương với các tính năng trong gói đăng ký.
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
         <!-- Cascade blocking warning -->
         <nz-alert 
           *ngIf="userForm.get('role')?.value === 'business' && userForm.get('status')?.value === 'suspended'"
