@@ -6,6 +6,7 @@ import { CommentService, Comment } from '../../services/comment.service';
 import { AuthService } from '../../services/auth.service';
 import { Blog } from '../blog-management/blog-management.component';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-blog',
@@ -51,7 +52,8 @@ export class BlogComponent implements OnInit {
     private route: ActivatedRoute,
     public router: Router,
     private fb: FormBuilder,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {
     this.commentForm = this.fb.group({
       content: ['', [Validators.required, Validators.minLength(1)]]
@@ -160,7 +162,15 @@ export class BlogComponent implements OnInit {
 
   getCurrentDateTime(): string {
     const now = new Date();
-    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const days = [
+      this.translate.instant('BLOG.DAYS.SUNDAY'),
+      this.translate.instant('BLOG.DAYS.MONDAY'),
+      this.translate.instant('BLOG.DAYS.TUESDAY'),
+      this.translate.instant('BLOG.DAYS.WEDNESDAY'),
+      this.translate.instant('BLOG.DAYS.THURSDAY'),
+      this.translate.instant('BLOG.DAYS.FRIDAY'),
+      this.translate.instant('BLOG.DAYS.SATURDAY')
+    ];
     const dayName = days[now.getDay()];
     const date = now.toLocaleDateString('vi-VN', {
       day: '2-digit',
@@ -171,7 +181,7 @@ export class BlogComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
-    return `${dayName}, ngày ${date} ${time} (GMT+7)`;
+    return `${dayName}, ${this.translate.instant('BLOG.DATE_PREFIX')} ${date} ${time} (GMT+7)`;
   }
 
   loadComments(blogId: string): void {
@@ -217,14 +227,14 @@ export class BlogComponent implements OnInit {
     if (!this.selectedBlog?._id) return;
 
     if (!this.isLoggedIn) {
-      this.message.warning('Vui lòng đăng nhập để bình luận');
+      this.message.warning(this.translate.instant('BLOG.LOGIN_TO_COMMENT'));
       this.router.navigate(['/login']);
       return;
     }
 
     const form = parentCommentId ? this.replyForms.get(parentCommentId) : this.commentForm;
     if (!form || form.invalid) {
-      this.message.warning('Vui lòng nhập nội dung bình luận');
+      this.message.warning(this.translate.instant('BLOG.ENTER_COMMENT_CONTENT'));
       return;
     }
 
@@ -233,7 +243,7 @@ export class BlogComponent implements OnInit {
 
     this.commentService.createComment(this.selectedBlog._id, content, parentCommentId).subscribe({
       next: (newComment) => {
-        this.message.success(parentCommentId ? 'Đã trả lời bình luận' : 'Đã thêm bình luận');
+        this.message.success(parentCommentId ? this.translate.instant('BLOG.REPLY_SUCCESS') : this.translate.instant('BLOG.COMMENT_SUCCESS'));
         form.reset();
         if (parentCommentId) {
           this.showReplyForm.set(parentCommentId, false);
@@ -243,7 +253,7 @@ export class BlogComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi tạo comment:', error);
-        this.message.error(error.error?.message || 'Không thể thêm bình luận');
+        this.message.error(error.error?.message || this.translate.instant('BLOG.COMMENT_ERROR'));
         this.isSubmittingComment = false;
       }
     });
@@ -251,7 +261,7 @@ export class BlogComponent implements OnInit {
 
   toggleReplyForm(commentId: string): void {
     if (!this.isLoggedIn) {
-      this.message.warning('Vui lòng đăng nhập để trả lời');
+      this.message.warning(this.translate.instant('BLOG.LOGIN_TO_REPLY'));
       this.router.navigate(['/login']);
       return;
     }

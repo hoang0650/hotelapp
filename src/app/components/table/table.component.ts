@@ -131,6 +131,30 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         }
       }
       
+      // Tính lại totalAmount theo công thức: tiền phòng + tiền dịch vụ + phụ thu - khuyến mãi
+      // Nếu có đủ thông tin để tính lại
+      const roomAmount = item.roomAmount || item.roomTotal || 0;
+      const serviceAmount = item.serviceAmount || item.servicesTotal || 0;
+      const additionalCharges = item.additionalCharges || 0;
+      const discount = item.discount || 0;
+      
+      // Chỉ tính lại nếu có ít nhất một trong các giá trị và totalAmount chưa được tính đúng
+      if (roomAmount > 0 || serviceAmount > 0 || additionalCharges > 0 || discount > 0) {
+        const calculatedTotal = roomAmount + serviceAmount + additionalCharges - discount;
+        // Cập nhật totalAmount nếu chưa có hoặc khác với giá trị tính được
+        if (!item.totalAmount || Math.abs(item.totalAmount - calculatedTotal) > 0.01) {
+          item.totalAmount = calculatedTotal;
+        }
+      }
+      
+      // Đảm bảo có roomTotal và servicesTotal để hiển thị
+      if (!item.roomTotal && item.roomAmount) {
+        item.roomTotal = item.roomAmount;
+      }
+      if (!item.servicesTotal && item.serviceAmount) {
+        item.servicesTotal = item.serviceAmount;
+      }
+      
       return true;
     });
   }
@@ -747,10 +771,14 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       })),
       roomAmount: invoice.roomAmount || 0,
       serviceAmount: invoice.serviceAmount || 0,
+      // Map roomAmount và serviceAmount thành roomTotal và servicesTotal để hiển thị
+      roomTotal: invoice.roomAmount || invoice.roomTotal || 0,
+      servicesTotal: invoice.serviceAmount || invoice.serviceAmount || invoice.servicesTotal || 0,
       additionalCharges: invoice.additionalCharges || 0,
       discount: invoice.discount || 0,
       advancePayment: invoice.advancePayment || 0,
-      totalAmount: invoice.totalAmount || 0,
+      // Tính totalAmount theo công thức: tiền phòng + tiền dịch vụ + phụ thu - khuyến mãi
+      totalAmount: (invoice.roomAmount || 0) + (invoice.serviceAmount || 0) + (invoice.additionalCharges || 0) - (invoice.discount || 0),
       paymentMethod: invoice.paymentMethod || 'cash',
       paymentStatus: invoice.paymentStatus || 'paid',
       notes: invoice.notes || '',
@@ -922,7 +950,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       // Chỉ xuất các bản ghi đã thanh toán
       const data = this.paidData.map(item => {
         // Lấy thông tin khách hàng
-        const customerName = item.customerName || item.guestInfo?.name || 'Khách lẻ';
+        const customerName = item.customerName || item.guestInfo?.name || this.translate.instant('TABLE_EXPORT.WALK_IN_GUEST');
         const customerPhone = item.customerPhone || item.guestInfo?.phone || '';
         const customerIdNumber = item.customerIdNumber || item.guestInfo?.idNumber || '';
         
@@ -955,30 +983,30 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         const guestSource = this.getGuestSourceLabel(item.guestInfo?.guestSource || item.guestSource || 'walkin');
         
         return {
-          'Phòng': item.roomNumber || '',
-          'Khách hàng': customerName,
-          'Nguồn': guestSource,
-          'SĐT': customerPhone,
-          'CCCD/CMND': customerIdNumber,
-          'Nhận phòng': checkInTime ? this.formatDateTime(checkInTime) : '',
-          'Trả phòng': checkOutTime ? this.formatDateTime(checkOutTime) : '',
-          'Thời gian lưu trú': duration,
-          'Tiền phòng': item.roomTotal || 0,
-          'Dịch vụ': servicesList,
-          'Tiền dịch vụ': item.servicesTotal || 0,
-          'Phụ thu': item.additionalCharges || 0,
-          'Khuyến mãi': item.discount || 0,
-          'Đặt trước': item.advancePayment || 0,
-          'Tổng tiền': item.totalAmount || item.amount || 0,
-          'Hình thức TT': paymentMethod,
-          'Trạng thái': 'Đã thanh toán',
-          'Ghi chú': item.notes || ''
+          [this.translate.instant('TABLE_EXPORT.ROOM')]: item.roomNumber || '',
+          [this.translate.instant('TABLE_EXPORT.CUSTOMER')]: customerName,
+          [this.translate.instant('TABLE_EXPORT.SOURCE')]: guestSource,
+          [this.translate.instant('TABLE_EXPORT.PHONE')]: customerPhone,
+          [this.translate.instant('TABLE_EXPORT.ID_NUMBER')]: customerIdNumber,
+          [this.translate.instant('TABLE_EXPORT.CHECK_IN')]: checkInTime ? this.formatDateTime(checkInTime) : '',
+          [this.translate.instant('TABLE_EXPORT.CHECK_OUT')]: checkOutTime ? this.formatDateTime(checkOutTime) : '',
+          [this.translate.instant('TABLE_EXPORT.DURATION')]: duration,
+          [this.translate.instant('TABLE_EXPORT.ROOM_TOTAL')]: item.roomTotal || 0,
+          [this.translate.instant('TABLE_EXPORT.SERVICES')]: servicesList,
+          [this.translate.instant('TABLE_EXPORT.SERVICES_TOTAL')]: item.servicesTotal || 0,
+          [this.translate.instant('TABLE_EXPORT.ADDITIONAL_CHARGES')]: item.additionalCharges || 0,
+          [this.translate.instant('TABLE_EXPORT.DISCOUNT')]: item.discount || 0,
+          [this.translate.instant('TABLE_EXPORT.ADVANCE_PAYMENT')]: item.advancePayment || 0,
+          [this.translate.instant('TABLE_EXPORT.TOTAL_AMOUNT')]: item.totalAmount || item.amount || 0,
+          [this.translate.instant('TABLE_EXPORT.PAYMENT_METHOD')]: paymentMethod,
+          [this.translate.instant('TABLE_EXPORT.STATUS')]: this.translate.instant('TABLE_EXPORT.PAID'),
+          [this.translate.instant('TABLE_EXPORT.NOTES')]: item.notes || ''
         };
       });
 
       const worksheet = XLSX.utils.json_to_sheet(data);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Lịch sử đã thanh toán');
+      XLSX.utils.book_append_sheet(workbook, worksheet, this.translate.instant('TABLE_EXPORT.PAYMENT_HISTORY'));
 
       // Thiết lập độ rộng cột
       const columnWidths = [
@@ -1007,10 +1035,10 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       const fileName = `lich_su_thanh_toan_${format(new Date(), 'dd-MM-yyyy_HH-mm')}.xlsx`;
       XLSX.writeFile(workbook, fileName);
       
-      this.message.success(`Đã xuất file ${fileName}`);
+      this.message.success(this.translate.instant('TABLE_EXPORT.EXPORT_SUCCESS', { fileName }));
     } catch (error) {
       console.error('Lỗi xuất Excel:', error);
-      this.message.error('Lỗi khi xuất file Excel');
+      this.message.error(this.translate.instant('TABLE_EXPORT.EXPORT_ERROR'));
     } finally {
       setTimeout(() => {
         this.exported = false;
@@ -1124,10 +1152,10 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       const totalRevenue = (values.managerHandoverAmount || 0) + (values.expenseAmount || 0) + (values.incomeAmount || 0);
       
       if (handoverAmount >= 0) {
-        this.handoverMessage = `Số tiền giao ca: ${this.formatterVND(handoverAmount)} đ | Tổng doanh thu: ${this.formatterVND(totalRevenue)} đ`;
+        this.handoverMessage = `${this.translate.instant('TABLE.SHIFT_HANDOVER_MODAL.HANDOVER_AMOUNT_LABEL')} ${this.formatterVND(handoverAmount)} đ | ${this.translate.instant('TABLE.SHIFT_HANDOVER_MODAL.TOTAL_REVENUE_LABEL')} ${this.formatterVND(totalRevenue)} đ`;
         this.handoverMessageType = handoverAmount > 0 ? 'success' : 'info';
       } else {
-        this.handoverMessage = `Số tiền giao ca: ${this.formatterVND(handoverAmount)} đ (âm)`;
+        this.handoverMessage = `${this.translate.instant('TABLE.SHIFT_HANDOVER_MODAL.HANDOVER_AMOUNT_LABEL')} ${this.formatterVND(handoverAmount)} đ${this.translate.instant('TABLE.SHIFT_HANDOVER_MODAL.HANDOVER_AMOUNT_NEGATIVE')}`;
         this.handoverMessageType = 'warning';
       }
     });

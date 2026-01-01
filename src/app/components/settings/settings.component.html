@@ -789,8 +789,11 @@
                 <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
                   <nz-form-item>
                     <nz-form-control>
-                      <label nz-checkbox formControlName="enableOTAManagement">
+                      <label nz-checkbox formControlName="enableOTAManagement" [nzDisabled]="isFeatureDisabledByPackage('enableOTAManagement')">
                         Bật quản lý OTA
+                        <span *ngIf="isFeatureDisabledByPackage('enableOTAManagement')" style="color: #52c41a; margin-left: 8px;">
+                          (Tự động bật từ gói đăng ký)
+                        </span>
                       </label>
                       <div style="margin-top: 8px; color: #666; font-size: 12px;">
                         Khi bật, khách sạn có thể quản lý tích hợp với các kênh OTA (Booking.com, Agoda, v.v.).
@@ -805,8 +808,11 @@
                 <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
                   <nz-form-item>
                     <nz-form-control>
-                      <label nz-checkbox formControlName="enableEmailManagement">
+                      <label nz-checkbox formControlName="enableEmailManagement" [nzDisabled]="isFeatureDisabledByPackage('enableEmailManagement')">
                         Bật quản lý email
+                        <span *ngIf="isFeatureDisabledByPackage('enableEmailManagement')" style="color: #52c41a; margin-left: 8px;">
+                          (Tự động bật từ gói đăng ký)
+                        </span>
                       </label>
                       <div style="margin-top: 8px; color: #666; font-size: 12px;">
                         Khi bật, khách sạn có thể quản lý cấu hình email và gửi email.
@@ -821,8 +827,11 @@
                 <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
                   <nz-form-item>
                     <nz-form-control>
-                      <label nz-checkbox formControlName="enableElectricManagement">
+                      <label nz-checkbox formControlName="enableElectricManagement" [nzDisabled]="isFeatureDisabledByPackage('enableElectricManagement')">
                         Bật quản lý điện
+                        <span *ngIf="isFeatureDisabledByPackage('enableElectricManagement')" style="color: #52c41a; margin-left: 8px;">
+                          (Tự động bật từ gói đăng ký)
+                        </span>
                       </label>
                       <div style="margin-top: 8px; color: #666; font-size: 12px;">
                         Khi bật, khách sạn có thể quản lý cài đặt và theo dõi điện năng tiêu thụ.
@@ -837,8 +846,11 @@
                 <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
                   <nz-form-item>
                     <nz-form-control>
-                      <label nz-checkbox formControlName="enablePayPalPayment">
+                      <label nz-checkbox formControlName="enablePayPalPayment" [nzDisabled]="isFeatureDisabledByPackage('enablePayPalPayment')">
                         Bật thanh toán PayPal
+                        <span *ngIf="isFeatureDisabledByPackage('enablePayPalPayment')" style="color: #52c41a; margin-left: 8px;">
+                          (Tự động bật từ gói đăng ký)
+                        </span>
                       </label>
                       <div style="margin-top: 8px; color: #666; font-size: 12px;">
                         Khi bật, khách sạn có thể sử dụng PayPal để thanh toán.
@@ -853,8 +865,11 @@
                 <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
                   <nz-form-item>
                     <nz-form-control>
-                      <label nz-checkbox formControlName="enableCryptoPayment">
+                      <label nz-checkbox formControlName="enableCryptoPayment" [nzDisabled]="isFeatureDisabledByPackage('enableCryptoPayment')">
                         Bật thanh toán Crypto
+                        <span *ngIf="isFeatureDisabledByPackage('enableCryptoPayment')" style="color: #52c41a; margin-left: 8px;">
+                          (Tự động bật từ gói đăng ký)
+                        </span>
                       </label>
                       <div style="margin-top: 8px; color: #666; font-size: 12px;">
                         Khi bật, khách sạn có thể sử dụng tiền điện tử (Bitcoin, Ethereum, USDT, v.v.) để thanh toán.
@@ -869,8 +884,11 @@
                 <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
                   <nz-form-item>
                     <nz-form-control>
-                      <label nz-checkbox formControlName="enableDraftInvoice">
+                      <label nz-checkbox formControlName="enableDraftInvoice" [nzDisabled]="isFeatureDisabledByPackage('enableDraftInvoice')">
                         Bật xem hóa đơn nháp
+                        <span *ngIf="isFeatureDisabledByPackage('enableDraftInvoice')" style="color: #52c41a; margin-left: 8px;">
+                          (Tự động bật từ gói đăng ký)
+                        </span>
                       </label>
                       <div style="margin-top: 8px; color: #666; font-size: 12px;">
                         Khi bật, khách sạn có thể xem hóa đơn nháp trước khi xuất hóa đơn chính thức.
@@ -885,8 +903,11 @@
                 <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
                   <nz-form-item>
                     <nz-form-control>
-                      <label nz-checkbox formControlName="enableExportInvoice">
+                      <label nz-checkbox formControlName="enableExportInvoice" [nzDisabled]="isFeatureDisabledByPackage('enableExportInvoice')">
                         Bật xuất hóa đơn
+                        <span *ngIf="isFeatureDisabledByPackage('enableExportInvoice')" style="color: #52c41a; margin-left: 8px;">
+                          (Tự động bật từ gói đăng ký)
+                        </span>
                       </label>
                       <div style="margin-top: 8px; color: #666; font-size: 12px;">
                         Khi bật, khách sạn có thể xuất hóa đơn ra file PDF hoặc các định dạng khác.
@@ -901,8 +922,11 @@
                 <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
                   <nz-form-item>
                     <nz-form-control>
-                      <label nz-checkbox formControlName="enableAiChatbox">
+                      <label nz-checkbox formControlName="enableAiChatbox" [nzDisabled]="isFeatureDisabledByPackage('enableAiChatbox')">
                         Bật AI Chatbox
+                        <span *ngIf="isFeatureDisabledByPackage('enableAiChatbox')" style="color: #52c41a; margin-left: 8px;">
+                          (Tự động bật từ gói đăng ký)
+                        </span>
                       </label>
                       <div style="margin-top: 8px; color: #666; font-size: 12px;">
                         Khi bật, khách sạn có thể sử dụng trợ lý AI để hỗ trợ và trả lời câu hỏi.

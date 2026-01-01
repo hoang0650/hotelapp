@@ -415,11 +415,11 @@
       <!-- Nhân viên giao ca -->
       <div nz-col [nzSpan]="12">
         <nz-form-item>
-          <nz-form-label nzRequired>Nhân viên giao ca</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng chọn nhân viên giao ca!">
+          <nz-form-label nzRequired>{{ 'TABLE.SHIFT_HANDOVER_MODAL.FROM_STAFF' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'TABLE.SHIFT_HANDOVER_MODAL.FROM_STAFF_REQUIRED' | translate">
             <nz-select 
               formControlName="fromStaffId" 
-              nzPlaceHolder="Chọn nhân viên giao ca"
+              [nzPlaceHolder]="'TABLE.SHIFT_HANDOVER_MODAL.FROM_STAFF_PLACEHOLDER' | translate"
               nzShowSearch
               [nzLoading]="isLoadingStaff">
               <nz-option 
@@ -435,11 +435,11 @@
       <!-- Nhân viên nhận ca -->
       <div nz-col [nzSpan]="12">
         <nz-form-item>
-          <nz-form-label nzRequired>Nhân viên nhận ca</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng chọn nhân viên nhận ca!">
+          <nz-form-label nzRequired>{{ 'TABLE.SHIFT_HANDOVER_MODAL.TO_STAFF' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'TABLE.SHIFT_HANDOVER_MODAL.TO_STAFF_REQUIRED' | translate">
             <nz-select 
               formControlName="toStaffId" 
-              nzPlaceHolder="Chọn nhân viên nhận ca"
+              [nzPlaceHolder]="'TABLE.SHIFT_HANDOVER_MODAL.TO_STAFF_PLACEHOLDER' | translate"
               nzShowSearch
               [nzLoading]="isLoadingStaff">
               <nz-option 
@@ -449,7 +449,7 @@
               </nz-option>
             </nz-select>
             <small class="text-muted" *ngIf="getReceivingStaffList().length === 0 && !isLoadingStaff">
-              Không có nhân viên khác để nhận ca
+              {{ 'TABLE.SHIFT_HANDOVER_MODAL.NO_STAFF_AVAILABLE' | translate }}
             </small>
           </nz-form-control>
         </nz-form-item>
@@ -458,14 +458,14 @@
 
     <!-- Mật khẩu xác nhận -->
     <nz-form-item>
-      <nz-form-label nzRequired>Mật khẩu xác nhận (của nhân viên nhận ca)</nz-form-label>
-      <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu nhân viên nhận!">
+      <nz-form-label nzRequired>{{ 'TABLE.SHIFT_HANDOVER_MODAL.PASSWORD_LABEL' | translate }}</nz-form-label>
+      <nz-form-control [nzErrorTip]="'TABLE.SHIFT_HANDOVER_MODAL.PASSWORD_REQUIRED' | translate">
         <nz-input-group [nzSuffix]="passwordSuffixTpl">
           <input 
             nz-input 
             [type]="passwordVisible ? 'text' : 'password'" 
             formControlName="toUserPassword" 
-            placeholder="Nhập mật khẩu của nhân viên nhận ca để xác nhận" />
+            [placeholder]="'TABLE.SHIFT_HANDOVER_MODAL.PASSWORD_PLACEHOLDER' | translate" />
         </nz-input-group>
         <ng-template #passwordSuffixTpl>
           <span 
@@ -478,13 +478,13 @@
       </nz-form-control>
     </nz-form-item>
 
-    <nz-divider nzText="Thông tin tiền giao ca"></nz-divider>
+    <nz-divider [nzText]="'TABLE.SHIFT_HANDOVER_MODAL.MONEY_INFO' | translate"></nz-divider>
 
     <div nz-row [nzGutter]="16">
       <!-- Số tiền ca trước -->
       <div nz-col [nzSpan]="8">
         <nz-form-item>
-          <nz-form-label>Tiền ca trước</nz-form-label>
+          <nz-form-label>{{ 'TABLE.SHIFT_HANDOVER_MODAL.PREVIOUS_SHIFT_AMOUNT' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number
               formControlName="previousShiftAmount"
@@ -502,8 +502,8 @@
       <!-- Tiền mặt trong ca -->
       <div nz-col [nzSpan]="8">
         <nz-form-item>
-          <nz-form-label nzRequired>Tiền mặt trong ca</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng nhập tiền mặt!">
+          <nz-form-label nzRequired>{{ 'TABLE.SHIFT_HANDOVER_MODAL.CASH_IN_SHIFT' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'TABLE.SHIFT_HANDOVER_MODAL.CASH_IN_SHIFT_REQUIRED' | translate">
             <nz-input-number
               formControlName="cashInShift"
               [nzMin]="0"
@@ -513,7 +513,7 @@
               [nzDisabled]="true"
               style="width: 100%"
             ></nz-input-number>
-            <small class="text-muted">Tự động tính từ tiền mặt thu được trong ca</small>
+            <small class="text-muted">{{ 'TABLE.SHIFT_HANDOVER_MODAL.CASH_IN_SHIFT_HINT' | translate }}</small>
           </nz-form-control>
         </nz-form-item>
       </div>
@@ -521,7 +521,7 @@
       <!-- Tiền giao quản lý -->
       <div nz-col [nzSpan]="8">
         <nz-form-item>
-          <nz-form-label>Tiền giao quản lý</nz-form-label>
+          <nz-form-label>{{ 'TABLE.SHIFT_HANDOVER_MODAL.MANAGER_HANDOVER_AMOUNT' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number
               formControlName="managerHandoverAmount"
@@ -532,7 +532,7 @@
               [nzDisabled]="true"
               style="width: 100%"
             ></nz-input-number>
-            <small class="text-muted">Cập nhật qua nút "Giao tiền QL"</small>
+            <small class="text-muted">{{ 'TABLE.SHIFT_HANDOVER_MODAL.MANAGER_HANDOVER_HINT' | translate }}</small>
           </nz-form-control>
         </nz-form-item>
       </div>
@@ -556,26 +556,26 @@
       <ng-template #nzMessage>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>
-            <strong>Số tiền giao ca:</strong> 
+            <strong>{{ 'TABLE.SHIFT_HANDOVER_MODAL.HANDOVER_AMOUNT_LABEL' | translate }}</strong> 
             {{ formatterVND((shiftHandoverForm.get('previousShiftAmount')?.value || 0) + (shiftHandoverForm.get('cashInShift')?.value || 0) - (shiftHandoverForm.get('managerHandoverAmount')?.value || 0)) }} đ
           </span>
           <span style="margin-left: 16px;">
             <strong>|</strong>
           </span>
           <span style="margin-left: 16px;">
-            <strong>Tổng doanh thu:</strong> 
+            <strong>{{ 'TABLE.SHIFT_HANDOVER_MODAL.TOTAL_REVENUE_LABEL' | translate }}</strong> 
             {{ formatterVND((shiftHandoverForm.get('managerHandoverAmount')?.value || 0) + (shiftHandoverForm.get('expenseAmount')?.value || 0) + (shiftHandoverForm.get('incomeAmount')?.value || 0)) }} đ
           </span>
         </div>
       </ng-template>
     </nz-alert>
 
-    <nz-divider nzText="Thông tin doanh thu (tham khảo)"></nz-divider>
+    <nz-divider [nzText]="'TABLE.SHIFT_HANDOVER_MODAL.REVENUE_INFO' | translate"></nz-divider>
 
     <div nz-row [nzGutter]="16">
       <div nz-col [nzSpan]="8">
         <nz-form-item>
-          <nz-form-label>Tiền mặt</nz-form-label>
+          <nz-form-label>{{ 'TABLE.SHIFT_HANDOVER_MODAL.CASH' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number 
               formControlName="cashAmount" 
@@ -584,13 +584,13 @@
               [nzDisabled]="true"
               style="width: 100%"
             ></nz-input-number>
-            <small class="text-muted">Tự động tính từ thanh toán tiền mặt</small>
+            <small class="text-muted">{{ 'TABLE.SHIFT_HANDOVER_MODAL.CASH_HINT' | translate }}</small>
           </nz-form-control>
         </nz-form-item>
       </div>
       <div nz-col [nzSpan]="8">
         <nz-form-item>
-          <nz-form-label>Chuyển khoản</nz-form-label>
+          <nz-form-label>{{ 'TABLE.SHIFT_HANDOVER_MODAL.BANK_TRANSFER' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number 
               formControlName="bankTransferAmount" 
@@ -599,13 +599,13 @@
               [nzDisabled]="true"
               style="width: 100%"
             ></nz-input-number>
-            <small class="text-muted">Tự động tính từ thanh toán chuyển khoản</small>
+            <small class="text-muted">{{ 'TABLE.SHIFT_HANDOVER_MODAL.BANK_TRANSFER_HINT' | translate }}</small>
           </nz-form-control>
         </nz-form-item>
       </div>
       <div nz-col [nzSpan]="8">
         <nz-form-item>
-          <nz-form-label>Cà thẻ</nz-form-label>
+          <nz-form-label>{{ 'TABLE.SHIFT_HANDOVER_MODAL.CARD_PAYMENT' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number 
               formControlName="cardPaymentAmount" 
@@ -614,7 +614,7 @@
               [nzDisabled]="true"
               style="width: 100%"
             ></nz-input-number>
-            <small class="text-muted">Tự động tính từ thanh toán cà thẻ</small>
+            <small class="text-muted">{{ 'TABLE.SHIFT_HANDOVER_MODAL.CARD_PAYMENT_HINT' | translate }}</small>
           </nz-form-control>
         </nz-form-item>
       </div>
@@ -623,7 +623,7 @@
     <div nz-row [nzGutter]="16">
       <div nz-col [nzSpan]="12">
         <nz-form-item>
-          <nz-form-label>Phiếu chi</nz-form-label>
+          <nz-form-label>{{ 'TABLE.SHIFT_HANDOVER_MODAL.EXPENSE_AMOUNT' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number 
               formControlName="expenseAmount" 
@@ -637,7 +637,7 @@
       </div>
       <div nz-col [nzSpan]="12">
         <nz-form-item>
-          <nz-form-label>Phiếu thu</nz-form-label>
+          <nz-form-label>{{ 'TABLE.SHIFT_HANDOVER_MODAL.INCOME_AMOUNT' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number 
               formControlName="incomeAmount" 
@@ -646,7 +646,7 @@
               [nzDisabled]="true"
               style="width: 100%"
             ></nz-input-number>
-            <small class="text-muted">Tự động tính từ phiếu thu trong ca</small>
+            <small class="text-muted">{{ 'TABLE.SHIFT_HANDOVER_MODAL.INCOME_AMOUNT_HINT' | translate }}</small>
           </nz-form-control>
         </nz-form-item>
       </div>
@@ -654,50 +654,50 @@
 
     <!-- Ghi chú giao ca -->
     <nz-form-item>
-      <nz-form-label>Ghi chú / Vấn đề cần bàn giao</nz-form-label>
+      <nz-form-label>{{ 'TABLE.SHIFT_HANDOVER_MODAL.NOTES_LABEL' | translate }}</nz-form-label>
       <nz-form-control>
         <textarea
           nz-input
           formControlName="notes"
           rows="2"
-          placeholder="Nhập ghi chú giao ca, vấn đề cần bàn giao..."
+          [placeholder]="'TABLE.SHIFT_HANDOVER_MODAL.NOTES_PLACEHOLDER' | translate"
         ></textarea>
       </nz-form-control>
     </nz-form-item>
 
     <!-- Thống kê tổng quan trong ca -->
-    <nz-divider nzText="Thống kê trong ca"></nz-divider>
+    <nz-divider [nzText]="'TABLE.SHIFT_HANDOVER_MODAL.STATISTICS' | translate"></nz-divider>
     <div class="summary-stats">
       <nz-descriptions nzBordered [nzColumn]="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }">
-        <nz-descriptions-item nzTitle="Số phòng checkout">
-          <nz-tag nzColor="blue">{{ paidData.length }} phòng</nz-tag>
+        <nz-descriptions-item [nzTitle]="'TABLE.SHIFT_HANDOVER_MODAL.ROOMS_CHECKOUT' | translate">
+          <nz-tag nzColor="blue">{{ paidData.length }} {{ 'TABLE.SHIFT_HANDOVER_MODAL.ROOMS' | translate }}</nz-tag>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Tổng tiền thu">
+        <nz-descriptions-item [nzTitle]="'TABLE.SHIFT_HANDOVER_MODAL.TOTAL_COLLECTED' | translate">
           <span class="total-amount text-success">{{ formatterVND(getTotalAmount()) }} đ</span>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Tiền mặt">
+        <nz-descriptions-item [nzTitle]="'TABLE.SHIFT_HANDOVER_MODAL.CASH' | translate">
           <span>{{ formatterVND(shiftHandoverForm.get('cashAmount')?.value || 0) }} đ</span>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Chuyển khoản">
+        <nz-descriptions-item [nzTitle]="'TABLE.SHIFT_HANDOVER_MODAL.BANK_TRANSFER' | translate">
           <span>{{ formatterVND(shiftHandoverForm.get('bankTransferAmount')?.value || 0) }} đ</span>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Cà thẻ">
+        <nz-descriptions-item [nzTitle]="'TABLE.SHIFT_HANDOVER_MODAL.CARD_PAYMENT' | translate">
           <span>{{ formatterVND(shiftHandoverForm.get('cardPaymentAmount')?.value || 0) }} đ</span>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Tiền ca trước">
+        <nz-descriptions-item [nzTitle]="'TABLE.SHIFT_HANDOVER_MODAL.PREVIOUS_SHIFT_AMOUNT' | translate">
           <span>{{ formatterVND(previousShiftAmount) }} đ</span>
         </nz-descriptions-item>
       </nz-descriptions>
     </div>
     
     <!-- Hiển thị tiến trình -->
-    <nz-spin *ngIf="isSubmitting" nzTip="Đang xử lý giao ca..."></nz-spin>
+    <nz-spin *ngIf="isSubmitting" [nzTip]="'TABLE.SHIFT_HANDOVER_MODAL.PROCESSING' | translate"></nz-spin>
   </form>
   </ng-container>
 
   <ng-template #modalFooter>
     <button nz-button nzType="default" (click)="closeShiftHandoverModal()" [disabled]="isSubmitting">
-      Hủy
+      {{ 'TABLE.SHIFT_HANDOVER_MODAL.CANCEL' | translate }}
     </button>
     <button 
       nz-button 
@@ -706,7 +706,7 @@
       (click)="submitShiftHandover()"
       [disabled]="isSubmitting || shiftHandoverForm.invalid"
     >
-      Xác nhận giao ca
+      {{ 'TABLE.SHIFT_HANDOVER_MODAL.CONFIRM' | translate }}
     </button>
   </ng-template>
 </nz-modal>
@@ -722,7 +722,7 @@
   <ng-template #managerModalTitle>
     <div class="modal-title">
       <i nz-icon nzType="dollar" nzTheme="outline" style="color: #faad14; margin-right: 8px;"></i>
-      <span>Giao tiền quản lý</span>
+      <span>{{ 'TABLE.MANAGER_HANDOVER_MODAL.TITLE' | translate }}</span>
     </div>
   </ng-template>
 
@@ -738,47 +738,47 @@
       >
         <ng-template #cashInfoMessage>
           <div>
-            <p style="margin: 0;"><strong>Tiền mặt ca trước:</strong> {{ formatterVND(previousShiftAmount) }} đ</p>
-            <p style="margin: 4px 0;"><strong>Tiền mặt thực thu trong ca:</strong> {{ formatterVND(getActualCashInShift()) }} đ</p>
+            <p style="margin: 0;"><strong>{{ 'TABLE.MANAGER_HANDOVER_MODAL.CASH_BEFORE_SHIFT' | translate }}</strong> {{ formatterVND(previousShiftAmount) }} đ</p>
+            <p style="margin: 4px 0;"><strong>{{ 'TABLE.MANAGER_HANDOVER_MODAL.ACTUAL_CASH_IN_SHIFT' | translate }}</strong> {{ formatterVND(getActualCashInShift()) }} đ</p>
             <p style="margin: 4px 0; font-size: 12px; color: #666;">
               <span *ngIf="(shiftHandoverForm.get('expenseAmount')?.value || 0) > 0" style="color: #ff4d4f;">
-                - Phiếu chi: {{ formatterVND(shiftHandoverForm.get('expenseAmount')?.value || 0) }} đ
+                {{ 'TABLE.MANAGER_HANDOVER_MODAL.EXPENSE_VOUCHER' | translate }} {{ formatterVND(shiftHandoverForm.get('expenseAmount')?.value || 0) }} đ
               </span>
               <span *ngIf="(shiftHandoverForm.get('incomeAmount')?.value || 0) > 0" style="color: #52c41a; margin-left: 8px;">
-                + Phiếu thu: {{ formatterVND(shiftHandoverForm.get('incomeAmount')?.value || 0) }} đ
+                {{ 'TABLE.MANAGER_HANDOVER_MODAL.INCOME_VOUCHER' | translate }} {{ formatterVND(shiftHandoverForm.get('incomeAmount')?.value || 0) }} đ
               </span>
             </p>
-            <p style="margin: 0; font-size: 16px; color: #1890ff;"><strong>Tổng tiền mặt hiện có:</strong> {{ formatterVND(previousShiftAmount + getActualCashInShift()) }} đ</p>
+            <p style="margin: 0; font-size: 16px; color: #1890ff;"><strong>{{ 'TABLE.MANAGER_HANDOVER_MODAL.TOTAL_CASH_AVAILABLE' | translate }}</strong> {{ formatterVND(previousShiftAmount + getActualCashInShift()) }} đ</p>
           </div>
         </ng-template>
       </nz-alert>
       
-      <nz-divider nzText="Thông tin quản lý nhận tiền" nzOrientation="left"></nz-divider>
+      <nz-divider [nzText]="'TABLE.MANAGER_HANDOVER_MODAL.MANAGER_INFO' | translate" nzOrientation="left"></nz-divider>
       
       <!-- Tài khoản quản lý -->
       <nz-form-item>
-        <nz-form-label nzRequired>Tài khoản quản lý</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập tài khoản quản lý (username hoặc email)">
+        <nz-form-label nzRequired>{{ 'TABLE.MANAGER_HANDOVER_MODAL.MANAGER_ACCOUNT' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'TABLE.MANAGER_HANDOVER_MODAL.MANAGER_ACCOUNT_REQUIRED' | translate">
           <input
             nz-input
             formControlName="managerUsername"
-            placeholder="Nhập username hoặc email của quản lý"
+            [placeholder]="'TABLE.MANAGER_HANDOVER_MODAL.MANAGER_ACCOUNT_PLACEHOLDER' | translate"
             style="width: 100%"
           />
-          <small class="text-muted">Nhập username hoặc email của quản lý để xác thực</small>
+          <small class="text-muted">{{ 'TABLE.MANAGER_HANDOVER_MODAL.MANAGER_ACCOUNT_HINT' | translate }}</small>
         </nz-form-control>
       </nz-form-item>
       
       <!-- Mật khẩu quản lý -->
       <nz-form-item>
-        <nz-form-label nzRequired>Mật khẩu quản lý</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu quản lý">
+        <nz-form-label nzRequired>{{ 'TABLE.MANAGER_HANDOVER_MODAL.MANAGER_PASSWORD' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'TABLE.MANAGER_HANDOVER_MODAL.MANAGER_PASSWORD_REQUIRED' | translate">
           <nz-input-group [nzSuffix]="managerPasswordSuffix">
             <input
               nz-input
               formControlName="managerPassword"
               [type]="managerPasswordVisible ? 'text' : 'password'"
-              placeholder="Nhập mật khẩu quản lý để xác nhận"
+              [placeholder]="'TABLE.MANAGER_HANDOVER_MODAL.MANAGER_PASSWORD_PLACEHOLDER' | translate"
             />
           </nz-input-group>
           <ng-template #managerPasswordSuffix>
@@ -789,16 +789,16 @@
               style="cursor: pointer;"
             ></span>
           </ng-template>
-          <small class="text-muted">Quản lý cần nhập mật khẩu để xác nhận nhận tiền</small>
+          <small class="text-muted">{{ 'TABLE.MANAGER_HANDOVER_MODAL.MANAGER_PASSWORD_HINT' | translate }}</small>
         </nz-form-control>
       </nz-form-item>
       
-      <nz-divider nzText="Số tiền giao" nzOrientation="left"></nz-divider>
+      <nz-divider [nzText]="'TABLE.MANAGER_HANDOVER_MODAL.AMOUNT_SECTION' | translate" nzOrientation="left"></nz-divider>
       
       <!-- Số tiền giao quản lý -->
       <nz-form-item>
-        <nz-form-label nzRequired>Số tiền giao quản lý</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập số tiền">
+        <nz-form-label nzRequired>{{ 'TABLE.MANAGER_HANDOVER_MODAL.AMOUNT_LABEL' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'TABLE.MANAGER_HANDOVER_MODAL.AMOUNT_REQUIRED' | translate">
           <nz-input-number
             formControlName="managerHandoverAmount"
             [nzMin]="0"
@@ -807,7 +807,7 @@
             [nzFormatter]="formatterVND"
             [nzParser]="parserVND"
             style="width: 100%"
-            nzPlaceHolder="Nhập số tiền giao quản lý"
+            [nzPlaceHolder]="'TABLE.MANAGER_HANDOVER_MODAL.AMOUNT_PLACEHOLDER' | translate"
           ></nz-input-number>
         </nz-form-control>
       </nz-form-item>
@@ -820,7 +820,7 @@
       >
         <ng-template #nzMessage>
           <span style="font-size: 16px;">
-            <strong>Tiền mặt còn lại:</strong> 
+            <strong>{{ 'TABLE.MANAGER_HANDOVER_MODAL.CASH_REMAINING' | translate }}</strong> 
             <span [style.color]="getCashAfterManagerHandover() >= 0 ? '#52c41a' : '#ff4d4f'">
               {{ formatterVND(getCashAfterManagerHandover()) }} đ
             </span>
@@ -830,13 +830,13 @@
       
       <!-- Ghi chú -->
       <nz-form-item>
-        <nz-form-label>Ghi chú</nz-form-label>
+        <nz-form-label>{{ 'TABLE.MANAGER_HANDOVER_MODAL.NOTES_LABEL' | translate }}</nz-form-label>
         <nz-form-control>
           <textarea
             nz-input
             formControlName="notes"
             rows="2"
-            placeholder="Nhập ghi chú (không bắt buộc)..."
+            [placeholder]="'TABLE.MANAGER_HANDOVER_MODAL.NOTES_PLACEHOLDER' | translate"
           ></textarea>
         </nz-form-control>
       </nz-form-item>
@@ -846,7 +846,7 @@
 
   <ng-template #managerModalFooter>
     <button nz-button nzType="default" (click)="closeManagerHandoverModal()" [disabled]="isSubmittingManagerHandover">
-      Hủy
+      {{ 'TABLE.MANAGER_HANDOVER_MODAL.CANCEL' | translate }}
     </button>
     <button 
       nz-button 
@@ -857,7 +857,7 @@
       [disabled]="isSubmittingManagerHandover || managerHandoverForm.invalid || getCashAfterManagerHandover() < 0"
     >
       <i nz-icon nzType="dollar"></i>
-      Xác nhận giao tiền
+      {{ 'TABLE.MANAGER_HANDOVER_MODAL.CONFIRM' | translate }}
     </button>
   </ng-template>
 </nz-modal>
@@ -1097,7 +1097,7 @@
 <!-- Modal/Drawer Lịch sử giao ca -->
 <nz-drawer
   [(nzVisible)]="isShiftHandoverHistoryVisible"
-  [nzTitle]="'Lịch sử giao ca'"
+  [nzTitle]="'TABLE.SHIFT_HANDOVER_HISTORY' | translate"
   [nzWidth]="1200"
   (nzOnClose)="closeShiftHandoverHistory()"
 >

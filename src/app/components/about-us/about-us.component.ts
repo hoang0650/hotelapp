@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-about-us',
@@ -6,40 +7,49 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./about-us.component.css']
 })
 export class AboutUsComponent implements OnInit {
-  coreValues = [
-    {
-      title: 'Sáng tạo',
-      description: 'Luôn đổi mới và sáng tạo trong mọi giải pháp công nghệ, mang đến những trải nghiệm độc đáo cho khách hàng.',
-      icon: 'bulb'
-    },
-    {
-      title: 'Chất lượng',
-      description: 'Cam kết cung cấp các sản phẩm và dịch vụ chất lượng cao, đáp ứng mọi nhu cầu của khách hàng.',
-      icon: 'star'
-    },
-    {
-      title: 'Tin cậy',
-      description: 'Xây dựng mối quan hệ lâu dài dựa trên sự tin cậy và minh bạch trong mọi giao dịch.',
-      icon: 'safety-certificate'
-    },
-    {
-      title: 'Đổi mới',
-      description: 'Không ngừng cập nhật và phát triển công nghệ mới, đi đầu trong xu hướng số hóa ngành khách sạn.',
-      icon: 'thunderbolt'
-    },
-    {
-      title: 'Hợp tác',
-      description: 'Làm việc chặt chẽ với đối tác và khách hàng để đạt được mục tiêu chung và tạo ra giá trị bền vững.',
-      icon: 'team'
-    },
-    {
-      title: 'Phục vụ',
-      description: 'Đặt khách hàng làm trung tâm, luôn lắng nghe và phục vụ với tinh thần tận tâm, chuyên nghiệp.',
-      icon: 'customer-service'
-    }
-  ];
+  coreValues: { title: string; description: string; icon: string }[] = [];
+
+  constructor(private translate: TranslateService) {}
 
   ngOnInit(): void {
-    // Initialization logic if needed
+    this.initCoreValues();
+    this.translate.onLangChange.subscribe(() => {
+      this.initCoreValues();
+    });
+  }
+
+  private initCoreValues(): void {
+    this.coreValues = [
+      {
+        title: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.CREATIVITY.TITLE'),
+        description: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.CREATIVITY.DESCRIPTION'),
+        icon: 'bulb'
+      },
+      {
+        title: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.QUALITY.TITLE'),
+        description: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.QUALITY.DESCRIPTION'),
+        icon: 'star'
+      },
+      {
+        title: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.TRUST.TITLE'),
+        description: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.TRUST.DESCRIPTION'),
+        icon: 'safety-certificate'
+      },
+      {
+        title: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.INNOVATION.TITLE'),
+        description: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.INNOVATION.DESCRIPTION'),
+        icon: 'thunderbolt'
+      },
+      {
+        title: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.COOPERATION.TITLE'),
+        description: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.COOPERATION.DESCRIPTION'),
+        icon: 'team'
+      },
+      {
+        title: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.SERVICE.TITLE'),
+        description: this.translate.instant('ABOUT_US.CORE_VALUES_ITEMS.SERVICE.DESCRIPTION'),
+        icon: 'customer-service'
+      }
+    ];
   }
 }

@@ -87,7 +87,8 @@
       <div nz-col [nzSpan]="12">
         <nz-form-item>
           <nz-form-label>{{ 'BOOKING_MODAL.CHECK_OUT_DATE' | translate }}</nz-form-label>
-          <nz-form-control>
+          <nz-form-control 
+            [nzErrorTip]="bookingForm.get('checkOutDate')?.hasError('invalidDateRange') ? ('BOOKING_MODAL.INVALID_DATE_RANGE' | translate) : ''">
             <input 
               nz-input 
               type="datetime-local" 

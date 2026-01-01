@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ContactService } from '../../services/contact.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-contact',
@@ -15,7 +16,8 @@ export class ContactComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private contactService: ContactService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {
     this.initForm();
   }
@@ -49,13 +51,13 @@ export class ContactComponent implements OnInit {
 
     this.contactService.createContact(formData).subscribe({
       next: (response) => {
-        this.message.success(response.message || 'Gửi liên hệ thành công! Chúng tôi sẽ phản hồi sớm nhất có thể.');
+        this.message.success(response.message || this.translate.instant('CONTACT.SUCCESS_MESSAGE'));
         this.contactForm.reset();
         this.isLoading = false;
       },
       error: (error) => {
         this.isLoading = false;
-        this.message.error(error.error?.error || 'Gửi liên hệ thất bại. Vui lòng thử lại sau.');
+        this.message.error(error.error?.error || this.translate.instant('CONTACT.ERROR_MESSAGE_SEND'));
       }
     });
   }

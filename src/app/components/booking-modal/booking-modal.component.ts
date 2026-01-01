@@ -91,25 +91,70 @@ export class BookingModalComponent implements OnInit {
       }
     }
     
+    // Nếu vẫn chưa có hotelId, thử lấy từ localStorage
+    if (!this.hotelId) {
+      this.hotelId = localStorage.getItem('selectedHotelId') || undefined;
+    }
+    
     // Load hotel info nếu có hotelId
     if (this.hotelId) {
       this.loadBusinessInfo();
     }
     
-    // Set default checkOutDate nếu có checkInDate
+    // Đảm bảo roomId được set đúng trong form nếu có
+    if (this.data.roomId && this.bookingForm.get('roomId')?.value !== this.data.roomId) {
+      this.bookingForm.patchValue({ roomId: this.data.roomId });
+    }
+    
+    // Set default checkOutDate nếu có checkInDate và validation
     this.bookingForm.get('checkInDate')?.valueChanges.subscribe(value => {
-      if (value && !this.bookingForm.get('checkOutDate')?.value) {
+      if (value) {
         const checkIn = new Date(value);
-        checkIn.setDate(checkIn.getDate() + 1);
-        this.bookingForm.patchValue({
-          checkOutDate: this.formatDateTimeLocal(checkIn)
-        });
+        const checkOutControl = this.bookingForm.get('checkOutDate');
+        const currentCheckOut = checkOutControl?.value;
+        
+        // Nếu chưa có checkOutDate, set mặc định là +1 ngày
+        if (!currentCheckOut) {
+          const defaultCheckOut = new Date(checkIn);
+          defaultCheckOut.setDate(defaultCheckOut.getDate() + 1);
+          checkOutControl?.setValue(this.formatDateTimeLocal(defaultCheckOut), { emitEvent: false });
+        } else {
+          // Nếu có checkOutDate, kiểm tra xem có hợp lệ không
+          const checkOut = new Date(currentCheckOut);
+          if (checkOut <= checkIn) {
+            // Nếu checkOutDate <= checkInDate, tự động cập nhật thành +1 ngày
+            const newCheckOut = new Date(checkIn);
+            newCheckOut.setDate(newCheckOut.getDate() + 1);
+            checkOutControl?.setValue(this.formatDateTimeLocal(newCheckOut), { emitEvent: false });
+          }
+        }
+        
+        // Clear errors khi thay đổi
+        checkOutControl?.setErrors(null);
+        checkOutControl?.updateValueAndValidity({ emitEvent: false });
+        
+        // Filter available rooms
+        this.filterAvailableRooms();
       }
     });
     
-    // Filter available rooms khi thay đổi checkInDate hoặc checkOutDate
-    this.bookingForm.get('checkInDate')?.valueChanges.subscribe(() => this.filterAvailableRooms());
-    this.bookingForm.get('checkOutDate')?.valueChanges.subscribe(() => this.filterAvailableRooms());
+    // Validation cho checkOutDate
+    this.bookingForm.get('checkOutDate')?.valueChanges.subscribe(value => {
+      if (value) {
+        const checkInValue = this.bookingForm.get('checkInDate')?.value;
+        if (checkInValue) {
+          const checkIn = new Date(checkInValue);
+          const checkOut = new Date(value);
+          if (checkOut <= checkIn) {
+            this.bookingForm.get('checkOutDate')?.setErrors({ invalidDateRange: true });
+          } else {
+            this.bookingForm.get('checkOutDate')?.setErrors(null);
+          }
+        }
+        // Filter available rooms
+        this.filterAvailableRooms();
+      }
+    });
   }
 
   formatDateTimeLocal(date: Date): string {
@@ -121,13 +166,46 @@ export class BookingModalComponent implements OnInit {
   loadRooms(): void {
     if (this.data.rooms) {
       this.rooms = this.data.rooms;
-      this.filterAvailableRooms();
+      // Nếu có roomId trong data, đảm bảo room đó có trong danh sách
+      if (this.data.roomId && !this.rooms.find(r => r._id === this.data.roomId)) {
+        // Nếu room không có trong danh sách, load từ API
+        if (this.hotelId) {
+          this.isLoading = true;
+          this.roomsService.getRooms({ hotelId: this.hotelId }).subscribe(
+            (rooms) => {
+              this.rooms = rooms;
+              this.filterAvailableRooms();
+              // Đảm bảo roomId được set đúng sau khi load
+              if (this.data.roomId && this.rooms.find(r => r._id === this.data.roomId)) {
+                this.bookingForm.patchValue({ roomId: this.data.roomId });
+              }
+              this.isLoading = false;
+            },
+            (error) => {
+              this.message.error('Lỗi khi tải danh sách phòng: ' + (error.error?.message || error.message));
+              this.isLoading = false;
+            }
+          );
+        } else {
+          this.filterAvailableRooms();
+        }
+      } else {
+        this.filterAvailableRooms();
+        // Đảm bảo roomId được set đúng nếu có
+        if (this.data.roomId && this.rooms.find(r => r._id === this.data.roomId)) {
+          this.bookingForm.patchValue({ roomId: this.data.roomId });
+        }
+      }
     } else if (this.hotelId) {
       this.isLoading = true;
       this.roomsService.getRooms({ hotelId: this.hotelId }).subscribe(
         (rooms) => {
           this.rooms = rooms;
           this.filterAvailableRooms();
+          // Đảm bảo roomId được set đúng sau khi load
+          if (this.data.roomId && this.rooms.find(r => r._id === this.data.roomId)) {
+            this.bookingForm.patchValue({ roomId: this.data.roomId });
+          }
           this.isLoading = false;
         },
         (error) => {
@@ -351,6 +429,36 @@ export class BookingModalComponent implements OnInit {
     
     const checkInDate = new Date(formValue.checkInDate);
     const checkOutDate = formValue.checkOutDate ? new Date(formValue.checkOutDate) : undefined;
+    
+    // Kiểm tra checkOutDate phải sau checkInDate
+    if (checkOutDate && checkOutDate <= checkInDate) {
+      this.message.error(this.translate.instant('BOOKING_MODAL.INVALID_DATE_RANGE'));
+      this.bookingForm.get('checkOutDate')?.setErrors({ invalidDateRange: true });
+      this.bookingForm.get('checkOutDate')?.markAsDirty();
+      return false;
+    }
+    
+    // Kiểm tra checkInDate không được trong quá khứ (trừ khi đặt cho hôm nay)
+    const now = new Date();
+    now.setSeconds(0, 0); // Bỏ phần giây và milliseconds
+    const checkInDateNormalized = new Date(checkInDate);
+    checkInDateNormalized.setSeconds(0, 0);
+    
+    // Cho phép đặt cho hôm nay hoặc tương lai
+    if (checkInDateNormalized < now) {
+      // Kiểm tra xem có phải cùng ngày không (cho phép đặt trong ngày)
+      const today = new Date(now);
+      today.setHours(0, 0, 0, 0);
+      const checkInDay = new Date(checkInDateNormalized);
+      checkInDay.setHours(0, 0, 0, 0);
+      
+      if (checkInDay < today) {
+        this.message.error(this.translate.instant('BOOKING_MODAL.CHECK_IN_PAST_ERROR') || 'Không thể đặt phòng cho ngày đã qua');
+        this.bookingForm.get('checkInDate')?.setErrors({ pastDate: true });
+        this.bookingForm.get('checkInDate')?.markAsDirty();
+        return false;
+      }
+    }
     
     // Kiểm tra lại trước khi gửi
     if (!this.isRoomAvailableForDate(selectedRoom, checkInDate, checkOutDate)) {

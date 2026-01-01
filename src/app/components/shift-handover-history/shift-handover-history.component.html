@@ -1,24 +1,24 @@
 <div class="shift-handover-history-container">
-  <nz-card nzTitle="Lịch sử giao ca">
+  <nz-card [nzTitle]="cardTitle">
     <!-- Filters -->
     <div class="filters" style="margin-bottom: 16px;">
       <nz-date-picker
         [(ngModel)]="startDate"
         nzFormat="dd/MM/yyyy"
-        nzPlaceHolder="Từ ngày"
+        [nzPlaceHolder]="'SHIFT_HANDOVER.HISTORY.FROM_DATE' | translate"
         style="margin-right: 8px; width: 150px;"
       ></nz-date-picker>
       <nz-date-picker
         [(ngModel)]="endDate"
         nzFormat="dd/MM/yyyy"
-        nzPlaceHolder="Đến ngày"
+        [nzPlaceHolder]="'SHIFT_HANDOVER.HISTORY.TO_DATE' | translate"
         style="margin-right: 16px; width: 150px;"
       ></nz-date-picker>
       <button nz-button nzType="primary" (click)="onFilterChange()">
-        <i nz-icon nzType="search"></i> Tìm kiếm
+        <i nz-icon nzType="search"></i> {{ 'SHIFT_HANDOVER.HISTORY.SEARCH' | translate }}
       </button>
       <button nz-button (click)="resetFilters()" style="margin-left: 8px;">
-        <i nz-icon nzType="reload"></i> Làm mới
+        <i nz-icon nzType="reload"></i> {{ 'SHIFT_HANDOVER.HISTORY.REFRESH' | translate }}
       </button>
       <button 
         nz-button 
@@ -26,8 +26,8 @@
         (click)="exportShiftHandoverHistory()" 
         [nzLoading]="isLoading"
         style="margin-left: 8px;"
-        title="Xuất Excel lịch sử giao ca">
-        <i nz-icon nzType="file-excel"></i> Xuất Excel lịch sử giao ca
+        [title]="'SHIFT_HANDOVER.HISTORY.EXPORT_HISTORY' | translate">
+        <i nz-icon nzType="file-excel"></i> {{ 'SHIFT_HANDOVER.HISTORY.EXPORT_HISTORY' | translate }}
       </button>
       <button 
         nz-button 
@@ -35,78 +35,78 @@
         (click)="exportRevenueAndExpense()" 
         [nzLoading]="isLoading"
         style="margin-left: 8px;"
-        title="Xuất Excel tổng doanh thu và phiếu chi">
-        <i nz-icon nzType="file-excel"></i> Xuất Excel doanh thu & phiếu chi
+        [title]="'SHIFT_HANDOVER.HISTORY.EXPORT_REVENUE_EXPENSE' | translate">
+        <i nz-icon nzType="file-excel"></i> {{ 'SHIFT_HANDOVER.HISTORY.EXPORT_REVENUE_EXPENSE' | translate }}
       </button>
       
       <!-- Dropdown xuất Excel doanh thu -->
       <button nz-button nzType="default" nz-dropdown [nzDropdownMenu]="revenueMenu" style="margin-left: 8px;">
-        <i nz-icon nzType="file-excel"></i> Xuất Excel doanh thu <i nz-icon nzType="down"></i>
+        <i nz-icon nzType="file-excel"></i> {{ 'SHIFT_HANDOVER.HISTORY.EXPORT_REVENUE' | translate }} <i nz-icon nzType="down"></i>
       </button>
       <nz-dropdown-menu #revenueMenu="nzDropdownMenu">
         <ul nz-menu>
           <li nz-menu-item (click)="exportRevenueByMonth()">
-            <i nz-icon nzType="calendar"></i> Theo tháng
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_MONTH' | translate }}
           </li>
           <li nz-menu-item (click)="exportRevenueByQuarter()">
-            <i nz-icon nzType="calendar"></i> Theo quý
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_QUARTER' | translate }}
           </li>
           <li nz-menu-item (click)="exportRevenueByYear()">
-            <i nz-icon nzType="calendar"></i> Theo năm
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_YEAR' | translate }}
           </li>
         </ul>
       </nz-dropdown-menu>
       
       <!-- Dropdown xuất Excel phiếu chi -->
       <button nz-button nzType="default" nz-dropdown [nzDropdownMenu]="expenseMenu" style="margin-left: 8px;">
-        <i nz-icon nzType="file-excel"></i> Xuất Excel phiếu chi <i nz-icon nzType="down"></i>
+        <i nz-icon nzType="file-excel"></i> {{ 'SHIFT_HANDOVER.HISTORY.EXPORT_EXPENSE' | translate }} <i nz-icon nzType="down"></i>
       </button>
       <nz-dropdown-menu #expenseMenu="nzDropdownMenu">
         <ul nz-menu>
           <li nz-menu-item (click)="exportExpenseByMonth()">
-            <i nz-icon nzType="calendar"></i> Theo tháng
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_MONTH' | translate }}
           </li>
           <li nz-menu-item (click)="exportExpenseByQuarter()">
-            <i nz-icon nzType="calendar"></i> Theo quý
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_QUARTER' | translate }}
           </li>
           <li nz-menu-item (click)="exportExpenseByYear()">
-            <i nz-icon nzType="calendar"></i> Theo năm
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_YEAR' | translate }}
           </li>
         </ul>
       </nz-dropdown-menu>
       
       <!-- Dropdown xuất Excel phiếu thu -->
       <button nz-button nzType="default" nz-dropdown [nzDropdownMenu]="incomeMenu" style="margin-left: 8px;">
-        <i nz-icon nzType="file-excel"></i> Xuất Excel phiếu thu <i nz-icon nzType="down"></i>
+        <i nz-icon nzType="file-excel"></i> {{ 'SHIFT_HANDOVER.HISTORY.EXPORT_INCOME' | translate }} <i nz-icon nzType="down"></i>
       </button>
       <nz-dropdown-menu #incomeMenu="nzDropdownMenu">
         <ul nz-menu>
           <li nz-menu-item (click)="exportIncomeByMonth()">
-            <i nz-icon nzType="calendar"></i> Theo tháng
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_MONTH' | translate }}
           </li>
           <li nz-menu-item (click)="exportIncomeByQuarter()">
-            <i nz-icon nzType="calendar"></i> Theo quý
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_QUARTER' | translate }}
           </li>
           <li nz-menu-item (click)="exportIncomeByYear()">
-            <i nz-icon nzType="calendar"></i> Theo năm
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_YEAR' | translate }}
           </li>
         </ul>
       </nz-dropdown-menu>
       
       <!-- Dropdown xuất Excel tổng hợp (doanh thu + phiếu chi + phiếu thu) -->
       <button nz-button nzType="primary" nz-dropdown [nzDropdownMenu]="combinedMenu" style="margin-left: 8px;">
-        <i nz-icon nzType="file-excel"></i> Xuất Excel tổng hợp <i nz-icon nzType="down"></i>
+        <i nz-icon nzType="file-excel"></i> {{ 'SHIFT_HANDOVER.HISTORY.EXPORT_COMBINED' | translate }} <i nz-icon nzType="down"></i>
       </button>
       <nz-dropdown-menu #combinedMenu="nzDropdownMenu">
         <ul nz-menu>
           <li nz-menu-item (click)="exportCombinedByMonth()">
-            <i nz-icon nzType="calendar"></i> Theo tháng
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_MONTH' | translate }}
           </li>
           <li nz-menu-item (click)="exportCombinedByQuarter()">
-            <i nz-icon nzType="calendar"></i> Theo quý
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_QUARTER' | translate }}
           </li>
           <li nz-menu-item (click)="exportCombinedByYear()">
-            <i nz-icon nzType="calendar"></i> Theo năm
+            <i nz-icon nzType="calendar"></i> {{ 'SHIFT_HANDOVER.HISTORY.BY_YEAR' | translate }}
           </li>
         </ul>
       </nz-dropdown-menu>
@@ -126,16 +126,16 @@
     >
       <thead>
         <tr>
-          <th>Thời gian</th>
-          <th>Nhân viên giao</th>
-          <th>Nhân viên nhận</th>
-          <th>Tiền ca trước</th>
-          <th>Tiền mặt trong ca</th>
-          <th>Tiền giao QL</th>
-          <th>Số tiền giao ca</th>
-          <th>Tổng doanh thu</th>
-          <th>Trạng thái</th>
-          <th>Thao tác</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.TIME_COLUMN' | translate }}</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.FROM_STAFF_COLUMN' | translate }}</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.TO_STAFF_COLUMN' | translate }}</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.PREVIOUS_SHIFT_COLUMN' | translate }}</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.CASH_IN_SHIFT_COLUMN' | translate }}</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.MANAGER_HANDOVER_COLUMN' | translate }}</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.HANDOVER_AMOUNT_COLUMN' | translate }}</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.TOTAL_REVENUE_COLUMN' | translate }}</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.STATUS_COLUMN' | translate }}</th>
+          <th>{{ 'SHIFT_HANDOVER.HISTORY.ACTIONS_COLUMN' | translate }}</th>
         </tr>
       </thead>
       <tbody>
@@ -155,7 +155,7 @@
           </td>
           <td>
             <button nz-button nzType="link" nzSize="small" (click)="viewDetail(record)">
-              <i nz-icon nzType="eye"></i> Chi tiết
+              <i nz-icon nzType="eye"></i> {{ 'SHIFT_HANDOVER.HISTORY.VIEW_DETAIL' | translate }}
             </button>
           </td>
         </tr>
@@ -166,7 +166,7 @@
   <!-- Detail Modal -->
   <nz-modal
     [(nzVisible)]="isDetailModalVisible"
-    nzTitle="Chi tiết giao ca"
+    [nzTitle]="detailModalTitle"
     [nzWidth]="800"
     (nzOnCancel)="closeDetailModal()"
     [nzFooter]="null"
@@ -174,57 +174,57 @@
     <ng-container *nzModalContent>
       <div *ngIf="selectedRecord">
         <nz-descriptions nzBordered [nzColumn]="{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }">
-          <nz-descriptions-item nzTitle="Thời gian giao ca">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.HANDOVER_TIME' | translate">
             {{ formatDate(selectedRecord.handoverTime) }}
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Nhân viên giao">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.FROM_STAFF' | translate">
             {{ getStaffName(selectedRecord.fromStaffId) }}
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Nhân viên nhận">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.TO_STAFF' | translate">
             {{ getStaffName(selectedRecord.toStaffId) }}
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Trạng thái">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.STATUS_COLUMN' | translate">
             <nz-tag [nzColor]="getStatusColor(selectedRecord.status)">
               {{ getStatusLabel(selectedRecord.status) }}
             </nz-tag>
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Tiền ca trước">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.PREVIOUS_SHIFT_AMOUNT' | translate">
             <strong>{{ formatCurrency(selectedRecord.previousShiftAmount || 0) }}</strong>
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Tiền mặt trong ca">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.CASH_IN_SHIFT' | translate">
             <strong>{{ formatCurrency(selectedRecord.cashInShift || 0) }}</strong>
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Tiền giao quản lý">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.MANAGER_HANDOVER_AMOUNT' | translate">
             <strong class="text-danger">{{ formatCurrency(selectedRecord.managerHandoverAmount || 0) }}</strong>
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Số tiền giao ca">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.HANDOVER_AMOUNT' | translate">
             <strong class="text-success">{{ formatCurrency(selectedRecord.handoverAmount || 0) }}</strong>
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Tiền mặt">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.CASH' | translate">
             {{ formatCurrency(selectedRecord.cashAmount || 0) }}
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Chuyển khoản">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate">
             {{ formatCurrency(selectedRecord.bankTransferAmount || 0) }}
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Cà thẻ">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate">
             {{ formatCurrency(selectedRecord.cardPaymentAmount || 0) }}
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Phiếu chi">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.EXPENSE_AMOUNT' | translate">
             {{ formatCurrency(selectedRecord.expenseAmount || 0) }}
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Phiếu thu">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.INCOME_AMOUNT' | translate">
             {{ formatCurrency(selectedRecord.incomeAmount || 0) }}
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Tổng doanh thu">
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.TOTAL_REVENUE' | translate">
             <strong class="text-primary">{{ formatCurrency(getTotalRevenue(selectedRecord)) }}</strong>
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="Ghi chú" [nzSpan]="2">
-            {{ selectedRecord.notes || 'Không có' }}
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.NOTES' | translate" [nzSpan]="2">
+            {{ selectedRecord.notes || ('SHIFT_HANDOVER.HISTORY.NO_NOTES' | translate) }}
           </nz-descriptions-item>
         </nz-descriptions>
         
         <!-- Expenses (Phiếu chi) -->
-        <nz-divider nzText="Phiếu chi trong ca" *ngIf="selectedRecord.expenses && selectedRecord.expenses.length > 0"></nz-divider>
+        <nz-divider [nzText]="'SHIFT_HANDOVER.HISTORY.EXPENSES_IN_SHIFT' | translate" *ngIf="selectedRecord.expenses && selectedRecord.expenses.length > 0"></nz-divider>
         <nz-table
           *ngIf="selectedRecord.expenses && selectedRecord.expenses.length > 0"
           [nzData]="selectedRecord.expenses"
@@ -233,27 +233,27 @@
         >
           <thead>
             <tr>
-              <th>Mô tả</th>
-              <th>Danh mục</th>
-              <th>Người nhận</th>
-              <th>Số tiền</th>
-              <th>Hình thức TT</th>
-              <th>Thời gian</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.DESCRIPTION' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.CATEGORY' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.RECIPIENT' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.AMOUNT' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.PAYMENT_METHOD' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.TIMESTAMP' | translate }}</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let expense of selectedRecord.expenses">
-              <td>{{ expense.description || 'Phiếu chi' }}</td>
+              <td>{{ expense.description || ('SHIFT_HANDOVER.HISTORY.EXPENSE_VOUCHER' | translate) }}</td>
               <td>
                 <nz-tag [nzColor]="getExpenseCategoryColor(expense.category)">
                   {{ getExpenseCategoryLabel(expense.category) }}
                 </nz-tag>
               </td>
-              <td>{{ expense.recipient || 'N/A' }}</td>
+              <td>{{ expense.recipient || ('SHIFT_HANDOVER.HISTORY.N_A' | translate) }}</td>
               <td><strong class="text-danger">{{ formatCurrency(expense.amount || 0) }}</strong></td>
               <td>
                 <nz-tag [nzColor]="expense.method === 'cash' ? 'red' : expense.method === 'bank_transfer' ? 'blue' : 'green'">
-                  {{ expense.method === 'cash' ? 'Tiền mặt' : expense.method === 'bank_transfer' ? 'Chuyển khoản' : 'Thẻ' }}
+                  {{ expense.method === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : expense.method === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : ('SHIFT_HANDOVER_EXPORT.CARD' | translate) }}
                 </nz-tag>
               </td>
               <td>{{ formatDate(expense.timestamp) }}</td>
@@ -262,7 +262,7 @@
         </nz-table>
         
         <!-- Incomes (Phiếu thu) -->
-        <nz-divider nzText="Phiếu thu trong ca" *ngIf="selectedRecord.incomes && selectedRecord.incomes.length > 0"></nz-divider>
+        <nz-divider [nzText]="'SHIFT_HANDOVER.HISTORY.INCOMES_IN_SHIFT' | translate" *ngIf="selectedRecord.incomes && selectedRecord.incomes.length > 0"></nz-divider>
         <nz-table
           *ngIf="selectedRecord.incomes && selectedRecord.incomes.length > 0"
           [nzData]="selectedRecord.incomes"
@@ -271,27 +271,27 @@
         >
           <thead>
             <tr>
-              <th>Mô tả</th>
-              <th>Danh mục</th>
-              <th>Người nộp</th>
-              <th>Số tiền</th>
-              <th>Hình thức TT</th>
-              <th>Thời gian</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.DESCRIPTION' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.CATEGORY' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.PAYER' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.AMOUNT' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.PAYMENT_METHOD' | translate }}</th>
+              <th>{{ 'SHIFT_HANDOVER.HISTORY.TIMESTAMP' | translate }}</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let income of selectedRecord.incomes">
-              <td>{{ income.description || 'Phiếu thu' }}</td>
+              <td>{{ income.description || ('SHIFT_HANDOVER.HISTORY.INCOME_VOUCHER' | translate) }}</td>
               <td>
                 <nz-tag [nzColor]="getIncomeCategoryColor(income.category)">
                   {{ getIncomeCategoryLabel(income.category) }}
                 </nz-tag>
               </td>
-              <td>{{ income.source || 'N/A' }}</td>
+              <td>{{ income.source || ('SHIFT_HANDOVER.HISTORY.N_A' | translate) }}</td>
               <td><strong class="text-success">{{ formatCurrency(income.amount || 0) }}</strong></td>
               <td>
                 <nz-tag [nzColor]="income.method === 'cash' ? 'red' : income.method === 'bank_transfer' ? 'blue' : 'green'">
-                  {{ income.method === 'cash' ? 'Tiền mặt' : income.method === 'bank_transfer' ? 'Chuyển khoản' : income.method === 'card' ? 'Thẻ' : 'Khác' }}
+                  {{ income.method === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : income.method === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : income.method === 'card' ? ('SHIFT_HANDOVER_EXPORT.CARD' | translate) : ('SHIFT_HANDOVER_EXPORT.OTHER' | translate) }}
                 </nz-tag>
               </td>
               <td>{{ formatDate(income.timestamp) }}</td>
@@ -300,7 +300,7 @@
         </nz-table>
         
         <!-- Room History -->
-        <nz-divider nzText="Lịch sử phòng trong ca" *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"></nz-divider>
+        <nz-divider [nzText]="'SHIFT_HANDOVER.HISTORY.ROOM_HISTORY_IN_SHIFT' | translate" *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"></nz-divider>
         <div class="table-responsive-wrapper">
           <nz-table
             *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"
@@ -312,19 +312,19 @@
           >
             <thead>
               <tr>
-                <th nzWidth="80px">Phòng</th>
-                <th nzWidth="100px">Hành động</th>
-                <th nzWidth="120px">Khách</th>
-                <th nzWidth="100px">Nguồn</th>
-                <th nzWidth="100px">Tiền phòng</th>
-                <th nzWidth="100px">Phụ thu</th>
-                <th nzWidth="100px">Khuyến mãi</th>
-                <th nzWidth="100px">Tiền dịch vụ</th>
-                <th nzWidth="100px">Tiền đặt trước</th>
-                <th nzWidth="120px"><strong>Số tiền</strong></th>
-                <th nzWidth="100px">Hình thức TT</th>
-                <th nzWidth="140px">Nhận phòng</th>
-                <th nzWidth="140px">Trả phòng</th>
+                <th nzWidth="80px">{{ 'SHIFT_HANDOVER.HISTORY.ROOM' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ACTION' | translate }}</th>
+                <th nzWidth="120px">{{ 'SHIFT_HANDOVER.HISTORY.GUEST' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.SOURCE' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ROOM_TOTAL' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ADDITIONAL_CHARGES' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.DISCOUNT' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.SERVICE_AMOUNT' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ADVANCE_PAYMENT' | translate }}</th>
+                <th nzWidth="120px"><strong>{{ 'SHIFT_HANDOVER.HISTORY.AMOUNT' | translate }}</strong></th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.PAYMENT_METHOD' | translate }}</th>
+                <th nzWidth="140px">{{ 'SHIFT_HANDOVER.HISTORY.CHECK_IN' | translate }}</th>
+                <th nzWidth="140px">{{ 'SHIFT_HANDOVER.HISTORY.CHECK_OUT' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -345,10 +345,10 @@
                 <td class="text-right">{{ formatCurrency(getServiceAmount(room)) }}</td>
                 <td class="text-right">{{ formatCurrency(getAdvancePayment(room)) }}</td>
                 <td class="text-right"><strong>{{ formatCurrency(room.amount || 0) }}</strong></td>
-                <td>{{ room.paymentMethod === 'cash' ? 'Tiền mặt' : room.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : room.paymentMethod === 'card' ? 'Thẻ' : 'Khác' }}</td>
+                <td>{{ room.paymentMethod === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : room.paymentMethod === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : room.paymentMethod === 'card' ? ('SHIFT_HANDOVER_EXPORT.CARD' | translate) : ('SHIFT_HANDOVER_EXPORT.OTHER' | translate) }}</td>
                 <td class="text-ellipsis">
                   <span [nz-tooltip]="getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : 'N/A'" nzTooltipPlacement="top">
-                    {{ getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : 'N/A' }}
+                    {{ getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : ('SHIFT_HANDOVER.HISTORY.N_A' | translate) }}
                   </span>
                 </td>
                 <td class="text-ellipsis">

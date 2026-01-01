@@ -2,9 +2,9 @@
   <!-- Header với breadcrumb -->
   <div class="blog-header-bar">
     <div class="blog-breadcrumb">
-      <a routerLink="/home">Trang chủ</a>
+      <a routerLink="/home">{{ 'BLOG.HOME' | translate }}</a>
       <span class="separator">|</span>
-      <span>Blog</span>
+      <span>{{ 'BLOG.TITLE' | translate }}</span>
       <span class="separator" *ngIf="selectedBlog">|</span>
       <span *ngIf="selectedBlog">{{ selectedBlog.title }}</span>
     </div>
@@ -21,7 +21,7 @@
         <nz-card>
           <button nz-button nzType="default" (click)="backToList()" class="mb-3">
             <i nz-icon nzType="arrow-left"></i>
-            Quay lại danh sách
+            {{ 'BLOG.BACK_TO_LIST' | translate }}
           </button>
 
           <h1 class="blog-title">{{ selectedBlog.title }}</h1>
@@ -37,7 +37,7 @@
             </span>
             <span class="meta-item" *ngIf="selectedBlog.views">
               <i nz-icon nzType="eye" nzTheme="outline"></i>
-              {{ selectedBlog.views }} lượt xem
+              {{ selectedBlog.views }} {{ 'BLOG.VIEWS' | translate }}
             </span>
           </div>
 
@@ -63,7 +63,7 @@
                 [class.active]="selectedBlog.userLiked"
                 (click)="likeBlog()">
                 <i nz-icon [nzType]="selectedBlog.userLiked ? 'like' : 'like'" [nzTheme]="selectedBlog.userLiked ? 'fill' : 'outline'"></i>
-                Thích ({{ selectedBlog.likesCount || 0 }})
+                {{ 'BLOG.LIKE' | translate }} ({{ selectedBlog.likesCount || 0 }})
               </button>
               <button 
                 nz-button 
@@ -72,14 +72,14 @@
                 [class.active]="selectedBlog.userDisliked"
                 (click)="dislikeBlog()">
                 <i nz-icon [nzType]="selectedBlog.userDisliked ? 'dislike' : 'dislike'" [nzTheme]="selectedBlog.userDisliked ? 'fill' : 'outline'"></i>
-                Không thích ({{ selectedBlog.dislikesCount || 0 }})
+                {{ 'BLOG.DISLIKE' | translate }} ({{ selectedBlog.dislikesCount || 0 }})
               </button>
             </div>
           </div>
         </nz-card>
 
         <!-- Comment Section -->
-        <nz-card class="mt-3" nzTitle="Bình luận">
+        <nz-card class="mt-3" [nzTitle]="'BLOG.COMMENTS' | translate">
       <div class="comment-section">
         <!-- Form thêm comment -->
         <div class="comment-form mb-4" *ngIf="isLoggedIn">
@@ -90,7 +90,7 @@
                   nz-input 
                   formControlName="content" 
                   rows="4" 
-                  placeholder="Viết bình luận của bạn..."></textarea>
+                  [placeholder]="'BLOG.WRITE_COMMENT' | translate"></textarea>
               </nz-form-control>
             </nz-form-item>
             <div class="text-right">
@@ -99,7 +99,7 @@
                 nzType="primary" 
                 [nzLoading]="isSubmittingComment"
                 [disabled]="commentForm.invalid">
-                Gửi bình luận
+                {{ 'BLOG.SUBMIT_COMMENT' | translate }}
               </button>
             </div>
           </form>
@@ -108,10 +108,10 @@
         <div class="login-prompt mb-4" *ngIf="!isLoggedIn">
           <nz-alert 
             nzType="info" 
-            nzMessage="Vui lòng đăng nhập để bình luận"
+            [nzMessage]="'BLOG.LOGIN_TO_COMMENT' | translate"
             [nzShowIcon]="true">
             <button nz-button nzType="primary" nzSize="small" (click)="$event.preventDefault(); router.navigate(['/login'])">
-              Đăng nhập
+              {{ 'BLOG.LOGIN' | translate }}
             </button>
           </nz-alert>
         </div>
@@ -119,7 +119,7 @@
         <!-- Danh sách comments -->
         <nz-spin [nzSpinning]="isLoadingComments">
           <div *ngIf="comments.length === 0 && !isLoadingComments" class="empty-comments">
-            <nz-empty nzNotFoundContent="Chưa có bình luận nào. Hãy là người đầu tiên bình luận!"></nz-empty>
+            <nz-empty [nzNotFoundContent]="'BLOG.NO_COMMENTS' | translate"></nz-empty>
           </div>
 
           <div class="comments-list" *ngIf="comments.length > 0">
@@ -159,7 +159,7 @@
                   nzSize="small"
                   (click)="toggleReplyForm(comment._id!)">
                   <i nz-icon nzType="message" nzTheme="outline"></i>
-                  Trả lời
+                  {{ 'BLOG.REPLY' | translate }}
                 </button>
                 <button 
                   nz-button 
@@ -168,7 +168,7 @@
                   nzDanger
                   *ngIf="canDeleteComment(comment)"
                   nz-popconfirm
-                  nzPopconfirmTitle="Bạn có chắc muốn xóa bình luận này?"
+                  [nzPopconfirmTitle]="'BLOG.CONFIRM_DELETE_COMMENT' | translate"
                   (nzOnConfirm)="deleteComment(comment._id!)">
                   <i nz-icon nzType="delete" nzTheme="outline"></i>
                 </button>
@@ -183,7 +183,7 @@
                         nz-input 
                         formControlName="content" 
                         rows="3" 
-                        placeholder="Viết phản hồi..."></textarea>
+                        [placeholder]="'BLOG.WRITE_REPLY' | translate"></textarea>
                     </nz-form-control>
                   </nz-form-item>
                   <div class="text-right">
@@ -192,7 +192,7 @@
                       nzType="default" 
                       nzSize="small"
                       (click)="toggleReplyForm(comment._id!)">
-                      Hủy
+                      {{ 'COMMON.CANCEL' | translate }}
                     </button>
                     <button 
                       nz-button 
@@ -201,7 +201,7 @@
                       [nzLoading]="isSubmittingComment"
                       [disabled]="replyForms.get(comment._id!)?.invalid"
                       style="margin-left: 8px;">
-                      Gửi
+                      {{ 'BLOG.SEND' | translate }}
                     </button>
                   </div>
                 </form>
@@ -246,7 +246,7 @@
                       nzDanger
                       *ngIf="canDeleteComment(reply)"
                       nz-popconfirm
-                      nzPopconfirmTitle="Bạn có chắc muốn xóa bình luận này?"
+                      [nzPopconfirmTitle]="'BLOG.CONFIRM_DELETE_COMMENT' | translate"
                       (nzOnConfirm)="deleteComment(reply._id!)">
                       <i nz-icon nzType="delete" nzTheme="outline"></i>
                     </button>
@@ -264,17 +264,17 @@
       <nz-col [nzXs]="24" [nzSm]="24" [nzMd]="8" [nzLg]="8">
         <div class="blog-sidebar">
           <!-- Quảng cáo -->
-          <nz-card class="sidebar-card mb-3" nzTitle="Quảng cáo">
+          <nz-card class="sidebar-card mb-3" [nzTitle]="'BLOG.ADVERTISEMENT' | translate">
             <div class="advertisement-placeholder">
               <div class="ad-content">
                 <i nz-icon nzType="picture" nzTheme="outline" style="font-size: 48px; color: #d9d9d9;"></i>
-                <p style="color: #999; margin-top: 16px;">Khu vực quảng cáo</p>
+                <p style="color: #999; margin-top: 16px;">{{ 'BLOG.ADVERTISEMENT_AREA' | translate }}</p>
               </div>
             </div>
           </nz-card>
 
           <!-- Bài viết liên quan -->
-          <nz-card class="sidebar-card" nzTitle="Bài viết liên quan" *ngIf="relatedBlogs.length > 0">
+          <nz-card class="sidebar-card" [nzTitle]="'BLOG.RELATED_POSTS' | translate" *ngIf="relatedBlogs.length > 0">
             <div class="related-blogs">
               <div class="related-blog-item" *ngFor="let blog of relatedBlogs" (click)="viewBlogDetail(blog)">
                 <div class="related-blog-image" *ngIf="blog.featuredImage || blog.imageUrl">
@@ -291,7 +291,7 @@
           </nz-card>
 
           <!-- Danh mục -->
-          <nz-card class="sidebar-card" nzTitle="Danh mục" *ngIf="categories.length > 0">
+          <nz-card class="sidebar-card" [nzTitle]="'BLOG.CATEGORIES' | translate" *ngIf="categories.length > 0">
             <div class="category-list">
               <div class="category-item" *ngFor="let cat of categories" (click)="onCategoryFilter(cat)">
                 <span>{{ cat }}</span>
@@ -313,9 +313,9 @@
           <div class="blog-header mb-4">
             <h1 class="blog-page-title">
               <i nz-icon nzType="file-text" nzTheme="outline"></i>
-              Blog
+              {{ 'BLOG.TITLE' | translate }}
             </h1>
-            <p class="blog-page-subtitle">Khám phá những bài viết mới nhất từ chúng tôi</p>
+            <p class="blog-page-subtitle">{{ 'BLOG.SUBTITLE' | translate }}</p>
           </div>
 
       <!-- Bộ lọc và tìm kiếm -->
@@ -327,7 +327,7 @@
               nz-input 
               [(ngModel)]="searchValue"
               (keyup.enter)="onSearch()"
-              placeholder="Tìm kiếm bài viết..." />
+              [placeholder]="'BLOG.SEARCH_PLACEHOLDER' | translate" />
           </nz-input-group>
           <ng-template #suffixIconSearch>
             <i nz-icon nzType="search" (click)="onSearch()"></i>
@@ -335,7 +335,7 @@
         </div>
         <div nz-col [nzXs]="24" [nzSm]="8" [nzMd]="12" *ngIf="categories.length > 0">
           <nz-select 
-            nzPlaceHolder="Lọc theo danh mục"
+            [nzPlaceHolder]="'BLOG.FILTER_BY_CATEGORY' | translate"
             [(ngModel)]="categoryFilter"
             (ngModelChange)="onCategoryFilter($event)"
             nzAllowClear
@@ -348,7 +348,7 @@
       <!-- Danh sách bài viết -->
       <nz-spin [nzSpinning]="isLoading">
         <div *ngIf="blogs.length === 0 && !isLoading" class="empty-state">
-          <nz-empty nzNotFoundContent="Chưa có bài viết nào"></nz-empty>
+          <nz-empty [nzNotFoundContent]="'BLOG.NO_POSTS' | translate"></nz-empty>
         </div>
 
         <div nz-row [nzGutter]="[16, 16]" *ngIf="blogs.length > 0">
@@ -403,7 +403,7 @@
             (nzPageSizeChange)="onPageSizeChange($event)">
           </nz-pagination>
           <ng-template #totalTemplate let-total>
-            Tổng {{ total }} bài viết
+            {{ 'BLOG.TOTAL_POSTS' | translate: {total: total} }}
           </ng-template>
         </div>
       </nz-spin>
@@ -414,17 +414,17 @@
       <nz-col [nzXs]="24" [nzSm]="24" [nzMd]="8" [nzLg]="8">
         <div class="blog-sidebar">
           <!-- Quảng cáo -->
-          <nz-card class="sidebar-card mb-3" nzTitle="Quảng cáo">
+          <nz-card class="sidebar-card mb-3" [nzTitle]="'BLOG.ADVERTISEMENT' | translate">
             <div class="advertisement-placeholder">
               <div class="ad-content">
                 <i nz-icon nzType="picture" nzTheme="outline" style="font-size: 48px; color: #d9d9d9;"></i>
-                <p style="color: #999; margin-top: 16px;">Khu vực quảng cáo</p>
+                <p style="color: #999; margin-top: 16px;">{{ 'BLOG.ADVERTISEMENT_AREA' | translate }}</p>
               </div>
             </div>
           </nz-card>
 
           <!-- Bài viết nổi bật -->
-          <nz-card class="sidebar-card mb-3" nzTitle="Bài viết nổi bật" *ngIf="blogs.length > 0">
+          <nz-card class="sidebar-card mb-3" [nzTitle]="'BLOG.FEATURED_POSTS' | translate" *ngIf="blogs.length > 0">
             <div class="related-blogs">
               <div class="related-blog-item" *ngFor="let blog of blogs.slice(0, 5)" (click)="viewBlogDetail(blog)">
                 <div class="related-blog-image" *ngIf="blog.featuredImage || blog.imageUrl">
@@ -434,7 +434,7 @@
                   <h4 class="related-blog-title">{{ blog.title }}</h4>
                   <div class="related-blog-meta">
                     <span>{{ formatDate(blog.createdAt) }}</span>
-                    <span *ngIf="blog.views"> • {{ blog.views }} lượt xem</span>
+                    <span *ngIf="blog.views"> • {{ blog.views }} {{ 'BLOG.VIEWS' | translate }}</span>
                   </div>
                 </div>
               </div>
@@ -442,7 +442,7 @@
           </nz-card>
 
           <!-- Danh mục -->
-          <nz-card class="sidebar-card" nzTitle="Danh mục" *ngIf="categories.length > 0">
+          <nz-card class="sidebar-card" [nzTitle]="'BLOG.CATEGORIES' | translate" *ngIf="categories.length > 0">
             <div class="category-list">
               <div class="category-item" *ngFor="let cat of categories" (click)="onCategoryFilter(cat)">
                 <span>{{ cat }}</span>

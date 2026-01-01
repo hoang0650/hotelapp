@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
@@ -16,6 +16,7 @@ import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 
 type HotelStatusType = 'active' | 'inactive' | 'maintenance' | 'suspended';
 
@@ -24,7 +25,7 @@ type HotelStatusType = 'active' | 'inactive' | 'maintenance' | 'suspended';
   templateUrl: './hotel-management.component.html',
   styleUrls: ['./hotel-management.component.css']
 })
-export class HotelManagementComponent implements OnInit {
+export class HotelManagementComponent implements OnInit, OnDestroy {
   hotelForm!: FormGroup;
   hotels: Hotel[] = [];
   businesses: Business[] = [];
@@ -51,14 +52,16 @@ export class HotelManagementComponent implements OnInit {
   isLoadingUpload = false;
 
   hotelStatusOptions: { label: string, value: HotelStatusType }[] = [];
+  
+  private subscriptions = new Subscription();
 
 
   private initStatusOptions(): void {
     this.hotelStatusOptions = [
-      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS.ACTIVE'), value: 'active' },
-      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS.INACTIVE'), value: 'inactive' },
-      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS.MAINTENANCE'), value: 'maintenance' },
-      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS.SUSPENDED'), value: 'suspended' }
+      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS_OPTIONS.ACTIVE'), value: 'active' },
+      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS_OPTIONS.INACTIVE'), value: 'inactive' },
+      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS_OPTIONS.MAINTENANCE'), value: 'maintenance' },
+      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS_OPTIONS.SUSPENDED'), value: 'suspended' }
     ];
   }
 
@@ -121,6 +124,17 @@ export class HotelManagementComponent implements OnInit {
     this.loadHotels();
     this.loadBusinesses();
     this.loadAvailableManagers();
+    
+    // Subscribe to language changes to update statusOptions
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.initStatusOptions();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
   }
 
   // ============ KIỂM TRA QUYỀN ============
@@ -603,7 +617,7 @@ export class HotelManagementComponent implements OnInit {
       nzOkType: 'primary',
       nzOkDanger: true,
       nzOnOk: () => {
-        this.updateHotelStatusLogic(hotelId, 'suspended', 'Khách sạn và tất cả nhân viên đã bị đình chỉ.');
+        this.updateHotelStatusLogic(hotelId, 'suspended', this.translate.instant('HOTEL_MANAGEMENT.SUSPEND_SUCCESS'));
       },
       nzCancelText: this.translate.instant('HOTEL_MANAGEMENT.CANCEL')
     });
@@ -611,6 +625,10 @@ export class HotelManagementComponent implements OnInit {
 
   getActivatedMessage(): string {
     return this.translate.instant('HOTEL_MANAGEMENT.ACTIVATED');
+  }
+
+  getActivateSuccessMessage(): string {
+    return this.translate.instant('HOTEL_MANAGEMENT.ACTIVATE_SUCCESS');
   }
 
   updateHotelStatusLogic(hotelId: string, status: HotelStatusType, successMessage: string): void {
@@ -649,25 +667,25 @@ export class HotelManagementComponent implements OnInit {
   }
 
   getBusinessName(businessId: string | { _id: string; [key: string]: any } | undefined): string {
-    if (!businessId) return 'N/A';
+    if (!businessId) return this.translate.instant('COMMON.N_A');
     
     // Extract businessId nếu là object
     const id = typeof businessId === 'object' && businessId !== null && '_id' in businessId 
       ? businessId._id 
       : businessId;
     
-    if (!id || typeof id !== 'string') return 'N/A';
+    if (!id || typeof id !== 'string') return this.translate.instant('COMMON.N_A');
     const business = this.businesses.find((b: Business) => b._id === id);
-    return business ? business.name : 'N/A';
+    return business ? business.name : this.translate.instant('COMMON.N_A');
   }
 
   getHotelStatusLabel(statusValue: HotelStatusType | undefined): string {
-    if (!statusValue) return 'N/A';
+    if (!statusValue) return this.translate.instant('COMMON.N_A');
     const statusMap: { [key: string]: string } = {
-      'active': this.translate.instant('HOTEL_MANAGEMENT.STATUS.ACTIVE'),
-      'inactive': this.translate.instant('HOTEL_MANAGEMENT.STATUS.INACTIVE'),
-      'maintenance': this.translate.instant('HOTEL_MANAGEMENT.STATUS.MAINTENANCE'),
-      'suspended': this.translate.instant('HOTEL_MANAGEMENT.STATUS.SUSPENDED')
+      'active': this.translate.instant('HOTEL_MANAGEMENT.STATUS_OPTIONS.ACTIVE'),
+      'inactive': this.translate.instant('HOTEL_MANAGEMENT.STATUS_OPTIONS.INACTIVE'),
+      'maintenance': this.translate.instant('HOTEL_MANAGEMENT.STATUS_OPTIONS.MAINTENANCE'),
+      'suspended': this.translate.instant('HOTEL_MANAGEMENT.STATUS_OPTIONS.SUSPENDED')
     };
     return statusMap[statusValue] || statusValue;
   }
@@ -683,15 +701,15 @@ export class HotelManagementComponent implements OnInit {
   }
 
   getManagerName(managerId: string | User | undefined): string {
-    if (!managerId) return 'Chưa có';
+    if (!managerId) return this.translate.instant('HOTEL_MANAGEMENT.NO_MANAGER');
     if (typeof managerId === 'object' && managerId !== null && '_id' in managerId) {
-      return managerId.fullName || managerId.username || 'N/A';
+      return managerId.fullName || managerId.username || this.translate.instant('COMMON.N_A');
     }
     if (typeof managerId === 'string') {
       const manager = this.availableManagers.find((m: User) => m._id === managerId);
-      return manager ? (manager.fullName || manager.username || 'N/A') : 'N/A';
+      return manager ? (manager.fullName || manager.username || this.translate.instant('COMMON.N_A')) : this.translate.instant('COMMON.N_A');
     }
-    return 'N/A';
+    return this.translate.instant('COMMON.N_A');
   }
 
   /**

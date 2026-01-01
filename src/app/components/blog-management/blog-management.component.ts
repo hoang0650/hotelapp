@@ -7,6 +7,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { TranslateService } from '@ngx-translate/core';
 
 export interface BlogSection {
   title: string;
@@ -80,7 +81,8 @@ export class BlogManagementComponent implements OnInit {
     public authService: AuthService,
     private message: NzMessageService,
     private modal: NzModalService,
-    private http: HttpClient
+    private http: HttpClient,
+    private translate: TranslateService
   ) {
     this.blogForm = this.fb.group({
       title: ['', [Validators.required, Validators.maxLength(200)]],
@@ -145,7 +147,7 @@ export class BlogManagementComponent implements OnInit {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     if (!this.canAccess) {
-      this.message.error('Bạn không có quyền truy cập trang này');
+      this.message.error(this.translate.instant('BLOG_MANAGEMENT.NO_ACCESS'));
       return;
     }
     this.loadBlogs();
@@ -174,7 +176,7 @@ export class BlogManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi tải danh sách blog:', error);
-        this.message.error(error.error?.message || 'Không thể tải danh sách blog');
+        this.message.error(error.error?.message || this.translate.instant('BLOG_MANAGEMENT.LOAD_ERROR'));
         this.isLoading = false;
       }
     });
@@ -278,7 +280,7 @@ export class BlogManagementComponent implements OnInit {
 
   handleOk(): void {
     if (this.blogForm.invalid) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc');
+      this.message.warning(this.translate.instant('BLOG_MANAGEMENT.FILL_REQUIRED'));
       Object.values(this.blogForm.controls).forEach(control => {
         if (control.invalid) {
           control.markAsDirty();
@@ -334,28 +336,28 @@ export class BlogManagementComponent implements OnInit {
     if (this.editId) {
       this.blogService.updateBlog(this.editId, blogData).subscribe({
         next: (updatedBlog) => {
-          this.message.success('Đã cập nhật bài viết thành công');
+          this.message.success(this.translate.instant('BLOG_MANAGEMENT.UPDATE_SUCCESS'));
           this.loadBlogs();
           this.handleCancel();
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Lỗi khi cập nhật blog:', error);
-          this.message.error(error.error?.message || 'Không thể cập nhật bài viết');
+          this.message.error(error.error?.message || this.translate.instant('BLOG_MANAGEMENT.UPDATE_ERROR'));
           this.isLoading = false;
         }
       });
     } else {
       this.blogService.createBlog(blogData).subscribe({
         next: (newBlog) => {
-          this.message.success('Đã tạo bài viết thành công');
+          this.message.success(this.translate.instant('BLOG_MANAGEMENT.CREATE_SUCCESS'));
           this.loadBlogs();
           this.handleCancel();
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Lỗi khi tạo blog:', error);
-          this.message.error(error.error?.message || 'Không thể tạo bài viết');
+          this.message.error(error.error?.message || this.translate.instant('BLOG_MANAGEMENT.CREATE_ERROR'));
           this.isLoading = false;
         }
       });
@@ -364,28 +366,28 @@ export class BlogManagementComponent implements OnInit {
 
   deleteBlog(id: string): void {
     if (!this.canDelete) {
-      this.message.error('Bạn không có quyền xóa bài viết');
+      this.message.error(this.translate.instant('BLOG_MANAGEMENT.NO_DELETE_PERMISSION'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận xóa',
-      nzContent: 'Bạn có chắc chắn muốn xóa bài viết này?',
-      nzOkText: 'Xóa',
+      nzTitle: this.translate.instant('BLOG_MANAGEMENT.CONFIRM_DELETE_TITLE'),
+      nzContent: this.translate.instant('BLOG_MANAGEMENT.CONFIRM_DELETE_MESSAGE'),
+      nzOkText: this.translate.instant('BLOG_MANAGEMENT.DELETE'),
       nzOkType: 'primary',
       nzOkDanger: true,
-      nzCancelText: 'Hủy',
+      nzCancelText: this.translate.instant('COMMON.CANCEL'),
       nzOnOk: () => {
         this.isLoading = true;
         this.blogService.deleteBlog(id).subscribe({
           next: () => {
-            this.message.success('Đã xóa bài viết thành công');
+            this.message.success(this.translate.instant('BLOG_MANAGEMENT.DELETE_SUCCESS'));
             this.loadBlogs();
             this.isLoading = false;
           },
           error: (error) => {
             console.error('Lỗi khi xóa blog:', error);
-            this.message.error(error.error?.message || 'Không thể xóa bài viết');
+            this.message.error(error.error?.message || this.translate.instant('BLOG_MANAGEMENT.DELETE_ERROR'));
             this.isLoading = false;
           }
         });
@@ -418,9 +420,9 @@ export class BlogManagementComponent implements OnInit {
   getStatusLabel(status: string): string {
     switch (status) {
       case 'published':
-        return 'Đã xuất bản';
+        return this.translate.instant('BLOG_MANAGEMENT.PUBLISHED');
       case 'draft':
-        return 'Bản nháp';
+        return this.translate.instant('BLOG_MANAGEMENT.DRAFT');
       default:
         return status;
     }

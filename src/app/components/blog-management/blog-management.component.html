@@ -3,7 +3,7 @@
     <div class="header-section">
       <h2 class="mb-4">
         <i nz-icon nzType="file-text" nzTheme="outline"></i>
-        Quản Lý Blog
+        {{ 'BLOG_MANAGEMENT.TITLE' | translate }}
       </h2>
     </div>
 
@@ -11,7 +11,7 @@
     <div nz-row [nzGutter]="16" class="mb-4 filter-section">
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Tìm kiếm</nz-form-label>
+          <nz-form-label>{{ 'BLOG_MANAGEMENT.SEARCH' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-group [nzSuffix]="suffixIconSearch">
               <input 
@@ -19,7 +19,7 @@
                 nz-input 
                 [(ngModel)]="searchValue"
                 (keyup.enter)="onSearch()"
-                placeholder="Tìm kiếm theo tiêu đề, nội dung..." />
+                [placeholder]="'BLOG_MANAGEMENT.SEARCH_PLACEHOLDER' | translate" />
             </nz-input-group>
             <ng-template #suffixIconSearch>
               <i nz-icon nzType="search" (click)="onSearch()"></i>
@@ -30,16 +30,16 @@
 
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Trạng thái</nz-form-label>
+          <nz-form-label>{{ 'BLOG_MANAGEMENT.STATUS' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Tất cả"
+              [nzPlaceHolder]="'BLOG_MANAGEMENT.ALL' | translate"
               [ngModel]="statusFilter" 
               (ngModelChange)="onStatusFilterChange($event)"
               class="w-100">
-              <nz-option nzValue="all" nzLabel="Tất cả"></nz-option>
-              <nz-option nzValue="published" nzLabel="Đã xuất bản"></nz-option>
-              <nz-option nzValue="draft" nzLabel="Bản nháp"></nz-option>
+              <nz-option nzValue="all" [nzLabel]="'BLOG_MANAGEMENT.ALL' | translate"></nz-option>
+              <nz-option nzValue="published" [nzLabel]="'BLOG_MANAGEMENT.PUBLISHED' | translate"></nz-option>
+              <nz-option nzValue="draft" [nzLabel]="'BLOG_MANAGEMENT.DRAFT' | translate"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
@@ -50,7 +50,7 @@
     <div class="mb-3" *ngIf="canAccess">
       <button nz-button nzType="primary" (click)="openCreateModal()">
         <i nz-icon nzType="plus"></i>
-        Thêm bài viết mới
+        {{ 'BLOG_MANAGEMENT.ADD_NEW' | translate }}
       </button>
     </div>
 
@@ -72,14 +72,14 @@
           [nzSize]="'small'">
           <thead>
             <tr>
-              <th nzWidth="200px">Tiêu đề</th>
-              <th nzWidth="150px">Tác giả</th>
-              <th nzWidth="100px">Trạng thái</th>
-              <th nzWidth="120px">Danh mục</th>
-              <th nzWidth="100px">Lượt xem</th>
-              <th nzWidth="150px">Ngày tạo</th>
-              <th nzWidth="150px">Ngày cập nhật</th>
-              <th nzWidth="150px">Thao tác</th>
+              <th nzWidth="200px">{{ 'BLOG_MANAGEMENT.TITLE_COLUMN' | translate }}</th>
+              <th nzWidth="150px">{{ 'BLOG_MANAGEMENT.AUTHOR' | translate }}</th>
+              <th nzWidth="100px">{{ 'BLOG_MANAGEMENT.STATUS' | translate }}</th>
+              <th nzWidth="120px">{{ 'BLOG_MANAGEMENT.CATEGORY' | translate }}</th>
+              <th nzWidth="100px">{{ 'BLOG_MANAGEMENT.VIEWS' | translate }}</th>
+              <th nzWidth="150px">{{ 'BLOG_MANAGEMENT.CREATED_DATE' | translate }}</th>
+              <th nzWidth="150px">{{ 'BLOG_MANAGEMENT.UPDATED_DATE' | translate }}</th>
+              <th nzWidth="150px">{{ 'BLOG_MANAGEMENT.ACTIONS' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -105,15 +105,15 @@
                   <button nz-button nzSize="small" nzType="primary" 
                           (click)="openEditModal(blog)" 
                           *ngIf="canAccess"
-                          nz-tooltip nzTooltipTitle="Chỉnh sửa">
+                          [nz-tooltip] [nzTooltipTitle]="'BLOG_MANAGEMENT.EDIT' | translate">
                     <i nz-icon nzType="edit"></i>
                   </button>
                   <button nz-button nzSize="small" nzType="text" nzDanger
                           *ngIf="canDelete"
                           nz-popconfirm 
-                          nzPopconfirmTitle="Bạn có chắc muốn xóa?" 
+                          [nzPopconfirmTitle]="'BLOG_MANAGEMENT.CONFIRM_DELETE' | translate" 
                           (nzOnConfirm)="deleteBlog(blog._id!)"
-                          nz-tooltip nzTooltipTitle="Xóa">
+                          [nz-tooltip] [nzTooltipTitle]="'BLOG_MANAGEMENT.DELETE' | translate">
                     <i nz-icon nzType="delete"></i>
                   </button>
                 </nz-button-group>
@@ -127,7 +127,7 @@
     <!-- Modal thêm/sửa blog -->
     <nz-modal
       [(nzVisible)]="isModalVisible"
-      [nzTitle]="editId ? 'Cập nhật bài viết' : 'Thêm bài viết mới'"
+      [nzTitle]="(editId ? 'BLOG_MANAGEMENT.UPDATE_TITLE' : 'BLOG_MANAGEMENT.ADD_TITLE') | translate"
       (nzOnCancel)="handleCancel()"
       [nzFooter]="null"
       [nzWidth]="1200"
@@ -135,31 +135,31 @@
       <div *nzModalContent>
         <form nz-form [formGroup]="blogForm" (ngSubmit)="handleOk()">
           <nz-form-item>
-            <nz-form-label nzRequired>Tiêu đề</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập tiêu đề">
-              <input nz-input formControlName="title" placeholder="Nhập tiêu đề bài viết" />
+            <nz-form-label nzRequired>{{ 'BLOG_MANAGEMENT.TITLE_LABEL' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'BLOG_MANAGEMENT.TITLE_ERROR' | translate">
+              <input nz-input formControlName="title" [placeholder]="'BLOG_MANAGEMENT.TITLE_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Mô tả ngắn</nz-form-label>
+            <nz-form-label>{{ 'BLOG_MANAGEMENT.EXCERPT' | translate }}</nz-form-label>
             <nz-form-control>
-              <textarea nz-input formControlName="excerpt" rows="3" placeholder="Nhập mô tả ngắn (tối đa 500 ký tự)"></textarea>
+              <textarea nz-input formControlName="excerpt" rows="3" [placeholder]="'BLOG_MANAGEMENT.EXCERPT_PLACEHOLDER' | translate"></textarea>
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Ảnh đại diện bài viết</nz-form-label>
+            <nz-form-label>{{ 'BLOG_MANAGEMENT.FEATURED_IMAGE' | translate }}</nz-form-label>
             <nz-form-control>
               <div class="image-upload-section">
                 <div class="upload-options">
                   <div class="upload-option">
-                    <label>Nhập link ảnh:</label>
-                    <input nz-input placeholder="Nhập link ảnh bài viết" type="text" formControlName="imageUrl" style="width: 100%;">
+                    <label>{{ 'BLOG_MANAGEMENT.ENTER_IMAGE_LINK' | translate }}</label>
+                    <input nz-input [placeholder]="'BLOG_MANAGEMENT.IMAGE_LINK_PLACEHOLDER' | translate" type="text" formControlName="imageUrl" style="width: 100%;">
                   </div>
-                  <div class="upload-divider">HOẶC</div>
+                  <div class="upload-divider">{{ 'COMMON.OR' | translate }}</div>
                   <div class="upload-option">
-                    <label>Tải ảnh lên:</label>
+                    <label>{{ 'BLOG_MANAGEMENT.UPLOAD_IMAGE' | translate }}</label>
                     <nz-upload
                       [nzAction]="uploadUrl"
                       [nzHeaders]="uploadHeaders"
@@ -170,7 +170,7 @@
                       nzName="image">
                       <button nz-button nzType="default" [nzLoading]="isLoading">
                         <i nz-icon nzType="upload"></i>
-                        Chọn ảnh
+                        {{ 'BLOG_MANAGEMENT.SELECT_IMAGE' | translate }}
                       </button>
                     </nz-upload>
                   </div>
@@ -187,17 +187,17 @@
           </nz-form-item>
 
           <div formArrayName="sections">
-            <h3>Các phần của bài viết</h3>
-            <button type="button" (click)="addSection()" class="add-section-button">Thêm phần mới</button>
+            <h3>{{ 'BLOG_MANAGEMENT.SECTIONS' | translate }}</h3>
+            <button type="button" (click)="addSection()" class="add-section-button">{{ 'BLOG_MANAGEMENT.ADD_SECTION' | translate }}</button>
 
             <div *ngFor="let section of sections.controls; let i = index" [formGroupName]="i" class="section-form">
-              <h4>Phần {{ i + 1 }}</h4>
+              <h4>{{ 'BLOG_MANAGEMENT.SECTION' | translate }} {{ i + 1 }}</h4>
               <div class="form-group">
-                <label [for]="'sectionTitle' + i">Tiêu đề phần</label>
+                <label [for]="'sectionTitle' + i">{{ 'BLOG_MANAGEMENT.SECTION_TITLE' | translate }}</label>
                 <input type="text" [id]="'sectionTitle' + i" formControlName="title">
               </div>
               <div class="form-group">
-                <label [for]="'sectionContent' + i">Nội dung phần</label>
+                <label [for]="'sectionContent' + i">{{ 'BLOG_MANAGEMENT.SECTION_CONTENT' | translate }}</label>
                 <editor [id]="'sectionContent' + i" formControlName="content"
                   apiKey="svjwnw0epdbm6nlw5r643hpcztdphaqa7hyed3k5u87wkj8l" 
                   [init]="{
@@ -212,43 +212,43 @@
                   }">
                 </editor>
               </div>
-              <button type="button" (click)="removeSection(i)" class="remove-section-button">Xóa phần này</button>
+              <button type="button" (click)="removeSection(i)" class="remove-section-button">{{ 'BLOG_MANAGEMENT.REMOVE_SECTION' | translate }}</button>
             </div>
           </div>
 
           <nz-row [nzGutter]="16">
             <div nz-col [nzXs]="24" [nzSm]="12">
               <nz-form-item>
-                <nz-form-label nzRequired>Trạng thái</nz-form-label>
+                <nz-form-label nzRequired>{{ 'BLOG_MANAGEMENT.STATUS' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-select formControlName="status">
-                    <nz-option nzValue="draft" nzLabel="Bản nháp"></nz-option>
-                    <nz-option nzValue="published" nzLabel="Đã xuất bản"></nz-option>
+                    <nz-option nzValue="draft" [nzLabel]="'BLOG_MANAGEMENT.DRAFT' | translate"></nz-option>
+                    <nz-option nzValue="published" [nzLabel]="'BLOG_MANAGEMENT.PUBLISHED' | translate"></nz-option>
                   </nz-select>
                 </nz-form-control>
               </nz-form-item>
             </div>
             <div nz-col [nzXs]="24" [nzSm]="12">
               <nz-form-item>
-                <nz-form-label>Danh mục</nz-form-label>
+                <nz-form-label>{{ 'BLOG_MANAGEMENT.CATEGORY' | translate }}</nz-form-label>
                 <nz-form-control>
-                  <input nz-input formControlName="category" placeholder="Nhập danh mục" />
+                  <input nz-input formControlName="category" [placeholder]="'BLOG_MANAGEMENT.CATEGORY_PLACEHOLDER' | translate" />
                 </nz-form-control>
               </nz-form-item>
             </div>
           </nz-row>
 
           <nz-form-item>
-            <nz-form-label>Tags (phân cách bằng dấu phẩy)</nz-form-label>
+            <nz-form-label>{{ 'BLOG_MANAGEMENT.TAGS' | translate }}</nz-form-label>
             <nz-form-control>
-              <input nz-input formControlName="tags" placeholder="Ví dụ: tag1, tag2, tag3" />
+              <input nz-input formControlName="tags" [placeholder]="'BLOG_MANAGEMENT.TAGS_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <button type="submit" [disabled]="blogForm.invalid" class="submit-button">
-            {{ isEditMode ? 'Cập nhật' : 'Đăng bài' }}
+            {{ (isEditMode ? 'BLOG_MANAGEMENT.UPDATE' : 'BLOG_MANAGEMENT.PUBLISH') | translate }}
           </button>
-          <button type="button" (click)="resetForm()" class="reset-button">Hủy</button>
+          <button type="button" (click)="resetForm()" class="reset-button">{{ 'COMMON.CANCEL' | translate }}</button>
         </form>
       </div>
     </nz-modal>

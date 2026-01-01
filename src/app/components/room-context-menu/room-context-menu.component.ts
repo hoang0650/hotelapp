@@ -1,6 +1,7 @@
 import { Component, Output, EventEmitter, OnInit, Inject } from '@angular/core';
 import { NzModalRef, NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 import { Room } from '../../interfaces/rooms';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-room-context-menu',
@@ -18,7 +19,8 @@ export class RoomContextMenuComponent implements OnInit {
 
   constructor(
     @Inject(NZ_MODAL_DATA) public data: { room: Room },
-    private modalRef: NzModalRef
+    private modalRef: NzModalRef,
+    private translate: TranslateService
   ) {
     this.room = data.room;
   }
@@ -47,12 +49,12 @@ export class RoomContextMenuComponent implements OnInit {
 
   getStatusLabel(status: string): string {
     const labels: {[key: string]: string} = {
-      'vacant': 'Trống',
-      'occupied': 'Đang sử dụng',
-      'dirty': 'Cần dọn dẹp',
-      'cleaning': 'Đang dọn dẹp', 
-      'maintenance': 'Bảo trì',
-      'booked': 'Đã đặt'
+      'vacant': this.translate.instant('ROOM_CONTEXT_MENU.STATUS_OPTIONS.VACANT'),
+      'occupied': this.translate.instant('ROOM_CONTEXT_MENU.STATUS_OPTIONS.OCCUPIED'),
+      'dirty': this.translate.instant('ROOM_CONTEXT_MENU.STATUS_OPTIONS.DIRTY'),
+      'cleaning': this.translate.instant('ROOM_CONTEXT_MENU.STATUS_OPTIONS.CLEANING'), 
+      'maintenance': this.translate.instant('ROOM_CONTEXT_MENU.STATUS_OPTIONS.MAINTENANCE'),
+      'booked': this.translate.instant('ROOM_CONTEXT_MENU.STATUS_OPTIONS.BOOKED')
     };
     return labels[status] || status;
   }

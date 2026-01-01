@@ -6,7 +6,8 @@ import { DatePipe, registerLocaleData } from '@angular/common'; // Import DatePi
 import { CommonModule } from '@angular/common'; // Đảm bảo CommonModule được import
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { EditorModule } from '@tinymce/tinymce-angular';
 
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -148,7 +149,44 @@ export class CustomTranslateLoader implements TranslateLoader {
   constructor(private http: HttpClient) {}
 
   getTranslation(lang: string): Observable<any> {
-    return this.http.get(`./assets/i18n/${lang}.json`);
+    console.log(`📥 CustomTranslateLoader: Loading translation for ${lang}`);
+    const url = `./assets/i18n/${lang}.json`;
+    console.log(`📥 Loading from URL: ${url}`);
+    
+    return this.http.get(url, { responseType: 'json' }).pipe(
+      catchError((error) => {
+        console.error(`❌ Error loading translation file for ${lang}:`, error);
+        console.error(`❌ Error status: ${error.status}, Error message: ${error.message}`);
+        if (error.url) {
+          console.error(`❌ Error URL: ${error.url}`);
+        }
+        
+        // Check if it's a JSON parse error (status 200 but ok: false)
+        if (error.status === 200 && error.ok === false) {
+          console.error(`❌ JSON Parse Error! File ${lang}.json may have invalid JSON syntax`);
+          console.error(`❌ This is why translations are not working!`);
+          // Don't fallback - let the error show so we can fix it
+          return of({});
+        }
+        
+        // Only fallback if it's a real error (not just missing keys)
+        if (error.status === 404 || error.status === 0) {
+          console.warn(`⚠️ File not found or network error for ${lang}, falling back to Vietnamese`);
+          if (lang !== 'vi') {
+            return this.http.get(`./assets/i18n/vi.json`, { responseType: 'json' }).pipe(
+              catchError((fallbackError) => {
+                console.error('❌ Failed to load Vietnamese translation as fallback:', fallbackError);
+                return of({});
+              })
+            );
+          }
+        }
+        
+        // For other errors (like JSON parse errors), don't fallback silently
+        console.error('❌ Translation file error, returning empty object');
+        return of({});
+      })
+    );
   }
 }
 
@@ -297,7 +335,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
             useFactory: HttpLoaderFactory,
             deps: [HttpClient]
           },
-          defaultLanguage: 'vi'
+          fallbackLang: 'vi'
         })
     ],
     providers: [

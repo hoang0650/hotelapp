@@ -41,27 +41,9 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   positions: { value: string, label: string }[] = [];
   statuses: { value: string, label: string }[] = [];
   
-  shifts = [
-    { value: 'morning', label: 'Ca sáng' },
-    { value: 'afternoon', label: 'Ca chiều' },
-    { value: 'night', label: 'Ca đêm' },
-    { value: 'full-day', label: 'Cả ngày' }
-  ];
-  
-  genders = [
-    { value: 'male', label: 'Nam' },
-    { value: 'female', label: 'Nữ' },
-    { value: 'other', label: 'Khác' }
-  ];
-  
-  permissions = [
-    { value: 'view', label: 'Xem' },
-    { value: 'create', label: 'Tạo mới' },
-    { value: 'edit', label: 'Chỉnh sửa' },
-    { value: 'delete', label: 'Xóa' },
-    { value: 'manage_rooms', label: 'Quản lý phòng' },
-    { value: 'manage_bookings', label: 'Quản lý đặt phòng' }
-  ];
+  shifts: { value: string, label: string }[] = [];
+  genders: { value: string, label: string }[] = [];
+  permissions: { value: string, label: string }[] = [];
   
   // UI State
   editId: string | null = null;
@@ -90,6 +72,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.initTranslationArrays();
     this.loadHotels();
     this.loadBusinessInfo();
     
@@ -99,6 +82,35 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       this.selectedHotelId = hotelId;
       this.loadStaff(); // loadUsers sẽ được gọi sau khi loadStaff xong
     }
+
+    // Subscribe to language changes
+    this.translate.onLangChange.subscribe(() => {
+      this.initTranslationArrays();
+    });
+  }
+
+  private initTranslationArrays(): void {
+    this.shifts = [
+      { value: 'morning', label: this.translate.instant('STAFF_MANAGEMENT.SHIFTS.MORNING') },
+      { value: 'afternoon', label: this.translate.instant('STAFF_MANAGEMENT.SHIFTS.AFTERNOON') },
+      { value: 'night', label: this.translate.instant('STAFF_MANAGEMENT.SHIFTS.NIGHT') },
+      { value: 'full-day', label: this.translate.instant('STAFF_MANAGEMENT.SHIFTS.FULL_DAY') }
+    ];
+    
+    this.genders = [
+      { value: 'male', label: this.translate.instant('STAFF_MANAGEMENT.GENDERS.MALE') },
+      { value: 'female', label: this.translate.instant('STAFF_MANAGEMENT.GENDERS.FEMALE') },
+      { value: 'other', label: this.translate.instant('STAFF_MANAGEMENT.GENDERS.OTHER') }
+    ];
+    
+    this.permissions = [
+      { value: 'view', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.VIEW') },
+      { value: 'create', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.CREATE') },
+      { value: 'edit', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.EDIT') },
+      { value: 'delete', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.DELETE') },
+      { value: 'manage_rooms', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.MANAGE_ROOMS') },
+      { value: 'manage_bookings', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.MANAGE_BOOKINGS') }
+    ];
   }
 
   loadBusinessInfo(): void {
@@ -121,7 +133,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
                     console.error('Error loading business info:', error);
                     // Fallback: dùng hotel info
                     this.businessInfo = {
-                      name: hotel.name || 'Khách sạn',
+                      name: hotel.name || this.translate.instant('STAFF_MANAGEMENT.DEFAULT_HOTEL'),
                       logo: ''
                     };
                   }
@@ -130,7 +142,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
             } else {
               // Fallback: dùng hotel info
               this.businessInfo = {
-                name: hotel?.name || 'Khách sạn',
+                name: hotel?.name || this.translate.instant('STAFF_MANAGEMENT.DEFAULT_HOTEL'),
                 logo: ''
               };
             }
@@ -152,7 +164,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
           },
           (error) => {
             console.error('Error loading business info:', error);
-            this.businessInfo = { name: 'Khách sạn', logo: '' };
+            this.businessInfo = { name: this.translate.instant('STAFF_MANAGEMENT.DEFAULT_HOTEL'), logo: '' };
           }
         )
       );
@@ -191,7 +203,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
           street: [''],
           city: [''],
           state: [''],
-          country: ['Việt Nam'],
+          country: [this.translate.instant('STAFF_MANAGEMENT.DEFAULT_COUNTRY')],
           postalCode: ['']
         })
       }),
@@ -237,7 +249,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
         email: '',
         phone: '',
         emergencyContact: { name: '', relationship: '', phone: '' },
-        address: { street: '', city: '', state: '', country: 'Việt Nam', postalCode: '' }
+        address: { street: '', city: '', state: '', country: this.translate.instant('STAFF_MANAGEMENT.DEFAULT_COUNTRY'), postalCode: '' }
       },
       employmentInfo: {
         position: 'receptionist',
@@ -564,12 +576,12 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   deleteStaff(staff: Staff): void {
     this.modal.confirm({
-      nzTitle: 'Xác nhận xóa',
-      nzContent: `Bạn có chắc muốn xóa nhân viên <b>${this.getFullName(staff)}</b>?`,
-      nzOkText: 'Xóa',
+      nzTitle: this.translate.instant('STAFF_MANAGEMENT.CONFIRM_DELETE_TITLE'),
+      nzContent: this.translate.instant('STAFF_MANAGEMENT.CONFIRM_DELETE_MESSAGE', { name: this.getFullName(staff) }),
+      nzOkText: this.translate.instant('COMMON.DELETE'),
       nzOkType: 'primary',
       nzOkDanger: true,
-      nzCancelText: 'Hủy',
+      nzCancelText: this.translate.instant('COMMON.CANCEL'),
       nzOnOk: () => {
         this.isLoading = true;
         this.subscriptions.add(
@@ -694,12 +706,12 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   calculateSalary(): void {
     if (!this.selectedStaffForSalary || !this.selectedStaffForSalary._id) {
-      this.message.error('Không tìm thấy thông tin nhân viên');
+      this.message.error(this.translate.instant('STAFF_MANAGEMENT.STAFF_NOT_FOUND'));
       return;
     }
 
     if (this.salaryCalculationForm.invalid) {
-      this.message.warning('Vui lòng kiểm tra lại thông tin');
+      this.message.warning(this.translate.instant('STAFF_MANAGEMENT.CHECK_INFO'));
       return;
     }
 
@@ -730,12 +742,12 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
             }
           }
           this.salaryCalculationResult = response.data;
-          this.message.success('Tính lương thành công!');
+          this.message.success(this.translate.instant('STAFF_MANAGEMENT.CALCULATE_SALARY_SUCCESS'));
           this.isLoading = false;
           // KHÔNG reload staff vì chưa lưu vào payroll
         },
         (error) => {
-          this.message.error('Lỗi khi tính lương: ' + (error.error?.message || error.message));
+          this.message.error(this.translate.instant('STAFF_MANAGEMENT.CALCULATE_SALARY_ERROR') + ': ' + (error.error?.message || error.message));
           this.isLoading = false;
         }
       )
@@ -744,22 +756,22 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   paySalary(): void {
     if (!this.selectedStaffForSalary || !this.selectedStaffForSalary._id || !this.salaryCalculationResult) {
-      this.message.error('Vui lòng tính lương trước');
+      this.message.error(this.translate.instant('STAFF_MANAGEMENT.CALCULATE_SALARY_FIRST'));
       return;
     }
 
     const staffId = this.selectedStaffForSalary._id;
     if (!staffId) {
-      this.message.error('Không tìm thấy ID nhân viên');
+      this.message.error(this.translate.instant('STAFF_MANAGEMENT.STAFF_ID_NOT_FOUND'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận thanh toán',
-      nzContent: `Bạn có chắc muốn lưu lương và đánh dấu đã thanh toán cho nhân viên <b>${this.getFullName(this.selectedStaffForSalary)}</b>?`,
-      nzOkText: 'Xác nhận',
+      nzTitle: this.translate.instant('STAFF_MANAGEMENT.CONFIRM_PAYMENT_TITLE'),
+      nzContent: this.translate.instant('STAFF_MANAGEMENT.CONFIRM_PAYMENT_MESSAGE', { name: this.getFullName(this.selectedStaffForSalary) }),
+      nzOkText: this.translate.instant('COMMON.CONFIRM'),
       nzOkType: 'primary',
-      nzCancelText: 'Hủy',
+      nzCancelText: this.translate.instant('COMMON.CANCEL'),
       nzOnOk: () => {
         this.isLoading = true;
         const breakdown = this.salaryCalculationResult.breakdown;
@@ -781,7 +793,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
         this.subscriptions.add(
           this.staffService.paySalary(staffId, payData).subscribe(
             (response) => {
-              this.message.success('Đã lưu lương và đánh dấu đã thanh toán thành công!');
+              this.message.success(this.translate.instant('STAFF_MANAGEMENT.PAYMENT_SUCCESS'));
               this.isLoading = false;
               // Reload danh sách staff để cập nhật payroll
               this.loadStaff();
@@ -789,7 +801,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
               this.closeSalaryModal();
             },
             (error) => {
-              this.message.error('Lỗi khi lưu lương: ' + (error.error?.message || error.message));
+              this.message.error(this.translate.instant('STAFF_MANAGEMENT.PAYMENT_ERROR') + ': ' + (error.error?.message || error.message));
               this.isLoading = false;
             }
           )
@@ -850,7 +862,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   // Xuất PDF phiếu tính lương
   async exportSalaryPDF(): Promise<void> {
     if (!this.salaryCalculationResult || !this.selectedStaffForSalary) {
-      this.message.warning('Vui lòng tính lương trước khi xuất PDF');
+      this.message.warning(this.translate.instant('STAFF_MANAGEMENT.CALCULATE_SALARY_BEFORE_PDF'));
       return;
     }
 
@@ -858,11 +870,11 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     const staff = this.selectedStaffForSalary;
     const staffName = this.getFullName(staff);
     const period = this.getSalaryPeriod();
-    const businessName = this.businessInfo?.name || 'Khách sạn';
+    const businessName = this.businessInfo?.name || this.translate.instant('STAFF_MANAGEMENT.DEFAULT_HOTEL');
 
     // Tính lương cơ bản tháng (nếu có)
     const baseSalaryMonthly = staff.employmentInfo?.salary || 0;
-    const baseSalaryText = baseSalaryMonthly > 0 ? `THÁNG = ${this.formatCurrencyK(baseSalaryMonthly)}` : '';
+    const baseSalaryText = baseSalaryMonthly > 0 ? `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.MONTHLY')} = ${this.formatCurrencyK(baseSalaryMonthly)}` : '';
 
     // Lấy ngày bắt đầu làm việc
     const startDate = breakdown.startDate || staff.employmentInfo?.startDate;
@@ -875,10 +887,10 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     // Tính các khoản phụ cấp
     const allowanceItems: any[] = [];
     if (breakdown.allowance > 0) {
-      allowanceItems.push(`${this.formatCurrencyK(breakdown.allowance)} PHỤ CẤP`);
+      allowanceItems.push(`${this.formatCurrencyK(breakdown.allowance)} ${this.translate.instant('STAFF_MANAGEMENT.EXPORT.ALLOWANCE')}`);
     }
     if (breakdown.bonus > 0) {
-      allowanceItems.push(`${this.formatCurrencyK(breakdown.bonus)} THƯỞNG`);
+      allowanceItems.push(`${this.formatCurrencyK(breakdown.bonus)} ${this.translate.instant('STAFF_MANAGEMENT.EXPORT.BONUS')}`);
     }
 
     // Lấy ỨNG LƯƠNG từ breakdown
@@ -910,7 +922,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
         // Tiêu đề
         {
-          text: `PHIẾU TÍNH LƯƠNG ${period}`,
+          text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.SALARY_SLIP')} ${period}`,
           fontSize: 18,
           bold: true,
           alignment: 'center',
@@ -923,23 +935,23 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
             {
               width: '*',
               text: [
-                { text: 'Họ Và Tên: ', bold: true },
+                { text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.FULL_NAME')}: `, bold: true },
                 { text: staffName.toUpperCase(), bold: true },
-                { text: '\nChức vụ: ', bold: true },
+                { text: `\n${this.translate.instant('STAFF_MANAGEMENT.POSITION')}: `, bold: true },
                 { text: positionLabel },
-                { text: '\nLương Cơ Bản: ', bold: true },
+                { text: `\n${this.translate.instant('STAFF_MANAGEMENT.EXPORT.BASE_SALARY')}: `, bold: true },
                 { text: baseSalaryText || 'N/A', bold: true },
-                { text: '\nSố ngày làm việc thực tế: ', bold: true },
-                { text: `${breakdown.daysWorked || 0} ngày` },
-                { text: '\nNgày bắt đầu làm việc: ', bold: true },
+                { text: `\n${this.translate.instant('STAFF_MANAGEMENT.EXPORT.WORKING_DAYS')}: `, bold: true },
+                { text: `${breakdown.daysWorked || 0} ${this.translate.instant('STAFF_MANAGEMENT.EXPORT.DAYS')}` },
+                { text: `\n${this.translate.instant('STAFF_MANAGEMENT.EXPORT.START_DATE')}: `, bold: true },
                 { text: startDateText },
-                { text: '\n\nPHỤ CẤP:', bold: true, fontSize: 12 },
+                { text: `\n\n${this.translate.instant('STAFF_MANAGEMENT.EXPORT.ALLOWANCES')}:`, bold: true, fontSize: 12 },
                 ...allowanceItems.map(item => ({ text: `\n${item}`, fontSize: 10 })),
-                { text: '\n\nPHẠT: ', bold: true, fontSize: 12 },
+                { text: `\n\n${this.translate.instant('STAFF_MANAGEMENT.EXPORT.PENALTY')}: `, bold: true, fontSize: 12 },
                 { text: breakdown.penalty > 0 ? `${this.formatCurrencyK(breakdown.penalty)}` : '0', fontSize: 12, color: 'red' },
-                { text: '\n\nỨNG LƯƠNG: ', bold: true, fontSize: 12 },
+                { text: `\n\n${this.translate.instant('STAFF_MANAGEMENT.EXPORT.ADVANCE_PAYMENT')}: `, bold: true, fontSize: 12 },
                 { text: advancePayment > 0 ? `${this.formatCurrencyK(advancePayment)}` : '0', fontSize: 12, color: 'red' },
-                { text: '\n\nLương Nhận: ', bold: true, fontSize: 14 },
+                { text: `\n\n${this.translate.instant('STAFF_MANAGEMENT.EXPORT.NET_SALARY')}: `, bold: true, fontSize: 14 },
                 { text: `${this.formatCurrency(breakdown.netSalary || 0)}`, bold: true, fontSize: 14 }
               ],
               fontSize: 11
@@ -953,14 +965,14 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
           columns: [
             {
               width: '*',
-              text: 'NGƯỜI LẬP PHIẾU',
+              text: this.translate.instant('STAFF_MANAGEMENT.EXPORT.PREPARED_BY'),
               fontSize: 10,
               bold: true,
               margin: [0, 30, 0, 0]
             },
             {
               width: '*',
-              text: 'GIÁM ĐỐC',
+              text: this.translate.instant('STAFF_MANAGEMENT.EXPORT.DIRECTOR'),
               fontSize: 10,
               bold: true,
               alignment: 'right',
@@ -978,14 +990,14 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     if (window.pdfMake) {
       window.pdfMake.createPdf(documentDefinition).print();
     } else {
-      this.message.error('PDF library chưa được tải. Vui lòng tải lại trang.');
+      this.message.error(this.translate.instant('STAFF_MANAGEMENT.EXPORT.PDF_LIBRARY_ERROR'));
     }
   }
 
   // Xuất Excel phiếu tính lương
   exportSalaryExcel(): void {
     if (!this.salaryCalculationResult || !this.selectedStaffForSalary) {
-      this.message.warning('Vui lòng tính lương trước khi xuất Excel');
+      this.message.warning(this.translate.instant('STAFF_MANAGEMENT.CALCULATE_SALARY_BEFORE_EXCEL'));
       return;
     }
 
@@ -993,7 +1005,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     const staff = this.selectedStaffForSalary;
     const staffName = this.getFullName(staff);
     const period = this.getSalaryPeriod();
-    const businessName = this.businessInfo?.name || 'Khách sạn';
+    const businessName = this.businessInfo?.name || this.translate.instant('STAFF_MANAGEMENT.DEFAULT_HOTEL');
 
     // Lấy ngày bắt đầu làm việc
     const startDate = breakdown.startDate || staff.employmentInfo?.startDate;
@@ -1006,28 +1018,28 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     // Tạo dữ liệu Excel
     const data: any[] = [
       [businessName.toUpperCase()],
-      [`PHIẾU TÍNH LƯƠNG ${period}`],
+      [`${this.translate.instant('STAFF_MANAGEMENT.EXPORT.SALARY_SLIP')} ${period}`],
       [],
-      ['Họ Và Tên:', staffName.toUpperCase()],
-      ['Chức vụ:', positionLabel.toUpperCase()],
-      ['Lương Cơ Bản:', breakdown.baseSalary ? this.formatCurrency(breakdown.baseSalary) : 'N/A'],
-      ['Số ngày làm việc thực tế:', `${breakdown.daysWorked || 0} ngày`],
-      ['Ngày bắt đầu làm việc:', startDateText],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.FULL_NAME') + ':', staffName.toUpperCase()],
+      [this.translate.instant('STAFF_MANAGEMENT.POSITION') + ':', positionLabel.toUpperCase()],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.BASE_SALARY') + ':', breakdown.baseSalary ? this.formatCurrency(breakdown.baseSalary) : 'N/A'],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.WORKING_DAYS') + ':', `${breakdown.daysWorked || 0} ${this.translate.instant('STAFF_MANAGEMENT.EXPORT.DAYS')}`],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.START_DATE') + ':', startDateText],
       [],
-      ['PHỤ CẤP:'],
-      ['Phụ cấp:', breakdown.allowance ? this.formatCurrency(breakdown.allowance) : '0'],
-      ['Thưởng:', breakdown.bonus ? this.formatCurrency(breakdown.bonus) : '0'],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.ALLOWANCES') + ':'],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.ALLOWANCE') + ':', breakdown.allowance ? this.formatCurrency(breakdown.allowance) : '0'],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.BONUS') + ':', breakdown.bonus ? this.formatCurrency(breakdown.bonus) : '0'],
       [],
-      ['TRỪ:'],
-      ['Bảo hiểm:', breakdown.insurance ? this.formatCurrency(breakdown.insurance) : '0'],
-      ['Phạt:', breakdown.penalty ? this.formatCurrency(breakdown.penalty) : '0'],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.DEDUCTIONS') + ':'],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.INSURANCE') + ':', breakdown.insurance ? this.formatCurrency(breakdown.insurance) : '0'],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.PENALTY') + ':', breakdown.penalty ? this.formatCurrency(breakdown.penalty) : '0'],
       [],
-      ['ỨNG LƯƠNG:', breakdown.advancePayment ? this.formatCurrency(breakdown.advancePayment) : '0'],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.ADVANCE_PAYMENT') + ':', breakdown.advancePayment ? this.formatCurrency(breakdown.advancePayment) : '0'],
       [],
-      ['Lương Nhận:', breakdown.netSalary ? this.formatCurrency(breakdown.netSalary) : '0'],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.NET_SALARY') + ':', breakdown.netSalary ? this.formatCurrency(breakdown.netSalary) : '0'],
       [],
-      ['Ngày cơ sở:', this.formatDate(breakdown.baseDate)],
-      ['Ngày tính lương:', this.formatDate(breakdown.calculationDate)]
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.BASE_DATE') + ':', this.formatDate(breakdown.baseDate)],
+      [this.translate.instant('STAFF_MANAGEMENT.EXPORT.CALCULATION_DATE') + ':', this.formatDate(breakdown.calculationDate)]
     ];
 
     // Tạo workbook
@@ -1041,7 +1053,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     // Tạo workbook và xuất file
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Phiếu tính lương');
+    XLSX.utils.book_append_sheet(wb, ws, this.translate.instant('STAFF_MANAGEMENT.EXPORT.SALARY_SLIP'));
     
     const fileName = `Phieu_Tinh_Luong_${staffName.replace(/\s+/g, '_')}_${period.replace('/', '_')}.xlsx`;
     XLSX.writeFile(wb, fileName);
@@ -1118,13 +1130,13 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   // Xuất Excel lịch sử payroll
   exportPayrollHistoryExcel(): void {
     if (!this.selectedStaffForPayrollHistory || this.payrollHistory.length === 0) {
-      this.message.warning('Không có dữ liệu để xuất Excel');
+      this.message.warning(this.translate.instant('STAFF_MANAGEMENT.EXPORT.NO_DATA'));
       return;
     }
 
     const staff = this.selectedStaffForPayrollHistory;
     const staffName = this.getFullName(staff);
-    const businessName = this.businessInfo?.name || 'Khách sạn';
+    const businessName = this.businessInfo?.name || this.translate.instant('STAFF_MANAGEMENT.DEFAULT_HOTEL');
     
     // Tạo tên file dựa trên filter
     let fileName = '';
@@ -1139,30 +1151,30 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     // Tạo header
     const header = [
       [businessName.toUpperCase()],
-      [`LỊCH SỬ LƯƠNG - ${staffName.toUpperCase()}`],
-      [`Chức vụ: ${this.getPositionLabel(staff.employmentInfo?.position || '')}`],
-      [this.payrollFilterType === 'month' ? `Tháng: ${this.payrollFilterMonth}/${this.payrollFilterYear}` :
-       this.payrollFilterType === 'quarter' ? `Quý: ${this.payrollFilterQuarter}/${this.payrollFilterYear}` :
-       `Năm: ${this.payrollFilterYear}`],
+      [`${this.translate.instant('STAFF_MANAGEMENT.EXPORT.PAYROLL_HISTORY')} - ${staffName.toUpperCase()}`],
+      [`${this.translate.instant('STAFF_MANAGEMENT.POSITION')}: ${this.getPositionLabel(staff.employmentInfo?.position || '')}`],
+      [this.payrollFilterType === 'month' ? `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.MONTH')}: ${this.payrollFilterMonth}/${this.payrollFilterYear}` :
+       this.payrollFilterType === 'quarter' ? `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.QUARTER')}: ${this.payrollFilterQuarter}/${this.payrollFilterYear}` :
+       `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.YEAR')}: ${this.payrollFilterYear}`],
       []
     ];
 
     // Tạo header bảng
     const tableHeader = [
-      'STT',
-      'Kỳ lương',
-      'Ngày bắt đầu',
-      'Ngày kết thúc',
-      'Số ngày làm việc',
-      'Lương cơ bản',
-      'Phụ cấp',
-      'Thưởng',
-      'Bảo hiểm',
-      'Phạt',
-      'Ứng lương',
-      'Lương thực nhận',
-      'Ngày thanh toán',
-      'Trạng thái'
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.NO'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.PAYROLL_PERIOD'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.START_DATE'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.END_DATE'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.WORKING_DAYS'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.BASE_SALARY'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ALLOWANCE'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.BONUS'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.INSURANCE'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.PENALTY'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ADVANCE_PAYMENT'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.NET_SALARY'),
+      this.translate.instant('STAFF_MANAGEMENT.PAYMENT_DATE'),
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.STATUS')
     ];
 
     // Tạo dữ liệu bảng
@@ -1170,7 +1182,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       const startDate = payroll.period?.startDate ? this.formatDate(payroll.period.startDate) : 'N/A';
       const endDate = payroll.period?.endDate ? this.formatDate(payroll.period.endDate) : 'N/A';
       const paymentDate = payroll.paymentDate ? this.formatDate(payroll.paymentDate) : 'N/A';
-      const status = payroll.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán';
+      const status = payroll.paymentStatus === 'paid' ? this.translate.instant('STAFF_MANAGEMENT.PAYMENT_STATUS.PAID') : this.translate.instant('STAFF_MANAGEMENT.PAYMENT_STATUS.UNPAID');
       
       return [
         index + 1,
@@ -1193,7 +1205,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     // Tính tổng
     const totals = [
       '',
-      'TỔNG CỘNG',
+      this.translate.instant('STAFF_MANAGEMENT.EXPORT.TOTAL'),
       '',
       '',
       this.payrollHistory.reduce((sum, p) => sum + (p.daysWorked || 0), 0),
@@ -1239,7 +1251,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     // Tạo workbook và xuất file
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Lịch sử lương');
+    XLSX.utils.book_append_sheet(wb, ws, this.translate.instant('STAFF_MANAGEMENT.EXPORT.PAYROLL_HISTORY'));
     
     XLSX.writeFile(wb, fileName);
     
@@ -1255,7 +1267,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     const staff = this.selectedStaffForPayrollHistory;
     const staffName = this.getFullName(staff);
-    const businessName = this.businessInfo?.name || 'Khách sạn';
+    const businessName = this.businessInfo?.name || this.translate.instant('STAFF_MANAGEMENT.DEFAULT_HOTEL');
     const positionLabel = this.getPositionLabel(staff.employmentInfo?.position || '');
 
     // Tạo tiêu đề filter
@@ -1290,7 +1302,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     // Tiêu đề
     content.push({
-      text: 'LỊCH SỬ LƯƠNG',
+      text: this.translate.instant('STAFF_MANAGEMENT.PAYROLL_HISTORY'),
       fontSize: 18,
       bold: true,
       alignment: 'center',
@@ -1300,11 +1312,11 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     // Thông tin nhân viên và filter
     content.push({
       text: [
-        { text: 'Nhân viên: ', bold: true, fontSize: 11 },
+        { text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.STAFF')}: `, bold: true, fontSize: 11 },
         { text: staffName.toUpperCase(), fontSize: 11 },
-        { text: '\nChức vụ: ', bold: true, fontSize: 11 },
+        { text: `\n${this.translate.instant('STAFF_MANAGEMENT.POSITION')}: `, bold: true, fontSize: 11 },
         { text: positionLabel, fontSize: 11 },
-        { text: '\nKỳ: ', bold: true, fontSize: 11 },
+        { text: `\n${this.translate.instant('STAFF_MANAGEMENT.EXPORT.PERIOD')}: `, bold: true, fontSize: 11 },
         { text: filterTitle, fontSize: 11 }
       ],
       margin: [0, 0, 0, 20]
@@ -1312,16 +1324,16 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     // Tạo header bảng - cấu trúc mới với các khoản mục lương thành hàng
     const tableHeader = [
-      { text: 'STT', style: 'tableHeader', alignment: 'center' },
-      { text: 'Kỳ lương', style: 'tableHeader' },
-      { text: 'Ngày bắt đầu', style: 'tableHeader', alignment: 'center' },
-      { text: 'Ngày kết thúc', style: 'tableHeader', alignment: 'center' },
-      { text: 'Ngày làm việc', style: 'tableHeader', alignment: 'center' },
-      { text: 'Khoản mục', style: 'tableHeader' },
-      { text: 'Số tiền', style: 'tableHeader', alignment: 'right' },
-      { text: 'Lương thực nhận', style: 'tableHeader', alignment: 'right' },
-      { text: 'Ngày thanh toán', style: 'tableHeader', alignment: 'center' },
-      { text: 'Trạng thái', style: 'tableHeader', alignment: 'center' }
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.NO'), style: 'tableHeader', alignment: 'center' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.PAYROLL_PERIOD'), style: 'tableHeader' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.START_DATE'), style: 'tableHeader', alignment: 'center' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.END_DATE'), style: 'tableHeader', alignment: 'center' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.WORKING_DAYS'), style: 'tableHeader', alignment: 'center' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ITEM'), style: 'tableHeader' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.AMOUNT'), style: 'tableHeader', alignment: 'right' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.NET_SALARY'), style: 'tableHeader', alignment: 'right' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.PAYMENT_DATE'), style: 'tableHeader', alignment: 'center' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.STATUS'), style: 'tableHeader', alignment: 'center' }
     ];
 
     // Tạo body bảng - mỗi kỳ lương có nhiều hàng cho các khoản mục
@@ -1330,18 +1342,18 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       const startDate = payroll.period?.startDate ? this.formatDate(payroll.period.startDate) : 'N/A';
       const endDate = payroll.period?.endDate ? this.formatDate(payroll.period.endDate) : 'N/A';
       const paymentDate = payroll.paymentDate ? this.formatDate(payroll.paymentDate) : 'N/A';
-      const status = payroll.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán';
-      const daysWorked = `${payroll.daysWorked || 0} ngày`;
+      const status = payroll.paymentStatus === 'paid' ? this.translate.instant('STAFF_MANAGEMENT.PAYMENT_STATUS.PAID') : this.translate.instant('STAFF_MANAGEMENT.PAYMENT_STATUS.UNPAID');
+      const daysWorked = `${payroll.daysWorked || 0} ${this.translate.instant('STAFF_MANAGEMENT.DAYS')}`;
       const netSalary = this.formatCurrency(payroll.netSalary || 0);
 
       // Các khoản mục lương
       const salaryItems = [
-        { label: 'Lương cơ bản', amount: payroll.baseSalary || 0 },
-        { label: 'Phụ cấp', amount: payroll.allowance || 0 },
-        { label: 'Thưởng', amount: payroll.bonus || 0 },
-        { label: 'Bảo hiểm', amount: payroll.insurance || 0 },
-        { label: 'Phạt', amount: payroll.penalty || 0 },
-        { label: 'Ứng lương', amount: payroll.advancePayment || 0 }
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.BASE_SALARY'), amount: payroll.baseSalary || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ALLOWANCE'), amount: payroll.allowance || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.BONUS'), amount: payroll.bonus || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.INSURANCE'), amount: payroll.insurance || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.PENALTY'), amount: payroll.penalty || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ADVANCE_PAYMENT'), amount: payroll.advancePayment || 0 }
       ];
 
       // Thêm các hàng cho từng khoản mục
@@ -1384,7 +1396,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     totalItems.forEach((item, itemIndex) => {
       const isFirstRow = itemIndex === 0;
       tableBody.push([
-        isFirstRow ? { text: 'TỔNG CỘNG', colSpan: 5, bold: true, fontSize: 9 } : '',
+        isFirstRow ? { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT.TOTAL'), colSpan: 5, bold: true, fontSize: 9 } : '',
         '',
         '',
         '',
@@ -1427,8 +1439,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     
     content.push({
       text: [
-        { text: 'Cảm ơn quý khách đã sử dụng dịch vụ!\n', alignment: 'center', fontSize: 10 },
-        { text: `Ngày in: ${printDate}`, alignment: 'center', fontSize: 9, italics: true }
+        { text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.THANK_YOU')}\n`, alignment: 'center', fontSize: 10 },
+        { text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.PRINT_DATE')}: ${printDate}`, alignment: 'center', fontSize: 9, italics: true }
       ],
       alignment: 'center',
       margin: [0, 20, 0, 0]
@@ -1453,7 +1465,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     if (window.pdfMake) {
       window.pdfMake.createPdf(documentDefinition).print();
     } else {
-      this.message.error('PDF library chưa được tải. Vui lòng tải lại trang.');
+      this.message.error(this.translate.instant('STAFF_MANAGEMENT.EXPORT.PDF_LIBRARY_ERROR'));
     }
   }
 
@@ -1556,7 +1568,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
           this.isLoading = false;
 
           if (this.allStaffPayrollSummary.length === 0) {
-            this.message.warning('Không có dữ liệu lương cho khoảng thời gian đã chọn');
+            this.message.warning(this.translate.instant('STAFF_MANAGEMENT.EXPORT.NO_PAYROLL_DATA'));
           } else {
             if (this.exportSummaryFormat === 'excel') {
               this.exportSummaryExcel();
@@ -1568,7 +1580,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
         (error) => {
           console.error('Error loading staff payroll summary:', error);
           this.isLoading = false;
-          this.message.error('Lỗi khi tải dữ liệu lương');
+          this.message.error(this.translate.instant('STAFF_MANAGEMENT.EXPORT.LOAD_PAYROLL_ERROR'));
         }
       )
     );
@@ -1586,31 +1598,31 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       const startDate = payroll.period?.startDate ? this.formatDate(payroll.period.startDate) : 'N/A';
       const endDate = payroll.period?.endDate ? this.formatDate(payroll.period.endDate) : 'N/A';
       const paymentDate = payroll.paymentDate ? this.formatDate(payroll.paymentDate) : 'N/A';
-      const status = payroll.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán';
+      const status = payroll.paymentStatus === 'paid' ? this.translate.instant('STAFF_MANAGEMENT.PAYMENT_STATUS.PAID') : this.translate.instant('STAFF_MANAGEMENT.PAYMENT_STATUS.UNPAID');
 
       data.push({
         'STT': index + 1,
-        'Nhân viên': payroll.staffName,
-        'Chức vụ': payroll.staffPosition,
-        'Kỳ lương': `${startDate} - ${endDate}`,
-        'Ngày bắt đầu': startDate,
-        'Ngày kết thúc': endDate,
-        'Số ngày làm việc': payroll.daysWorked || 0,
-        'Lương cơ bản': payroll.baseSalary || 0,
-        'Phụ cấp': payroll.allowance || 0,
-        'Thưởng': payroll.bonus || 0,
-        'Bảo hiểm': payroll.insurance || 0,
-        'Phạt': payroll.penalty || 0,
-        'Ứng lương': payroll.advancePayment || 0,
-        'Lương thực nhận': payroll.netSalary || 0,
-        'Ngày thanh toán': paymentDate,
-        'Trạng thái': status
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.STAFF')]: payroll.staffName,
+        [this.translate.instant('STAFF_MANAGEMENT.POSITION')]: payroll.staffPosition,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.PAYROLL_PERIOD')]: `${startDate} - ${endDate}`,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.START_DATE')]: startDate,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.END_DATE')]: endDate,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.WORKING_DAYS')]: payroll.daysWorked || 0,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.BASE_SALARY')]: payroll.baseSalary || 0,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ALLOWANCE')]: payroll.allowance || 0,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.BONUS')]: payroll.bonus || 0,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.INSURANCE')]: payroll.insurance || 0,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.PENALTY')]: payroll.penalty || 0,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ADVANCE_PAYMENT')]: payroll.advancePayment || 0,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.NET_SALARY')]: payroll.netSalary || 0,
+        [this.translate.instant('STAFF_MANAGEMENT.PAYMENT_DATE')]: paymentDate,
+        [this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.STATUS')]: status
       });
     });
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Tổng hợp thanh toán');
+    XLSX.utils.book_append_sheet(wb, ws, this.translate.instant('STAFF_MANAGEMENT.PAYMENT_SUMMARY'));
 
     let fileName = '';
     if (this.exportSummaryFilterType === 'month') {
@@ -1622,7 +1634,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     }
 
     XLSX.writeFile(wb, fileName);
-    this.message.success('Xuất Excel thành công!');
+    this.message.success(this.translate.instant('STAFF_MANAGEMENT.EXPORT.EXCEL_SUCCESS'));
     this.closeExportSummaryModal();
   }
 
@@ -1633,7 +1645,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     }
 
     if (!window.pdfMake) {
-      this.message.error('PDF library chưa được tải. Vui lòng tải lại trang.');
+      this.message.error(this.translate.instant('STAFF_MANAGEMENT.EXPORT.PDF_LIBRARY_ERROR'));
       return;
     }
 
@@ -1653,34 +1665,34 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     // Tiêu đề
     let filterTitle = '';
     if (this.exportSummaryFilterType === 'month') {
-      filterTitle = `Tháng ${this.exportSummaryFilterMonth}/${this.exportSummaryFilterYear}`;
+      filterTitle = `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.MONTH')} ${this.exportSummaryFilterMonth}/${this.exportSummaryFilterYear}`;
     } else if (this.exportSummaryFilterType === 'quarter') {
-      filterTitle = `Quý ${this.exportSummaryFilterQuarter}/${this.exportSummaryFilterYear}`;
+      filterTitle = `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.QUARTER')} ${this.exportSummaryFilterQuarter}/${this.exportSummaryFilterYear}`;
     } else {
-      filterTitle = `Năm ${this.exportSummaryFilterYear}`;
+      filterTitle = `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.YEAR')} ${this.exportSummaryFilterYear}`;
     }
 
     content.push({
       text: [
-        { text: 'TỔNG HỢP THANH TOÁN LƯƠNG\n', fontSize: 16, bold: true, alignment: 'center' },
-        { text: `Kỳ: ${filterTitle}\n`, fontSize: 12, alignment: 'center' },
-        { text: `Tổng số nhân viên: ${this.allStaffPayrollSummary.length}\n\n`, fontSize: 11, alignment: 'center' }
+        { text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.PAYMENT_SUMMARY_TITLE')}\n`, fontSize: 16, bold: true, alignment: 'center' },
+        { text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.PERIOD')}: ${filterTitle}\n`, fontSize: 12, alignment: 'center' },
+        { text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.TOTAL_STAFF')}: ${this.allStaffPayrollSummary.length}\n\n`, fontSize: 11, alignment: 'center' }
       ],
       margin: [0, 0, 0, 20]
     });
 
     // Header bảng
     const tableHeader = [
-      { text: 'STT', style: 'tableHeader', alignment: 'center' },
-      { text: 'Nhân viên', style: 'tableHeader' },
-      { text: 'Chức vụ', style: 'tableHeader' },
-      { text: 'Kỳ lương', style: 'tableHeader' },
-      { text: 'Ngày làm việc', style: 'tableHeader', alignment: 'center' },
-      { text: 'Khoản mục', style: 'tableHeader' },
-      { text: 'Số tiền', style: 'tableHeader', alignment: 'right' },
-      { text: 'Lương thực nhận', style: 'tableHeader', alignment: 'right' },
-      { text: 'Ngày thanh toán', style: 'tableHeader', alignment: 'center' },
-      { text: 'Trạng thái', style: 'tableHeader', alignment: 'center' }
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.NO'), style: 'tableHeader', alignment: 'center' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.STAFF'), style: 'tableHeader' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.POSITION'), style: 'tableHeader' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.PAYROLL_PERIOD'), style: 'tableHeader' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.WORKING_DAYS'), style: 'tableHeader', alignment: 'center' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ITEM'), style: 'tableHeader' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.AMOUNT'), style: 'tableHeader', alignment: 'right' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.NET_SALARY'), style: 'tableHeader', alignment: 'right' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.PAYMENT_DATE'), style: 'tableHeader', alignment: 'center' },
+      { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.STATUS'), style: 'tableHeader', alignment: 'center' }
     ];
 
     // Body bảng - nhóm theo nhân viên
@@ -1692,8 +1704,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       const startDate = payroll.period?.startDate ? this.formatDate(payroll.period.startDate) : 'N/A';
       const endDate = payroll.period?.endDate ? this.formatDate(payroll.period.endDate) : 'N/A';
       const paymentDate = payroll.paymentDate ? this.formatDate(payroll.paymentDate) : 'N/A';
-      const status = payroll.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán';
-      const daysWorked = `${payroll.daysWorked || 0} ngày`;
+      const status = payroll.paymentStatus === 'paid' ? this.translate.instant('STAFF_MANAGEMENT.PAYMENT_STATUS.PAID') : this.translate.instant('STAFF_MANAGEMENT.PAYMENT_STATUS.UNPAID');
+      const daysWorked = `${payroll.daysWorked || 0} ${this.translate.instant('STAFF_MANAGEMENT.DAYS')}`;
       const netSalary = this.formatCurrency(payroll.netSalary || 0);
 
       // Nếu là nhân viên mới, tăng index
@@ -1703,12 +1715,12 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       }
 
       const salaryItems = [
-        { label: 'Lương cơ bản', amount: payroll.baseSalary || 0 },
-        { label: 'Phụ cấp', amount: payroll.allowance || 0 },
-        { label: 'Thưởng', amount: payroll.bonus || 0 },
-        { label: 'Bảo hiểm', amount: payroll.insurance || 0 },
-        { label: 'Phạt', amount: payroll.penalty || 0 },
-        { label: 'Ứng lương', amount: payroll.advancePayment || 0 }
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.BASE_SALARY'), amount: payroll.baseSalary || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ALLOWANCE'), amount: payroll.allowance || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.BONUS'), amount: payroll.bonus || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.INSURANCE'), amount: payroll.insurance || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.PENALTY'), amount: payroll.penalty || 0 },
+        { label: this.translate.instant('STAFF_MANAGEMENT.EXPORT_HEADERS.ADVANCE_PAYMENT'), amount: payroll.advancePayment || 0 }
       ];
 
       salaryItems.forEach((item, itemIndex) => {
@@ -1749,7 +1761,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     totalItems.forEach((item, itemIndex) => {
       const isFirstRow = itemIndex === 0;
       tableBody.push([
-        isFirstRow ? { text: 'TỔNG CỘNG', colSpan: 5, bold: true, fontSize: 8 } : '',
+        isFirstRow ? { text: this.translate.instant('STAFF_MANAGEMENT.EXPORT.TOTAL'), colSpan: 5, bold: true, fontSize: 8 } : '',
         '',
         '',
         '',
@@ -1791,8 +1803,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     content.push({
       text: [
-        { text: 'Cảm ơn quý khách đã sử dụng dịch vụ!\n', alignment: 'center', fontSize: 10 },
-        { text: `Ngày in: ${printDate}`, alignment: 'center', fontSize: 9, italics: true }
+        { text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.THANK_YOU')}\n`, alignment: 'center', fontSize: 10 },
+        { text: `${this.translate.instant('STAFF_MANAGEMENT.EXPORT.PRINT_DATE')}: ${printDate}`, alignment: 'center', fontSize: 9, italics: true }
       ],
       alignment: 'center',
       margin: [0, 20, 0, 0]

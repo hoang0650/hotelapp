@@ -6,6 +6,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { User } from '../../interfaces/user';
 import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient } from '@angular/common/http';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-profile',
@@ -33,7 +34,8 @@ export class ProfileComponent implements OnInit {
     private userService: UserService,
     private authService: AuthService,
     private message: NzMessageService,
-    private http: HttpClient
+    private http: HttpClient,
+    private translate: TranslateService
   ) {
     // Form thông tin cơ bản
     this.profileForm = this.fb.group({
@@ -91,7 +93,7 @@ export class ProfileComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading profile:', error);
-        this.message.error('Không thể tải thông tin hồ sơ');
+        this.message.error(this.translate.instant('PROFILE.LOAD_ERROR'));
         this.loading = false;
       }
     });
@@ -158,7 +160,7 @@ export class ProfileComponent implements OnInit {
    */
   saveProfile(): void {
     if (this.profileForm.invalid || this.bankAccountForm.invalid || this.personalInfoForm.invalid) {
-      this.message.warning('Vui lòng kiểm tra lại thông tin đã nhập');
+      this.message.warning(this.translate.instant('PROFILE.CHECK_INFO'));
       return;
     }
 
@@ -235,7 +237,7 @@ export class ProfileComponent implements OnInit {
     this.userService.updateProfile(profileData).subscribe({
       next: (response) => {
         if (response.success || response.data || response.user) {
-          this.message.success(response.message || 'Cập nhật hồ sơ thành công');
+          this.message.success(response.message || this.translate.instant('PROFILE.UPDATE_SUCCESS'));
           // Cập nhật current user trong AuthService
           const updatedUser = response.data || response.user;
           if (updatedUser) {
@@ -243,13 +245,13 @@ export class ProfileComponent implements OnInit {
           }
           this.loadProfile(); // Reload để hiển thị dữ liệu mới
         } else {
-          this.message.error(response.error || response.message || 'Cập nhật hồ sơ thất bại');
+          this.message.error(response.error || response.message || this.translate.instant('PROFILE.UPDATE_ERROR'));
         }
         this.saving = false;
       },
       error: (error) => {
         console.error('Error updating profile:', error);
-        this.message.error(error.error?.message || 'Có lỗi xảy ra khi cập nhật hồ sơ');
+        this.message.error(error.error?.message || this.translate.instant('PROFILE.UPDATE_ERROR_GENERIC'));
         this.saving = false;
       }
     });
@@ -273,7 +275,7 @@ export class ProfileComponent implements OnInit {
     const beneficiaryName = this.bankAccountForm.get('beneficiaryName')?.value?.trim() || '';
 
     if (!bankName || !accountNumber) {
-      this.message.warning('Vui lòng nhập tên ngân hàng và số tài khoản');
+      this.message.warning(this.translate.instant('PROFILE.BANK_INFO_REQUIRED'));
       return;
     }
 
@@ -287,7 +289,7 @@ export class ProfileComponent implements OnInit {
     this.qrBeneficiaryName = beneficiaryName || this.bankAccountForm.get('accountHolderName')?.value?.trim() || '';
     
     this.showQrPreview = true;
-    this.message.success('Đã tạo QR thanh toán thành công. Vui lòng bấm "Lưu thay đổi" để lưu vào hệ thống.');
+    this.message.success(this.translate.instant('PROFILE.QR_SUCCESS'));
   }
 
   /**
@@ -322,11 +324,11 @@ export class ProfileComponent implements OnInit {
         this.profileForm.patchValue({
           avatar: imageUrl
         });
-        this.message.success('Tải lên ảnh đại diện thành công');
+        this.message.success(this.translate.instant('PROFILE.UPLOAD_AVATAR_SUCCESS'));
       }
       this.isLoadingUpload = false;
     } else if (info.file.status === 'error') {
-      this.message.error(`Lỗi khi tải lên ảnh: ${info.file.error?.message || 'Không xác định'}`);
+      this.message.error(`${this.translate.instant('PROFILE.UPLOAD_AVATAR_ERROR')} ${info.file.error?.message || this.translate.instant('COMMON.UNKNOWN')}`);
       console.error('Upload error:', info.file.error);
       this.isLoadingUpload = false;
     }
@@ -335,12 +337,12 @@ export class ProfileComponent implements OnInit {
   beforeUpload = (file: NzUploadFile): boolean => {
     const isImage = file.type?.startsWith('image/');
     if (!isImage) {
-      this.message.error('Bạn chỉ có thể tải lên file hình ảnh!');
+      this.message.error(this.translate.instant('PROFILE.IMAGE_ONLY'));
       return false;
     }
     const isLt5M = (file.size || 0) / 1024 / 1024 < 5;
     if (!isLt5M) {
-      this.message.error('Hình ảnh phải nhỏ hơn 5MB!');
+      this.message.error(this.translate.instant('PROFILE.IMAGE_SIZE_LIMIT'));
       return false;
     }
     this.fileList = this.fileList.concat(file);

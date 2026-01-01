@@ -123,11 +123,11 @@
         [nzSelectedIndex]="activeTab === 'all' ? 0 : (activeTab === 'system' ? 1 : 2)" 
         (nzSelectChange)="onTabChange($event)"
         style="margin-bottom: 16px;">
-        <nz-tab [nzTitle]="'Tất cả' + (unreadCounts.total > 0 ? ' (' + unreadCounts.total + ')' : '')">
+        <nz-tab [nzTitle]="tabAllTitleWithCount">
         </nz-tab>
-        <nz-tab [nzTitle]="'Hệ thống' + (unreadCounts.system > 0 ? ' (' + unreadCounts.system + ')' : '')">
+        <nz-tab [nzTitle]="tabSystemTitleWithCount">
         </nz-tab>
-        <nz-tab [nzTitle]="'Khách sạn' + (unreadCounts.hotel > 0 ? ' (' + unreadCounts.hotel + ')' : '')">
+        <nz-tab [nzTitle]="tabHotelTitleWithCount">
         </nz-tab>
       </nz-tabset>
       

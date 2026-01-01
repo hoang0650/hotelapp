@@ -2,19 +2,19 @@
   <nz-card [nzBordered]="false" class="about-us-card">
     <div class="hero-section">
       <h1 class="hero-title">PHHOTEL</h1>
-      <p class="hero-subtitle">Kết nối sáng tạo, vươn tới tương lai</p>
+      <p class="hero-subtitle">{{ 'ABOUT_US.HERO_SUBTITLE' | translate }}</p>
     </div>
 
     <nz-divider></nz-divider>
 
     <div class="company-info-section">
-      <h2 class="section-heading">Thông tin công ty</h2>
+      <h2 class="section-heading">{{ 'ABOUT_US.COMPANY_INFO' | translate }}</h2>
       
       <div nz-row nzGutter="24" class="info-row">
         <div nz-col nzXs="24" nzSm="12" nzMd="8" class="info-item">
           <div class="info-label">
             <i nz-icon nzType="bank" nzTheme="outline"></i>
-            <strong>Tên công ty:</strong>
+            <strong>{{ 'ABOUT_US.COMPANY_NAME' | translate }}:</strong>
           </div>
           <div class="info-value">
             CÔNG TY TNHH GIẢI PHÁP CÔNG NGHỆ PHGROUP
@@ -24,7 +24,7 @@
         <div nz-col nzXs="24" nzSm="12" nzMd="8" class="info-item">
           <div class="info-label">
             <i nz-icon nzType="file-text" nzTheme="outline"></i>
-            <strong>Mã số thuế:</strong>
+            <strong>{{ 'ABOUT_US.TAX_ID' | translate }}:</strong>
           </div>
           <div class="info-value">
             3703279135
@@ -34,7 +34,7 @@
         <div nz-col nzXs="24" nzSm="12" nzMd="8" class="info-item">
           <div class="info-label">
             <i nz-icon nzType="global" nzTheme="outline"></i>
-            <strong>Tên quốc tế:</strong>
+            <strong>{{ 'ABOUT_US.INTERNATIONAL_NAME' | translate }}:</strong>
           </div>
           <div class="info-value">
             PHGROUP TECHNOLOGY SOLUTIONS COMPANY LIMITED
@@ -46,7 +46,7 @@
         <div nz-col nzXs="24" nzSm="12" nzMd="12" class="info-item">
           <div class="info-label">
             <i nz-icon nzType="tag" nzTheme="outline"></i>
-            <strong>Tên viết tắt:</strong>
+            <strong>{{ 'ABOUT_US.SHORT_NAME' | translate }}:</strong>
           </div>
           <div class="info-value">
             PHGROUP TECHNOLOGY SOLUTIONS CO., LTD
@@ -56,7 +56,7 @@
         <div nz-col nzXs="24" nzSm="12" nzMd="12" class="info-item">
           <div class="info-label">
             <i nz-icon nzType="environment" nzTheme="outline"></i>
-            <strong>Địa chỉ:</strong>
+            <strong>{{ 'ABOUT_US.ADDRESS' | translate }}:</strong>
           </div>
           <div class="info-value">
             Lô A1-15 Đường Bình Hoà 24, khu dân cư Đồng An 4, Phường Bình Hòa, Thành phố Thuận An, Tỉnh Bình Dương, Việt Nam
@@ -68,37 +68,24 @@
     <nz-divider></nz-divider>
 
     <div class="about-section">
-      <h2 class="section-heading">Về chúng tôi</h2>
+      <h2 class="section-heading">{{ 'ABOUT_US.ABOUT_US' | translate }}</h2>
       <div nz-row nzGutter="24">
         <div nz-col nzXs="24" nzSm="24" nzMd="12">
-          <p class="about-text">
-            PHHOTEL được điều hành bởi <strong>CÔNG TY TNHH GIẢI PHÁP CÔNG NGHỆ PHGROUP</strong>, 
-            một công ty chuyên cung cấp các giải pháp công nghệ hiện đại cho ngành khách sạn và du lịch.
-          </p>
-          <p class="about-text">
-            Với phương châm <strong>"Kết nối sáng tạo, vươn tới tương lai"</strong>, chúng tôi cam kết 
-            mang đến những giải pháp công nghệ tiên tiến, giúp các khách sạn quản lý hiệu quả và 
-            nâng cao trải nghiệm khách hàng.
-          </p>
+          <p class="about-text" [innerHTML]="'ABOUT_US.ABOUT_DESCRIPTION_1' | translate"></p>
+          <p class="about-text" [innerHTML]="'ABOUT_US.ABOUT_DESCRIPTION_2' | translate"></p>
         </div>
         <div nz-col nzXs="24" nzSm="24" nzMd="12">
           <div class="mission-vision">
             <h3 class="sub-heading">
               <i nz-icon nzType="rocket" nzTheme="outline"></i>
-              Sứ mệnh
+              {{ 'ABOUT_US.MISSION' | translate }}
             </h3>
-            <p>
-              Cung cấp các giải pháp công nghệ toàn diện, giúp các khách sạn vận hành hiệu quả 
-              và tối ưu hóa trải nghiệm khách hàng.
-            </p>
+            <p>{{ 'ABOUT_US.MISSION_DESCRIPTION' | translate }}</p>
             <h3 class="sub-heading">
               <i nz-icon nzType="eye" nzTheme="outline"></i>
-              Tầm nhìn
+              {{ 'ABOUT_US.VISION' | translate }}
             </h3>
-            <p>
-              Trở thành đối tác công nghệ hàng đầu trong ngành khách sạn và du lịch tại Việt Nam 
-              và khu vực Đông Nam Á.
-            </p>
+            <p>{{ 'ABOUT_US.VISION_DESCRIPTION' | translate }}</p>
           </div>
         </div>
       </div>
@@ -107,7 +94,7 @@
     <nz-divider></nz-divider>
 
     <div class="values-section">
-      <h2 class="section-heading">Giá trị cốt lõi</h2>
+      <h2 class="section-heading">{{ 'ABOUT_US.CORE_VALUES' | translate }}</h2>
       <div nz-row nzGutter="24">
         <div nz-col nzXs="24" nzSm="12" nzMd="8" *ngFor="let value of coreValues" class="value-item">
           <div class="value-icon">

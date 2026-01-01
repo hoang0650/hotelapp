@@ -602,7 +602,7 @@
     <!-- Modal tính lương -->
     <nz-modal
       [(nzVisible)]="isSalaryModalVisible"
-      nzTitle="Tính lương nhân viên"
+      [nzTitle]="'STAFF_MANAGEMENT.SALARY_MODAL.TITLE' | translate"
       [nzWidth]="800"
       (nzOnCancel)="closeSalaryModal()"
       [nzFooter]="null"
@@ -612,31 +612,31 @@
           <div class="staff-info-header" style="margin-bottom: 20px; padding: 16px; background: #f5f5f5; border-radius: 8px;">
             <h3>{{ getFullName(selectedStaffForSalary) }}</h3>
             <p style="margin: 0; color: #666;">
-              <strong>Chức vụ:</strong> {{ getPositionLabel(selectedStaffForSalary.employmentInfo.position || 'other') }} | 
-              <strong>Lương cơ bản:</strong> {{ formatCurrency(selectedStaffForSalary.employmentInfo.salary || 0) }} | 
-              <strong>Ngày bắt đầu:</strong> {{ selectedStaffForSalary.employmentInfo.startDate | date:'dd/MM/yyyy' }}
+              <strong>{{ 'STAFF_MANAGEMENT.POSITION' | translate }}:</strong> {{ getPositionLabel(selectedStaffForSalary.employmentInfo.position || 'other') }} | 
+              <strong>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.BASE_SALARY' | translate }}:</strong> {{ formatCurrency(selectedStaffForSalary.employmentInfo.salary || 0) }} | 
+              <strong>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.START_DATE' | translate }}:</strong> {{ selectedStaffForSalary.employmentInfo.startDate | date:'dd/MM/yyyy' }}
             </p>
           </div>
 
           <form nz-form [formGroup]="salaryCalculationForm" nzLayout="vertical" *ngIf="salaryCalculationForm">
             <nz-form-item>
-              <nz-form-label>Ngày tính lương</nz-form-label>
+              <nz-form-label>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.CALCULATION_DATE' | translate }}</nz-form-label>
               <nz-form-control>
                 <nz-date-picker 
                   formControlName="calculationDate" 
                   nzFormat="dd/MM/yyyy" 
                   style="width: 100%">
                 </nz-date-picker>
-                <div class="form-hint">Ngày tính lương (mặc định: hôm nay). Hệ thống sẽ tự động tính ngày cơ sở dựa trên lịch sử tính lương trước đó.</div>
+                <div class="form-hint">{{ 'STAFF_MANAGEMENT.SALARY_MODAL.CALCULATION_DATE_HINT' | translate }}</div>
               </nz-form-control>
             </nz-form-item>
 
-            <nz-divider nzText="Các khoản điều chỉnh"></nz-divider>
+            <nz-divider [nzText]="'STAFF_MANAGEMENT.SALARY_MODAL.ADJUSTMENTS' | translate"></nz-divider>
 
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="12">
                 <nz-form-item>
-                  <nz-form-label>Phụ cấp</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.ALLOWANCE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="allowance" 
@@ -646,13 +646,13 @@
                       [nzParser]="parserVND"
                       style="width: 100%">
                     </nz-input-number>
-                    <div class="form-hint">Khoản phụ cấp (nếu có)</div>
+                    <div class="form-hint">{{ 'STAFF_MANAGEMENT.SALARY_MODAL.ALLOWANCE_HINT' | translate }}</div>
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzSpan]="12">
                 <nz-form-item>
-                  <nz-form-label>Bảo hiểm</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.INSURANCE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="insurance" 
@@ -662,7 +662,7 @@
                       [nzParser]="parserVND"
                       style="width: 100%">
                     </nz-input-number>
-                    <div class="form-hint">Khoản bảo hiểm (sẽ bị trừ)</div>
+                    <div class="form-hint">{{ 'STAFF_MANAGEMENT.SALARY_MODAL.INSURANCE_HINT' | translate }}</div>
                   </nz-form-control>
                 </nz-form-item>
               </div>
@@ -671,7 +671,7 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="12">
                 <nz-form-item>
-                  <nz-form-label>Phạt</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.PENALTY' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="penalty" 
@@ -681,13 +681,13 @@
                       [nzParser]="parserVND"
                       style="width: 100%">
                     </nz-input-number>
-                    <div class="form-hint">Khoản phạt (sẽ bị trừ)</div>
+                    <div class="form-hint">{{ 'STAFF_MANAGEMENT.SALARY_MODAL.PENALTY_HINT' | translate }}</div>
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzSpan]="12">
                 <nz-form-item>
-                  <nz-form-label>Thưởng</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.BONUS' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="bonus" 
@@ -697,7 +697,7 @@
                       [nzParser]="parserVND"
                       style="width: 100%">
                     </nz-input-number>
-                    <div class="form-hint">Khoản thưởng (sẽ được cộng)</div>
+                    <div class="form-hint">{{ 'STAFF_MANAGEMENT.SALARY_MODAL.BONUS_HINT' | translate }}</div>
                   </nz-form-control>
                 </nz-form-item>
               </div>
@@ -706,7 +706,7 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="12">
                 <nz-form-item>
-                  <nz-form-label>Ứng lương</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.ADVANCE_PAYMENT' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="advancePayment" 
@@ -716,16 +716,16 @@
                       [nzParser]="parserVND"
                       style="width: 100%">
                     </nz-input-number>
-                    <div class="form-hint">Khoản ứng lương (sẽ bị trừ)</div>
+                    <div class="form-hint">{{ 'STAFF_MANAGEMENT.SALARY_MODAL.ADVANCE_PAYMENT_HINT' | translate }}</div>
                   </nz-form-control>
                 </nz-form-item>
               </div>
             </div>
 
             <div class="form-actions" style="margin-top: 24px;">
-              <button nz-button type="button" (click)="closeSalaryModal()">Hủy</button>
+              <button nz-button type="button" (click)="closeSalaryModal()">{{ 'STAFF_MANAGEMENT.CANCEL' | translate }}</button>
               <button nz-button nzType="primary" (click)="calculateSalary()" [nzLoading]="isLoading">
-                <i nz-icon nzType="calculator"></i> Tính lương
+                <i nz-icon nzType="calculator"></i> {{ 'STAFF_MANAGEMENT.CALCULATE_SALARY' | translate }}
               </button>
             </div>
           </form>
@@ -738,82 +738,82 @@
                 <img [src]="getImageUrl(businessLogo)" alt="Logo" style="max-height: 60px; max-width: 120px; object-fit: contain;" (error)="handleLogoError($event)">
               </div>
               <h2 style="margin: 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">
-                {{ (businessInfo?.name || 'Khách sạn').toUpperCase() }}
+                {{ (businessInfo?.name || ('STAFF_MANAGEMENT.DEFAULT_HOTEL' | translate)).toUpperCase() }}
               </h2>
             </div>
 
             <!-- Tiêu đề phiếu tính lương -->
             <h1 style="text-align: center; font-size: 20px; font-weight: bold; margin: 20px 0 30px 0; text-transform: uppercase;">
-              PHIẾU TÍNH LƯƠNG {{ getSalaryPeriod() }}
+              {{ 'STAFF_MANAGEMENT.EXPORT.SALARY_SLIP' | translate }} {{ getSalaryPeriod() }}
             </h1>
             <!-- Thông tin nhân viên và lương -->
             <div style="margin-bottom: 30px;">
               <div style="margin-bottom: 15px;">
-                <strong>Họ Và Tên:</strong> 
+                <strong>{{ 'STAFF_MANAGEMENT.EXPORT.FULL_NAME' | translate }}:</strong> 
                 <span style="font-weight: bold; text-transform: uppercase;">
                   {{ getFullName(selectedStaffForSalary!) }}
                 </span>
               </div>
 
               <div style="margin-bottom: 15px;">
-                <strong>Chức vụ:</strong> 
+                <strong>{{ 'STAFF_MANAGEMENT.POSITION' | translate }}:</strong> 
                 <span style="font-weight: bold;">
                   {{ getPositionLabel(selectedStaffForSalary.employmentInfo.position || '') }}
                 </span>
               </div>
               
               <div style="margin-bottom: 15px;">
-                <strong>Lương Cơ Bản:</strong> 
+                <strong>{{ 'STAFF_MANAGEMENT.EXPORT.BASE_SALARY' | translate }}:</strong> 
                 <span style="font-weight: bold;">
-                  THÁNG = {{ formatCurrencyK(selectedStaffForSalary.employmentInfo.salary || 0) }}
+                  {{ 'STAFF_MANAGEMENT.EXPORT.MONTHLY' | translate }} = {{ formatCurrencyK(selectedStaffForSalary.employmentInfo.salary || 0) }}
                 </span>
               </div>
 
               <div style="margin-bottom: 15px;">
-                <strong>Số ngày làm việc thực tế:</strong> 
+                <strong>{{ 'STAFF_MANAGEMENT.EXPORT.WORKING_DAYS' | translate }}:</strong> 
                 <span style="font-weight: bold;">
-                  {{ salaryCalculationResult.breakdown?.daysWorked || 0 }} ngày
+                  {{ salaryCalculationResult.breakdown?.daysWorked || 0 }} {{ 'STAFF_MANAGEMENT.EXPORT.DAYS' | translate }}
                 </span>
               </div>
 
               <div style="margin-bottom: 15px;">
-                <strong>Ngày bắt đầu làm việc:</strong> 
+                <strong>{{ 'STAFF_MANAGEMENT.EXPORT.START_DATE' | translate }}:</strong> 
                 <span style="font-weight: bold;">
                   {{ formatDate(selectedStaffForSalary.employmentInfo.startDate) }}
                 </span>
               </div>
 
               <div style="margin-bottom: 15px;">
-                <strong>PHỤ CẤP:</strong>
+                <strong>{{ 'STAFF_MANAGEMENT.EXPORT.ALLOWANCES' | translate }}:</strong>
                 <div style="margin-left: 20px; margin-top: 5px;">
                   <div *ngIf="salaryCalculationResult.breakdown?.allowance > 0" style="margin-bottom: 5px;">
-                    {{ formatCurrencyK(salaryCalculationResult.breakdown.allowance) }} PHỤ CẤP
+                    {{ formatCurrencyK(salaryCalculationResult.breakdown.allowance) }} {{ 'STAFF_MANAGEMENT.EXPORT.ALLOWANCE' | translate }}
                   </div>
                   <div *ngIf="salaryCalculationResult.breakdown?.bonus > 0" style="margin-bottom: 5px;">
-                    {{ formatCurrencyK(salaryCalculationResult.breakdown.bonus) }} THƯỞNG
+                    {{ formatCurrencyK(salaryCalculationResult.breakdown.bonus) }} {{ 'STAFF_MANAGEMENT.EXPORT.BONUS' | translate }}
                   </div>
                   <div *ngIf="salaryCalculationResult.breakdown?.allowance === 0 && salaryCalculationResult.breakdown?.bonus === 0">
-                    Không có
+                    {{ 'STAFF_MANAGEMENT.SALARY_MODAL.NONE' | translate }}
                   </div>
                 </div>
               </div>
 
               <div style="margin-bottom: 15px;">
-                <strong>PHẠT:</strong> 
+                <strong>{{ 'STAFF_MANAGEMENT.EXPORT.PENALTY' | translate }}:</strong> 
                 <span style="color: #ff4d4f; font-weight: bold;">
                   {{ formatCurrencyK(salaryCalculationResult.breakdown?.penalty || 0) }}
                 </span>
               </div>
 
               <div style="margin-bottom: 15px;">
-                <strong>ỨNG LƯƠNG:</strong> 
+                <strong>{{ 'STAFF_MANAGEMENT.EXPORT.ADVANCE_PAYMENT' | translate }}:</strong> 
                 <span style="color: #ff4d4f; font-weight: bold;">
                   {{ formatCurrencyK(salaryCalculationResult.breakdown?.advancePayment || 0) }}
                 </span>
               </div>
 
               <div style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 4px;">
-                <strong style="font-size: 16px;">Lương Nhận:</strong> 
+                <strong style="font-size: 16px;">{{ 'STAFF_MANAGEMENT.EXPORT.NET_SALARY' | translate }}:</strong> 
                 <span style="font-size: 18px; font-weight: bold; color: #1890ff;">
                   {{ formatCurrency(salaryCalculationResult.breakdown?.netSalary || 0) }}
                 </span>
@@ -823,42 +823,41 @@
             <!-- Phần ký -->
             <div style="margin-top: 40px; display: flex; justify-content: space-between;">
               <div>
-                <div style="margin-bottom: 50px; font-weight: bold;">NGƯỜI LẬP PHIẾU</div>
+                <div style="margin-bottom: 50px; font-weight: bold;">{{ 'STAFF_MANAGEMENT.EXPORT.PREPARED_BY' | translate }}</div>
               </div>
               <div style="text-align: right;">
-                <div style="margin-bottom: 50px; font-weight: bold;">GIÁM ĐỐC</div>
+                <div style="margin-bottom: 50px; font-weight: bold;">{{ 'STAFF_MANAGEMENT.EXPORT.DIRECTOR' | translate }}</div>
               </div>
             </div>
             <div style="margin-top: 16px; padding: 12px; background: #fff7e6; border-radius: 4px; border-left: 4px solid #faad14;">
               <small>
                 <i nz-icon nzType="info-circle" style="color: #faad14;"></i>
-                <strong>Lưu ý:</strong> Đây chỉ là kết quả tính lương, chưa được lưu vào payroll. 
-                Vui lòng bấm nút "Đã thanh toán" để lưu vào lịch sử payroll và đánh dấu đã thanh toán.
+                <strong>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.NOTE' | translate }}:</strong> {{ 'STAFF_MANAGEMENT.SALARY_MODAL.NOTE_MESSAGE' | translate }}
                 <br>
-                Lương thực nhận = (Lương cơ bản theo ngày) + Phụ cấp + Thưởng - Bảo hiểm - Phạt.
+                {{ 'STAFF_MANAGEMENT.SALARY_MODAL.NET_SALARY_FORMULA' | translate }}
                 <br>
-                <strong>Ngày cơ sở:</strong> 
+                <strong>{{ 'STAFF_MANAGEMENT.EXPORT.BASE_DATE' | translate }}:</strong> 
                 <ul style="margin: 4px 0; padding-left: 20px;">
-                  <li>Lần đầu tính lương: Ngày cơ sở = Ngày bắt đầu làm việc</li>
-                  <li>Đã tính lương trước đó và số ngày < 30: Ngày cơ sở = Ngày sau lần tính lương trước</li>
-                  <li>Đã tính lương trước đó và số ngày >= 30: Ngày cơ sở = Ngày bắt đầu làm việc của tháng tính lương (ví dụ: bắt đầu làm 4/11, tính lương tháng 12 sẽ lấy 4/12 làm ngày cơ sở)</li>
+                  <li>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.BASE_DATE_RULE_1' | translate }}</li>
+                  <li>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.BASE_DATE_RULE_2' | translate }}</li>
+                  <li>{{ 'STAFF_MANAGEMENT.SALARY_MODAL.BASE_DATE_RULE_3' | translate }}</li>
                 </ul>
               </small>
             </div>
             <!-- Nút xuất file và thanh toán -->
             <div class="form-actions" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #d9d9d9; display: flex; gap: 8px; justify-content: space-between;">
               <div>
-                <button nz-button type="button" (click)="closeSalaryModal()">Đóng</button>
+                <button nz-button type="button" (click)="closeSalaryModal()">{{ 'STAFF_MANAGEMENT.SALARY_MODAL.CLOSE' | translate }}</button>
               </div>
               <div style="display: flex; gap: 8px;">
                 <button nz-button nzType="default" (click)="exportSalaryPDF()" [nzLoading]="isLoading">
-                  <i nz-icon nzType="file-pdf"></i> Xuất PDF
+                  <i nz-icon nzType="file-pdf"></i> {{ 'STAFF_MANAGEMENT.SALARY_MODAL.EXPORT_PDF' | translate }}
                 </button>
                 <button nz-button nzType="default" (click)="exportSalaryExcel()" [nzLoading]="isLoading">
-                  <i nz-icon nzType="file-excel"></i> Xuất Excel
+                  <i nz-icon nzType="file-excel"></i> {{ 'STAFF_MANAGEMENT.SALARY_MODAL.EXPORT_EXCEL' | translate }}
                 </button>
                 <button nz-button nzType="primary" nzDanger (click)="paySalary()" [nzLoading]="isLoading">
-                  <i nz-icon nzType="dollar"></i> Đã thanh toán
+                  <i nz-icon nzType="dollar"></i> {{ 'STAFF_MANAGEMENT.SALARY_MODAL.PAID' | translate }}
                 </button>
               </div>
             </div>

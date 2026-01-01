@@ -218,10 +218,10 @@ export class DebtManagementComponent implements OnInit {
 
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      'pending': this.translate.instant('DEBT_MANAGEMENT.STATUS.PENDING'),
-      'partial': this.translate.instant('DEBT_MANAGEMENT.STATUS.PARTIAL'),
-      'settled': this.translate.instant('DEBT_MANAGEMENT.STATUS.SETTLED'),
-      'cancelled': this.translate.instant('DEBT_MANAGEMENT.STATUS.CANCELLED')
+      'pending': this.translate.instant('DEBT_MANAGEMENT.STATUS_OPTIONS.PENDING'),
+      'partial': this.translate.instant('DEBT_MANAGEMENT.STATUS_OPTIONS.PARTIAL'),
+      'settled': this.translate.instant('DEBT_MANAGEMENT.STATUS_OPTIONS.SETTLED'),
+      'cancelled': this.translate.instant('DEBT_MANAGEMENT.STATUS_OPTIONS.CANCELLED')
     };
     return labels[status] || status;
   }

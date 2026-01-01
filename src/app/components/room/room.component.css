@@ -7,8 +7,110 @@
 }
 
 .dirty-room {
-    background: linear-gradient(135deg, #d4af37 0%, #f4cf37 100%);
+    background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
     color: #000;
+    border: 2px solid #fa8c16;
+    box-shadow: 0 4px 12px rgba(250, 173, 20, 0.3);
+    transition: all 0.3s ease;
+    min-height: 100%;
+}
+
+.dirty-room:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(250, 173, 20, 0.4);
+    border-color: #ff9800;
+}
+
+.dirty-room .room-number,
+.dirty-room .room-type {
+    color: #000;
+    font-weight: 700;
+}
+
+.dirty-room .detail-value,
+.dirty-room .detail-label {
+    color: #000;
+}
+
+/* Vacant room styles - cải thiện */
+.vacant-room {
+    background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+    color: white;
+    border: 2px solid #52c41a;
+    box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    min-height: 100%;
+}
+
+.vacant-room:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(82, 196, 26, 0.4);
+    border-color: #73d13d;
+    background: linear-gradient(135deg, #73d13d 0%, #95de64 100%);
+}
+
+.vacant-room .room-number,
+.vacant-room .room-type {
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Vacant room details */
+.vacant-details {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px;
+    margin-top: 8px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vacant-details .status-icon {
+    color: #fff;
+    font-size: 18px;
+    margin-right: 6px;
+}
+
+.vacant-details .vacant-ready {
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Dirty room details - đảm bảo cùng kích thước với vacant */
+.dirty-details {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 8px;
+    margin-top: 8px;
+    border: 1px dashed rgba(0, 0, 0, 0.2);
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dirty-details .status-icon {
+    color: #d46b08;
+    font-size: 18px;
+    margin-right: 6px;
+}
+
+.dirty-details .dirty-needs-cleaning {
+    color: #d46b08;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* Status icon styles */
+.status-icon {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
 }
 .maintenance {
     background: #722ed1 !important;
@@ -699,4 +801,347 @@
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* Compact Mode Control */
+.compact-mode-control {
+    margin-bottom: 20px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    border: 1px solid #bae6fd;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.compact-mode-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.compact-mode-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #0369a1;
+    cursor: pointer;
+    user-select: none;
+}
+
+.compact-mode-label i {
+    font-size: 16px;
+    color: #0284c7;
+}
+
+.compact-mode-label span {
+    margin-left: 4px;
+}
+
+/* Compact Mode Room Styles */
+.room-col.compact-mode {
+    min-width: 0;
+}
+
+.room-col.compact-mode .room-item {
+    padding: 10px 12px;
+    min-height: auto;
+}
+
+.room-col.compact-mode .room-header {
+    margin-bottom: 6px;
+}
+
+.room-col.compact-mode .room-number {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.room-col.compact-mode .room-type {
+    font-size: 12px;
+    margin-bottom: 8px;
+    padding: 3px 8px;
+}
+
+/* Compact mode với số cột lớn (6, 8, 12) - phòng rộng hơn */
+.room-col.compact-mode[nz-col][nzSpan="3"] .room-item,
+.room-col.compact-mode[nz-col][nzSpan="2"] .room-item {
+    padding: 12px 14px;
+}
+
+.room-col.compact-mode[nz-col][nzSpan="3"] .room-number,
+.room-col.compact-mode[nz-col][nzSpan="2"] .room-number {
+    font-size: 17px;
+}
+
+.room-col.compact-mode[nz-col][nzSpan="3"] .room-type,
+.room-col.compact-mode[nz-col][nzSpan="2"] .room-type {
+    font-size: 13px;
+    padding: 4px 10px;
+}
+
+.room-col.compact-mode .room-badges-compact {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 6px;
+    margin-bottom: 4px;
+    width: 100%;
+}
+
+.room-col.compact-mode .room-badges-compact .room-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    line-height: 1.5;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.room-col.compact-mode .room-badges-compact .room-badge i {
+    font-size: 11px;
+    margin-right: 0;
+}
+
+/* Đảm bảo duration badge hiển thị tốt ở cả hai chế độ */
+.room-badge.duration-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.room-badge.duration-badge i {
+    font-size: 12px;
+    margin-right: 0;
+}
+
+/* Responsive for compact mode */
+@media (max-width: 768px) {
+    .compact-mode-control {
+        padding: 12px 16px;
+        margin-bottom: 16px;
+    }
+
+    .compact-mode-label {
+        font-size: 13px;
+    }
+
+    .room-col.compact-mode .room-number {
+        font-size: 13px;
+    }
+
+    .room-col.compact-mode .room-type {
+        font-size: 10px;
+    }
+}
+
+/* Responsive styles for large column counts (6, 8, 12) */
+.room-col {
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+/* Khi số cột lớn, giảm padding và font-size để phòng không bị chật */
+.room-col .room-item {
+    transition: all 0.3s ease;
+    overflow: hidden;
+    word-wrap: break-word;
+}
+
+.room-col .room-number,
+.room-col .room-type {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Responsive cho Mobile (xs) */
+@media (max-width: 575px) {
+    .room-col .room-item {
+        padding: 12px 10px;
+    }
+    
+    .room-col .room-number {
+        font-size: 16px;
+    }
+    
+    .room-col .room-type {
+        font-size: 13px;
+    }
+}
+
+/* Responsive cho Tablet (sm: 576px - 767px) */
+@media (min-width: 576px) and (max-width: 767px) {
+    /* 2-3 cột trên tablet */
+    .room-col[nz-col][nzSm="12"] .room-item,
+    .room-col[nz-col][nzSm="8"] .room-item {
+        padding: 12px 10px;
+    }
+    
+    /* 4 cột trên tablet */
+    .room-col[nz-col][nzSm="6"] .room-item {
+        padding: 10px 8px;
+    }
+    
+    /* 6 cột trên tablet */
+    .room-col[nz-col][nzSm="4"] .room-item {
+        padding: 10px 6px;
+    }
+    
+    .room-col[nz-col][nzSm="4"] .room-number {
+        font-size: 15px;
+    }
+    
+    .room-col[nz-col][nzSm="4"] .room-type {
+        font-size: 12px;
+    }
+    
+    /* 8 cột trên tablet */
+    .room-col[nz-col][nzSm="3"] .room-item {
+        padding: 8px 5px;
+    }
+    
+    .room-col[nz-col][nzSm="3"] .room-number {
+        font-size: 14px;
+    }
+    
+    .room-col[nz-col][nzSm="3"] .room-type {
+        font-size: 11px;
+    }
+    
+    .room-col[nz-col][nzSm="3"] .room-badge {
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+    
+    /* 12 cột trên tablet */
+    .room-col[nz-col][nzSm="2"] .room-item {
+        padding: 6px 4px;
+    }
+    
+    .room-col[nz-col][nzSm="2"] .room-number {
+        font-size: 13px;
+        font-weight: 600;
+    }
+    
+    .room-col[nz-col][nzSm="2"] .room-type {
+        font-size: 10px;
+        padding: 1px 4px;
+    }
+    
+    .room-col[nz-col][nzSm="2"] .room-badge {
+        font-size: 9px;
+        padding: 1px 3px;
+        line-height: 1.3;
+    }
+}
+
+/* Responsive cho Tablet Landscape (md: 768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+    /* 6 cột */
+    .room-col[nz-col][nzSpan="4"] .room-item {
+        padding: 10px 8px;
+    }
+    
+    .room-col[nz-col][nzSpan="4"] .room-number {
+        font-size: 15px;
+    }
+    
+    .room-col[nz-col][nzSpan="4"] .room-type {
+        font-size: 12px;
+    }
+    
+    /* 8 cột */
+    .room-col[nz-col][nzSpan="3"] .room-item {
+        padding: 8px 6px;
+    }
+    
+    .room-col[nz-col][nzSpan="3"] .room-number {
+        font-size: 14px;
+    }
+    
+    .room-col[nz-col][nzSpan="3"] .room-type {
+        font-size: 11px;
+    }
+    
+    .room-col[nz-col][nzSpan="3"] .room-badge {
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+    
+    /* 12 cột */
+    .room-col[nz-col][nzSpan="2"] .room-item {
+        padding: 6px 4px;
+    }
+    
+    .room-col[nz-col][nzSpan="2"] .room-number {
+        font-size: 13px;
+        font-weight: 600;
+    }
+    
+    .room-col[nz-col][nzSpan="2"] .room-type {
+        font-size: 10px;
+        padding: 1px 4px;
+    }
+    
+    .room-col[nz-col][nzSpan="2"] .room-badge {
+        font-size: 9px;
+        padding: 1px 3px;
+        line-height: 1.3;
+    }
+}
+
+/* Responsive cho Desktop (lg: 992px - 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+    /* 6 cột */
+    .room-col[nz-col][nzSpan="4"] .room-item {
+        padding: 12px 10px;
+    }
+    
+    /* 8 cột */
+    .room-col[nz-col][nzSpan="3"] .room-item {
+        padding: 10px 8px;
+    }
+    
+    /* 12 cột */
+    .room-col[nz-col][nzSpan="2"] .room-item {
+        padding: 8px 6px;
+    }
+    
+    .room-col[nz-col][nzSpan="2"] .room-number {
+        font-size: 14px;
+    }
+    
+    .room-col[nz-col][nzSpan="2"] .room-type {
+        font-size: 11px;
+    }
+}
+
+/* Responsive cho Large Desktop (xl: ≥1200px) */
+@media (min-width: 1200px) {
+    /* 6 cột */
+    .room-col[nz-col][nzSpan="4"] .room-item {
+        padding: 14px 12px;
+    }
+    
+    /* 8 cột */
+    .room-col[nz-col][nzSpan="3"] .room-item {
+        padding: 12px 10px;
+    }
+    
+    /* 12 cột */
+    .room-col[nz-col][nzSpan="2"] .room-item {
+        padding: 10px 8px;
+    }
+    
+    .room-col[nz-col][nzSpan="2"] .room-number {
+        font-size: 15px;
+    }
+    
+    .room-col[nz-col][nzSpan="2"] .room-type {
+        font-size: 12px;
+    }
 }

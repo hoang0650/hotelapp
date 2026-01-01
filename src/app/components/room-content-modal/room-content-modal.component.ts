@@ -1171,6 +1171,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         // Tổng cộng = tiền phòng + phụ thu + tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
         this.totalPrice = roomPrice + totalAdditionalCharges + serviceTotal;
         
+        // Lưu totalPrice vào roomData để room.component có thể sử dụng
+        if (this.roomData && this.roomData._id) {
+          this.roomData.totalPrice = this.totalPrice;
+          // Lưu vào localStorage với key là roomId để room.component có thể đọc
+          localStorage.setItem(`room_${this.roomData._id}_totalPrice`, this.totalPrice.toString());
+        }
+        
         // Còn lại phải thanh toán = Tổng cộng - đặt trước - khuyến mãi (cho phép số âm)
         this.remainingAmount = this.totalPrice - this.advancePayment - totalDiscount;
         
@@ -1228,6 +1235,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         // Công thức mới:
         // Tổng cộng = tiền phòng + phụ thu + tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
         this.totalPrice = roomPrice + totalAdditionalCharges + serviceTotal;
+        
+        // Lưu totalPrice vào roomData để room.component có thể sử dụng
+        if (this.roomData && this.roomData._id) {
+          this.roomData.totalPrice = this.totalPrice;
+          // Lưu vào localStorage với key là roomId để room.component có thể đọc
+          localStorage.setItem(`room_${this.roomData._id}_totalPrice`, this.totalPrice.toString());
+        }
         
         // Còn lại phải thanh toán = Tổng cộng - đặt trước - khuyến mãi (cho phép số âm)
         this.remainingAmount = this.totalPrice - this.advancePayment - totalDiscount;
@@ -3938,5 +3952,159 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestInfo: updatedGuestInfo,
       advancePayment: advancePayment
     });
+  }
+  
+  // Getter để lấy phụ thu checkin sớm từ roomPriceDetails
+  getEarlyCheckinSurcharge(): number {
+    if (!this.roomPriceDetails) return 0;
+    
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
+    if (this.roomPriceDetails.breakdown?.beforeNightly?.earlyCheckinSurcharge) {
+      return this.roomPriceDetails.breakdown.beforeNightly.earlyCheckinSurcharge;
+    }
+    
+    // Kiểm tra trực tiếp từ roomPriceDetails
+    if (this.roomPriceDetails.earlyCheckinSurcharge) {
+      return this.roomPriceDetails.earlyCheckinSurcharge;
+    }
+    
+    return 0;
+  }
+  
+  // Getter để lấy số giờ checkin sớm
+  getEarlyCheckinHours(): number {
+    if (!this.roomPriceDetails) return 0;
+    
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
+    if (this.roomPriceDetails.breakdown?.beforeNightly?.hours) {
+      return this.roomPriceDetails.breakdown.beforeNightly.hours;
+    }
+    
+    // Kiểm tra trực tiếp từ roomPriceDetails
+    if (this.roomPriceDetails.earlyCheckinHours) {
+      return this.roomPriceDetails.earlyCheckinHours;
+    }
+    
+    return 0;
+  }
+  
+  // Getter để lấy phụ thu checkout trễ từ roomPriceDetails
+  getLateCheckoutSurcharge(): number {
+    if (!this.roomPriceDetails) return 0;
+    
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
+    if (this.roomPriceDetails.breakdown?.afterNightly?.lateCheckoutSurcharge) {
+      return this.roomPriceDetails.breakdown.afterNightly.lateCheckoutSurcharge;
+    }
+    
+    // Kiểm tra trực tiếp từ roomPriceDetails
+    if (this.roomPriceDetails.lateCheckoutSurcharge) {
+      return this.roomPriceDetails.lateCheckoutSurcharge;
+    }
+    
+    return 0;
+  }
+  
+  // Getter để lấy số giờ checkout trễ
+  getLateCheckoutHours(): number {
+    if (!this.roomPriceDetails) return 0;
+    
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
+    if (this.roomPriceDetails.breakdown?.afterNightly?.hours) {
+      return this.roomPriceDetails.breakdown.afterNightly.hours;
+    }
+    
+    // Kiểm tra trực tiếp từ roomPriceDetails
+    if (this.roomPriceDetails.lateCheckoutHours) {
+      return this.roomPriceDetails.lateCheckoutHours;
+    }
+    
+    return 0;
+  }
+  
+  // Getter để lấy số tiền qua đêm (basePrice)
+  getBaseRoomPrice(): number {
+    if (!this.roomPriceDetails) return 0;
+    
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
+    if (this.roomPriceDetails.breakdown?.nightly?.price) {
+      return this.roomPriceDetails.breakdown.nightly.price;
+    }
+    
+    // Kiểm tra trực tiếp từ roomPriceDetails
+    if (this.roomPriceDetails.basePrice) {
+      return this.roomPriceDetails.basePrice;
+    }
+    
+    return 0;
+  }
+  
+  // Getter để lấy số đêm (nights)
+  getNights(): number {
+    if (!this.roomPriceDetails) return 0;
+    
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
+    if (this.roomPriceDetails.breakdown?.nightly?.nights) {
+      return this.roomPriceDetails.breakdown.nightly.nights;
+    }
+    
+    // Kiểm tra trực tiếp từ roomPriceDetails
+    if (this.roomPriceDetails.nights) {
+      return this.roomPriceDetails.nights;
+    }
+    
+    return 0;
+  }
+  
+  // Getter để lấy số giờ (hours) - cho hourly rate
+  getHours(): number {
+    if (!this.roomPriceDetails) return 0;
+    
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
+    if (this.roomPriceDetails.breakdown?.hourly?.hours) {
+      return this.roomPriceDetails.breakdown.hourly.hours;
+    }
+    
+    // Kiểm tra trực tiếp từ roomPriceDetails
+    if (this.roomPriceDetails.hours) {
+      return this.roomPriceDetails.hours;
+    }
+    
+    return 0;
+  }
+  
+  // Getter để lấy giá theo giờ (hourlyPrice) - cho hourly rate
+  getHourlyPrice(): number {
+    if (!this.roomPriceDetails) return 0;
+    
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
+    if (this.roomPriceDetails.breakdown?.hourly?.price) {
+      return this.roomPriceDetails.breakdown.hourly.price;
+    }
+    
+    // Kiểm tra trực tiếp từ roomPriceDetails
+    if (this.roomPriceDetails.hourlyPrice) {
+      return this.roomPriceDetails.hourlyPrice;
+    }
+    
+    // Nếu có basePrice và rateType là hourly
+    if (this.roomPriceDetails.basePrice && this.roomPriceDetails.rateType === 'hourly') {
+      return this.roomPriceDetails.basePrice;
+    }
+    
+    return 0;
+  }
+  
+  // Debug method để kiểm tra roomPriceDetails
+  debugRoomPriceDetails(): void {
+    console.log('roomPriceDetails:', this.roomPriceDetails);
+    console.log('getEarlyCheckinSurcharge():', this.getEarlyCheckinSurcharge());
+    console.log('getEarlyCheckinHours():', this.getEarlyCheckinHours());
+    console.log('getLateCheckoutSurcharge():', this.getLateCheckoutSurcharge());
+    console.log('getLateCheckoutHours():', this.getLateCheckoutHours());
+    console.log('getBaseRoomPrice():', this.getBaseRoomPrice());
+    console.log('getNights():', this.getNights());
+    console.log('getHours():', this.getHours());
+    console.log('getHourlyPrice():', this.getHourlyPrice());
   }
 }

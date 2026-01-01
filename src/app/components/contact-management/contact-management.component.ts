@@ -4,6 +4,7 @@ import { ContactService, Contact, ContactQuery, ContactStats } from '../../servi
 import { AuthService } from '../../services/auth.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-contact-management',
@@ -40,19 +41,15 @@ export class ContactManagementComponent implements OnInit {
   notesForm!: FormGroup;
   isUpdatingNotes = false;
 
-  statusOptions = [
-    { value: 'pending', label: 'Chờ xử lý', color: 'orange' },
-    { value: 'read', label: 'Đã đọc', color: 'blue' },
-    { value: 'replied', label: 'Đã phản hồi', color: 'green' },
-    { value: 'archived', label: 'Đã lưu trữ', color: 'default' }
-  ];
+  statusOptions: { value: string; label: string; color: string }[] = [];
 
   constructor(
     private contactService: ContactService,
     public authService: AuthService,
     private message: NzMessageService,
     private modal: NzModalService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private translate: TranslateService
   ) {
     this.replyForm = this.fb.group({
       replyMessage: ['', [Validators.required, Validators.minLength(10)]]
@@ -64,8 +61,21 @@ export class ContactManagementComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.initStatusOptions();
     this.loadContacts();
     this.loadStats();
+    this.translate.onLangChange.subscribe(() => {
+      this.initStatusOptions();
+    });
+  }
+
+  private initStatusOptions(): void {
+    this.statusOptions = [
+      { value: 'pending', label: this.translate.instant('CONTACT_MANAGEMENT.PENDING'), color: 'orange' },
+      { value: 'read', label: this.translate.instant('CONTACT_MANAGEMENT.READ'), color: 'blue' },
+      { value: 'replied', label: this.translate.instant('CONTACT_MANAGEMENT.REPLIED'), color: 'green' },
+      { value: 'archived', label: this.translate.instant('CONTACT_MANAGEMENT.ARCHIVED'), color: 'default' }
+    ];
   }
 
   get isAdmin(): boolean {
@@ -104,7 +114,7 @@ export class ContactManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading contacts:', error);
-        this.message.error('Lỗi khi tải danh sách liên hệ');
+        this.message.error(this.translate.instant('CONTACT_MANAGEMENT.LOAD_ERROR'));
         this.isLoading = false;
       }
     });
@@ -171,7 +181,7 @@ export class ContactManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading contact detail:', error);
-        this.message.error('Lỗi khi tải chi tiết liên hệ');
+        this.message.error(this.translate.instant('CONTACT_MANAGEMENT.LOAD_DETAIL_ERROR'));
       }
     });
   }
@@ -209,7 +219,7 @@ export class ContactManagementComponent implements OnInit {
 
     this.contactService.replyContact(this.selectedContact._id, replyMessage).subscribe({
       next: (response) => {
-        this.message.success('Phản hồi liên hệ thành công');
+        this.message.success(this.translate.instant('CONTACT_MANAGEMENT.REPLY_SUCCESS'));
         this.closeReplyModal();
         this.loadContacts();
         this.loadStats();
@@ -217,7 +227,7 @@ export class ContactManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error replying contact:', error);
-        this.message.error(error.error?.error || 'Lỗi khi phản hồi liên hệ');
+        this.message.error(error.error?.error || this.translate.instant('CONTACT_MANAGEMENT.REPLY_ERROR'));
         this.isReplying = false;
       }
     });
@@ -226,7 +236,7 @@ export class ContactManagementComponent implements OnInit {
   updateStatus(contact: Contact, status: string): void {
     this.contactService.updateContactStatus(contact._id!, status).subscribe({
       next: (response) => {
-        this.message.success('Cập nhật trạng thái thành công');
+        this.message.success(this.translate.instant('CONTACT_MANAGEMENT.UPDATE_STATUS_SUCCESS'));
         this.loadContacts();
         this.loadStats();
         if (this.selectedContact && this.selectedContact._id === contact._id) {
@@ -235,7 +245,7 @@ export class ContactManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error updating status:', error);
-        this.message.error(error.error?.error || 'Lỗi khi cập nhật trạng thái');
+        this.message.error(error.error?.error || this.translate.instant('CONTACT_MANAGEMENT.UPDATE_STATUS_ERROR'));
       }
     });
   }
@@ -289,7 +299,22 @@ export class ContactManagementComponent implements OnInit {
 
   getStatusLabel(status: string): string {
     const option = this.statusOptions.find(opt => opt.value === status);
-    return option ? option.label : status;
+    if (option) {
+      return option.label;
+    }
+    // Fallback nếu không tìm thấy trong options
+    switch (status) {
+      case 'pending':
+        return this.translate.instant('CONTACT_MANAGEMENT.PENDING');
+      case 'read':
+        return this.translate.instant('CONTACT_MANAGEMENT.READ');
+      case 'replied':
+        return this.translate.instant('CONTACT_MANAGEMENT.REPLIED');
+      case 'archived':
+        return this.translate.instant('CONTACT_MANAGEMENT.ARCHIVED');
+      default:
+        return status;
+    }
   }
 
   getStatusColor(status: string): string {

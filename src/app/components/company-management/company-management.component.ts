@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { BusinessService } from '../../services/business.service'; 
 import { Business, BusinessAddress, BusinessContactInfo } from '../../interfaces/business';
@@ -12,6 +12,7 @@ import { User } from '../../interfaces/user';
 import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 
 const businessStatusesList = ['pending', 'active', 'inactive', 'suspended'] as const;
 type BusinessStatus = typeof businessStatusesList[number];
@@ -21,7 +22,7 @@ type BusinessStatus = typeof businessStatusesList[number];
   templateUrl: './company-management.component.html',
   styleUrls: ['./company-management.component.css']
 })
-export class CompanyManagementComponent implements OnInit {
+export class CompanyManagementComponent implements OnInit, OnDestroy {
   businessForm: FormGroup;
   businesses: Business[] = [];
   selectedBusiness: Business | null = null;
@@ -41,6 +42,8 @@ export class CompanyManagementComponent implements OnInit {
   statusOptions: { value: BusinessStatus, label: string }[] = [];
 
   readonly businessStatuses = businessStatusesList;
+  
+  private subscriptions = new Subscription();
 
   constructor(
     private businessService: BusinessService, 
@@ -81,6 +84,17 @@ export class CompanyManagementComponent implements OnInit {
     this.permissions = this.authService.getPermissionRules();
     this.loadBusinesses();
     this.loadHotels();
+    
+    // Subscribe to language changes to update statusOptions
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.initStatusOptions();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
   }
 
   private initStatusOptions(): void {
@@ -545,7 +559,7 @@ export class CompanyManagementComponent implements OnInit {
   getHotelName(hotelIdOrObject: string | Hotel): string {
     if (typeof hotelIdOrObject === 'string') {
       const hotel = this.availableHotels.find(h => h._id === hotelIdOrObject);
-      return hotel ? hotel.name : 'Không tìm thấy';
+      return hotel ? hotel.name : this.translate.instant('COMPANY_MANAGEMENT.NOT_FOUND');
     }
     return hotelIdOrObject.name; 
   }
@@ -564,6 +578,18 @@ export class CompanyManagementComponent implements OnInit {
       case 'suspended': return 'red';
       default: return 'blue';
     }
+  }
+
+  getApproveSuccessMessage(): string {
+    return this.translate.instant('COMPANY_MANAGEMENT.APPROVE_SUCCESS');
+  }
+
+  getRejectSuccessMessage(): string {
+    return this.translate.instant('COMPANY_MANAGEMENT.REJECT_SUCCESS');
+  }
+
+  getReactivateSuccessMessage(): string {
+    return this.translate.instant('COMPANY_MANAGEMENT.REACTIVATE_SUCCESS');
   }
 
   /**
@@ -606,11 +632,11 @@ export class CompanyManagementComponent implements OnInit {
         this.businessForm.patchValue({
           logo: imageUrl
         });
-        this.message.success('Tải lên logo thành công');
+        this.message.success(this.translate.instant('COMPANY_MANAGEMENT.UPLOAD_SUCCESS'));
       }
       this.isLoadingUpload = false;
     } else if (info.file.status === 'error') {
-      this.message.error(`Lỗi khi tải lên logo: ${info.file.error?.message || 'Không xác định'}`);
+      this.message.error(`${this.translate.instant('COMPANY_MANAGEMENT.UPLOAD_ERROR')} ${info.file.error?.message || this.translate.instant('COMPANY_MANAGEMENT.UPLOAD_ERROR_UNKNOWN')}`);
       console.error('Upload error:', info.file.error);
       this.isLoadingUpload = false;
     }
@@ -619,12 +645,12 @@ export class CompanyManagementComponent implements OnInit {
   beforeUpload = (file: NzUploadFile): boolean => {
     const isImage = file.type?.startsWith('image/');
     if (!isImage) {
-      this.message.error('Bạn chỉ có thể tải lên file hình ảnh!');
+      this.message.error(this.translate.instant('COMPANY_MANAGEMENT.UPLOAD_IMAGE_ONLY'));
       return false;
     }
     const isLt5M = (file.size || 0) / 1024 / 1024 < 5;
     if (!isLt5M) {
-      this.message.error('Hình ảnh phải nhỏ hơn 5MB!');
+      this.message.error(this.translate.instant('COMPANY_MANAGEMENT.IMAGE_SIZE_ERROR'));
       return false;
     }
     this.fileList = this.fileList.concat(file);

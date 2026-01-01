@@ -814,7 +814,7 @@ export class ServiceManagementComponent implements OnInit {
 
   exportStatisticsToExcel(): void {
     if (!this.statisticsData) {
-      this.message.warning('Vui lòng xem thống kê trước khi xuất Excel');
+      this.message.warning(this.translate.instant('SERVICE_MANAGEMENT.EXPORT.VIEW_STATS_FIRST'));
       return;
     }
 
@@ -826,34 +826,34 @@ export class ServiceManagementComponent implements OnInit {
 
       // Sheet 1: Tổng quan
       const summaryData = [
-        ['THỐNG KÊ DOANH THU DỊCH VỤ'],
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.TITLE')],
         [''],
-        ['Tổng doanh thu', this.statisticsData.totalRevenue],
-        ['Tổng số đơn', this.statisticsData.totalOrders],
-        ['Tổng số lượng', this.statisticsData.totalQuantity],
-        ['Giá trị đơn trung bình', this.statisticsData.averageOrderValue],
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.TOTAL_REVENUE'), this.statisticsData.totalRevenue],
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.TOTAL_ORDERS'), this.statisticsData.totalOrders],
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.TOTAL_QUANTITY'), this.statisticsData.totalQuantity],
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.AVERAGE_ORDER_VALUE'), this.statisticsData.averageOrderValue],
         [''],
-        ['Thời gian thống kê', 
-          this.statisticsFilter.startDate ? format(new Date(this.statisticsFilter.startDate), 'dd/MM/yyyy') : 'Tất cả',
-          'đến',
-          this.statisticsFilter.endDate ? format(new Date(this.statisticsFilter.endDate), 'dd/MM/yyyy') : 'Tất cả'
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.STATISTICS_PERIOD'), 
+          this.statisticsFilter.startDate ? format(new Date(this.statisticsFilter.startDate), 'dd/MM/yyyy') : this.translate.instant('SERVICE_MANAGEMENT.EXPORT.ALL'),
+          this.translate.instant('SERVICE_MANAGEMENT.EXPORT.TO'),
+          this.statisticsFilter.endDate ? format(new Date(this.statisticsFilter.endDate), 'dd/MM/yyyy') : this.translate.instant('SERVICE_MANAGEMENT.EXPORT.ALL')
         ],
-        ['Khách sạn', this.statisticsFilter.hotelId ? this.getHotelName(this.statisticsFilter.hotelId) : 'Tất cả']
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.HOTEL'), this.statisticsFilter.hotelId ? this.getHotelName(this.statisticsFilter.hotelId) : this.translate.instant('SERVICE_MANAGEMENT.EXPORT.ALL')]
       ];
 
       const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
       summarySheet['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 10 }, { wch: 20 }];
-      workbook.Sheets['Tổng quan'] = summarySheet;
-      workbook.SheetNames.push('Tổng quan');
+      workbook.Sheets[this.translate.instant('SERVICE_MANAGEMENT.EXPORT.SUMMARY_SHEET')] = summarySheet;
+      workbook.SheetNames.push(this.translate.instant('SERVICE_MANAGEMENT.EXPORT.SUMMARY_SHEET'));
 
       // Sheet 2: Thống kê theo dịch vụ
       const serviceData = this.statisticsData.serviceStats.map((stat: any) => ({
-        'Tên dịch vụ': stat.serviceName,
-        'Danh mục': this.getCategoryLabel(stat.category),
-        'Số lượng bán': stat.quantity,
-        'Doanh thu': stat.revenue,
-        'Giá bán TB': stat.averagePrice,
-        'Số đơn': stat.orderCount
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.SERVICE_NAME')]: stat.serviceName,
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.CATEGORY')]: this.getCategoryLabel(stat.category),
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.QUANTITY_SOLD')]: stat.quantity,
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.REVENUE')]: stat.revenue,
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.AVERAGE_PRICE')]: stat.averagePrice,
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.ORDER_COUNT')]: stat.orderCount
       }));
 
       if (serviceData.length > 0) {
@@ -866,16 +866,16 @@ export class ServiceManagementComponent implements OnInit {
           { wch: 15 }, // Giá bán TB
           { wch: 10 }  // Số đơn
         ];
-        workbook.Sheets['Thống kê theo dịch vụ'] = serviceSheet;
-        workbook.SheetNames.push('Thống kê theo dịch vụ');
+        workbook.Sheets[this.translate.instant('SERVICE_MANAGEMENT.EXPORT.SERVICE_STATS_SHEET')] = serviceSheet;
+        workbook.SheetNames.push(this.translate.instant('SERVICE_MANAGEMENT.EXPORT.SERVICE_STATS_SHEET'));
       }
 
       // Sheet 3: Thống kê theo danh mục
       const categoryData = this.statisticsData.categoryStats.map((stat: any) => ({
-        'Danh mục': this.getCategoryLabel(stat.category),
-        'Số lượng bán': stat.quantity,
-        'Doanh thu': stat.revenue,
-        'Tỷ lệ (%)': stat.percentage
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.CATEGORY')]: this.getCategoryLabel(stat.category),
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.QUANTITY_SOLD')]: stat.quantity,
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.REVENUE')]: stat.revenue,
+        [this.translate.instant('SERVICE_MANAGEMENT.EXPORT.PERCENTAGE')]: stat.percentage
       }));
 
       if (categoryData.length > 0) {
@@ -886,8 +886,8 @@ export class ServiceManagementComponent implements OnInit {
           { wch: 15 }, // Doanh thu
           { wch: 12 }  // Tỷ lệ
         ];
-        workbook.Sheets['Thống kê theo danh mục'] = categorySheet;
-        workbook.SheetNames.push('Thống kê theo danh mục');
+        workbook.Sheets[this.translate.instant('SERVICE_MANAGEMENT.EXPORT.CATEGORY_STATS_SHEET')] = categorySheet;
+        workbook.SheetNames.push(this.translate.instant('SERVICE_MANAGEMENT.EXPORT.CATEGORY_STATS_SHEET'));
       }
 
       // Tạo tên file
@@ -898,11 +898,11 @@ export class ServiceManagementComponent implements OnInit {
 
       // Xuất file
       XLSX.writeFile(workbook, `${fileName}.xlsx`);
-      this.message.success('Đã xuất file Excel thống kê thành công!');
+      this.message.success(this.translate.instant('SERVICE_MANAGEMENT.EXPORT.SUCCESS'));
       this.isExportingStatistics = false;
     } catch (error) {
       console.error('Lỗi khi xuất Excel:', error);
-      this.message.error('Lỗi khi xuất file Excel');
+      this.message.error(this.translate.instant('SERVICE_MANAGEMENT.EXPORT.ERROR'));
       this.isExportingStatistics = false;
     }
   }

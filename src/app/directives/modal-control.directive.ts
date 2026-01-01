@@ -715,13 +715,29 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   
   // Hiển thị modal đặt phòng trước
   showBookingModal(): void {
+    // Xử lý hotelId (có thể là object hoặc string)
+    let hotelId: string | null = null;
+    if (this.room.hotelId) {
+      if (typeof this.room.hotelId === 'string') {
+        hotelId = this.room.hotelId;
+      } else if (typeof this.room.hotelId === 'object' && this.room.hotelId !== null) {
+        const hotelIdObj = this.room.hotelId as any;
+        hotelId = hotelIdObj._id ? String(hotelIdObj._id) : String(hotelIdObj);
+      }
+    }
+    
+    // Nếu không có hotelId, lấy từ localStorage
+    if (!hotelId) {
+      hotelId = localStorage.getItem('selectedHotelId');
+    }
+    
     let bookingModalRef: NzModalRef | null = null;
     bookingModalRef = this.modalService.create({
       nzTitle: `Đặt phòng ${this.room.roomNumber}`,
       nzContent: BookingModalComponent,
       nzData: {
         selectedDate: new Date(),
-        hotelId: this.room.hotelId,
+        hotelId: hotelId,
         roomId: this.room._id,
         rooms: [this.room] // Chỉ hiển thị phòng hiện tại
       },

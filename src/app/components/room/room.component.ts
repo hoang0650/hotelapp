@@ -61,6 +61,10 @@ export class RoomComponent implements OnInit, OnDestroy {
   isCalendarPanelActive = false;
   isHistoryPanelActive = false;
   
+  // Compact mode for room display
+  isCompactMode = false; // Chế độ rút gọn: chỉ hiển thị số phòng, thời gian lưu trú và loại phòng
+  Math = Math; // Expose Math object to template for calculations
+  
   // Phiếu chi
   isExpenseModalVisible = false;
   expenseForm: FormGroup;
@@ -1059,6 +1063,92 @@ export class RoomComponent implements OnInit, OnDestroy {
     localStorage.setItem('roomColumnsCount', count.toString());
   }
 
+  getRoomColSpan(): number {
+    if (this.isCompactMode) {
+      // Với số cột lớn (6, 8, 12), giữ nguyên hoặc tăng nhẹ để phòng rộng hơn
+      if (this.count >= 12) {
+        // 12 cột: giữ nguyên để phòng rộng hơn
+        return 24 / 12; // = 2
+      }
+      if (this.count >= 8) {
+        // 8 cột: tăng nhẹ lên 9 cột thay vì 12 để phòng rộng hơn
+        return Math.floor(24 / 9); // ≈ 2.67 → 2
+      }
+      if (this.count >= 6) {
+        // 6 cột: tăng nhẹ lên 7 cột thay vì 9 để phòng rộng hơn
+        return Math.floor(24 / 7); // ≈ 3.4 → 3
+      }
+      // Với số cột nhỏ hơn (2, 3, 4), tăng 1.5 lần như cũ
+      const compactCount = Math.floor(this.count * 1.5);
+      return Math.max(1, Math.floor(24 / compactCount));
+    }
+    return 24 / this.count;
+  }
+
+  // Responsive methods for different breakpoints
+  getRoomColSpanXs(): number {
+    // Mobile (<576px): luôn full width
+    return 24;
+  }
+
+  getRoomColSpanSm(): number {
+    // Tablet (≥576px): giảm số cột để phòng không bị chật
+    if (this.isCompactMode) {
+      // Compact mode: với số cột lớn, giữ rộng hơn
+      if (this.count <= 3) return 8;   // 2-3 cột → 3 phòng/row
+      if (this.count <= 4) return 6;  // 4 cột → 4 phòng/row
+      if (this.count === 6) return 4; // 6 cột → 6 phòng/row (giữ nguyên)
+      if (this.count === 8) return 3; // 8 cột → 8 phòng/row (giữ nguyên)
+      if (this.count === 12) return 2; // 12 cột → 12 phòng/row (giữ nguyên)
+      return 4; // default
+    }
+    // Normal mode: giảm số cột trên tablet để dễ nhìn hơn
+    if (this.count <= 2) return 12; // 2 cột → 2 phòng/row
+    if (this.count <= 3) return 8;  // 3 cột → 3 phòng/row
+    if (this.count <= 4) return 6; // 4 cột → 4 phòng/row
+    if (this.count <= 6) return 4; // 6 cột → 6 phòng/row
+    if (this.count <= 8) return 3; // 8 cột → 8 phòng/row
+    return 2; // 12 cột → 12 phòng/row
+  }
+
+  getRoomColSpanMd(): number {
+    // Tablet landscape (≥768px): bắt đầu hiển thị đúng số cột nhưng vẫn điều chỉnh cho số cột lớn
+    if (this.count <= 4) {
+      return this.getRoomColSpan();
+    }
+    // Với số cột lớn (6, 8, 12), giảm một chút để không quá chật
+    if (this.count === 6) return 4; // 6 cột → 6 phòng/row
+    if (this.count === 8) return 3; // 8 cột → 8 phòng/row
+    if (this.count === 12) return 2; // 12 cột → 12 phòng/row
+    return this.getRoomColSpan();
+  }
+
+  getRoomColSpanLg(): number {
+    // Desktop (≥992px): hiển thị đúng số cột
+    return this.getRoomColSpan();
+  }
+
+  getRoomColSpanXl(): number {
+    // Large desktop (≥1200px): hiển thị đúng số cột
+    return this.getRoomColSpan();
+  }
+
+  // Điều chỉnh gutter (khoảng cách) dựa trên số cột để phòng không bị chật
+  getRoomGutter(): [number, number] {
+    // Khi số cột lớn, giảm gutter để tiết kiệm không gian
+    if (this.count >= 12) {
+      return [8, 8]; // Gutter nhỏ nhất cho 12 cột
+    }
+    if (this.count >= 8) {
+      return [10, 10]; // Gutter nhỏ cho 8 cột
+    }
+    if (this.count >= 6) {
+      return [12, 12]; // Gutter vừa cho 6 cột
+    }
+    // Gutter mặc định cho số cột nhỏ hơn
+    return [this.hGutter, this.vGutter];
+  }
+
   switchValue = false;
 
   onSelectRoom(room: Room): void {
@@ -1386,15 +1476,17 @@ export class RoomComponent implements OnInit, OnDestroy {
         ? new Date(room.currentBooking.checkOutDate)
         : null;
       
-      const rateTypeLabels: {[key: string]: string} = {
-        'hourly': 'Theo giờ',
-        'daily': 'Ngày đêm',
-        'nightly': 'Qua đêm'
-      };
       // Lấy rateType từ bookingType hoặc rateType (tương thích cả hai)
       const currentBooking = room.currentBooking as any;
       const rateType = currentBooking?.rateType || currentBooking?.bookingType || 'hourly';
-      const rateTypeLabel = rateTypeLabels[rateType] || 'Theo giờ';
+      
+      // Sử dụng translation thay vì hardcode
+      const rateTypeLabels: {[key: string]: string} = {
+        'hourly': this.translate.instant('ROOM.RATE_TYPE_HOURLY') || 'Theo giờ',
+        'daily': this.translate.instant('ROOM.RATE_TYPE_DAILY') || 'Ngày đêm',
+        'nightly': this.translate.instant('ROOM.RATE_TYPE_NIGHTLY') || 'Qua đêm'
+      };
+      const rateTypeLabel = rateTypeLabels[rateType] || this.translate.instant('ROOM.RATE_TYPE_HOURLY') || 'Theo giờ';
       
       const checkInDateStr = checkInDate 
         ? `${checkInDate.getHours().toString().padStart(2, '0')}:${checkInDate.getMinutes().toString().padStart(2, '0')} ${checkInDate.getDate().toString().padStart(2, '0')}/${(checkInDate.getMonth() + 1).toString().padStart(2, '0')}/${checkInDate.getFullYear()}`
@@ -1425,12 +1517,13 @@ export class RoomComponent implements OnInit, OnDestroy {
         const checkInDate = bookingEvent.checkinTime ? new Date(bookingEvent.checkinTime) : null;
         const expectedCheckoutTime = bookingEvent.expectedCheckoutTime ? new Date(bookingEvent.expectedCheckoutTime) : null;
         
+        // Sử dụng translation thay vì hardcode
         const rateTypeLabels: {[key: string]: string} = {
-          'hourly': 'Theo giờ',
-          'daily': 'Ngày đêm',
-          'nightly': 'Qua đêm'
+          'hourly': this.translate.instant('ROOM.RATE_TYPE_HOURLY') || 'Theo giờ',
+          'daily': this.translate.instant('ROOM.RATE_TYPE_DAILY') || 'Ngày đêm',
+          'nightly': this.translate.instant('ROOM.RATE_TYPE_NIGHTLY') || 'Qua đêm'
         };
-        const rateTypeLabel = rateTypeLabels[bookingEvent.rateType || 'hourly'] || 'Theo giờ';
+        const rateTypeLabel = rateTypeLabels[bookingEvent.rateType || 'hourly'] || this.translate.instant('ROOM.RATE_TYPE_HOURLY') || 'Theo giờ';
         
         const checkInDateStr = checkInDate 
           ? `${checkInDate.getHours().toString().padStart(2, '0')}:${checkInDate.getMinutes().toString().padStart(2, '0')} ${checkInDate.getDate().toString().padStart(2, '0')}/${(checkInDate.getMonth() + 1).toString().padStart(2, '0')}/${checkInDate.getFullYear()}`
@@ -1478,11 +1571,24 @@ export class RoomComponent implements OnInit, OnDestroy {
       ? `${checkinInfo.checkinTime.getHours().toString().padStart(2, '0')}:${checkinInfo.checkinTime.getMinutes().toString().padStart(2, '0')} ${checkinInfo.checkinTime.getDate().toString().padStart(2, '0')}/${(checkinInfo.checkinTime.getMonth() + 1).toString().padStart(2, '0')}/${checkinInfo.checkinTime.getFullYear()}`
       : '';
     
-    // Công thức mới:
-    // Tổng tiền = tiền phòng + phụ thu + tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
-    // ĐỒNG BỘ: Công thức này phải khớp với room-content-modal.component.ts:
-    // totalPrice = roomPrice + totalAdditionalCharges + serviceTotal
-    const totalAmount = checkinInfo.roomPrice + checkinInfo.additionalCharges + checkinInfo.serviceAmount;
+    // Lấy totalAmount từ room.totalPrice (được tính từ room-content-modal) nếu có
+    // Nếu không có thì tính lại theo công thức cũ
+    let totalAmount = 0;
+    if (room._id) {
+      const savedTotalPrice = localStorage.getItem(`room_${room._id}_totalPrice`);
+      if (savedTotalPrice) {
+        totalAmount = parseFloat(savedTotalPrice) || 0;
+      }
+    }
+    
+    // Nếu không có totalPrice từ modal, tính lại theo công thức
+    if (totalAmount === 0) {
+      // Công thức mới:
+      // Tổng tiền = tiền phòng + phụ thu + tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
+      // ĐỒNG BỘ: Công thức này phải khớp với room-content-modal.component.ts:
+      // totalPrice = roomPrice + totalAdditionalCharges + serviceTotal
+      totalAmount = checkinInfo.roomPrice + checkinInfo.additionalCharges + checkinInfo.serviceAmount;
+    }
     
     // Còn thu = Tổng tiền - đặt trước - khuyến mãi (cho phép số âm)
     // ĐỒNG BỘ: Công thức này phải khớp với room-content-modal.component.ts:
@@ -2060,6 +2166,50 @@ export class RoomComponent implements OnInit, OnDestroy {
     
     // Mặc định
     return 'walkin';
+  }
+
+  // Tính và hiển thị thời gian lưu trú của khách (tương tự invoice component)
+  getRoomDurationText(room: Room): string {
+    if (room.status !== 'occupied') {
+      return '';
+    }
+
+    const checkinInfo = this.getRoomCheckinInfo(room);
+    if (!checkinInfo || !checkinInfo.checkinTime) {
+      return '';
+    }
+
+    const checkInTime = checkinInfo.checkinTime instanceof Date
+      ? checkinInfo.checkinTime
+      : new Date(checkinInfo.checkinTime);
+    const checkOutTime = new Date(); // Thời gian hiện tại (vì phòng đang occupied, chưa checkout)
+
+    if (isNaN(checkInTime.getTime()) || isNaN(checkOutTime.getTime())) {
+      return '';
+    }
+
+    // Tính chính xác thời gian lưu trú
+    const durationInMs = checkOutTime.getTime() - checkInTime.getTime();
+    const totalMinutes = Math.floor(durationInMs / (1000 * 60));
+
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+    const minutes = totalMinutes % 60;
+
+    // Hiển thị theo định dạng: X ngày Y giờ Z phút hoặc Y giờ Z phút
+    const parts: string[] = [];
+
+    if (days > 0) {
+      parts.push(`${days} ngày`);
+    }
+    if (hours > 0) {
+      parts.push(`${hours} giờ`);
+    }
+    if (minutes > 0 || (days === 0 && hours === 0)) {
+      parts.push(`${minutes} phút`);
+    }
+
+    return parts.length > 0 ? parts.join(' ') : '0 phút';
   }
 
   // Xử lý khi chọn ngày từ calendar để đặt phòng

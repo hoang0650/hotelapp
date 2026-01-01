@@ -3,7 +3,7 @@
     <div class="header-section">
       <h2 class="mb-4">
         <i nz-icon nzType="mail" nzTheme="outline"></i>
-        Quản Lý Liên Hệ
+        {{ 'CONTACT_MANAGEMENT.TITLE' | translate }}
       </h2>
     </div>
 
@@ -12,28 +12,28 @@
       <div nz-col [nzXs]="12" [nzSm]="6" [nzMd]="6">
         <nz-statistic 
           [nzValue]="stats.total" 
-          nzTitle="Tổng số" 
+          [nzTitle]="'CONTACT_MANAGEMENT.TOTAL' | translate" 
           [nzValueStyle]="{ color: '#1890ff' }">
         </nz-statistic>
       </div>
       <div nz-col [nzXs]="12" [nzSm]="6" [nzMd]="6">
         <nz-statistic 
           [nzValue]="stats.pending" 
-          nzTitle="Chờ xử lý" 
+          [nzTitle]="'CONTACT_MANAGEMENT.PENDING' | translate" 
           [nzValueStyle]="{ color: '#faad14' }">
         </nz-statistic>
       </div>
       <div nz-col [nzXs]="12" [nzSm]="6" [nzMd]="6">
         <nz-statistic 
           [nzValue]="stats.read" 
-          nzTitle="Đã đọc" 
+          [nzTitle]="'CONTACT_MANAGEMENT.READ' | translate" 
           [nzValueStyle]="{ color: '#1890ff' }">
         </nz-statistic>
       </div>
       <div nz-col [nzXs]="12" [nzSm]="6" [nzMd]="6">
         <nz-statistic 
           [nzValue]="stats.replied" 
-          nzTitle="Đã phản hồi" 
+          [nzTitle]="'CONTACT_MANAGEMENT.REPLIED' | translate" 
           [nzValueStyle]="{ color: '#52c41a' }">
         </nz-statistic>
       </div>
@@ -48,7 +48,7 @@
             nz-input 
             [(ngModel)]="searchValue"
             (keyup.enter)="onSearch()"
-            placeholder="Tìm kiếm theo tên, email, chủ đề..." />
+            [placeholder]="'CONTACT_MANAGEMENT.SEARCH_PLACEHOLDER' | translate" />
         </nz-input-group>
         <ng-template #suffixIconSearch>
           <i nz-icon nzType="search" (click)="onSearch()"></i>
@@ -57,7 +57,7 @@
       
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-select 
-          nzPlaceHolder="Lọc theo trạng thái"
+          [nzPlaceHolder]="'CONTACT_MANAGEMENT.FILTER_BY_STATUS' | translate"
           [(ngModel)]="selectedStatus"
           (ngModelChange)="onStatusChange($event)"
           nzAllowClear
@@ -71,7 +71,7 @@
           [(ngModel)]="dateRange"
           (ngModelChange)="onDateRangeChange($event)"
           nzFormat="yyyy-MM-dd"
-          nzPlaceHolder="['Từ ngày', 'Đến ngày']"
+          [nzPlaceHolder]="['CONTACT_MANAGEMENT.FROM_DATE' | translate, 'CONTACT_MANAGEMENT.TO_DATE' | translate]"
           class="w-100">
         </nz-range-picker>
       </div>
@@ -87,13 +87,13 @@
       nzSize="middle">
       <thead>
         <tr>
-          <th>Họ tên</th>
-          <th>Email</th>
-          <th>Số điện thoại</th>
-          <th>Chủ đề</th>
-          <th>Trạng thái</th>
-          <th>Ngày gửi</th>
-          <th>Thao tác</th>
+          <th>{{ 'CONTACT_MANAGEMENT.FULL_NAME' | translate }}</th>
+          <th>{{ 'CONTACT_MANAGEMENT.EMAIL' | translate }}</th>
+          <th>{{ 'CONTACT_MANAGEMENT.PHONE' | translate }}</th>
+          <th>{{ 'CONTACT_MANAGEMENT.SUBJECT' | translate }}</th>
+          <th>{{ 'CONTACT_MANAGEMENT.STATUS' | translate }}</th>
+          <th>{{ 'CONTACT_MANAGEMENT.SENT_DATE' | translate }}</th>
+          <th>{{ 'CONTACT_MANAGEMENT.ACTIONS' | translate }}</th>
         </tr>
       </thead>
       <tbody>
@@ -111,7 +111,7 @@
           <td>
             <button nz-button nzType="link" nzSize="small" (click)="viewDetail(contact)">
               <i nz-icon nzType="eye" nzTheme="outline"></i>
-              Xem
+              {{ 'CONTACT_MANAGEMENT.VIEW' | translate }}
             </button>
             <button 
               nz-button 
@@ -120,7 +120,7 @@
               (click)="openReplyModal(contact)"
               *ngIf="contact.status !== 'replied'">
               <i nz-icon nzType="message" nzTheme="outline"></i>
-              Phản hồi
+              {{ 'CONTACT_MANAGEMENT.REPLY' | translate }}
             </button>
             <button 
               nz-button 
@@ -128,7 +128,7 @@
               nzSize="small" 
               nzDanger
               nz-popconfirm
-              nzPopconfirmTitle="Bạn có chắc muốn xóa liên hệ này?"
+              [nzPopconfirmTitle]="'CONTACT_MANAGEMENT.CONFIRM_DELETE' | translate"
               (nzOnConfirm)="deleteContact(contact)">
               <i nz-icon nzType="delete" nzTheme="outline"></i>
             </button>
@@ -151,12 +151,12 @@
         (nzPageSizeChange)="onPageSizeChange($event)">
       </nz-pagination>
       <ng-template #totalTemplate let-total>
-        Tổng {{ total }} liên hệ
+        {{ 'CONTACT_MANAGEMENT.TOTAL_CONTACTS' | translate: {total: total} }}
       </ng-template>
     </div>
 
     <div *ngIf="contacts.length === 0 && !isLoading" class="empty-state">
-      <nz-empty nzNotFoundContent="Chưa có liên hệ nào"></nz-empty>
+      <nz-empty [nzNotFoundContent]="'CONTACT_MANAGEMENT.NO_CONTACTS' | translate"></nz-empty>
     </div>
   </nz-card>
 </div>
@@ -164,31 +164,31 @@
 <!-- Modal chi tiết liên hệ -->
 <nz-modal
   [(nzVisible)]="isDetailModalVisible"
-  nzTitle="Chi tiết liên hệ"
+  [nzTitle]="'CONTACT_MANAGEMENT.DETAIL_TITLE' | translate"
   (nzOnCancel)="closeDetailModal()"
   [nzFooter]="null"
   [nzWidth]="800">
   <ng-container *nzModalContent>
     <div *ngIf="selectedContact">
       <nz-descriptions nzBordered [nzColumn]="2">
-        <nz-descriptions-item nzTitle="Họ và tên">
+        <nz-descriptions-item [nzTitle]="'CONTACT_MANAGEMENT.FULL_NAME' | translate">
           {{ selectedContact.name }}
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Email">
+        <nz-descriptions-item [nzTitle]="'CONTACT_MANAGEMENT.EMAIL' | translate">
           {{ selectedContact.email }}
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Số điện thoại">
+        <nz-descriptions-item [nzTitle]="'CONTACT_MANAGEMENT.PHONE' | translate">
           {{ selectedContact.phone || 'N/A' }}
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Trạng thái">
+        <nz-descriptions-item [nzTitle]="'CONTACT_MANAGEMENT.STATUS' | translate">
           <nz-tag [nzColor]="getStatusColor(selectedContact.status || 'pending')">
             {{ getStatusLabel(selectedContact.status || 'pending') }}
           </nz-tag>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Chủ đề" [nzSpan]="2">
+        <nz-descriptions-item [nzTitle]="'CONTACT_MANAGEMENT.SUBJECT' | translate" [nzSpan]="2">
           {{ selectedContact.subject }}
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Nội dung" [nzSpan]="2">
+        <nz-descriptions-item [nzTitle]="'CONTACT_MANAGEMENT.MESSAGE' | translate" [nzSpan]="2">
           <div style="white-space: pre-wrap;">{{ selectedContact.message }}</div>
         </nz-descriptions-item>
         <nz-descriptions-item nzTitle="Ngày gửi">

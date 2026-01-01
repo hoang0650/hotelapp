@@ -114,7 +114,7 @@
     <!-- Chi tiết khách sạn Drawer -->
     <nz-drawer
       [nzVisible]="selectedViewHotel !== null"
-      nzTitle="Chi tiết khách sạn"
+      [nzTitle]="'HOTEL_MANAGEMENT.DETAIL_TITLE' | translate"
       (nzOnClose)="closeHotelDetails()"
       [nzWidth]="520">
       <ng-container *nzDrawerContent>
@@ -124,22 +124,22 @@
             *ngIf="isCascadeBlocked(selectedViewHotel)"
             nzType="error" 
             nzShowIcon
-            [nzMessage]="'Khách sạn đang ' + getHotelStatusLabel(selectedViewHotel.status)"
-            nzDescription="Tất cả phòng và nhân viên thuộc khách sạn này đang bị tạm ngưng hoạt động."
+            [nzMessage]="('HOTEL_MANAGEMENT.HOTEL_IS' | translate) + ' ' + getHotelStatusLabel(selectedViewHotel.status)"
+            [nzDescription]="'HOTEL_MANAGEMENT.CASCADE_BLOCKED_DESC' | translate"
             class="mb-4">
           </nz-alert>
 
-          <nz-descriptions nzTitle="Thông tin cơ bản" nzBordered [nzColumn]="1">
-            <nz-descriptions-item nzTitle="Tên khách sạn">
+          <nz-descriptions [nzTitle]="'HOTEL_MANAGEMENT.BASIC_INFO' | translate" nzBordered [nzColumn]="1">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.HOTEL_NAME' | translate">
               {{ selectedViewHotel.name }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Xếp hạng">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.STAR_RATING' | translate">
               <nz-rate [ngModel]="selectedViewHotel.starRating || 0" nzDisabled></nz-rate>
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Doanh nghiệp" *ngIf="isAdmin">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.BUSINESS' | translate" *ngIf="isAdmin">
               {{ getBusinessName(selectedViewHotel.businessId) }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Địa chỉ">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.ADDRESS' | translate">
               <span *ngIf="selectedViewHotel?.address">
                 {{ selectedViewHotel!.address!.street }}
                 <span *ngIf="selectedViewHotel!.address!.city">, {{ selectedViewHotel!.address!.city }}</span>
@@ -148,13 +148,13 @@
               </span>
               <span *ngIf="!selectedViewHotel?.address">-</span>
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Điện thoại">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.PHONE' | translate">
               {{ selectedViewHotel!.contactInfo?.phone || '-' }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Email">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.EMAIL' | translate">
               {{ selectedViewHotel!.contactInfo?.email || '-' }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Website">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.WEBSITE' | translate">
               <a *ngIf="selectedViewHotel?.contactInfo?.website" 
                  [href]="selectedViewHotel!.contactInfo!.website" 
                  target="_blank">
@@ -162,15 +162,15 @@
               </a>
               <span *ngIf="!selectedViewHotel?.contactInfo?.website">-</span>
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Quản lý">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.MANAGER' | translate">
               {{ getManagerName(selectedViewHotel.managerId) }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Trạng thái">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.STATUS' | translate">
               <nz-tag [nzColor]="getStatusColor(selectedViewHotel.status)">
                 {{ getHotelStatusLabel(selectedViewHotel.status) }}
               </nz-tag>
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Mô tả" *ngIf="selectedViewHotel?.description">
+            <nz-descriptions-item [nzTitle]="'HOTEL_MANAGEMENT.DESCRIPTION' | translate" *ngIf="selectedViewHotel?.description">
               {{ selectedViewHotel.description }}
             </nz-descriptions-item>
           </nz-descriptions>
@@ -178,28 +178,28 @@
           <!-- Action Buttons -->
           <div class="mt-4" *ngIf="canManage(selectedViewHotel?._id)">
             <nz-divider></nz-divider>
-            <h4>Thao tác</h4>
+            <h4>{{ 'HOTEL_MANAGEMENT.ACTIONS_SECTION' | translate }}</h4>
             <nz-space>
               <!-- Suspend -->
               <ng-container *ngIf="selectedViewHotel?.status === 'active'">
                 <button *nzSpaceItem nz-button nzType="default" nzDanger
                         (click)="blockHotel(selectedViewHotel._id!)">
-                  <i nz-icon nzType="stop" nzTheme="outline"></i> Đình chỉ
+                  <i nz-icon nzType="stop" nzTheme="outline"></i> {{ 'HOTEL_MANAGEMENT.SUSPEND' | translate }}
                 </button>
               </ng-container>
               
               <!-- Activate -->
               <ng-container *ngIf="selectedViewHotel?.status === 'suspended' || selectedViewHotel?.status === 'inactive'">
                 <button *nzSpaceItem nz-button nzType="primary" 
-                        (click)="updateHotelStatusLogic(selectedViewHotel._id!, 'active', 'Khách sạn đã được kích hoạt lại.')">
-                  <i nz-icon nzType="play-circle" nzTheme="outline"></i> Kích hoạt lại
+                        (click)="updateHotelStatusLogic(selectedViewHotel._id!, 'active', getActivateSuccessMessage())">
+                  <i nz-icon nzType="play-circle" nzTheme="outline"></i> {{ 'HOTEL_MANAGEMENT.ACTIVATE' | translate }}
                 </button>
               </ng-container>
 
               <!-- Edit -->
               <button *nzSpaceItem nz-button nzType="default" 
                       (click)="startEdit(selectedViewHotel); closeHotelDetails()">
-                <i nz-icon nzType="edit" nzTheme="outline"></i> Chỉnh sửa
+                <i nz-icon nzType="edit" nzTheme="outline"></i> {{ 'HOTEL_MANAGEMENT.EDIT' | translate }}
               </button>
             </nz-space>
           </div>
@@ -212,92 +212,92 @@
       <form nz-form [formGroup]="hotelForm" (ngSubmit)="submitForm()">
         <h3>
           <i nz-icon [nzType]="editId === 'new' ? 'plus-circle' : 'edit'" nzTheme="outline"></i>
-          {{ editId === 'new' ? 'Tạo Khách sạn mới' : 'Cập nhật Khách sạn' }}
+          {{ editId === 'new' ? ('HOTEL_MANAGEMENT.CREATE_NEW' | translate) : ('HOTEL_MANAGEMENT.UPDATE' | translate) }}
         </h3>
         
         <nz-form-item>
-          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="name" nzRequired>Tên Khách sạn</nz-form-label>
-          <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="Vui lòng nhập tên khách sạn!">
-            <input nz-input formControlName="name" id="name" placeholder="Nhập tên khách sạn" />
+          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="name" nzRequired>{{ 'HOTEL_MANAGEMENT.HOTEL_NAME' | translate }}</nz-form-label>
+          <nz-form-control [nzSm]="14" [nzXs]="24" [nzErrorTip]="'HOTEL_MANAGEMENT.HOTEL_NAME_REQUIRED' | translate">
+            <input nz-input formControlName="name" id="name" [placeholder]="'HOTEL_MANAGEMENT.ENTER_HOTEL_NAME' | translate" />
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="businessId" nzRequired>Thuộc Doanh nghiệp</nz-form-label>
-          <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="Vui lòng chọn doanh nghiệp!">
-            <nz-select formControlName="businessId" id="businessId" nzPlaceHolder="Chọn doanh nghiệp chủ quản"
+          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="businessId" nzRequired>{{ 'HOTEL_MANAGEMENT.BELONGS_TO_BUSINESS' | translate }}</nz-form-label>
+          <nz-form-control [nzSm]="14" [nzXs]="24" [nzErrorTip]="'HOTEL_MANAGEMENT.BUSINESS_REQUIRED' | translate">
+            <nz-select formControlName="businessId" id="businessId" [nzPlaceHolder]="'HOTEL_MANAGEMENT.SELECT_BUSINESS' | translate"
                        [nzDisabled]="isBusiness">
               <nz-option *ngFor="let biz of businesses" [nzValue]="biz._id" [nzLabel]="biz.name"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
 
-        <nz-divider nzText="Địa chỉ Khách sạn" nzOrientation="left"></nz-divider>
+        <nz-divider [nzText]="'HOTEL_MANAGEMENT.ADDRESS_SECTION' | translate" nzOrientation="left"></nz-divider>
 
         <div formGroupName="address">
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="street">Đường</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="street">{{ 'HOTEL_MANAGEMENT.STREET' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="street" id="street" placeholder="Số nhà, tên đường" />
+              <input nz-input formControlName="street" id="street" [placeholder]="'HOTEL_MANAGEMENT.STREET_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="city">Thành phố/Tỉnh</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="city">{{ 'HOTEL_MANAGEMENT.CITY' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="city" id="city" placeholder="Thành phố hoặc tỉnh" />
+              <input nz-input formControlName="city" id="city" [placeholder]="'HOTEL_MANAGEMENT.CITY_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="state">Quận/Huyện</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="state">{{ 'HOTEL_MANAGEMENT.STATE' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="state" id="state" placeholder="Quận hoặc huyện" />
+              <input nz-input formControlName="state" id="state" [placeholder]="'HOTEL_MANAGEMENT.STATE_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="country">Quốc gia</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="country">{{ 'HOTEL_MANAGEMENT.COUNTRY' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="country" id="country" placeholder="Quốc gia" />
+              <input nz-input formControlName="country" id="country" [placeholder]="'HOTEL_MANAGEMENT.COUNTRY_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
         </div>
 
-        <nz-divider nzText="Thông tin liên hệ" nzOrientation="left"></nz-divider>
+        <nz-divider [nzText]="'HOTEL_MANAGEMENT.CONTACT_INFO' | translate" nzOrientation="left"></nz-divider>
 
         <div formGroupName="contactInfo">
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="phone">Số điện thoại</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="phone">{{ 'HOTEL_MANAGEMENT.PHONE_NUMBER' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="phone" id="phone" placeholder="Nhập số điện thoại" />
+              <input nz-input formControlName="phone" id="phone" [placeholder]="'HOTEL_MANAGEMENT.ENTER_PHONE' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="email">Email</nz-form-label>
-            <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="Email không hợp lệ!">
-              <input nz-input formControlName="email" id="email" placeholder="Nhập địa chỉ email" type="email"/>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="email">{{ 'HOTEL_MANAGEMENT.EMAIL' | translate }}</nz-form-label>
+            <nz-form-control [nzSm]="14" [nzXs]="24" [nzErrorTip]="'HOTEL_MANAGEMENT.INVALID_EMAIL' | translate">
+              <input nz-input formControlName="email" id="email" [placeholder]="'HOTEL_MANAGEMENT.ENTER_EMAIL' | translate" type="email"/>
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="website">Website</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="website">{{ 'HOTEL_MANAGEMENT.WEBSITE' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="website" id="website" placeholder="Địa chỉ website (tùy chọn)" />
+              <input nz-input formControlName="website" id="website" [placeholder]="'HOTEL_MANAGEMENT.WEBSITE_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
         </div>
 
-        <nz-divider nzText="Logo khách sạn" nzOrientation="left"></nz-divider>
+        <nz-divider [nzText]="'HOTEL_MANAGEMENT.LOGO_SECTION' | translate" nzOrientation="left"></nz-divider>
 
         <nz-form-item>
-          <nz-form-label [nzSm]="6" [nzXs]="24">Logo khách sạn</nz-form-label>
+          <nz-form-label [nzSm]="6" [nzXs]="24">{{ 'HOTEL_MANAGEMENT.LOGO' | translate }}</nz-form-label>
           <nz-form-control [nzSm]="14" [nzXs]="24">
             <div class="logo-upload-section">
               <div class="upload-options">
                 <div class="upload-option">
-                  <label>Nhập link logo:</label>
-                  <input nz-input formControlName="logo" placeholder="Nhập URL logo khách sạn" style="width: 100%;">
+                  <label>{{ 'HOTEL_MANAGEMENT.ENTER_LOGO_LINK' | translate }}</label>
+                  <input nz-input formControlName="logo" [placeholder]="'HOTEL_MANAGEMENT.LOGO_URL_PLACEHOLDER' | translate" style="width: 100%;">
                 </div>
-                <div class="upload-divider">HOẶC</div>
+                <div class="upload-divider">{{ 'HOTEL_MANAGEMENT.OR' | translate }}</div>
                 <div class="upload-option" (click)="$event.stopPropagation()">
-                  <label>Tải logo lên:</label>
+                  <label>{{ 'HOTEL_MANAGEMENT.UPLOAD_LOGO' | translate }}</label>
                   <nz-upload
                     [nzAction]="uploadUrl"
                     [nzHeaders]="uploadHeaders"
@@ -308,7 +308,7 @@
                     nzName="image">
                     <button nz-button nzType="default" type="button" [nzLoading]="isLoadingUpload">
                       <i nz-icon nzType="upload"></i>
-                      Chọn logo
+                      {{ 'HOTEL_MANAGEMENT.SELECT_LOGO' | translate }}
                     </button>
                   </nz-upload>
                 </div>
@@ -316,7 +316,7 @@
               <div *ngIf="hotelForm.get('logo')?.value" class="logo-preview">
                 <img 
                   [src]="getImageUrl(hotelForm.get('logo')?.value)" 
-                  alt="Logo khách sạn" 
+                  [alt]="'HOTEL_MANAGEMENT.LOGO' | translate" 
                   style="max-width: 150px; max-height: 150px; object-fit: contain; margin-top: 8px;"
                   (error)="handleLogoError($event)">
               </div>
@@ -324,19 +324,19 @@
           </nz-form-control>
         </nz-form-item>
 
-        <nz-divider nzText="Thông tin khác" nzOrientation="left"></nz-divider>
+        <nz-divider [nzText]="'HOTEL_MANAGEMENT.OTHER_INFO' | translate" nzOrientation="left"></nz-divider>
 
         <nz-form-item>
-          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="description">Mô tả</nz-form-label>
+          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="description">{{ 'HOTEL_MANAGEMENT.DESCRIPTION' | translate }}</nz-form-label>
           <nz-form-control [nzSm]="14" [nzXs]="24">
             <textarea nz-input formControlName="description" id="description" 
                       [nzAutosize]="{ minRows: 2, maxRows: 4 }" 
-                      placeholder="Mô tả ngắn về khách sạn"></textarea>
+                      [placeholder]="'HOTEL_MANAGEMENT.DESCRIPTION_PLACEHOLDER' | translate"></textarea>
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="starRating">Xếp hạng (sao)</nz-form-label>
+          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="starRating">{{ 'HOTEL_MANAGEMENT.STAR_RATING_LABEL' | translate }}</nz-form-label>
           <nz-form-control [nzSm]="14" [nzXs]="24">
             <nz-rate 
               [ngModel]="hotelForm.get('starRating')?.value || 0" 
@@ -348,9 +348,9 @@
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="managerId">Người quản lý</nz-form-label>
+          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="managerId">{{ 'HOTEL_MANAGEMENT.MANAGER' | translate }}</nz-form-label>
           <nz-form-control [nzSm]="14" [nzXs]="24">
-            <nz-select formControlName="managerId" id="managerId" nzPlaceHolder="Chọn người quản lý" nzAllowClear>
+            <nz-select formControlName="managerId" id="managerId" [nzPlaceHolder]="'HOTEL_MANAGEMENT.SELECT_MANAGER' | translate" nzAllowClear>
               <nz-option *ngFor="let manager of availableManagers" 
                          [nzValue]="manager._id" 
                          [nzLabel]="(manager.fullName || manager.username) + ' (' + manager.email + ')'">
@@ -360,9 +360,9 @@
         </nz-form-item>
 
         <nz-form-item *ngIf="isAdmin || isBusiness">
-          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="status" nzRequired>Trạng thái</nz-form-label>
-          <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="Vui lòng chọn trạng thái!">
-            <nz-select formControlName="status" id="status" nzPlaceHolder="Chọn trạng thái khách sạn">
+          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="status" nzRequired>{{ 'HOTEL_MANAGEMENT.STATUS' | translate }}</nz-form-label>
+          <nz-form-control [nzSm]="14" [nzXs]="24" [nzErrorTip]="'HOTEL_MANAGEMENT.STATUS_REQUIRED' | translate">
+            <nz-select formControlName="status" id="status" [nzPlaceHolder]="'HOTEL_MANAGEMENT.SELECT_STATUS' | translate">
               <nz-option *ngFor="let statusOpt of hotelStatusOptions" 
                          [nzValue]="statusOpt.value" 
                          [nzLabel]="statusOpt.label">
@@ -372,52 +372,52 @@
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="facilities">Tiện nghi</nz-form-label>
+          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="facilities">{{ 'HOTEL_MANAGEMENT.FACILITIES' | translate }}</nz-form-label>
           <nz-form-control [nzSm]="14" [nzXs]="24">
             <nz-select formControlName="facilities" id="facilities" nzMode="tags" 
-                       nzPlaceHolder="Nhập các tiện nghi (ví dụ: Wifi, Bể bơi)">
+                       [nzPlaceHolder]="'HOTEL_MANAGEMENT.FACILITIES_PLACEHOLDER' | translate">
             </nz-select>
           </nz-form-control>
         </nz-form-item>
 
-        <nz-divider nzText="Thông tin tài khoản ngân hàng" nzOrientation="left"></nz-divider>
+        <nz-divider [nzText]="'HOTEL_MANAGEMENT.BANK_ACCOUNT_SECTION' | translate" nzOrientation="left"></nz-divider>
 
         <div formGroupName="bankAccount">
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="bankName">Tên ngân hàng</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="bankName">{{ 'HOTEL_MANAGEMENT.BANK_NAME' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="bankName" id="bankName" placeholder="Ví dụ: Vietcombank, Techcombank..." />
+              <input nz-input formControlName="bankName" id="bankName" [placeholder]="'HOTEL_MANAGEMENT.BANK_NAME_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="accountNumber">Số tài khoản</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="accountNumber">{{ 'HOTEL_MANAGEMENT.ACCOUNT_NUMBER' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="accountNumber" id="accountNumber" placeholder="Nhập số tài khoản" />
+              <input nz-input formControlName="accountNumber" id="accountNumber" [placeholder]="'HOTEL_MANAGEMENT.ACCOUNT_NUMBER_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="accountHolderName">Tên chủ tài khoản</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="accountHolderName">{{ 'HOTEL_MANAGEMENT.ACCOUNT_HOLDER' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="accountHolderName" id="accountHolderName" placeholder="Tên chủ tài khoản" />
+              <input nz-input formControlName="accountHolderName" id="accountHolderName" [placeholder]="'HOTEL_MANAGEMENT.ACCOUNT_HOLDER_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="beneficiaryName">Tên người thụ hưởng</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="beneficiaryName">{{ 'HOTEL_MANAGEMENT.BENEFICIARY_NAME' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="beneficiaryName" id="beneficiaryName" placeholder="Tên người thụ hưởng (hiển thị trên QR code)" />
+              <input nz-input formControlName="beneficiaryName" id="beneficiaryName" [placeholder]="'HOTEL_MANAGEMENT.BENEFICIARY_NAME_PLACEHOLDER' | translate" />
               <div style="font-size: 12px; color: #999; margin-top: 4px;">
-                Tên người thụ hưởng sẽ được hiển thị bên dưới QR code khi thanh toán
+                {{ 'HOTEL_MANAGEMENT.BENEFICIARY_NAME_HINT' | translate }}
               </div>
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="branch">Chi nhánh</nz-form-label>
+            <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="branch">{{ 'HOTEL_MANAGEMENT.BRANCH' | translate }}</nz-form-label>
             <nz-form-control [nzSm]="14" [nzXs]="24">
-              <input nz-input formControlName="branch" id="branch" placeholder="Chi nhánh ngân hàng (tùy chọn)" />
+              <input nz-input formControlName="branch" id="branch" [placeholder]="'HOTEL_MANAGEMENT.BRANCH_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
@@ -431,7 +431,7 @@
                 (click)="generateQrPayment()"
                 [disabled]="!hotelForm.get('bankAccount.bankName')?.value || !hotelForm.get('bankAccount.accountNumber')?.value">
                 <i nz-icon nzType="qrcode" nzTheme="outline"></i>
-                Tạo QR thanh toán
+                {{ 'HOTEL_MANAGEMENT.GENERATE_QR' | translate }}
               </button>
               <button 
                 *ngIf="showQrPreview"
@@ -441,7 +441,7 @@
                 (click)="clearQrPreview()"
                 style="margin-left: 8px;">
                 <i nz-icon nzType="delete" nzTheme="outline"></i>
-                Xóa QR
+                {{ 'HOTEL_MANAGEMENT.CLEAR_QR' | translate }}
               </button>
             </nz-form-control>
           </nz-form-item>
@@ -454,7 +454,7 @@
                 <div style="text-align: center; padding: 20px;">
                   <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 600;">
                     <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
-                    QR Code thanh toán đã lưu
+                    {{ 'HOTEL_MANAGEMENT.QR_SAVED' | translate }}
                   </h3>
                   <div style="display: inline-block; padding: 16px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <img 
@@ -465,14 +465,14 @@
                     />
                   </div>
                   <div style="margin-top: 16px; font-size: 12px; color: #666;">
-                    <p><strong>Ngân hàng:</strong> {{ selectedHotel?.bankAccount?.bankName || 'N/A' }}</p>
-                    <p><strong>Số tài khoản:</strong> {{ selectedHotel?.bankAccount?.accountNumber || 'N/A' }}</p>
+                    <p><strong>{{ 'HOTEL_MANAGEMENT.BANK_NAME' | translate }}:</strong> {{ selectedHotel?.bankAccount?.bankName || ('COMMON.N_A' | translate) }}</p>
+                    <p><strong>{{ 'HOTEL_MANAGEMENT.ACCOUNT_NUMBER' | translate }}:</strong> {{ selectedHotel?.bankAccount?.accountNumber || ('COMMON.N_A' | translate) }}</p>
                     <p *ngIf="selectedHotel?.bankAccount?.beneficiaryName" style="margin-top: 8px;">
-                      <strong>Tên người thụ hưởng:</strong> {{ selectedHotel?.bankAccount?.beneficiaryName }}
+                      <strong>{{ 'HOTEL_MANAGEMENT.BENEFICIARY_NAME' | translate }}:</strong> {{ selectedHotel?.bankAccount?.beneficiaryName }}
                     </p>
                     <p style="margin-top: 8px; color: #52c41a;">
                       <i nz-icon nzType="check-circle" nzTheme="outline"></i>
-                      QR code đã được lưu trong hệ thống
+                      {{ 'HOTEL_MANAGEMENT.QR_SAVED_IN_SYSTEM' | translate }}
                     </p>
                   </div>
                 </div>
@@ -488,7 +488,7 @@
                 <div style="text-align: center; padding: 20px;">
                   <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 600;">
                     <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
-                    QR Code thanh toán SePay (Chưa lưu)
+                    {{ 'HOTEL_MANAGEMENT.QR_PREVIEW' | translate }}
                   </h3>
                   <div style="display: inline-block; padding: 16px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <img 
@@ -499,15 +499,15 @@
                     />
                   </div>
                   <div style="margin-top: 16px; font-size: 12px; color: #666;">
-                    <p><strong>Ngân hàng:</strong> {{ hotelForm.get('bankAccount.bankName')?.value }}</p>
-                    <p><strong>Số tài khoản:</strong> {{ hotelForm.get('bankAccount.accountNumber')?.value }}</p>
+                    <p><strong>{{ 'HOTEL_MANAGEMENT.BANK_NAME' | translate }}:</strong> {{ hotelForm.get('bankAccount.bankName')?.value }}</p>
+                    <p><strong>{{ 'HOTEL_MANAGEMENT.ACCOUNT_NUMBER' | translate }}:</strong> {{ hotelForm.get('bankAccount.accountNumber')?.value }}</p>
                     <p *ngIf="qrBeneficiaryName" style="margin-top: 8px; padding: 8px; background: #fff; border-radius: 4px; border: 1px solid #ffc53d;">
-                      <strong style="color: #ff9800;">Tên người thụ hưởng:</strong> 
+                      <strong style="color: #ff9800;">{{ 'HOTEL_MANAGEMENT.BENEFICIARY_NAME' | translate }}:</strong> 
                       <span style="font-weight: 600; color: #333;">{{ qrBeneficiaryName }}</span>
                     </p>
                     <p style="margin-top: 8px; color: #ff9800; font-weight: 600;">
                       <i nz-icon nzType="info-circle" nzTheme="outline"></i>
-                      Bấm "Cập nhật" để lưu QR code này vào hệ thống
+                      {{ 'HOTEL_MANAGEMENT.QR_SAVE_HINT' | translate }}
                     </p>
                   </div>
                 </div>
@@ -522,11 +522,11 @@
               <button *nzSpaceItem nz-button nzType="primary" type="submit" 
                       [disabled]="hotelForm.invalid" [nzLoading]="isLoading">
                 <i nz-icon [nzType]="editId === 'new' ? 'plus' : 'save'"></i>
-                {{ editId === 'new' ? 'Tạo mới' : 'Cập nhật' }}
+                {{ editId === 'new' ? ('HOTEL_MANAGEMENT.CREATE' | translate) : ('HOTEL_MANAGEMENT.SUBMIT' | translate) }}
               </button>
               <button *nzSpaceItem nz-button nzType="default" type="button" (click)="stopEdit()">
                 <i nz-icon nzType="close"></i>
-                Hủy
+                {{ 'HOTEL_MANAGEMENT.CANCEL' | translate }}
               </button>
             </nz-space>
           </nz-form-control>

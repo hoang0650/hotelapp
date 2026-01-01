@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { NotificationsService } from '../../services/notifications.service';
@@ -29,6 +29,24 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isNotificationDrawerVisible = false;
   notificationSettings: NotificationSettings | null = null;
   areNotificationsEnabled = true; // Mặc định bật
+  
+  // Tab titles for notifications
+  tabAllTitle = '';
+  tabSystemTitle = '';
+  tabHotelTitle = '';
+  
+  // Computed tab titles with counts
+  get tabAllTitleWithCount(): string {
+    return this.tabAllTitle + (this.unreadCounts.total > 0 ? ` (${this.unreadCounts.total})` : '');
+  }
+  
+  get tabSystemTitleWithCount(): string {
+    return this.tabSystemTitle + (this.unreadCounts.system > 0 ? ` (${this.unreadCounts.system})` : '');
+  }
+  
+  get tabHotelTitleWithCount(): string {
+    return this.tabHotelTitle + (this.unreadCounts.hotel > 0 ? ` (${this.unreadCounts.hotel})` : '');
+  }
 
   constructor(
     private userService: UserService,
@@ -37,7 +55,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private settingsService: SettingsService,
     private hotelService: HotelService,
     public translate: TranslateService,
-    public translationService: TranslationService
+    public translationService: TranslationService,
+    private cdr: ChangeDetectorRef
   ) {
     // Set default language
     const savedLang = localStorage.getItem('language') || 'vi';
@@ -46,6 +65,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Initialize tab titles
+    this.updateTabTitles();
+    
     // Đăng ký lắng nghe từ UserService
     this.subscriptions.add(
       this.userService.currentUser.subscribe(user => {
@@ -59,6 +81,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
         if (user) {
           this.currentUser = user;
         }
+      })
+    );
+    
+    // Subscribe to language changes to update tab titles
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.updateTabTitles();
+        this.cdr.detectChanges();
       })
     );
     
@@ -78,6 +108,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.notificationsService.loadAnnouncements();
       this.loadNotificationSettings();
     }, 5 * 60 * 1000);
+  }
+  
+  /**
+   * Update tab titles based on current language
+   */
+  private updateTabTitles(): void {
+    this.tabAllTitle = this.translate.instant('NOTIFICATIONS.ALL');
+    this.tabSystemTitle = this.translate.instant('NOTIFICATIONS.SYSTEM');
+    this.tabHotelTitle = this.translate.instant('NOTIFICATIONS.HOTEL');
   }
 
   ngOnDestroy(): void {
@@ -105,11 +144,19 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   // Chuyển đổi ngôn ngữ - sử dụng TranslationService để đảm bảo tất cả component được cập nhật
   switchLanguage(lang: string): void {
+    console.log(`Header: Switching language to ${lang}`);
     this.translationService.switchLanguage(lang);
-    // Trigger change detection để cập nhật tất cả component
+    
+    // Wait for translation to load, then update
     setTimeout(() => {
+      // Update tab titles after language switch
+      this.updateTabTitles();
+      // Force change detection
+      this.cdr.detectChanges();
+      // Trigger custom event for other components
       window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
-    }, 100);
+      console.log(`Header: Language switch completed, current lang: ${this.translate.currentLang}`);
+    }, 200);
   }
 
   logout(): void {
@@ -373,6 +420,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
         if (response.success && response.data) {
           this.unreadCounts = response.data;
           this.unreadCount = response.data.total;
+          // Update tab titles when counts change
+          this.updateTabTitles();
+          this.cdr.detectChanges();
         }
       },
       error: (error) => {
@@ -406,7 +456,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
   formatDate(date: Date | string): string {
     if (!date) return '';
     const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleDateString('vi-VN', {
+    const currentLang = this.translate.currentLang || 'vi';
+    const localeMap: { [key: string]: string } = {
+      'vi': 'vi-VN',
+      'en': 'en-US',
+      'de': 'de-DE'
+    };
+    const locale = localeMap[currentLang] || 'vi-VN';
+    return d.toLocaleDateString(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -418,13 +475,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   getNotificationTypeLabel(type: string): string {
     const labelMap: { [key: string]: string } = {
-      'maintenance': 'Bảo trì',
-      'update': 'Cập nhật',
-      'info': 'Thông tin',
-      'warning': 'Cảnh báo',
-      'success': 'Thành công'
+      'maintenance': this.translate.instant('NOTIFICATIONS.TYPE_MAINTENANCE'),
+      'update': this.translate.instant('NOTIFICATIONS.TYPE_UPDATE'),
+      'info': this.translate.instant('NOTIFICATIONS.TYPE_INFO'),
+      'warning': this.translate.instant('NOTIFICATIONS.TYPE_WARNING'),
+      'success': this.translate.instant('NOTIFICATIONS.TYPE_SUCCESS')
     };
-    return labelMap[type] || 'Thông báo';
+    return labelMap[type] || this.translate.instant('NOTIFICATIONS.TYPE_GENERAL');
   }
 
   apiBaseUrl = 'https://nest-production-8106.up.railway.app';

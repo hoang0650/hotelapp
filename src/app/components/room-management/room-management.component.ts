@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { Room, RoomCapacity, RoomPricing, SpecialPrice, RoomRevenue } from '../../interfaces/rooms';
 import { Hotel } from '../../interfaces/hotel';
@@ -8,13 +8,14 @@ import { AuthService } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-room-management',
   templateUrl: './room-management.component.html',
   styleUrls: ['./room-management.component.css']
 })
-export class RoomManagementComponent implements OnInit {
+export class RoomManagementComponent implements OnInit, OnDestroy {
   roomForm!: FormGroup;
   rooms: Room[] = [];
   hotels: Hotel[] = [];
@@ -29,19 +30,33 @@ export class RoomManagementComponent implements OnInit {
   total: number = 0;
 
   roomStatusOptions: { label: string, value: Room['status'] }[] = [];
+  timezoneOptions: { label: string, value: string }[] = [];
 
   priceConfigId: string | null = null;
   hasPriceConfig: boolean = false;
   currentUser: User | null = null;
+  
+  private subscriptions = new Subscription();
 
 
   private initStatusOptions(): void {
     this.roomStatusOptions = [
-      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.VACANT'), value: 'vacant' },
-      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.OCCUPIED'), value: 'occupied' },
-      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.CLEANING'), value: 'cleaning' },
-      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.DIRTY'), value: 'dirty' },
-      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.MAINTENANCE'), value: 'maintenance' }
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS_OPTIONS.VACANT'), value: 'vacant' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS_OPTIONS.OCCUPIED'), value: 'occupied' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS_OPTIONS.CLEANING'), value: 'cleaning' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS_OPTIONS.DIRTY'), value: 'dirty' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS_OPTIONS.MAINTENANCE'), value: 'maintenance' }
+    ];
+  }
+
+  private initTimezoneOptions(): void {
+    this.timezoneOptions = [
+      { label: this.translate.instant('ROOM_MANAGEMENT.TIMEZONE_UTC7'), value: 'UTC+7' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.TIMEZONE_UTC8'), value: 'UTC+8' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.TIMEZONE_UTC9'), value: 'UTC+9' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.TIMEZONE_UTC0'), value: 'UTC+0' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.TIMEZONE_UTC_MINUS5'), value: 'UTC-5' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.TIMEZONE_UTC_MINUS8'), value: 'UTC-8' }
     ];
   }
 
@@ -54,6 +69,7 @@ export class RoomManagementComponent implements OnInit {
     private translate: TranslateService
   ) {
     this.initStatusOptions();
+    this.initTimezoneOptions();
     this.roomForm = this.fb.group({
       hotelId: [null, Validators.required],
       roomNumber: ['', Validators.required],
@@ -112,6 +128,18 @@ export class RoomManagementComponent implements OnInit {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.loadHotels();
+    
+    // Subscribe to language changes to update statusOptions and timezoneOptions
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.initStatusOptions();
+        this.initTimezoneOptions();
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
   }
 
   // ============ KIỂM TRA QUYỀN ============
@@ -725,12 +753,16 @@ export class RoomManagementComponent implements OnInit {
 
   getHotelName(hotelId: string): string {
     const hotel = this.hotels.find((h: Hotel) => h._id === hotelId);
-    return hotel ? hotel.name : 'Không rõ';
+    return hotel ? hotel.name : this.translate.instant('COMMON.UNKNOWN');
   }
 
   getRoomStatusLabel(statusValue: Room['status'] | undefined): string {
-    if (!statusValue) return this.translate.instant('ROOM_MANAGEMENT.STATUS.UNKNOWN');
+    if (!statusValue) return this.translate.instant('ROOM_MANAGEMENT.STATUS_OPTIONS.UNKNOWN');
     const option = this.roomStatusOptions.find((opt: { label: string, value: Room['status'] }) => opt.value === statusValue);
     return option ? option.label : statusValue;
+  }
+
+  getFloorLabel(floor: string | number): string {
+    return `${this.translate.instant('ROOM_MANAGEMENT.FLOOR_PREFIX')} ${floor}`;
   }
 }

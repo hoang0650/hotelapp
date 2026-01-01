@@ -1,60 +1,60 @@
 <div class="contact-container">
   <nz-card class="contact-card">
-    <h2 class="text-center mb-4">Liên hệ với chúng tôi</h2>
+    <h2 class="text-center mb-4">{{ 'CONTACT.TITLE' | translate }}</h2>
     <p class="text-center mb-4" style="color: #666;">
-      Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn. Hãy gửi tin nhắn cho chúng tôi!
+      {{ 'CONTACT.DESCRIPTION' | translate }}
     </p>
 
     <form [formGroup]="contactForm" (ngSubmit)="onSubmit()" class="contact-form">
       <!-- Tên -->
       <nz-form-item>
-        <nz-form-label nzRequired>Họ và tên</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập họ và tên (ít nhất 2 ký tự)">
+        <nz-form-label nzRequired>{{ 'CONTACT.FULL_NAME' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'CONTACT.ERROR_FULL_NAME' | translate">
           <nz-input-group nzPrefixIcon="user">
-            <input type="text" nz-input formControlName="name" placeholder="Nhập họ và tên của bạn" />
+            <input type="text" nz-input formControlName="name" [placeholder]="'CONTACT.PLACEHOLDER_FULL_NAME' | translate" />
           </nz-input-group>
         </nz-form-control>
       </nz-form-item>
 
       <!-- Email -->
       <nz-form-item>
-        <nz-form-label nzRequired>Email</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
+        <nz-form-label nzRequired>{{ 'CONTACT.EMAIL' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'CONTACT.ERROR_EMAIL' | translate">
           <nz-input-group nzPrefixIcon="mail">
-            <input type="email" nz-input formControlName="email" placeholder="Nhập địa chỉ email của bạn" />
+            <input type="email" nz-input formControlName="email" [placeholder]="'CONTACT.PLACEHOLDER_EMAIL' | translate" />
           </nz-input-group>
         </nz-form-control>
       </nz-form-item>
 
       <!-- Số điện thoại -->
       <nz-form-item>
-        <nz-form-label>Số điện thoại</nz-form-label>
+        <nz-form-label>{{ 'CONTACT.PHONE' | translate }}</nz-form-label>
         <nz-form-control>
           <nz-input-group nzPrefixIcon="phone">
-            <input type="text" nz-input formControlName="phone" placeholder="Nhập số điện thoại (tùy chọn)" />
+            <input type="text" nz-input formControlName="phone" [placeholder]="'CONTACT.PLACEHOLDER_PHONE' | translate" />
           </nz-input-group>
         </nz-form-control>
       </nz-form-item>
 
       <!-- Chủ đề -->
       <nz-form-item>
-        <nz-form-label nzRequired>Chủ đề</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập chủ đề (ít nhất 5 ký tự)">
+        <nz-form-label nzRequired>{{ 'CONTACT.SUBJECT' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'CONTACT.ERROR_SUBJECT' | translate">
           <nz-input-group nzPrefixIcon="file-text">
-            <input type="text" nz-input formControlName="subject" placeholder="Nhập chủ đề liên hệ" />
+            <input type="text" nz-input formControlName="subject" [placeholder]="'CONTACT.PLACEHOLDER_SUBJECT' | translate" />
           </nz-input-group>
         </nz-form-control>
       </nz-form-item>
 
       <!-- Nội dung -->
       <nz-form-item>
-        <nz-form-label nzRequired>Nội dung</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập nội dung (ít nhất 10 ký tự)">
+        <nz-form-label nzRequired>{{ 'CONTACT.MESSAGE' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'CONTACT.ERROR_MESSAGE' | translate">
           <textarea 
             nz-input 
             formControlName="message" 
             rows="6" 
-            placeholder="Nhập nội dung tin nhắn của bạn..."></textarea>
+            [placeholder]="'CONTACT.PLACEHOLDER_MESSAGE' | translate"></textarea>
         </nz-form-control>
       </nz-form-item>
 
@@ -69,7 +69,7 @@
             [disabled]="contactForm.invalid"
             class="submit-btn">
             <i nz-icon nzType="send" nzTheme="outline"></i>
-            Gửi liên hệ
+            {{ 'CONTACT.SUBMIT' | translate }}
           </button>
         </nz-form-control>
       </nz-form-item>

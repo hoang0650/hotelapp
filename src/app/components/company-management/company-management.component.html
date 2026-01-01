@@ -101,7 +101,7 @@
                    (nzOnConfirm)="deleteBusiness(business._id!)" 
                    *ngIf="editId !== business._id">
                   <button nz-button nzSize="small" nzType="text" nzDanger
-                          nz-tooltip nzTooltipTitle="Xóa">
+                          [nz-tooltip]="'COMPANY_MANAGEMENT.DELETE_TOOLTIP' | translate">
                     <i nz-icon nzType="delete"></i>
                   </button>
                 </a>
@@ -115,7 +115,7 @@
     <!-- Chi tiết doanh nghiệp Drawer -->
     <nz-drawer
       [nzVisible]="selectedViewBusiness !== null"
-      nzTitle="Chi tiết doanh nghiệp"
+      [nzTitle]="'COMPANY_MANAGEMENT.DETAIL_TITLE' | translate"
       (nzOnClose)="closeBusinessDetails()"
       [nzWidth]="520">
       <ng-container *nzDrawerContent>
@@ -125,22 +125,22 @@
             *ngIf="isCascadeBlocked(selectedViewBusiness)"
             nzType="error" 
             nzShowIcon
-            [nzMessage]="'Doanh nghiệp bị ' + getStatusLabel(selectedViewBusiness.status)"
-            nzDescription="Tất cả khách sạn, phòng và nhân viên thuộc doanh nghiệp này đang bị tạm ngưng hoạt động."
+            [nzMessage]="('COMPANY_MANAGEMENT.BUSINESS_BLOCKED' | translate) + getStatusLabel(selectedViewBusiness.status)"
+            [nzDescription]="'COMPANY_MANAGEMENT.CASCADE_BLOCKED_DESC' | translate"
             class="mb-4">
           </nz-alert>
 
-          <nz-descriptions nzTitle="Thông tin cơ bản" nzBordered [nzColumn]="1">
-            <nz-descriptions-item nzTitle="Tên doanh nghiệp">
+          <nz-descriptions [nzTitle]="'COMPANY_MANAGEMENT.BASIC_INFO' | translate" nzBordered [nzColumn]="1">
+            <nz-descriptions-item [nzTitle]="'COMPANY_MANAGEMENT.BUSINESS_NAME_LABEL' | translate">
               {{ selectedViewBusiness!.name }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Tên pháp lý">
+            <nz-descriptions-item [nzTitle]="'COMPANY_MANAGEMENT.LEGAL_NAME_LABEL' | translate">
               {{ selectedViewBusiness!.legalName || '-' }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Mã số thuế">
+            <nz-descriptions-item [nzTitle]="'COMPANY_MANAGEMENT.TAX_ID_LABEL' | translate">
               {{ selectedViewBusiness!.taxId }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Địa chỉ">
+            <nz-descriptions-item [nzTitle]="'COMPANY_MANAGEMENT.ADDRESS_LABEL' | translate">
               <span *ngIf="selectedViewBusiness?.address">
                 {{ selectedViewBusiness!.address!.street }}
                 <span *ngIf="selectedViewBusiness!.address!.city">, {{ selectedViewBusiness!.address!.city }}</span>
@@ -150,13 +150,13 @@
               </span>
               <span *ngIf="!selectedViewBusiness?.address">-</span>
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Số điện thoại">
+            <nz-descriptions-item [nzTitle]="'COMPANY_MANAGEMENT.PHONE_LABEL' | translate">
               {{ selectedViewBusiness!.contactInfo.phone || '-' }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Email">
+            <nz-descriptions-item [nzTitle]="'COMPANY_MANAGEMENT.EMAIL_LABEL' | translate">
               {{ selectedViewBusiness!.contactInfo.email || '-' }}
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Website">
+            <nz-descriptions-item [nzTitle]="'COMPANY_MANAGEMENT.WEBSITE_LABEL' | translate">
               <a *ngIf="selectedViewBusiness?.contactInfo?.website" 
                  [href]="selectedViewBusiness!.contactInfo!.website" 
                  target="_blank">
@@ -164,7 +164,7 @@
               </a>
               <span *ngIf="!selectedViewBusiness?.contactInfo?.website">-</span>
             </nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Trạng thái">
+            <nz-descriptions-item [nzTitle]="'COMPANY_MANAGEMENT.STATUS_LABEL' | translate">
               <nz-tag [nzColor]="getStatusColor(selectedViewBusiness.status)">
                 {{ getStatusLabel(selectedViewBusiness.status) }}
               </nz-tag>
@@ -175,7 +175,7 @@
 
           <h3>
             <i nz-icon nzType="home" nzTheme="outline"></i>
-            Khách sạn trực thuộc ({{ getHotelArray(selectedViewBusiness).length }})
+            {{ 'COMPANY_MANAGEMENT.AFFILIATED_HOTELS' | translate }} ({{ getHotelArray(selectedViewBusiness).length }})
           </h3>
           <div *ngIf="selectedViewBusiness.hotels && selectedViewBusiness.hotels.length > 0; else noHotelsDetail">
             <nz-list [nzDataSource]="getHotelArray(selectedViewBusiness)" nzBordered nzSize="small">
@@ -183,29 +183,29 @@
                 <i nz-icon nzType="shop" nzTheme="outline" class="mr-2"></i>
                 {{ getHotelName(hotel) }}
                 <nz-tag *ngIf="isCascadeBlocked(selectedViewBusiness)" nzColor="warning" class="ml-2">
-                  Tạm ngưng
+                  {{ 'COMPANY_MANAGEMENT.SUSPENDED' | translate }}
                 </nz-tag>
               </nz-list-item>
             </nz-list>
           </div>
           <ng-template #noHotelsDetail>
-            <nz-empty nzNotFoundContent="Doanh nghiệp này chưa có khách sạn nào."></nz-empty>
+            <nz-empty [nzNotFoundContent]="'COMPANY_MANAGEMENT.NO_HOTELS' | translate"></nz-empty>
           </ng-template>
 
           <!-- Action Buttons for Admin -->
           <div class="mt-4" *ngIf="selectedViewBusiness && isAdmin">
             <nz-divider></nz-divider>
-            <h4>Thao tác</h4>
+            <h4>{{ 'COMPANY_MANAGEMENT.ACTIONS_SECTION' | translate }}</h4>
             <nz-space>
               <!-- Approve/Reject for Pending -->
               <ng-container *ngIf="selectedViewBusiness.status === 'pending'">
                 <button *nzSpaceItem nz-button nzType="primary" 
-                        (click)="updateBusinessStatusLogic(selectedViewBusiness._id!, 'active', 'Doanh nghiệp đã được duyệt.')">
-                  <i nz-icon nzType="check-circle" nzTheme="outline"></i> Duyệt
+                        (click)="updateBusinessStatusLogic(selectedViewBusiness._id!, 'active', getApproveSuccessMessage())">
+                  <i nz-icon nzType="check-circle" nzTheme="outline"></i> {{ 'COMPANY_MANAGEMENT.APPROVE' | translate }}
                 </button>
                 <button *nzSpaceItem nz-button nzType="default" 
-                        (click)="updateBusinessStatusLogic(selectedViewBusiness._id!, 'inactive', 'Doanh nghiệp đã bị từ chối.')">
-                  <i nz-icon nzType="close-circle" nzTheme="outline"></i> Từ chối
+                        (click)="updateBusinessStatusLogic(selectedViewBusiness._id!, 'inactive', getRejectSuccessMessage())">
+                  <i nz-icon nzType="close-circle" nzTheme="outline"></i> {{ 'COMPANY_MANAGEMENT.REJECT' | translate }}
                 </button>
               </ng-container>
 
@@ -213,22 +213,22 @@
               <ng-container *ngIf="selectedViewBusiness.status === 'active' || selectedViewBusiness.status === 'inactive'">
                 <button *nzSpaceItem nz-button nzType="default" nzDanger
                         (click)="blockBusiness(selectedViewBusiness._id!)">
-                  <i nz-icon nzType="stop" nzTheme="outline"></i> Đình chỉ
+                  <i nz-icon nzType="stop" nzTheme="outline"></i> {{ 'COMPANY_MANAGEMENT.SUSPEND_BUTTON' | translate }}
                 </button>
               </ng-container>
               
               <!-- Reactivate for Suspended/Inactive -->
               <ng-container *ngIf="selectedViewBusiness.status === 'suspended' || selectedViewBusiness.status === 'inactive'">
                 <button *nzSpaceItem nz-button nzType="primary" 
-                        (click)="updateBusinessStatusLogic(selectedViewBusiness._id!, 'active', 'Doanh nghiệp đã được kích hoạt lại.')">
-                  <i nz-icon nzType="play-circle" nzTheme="outline"></i> Kích hoạt lại
+                        (click)="updateBusinessStatusLogic(selectedViewBusiness._id!, 'active', getReactivateSuccessMessage())">
+                  <i nz-icon nzType="play-circle" nzTheme="outline"></i> {{ 'COMPANY_MANAGEMENT.REACTIVATE' | translate }}
                 </button>
               </ng-container>
 
               <!-- Edit Button -->
               <button *nzSpaceItem nz-button nzType="default" 
                       (click)="startEdit(selectedViewBusiness._id!); closeBusinessDetails()">
-                <i nz-icon nzType="edit" nzTheme="outline"></i> Chỉnh sửa
+                <i nz-icon nzType="edit" nzTheme="outline"></i> {{ 'COMPANY_MANAGEMENT.EDIT_BUTTON' | translate }}
               </button>
             </nz-space>
           </div>
@@ -241,102 +241,102 @@
       <form nz-form [formGroup]="businessForm" (ngSubmit)="selectedBusiness ? updateBusiness() : createBusiness()">
         <h3>
           <i nz-icon [nzType]="selectedBusiness ? 'edit' : 'plus-circle'" nzTheme="outline"></i>
-          {{ selectedBusiness ? 'Cập nhật doanh nghiệp' : 'Tạo doanh nghiệp mới' }}
+          {{ selectedBusiness ? ('COMPANY_MANAGEMENT.UPDATE_BUSINESS' | translate) : ('COMPANY_MANAGEMENT.CREATE_BUSINESS' | translate) }}
         </h3>
         
         <nz-form-item>
-          <nz-form-label [nzSpan]="24" [nzSm]="6" nzRequired>Tên doanh nghiệp</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng nhập tên doanh nghiệp" [nzSpan]="24" [nzSm]="14">
-            <input placeholder="Nhập tên doanh nghiệp" nz-input formControlName="name" />
+          <nz-form-label [nzSpan]="24" [nzSm]="6" nzRequired>{{ 'COMPANY_MANAGEMENT.BUSINESS_NAME_LABEL' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'COMPANY_MANAGEMENT.BUSINESS_NAME_REQUIRED' | translate" [nzSpan]="24" [nzSm]="14">
+            <input [placeholder]="'COMPANY_MANAGEMENT.BUSINESS_NAME_PLACEHOLDER' | translate" nz-input formControlName="name" />
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="24" [nzSm]="6">Tên pháp lý</nz-form-label>
+          <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.LEGAL_NAME_LABEL' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="24" [nzSm]="14">
-            <input placeholder="Nhập tên pháp lý (tùy chọn)" nz-input formControlName="legalName" />
+            <input [placeholder]="'COMPANY_MANAGEMENT.LEGAL_NAME_PLACEHOLDER' | translate" nz-input formControlName="legalName" />
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="24" [nzSm]="6" nzRequired>Mã số thuế</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng nhập mã số thuế" [nzSpan]="24" [nzSm]="14">
-            <input placeholder="Nhập mã số thuế" nz-input formControlName="taxId"/>
+          <nz-form-label [nzSpan]="24" [nzSm]="6" nzRequired>{{ 'COMPANY_MANAGEMENT.TAX_ID_LABEL' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'COMPANY_MANAGEMENT.TAX_ID_REQUIRED' | translate" [nzSpan]="24" [nzSm]="14">
+            <input [placeholder]="'COMPANY_MANAGEMENT.TAX_ID_PLACEHOLDER' | translate" nz-input formControlName="taxId"/>
           </nz-form-control>
         </nz-form-item>
 
-        <nz-divider nzText="Địa chỉ" nzOrientation="left"></nz-divider>
+        <nz-divider [nzText]="'COMPANY_MANAGEMENT.ADDRESS_SECTION' | translate" nzOrientation="left"></nz-divider>
 
         <div formGroupName="address">
           <nz-form-item>
-            <nz-form-label [nzSpan]="24" [nzSm]="6">Đường</nz-form-label>
+            <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.STREET' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="24" [nzSm]="14">
-              <input placeholder="Số nhà, tên đường" nz-input formControlName="street" />
+              <input [placeholder]="'COMPANY_MANAGEMENT.STREET_PLACEHOLDER' | translate" nz-input formControlName="street" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSpan]="24" [nzSm]="6">Thành phố/Tỉnh</nz-form-label>
+            <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.CITY' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="24" [nzSm]="14">
-              <input placeholder="Thành phố hoặc tỉnh" nz-input formControlName="city" />
+              <input [placeholder]="'COMPANY_MANAGEMENT.CITY_PLACEHOLDER' | translate" nz-input formControlName="city" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSpan]="24" [nzSm]="6">Quận/Huyện</nz-form-label>
+            <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.STATE' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="24" [nzSm]="14">
-              <input placeholder="Quận hoặc huyện" nz-input formControlName="state" />
+              <input [placeholder]="'COMPANY_MANAGEMENT.STATE_PLACEHOLDER' | translate" nz-input formControlName="state" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSpan]="24" [nzSm]="6">Quốc gia</nz-form-label>
+            <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.COUNTRY' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="24" [nzSm]="14">
-              <input placeholder="Quốc gia" nz-input formControlName="country" />
+              <input [placeholder]="'COMPANY_MANAGEMENT.COUNTRY_PLACEHOLDER' | translate" nz-input formControlName="country" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSpan]="24" [nzSm]="6">Mã bưu chính</nz-form-label>
+            <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.POSTAL_CODE' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="24" [nzSm]="14">
-              <input placeholder="Mã bưu chính (tùy chọn)" nz-input formControlName="postalCode" />
+              <input [placeholder]="'COMPANY_MANAGEMENT.POSTAL_CODE_PLACEHOLDER' | translate" nz-input formControlName="postalCode" />
             </nz-form-control>
           </nz-form-item>
         </div>
 
-        <nz-divider nzText="Thông tin liên hệ" nzOrientation="left"></nz-divider>
+        <nz-divider [nzText]="'COMPANY_MANAGEMENT.CONTACT_INFO' | translate" nzOrientation="left"></nz-divider>
 
         <div formGroupName="contactInfo">
           <nz-form-item>
-            <nz-form-label [nzSpan]="24" [nzSm]="6" nzRequired>Số điện thoại</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập số điện thoại" [nzSpan]="24" [nzSm]="14">
-              <input placeholder="Nhập số điện thoại" nz-input formControlName="phone" />
+            <nz-form-label [nzSpan]="24" [nzSm]="6" nzRequired>{{ 'COMPANY_MANAGEMENT.PHONE_LABEL' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'COMPANY_MANAGEMENT.PHONE_REQUIRED' | translate" [nzSpan]="24" [nzSm]="14">
+              <input [placeholder]="'COMPANY_MANAGEMENT.PHONE_PLACEHOLDER' | translate" nz-input formControlName="phone" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSpan]="24" [nzSm]="6" nzRequired>Email</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ" [nzSpan]="24" [nzSm]="14">
-              <input placeholder="Nhập email" nz-input formControlName="email" type="email"/>
+            <nz-form-label [nzSpan]="24" [nzSm]="6" nzRequired>{{ 'COMPANY_MANAGEMENT.EMAIL_LABEL' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'COMPANY_MANAGEMENT.EMAIL_REQUIRED' | translate" [nzSpan]="24" [nzSm]="14">
+              <input [placeholder]="'COMPANY_MANAGEMENT.EMAIL_PLACEHOLDER' | translate" nz-input formControlName="email" type="email"/>
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSpan]="24" [nzSm]="6">Website</nz-form-label>
+            <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.WEBSITE_LABEL' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="24" [nzSm]="14">
-              <input placeholder="Nhập địa chỉ website (tùy chọn)" nz-input formControlName="website" />
+              <input [placeholder]="'COMPANY_MANAGEMENT.WEBSITE_PLACEHOLDER' | translate" nz-input formControlName="website" />
             </nz-form-control>
           </nz-form-item>
         </div>
         
-        <nz-divider nzText="Logo doanh nghiệp" nzOrientation="left"></nz-divider>
+        <nz-divider [nzText]="'COMPANY_MANAGEMENT.LOGO_SECTION' | translate" nzOrientation="left"></nz-divider>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="24" [nzSm]="6">Logo</nz-form-label>
+          <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.LOGO_LABEL' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="24" [nzSm]="14">
             <div class="logo-upload-section">
               <div class="upload-options">
                 <div class="upload-option">
-                  <label>Nhập link logo:</label>
-                  <input nz-input formControlName="logo" placeholder="Nhập link logo" style="width: 100%;">
+                  <label>{{ 'COMPANY_MANAGEMENT.LOGO_LINK_LABEL' | translate }}</label>
+                  <input nz-input formControlName="logo" [placeholder]="'COMPANY_MANAGEMENT.LOGO_LINK_PLACEHOLDER' | translate" style="width: 100%;">
                 </div>
-                <div class="upload-divider">HOẶC</div>
+                <div class="upload-divider">{{ 'COMPANY_MANAGEMENT.OR' | translate }}</div>
                 <div class="upload-option">
-                  <label>Tải logo lên:</label>
+                  <label>{{ 'COMPANY_MANAGEMENT.UPLOAD_LOGO_LABEL' | translate }}</label>
                   <nz-upload
                     [nzAction]="uploadUrl"
                     [nzHeaders]="uploadHeaders"
@@ -347,7 +347,7 @@
                     nzName="image">
                     <button nz-button nzType="default" [nzLoading]="isLoadingUpload">
                       <i nz-icon nzType="upload"></i>
-                      Chọn logo
+                      {{ 'COMPANY_MANAGEMENT.SELECT_LOGO' | translate }}
                     </button>
                   </nz-upload>
                 </div>
@@ -362,21 +362,21 @@
           </nz-form-control>
         </nz-form-item>
 
-        <nz-divider nzText="Cài đặt khác" nzOrientation="left"></nz-divider>
+        <nz-divider [nzText]="'COMPANY_MANAGEMENT.OTHER_SETTINGS' | translate" nzOrientation="left"></nz-divider>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="24" [nzSm]="6">Khách sạn</nz-form-label>
+          <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.HOTELS_LABEL' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="24" [nzSm]="14">
-            <nz-select formControlName="hotels" nzMode="multiple" nzPlaceHolder="Chọn khách sạn (tùy chọn)">
+            <nz-select formControlName="hotels" nzMode="multiple" [nzPlaceHolder]="'COMPANY_MANAGEMENT.HOTELS_PLACEHOLDER' | translate">
               <nz-option *ngFor="let hotel of availableHotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item *ngIf="isAdmin">
-          <nz-form-label [nzSpan]="24" [nzSm]="6">Trạng thái</nz-form-label>
+          <nz-form-label [nzSpan]="24" [nzSm]="6">{{ 'COMPANY_MANAGEMENT.STATUS_LABEL' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="24" [nzSm]="14">
-            <nz-select formControlName="status" nzPlaceHolder="Chọn trạng thái">
+            <nz-select formControlName="status" [nzPlaceHolder]="'COMPANY_MANAGEMENT.STATUS_PLACEHOLDER' | translate">
               <nz-option *ngFor="let statusOpt of statusOptions" [nzValue]="statusOpt.value" [nzLabel]="statusOpt.label"></nz-option>
             </nz-select>
           </nz-form-control>
@@ -387,12 +387,12 @@
             <nz-space>
               <button *nzSpaceItem nz-button nzType="primary" type="submit" [disabled]="businessForm.invalid" [nzLoading]="isLoading">
                 <i nz-icon [nzType]="selectedBusiness ? 'save' : 'plus'"></i>
-                {{ selectedBusiness ? 'Cập nhật doanh nghiệp' : 'Tạo doanh nghiệp' }}
+                {{ selectedBusiness ? ('COMPANY_MANAGEMENT.SAVE_BUSINESS' | translate) : ('COMPANY_MANAGEMENT.CREATE_BUSINESS_BUTTON' | translate) }}
               </button>
               <ng-container *ngIf="selectedBusiness">
                 <button *nzSpaceItem nz-button nzType="default" type="button" (click)="stopEdit()">
                   <i nz-icon nzType="close"></i>
-                  Hủy
+                  {{ 'COMPANY_MANAGEMENT.CANCEL' | translate }}
                 </button>
               </ng-container>
             </nz-space>

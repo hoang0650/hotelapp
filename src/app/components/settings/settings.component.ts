@@ -8,6 +8,7 @@ import { SettingsService, EmailSettings } from '../../services/settings.service'
 import { NotificationsService, Announcement } from '../../services/notifications.service';
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
+import { PricingService } from '../../services/pricing.service';
 import { TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -41,6 +42,8 @@ export class SettingsComponent implements OnInit {
   selectedHotelId: string | null = null;
   currentHotelSettings: any = null;
   loadingHotels = false;
+  currentPackage: any = null; // Package đăng ký hiện tại
+  packageFeatures: any = {}; // Các tính năng từ package (để disable checkbox)
   
   // Announcements management
   announcements: Announcement[] = [];
@@ -68,6 +71,7 @@ export class SettingsComponent implements OnInit {
     private notificationsService: NotificationsService,
     private hotelService: HotelService,
     private businessService: BusinessService,
+    private pricingService: PricingService,
     private translate: TranslateService
   ) {
     this.initForms();
@@ -847,18 +851,16 @@ export class SettingsComponent implements OnInit {
     this.hotelService.getHotelById(hotelId).subscribe({
       next: (hotel) => {
         this.currentHotelSettings = hotel.settings || {};
-        this.hotelQRPaymentForm.patchValue({
-          enableQRPaymentForBankTransfer: this.currentHotelSettings.enableQRPaymentForBankTransfer || false
-        });
-        this.hotelFeaturesForm.patchValue({
-          enableOTAManagement: this.currentHotelSettings.enableOTAManagement || false,
-          enableEmailManagement: this.currentHotelSettings.enableEmailManagement || false,
-          enableElectricManagement: this.currentHotelSettings.enableElectricManagement || false,
-          enablePayPalPayment: this.currentHotelSettings.enablePayPalPayment || false,
-          enableCryptoPayment: this.currentHotelSettings.enableCryptoPayment || false,
-          enableDraftInvoice: this.currentHotelSettings.enableDraftInvoice || false,
-          enableExportInvoice: this.currentHotelSettings.enableExportInvoice || false,
-          enableAiChatbox: this.currentHotelSettings.enableAiChatbox || false
+        
+        // Load package info để kiểm tra tính năng
+        this.loadPackageFeatures(hotel, () => {
+          // Sau khi load package xong, mới load hotel features
+          this.hotelQRPaymentForm.patchValue({
+            enableQRPaymentForBankTransfer: this.currentHotelSettings.enableQRPaymentForBankTransfer || false
+          });
+          
+          // Load hotel features với logic tự động bật từ package
+          this.loadHotelFeaturesWithPackageLogic();
         });
         
         // Load hotel notification settings
@@ -880,6 +882,70 @@ export class SettingsComponent implements OnInit {
         this.message.error('Lỗi khi tải cài đặt khách sạn');
       }
     });
+  }
+  
+  private loadPackageFeatures(hotel: any, callback?: () => void): void {
+    // Lấy userId từ hotel (có thể là ownerId, userId, hoặc từ currentUser)
+    const userId = hotel.userId || hotel.ownerId || this.currentUser?._id;
+    
+    if (!userId) {
+      this.currentPackage = null;
+      this.packageFeatures = {};
+      if (callback) callback();
+      return;
+    }
+    
+    // Load package của user
+    this.pricingService.getCurrentUserPackage(userId).subscribe({
+      next: (response: any) => {
+        const packageData = response.data || response;
+        if (packageData && (packageData._id || packageData.id)) {
+          this.currentPackage = packageData;
+          
+          // Map các tính năng từ package
+          this.packageFeatures = {
+            enableOTAManagement: packageData.otaManagementFeature || false,
+            enableEmailManagement: packageData.emailManagementFeature || false,
+            enableElectricManagement: packageData.electricManagementFeature || false,
+            enablePayPalPayment: packageData.paypalPaymentFeature || false,
+            enableCryptoPayment: packageData.cryptoPaymentFeature || false,
+            enableDraftInvoice: packageData.draftInvoiceFeature || false,
+            enableExportInvoice: packageData.exportInvoiceFeature || false,
+            enableAiChatbox: packageData.aiChatboxFeature || false,
+            enableQRPaymentForBankTransfer: packageData.qrPaymentFeature || false
+          };
+        } else {
+          this.currentPackage = null;
+          this.packageFeatures = {};
+        }
+        if (callback) callback();
+      },
+      error: (error) => {
+        // Nếu không có package, không có tính năng nào từ package
+        console.log('No package found for user:', userId);
+        this.currentPackage = null;
+        this.packageFeatures = {};
+        if (callback) callback();
+      }
+    });
+  }
+  
+  private loadHotelFeaturesWithPackageLogic(): void {
+    const settings = this.currentHotelSettings;
+    
+    // Nếu package có tính năng, tự động bật (override hotel settings)
+    const features = {
+      enableOTAManagement: this.packageFeatures.enableOTAManagement || settings.enableOTAManagement || false,
+      enableEmailManagement: this.packageFeatures.enableEmailManagement || settings.enableEmailManagement || false,
+      enableElectricManagement: this.packageFeatures.enableElectricManagement || settings.enableElectricManagement || false,
+      enablePayPalPayment: this.packageFeatures.enablePayPalPayment || settings.enablePayPalPayment || false,
+      enableCryptoPayment: this.packageFeatures.enableCryptoPayment || settings.enableCryptoPayment || false,
+      enableDraftInvoice: this.packageFeatures.enableDraftInvoice || settings.enableDraftInvoice || false,
+      enableExportInvoice: this.packageFeatures.enableExportInvoice || settings.enableExportInvoice || false,
+      enableAiChatbox: this.packageFeatures.enableAiChatbox || settings.enableAiChatbox || false
+    };
+    
+    this.hotelFeaturesForm.patchValue(features);
   }
   
   saveHotelQRPaymentSettings(): void {
@@ -914,16 +980,19 @@ export class SettingsComponent implements OnInit {
     }
     
     this.saving = true;
+    const formValue = this.hotelFeaturesForm.value;
+    
+    // Đảm bảo các tính năng từ package luôn được bật (không thể tắt)
     const settings = {
       ...this.currentHotelSettings,
-      enableOTAManagement: this.hotelFeaturesForm.value.enableOTAManagement,
-      enableEmailManagement: this.hotelFeaturesForm.value.enableEmailManagement,
-      enableElectricManagement: this.hotelFeaturesForm.value.enableElectricManagement,
-      enablePayPalPayment: this.hotelFeaturesForm.value.enablePayPalPayment,
-      enableCryptoPayment: this.hotelFeaturesForm.value.enableCryptoPayment,
-      enableDraftInvoice: this.hotelFeaturesForm.value.enableDraftInvoice,
-      enableExportInvoice: this.hotelFeaturesForm.value.enableExportInvoice,
-      enableAiChatbox: this.hotelFeaturesForm.value.enableAiChatbox
+      enableOTAManagement: this.packageFeatures.enableOTAManagement || formValue.enableOTAManagement,
+      enableEmailManagement: this.packageFeatures.enableEmailManagement || formValue.enableEmailManagement,
+      enableElectricManagement: this.packageFeatures.enableElectricManagement || formValue.enableElectricManagement,
+      enablePayPalPayment: this.packageFeatures.enablePayPalPayment || formValue.enablePayPalPayment,
+      enableCryptoPayment: this.packageFeatures.enableCryptoPayment || formValue.enableCryptoPayment,
+      enableDraftInvoice: this.packageFeatures.enableDraftInvoice || formValue.enableDraftInvoice,
+      enableExportInvoice: this.packageFeatures.enableExportInvoice || formValue.enableExportInvoice,
+      enableAiChatbox: this.packageFeatures.enableAiChatbox || formValue.enableAiChatbox
     };
     
     this.hotelService.updateHotelSettings(this.selectedHotelId, settings).subscribe({
@@ -931,6 +1000,8 @@ export class SettingsComponent implements OnInit {
         this.saving = false;
         this.message.success(response.message || 'Đã lưu cài đặt tính năng cho khách sạn');
         this.currentHotelSettings = response.settings || {};
+        // Reload để cập nhật UI
+        this.loadHotelSettings(this.selectedHotelId!);
       },
       error: (error) => {
         this.saving = false;
@@ -940,16 +1011,53 @@ export class SettingsComponent implements OnInit {
   }
   
   toggleAllFeatures(value: boolean): void {
-    this.hotelFeaturesForm.patchValue({
-      enableOTAManagement: value,
-      enableEmailManagement: value,
-      enableElectricManagement: value,
-      enablePayPalPayment: value,
-      enableCryptoPayment: value,
-      enableDraftInvoice: value,
-      enableExportInvoice: value,
-      enableAiChatbox: value
-    });
+    // Chỉ toggle các tính năng không bắt buộc từ package
+    const features: any = {};
+    
+    // Chỉ set value cho các tính năng không có trong package
+    if (!this.packageFeatures.enableOTAManagement) {
+      features.enableOTAManagement = value;
+    }
+    if (!this.packageFeatures.enableEmailManagement) {
+      features.enableEmailManagement = value;
+    }
+    if (!this.packageFeatures.enableElectricManagement) {
+      features.enableElectricManagement = value;
+    }
+    if (!this.packageFeatures.enablePayPalPayment) {
+      features.enablePayPalPayment = value;
+    }
+    if (!this.packageFeatures.enableCryptoPayment) {
+      features.enableCryptoPayment = value;
+    }
+    if (!this.packageFeatures.enableDraftInvoice) {
+      features.enableDraftInvoice = value;
+    }
+    if (!this.packageFeatures.enableExportInvoice) {
+      features.enableExportInvoice = value;
+    }
+    if (!this.packageFeatures.enableAiChatbox) {
+      features.enableAiChatbox = value;
+    }
+    
+    // Nếu bật tất cả, cũng bật các tính năng từ package
+    if (value) {
+      features.enableOTAManagement = this.packageFeatures.enableOTAManagement || value;
+      features.enableEmailManagement = this.packageFeatures.enableEmailManagement || value;
+      features.enableElectricManagement = this.packageFeatures.enableElectricManagement || value;
+      features.enablePayPalPayment = this.packageFeatures.enablePayPalPayment || value;
+      features.enableCryptoPayment = this.packageFeatures.enableCryptoPayment || value;
+      features.enableDraftInvoice = this.packageFeatures.enableDraftInvoice || value;
+      features.enableExportInvoice = this.packageFeatures.enableExportInvoice || value;
+      features.enableAiChatbox = this.packageFeatures.enableAiChatbox || value;
+    }
+    
+    this.hotelFeaturesForm.patchValue(features);
+  }
+  
+  // Helper method để check xem tính năng có bị disable bởi package không
+  isFeatureDisabledByPackage(featureName: string): boolean {
+    return this.packageFeatures[featureName] === true;
   }
   
   saveHotelNotificationSettings(): void {

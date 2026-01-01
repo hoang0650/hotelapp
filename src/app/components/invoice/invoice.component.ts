@@ -27,6 +27,9 @@ interface InvoiceProduct {
 interface Duration {
   hours: number;
   days: number;
+  minutes?: number;
+  totalHours?: number;
+  totalMinutes?: number;
 }
 
 // Interface cho dịch vụ
@@ -111,18 +114,63 @@ export class InvoiceComponent implements OnInit {
   }
   
   get durationText(): string {
-    if (!this.invoiceData.duration) {
-      return 'N/A';
+    // Nếu có checkInTime và checkOutTime, tính lại từ đó để đảm bảo chính xác
+    if (this.invoiceData.checkInTime && this.invoiceData.checkOutTime) {
+      const checkInTime = this.invoiceData.checkInTime instanceof Date 
+        ? this.invoiceData.checkInTime 
+        : new Date(this.invoiceData.checkInTime);
+      const checkOutTime = this.invoiceData.checkOutTime instanceof Date 
+        ? this.invoiceData.checkOutTime 
+        : new Date(this.invoiceData.checkOutTime);
+      
+      if (!isNaN(checkInTime.getTime()) && !isNaN(checkOutTime.getTime())) {
+        // Tính chính xác thời gian lưu trú
+        const durationInMs = checkOutTime.getTime() - checkInTime.getTime();
+        const totalMinutes = Math.floor(durationInMs / (1000 * 60));
+        
+        const days = Math.floor(totalMinutes / (24 * 60));
+        const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+        const minutes = totalMinutes % 60;
+        
+        // Hiển thị theo định dạng: X ngày Y giờ Z phút hoặc Y giờ Z phút
+        const parts: string[] = [];
+        
+        if (days > 0) {
+          parts.push(`${days} ngày`);
+        }
+        if (hours > 0) {
+          parts.push(`${hours} giờ`);
+        }
+        if (minutes > 0 || (days === 0 && hours === 0)) {
+          parts.push(`${minutes} phút`);
+        }
+        
+        return parts.length > 0 ? parts.join(' ') : '0 phút';
+      }
     }
     
-    const hours = this.invoiceData.duration.hours || 0;
-    const days = this.invoiceData.duration.days || 0;
-    
-    if (days >= 1) {
-      return `${days} ngày ${hours % 24 > 0 ? `${hours % 24} giờ` : ''}`;
-    } else {
-      return `${hours} giờ`;
+    // Fallback: sử dụng duration object nếu có
+    if (this.invoiceData.duration) {
+      const days = this.invoiceData.duration.days || 0;
+      const hours = this.invoiceData.duration.hours || 0;
+      const minutes = this.invoiceData.duration.minutes || 0;
+      
+      const parts: string[] = [];
+      
+      if (days > 0) {
+        parts.push(`${days} ngày`);
+      }
+      if (hours > 0) {
+        parts.push(`${hours} giờ`);
+      }
+      if (minutes > 0 || (days === 0 && hours === 0)) {
+        parts.push(`${minutes} phút`);
+      }
+      
+      return parts.length > 0 ? parts.join(' ') : '0 phút';
     }
+    
+    return 'N/A';
   }
 
   // Getter kiểm tra services có tồn tại và có phần tử không
@@ -215,8 +263,8 @@ export class InvoiceComponent implements OnInit {
     // KHÔNG tự động thêm dịch vụ nữa vì đã được thêm từ room-history
     // (Loại bỏ logic tự động thêm services vào products để tránh trùng lặp)
     
-    // Tính tổng thời gian lưu trú nếu chưa có
-    if (!this.invoiceData.duration && this.invoiceData.checkInTime && this.invoiceData.checkOutTime) {
+    // Tính tổng thời gian lưu trú nếu chưa có hoặc tính lại từ checkInTime và checkOutTime
+    if (this.invoiceData.checkInTime && this.invoiceData.checkOutTime) {
       const checkInTime = this.invoiceData.checkInTime instanceof Date 
         ? this.invoiceData.checkInTime 
         : new Date(this.invoiceData.checkInTime);
@@ -226,11 +274,24 @@ export class InvoiceComponent implements OnInit {
       
       // Kiểm tra Date hợp lệ
       if (!isNaN(checkInTime.getTime()) && !isNaN(checkOutTime.getTime())) {
-        const durationInHours = Math.ceil((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60));
+        // Tính chính xác thời gian lưu trú (milliseconds)
+        const durationInMs = checkOutTime.getTime() - checkInTime.getTime();
+        
+        // Tính số ngày, giờ, phút
+        const totalMinutes = Math.floor(durationInMs / (1000 * 60));
+        const days = Math.floor(totalMinutes / (24 * 60));
+        const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+        const minutes = totalMinutes % 60;
+        
+        // Tính tổng giờ để tương thích với code cũ
+        const totalHours = totalMinutes / 60;
         
         this.invoiceData.duration = {
-          hours: durationInHours,
-          days: Math.ceil(durationInHours / 24)
+          days: days,
+          hours: hours,
+          minutes: minutes,
+          totalHours: totalHours,
+          totalMinutes: totalMinutes
         };
       }
     }

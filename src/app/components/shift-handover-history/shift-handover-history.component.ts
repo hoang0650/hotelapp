@@ -9,6 +9,7 @@ import {
 } from '../../interfaces/shift-handover';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-shift-handover-history',
@@ -39,10 +40,15 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   selectedRecord: ShiftHandover | null = null;
   isDetailModalVisible = false;
   
+  // Translated titles
+  cardTitle: string = '';
+  detailModalTitle: string = '';
+  
   constructor(
     private shiftHandoverService: ShiftHandoverService,
     private authService: AuthService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {}
   
   ngOnInit(): void {
@@ -53,6 +59,21 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     if (this._hotelId) {
       this.loadShiftHistory();
     }
+    
+    // Initialize translated titles
+    this.updateTitles();
+    
+    // Subscribe to language changes
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.updateTitles();
+      })
+    );
+  }
+  
+  private updateTitles(): void {
+    this.cardTitle = this.translate.instant('SHIFT_HANDOVER.HISTORY.TITLE');
+    this.detailModalTitle = this.translate.instant('SHIFT_HANDOVER.HISTORY.DETAIL_TITLE');
   }
   
   ngOnChanges(changes: SimpleChanges): void {
@@ -83,7 +104,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
     
     if (!currentHotelId) {
-      this.message.warning('Không tìm thấy thông tin khách sạn');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.HOTEL_NOT_FOUND'));
       this.isLoading = false;
       return;
     }
@@ -155,16 +176,16 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
   
   formatDate(date: Date | string | undefined): string {
-    if (!date) return 'N/A';
+    if (!date) return this.translate.instant('SHIFT_HANDOVER.HISTORY.N_A');
     return format(new Date(date), 'dd/MM/yyyy HH:mm');
   }
   
   getStaffName(staff: any): string {
-    if (!staff) return 'N/A';
+    if (!staff) return this.translate.instant('SHIFT_HANDOVER.HISTORY.N_A');
     if (typeof staff === 'string') return staff;
     const firstName = staff.personalInfo?.firstName || '';
     const lastName = staff.personalInfo?.lastName || '';
-    return `${firstName} ${lastName}`.trim() || staff.username || 'N/A';
+    return `${firstName} ${lastName}`.trim() || staff.username || this.translate.instant('SHIFT_HANDOVER.HISTORY.N_A');
   }
   
   getStatusColor(status: string): string {
@@ -179,25 +200,25 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   
   getStatusLabel(status: string): string {
     const labelMap: Record<string, string> = {
-      'pending': 'Chờ xác nhận',
-      'confirmed': 'Đã xác nhận',
-      'rejected': 'Đã từ chối',
-      'cancelled': 'Đã hủy'
+      'pending': this.translate.instant('SHIFT_HANDOVER.HISTORY.STATUS.PENDING'),
+      'confirmed': this.translate.instant('SHIFT_HANDOVER.HISTORY.STATUS.CONFIRMED'),
+      'rejected': this.translate.instant('SHIFT_HANDOVER.HISTORY.STATUS.REJECTED'),
+      'cancelled': this.translate.instant('SHIFT_HANDOVER.HISTORY.STATUS.CANCELLED')
     };
     return labelMap[status] || status;
   }
   
   getExpenseCategoryLabel(category: string | undefined): string {
-    if (!category) return 'Khác';
+    if (!category) return this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.OTHER');
     const labelMap: Record<string, string> = {
-      'supplies': 'Vật tư',
-      'utilities': 'Tiện ích',
-      'salary': 'Lương',
-      'maintenance': 'Bảo trì',
-      'marketing': 'Marketing',
-      'other': 'Khác'
+      'supplies': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.SUPPLIES'),
+      'utilities': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.UTILITIES'),
+      'salary': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.SALARY'),
+      'maintenance': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.MAINTENANCE'),
+      'marketing': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.MARKETING'),
+      'other': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.OTHER')
     };
-    return labelMap[category] || category || 'Khác';
+    return labelMap[category] || category || this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.OTHER');
   }
   
   getExpenseCategoryColor(category: string | undefined): string {
@@ -214,14 +235,14 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
 
   getIncomeCategoryLabel(category: string | undefined): string {
-    if (!category) return 'Khác';
+    if (!category) return this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.OTHER');
     const labelMap: Record<string, string> = {
-      'room_rental': 'Tiền phòng',
-      'service': 'Dịch vụ',
-      'deposit': 'Tiền cọc',
-      'other': 'Khác'
+      'room_rental': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.ROOM_RENTAL'),
+      'service': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.SERVICE'),
+      'deposit': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.DEPOSIT'),
+      'other': this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.OTHER')
     };
-    return labelMap[category] || category || 'Khác';
+    return labelMap[category] || category || this.translate.instant('SHIFT_HANDOVER.HISTORY.CATEGORY.OTHER');
   }
 
   getIncomeCategoryColor(category: string | undefined): string {
@@ -302,16 +323,16 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   getGuestSourceLabel(room: any): string {
     const source = this.getGuestSource(room);
     const sourceMap: { [key: string]: string } = {
-      'walkin': 'Walk-in',
-      'booking': 'Booking',
-      'agoda': 'Agoda',
-      'traveloka': 'Traveloka',
-      'expedia': 'Expedia',
-      'trip': 'Trip.com',
-      'g2j': 'G2J',
-      'other': 'Khác'
+      'walkin': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.WALKIN'),
+      'booking': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.BOOKING'),
+      'agoda': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.AGODA'),
+      'traveloka': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.TRAVELOKA'),
+      'expedia': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.EXPEDIA'),
+      'trip': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.TRIP'),
+      'g2j': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.G2J'),
+      'other': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.OTHER')
     };
-    return sourceMap[source] || source;
+    return sourceMap[source] || source || this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.OTHER');
   }
 
   // Lấy màu cho nguồn khách
@@ -367,7 +388,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
     
     if (!currentHotelId) {
-      this.message.warning('Không tìm thấy thông tin khách sạn');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.HOTEL_NOT_FOUND'));
       return;
     }
 
@@ -394,36 +415,36 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const allRecords = response.data || [];
           
           if (allRecords.length === 0) {
-            this.message.warning('Không có dữ liệu để xuất Excel');
+            this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.NO_DATA'));
             this.isLoading = false;
             return;
           }
 
           // Chuẩn bị dữ liệu cho Excel
           const excelData = allRecords.map(record => ({
-            'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
-            'Nhân viên giao': this.getStaffName(record.fromStaffId),
-            'Nhân viên nhận': this.getStaffName(record.toStaffId),
-            'Tiền ca trước': record.previousShiftAmount || 0,
-            'Tiền mặt trong ca': record.cashInShift || 0,
-            'Tiền giao quản lý': record.managerHandoverAmount || 0,
-            'Số tiền giao ca': record.handoverAmount || 0,
-            'Tiền mặt': record.cashAmount || 0,
-            'Chuyển khoản': record.bankTransferAmount || 0,
-            'Cà thẻ': record.cardPaymentAmount || 0,
-            'Phiếu chi': record.expenseAmount || 0,
-            'Phiếu thu': record.incomeAmount || 0,
-            'Tổng doanh thu': this.getTotalRevenue(record),
-            'Tổng tiền phòng': record.totalRoomRevenue || 0,
-            'Trạng thái': this.getStatusLabel(record.status),
-            'Ghi chú': record.notes || ''
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.HANDOVER_TIME')]: format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.FROM_STAFF')]: this.getStaffName(record.fromStaffId),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TO_STAFF')]: this.getStaffName(record.toStaffId),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.PREVIOUS_SHIFT_AMOUNT')]: record.previousShiftAmount || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.CASH_IN_SHIFT')]: record.cashInShift || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.MANAGER_HANDOVER_AMOUNT')]: record.managerHandoverAmount || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.HANDOVER_AMOUNT')]: record.handoverAmount || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.CASH_AMOUNT')]: record.cashAmount || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.BANK_TRANSFER_AMOUNT')]: record.bankTransferAmount || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.CARD_PAYMENT_AMOUNT')]: record.cardPaymentAmount || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPENSE_AMOUNT')]: record.expenseAmount || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.INCOME_AMOUNT')]: record.incomeAmount || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_REVENUE')]: this.getTotalRevenue(record),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_ROOM_REVENUE')]: record.totalRoomRevenue || 0,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.STATUS')]: this.getStatusLabel(record.status),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.NOTES')]: record.notes || ''
           }));
 
           // Tạo worksheet
           const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(excelData);
           const workbook: XLSX.WorkBook = { 
-            Sheets: { 'Lịch sử giao ca': worksheet }, 
-            SheetNames: ['Lịch sử giao ca'] 
+            Sheets: { [this.translate.instant('SHIFT_HANDOVER_EXPORT.SHEET_NAME')]: worksheet }, 
+            SheetNames: [this.translate.instant('SHIFT_HANDOVER_EXPORT.SHEET_NAME')] 
           };
 
           // Tạo tên file
@@ -432,12 +453,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
 
           // Xuất file
           XLSX.writeFile(workbook, `${fileName}.xlsx`);
-          this.message.success(`Đã xuất ${allRecords.length} bản ghi ra file Excel`);
+          this.message.success(this.translate.instant('SHIFT_HANDOVER_EXPORT.SUCCESS', { count: allRecords.length }));
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error exporting shift handover history:', error);
-          this.message.error('Không thể xuất dữ liệu ra Excel');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER_EXPORT.ERROR'));
           this.isLoading = false;
         }
       })
@@ -449,7 +470,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
     
     if (!currentHotelId) {
-      this.message.warning('Không tìm thấy thông tin khách sạn');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.HOTEL_NOT_FOUND'));
       return;
     }
 
@@ -476,7 +497,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const allRecords = response.data || [];
           
           if (allRecords.length === 0) {
-            this.message.warning('Không có dữ liệu để xuất Excel');
+            this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.NO_DATA'));
             this.isLoading = false;
             return;
           }
@@ -499,23 +520,23 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
                 const checkinTime = (room as any).checkinTime || (room as any).checkInTime || null;
                 
                 allRoomHistory.push({
-                  'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
-                  'Phòng': room.roomNumber || '',
-                  'Tên khách': this.getGuestName(room),
-                  'Nguồn': this.getGuestSourceLabel(room),
-                  'Hành động': room.action || '',
-                  'Tiền phòng': roomTotal,
-                  'Phụ thu': additionalCharges,
-                  'Khuyến mãi': discount,
-                  'Tiền dịch vụ': serviceAmount,
-                  'Tiền đặt trước': advancePayment,
-                  'Số tiền': room.amount || 0,
-                  'Hình thức thanh toán': room.paymentMethod === 'cash' ? 'Tiền mặt' : 
-                  room.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : 
-                  room.paymentMethod === 'card' ? 'Thẻ' : 'Khác',
-                  'Nhận phòng': checkinTime ? format(new Date(checkinTime), 'dd/MM/yyyy HH:mm') : '',
-                  'Trả phòng': format(new Date(room.timestamp), 'dd/MM/yyyy HH:mm'),
-                  'Ghi chú': room.notes || ''
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.HANDOVER_TIME')]: format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.ROOM')]: room.roomNumber || '',
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.GUEST_NAME')]: this.getGuestName(room),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.SOURCE')]: this.getGuestSourceLabel(room),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.ACTION')]: room.action || '',
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.ROOM_TOTAL')]: roomTotal,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.ADDITIONAL_CHARGES')]: additionalCharges,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.DISCOUNT')]: discount,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.SERVICE_AMOUNT')]: serviceAmount,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.ADVANCE_PAYMENT')]: advancePayment,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.AMOUNT')]: room.amount || 0,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.PAYMENT_METHOD')]: room.paymentMethod === 'cash' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CASH') : 
+                  room.paymentMethod === 'bank_transfer' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.BANK_TRANSFER') : 
+                  room.paymentMethod === 'card' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CARD') : this.translate.instant('SHIFT_HANDOVER_EXPORT.OTHER'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.CHECK_IN')]: checkinTime ? format(new Date(checkinTime), 'dd/MM/yyyy HH:mm') : '',
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.CHECK_OUT')]: format(new Date(room.timestamp), 'dd/MM/yyyy HH:mm'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.NOTES')]: room.notes || ''
                 });
               });
             }
@@ -524,16 +545,16 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             if (record.expenses && Array.isArray(record.expenses)) {
               record.expenses.forEach(expense => {
                 allExpenses.push({
-                  'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
-                  'Mô tả': expense.description || 'Phiếu chi',
-                  'Danh mục': this.getExpenseCategoryLabel(expense.category),
-                  'Người nhận': expense.recipient || '',
-                  'Số tiền': expense.amount || 0,
-                  'Hình thức thanh toán': expense.method === 'cash' ? 'Tiền mặt' : 
-                                          expense.method === 'bank_transfer' ? 'Chuyển khoản' : 
-                                          expense.method === 'card' ? 'Thẻ' : 'Khác',
-                  'Thời gian': format(new Date(expense.timestamp), 'dd/MM/yyyy HH:mm'),
-                  'Người duyệt': expense.approvedBy || ''
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.HANDOVER_TIME')]: format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.DESCRIPTION')]: expense.description || this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPENSE_VOUCHER'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.CATEGORY')]: this.getExpenseCategoryLabel(expense.category),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.RECIPIENT')]: expense.recipient || '',
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.AMOUNT')]: expense.amount || 0,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.PAYMENT_METHOD')]: expense.method === 'cash' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CASH') : 
+                                          expense.method === 'bank_transfer' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.BANK_TRANSFER') : 
+                                          expense.method === 'card' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CARD') : this.translate.instant('SHIFT_HANDOVER_EXPORT.OTHER'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.TIMESTAMP')]: format(new Date(expense.timestamp), 'dd/MM/yyyy HH:mm'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.APPROVED_BY')]: expense.approvedBy || ''
                 });
               });
             }
@@ -542,16 +563,16 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             if (record.incomes && Array.isArray(record.incomes)) {
               record.incomes.forEach(income => {
                 allIncomes.push({
-                  'Thời gian giao ca': format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
-                  'Mô tả': income.description || 'Phiếu thu',
-                  'Danh mục': this.getIncomeCategoryLabel(income.category),
-                  'Người nộp': income.source || '',
-                  'Số tiền': income.amount || 0,
-                  'Hình thức thanh toán': income.method === 'cash' ? 'Tiền mặt' : 
-                                          income.method === 'bank_transfer' ? 'Chuyển khoản' : 
-                                          income.method === 'card' ? 'Thẻ' : 'Khác',
-                  'Thời gian': format(new Date(income.timestamp), 'dd/MM/yyyy HH:mm'),
-                  'Người duyệt': income.approvedBy || ''
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.HANDOVER_TIME')]: format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.DESCRIPTION')]: income.description || this.translate.instant('SHIFT_HANDOVER_EXPORT.INCOME_VOUCHER'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.CATEGORY')]: this.getIncomeCategoryLabel(income.category),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.PAYER')]: income.source || '',
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.AMOUNT')]: income.amount || 0,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.PAYMENT_METHOD')]: income.method === 'cash' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CASH') : 
+                                          income.method === 'bank_transfer' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.BANK_TRANSFER') : 
+                                          income.method === 'card' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CARD') : this.translate.instant('SHIFT_HANDOVER_EXPORT.OTHER'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.TIMESTAMP')]: format(new Date(income.timestamp), 'dd/MM/yyyy HH:mm'),
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.APPROVED_BY')]: income.approvedBy || ''
                 });
               });
             }
@@ -565,38 +586,38 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
 
           // Sheet 1: Tổng hợp doanh thu
           const summaryData = [{
-            'Tổng số ca': allRecords.length,
-            'Tổng tiền ca trước': allRecords.reduce((sum, r) => sum + (r.previousShiftAmount || 0), 0),
-            'Tổng tiền mặt trong ca': allRecords.reduce((sum, r) => sum + (r.cashInShift || 0), 0),
-            'Tổng tiền giao quản lý': allRecords.reduce((sum, r) => sum + (r.managerHandoverAmount || 0), 0),
-            'Tổng số tiền giao ca': allRecords.reduce((sum, r) => sum + (r.handoverAmount || 0), 0),
-            'Tổng tiền mặt': allRecords.reduce((sum, r) => sum + (r.cashAmount || 0), 0),
-            'Tổng chuyển khoản': allRecords.reduce((sum, r) => sum + (r.bankTransferAmount || 0), 0),
-            'Tổng cà thẻ': allRecords.reduce((sum, r) => sum + (r.cardPaymentAmount || 0), 0),
-            'Tổng phiếu chi': allRecords.reduce((sum, r) => sum + (r.expenseAmount || 0), 0),
-            'Tổng phiếu thu': allRecords.reduce((sum, r) => sum + (r.incomeAmount || 0), 0),
-            'Tổng doanh thu': allRecords.reduce((sum, r) => sum + this.getTotalRevenue(r), 0),
-            'Tổng tiền phòng': allRecords.reduce((sum, r) => sum + (r.totalRoomRevenue || 0), 0)
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_SHIFTS')]: allRecords.length,
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_PREVIOUS_SHIFT_AMOUNT')]: allRecords.reduce((sum, r) => sum + (r.previousShiftAmount || 0), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_CASH_IN_SHIFT')]: allRecords.reduce((sum, r) => sum + (r.cashInShift || 0), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_MANAGER_HANDOVER_AMOUNT')]: allRecords.reduce((sum, r) => sum + (r.managerHandoverAmount || 0), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_HANDOVER_AMOUNT')]: allRecords.reduce((sum, r) => sum + (r.handoverAmount || 0), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_CASH_AMOUNT')]: allRecords.reduce((sum, r) => sum + (r.cashAmount || 0), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_BANK_TRANSFER_AMOUNT')]: allRecords.reduce((sum, r) => sum + (r.bankTransferAmount || 0), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_CARD_PAYMENT_AMOUNT')]: allRecords.reduce((sum, r) => sum + (r.cardPaymentAmount || 0), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_EXPENSE_AMOUNT')]: allRecords.reduce((sum, r) => sum + (r.expenseAmount || 0), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_INCOME_AMOUNT')]: allRecords.reduce((sum, r) => sum + (r.incomeAmount || 0), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_REVENUE')]: allRecords.reduce((sum, r) => sum + this.getTotalRevenue(r), 0),
+            [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_ROOM_REVENUE')]: allRecords.reduce((sum, r) => sum + (r.totalRoomRevenue || 0), 0)
           }];
-          workbook.Sheets['Tổng hợp'] = XLSX.utils.json_to_sheet(summaryData);
-          workbook.SheetNames.push('Tổng hợp');
+          workbook.Sheets[this.translate.instant('SHIFT_HANDOVER_EXPORT.SUMMARY_SHEET')] = XLSX.utils.json_to_sheet(summaryData);
+          workbook.SheetNames.push(this.translate.instant('SHIFT_HANDOVER_EXPORT.SUMMARY_SHEET'));
 
           // Sheet 2: Lịch sử phòng
           if (allRoomHistory.length > 0) {
-            workbook.Sheets['Lịch sử phòng'] = XLSX.utils.json_to_sheet(allRoomHistory);
-            workbook.SheetNames.push('Lịch sử phòng');
+            workbook.Sheets[this.translate.instant('SHIFT_HANDOVER_EXPORT.ROOM_HISTORY_SHEET')] = XLSX.utils.json_to_sheet(allRoomHistory);
+            workbook.SheetNames.push(this.translate.instant('SHIFT_HANDOVER_EXPORT.ROOM_HISTORY_SHEET'));
           }
 
           // Sheet 3: Phiếu chi
           if (allExpenses.length > 0) {
-            workbook.Sheets['Phiếu chi'] = XLSX.utils.json_to_sheet(allExpenses);
-            workbook.SheetNames.push('Phiếu chi');
+            workbook.Sheets[this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPENSE_SHEET')] = XLSX.utils.json_to_sheet(allExpenses);
+            workbook.SheetNames.push(this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPENSE_SHEET'));
           }
 
           // Sheet 4: Phiếu thu
           if (allIncomes.length > 0) {
-            workbook.Sheets['Phiếu thu'] = XLSX.utils.json_to_sheet(allIncomes);
-            workbook.SheetNames.push('Phiếu thu');
+            workbook.Sheets[this.translate.instant('SHIFT_HANDOVER_EXPORT.INCOME_SHEET')] = XLSX.utils.json_to_sheet(allIncomes);
+            workbook.SheetNames.push(this.translate.instant('SHIFT_HANDOVER_EXPORT.INCOME_SHEET'));
           }
 
           // Tạo tên file
@@ -605,12 +626,16 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
 
           // Xuất file
           XLSX.writeFile(workbook, `${fileName}.xlsx`);
-          this.message.success(`Đã xuất dữ liệu: ${allRoomHistory.length} lịch sử phòng, ${allExpenses.length} phiếu chi, ${allIncomes.length} phiếu thu`);
+          this.message.success(this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPORT_SUCCESS_DETAIL', { 
+            roomHistory: allRoomHistory.length, 
+            expenses: allExpenses.length, 
+            incomes: allIncomes.length 
+          }));
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error exporting revenue and expense:', error);
-          this.message.error('Không thể xuất dữ liệu ra Excel');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER_EXPORT.ERROR'));
           this.isLoading = false;
         }
       })
@@ -702,7 +727,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
     
     if (!currentHotelId) {
-      this.message.warning('Không tìm thấy thông tin khách sạn');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.HOTEL_NOT_FOUND'));
       return;
     }
 
@@ -721,7 +746,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const allRecords = response.data || [];
           
           if (allRecords.length === 0) {
-            this.message.warning('Không có dữ liệu để xuất Excel');
+            this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.NO_DATA'));
             this.isLoading = false;
             return;
           }
@@ -838,46 +863,56 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           sortedPeriods.forEach(periodKey => {
             const rooms = revenueByPeriod[periodKey] || [];
             const incomes = incomeByPeriod[periodKey] || [];
-            const totalRevenue = rooms.reduce((sum, r) => sum + (r['Số tiền'] || 0), 0);
-            const totalRoom = rooms.reduce((sum, r) => sum + (r['Tiền phòng'] || 0), 0);
-            const totalService = rooms.reduce((sum, r) => sum + (r['Tiền dịch vụ'] || 0), 0);
-            const totalAdditional = rooms.reduce((sum, r) => sum + (r['Phụ thu'] || 0), 0);
-            const totalDiscount = rooms.reduce((sum, r) => sum + (r['Khuyến mãi'] || 0), 0);
-            const totalIncome = incomes.reduce((sum, i) => sum + (i['Số tiền'] || 0), 0);
+            const amountKey = this.translate.instant('SHIFT_HANDOVER_EXPORT.AMOUNT');
+            const roomTotalKey = this.translate.instant('SHIFT_HANDOVER_EXPORT.ROOM_TOTAL');
+            const serviceAmountKey = this.translate.instant('SHIFT_HANDOVER_EXPORT.SERVICE_AMOUNT');
+            const additionalChargesKey = this.translate.instant('SHIFT_HANDOVER_EXPORT.ADDITIONAL_CHARGES');
+            const discountKey = this.translate.instant('SHIFT_HANDOVER_EXPORT.DISCOUNT');
+            const totalRevenue = rooms.reduce((sum, r) => sum + (r[amountKey] || 0), 0);
+            const totalRoom = rooms.reduce((sum, r) => sum + (r[roomTotalKey] || 0), 0);
+            const totalService = rooms.reduce((sum, r) => sum + (r[serviceAmountKey] || 0), 0);
+            const totalAdditional = rooms.reduce((sum, r) => sum + (r[additionalChargesKey] || 0), 0);
+            const totalDiscount = rooms.reduce((sum, r) => sum + (r[discountKey] || 0), 0);
+            const totalIncome = incomes.reduce((sum, i) => sum + (i[amountKey] || 0), 0);
 
             summaryData.push({
-              'Kỳ': periodKey,
-              'Số phòng': rooms.length,
-              'Tổng tiền phòng': totalRoom,
-              'Tổng tiền dịch vụ': totalService,
-              'Tổng phụ thu': totalAdditional,
-              'Tổng khuyến mãi': totalDiscount,
-              'Tổng doanh thu phòng': totalRevenue,
-              'Số phiếu thu': incomes.length,
-              'Tổng phiếu thu': totalIncome,
-              'Tổng doanh thu': totalRevenue + totalIncome
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.PERIOD')]: periodKey,
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.ROOM_COUNT')]: rooms.length,
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_ROOM_TOTAL')]: totalRoom,
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_SERVICE_AMOUNT')]: totalService,
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_ADDITIONAL_CHARGES')]: totalAdditional,
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_DISCOUNT')]: totalDiscount,
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_ROOM_REVENUE')]: totalRevenue,
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.INCOME_COUNT')]: incomes.length,
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_INCOME_AMOUNT')]: totalIncome,
+              [this.translate.instant('SHIFT_HANDOVER_EXPORT.TOTAL_REVENUE')]: totalRevenue + totalIncome
             });
           });
 
-          workbook.Sheets['Tổng hợp'] = XLSX.utils.json_to_sheet(summaryData);
-          workbook.SheetNames.push('Tổng hợp');
+          workbook.Sheets[this.translate.instant('SHIFT_HANDOVER_EXPORT.SUMMARY_SHEET')] = XLSX.utils.json_to_sheet(summaryData);
+          workbook.SheetNames.push(this.translate.instant('SHIFT_HANDOVER_EXPORT.SUMMARY_SHEET'));
 
           // Tạo sheet cho mỗi kỳ (doanh thu và phiếu thu)
           sortedPeriods.forEach(periodKey => {
-            const periodLabel = period === 'month' ? `Tháng ${periodKey}` :
-                               period === 'quarter' ? `Quý ${periodKey}` :
-                               `Năm ${periodKey}`;
+            const monthLabel = this.translate.instant('SHIFT_HANDOVER_EXPORT.MONTH');
+            const quarterLabel = this.translate.instant('SHIFT_HANDOVER_EXPORT.QUARTER');
+            const yearLabel = this.translate.instant('SHIFT_HANDOVER_EXPORT.YEAR');
+            const revenueLabel = this.translate.instant('SHIFT_HANDOVER_EXPORT.REVENUE');
+            const incomeLabel = this.translate.instant('SHIFT_HANDOVER_EXPORT.INCOME_VOUCHER');
+            const periodLabel = period === 'month' ? `${monthLabel} ${periodKey}` :
+                               period === 'quarter' ? `${quarterLabel} ${periodKey}` :
+                               `${yearLabel} ${periodKey}`;
             
             // Sheet doanh thu cho kỳ này
             if (revenueByPeriod[periodKey] && revenueByPeriod[periodKey].length > 0) {
-              workbook.Sheets[`${periodLabel} - Doanh thu`] = XLSX.utils.json_to_sheet(revenueByPeriod[periodKey]);
-              workbook.SheetNames.push(`${periodLabel} - Doanh thu`);
+              workbook.Sheets[`${periodLabel} - ${revenueLabel}`] = XLSX.utils.json_to_sheet(revenueByPeriod[periodKey]);
+              workbook.SheetNames.push(`${periodLabel} - ${revenueLabel}`);
             }
 
             // Sheet phiếu thu cho kỳ này
             if (incomeByPeriod[periodKey] && incomeByPeriod[periodKey].length > 0) {
-              workbook.Sheets[`${periodLabel} - Phiếu thu`] = XLSX.utils.json_to_sheet(incomeByPeriod[periodKey]);
-              workbook.SheetNames.push(`${periodLabel} - Phiếu thu`);
+              workbook.Sheets[`${periodLabel} - ${incomeLabel}`] = XLSX.utils.json_to_sheet(incomeByPeriod[periodKey]);
+              workbook.SheetNames.push(`${periodLabel} - ${incomeLabel}`);
             }
           });
 
@@ -907,7 +942,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
     
     if (!currentHotelId) {
-      this.message.warning('Không tìm thấy thông tin khách sạn');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.HOTEL_NOT_FOUND'));
       return;
     }
 
@@ -926,7 +961,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const allRecords = response.data || [];
           
           if (allRecords.length === 0) {
-            this.message.warning('Không có dữ liệu để xuất Excel');
+            this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.NO_DATA'));
             this.isLoading = false;
             return;
           }
@@ -1040,7 +1075,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
     
     if (!currentHotelId) {
-      this.message.warning('Không tìm thấy thông tin khách sạn');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.HOTEL_NOT_FOUND'));
       return;
     }
 
@@ -1059,7 +1094,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const allRecords = response.data || [];
           
           if (allRecords.length === 0) {
-            this.message.warning('Không có dữ liệu để xuất Excel');
+            this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.NO_DATA'));
             this.isLoading = false;
             return;
           }
@@ -1173,7 +1208,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     const currentHotelId = this._hotelId || this.hotelId || this.authService.getHotelId();
     
     if (!currentHotelId) {
-      this.message.warning('Không tìm thấy thông tin khách sạn');
+      this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.HOTEL_NOT_FOUND'));
       return;
     }
 
@@ -1192,7 +1227,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const allRecords = response.data || [];
           
           if (allRecords.length === 0) {
-            this.message.warning('Không có dữ liệu để xuất Excel');
+            this.message.warning(this.translate.instant('SHIFT_HANDOVER_EXPORT.NO_DATA'));
             this.isLoading = false;
             return;
           }
