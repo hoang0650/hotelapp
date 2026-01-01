@@ -8,6 +8,7 @@ import { SettingsService, EmailSettings } from '../../services/settings.service'
 import { NotificationsService, Announcement } from '../../services/notifications.service';
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-settings',
@@ -54,14 +55,8 @@ export class SettingsComponent implements OnInit {
   showQrPreview: boolean = false; // Hiển thị preview QR code
   qrBeneficiaryName: string = ''; // Tên người thụ hưởng cho QR code
 
-  // Email providers
-  emailProviders = [
-    { value: 'resend', label: 'Resend (Khuyến nghị)', description: 'Miễn phí 3000 email/tháng, API đơn giản' },
-    { value: 'sendgrid', label: 'SendGrid', description: 'Miễn phí 100 email/ngày' },
-    { value: 'mailgun', label: 'Mailgun', description: 'Miễn phí 5000 email/tháng (3 tháng đầu)' },
-    { value: 'aws-ses', label: 'AWS SES', description: 'Giá rẻ, scale tốt' },
-    { value: 'nodemailer', label: 'Nodemailer (SMTP)', description: 'SMTP truyền thống (Gmail, Outlook, etc.)' }
-  ];
+  // Email providers - will be initialized in ngOnInit
+  emailProviders: { value: string, label: string, description: string }[] = [];
   
   constructor(
     private fb: FormBuilder,
@@ -72,12 +67,14 @@ export class SettingsComponent implements OnInit {
     private settingsService: SettingsService,
     private notificationsService: NotificationsService,
     private hotelService: HotelService,
-    private businessService: BusinessService
+    private businessService: BusinessService,
+    private translate: TranslateService
   ) {
     this.initForms();
   }
 
   ngOnInit(): void {
+    this.initEmailProviders();
     this.loadCurrentUser();
     this.loadSettings();
     this.loadHotels();
@@ -85,6 +82,16 @@ export class SettingsComponent implements OnInit {
       this.loadAnnouncements();
       this.loadBusinesses();
     }
+  }
+
+  private initEmailProviders(): void {
+    this.emailProviders = [
+      { value: 'resend', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_RESEND'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_RESEND_DESC') },
+      { value: 'sendgrid', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_SENDGRID'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_SENDGRID_DESC') },
+      { value: 'mailgun', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_MAILGUN'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_MAILGUN_DESC') },
+      { value: 'aws-ses', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_AWS_SES'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_AWS_SES_DESC') },
+      { value: 'nodemailer', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_NODEMAILER'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_NODEMAILER_DESC') }
+    ];
   }
 
   private initForms(): void {

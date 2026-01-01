@@ -2,12 +2,12 @@
   <div class="header-section">
     <h2 class="mb-3">
       <i nz-icon nzType="home" nzTheme="outline"></i>
-      Quản lý Khách sạn
+      {{ 'HOTEL_MANAGEMENT.TITLE' | translate }}
     </h2>
     <div class="header-actions" *ngIf="canCreateHotel">
       <button nz-button nzType="primary" (click)="startEdit(null)" *ngIf="!editId">
         <i nz-icon nzType="plus"></i>
-        Thêm Khách sạn mới
+        {{ 'HOTEL_MANAGEMENT.ADD_NEW' | translate }}
       </button>
     </div>
   </div>
@@ -16,7 +16,7 @@
   <nz-alert 
     *ngIf="isBusiness && !isAdmin" 
     nzType="info" 
-    nzMessage="Bạn đang xem danh sách khách sạn thuộc doanh nghiệp của mình."
+    [nzMessage]="'HOTEL_MANAGEMENT.BUSINESS_VIEW_ALERT' | translate"
     [nzCloseable]="true"
     class="mb-3">
   </nz-alert>
@@ -24,7 +24,7 @@
   <nz-alert 
     *ngIf="isHotelManager && !isAdmin && !isBusiness" 
     nzType="info" 
-    nzMessage="Bạn đang xem thông tin khách sạn của mình."
+    [nzMessage]="'HOTEL_MANAGEMENT.HOTEL_MANAGER_VIEW_ALERT' | translate"
     [nzCloseable]="true"
     class="mb-3">
   </nz-alert>
@@ -41,14 +41,14 @@
         [nzScroll]="{ x: '1400px' }">
         <thead>
           <tr>
-            <th nzWidth="180px">Tên Khách sạn</th>
-            <th nzWidth="200px">Địa chỉ</th>
-            <th nzWidth="120px">Điện thoại</th>
-            <th nzWidth="150px" *ngIf="isAdmin">Doanh nghiệp</th>
-            <th nzWidth="100px">Trạng thái</th>
-            <th nzWidth="100px">Xếp hạng</th>
-            <th nzWidth="150px">Quản lý</th>
-            <th nzWidth="150px">Thao tác</th>
+            <th nzWidth="180px">{{ 'HOTEL_MANAGEMENT.HOTEL_NAME' | translate }}</th>
+            <th nzWidth="200px">{{ 'HOTEL_MANAGEMENT.ADDRESS' | translate }}</th>
+            <th nzWidth="120px">{{ 'HOTEL_MANAGEMENT.PHONE' | translate }}</th>
+            <th nzWidth="150px" *ngIf="isAdmin">{{ 'HOTEL_MANAGEMENT.BUSINESS' | translate }}</th>
+            <th nzWidth="100px">{{ 'HOTEL_MANAGEMENT.STATUS' | translate }}</th>
+            <th nzWidth="100px">{{ 'HOTEL_MANAGEMENT.RATING' | translate }}</th>
+            <th nzWidth="150px">{{ 'HOTEL_MANAGEMENT.MANAGER' | translate }}</th>
+            <th nzWidth="150px">{{ 'HOTEL_MANAGEMENT.ACTIONS' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -79,25 +79,29 @@
                 <button nz-button nzSize="small" nzType="default" 
                         (click)="startEdit(hotel)" 
                         *ngIf="canManage(hotel._id)"
-                        nz-tooltip nzTooltipTitle="Chỉnh sửa">
+                        nz-tooltip 
+                        [nzTooltipTitle]="'HOTEL_MANAGEMENT.EDIT' | translate">
                   <i nz-icon nzType="edit"></i>
                 </button>
                 <button nz-button nzSize="small" nzType="default" nzDanger
                         *ngIf="canBlockHotel(hotel) && hotel.status !== 'suspended'"
                         (click)="blockHotel(hotel._id!)"
-                        nz-tooltip nzTooltipTitle="Đình chỉ">
+                        nz-tooltip 
+                        [nzTooltipTitle]="'HOTEL_MANAGEMENT.SUSPEND' | translate">
                   <i nz-icon nzType="stop"></i>
                 </button>
                 <button nz-button nzSize="small" nzType="primary"
                         *ngIf="canManage(hotel._id) && hotel.status === 'suspended'"
-                        (click)="updateHotelStatusLogic(hotel._id!, 'active', 'Đã kích hoạt lại khách sạn')"
-                        nz-tooltip nzTooltipTitle="Kích hoạt lại">
+                        (click)="updateHotelStatusLogic(hotel._id!, 'active', getActivatedMessage())"
+                        nz-tooltip 
+                        [nzTooltipTitle]="'HOTEL_MANAGEMENT.ACTIVATE' | translate">
                   <i nz-icon nzType="check-circle"></i>
                 </button>
                 <button nz-button nzSize="small" nzType="text" nzDanger
                         *ngIf="canDelete(hotel._id)"
                         (click)="deleteHotel(hotel._id!)"
-                        nz-tooltip nzTooltipTitle="Xóa">
+                        nz-tooltip 
+                        [nzTooltipTitle]="'HOTEL_MANAGEMENT.DELETE' | translate">
                   <i nz-icon nzType="delete"></i>
                 </button>
               </nz-button-group>

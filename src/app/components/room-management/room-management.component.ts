@@ -7,6 +7,7 @@ import { HotelService } from '../../services/hotel.service';
 import { AuthService } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-room-management',
@@ -14,7 +15,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
   styleUrls: ['./room-management.component.css']
 })
 export class RoomManagementComponent implements OnInit {
-  roomForm: FormGroup;
+  roomForm!: FormGroup;
   rooms: Room[] = [];
   hotels: Hotel[] = [];
   editId: string | null = null;
@@ -27,25 +28,32 @@ export class RoomManagementComponent implements OnInit {
   pageSize: number = 10; // Tối đa 10 phòng mỗi trang
   total: number = 0;
 
-  roomStatusOptions: { label: string, value: Room['status'] }[] = [
-    { label: 'Trống', value: 'vacant' },
-    { label: 'Có khách', value: 'occupied' },
-    { label: 'Đang dọn', value: 'cleaning' },
-    { label: 'Bẩn', value: 'dirty' },
-    { label: 'Bảo trì', value: 'maintenance' }
-  ];
+  roomStatusOptions: { label: string, value: Room['status'] }[] = [];
 
   priceConfigId: string | null = null;
   hasPriceConfig: boolean = false;
   currentUser: User | null = null;
+
+
+  private initStatusOptions(): void {
+    this.roomStatusOptions = [
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.VACANT'), value: 'vacant' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.OCCUPIED'), value: 'occupied' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.CLEANING'), value: 'cleaning' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.DIRTY'), value: 'dirty' },
+      { label: this.translate.instant('ROOM_MANAGEMENT.STATUS.MAINTENANCE'), value: 'maintenance' }
+    ];
+  }
 
   constructor(
     private fb: FormBuilder, 
     private roomService: RoomsService, 
     private hotelService: HotelService,
     private authService: AuthService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {
+    this.initStatusOptions();
     this.roomForm = this.fb.group({
       hotelId: [null, Validators.required],
       roomNumber: ['', Validators.required],
@@ -184,7 +192,7 @@ export class RoomManagementComponent implements OnInit {
       },
       error => {
         console.error('Lỗi khi tải danh sách phòng:', error);
-        this.message.error('Không thể tải danh sách phòng');
+        this.message.error(this.translate.instant('ROOM_MANAGEMENT.LOAD_ROOMS_ERROR'));
       }
     );
   }
@@ -292,7 +300,7 @@ export class RoomManagementComponent implements OnInit {
       },
       error => {
         console.error('Lỗi khi tải danh sách khách sạn:', error);
-        this.message.error('Không thể tải danh sách khách sạn');
+        this.message.error(this.translate.instant('ROOM_MANAGEMENT.LOAD_HOTELS_ERROR'));
       }
     );
   }
@@ -322,7 +330,7 @@ export class RoomManagementComponent implements OnInit {
 
   startEdit(id: string): void {
     if (!this.canManage(id)) {
-      this.message.warning('Bạn không có quyền chỉnh sửa phòng này');
+      this.message.warning(this.translate.instant('ROOM_MANAGEMENT.NO_EDIT_PERMISSION'));
       return;
     }
     
@@ -493,25 +501,25 @@ export class RoomManagementComponent implements OnInit {
     // Kiểm tra quyền trước khi submit
     if (this.editId && this.editId !== 'new') {
       if (!this.canEditRoom || !this.canManage(this.editId)) {
-        this.message.warning('Bạn không có quyền cập nhật phòng này');
+        this.message.warning(this.translate.instant('ROOM_MANAGEMENT.NO_UPDATE_PERMISSION'));
         return;
       }
     } else {
       if (!this.canCreateRoom) {
-        this.message.warning('Bạn không có quyền tạo phòng mới');
+        this.message.warning(this.translate.instant('ROOM_MANAGEMENT.NO_CREATE_PERMISSION'));
         return;
       }
     }
 
     if (this.roomForm.invalid) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
-      Object.values(this.roomForm.controls).forEach(control => {
+      this.message.warning(this.translate.instant('ROOM_MANAGEMENT.FILL_REQUIRED_FIELDS'));
+      Object.values(this.roomForm.controls).forEach((control: any) => {
         if (control.invalid) {
           control.markAsDirty();
           control.updateValueAndValidity({ onlySelf: true });
         }
         if (control instanceof FormGroup) {
-          Object.values(control.controls).forEach(innerControl => {
+          Object.values(control.controls).forEach((innerControl: any) => {
             if (innerControl.invalid) {
               innerControl.markAsDirty();
               innerControl.updateValueAndValidity({ onlySelf: true });
@@ -522,7 +530,7 @@ export class RoomManagementComponent implements OnInit {
       return;
     }
 
-    const formValue = this.roomForm.value;
+    const formValue = this.roomForm!.value;
     const hasPriceConfig = formValue.priceConfigId && formValue.priceConfigId !== '';
     
     const roomData: any = {
@@ -595,25 +603,25 @@ export class RoomManagementComponent implements OnInit {
       });
       
       // Chỉ gửi roomData, không merge với selectedRoom để tránh gửi các trường không cần thiết
-      this.roomService.updateRoom(this.editId, roomData as Room).subscribe(
+      this.roomService.updateRoom(this.editId!, roomData as Room).subscribe(
         (updatedRoom: Room) => {
           console.log('Received updated room:', {
             additionalHourRate: updatedRoom.additionalHourRate,
             firstHourRate: updatedRoom.firstHourRate
           });
-          const index = this.rooms.findIndex(r => r._id === this.editId);
+          const index = this.rooms.findIndex((r: Room) => r._id === this.editId);
           if (index !== -1) {
             this.rooms[index] = updatedRoom;
             this.rooms = [...this.rooms];
             // Cập nhật total sau khi cập nhật
             this.total = this.rooms.length;
           }
-          this.message.success('Đã cập nhật phòng thành công');
+          this.message.success(this.translate.instant('ROOM_MANAGEMENT.UPDATE_SUCCESS'));
           this.stopEdit();
         },
-        error => {
+        (error: any) => {
           console.error('Lỗi khi cập nhật phòng:', error);
-          this.message.error(error.error?.message || 'Không thể cập nhật phòng');
+          this.message.error(error.error?.message || this.translate.instant('ROOM_MANAGEMENT.UPDATE_ERROR'));
         }
       );
     } else {
@@ -629,7 +637,7 @@ export class RoomManagementComponent implements OnInit {
           if (totalPages > 0) {
             this.pageIndex = totalPages;
           }
-          this.message.success('Đã tạo phòng thành công');
+          this.message.success(this.translate.instant('ROOM_MANAGEMENT.CREATE_SUCCESS'));
           this.stopEdit();
           this.roomForm.reset({
             hotelId: this.selectedHotelId,
@@ -644,16 +652,16 @@ export class RoomManagementComponent implements OnInit {
           });
           // Reload floors để cập nhật danh sách tầng mới
           if (this.selectedHotelId) {
-            this.roomService.getHotelFloors(this.selectedHotelId).subscribe(
-              data => {
-                this.floors = data.floors.map(f => String(f));
+            this.roomService.getHotelFloors(this.selectedHotelId!).subscribe(
+              (data: any) => {
+                this.floors = data.floors.map((f: any) => String(f));
               }
             );
           }
         },
-        error => {
+        (error: any) => {
           console.error('Lỗi khi tạo phòng:', error);
-          this.message.error(error.error?.message || 'Không thể tạo phòng');
+          this.message.error(error.error?.message || this.translate.instant('ROOM_MANAGEMENT.CREATE_ERROR'));
         }
       );
     }
@@ -661,13 +669,13 @@ export class RoomManagementComponent implements OnInit {
 
   deleteRoom(id: string): void {
     if (!this.canManage(id)) {
-      this.message.warning('Bạn không có quyền xóa phòng này');
+      this.message.warning(this.translate.instant('ROOM_MANAGEMENT.NO_DELETE_PERMISSION'));
       return;
     }
     
     this.roomService.deleteRoom(id).subscribe(
       () => {
-        this.rooms = this.rooms.filter(r => r._id !== id);
+        this.rooms = this.rooms.filter((r: Room) => r._id !== id);
         // Cập nhật total sau khi xóa
         this.total = this.rooms.length;
         // Nếu trang hiện tại không còn dữ liệu, chuyển về trang trước
@@ -677,14 +685,14 @@ export class RoomManagementComponent implements OnInit {
         } else if (totalPages === 0) {
           this.pageIndex = 1;
         }
-        this.message.success('Đã xóa phòng thành công');
+        this.message.success(this.translate.instant('ROOM_MANAGEMENT.DELETE_SUCCESS'));
         if (this.editId === id) {
           this.stopEdit();
         }
       },
-      error => {
+      (error: any) => {
         console.error('Lỗi khi xóa phòng:', error);
-        this.message.error(error.error?.message || 'Không thể xóa phòng');
+        this.message.error(error.error?.message || this.translate.instant('ROOM_MANAGEMENT.DELETE_ERROR'));
       }
     );
   }
@@ -695,34 +703,34 @@ export class RoomManagementComponent implements OnInit {
       this.pageIndex = 1;
       
       if (floor !== null && floor !== '') {
-        this.roomService.getRoomsByFloor(this.selectedHotelId, Number(floor)).subscribe(
-          data => {
+        this.roomService.getRoomsByFloor(this.selectedHotelId!, Number(floor)).subscribe(
+          (data: Room[]) => {
             this.rooms = data;
             this.total = data.length;
           },
-          error => {
+          (error: any) => {
             console.error('Lỗi khi lọc phòng theo tầng:', error);
-            this.message.error('Không thể lọc phòng theo tầng');
+            this.message.error(this.translate.instant('ROOM_MANAGEMENT.FILTER_FLOOR_ERROR'));
           }
         );
       } else {
-        this.loadRooms(this.selectedHotelId);
+        this.loadRooms(this.selectedHotelId!);
       }
     } else {
-      this.message.warning('Vui lòng chọn khách sạn trước');
+      this.message.warning(this.translate.instant('ROOM_MANAGEMENT.SELECT_HOTEL_FIRST'));
       this.rooms = [];
       this.total = 0;
     }
   }
 
   getHotelName(hotelId: string): string {
-    const hotel = this.hotels.find(h => h._id === hotelId);
+    const hotel = this.hotels.find((h: Hotel) => h._id === hotelId);
     return hotel ? hotel.name : 'Không rõ';
   }
 
   getRoomStatusLabel(statusValue: Room['status'] | undefined): string {
-    if (!statusValue) return 'Không xác định';
-    const option = this.roomStatusOptions.find(opt => opt.value === statusValue);
+    if (!statusValue) return this.translate.instant('ROOM_MANAGEMENT.STATUS.UNKNOWN');
+    const option = this.roomStatusOptions.find((opt: { label: string, value: Room['status'] }) => opt.value === statusValue);
     return option ? option.label : statusValue;
   }
 }

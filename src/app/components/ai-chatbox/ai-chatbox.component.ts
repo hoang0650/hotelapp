@@ -8,6 +8,7 @@ import { take } from 'rxjs/operators';
 import { NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 
 // Mở rộng ChatMessage để hỗ trợ file
 interface ChatMessage extends BaseChatMessage {
@@ -45,7 +46,8 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     private pricingService: PricingService,
     private hotelService: HotelService,
     private modal: NzModalService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -190,24 +192,24 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
    */
   clearChatHistory(): void {
     if (this.messages.length === 0) {
-      this.message.info('Không có lịch sử chat để xóa');
+      this.message.info(this.translate.instant('AI_CHATBOX.NO_HISTORY'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận xóa lịch sử chat',
-      nzContent: 'Bạn có chắc chắn muốn xóa toàn bộ lịch sử chat? Hành động này không thể hoàn tác.',
-      nzOkText: 'Xóa',
+      nzTitle: this.translate.instant('AI_CHATBOX.CONFIRM_CLEAR_TITLE'),
+      nzContent: this.translate.instant('AI_CHATBOX.CONFIRM_CLEAR_MESSAGE'),
+      nzOkText: this.translate.instant('COMMON.DELETE'),
       nzOkType: 'primary',
       nzOkDanger: true,
-      nzCancelText: 'Hủy',
+      nzCancelText: this.translate.instant('COMMON.CANCEL'),
       nzOnOk: async () => {
         try {
           await this.aiService.clearChatHistory();
-          this.message.success('Đã xóa lịch sử chat thành công');
+          this.message.success(this.translate.instant('AI_CHATBOX.CLEAR_SUCCESS'));
         } catch (error) {
           console.error('Error clearing chat history:', error);
-          this.message.error('Có lỗi xảy ra khi xóa lịch sử chat');
+          this.message.error(this.translate.instant('AI_CHATBOX.CLEAR_ERROR'));
         }
       }
     });

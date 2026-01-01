@@ -8,6 +8,7 @@ import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { TranslateService } from '@ngx-translate/core';
 
 declare global {
   interface Window {
@@ -47,7 +48,8 @@ export class BookingModalComponent implements OnInit {
     private message: NzMessageService,
     private hotelService: HotelService,
     private businessService: BusinessService,
-    private http: HttpClient
+    private http: HttpClient,
+    private translate: TranslateService
   ) {
     this.selectedDate = data.selectedDate;
     this.hotelId = data.hotelId;
@@ -219,7 +221,7 @@ export class BookingModalComponent implements OnInit {
         // Không hiển thị lỗi nếu là 403 - có thể do quyền truy cập
         // Nhưng vẫn cho phép tạo booking vì hotelId đã có sẵn
         if (error.status !== 403) {
-          this.message.warning('Không thể tải thông tin khách sạn. Vui lòng thử lại.');
+          this.message.warning(this.translate.instant('BOOKING_MODAL.LOAD_HOTEL_INFO_ERROR'));
         }
       }
     );
@@ -318,8 +320,8 @@ export class BookingModalComponent implements OnInit {
   }
 
   getRoomStatusLabel(room: Room): string {
-    if (room.status === 'vacant') return 'Trống';
-    if (room.status === 'occupied') return 'Đang có khách';
+    if (room.status === 'vacant') return this.translate.instant('ROOM.STATUS.VACANT');
+    if (room.status === 'occupied') return this.translate.instant('ROOM.STATUS.OCCUPIED');
     return room.status;
   }
 
@@ -331,19 +333,19 @@ export class BookingModalComponent implements OnInit {
           control.updateValueAndValidity({ onlySelf: true });
         }
       });
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      this.message.warning(this.translate.instant('BOOKING_MODAL.FILL_REQUIRED_FIELDS'));
       return false;
     }
     
     if (!this.hotelId) {
-      this.message.error('Không tìm thấy thông tin khách sạn.');
+      this.message.error(this.translate.instant('BOOKING_MODAL.HOTEL_NOT_FOUND'));
       return false;
     }
     
     const formValue = this.bookingForm.value;
     const selectedRoom = this.getSelectedRoom();
     if (!selectedRoom) {
-      this.message.warning('Vui lòng chọn phòng.');
+      this.message.warning(this.translate.instant('BOOKING_MODAL.SELECT_ROOM_REQUIRED'));
       return false;
     }
     
@@ -352,7 +354,7 @@ export class BookingModalComponent implements OnInit {
     
     // Kiểm tra lại trước khi gửi
     if (!this.isRoomAvailableForDate(selectedRoom, checkInDate, checkOutDate)) {
-      this.message.error('Phòng không khả dụng vào thời gian này. Vui lòng chọn ngày khác.');
+      this.message.error(this.translate.instant('BOOKING_MODAL.ROOM_NOT_AVAILABLE'));
       return false;
     }
     
@@ -375,12 +377,12 @@ export class BookingModalComponent implements OnInit {
     this.isLoading = true;
     this.roomsService.createBooking(bookingData).subscribe(
       (response) => {
-        this.message.success('Đặt phòng thành công!');
+        this.message.success(this.translate.instant('BOOKING_MODAL.BOOKING_SUCCESS'));
         this.isLoading = false;
         this.modalRef.close({ success: true, booking: response });
       },
       (error) => {
-        this.message.error(error.error?.message || 'Không thể đặt phòng.');
+        this.message.error(error.error?.message || this.translate.instant('BOOKING_MODAL.BOOKING_ERROR'));
         this.isLoading = false;
       }
     );
@@ -457,14 +459,14 @@ export class BookingModalComponent implements OnInit {
 
   async exportConfirmationPDF(): Promise<void> {
     if (this.bookingForm.invalid) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin trước khi xuất PDF.');
+      this.message.warning(this.translate.instant('BOOKING_MODAL.FILL_INFO_BEFORE_PDF'));
       return;
     }
     
     const formValue = this.bookingForm.value;
     const selectedRoom = this.getSelectedRoom();
     if (!selectedRoom) {
-      this.message.warning('Vui lòng chọn phòng.');
+      this.message.warning(this.translate.instant('BOOKING_MODAL.SELECT_ROOM_REQUIRED'));
       return;
     }
     
@@ -505,7 +507,7 @@ export class BookingModalComponent implements OnInit {
               console.error('Error loading hotel info:', error);
               // Nếu là lỗi 403, vẫn cho phép tiếp tục nhưng không có hotel info
               if (error.status === 403) {
-                this.message.warning('Không thể tải thông tin khách sạn do hạn chế quyền truy cập. PDF sẽ được tạo với thông tin có sẵn.');
+                this.message.warning(this.translate.instant('BOOKING_MODAL.HOTEL_INFO_ACCESS_DENIED'));
                 resolve(); // Resolve thay vì reject để vẫn có thể tạo PDF
               } else {
                 reject(error);
@@ -514,7 +516,7 @@ export class BookingModalComponent implements OnInit {
           );
         });
       } catch (error) {
-        this.message.error('Không thể tải thông tin khách sạn.');
+        this.message.error(this.translate.instant('BOOKING_MODAL.LOAD_HOTEL_INFO_ERROR'));
         this.isLoadingHotelInfo = false;
         return;
       }
@@ -714,7 +716,7 @@ export class BookingModalComponent implements OnInit {
       
       window.pdfMake.createPdf(docDefinition).download(fileName);
     } else {
-      this.message.error('PDF library chưa được tải. Vui lòng tải lại trang.');
+      this.message.error(this.translate.instant('BOOKING_MODAL.PDF_LIBRARY_NOT_LOADED'));
     }
   }
 

@@ -3,7 +3,7 @@
     <div class="header-section">
       <h2 class="mb-4">
         <i nz-icon nzType="coffee" nzTheme="outline"></i>
-        Quản Lý Dịch Vụ
+        {{ 'SERVICE_MANAGEMENT.TITLE' | translate }}
       </h2>
     </div>
 
@@ -11,7 +11,7 @@
     <nz-alert 
       *ngIf="isBusiness && !isAdmin" 
       nzType="info" 
-      nzMessage="Bạn đang xem danh sách dịch vụ của các khách sạn thuộc doanh nghiệp mình."
+      [nzMessage]="'SERVICE_MANAGEMENT.VIEW_BUSINESS_SERVICES' | translate"
       [nzCloseable]="true"
       class="mb-3">
     </nz-alert>
@@ -19,7 +19,7 @@
     <nz-alert 
       *ngIf="isHotelManager && !isAdmin && !isBusiness" 
       nzType="info" 
-      nzMessage="Bạn đang xem danh sách dịch vụ của khách sạn mình."
+      [nzMessage]="'SERVICE_MANAGEMENT.VIEW_HOTEL_SERVICES' | translate"
       [nzCloseable]="true"
       class="mb-3">
     </nz-alert>
@@ -28,10 +28,10 @@
     <div nz-row [nzGutter]="16" class="mb-4 filter-section">
       <div nz-col [nzXs]="24" [nzSm]="12">
         <nz-form-item>
-          <nz-form-label>Khách sạn</nz-form-label>
+          <nz-form-label>{{ 'SERVICE_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Chọn khách sạn"
+              [nzPlaceHolder]="'SERVICE_MANAGEMENT.SELECT_HOTEL' | translate"
               [ngModel]="selectedHotelId" 
               (ngModelChange)="onHotelChange($event)"
               nzAllowClear
@@ -74,15 +74,15 @@
           <nz-table #serviceTable [nzData]="services" nzBordered [nzScroll]="{ x: '1400px' }">
             <thead>
               <tr>
-                <th nzWidth="150px">Tên dịch vụ</th>
-                <th nzWidth="100px">Giá Bán</th>
-                <th nzWidth="100px">Giá Vốn</th>
-                <th nzWidth="120px">SL nhập</th>
-                <th nzWidth="100px">SL Bán</th>
-                <th nzWidth="100px">Tồn kho</th>
-                <th nzWidth="120px">Danh mục</th>
-                <th nzWidth="100px">Trạng thái</th>
-                <th nzWidth="150px">Thao tác</th>
+                <th nzWidth="150px">{{ 'SERVICE_MANAGEMENT.SERVICE_NAME' | translate }}</th>
+                <th nzWidth="100px">{{ 'SERVICE_MANAGEMENT.SALE_PRICE' | translate }}</th>
+                <th nzWidth="100px">{{ 'SERVICE_MANAGEMENT.COST_PRICE' | translate }}</th>
+                <th nzWidth="120px">{{ 'SERVICE_MANAGEMENT.IMPORT_QUANTITY' | translate }}</th>
+                <th nzWidth="100px">{{ 'SERVICE_MANAGEMENT.SALES_QUANTITY' | translate }}</th>
+                <th nzWidth="100px">{{ 'SERVICE_MANAGEMENT.INVENTORY' | translate }}</th>
+                <th nzWidth="120px">{{ 'SERVICE_MANAGEMENT.CATEGORY' | translate }}</th>
+                <th nzWidth="100px">{{ 'SERVICE_MANAGEMENT.STATUS' | translate }}</th>
+                <th nzWidth="150px">{{ 'SERVICE_MANAGEMENT.ACTIONS' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -101,7 +101,7 @@
                       {{ service.costPrice | currency: (service.currency || 'VND'):'symbol':'1.0-0' }}
                     </span>
                     <span *ngIf="!service.costPrice || service.costPrice === 0" style="color: #999;">
-                      Bình quân gia quyền
+                      {{ 'SERVICE_MANAGEMENT.AVERAGE_WEIGHTED' | translate }}
                     </span>
                   </td>
                   <td>
@@ -109,7 +109,7 @@
                     <button nz-button nzType="link" nzSize="small" 
                             (click)="updateImportQuantity(service._id!, 1)"
                             *ngIf="canManage(service)"
-                            nz-tooltip nzTooltipTitle="Thêm số lượng nhập">
+                            [nz-tooltip]="'SERVICE_MANAGEMENT.ADD_IMPORT_QUANTITY' | translate">
                       <i nz-icon nzType="plus-circle" nzTheme="fill" style="color: #52c41a;"></i>
                     </button>
                   </td>
@@ -118,7 +118,7 @@
                   <td>{{ getCategoryLabel(service.category) }}</td>
                   <td>
                     <nz-tag [nzColor]="service.isActive ? 'green' : 'red'">
-                      {{ service.isActive ? 'Hoạt động' : 'Ngừng' }}
+                      {{ service.isActive ? ('SERVICE_MANAGEMENT.ACTIVE' | translate) : ('SERVICE_MANAGEMENT.INACTIVE' | translate) }}
                     </nz-tag>
                   </td>
                   <td>
@@ -126,15 +126,15 @@
                       <button nz-button nzSize="small" nzType="primary" 
                               (click)="startEdit(service._id!)" 
                               *ngIf="canManage(service)"
-                              nz-tooltip nzTooltipTitle="Chỉnh sửa">
+                              [nz-tooltip]="'SERVICE_MANAGEMENT.EDIT' | translate">
                         <i nz-icon nzType="edit"></i>
                       </button>
                       <button nz-button nzSize="small" nzType="text" nzDanger
                               *ngIf="canDelete(service)"
                               nz-popconfirm 
-                              nzPopconfirmTitle="Bạn có chắc muốn xóa?" 
+                              [nzPopconfirmTitle]="'SERVICE_MANAGEMENT.CONFIRM_DELETE' | translate" 
                               (nzOnConfirm)="deleteService(service._id!)"
-                              nz-tooltip nzTooltipTitle="Xóa">
+                              [nz-tooltip]="'SERVICE_MANAGEMENT.DELETE' | translate">
                         <i nz-icon nzType="delete"></i>
                       </button>
                     </nz-button-group>
@@ -153,15 +153,15 @@
       <nz-divider></nz-divider>
       <h3>
         <i nz-icon [nzType]="editId ? 'edit' : 'plus-circle'" nzTheme="outline"></i>
-        {{ editId ? 'Cập nhật dịch vụ' : 'Thêm dịch vụ mới' }}
+        {{ editId ? ('SERVICE_MANAGEMENT.UPDATE_SERVICE' | translate) : ('SERVICE_MANAGEMENT.ADD_NEW_SERVICE' | translate) }}
       </h3>
       <form nz-form [formGroup]="serviceForm" (ngSubmit)="submitForm()">
         <nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label nzRequired>Khách sạn</nz-form-label>
-              <nz-form-control nzErrorTip="Vui lòng chọn khách sạn">
-                <nz-select formControlName="hotelId" nzPlaceHolder="Chọn khách sạn" [nzDisabled]="isHotelManager">
+              <nz-form-label nzRequired>{{ 'SERVICE_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'SERVICE_MANAGEMENT.HOTEL_REQUIRED' | translate">
+                <nz-select formControlName="hotelId" [nzPlaceHolder]="'SERVICE_MANAGEMENT.SELECT_HOTEL' | translate" [nzDisabled]="isHotelManager">
                   <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="getHotelName(hotel._id!)"></nz-option>
                 </nz-select>
               </nz-form-control>
@@ -170,17 +170,17 @@
 
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label nzRequired>Tên dịch vụ</nz-form-label>
-              <nz-form-control nzErrorTip="Vui lòng nhập tên dịch vụ">
-                <input nz-input formControlName="name" placeholder="Nhập tên dịch vụ" />
+              <nz-form-label nzRequired>{{ 'SERVICE_MANAGEMENT.SERVICE_NAME' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'SERVICE_MANAGEMENT.SERVICE_NAME_REQUIRED' | translate">
+                <input nz-input formControlName="name" [placeholder]="'SERVICE_MANAGEMENT.SERVICE_NAME_PLACEHOLDER' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
 
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label nzRequired>Giá Bán</nz-form-label>
-              <nz-form-control nzErrorTip="Vui lòng nhập giá hợp lệ">
+              <nz-form-label nzRequired>{{ 'SERVICE_MANAGEMENT.SALE_PRICE' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'SERVICE_MANAGEMENT.PRICE_REQUIRED' | translate">
                 <nz-input-number formControlName="price" [nzMin]="0" [nzStep]="1000" class="w-100"></nz-input-number>
               </nz-form-control>
             </nz-form-item>
@@ -190,7 +190,7 @@
         <nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label>Giá Vốn</nz-form-label>
+              <nz-form-label>{{ 'SERVICE_MANAGEMENT.COST_PRICE_LABEL' | translate }}</nz-form-label>
               <nz-form-control>
                 <nz-input-number formControlName="costPrice" [nzMin]="0" [nzStep]="1000" class="w-100"></nz-input-number>
               </nz-form-control>
@@ -199,7 +199,7 @@
 
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label>Số lượng nhập</nz-form-label>
+              <nz-form-label>{{ 'SERVICE_MANAGEMENT.IMPORT_QUANTITY_LABEL' | translate }}</nz-form-label>
               <nz-form-control>
                 <nz-input-number formControlName="importQuantity" [nzMin]="0" [nzStep]="1" class="w-100"></nz-input-number>
               </nz-form-control>
@@ -208,7 +208,7 @@
 
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label>Số lượng bán</nz-form-label>
+              <nz-form-label>{{ 'SERVICE_MANAGEMENT.SALES_QUANTITY_LABEL' | translate }}</nz-form-label>
               <nz-form-control>
                 <nz-input-number formControlName="salesQuantity" [nzMin]="0" [nzStep]="1" class="w-100"></nz-input-number>
               </nz-form-control>
@@ -219,9 +219,9 @@
         <nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label nzRequired>Danh mục</nz-form-label>
-              <nz-form-control nzErrorTip="Vui lòng chọn danh mục">
-                <nz-select formControlName="category" nzPlaceHolder="Chọn danh mục">
+              <nz-form-label nzRequired>{{ 'SERVICE_MANAGEMENT.CATEGORY' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'SERVICE_MANAGEMENT.CATEGORY_REQUIRED' | translate">
+                <nz-select formControlName="category" [nzPlaceHolder]="'SERVICE_MANAGEMENT.CATEGORY_PLACEHOLDER' | translate">
                   <nz-option *ngFor="let catOpt of serviceCategoryOptions" [nzValue]="catOpt.value" [nzLabel]="catOpt.label"></nz-option>
                 </nz-select>
               </nz-form-control>
@@ -230,18 +230,18 @@
 
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label>Đơn vị tiền tệ</nz-form-label>
+              <nz-form-label>{{ 'SERVICE_MANAGEMENT.CURRENCY' | translate }}</nz-form-label>
               <nz-form-control>
-                <input nz-input formControlName="currency" placeholder="VND, USD,..." />
+                <input nz-input formControlName="currency" [placeholder]="'SERVICE_MANAGEMENT.CURRENCY_PLACEHOLDER' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
 
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label>Trạng thái</nz-form-label>
+              <nz-form-label>{{ 'SERVICE_MANAGEMENT.STATUS_LABEL' | translate }}</nz-form-label>
               <nz-form-control>
-                <nz-switch formControlName="isActive"></nz-switch> ({{ serviceForm.get('isActive')!.value ? 'Hoạt động' : 'Không hoạt động' }})
+                <nz-switch formControlName="isActive"></nz-switch> ({{ serviceForm.get('isActive')!.value ? ('SERVICE_MANAGEMENT.ACTIVE_STATUS' | translate) : ('SERVICE_MANAGEMENT.INACTIVE_STATUS' | translate) }})
               </nz-form-control>
             </nz-form-item>
           </div>
@@ -250,26 +250,26 @@
         <nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <nz-form-item>
-              <nz-form-label>Dịch vụ tùy chỉnh</nz-form-label>
+              <nz-form-label>{{ 'SERVICE_MANAGEMENT.CUSTOM_SERVICE' | translate }}</nz-form-label>
               <nz-form-control>
-                <nz-switch formControlName="isCustom"></nz-switch> ({{ serviceForm.get('isCustom')!.value ? 'Có' : 'Không' }})
+                <nz-switch formControlName="isCustom"></nz-switch> ({{ serviceForm.get('isCustom')!.value ? ('SERVICE_MANAGEMENT.YES' | translate) : ('SERVICE_MANAGEMENT.NO' | translate) }})
               </nz-form-control>
             </nz-form-item>
           </div>
           <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="16">
             <nz-form-item>
-              <nz-form-label>Mô tả</nz-form-label>
+              <nz-form-label>{{ 'SERVICE_MANAGEMENT.DESCRIPTION' | translate }}</nz-form-label>
               <nz-form-control>
-                <textarea nz-input formControlName="description" rows="2" placeholder="Mô tả chi tiết về dịch vụ"></textarea>
+                <textarea nz-input formControlName="description" rows="2" [placeholder]="'SERVICE_MANAGEMENT.DESCRIPTION_PLACEHOLDER' | translate"></textarea>
               </nz-form-control>
             </nz-form-item>
           </div>
         </nz-row>
 
         <nz-form-item>
-          <nz-form-label>Hình ảnh (URL)</nz-form-label>
+          <nz-form-label>{{ 'SERVICE_MANAGEMENT.IMAGE_URL' | translate }}</nz-form-label>
           <nz-form-control>
-            <input nz-input formControlName="image" placeholder="Nhập URL hình ảnh" />
+            <input nz-input formControlName="image" [placeholder]="'SERVICE_MANAGEMENT.IMAGE_URL_PLACEHOLDER' | translate" />
             <!-- Hoặc dùng nz-upload nếu muốn upload file -->
             <!-- <nz-upload
               [nzAction]="uploadUrl" 
@@ -291,10 +291,10 @@
         <nz-form-item>
           <nz-form-control>
             <button nz-button nzType="primary" type="submit" [disabled]="serviceForm.pristine && !editId">
-              {{ editId ? 'Cập nhật' : 'Thêm mới' }}
+              {{ editId ? ('SERVICE_MANAGEMENT.UPDATE' | translate) : ('SERVICE_MANAGEMENT.ADD_NEW' | translate) }}
             </button>
             <button nz-button nzType="default" (click)="stopEdit()" *ngIf="editId" class="ml-2">
-              Hủy
+              {{ 'SERVICE_MANAGEMENT.CANCEL' | translate }}
             </button>
           </nz-form-control>
         </nz-form-item>

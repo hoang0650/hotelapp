@@ -1,47 +1,47 @@
 <nz-card>
   <div class="header">
-    <h2>Quản lý nhân viên</h2>
+    <h2>{{ 'STAFF_MANAGEMENT.TITLE' | translate }}</h2>
     <div class="header-actions">
       <!-- Chọn khách sạn -->
       <nz-select 
         [(ngModel)]="selectedHotelId" 
         (ngModelChange)="onHotelChange($event)"
-        nzPlaceHolder="Chọn khách sạn"
+        [nzPlaceHolder]="'STAFF_MANAGEMENT.SELECT_HOTEL' | translate"
         style="width: 250px; margin-right: 16px;">
         <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
       </nz-select>
       
       <button nz-button nzType="primary" (click)="showAddForm()" [disabled]="!selectedHotelId">
-        <i nz-icon nzType="plus"></i> Thêm nhân viên
+        <i nz-icon nzType="plus"></i> {{ 'STAFF_MANAGEMENT.ADD_STAFF' | translate }}
       </button>
       
       <nz-divider nzType="vertical"></nz-divider>
       
       <!-- Nút xuất tổng hợp -->
       <button nz-button nzType="default" nz-dropdown [nzDropdownMenu]="exportSummaryMenu" [disabled]="!selectedHotelId" style="margin-left: 8px;">
-        <i nz-icon nzType="file-excel"></i> Xuất tổng hợp thanh toán
+        <i nz-icon nzType="file-excel"></i> {{ 'STAFF_MANAGEMENT.EXPORT_SUMMARY' | translate }}
         <i nz-icon nzType="down"></i>
       </button>
       <nz-dropdown-menu #exportSummaryMenu="nzDropdownMenu">
         <ul nz-menu nzSelectable style="width: 250px;">
           <li nz-menu-item (click)="openExportSummaryModal('month', 'excel')">
-            <i nz-icon nzType="file-excel"></i> Xuất Excel theo tháng
+            <i nz-icon nzType="file-excel"></i> {{ 'STAFF_MANAGEMENT.EXPORT_EXCEL_MONTH' | translate }}
           </li>
           <li nz-menu-item (click)="openExportSummaryModal('quarter', 'excel')">
-            <i nz-icon nzType="file-excel"></i> Xuất Excel theo quý
+            <i nz-icon nzType="file-excel"></i> {{ 'STAFF_MANAGEMENT.EXPORT_EXCEL_QUARTER' | translate }}
           </li>
           <li nz-menu-item (click)="openExportSummaryModal('year', 'excel')">
-            <i nz-icon nzType="file-excel"></i> Xuất Excel theo năm
+            <i nz-icon nzType="file-excel"></i> {{ 'STAFF_MANAGEMENT.EXPORT_EXCEL_YEAR' | translate }}
           </li>
           <li nz-menu-divider></li>
           <li nz-menu-item (click)="openExportSummaryModal('month', 'pdf')">
-            <i nz-icon nzType="file-pdf"></i> Xuất PDF theo tháng
+            <i nz-icon nzType="file-pdf"></i> {{ 'STAFF_MANAGEMENT.EXPORT_PDF_MONTH' | translate }}
           </li>
           <li nz-menu-item (click)="openExportSummaryModal('quarter', 'pdf')">
-            <i nz-icon nzType="file-pdf"></i> Xuất PDF theo quý
+            <i nz-icon nzType="file-pdf"></i> {{ 'STAFF_MANAGEMENT.EXPORT_PDF_QUARTER' | translate }}
           </li>
           <li nz-menu-item (click)="openExportSummaryModal('year', 'pdf')">
-            <i nz-icon nzType="file-pdf"></i> Xuất PDF theo năm
+            <i nz-icon nzType="file-pdf"></i> {{ 'STAFF_MANAGEMENT.EXPORT_PDF_YEAR' | translate }}
           </li>
         </ul>
       </nz-dropdown-menu>
@@ -53,7 +53,7 @@
     <nz-alert 
       *ngIf="!selectedHotelId" 
       nzType="info" 
-      nzMessage="Vui lòng chọn khách sạn để xem danh sách nhân viên"
+      [nzMessage]="'STAFF_MANAGEMENT.SELECT_HOTEL_MESSAGE' | translate"
       nzShowIcon
       style="margin-bottom: 16px;">
     </nz-alert>
@@ -68,16 +68,16 @@
       [nzNoResult]="noDataTpl"
       *ngIf="selectedHotelId">
       <ng-template #noDataTpl>
-        <nz-empty nzNotFoundContent="Chưa có nhân viên nào. Bấm 'Thêm nhân viên' để tạo mới."></nz-empty>
+        <nz-empty [nzNotFoundContent]="'STAFF_MANAGEMENT.NO_STAFF' | translate"></nz-empty>
       </ng-template>
       <thead>
         <tr>
-          <th>Nhân viên</th>
-          <th>Chức vụ</th>
-          <th>Liên hệ</th>
-          <th>Trạng thái</th>
-          <th>Lương</th>
-          <th nzWidth="120px">Thao tác</th>
+          <th>{{ 'STAFF_MANAGEMENT.STAFF' | translate }}</th>
+          <th>{{ 'STAFF_MANAGEMENT.POSITION' | translate }}</th>
+          <th>{{ 'STAFF_MANAGEMENT.CONTACT' | translate }}</th>
+          <th>{{ 'STAFF_MANAGEMENT.STATUS' | translate }}</th>
+          <th>{{ 'STAFF_MANAGEMENT.SALARY' | translate }}</th>
+          <th nzWidth="120px">{{ 'STAFF_MANAGEMENT.ACTIONS' | translate }}</th>
         </tr>
       </thead>
       <tbody>
@@ -117,19 +117,19 @@
             {{ (staff.employmentInfo.salary || 0) | number }} đ
           </td>
           <td>
-            <button nz-button nzShape="circle" nzType="default" (click)="startEdit(staff)" nz-tooltip nzTooltipTitle="Chỉnh sửa">
+            <button nz-button nzShape="circle" nzType="default" (click)="startEdit(staff)" [nz-tooltip]="'STAFF_MANAGEMENT.EDIT' | translate">
               <i nz-icon nzType="edit"></i>
             </button>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button nzShape="circle" nzType="primary" (click)="openSalaryModal(staff)" nz-tooltip nzTooltipTitle="Tính lương">
+            <button nz-button nzShape="circle" nzType="primary" (click)="openSalaryModal(staff)" [nz-tooltip]="'STAFF_MANAGEMENT.CALCULATE_SALARY' | translate">
               <i nz-icon nzType="dollar"></i>
             </button>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button nzShape="circle" nzType="default" (click)="openPayrollHistoryModal(staff)" nz-tooltip nzTooltipTitle="Lịch sử lương">
+            <button nz-button nzShape="circle" nzType="default" (click)="openPayrollHistoryModal(staff)" [nz-tooltip]="'STAFF_MANAGEMENT.PAYROLL_HISTORY' | translate">
               <i nz-icon nzType="history"></i>
             </button>
             <nz-divider nzType="vertical"></nz-divider>
-            <button nz-button nzShape="circle" nzType="default" nzDanger (click)="deleteStaff(staff)" nz-tooltip nzTooltipTitle="Xóa">
+            <button nz-button nzShape="circle" nzType="default" nzDanger (click)="deleteStaff(staff)" [nz-tooltip]="'STAFF_MANAGEMENT.DELETE' | translate">
               <i nz-icon nzType="delete"></i>
             </button>
           </td>
@@ -140,7 +140,7 @@
     <!-- Form thêm/sửa nhân viên (Drawer) -->
     <nz-drawer
       [nzVisible]="isFormVisible"
-      [nzTitle]="selectedStaff ? 'Cập nhật nhân viên' : 'Thêm nhân viên mới'"
+      [nzTitle]="(selectedStaff ? ('STAFF_MANAGEMENT.UPDATE_STAFF' | translate) : ('STAFF_MANAGEMENT.ADD_NEW_STAFF' | translate))"
       [nzWidth]="720"
       (nzOnClose)="stopEdit()"
     >

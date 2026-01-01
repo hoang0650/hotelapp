@@ -1,27 +1,27 @@
 <div class="pricing-management-container">
   <nz-card>
     <div class="header-actions">
-      <h2>{{ isAdmin ? 'Quản lý gói dịch vụ' : 'Gói dịch vụ của tôi' }}</h2>
+      <h2>{{ isAdmin ? ('PRICING_MANAGEMENT.TITLE_ADMIN' | translate) : ('PRICING_MANAGEMENT.TITLE_USER' | translate) }}</h2>
       <button *ngIf="canCreatePackage()" nz-button nzType="primary" (click)="showModal()">
-        <i nz-icon nzType="plus"></i>Thêm gói mới
+        <i nz-icon nzType="plus"></i>{{ 'PRICING_MANAGEMENT.ADD_PACKAGE' | translate }}
       </button>
     </div>
 
     <nz-tabset [nzAnimated]="false">
       <!-- Tab Danh sách gói -->
-      <nz-tab nzTitle="{{ isAdmin ? 'Danh sách gói' : 'Gói dịch vụ' }}">
+      <nz-tab [nzTitle]="(isAdmin ? ('PRICING_MANAGEMENT.TAB_PACKAGES_ADMIN' | translate) : ('PRICING_MANAGEMENT.TAB_PACKAGES_USER' | translate))">
         <nz-table #packagesTable [nzData]="packages" [nzLoading]="loading">
           <thead>
             <tr>
-              <th>Tên gói</th>
-              <th>Mô tả</th>
-              <th>Giá tháng</th>
-              <th>Giá năm</th>
-              <th>Giảm giá (%)</th>
-              <th>Thời hạn</th>
-              <th>Số người dùng tối đa</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.NAME' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.DESCRIPTION' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.MONTHLY_PRICE' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.YEARLY_PRICE' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.DISCOUNT' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.DURATION' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.MAX_USERS' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.STATUS' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.ACTIONS' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -29,27 +29,27 @@
               <td>{{ pkg.name }}</td>
               <td>{{ pkg.description }}</td>
               <td>
-                <span *ngIf="(pkg.monthlyPrice || 0) === 0 && (pkg.yearlyPrice || 0) === 0" style="color: #52c41a; font-weight: bold;">FREE</span>
+                <span *ngIf="(pkg.monthlyPrice || 0) === 0 && (pkg.yearlyPrice || 0) === 0" style="color: #52c41a; font-weight: bold;">{{ 'PRICING_MANAGEMENT.FREE' | translate }}</span>
                 <span *ngIf="(pkg.monthlyPrice || 0) !== 0 || (pkg.yearlyPrice || 0) !== 0">{{ formatCurrency(pkg.monthlyPrice || pkg.price || 0) }}</span>
               </td>
               <td>
-                <span *ngIf="(pkg.monthlyPrice || 0) === 0 && (pkg.yearlyPrice || 0) === 0" style="color: #52c41a; font-weight: bold;">FREE</span>
+                <span *ngIf="(pkg.monthlyPrice || 0) === 0 && (pkg.yearlyPrice || 0) === 0" style="color: #52c41a; font-weight: bold;">{{ 'PRICING_MANAGEMENT.FREE' | translate }}</span>
                 <span *ngIf="(pkg.monthlyPrice || 0) !== 0 || (pkg.yearlyPrice || 0) !== 0">{{ formatCurrency(pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0)) }}</span>
               </td>
               <td>{{ pkg.yearlyDiscount || 0 }}%</td>
               <td>
                 <span *ngIf="pkg.monthlyDuration || pkg.yearlyDuration">
-                  Tháng: {{ pkg.monthlyDuration || pkg.duration }} tháng<br>
-                  Năm: {{ pkg.yearlyDuration || pkg.duration }} tháng
+                  {{ 'PRICING_MANAGEMENT.MONTH' | translate }}: {{ pkg.monthlyDuration || pkg.duration }} {{ 'PRICING_MANAGEMENT.MONTHS' | translate }}<br>
+                  Năm: {{ pkg.yearlyDuration || pkg.duration }} {{ 'PRICING_MANAGEMENT.MONTHS' | translate }}
                 </span>
                 <span *ngIf="!pkg.monthlyDuration && !pkg.yearlyDuration">
-                  {{ pkg.duration }} tháng
+                  {{ pkg.duration }} {{ 'PRICING_MANAGEMENT.MONTHS' | translate }}
                 </span>
               </td>
-              <td>{{ pkg.maxUsers === 0 || pkg.maxUsers === null ? 'Không giới hạn' : pkg.maxUsers }}</td>
+              <td>{{ pkg.maxUsers === 0 || pkg.maxUsers === null ? ('PRICING_MANAGEMENT.UNLIMITED' | translate) : pkg.maxUsers }}</td>
               <td>
                 <nz-tag [nzColor]="pkg.isActive ? 'success' : 'error'">
-                  {{ pkg.isActive ? 'Đang hoạt động' : 'Đã tắt' }}
+                  {{ pkg.isActive ? ('PRICING_MANAGEMENT.ACTIVE' | translate) : ('PRICING_MANAGEMENT.INACTIVE' | translate) }}
                 </nz-tag>
               </td>
               <td>
@@ -68,7 +68,7 @@
                     nz-button 
                     nzType="primary" 
                     (click)="subscribeToPackage(pkg._id || pkg.id, 'monthly')">
-                    Đăng ký tháng
+                    {{ 'PRICING_MANAGEMENT.SUBSCRIBE_MONTHLY' | translate }}
                   </button>
                   <button 
                     *ngIf="!currentUserPackage || (currentUserPackage._id !== pkg._id && currentUserPackage.id !== pkg.id)"
@@ -76,14 +76,14 @@
                     nzType="default" 
                     style="margin-left: 8px;" 
                     (click)="subscribeToPackage(pkg._id || pkg.id, 'yearly')">
-                    Đăng ký năm
+                    {{ 'PRICING_MANAGEMENT.SUBSCRIBE_YEARLY' | translate }}
                   </button>
                   <button 
                     *ngIf="currentUserPackage && (currentUserPackage._id === pkg._id || currentUserPackage.id === pkg.id)"
                     nz-button 
                     nzType="primary" 
                     (click)="upgradeOrDowngradePackage(pkg._id || pkg.id, 'monthly')">
-                    Nâng/Hạ cấp (Tháng)
+                    {{ 'PRICING_MANAGEMENT.UPGRADE_DOWNGRADE_MONTHLY' | translate }}
                   </button>
                   <button 
                     *ngIf="currentUserPackage && (currentUserPackage._id === pkg._id || currentUserPackage.id === pkg.id)"
@@ -91,15 +91,15 @@
                     nzType="default" 
                     style="margin-left: 8px;" 
                     (click)="upgradeOrDowngradePackage(pkg._id || pkg.id, 'yearly')">
-                    Nâng/Hạ cấp (Năm)
+                    {{ 'PRICING_MANAGEMENT.UPGRADE_DOWNGRADE_YEARLY' | translate }}
                   </button>
                 </ng-container>
-                <button *ngIf="isAdmin" nz-button nzType="default" (click)="onAdminSubscribe(pkg._id || pkg.id)">Đăng ký (Test)</button>
+                <button *ngIf="isAdmin" nz-button nzType="default" (click)="onAdminSubscribe(pkg._id || pkg.id)">{{ 'PRICING_MANAGEMENT.ADMIN_SUBSCRIBE_TEST' | translate }}</button>
               </td>
             </tr>
             <tr *ngIf="!isAdmin && packages.length === 0">
               <td colspan="9" style="text-align: center; padding: 20px;">
-                <nz-empty nzNotFoundContent="Bạn chưa đăng ký gói nào"></nz-empty>
+                <nz-empty [nzNotFoundContent]="'PRICING_MANAGEMENT.NO_PACKAGES' | translate"></nz-empty>
               </td>
             </tr>
           </tbody>
@@ -107,17 +107,17 @@
       </nz-tab>
 
       <!-- Tab Danh sách đăng ký - Chỉ hiển thị cho admin -->
-      <nz-tab *ngIf="canViewSubscribers()" nzTitle="Danh sách đăng ký">
+      <nz-tab *ngIf="canViewSubscribers()" [nzTitle]="'PRICING_MANAGEMENT.TAB_SUBSCRIBERS' | translate">
         <nz-table #subscribersTable [nzData]="subscribers" [nzLoading]="loading">
           <thead>
             <tr>
-              <th>Người dùng</th>
-              <th>Email</th>
-              <th>Gói đăng ký</th>
-              <th>Ngày đăng ký</th>
-              <th>Ngày hết hạn</th>
-              <th>Số lượng người dùng</th>
-              <th>Thao tác</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.USER' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.EMAIL' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.PACKAGE' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.SUBSCRIPTION_DATE' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.EXPIRY_DATE' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.USER_COUNT' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.ACTIONS' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -129,7 +129,7 @@
               <td>{{ sub.expiryDate | date:'dd/MM/yyyy' }}</td>
               <td>
                 <span *ngIf="sub.maxUsers === 0 || sub.maxUsers === null">
-                  {{ sub.staffCount || 0 }} / Không giới hạn
+                  {{ sub.staffCount || 0 }} / {{ 'PRICING_MANAGEMENT.UNLIMITED' | translate }}
                 </span>
                 <span *ngIf="sub.maxUsers !== 0 && sub.maxUsers !== null">
                   {{ sub.staffCount || 0 }} / {{ sub.maxUsers }}
@@ -143,7 +143,7 @@
                   (click)="sendPaymentReminder(sub)"
                   [nzLoading]="sub.sendingReminder">
                   <i nz-icon nzType="notification"></i>
-                  Gửi thông báo
+                  {{ 'PRICING_MANAGEMENT.SEND_NOTIFICATION' | translate }}
                 </button>
               </td>
             </tr>
@@ -156,7 +156,7 @@
   <!-- Modal Form -->
   <nz-modal
     [(nzVisible)]="isModalVisible"
-    [nzTitle]="editingPackageId ? 'Chỉnh sửa gói' : 'Thêm gói mới'"
+    [nzTitle]="(editingPackageId ? ('PRICING_MANAGEMENT.MODAL_TITLE_EDIT' | translate) : ('PRICING_MANAGEMENT.MODAL_TITLE_ADD' | translate))"
     (nzOnCancel)="handleCancel()"
     (nzOnOk)="handleOk()"
     [nzOkLoading]="loading"
@@ -167,24 +167,24 @@
       <form nz-form [formGroup]="packageForm" class="package-form">
         <!-- Tên gói -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Tên gói</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập tên gói">
-            <input nz-input formControlName="name" placeholder="Nhập tên gói" autofocus />
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'PRICING_MANAGEMENT.FORM.NAME' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.NAME_REQUIRED' | translate">
+            <input nz-input formControlName="name" [placeholder]="'PRICING_MANAGEMENT.FORM.NAME_PLACEHOLDER' | translate" autofocus />
           </nz-form-control>
         </nz-form-item>
 
         <!-- Mô tả -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Mô tả</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.DESCRIPTION' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
-            <textarea nz-input formControlName="description" placeholder="Nhập mô tả" [nzAutosize]="{ minRows: 3, maxRows: 5 }"></textarea>
+            <textarea nz-input formControlName="description" [placeholder]="'PRICING_MANAGEMENT.FORM.DESCRIPTION_PLACEHOLDER' | translate" [nzAutosize]="{ minRows: 3, maxRows: 5 }"></textarea>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Giá tháng -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Giá theo tháng</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập giá hợp lệ">
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'PRICING_MANAGEMENT.FORM.MONTHLY_PRICE' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.MONTHLY_PRICE_REQUIRED' | translate">
             <nz-input-number 
               formControlName="monthlyPrice" 
               [nzMin]="0" 
@@ -197,8 +197,8 @@
 
         <!-- Giá năm -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Giá theo năm</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập giá hợp lệ">
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'PRICING_MANAGEMENT.FORM.YEARLY_PRICE' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.YEARLY_PRICE_REQUIRED' | translate">
             <nz-input-number 
               formControlName="yearlyPrice" 
               [nzMin]="0" 
@@ -211,8 +211,8 @@
 
         <!-- Giảm giá -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Giảm giá theo năm (%)</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Giảm giá phải từ 0 đến 100%">
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.YEARLY_DISCOUNT' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.YEARLY_DISCOUNT_ERROR' | translate">
             <nz-input-number 
               formControlName="yearlyDiscount" 
               [nzMin]="0" 
@@ -221,7 +221,7 @@
               style="width: 100%">
             </nz-input-number>
             <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
-              Phần trăm giảm giá khi thanh toán theo năm (0-100%)
+              {{ 'PRICING_MANAGEMENT.FORM.YEARLY_DISCOUNT_HINT' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
@@ -230,22 +230,22 @@
         <ng-container *ngIf="isSuperAdmin">
           <!-- Thời hạn gói tháng -->
           <nz-form-item>
-            <nz-form-label [nzSpan]="6" nzRequired>Thời hạn gói tháng (tháng)</nz-form-label>
-            <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập thời hạn hợp lệ">
+            <nz-form-label [nzSpan]="6" nzRequired>{{ 'PRICING_MANAGEMENT.FORM.MONTHLY_DURATION' | translate }}</nz-form-label>
+            <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.MONTHLY_DURATION_REQUIRED' | translate">
               <nz-input-number formControlName="monthlyDuration" [nzMin]="1" [nzStep]="1" style="width: 100%"></nz-input-number>
               <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
-                Số tháng gói sẽ có hiệu lực khi người dùng đăng ký theo tháng
+                {{ 'PRICING_MANAGEMENT.FORM.MONTHLY_DURATION_HINT' | translate }}
               </div>
             </nz-form-control>
           </nz-form-item>
 
           <!-- Thời hạn gói năm -->
           <nz-form-item>
-            <nz-form-label [nzSpan]="6" nzRequired>Thời hạn gói năm (tháng)</nz-form-label>
-            <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập thời hạn hợp lệ">
+            <nz-form-label [nzSpan]="6" nzRequired>{{ 'PRICING_MANAGEMENT.FORM.YEARLY_DURATION' | translate }}</nz-form-label>
+            <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.YEARLY_DURATION_REQUIRED' | translate">
               <nz-input-number formControlName="yearlyDuration" [nzMin]="1" [nzStep]="1" style="width: 100%"></nz-input-number>
               <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
-                Số tháng gói sẽ có hiệu lực khi người dùng đăng ký theo năm
+                {{ 'PRICING_MANAGEMENT.FORM.YEARLY_DURATION_HINT' | translate }}
               </div>
             </nz-form-control>
           </nz-form-item>
@@ -253,20 +253,20 @@
 
         <!-- Thời hạn - Cho admin và các role khác (tương thích) -->
         <nz-form-item *ngIf="!isSuperAdmin">
-          <nz-form-label [nzSpan]="6" nzRequired>Thời hạn (tháng)</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập thời hạn hợp lệ">
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'PRICING_MANAGEMENT.FORM.DURATION' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.DURATION_REQUIRED' | translate">
             <nz-input-number formControlName="duration" [nzMin]="1" [nzStep]="1" style="width: 100%"></nz-input-number>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Tính năng -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.FEATURES' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <nz-select 
               formControlName="features" 
               nzMode="multiple" 
-              nzPlaceHolder="Chọn các tính năng"
+              [nzPlaceHolder]="'PRICING_MANAGEMENT.FORM.FEATURES_PLACEHOLDER' | translate"
               [nzMaxTagCount]="3"
               nzShowSearch>
               <nz-option 
@@ -276,16 +276,16 @@
               </nz-option>
             </nz-select>
             <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
-              Chọn các tính năng mà gói này sẽ cung cấp cho người dùng
+              {{ 'PRICING_MANAGEMENT.FORM.FEATURES_HINT' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Quyền -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Quyền</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng chọn ít nhất một quyền">
-            <nz-select formControlName="permissions" nzMode="multiple" nzPlaceHolder="Chọn quyền">
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'PRICING_MANAGEMENT.FORM.PERMISSIONS' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.PERMISSIONS_REQUIRED' | translate">
+            <nz-select formControlName="permissions" nzMode="multiple" [nzPlaceHolder]="'PRICING_MANAGEMENT.FORM.PERMISSIONS_PLACEHOLDER' | translate">
               <nz-option *ngFor="let permission of availablePermissions" [nzLabel]="permission" [nzValue]="permission">
               </nz-option>
             </nz-select>
@@ -294,10 +294,10 @@
 
         <!-- Số người dùng tối đa -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6" nzRequired>Số người dùng tối đa</nz-form-label>
-          <nz-form-control [nzSpan]="18" nzErrorTip="Vui lòng nhập số người dùng hợp lệ">
+          <nz-form-label [nzSpan]="6" nzRequired>{{ 'PRICING_MANAGEMENT.FORM.MAX_USERS' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.MAX_USERS_REQUIRED' | translate">
             <nz-checkbox formControlName="unlimitedUsers" style="margin-bottom: 8px;">
-              Không giới hạn
+              {{ 'PRICING_MANAGEMENT.FORM.UNLIMITED_USERS' | translate }}
             </nz-checkbox>
             <nz-input-number 
               formControlName="maxUsers" 
@@ -311,133 +311,133 @@
 
         <div style="margin-bottom: 16px; text-align: right;">
           <button nz-button nzType="default" (click)="toggleAllFeatures(true)" style="margin-right: 8px;">
-            Bật tất cả
+            {{ 'PRICING_MANAGEMENT.FORM.TOGGLE_ALL_ON' | translate }}
           </button>
           <button nz-button nzType="default" (click)="toggleAllFeatures(false)">
-            Tắt tất cả
+            {{ 'PRICING_MANAGEMENT.FORM.TOGGLE_ALL_OFF' | translate }}
           </button>
         </div>
 
         <!-- Tính năng QR thanh toán -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng QR thanh toán</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.QR_PAYMENT' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <label nz-checkbox formControlName="qrPaymentFeature">
-              Bật tính năng QR thanh toán tự động
+              {{ 'PRICING_MANAGEMENT.FEATURES.QR_PAYMENT_ENABLE' | translate }}
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng hiển thị QR code khi thanh toán chuyển khoản trong room.
+              {{ 'PRICING_MANAGEMENT.FEATURES.QR_PAYMENT_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Tính năng Quản lý OTA -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng Quản lý OTA</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.OTA_MANAGEMENT' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <label nz-checkbox formControlName="otaManagementFeature">
-              Bật tính năng quản lý OTA tự động
+              {{ 'PRICING_MANAGEMENT.FEATURES.OTA_MANAGEMENT_ENABLE' | translate }}
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng quản lý tích hợp với các kênh OTA (Booking.com, Agoda, v.v.).
+              {{ 'PRICING_MANAGEMENT.FEATURES.OTA_MANAGEMENT_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Tính năng Quản lý Email -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng Quản lý Email</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.EMAIL_MANAGEMENT' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <label nz-checkbox formControlName="emailManagementFeature">
-              Bật tính năng quản lý email tự động
+              {{ 'PRICING_MANAGEMENT.FEATURES.EMAIL_MANAGEMENT_ENABLE' | translate }}
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng quản lý cấu hình email và gửi email.
+              {{ 'PRICING_MANAGEMENT.FEATURES.EMAIL_MANAGEMENT_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Tính năng Quản lý Điện -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng Quản lý Điện</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.ELECTRIC_MANAGEMENT' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <label nz-checkbox formControlName="electricManagementFeature">
-              Bật tính năng quản lý điện tự động
+              {{ 'PRICING_MANAGEMENT.FEATURES.ELECTRIC_MANAGEMENT_ENABLE' | translate }}
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng quản lý cài đặt và theo dõi điện năng tiêu thụ.
+              {{ 'PRICING_MANAGEMENT.FEATURES.ELECTRIC_MANAGEMENT_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Tính năng Thanh toán PayPal -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng Thanh toán PayPal</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.PAYPAL_PAYMENT' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <label nz-checkbox formControlName="paypalPaymentFeature">
-              Bật tính năng thanh toán PayPal tự động
+              {{ 'PRICING_MANAGEMENT.FEATURES.PAYPAL_PAYMENT_ENABLE' | translate }}
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng thanh toán qua PayPal.
+              {{ 'PRICING_MANAGEMENT.FEATURES.PAYPAL_PAYMENT_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Tính năng Thanh toán Crypto -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng Thanh toán Crypto</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.CRYPTO_PAYMENT' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <label nz-checkbox formControlName="cryptoPaymentFeature">
-              Bật tính năng thanh toán Crypto tự động
+              {{ 'PRICING_MANAGEMENT.FEATURES.CRYPTO_PAYMENT_ENABLE' | translate }}
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng thanh toán qua tiền điện tử (Bitcoin, Ethereum, USDT, v.v.).
+              {{ 'PRICING_MANAGEMENT.FEATURES.CRYPTO_PAYMENT_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Tính năng Xem hóa đơn nháp -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng Xem hóa đơn nháp</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.DRAFT_INVOICE' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <label nz-checkbox formControlName="draftInvoiceFeature">
-              Bật tính năng xem hóa đơn nháp tự động
+              {{ 'PRICING_MANAGEMENT.FEATURES.DRAFT_INVOICE_ENABLE' | translate }}
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng xem hóa đơn nháp trước khi xuất hóa đơn chính thức.
+              {{ 'PRICING_MANAGEMENT.FEATURES.DRAFT_INVOICE_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Tính năng Xuất hóa đơn -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng Xuất hóa đơn</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.EXPORT_INVOICE' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <label nz-checkbox formControlName="exportInvoiceFeature">
-              Bật tính năng xuất hóa đơn tự động
+              {{ 'PRICING_MANAGEMENT.FEATURES.EXPORT_INVOICE_ENABLE' | translate }}
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng xuất hóa đơn ra file PDF hoặc các định dạng khác.
+              {{ 'PRICING_MANAGEMENT.FEATURES.EXPORT_INVOICE_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Tính năng AI Chatbox -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Tính năng AI Chatbox</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.AI_CHATBOX' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <label nz-checkbox formControlName="aiChatboxFeature">
-              Bật tính năng AI Chatbox tự động
+              {{ 'PRICING_MANAGEMENT.FEATURES.AI_CHATBOX_ENABLE' | translate }}
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              Khi bật, các khách sạn đăng ký gói này sẽ tự động có tính năng trợ lý AI để hỗ trợ và trả lời câu hỏi.
+              {{ 'PRICING_MANAGEMENT.FEATURES.AI_CHATBOX_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Trạng thái -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Trạng thái</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.STATUS' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <nz-switch formControlName="isActive"></nz-switch>
           </nz-form-control>

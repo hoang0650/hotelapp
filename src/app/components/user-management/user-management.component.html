@@ -4,13 +4,13 @@
     <div nz-col>
       <h2>
         <i nz-icon nzType="team" nzTheme="outline"></i>
-        Quản lý người dùng
+        {{ 'USER_MANAGEMENT.TITLE' | translate }}
       </h2>
     </div>
     <div nz-col>
       <button nz-button nzType="primary" (click)="showCreateModal()" *ngIf="canCreateUser">
         <i nz-icon nzType="user-add"></i>
-        Thêm người dùng
+        {{ 'USER_MANAGEMENT.ADD_USER' | translate }}
       </button>
     </div>
   </div>
@@ -19,7 +19,7 @@
   <nz-alert 
     *ngIf="!isAdmin" 
     nzType="warning" 
-    nzMessage="Bạn không có quyền quản lý người dùng. Chỉ Superadmin và Admin mới có quyền này."
+    [nzMessage]="'USER_MANAGEMENT.NO_PERMISSION_MESSAGE' | translate"
     [nzCloseable]="true"
     class="mb-3">
   </nz-alert>
@@ -32,15 +32,15 @@
           <input nz-input 
                  [(ngModel)]="searchText" 
                  (ngModelChange)="onSearchChange()"
-                 placeholder="Tìm kiếm theo tên, email..." />
+                 [placeholder]="'USER_MANAGEMENT.SEARCH_PLACEHOLDER' | translate" />
         </nz-input-group>
       </div>
       <div nz-col [nzXs]="12" [nzSm]="5">
         <nz-select [(ngModel)]="selectedRoleFilter" 
                    (ngModelChange)="onRoleFilterChange($event)"
-                   nzPlaceHolder="Lọc theo vai trò"
+                   [nzPlaceHolder]="'USER_MANAGEMENT.FILTER_BY_ROLE' | translate"
                    style="width: 100%;">
-          <nz-option nzValue="all" nzLabel="Tất cả vai trò"></nz-option>
+          <nz-option nzValue="all" [nzLabel]="'USER_MANAGEMENT.ALL_ROLES' | translate"></nz-option>
           <nz-option *ngFor="let role of manageableRoles" 
                      [nzValue]="role.value" 
                      [nzLabel]="role.label">
@@ -50,9 +50,9 @@
       <div nz-col [nzXs]="12" [nzSm]="5">
         <nz-select [(ngModel)]="selectedStatusFilter" 
                    (ngModelChange)="onStatusFilterChange($event)"
-                   nzPlaceHolder="Lọc theo trạng thái"
+                   [nzPlaceHolder]="'USER_MANAGEMENT.FILTER_BY_STATUS' | translate"
                    style="width: 100%;">
-          <nz-option nzValue="all" nzLabel="Tất cả trạng thái"></nz-option>
+          <nz-option nzValue="all" [nzLabel]="'USER_MANAGEMENT.ALL_STATUSES' | translate"></nz-option>
           <nz-option *ngFor="let status of userStatuses" 
                      [nzValue]="status.value" 
                      [nzLabel]="status.label">
@@ -62,11 +62,11 @@
       <div nz-col [nzXs]="24" [nzSm]="4">
         <button nz-button (click)="clearFilters()" nzType="default">
           <i nz-icon nzType="clear"></i>
-          Xóa bộ lọc
+          {{ 'USER_MANAGEMENT.CLEAR_FILTERS' | translate }}
         </button>
       </div>
       <div nz-col [nzXs]="24" [nzSm]="4" class="text-right">
-        <nz-statistic [nzValue]="total" nzTitle="Tổng số" [nzValueStyle]="{ fontSize: '16px' }"></nz-statistic>
+        <nz-statistic [nzValue]="total" [nzTitle]="'USER_MANAGEMENT.TOTAL' | translate" [nzValueStyle]="{ fontSize: '16px' }"></nz-statistic>
       </div>
     </div>
   </nz-card>
@@ -87,16 +87,16 @@
     nzBordered>
     <thead>
       <tr>
-        <th nzWidth="60px">STT</th>
-        <th nzWidth="150px">Tên đăng nhập</th>
-        <th nzWidth="200px">Email</th>
-        <th nzWidth="150px">Họ tên</th>
-        <th nzWidth="120px">Vai trò</th>
-        <th nzWidth="120px">Trạng thái</th>
-        <th nzWidth="150px" *ngIf="isAdmin">Business/Hotel</th>
-        <th nzWidth="150px">Đăng nhập cuối</th>
-        <th nzWidth="150px">Địa chỉ IP</th>
-        <th nzWidth="140px">Thao tác</th>
+        <th nzWidth="60px">{{ 'USER_MANAGEMENT.TABLE_HEADERS.NO' | translate }}</th>
+        <th nzWidth="150px">{{ 'USER_MANAGEMENT.TABLE_HEADERS.USERNAME' | translate }}</th>
+        <th nzWidth="200px">{{ 'USER_MANAGEMENT.TABLE_HEADERS.EMAIL' | translate }}</th>
+        <th nzWidth="150px">{{ 'USER_MANAGEMENT.TABLE_HEADERS.FULL_NAME' | translate }}</th>
+        <th nzWidth="120px">{{ 'USER_MANAGEMENT.TABLE_HEADERS.ROLE' | translate }}</th>
+        <th nzWidth="120px">{{ 'USER_MANAGEMENT.TABLE_HEADERS.STATUS' | translate }}</th>
+        <th nzWidth="150px" *ngIf="isAdmin">{{ 'USER_MANAGEMENT.TABLE_HEADERS.BUSINESS_HOTEL' | translate }}</th>
+        <th nzWidth="150px">{{ 'USER_MANAGEMENT.TABLE_HEADERS.LAST_LOGIN' | translate }}</th>
+        <th nzWidth="150px">{{ 'USER_MANAGEMENT.TABLE_HEADERS.IP_ADDRESS' | translate }}</th>
+        <th nzWidth="140px">{{ 'USER_MANAGEMENT.TABLE_HEADERS.ACTIONS' | translate }}</th>
       </tr>
     </thead>
     <tbody>
@@ -108,7 +108,7 @@
             <nz-avatar [nzSize]="24" nzIcon="user" class="mr-2"></nz-avatar>
             {{ user.username }}
           </span>
-          <nz-tag *ngIf="user._id === currentUser?._id" nzColor="processing" class="ml-2">Bạn</nz-tag>
+          <nz-tag *ngIf="user._id === currentUser?._id" nzColor="processing" class="ml-2">{{ 'USER_MANAGEMENT.YOU' | translate }}</nz-tag>
         </td>
         <td nzEllipsis>{{ user.email }}</td>
         <td>{{ user.fullName || '-' }}</td>
@@ -124,17 +124,17 @@
           </nz-badge>
         </td>
         <td *ngIf="isAdmin">
-          <span *ngIf="user.businessId" nz-tooltip [nzTooltipTitle]="'Business ID: ' + user.businessId">
+          <span *ngIf="user.businessId" nz-tooltip [nzTooltipTitle]="('USER_MANAGEMENT.BUSINESS_ID' | translate) + ': ' + user.businessId">
             <i nz-icon nzType="bank" class="mr-1"></i>
           </span>
-          <span *ngIf="user.hotelId" nz-tooltip [nzTooltipTitle]="'Hotel ID: ' + user.hotelId">
+          <span *ngIf="user.hotelId" nz-tooltip [nzTooltipTitle]="('USER_MANAGEMENT.HOTEL_ID' | translate) + ': ' + user.hotelId">
             <i nz-icon nzType="home" class="mr-1"></i>
           </span>
           <span *ngIf="!user.businessId && !user.hotelId">-</span>
         </td>
         <td>{{ formatDate(user.lastLogin) }}</td>
         <td>
-          <span *ngIf="user.lastLoginIp" nz-tooltip [nzTooltipTitle]="'IP đăng nhập lần cuối: ' + user.lastLoginIp">
+          <span *ngIf="user.lastLoginIp" nz-tooltip [nzTooltipTitle]="('USER_MANAGEMENT.LAST_LOGIN_IP' | translate) + ': ' + user.lastLoginIp">
             {{ user.lastLoginIp }}
           </span>
           <span *ngIf="!user.lastLoginIp" class="text-muted">-</span>
@@ -145,7 +145,7 @@
             <button nz-button nzType="default" nzSize="small" 
                     (click)="showEditModal(user)"
                     *ngIf="canManageUser(user)"
-                    nz-tooltip nzTooltipTitle="Chỉnh sửa">
+                    nz-tooltip [nzTooltipTitle]="'USER_MANAGEMENT.EDIT' | translate">
               <i nz-icon nzType="edit"></i>
             </button>
             
@@ -153,7 +153,7 @@
             <button nz-button nzType="default" nzSize="small" nzDanger
                     (click)="blockUser(user)"
                     *ngIf="canBlockUser(user) && user.status !== 'suspended'"
-                    nz-tooltip nzTooltipTitle="Khóa tài khoản">
+                    nz-tooltip [nzTooltipTitle]="'USER_MANAGEMENT.BLOCK' | translate">
               <i nz-icon nzType="lock"></i>
             </button>
             
@@ -161,7 +161,7 @@
             <button nz-button nzType="primary" nzSize="small"
                     (click)="activateUser(user)"
                     *ngIf="canManageUser(user) && (user.status === 'suspended' || user.status === 'inactive')"
-                    nz-tooltip nzTooltipTitle="Kích hoạt lại">
+                    nz-tooltip [nzTooltipTitle]="'USER_MANAGEMENT.ACTIVATE' | translate">
               <i nz-icon nzType="unlock"></i>
             </button>
             
@@ -169,7 +169,7 @@
             <button nz-button nzType="text" nzSize="small" nzDanger
                     (click)="deleteUser(user)"
                     *ngIf="canDeleteUser(user)"
-                    nz-tooltip nzTooltipTitle="Xóa người dùng">
+                    nz-tooltip [nzTooltipTitle]="'USER_MANAGEMENT.DELETE' | translate">
               <i nz-icon nzType="delete"></i>
             </button>
           </nz-button-group>
@@ -186,7 +186,7 @@
   <!-- Modal tạo/chỉnh sửa user -->
   <nz-modal
     [(nzVisible)]="isVisible"
-    [nzTitle]="editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'"
+    [nzTitle]="(editingUser ? ('USER_MANAGEMENT.MODAL_TITLE_EDIT' | translate) : ('USER_MANAGEMENT.MODAL_TITLE_ADD' | translate))"
     [nzWidth]="600"
     (nzOnCancel)="handleCancel()"
     (nzOnOk)="handleOk()"
@@ -197,36 +197,17 @@
         <div nz-row [nzGutter]="16">
           <div nz-col [nzSpan]="12">
             <nz-form-item>
-              <nz-form-label nzRequired>Tên đăng nhập</nz-form-label>
-              <nz-form-control nzErrorTip="Tên đăng nhập tối thiểu 3 ký tự">
-                <input nz-input formControlName="username" placeholder="Nhập tên đăng nhập" />
+              <nz-form-label nzRequired>{{ 'USER_MANAGEMENT.FORM.USERNAME' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'USER_MANAGEMENT.FORM.USERNAME_REQUIRED' | translate">
+                <input nz-input formControlName="username" [placeholder]="'USER_MANAGEMENT.FORM.USERNAME_PLACEHOLDER' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           <div nz-col [nzSpan]="12">
             <nz-form-item>
-              <nz-form-label nzRequired>Email</nz-form-label>
-              <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
-                <input nz-input formControlName="email" placeholder="Nhập email" type="email" />
-              </nz-form-control>
-            </nz-form-item>
-          </div>
-        </div>
-
-        <div nz-row [nzGutter]="16">
-          <div nz-col [nzSpan]="12">
-            <nz-form-item>
-              <nz-form-label>Họ và tên</nz-form-label>
-              <nz-form-control>
-                <input nz-input formControlName="fullName" placeholder="Nhập họ và tên" />
-              </nz-form-control>
-            </nz-form-item>
-          </div>
-          <div nz-col [nzSpan]="12">
-            <nz-form-item>
-              <nz-form-label>Số điện thoại</nz-form-label>
-              <nz-form-control>
-                <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+              <nz-form-label nzRequired>{{ 'USER_MANAGEMENT.FORM.EMAIL' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'USER_MANAGEMENT.FORM.EMAIL_INVALID' | translate">
+                <input nz-input formControlName="email" [placeholder]="'USER_MANAGEMENT.FORM.EMAIL_PLACEHOLDER' | translate" type="email" />
               </nz-form-control>
             </nz-form-item>
           </div>
@@ -235,9 +216,28 @@
         <div nz-row [nzGutter]="16">
           <div nz-col [nzSpan]="12">
             <nz-form-item>
-              <nz-form-label nzRequired>Vai trò</nz-form-label>
-              <nz-form-control nzErrorTip="Vui lòng chọn vai trò">
-                <nz-select formControlName="role" nzPlaceHolder="Chọn vai trò">
+              <nz-form-label>{{ 'USER_MANAGEMENT.FORM.FULL_NAME' | translate }}</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="fullName" [placeholder]="'USER_MANAGEMENT.FORM.FULL_NAME_PLACEHOLDER' | translate" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>{{ 'USER_MANAGEMENT.FORM.PHONE' | translate }}</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="phone" [placeholder]="'USER_MANAGEMENT.FORM.PHONE_PLACEHOLDER' | translate" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label nzRequired>{{ 'USER_MANAGEMENT.FORM.ROLE' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'USER_MANAGEMENT.FORM.ROLE_REQUIRED' | translate">
+                <nz-select formControlName="role" [nzPlaceHolder]="'USER_MANAGEMENT.FORM.ROLE_PLACEHOLDER' | translate">
                   <nz-option *ngFor="let role of manageableRoles" 
                              [nzValue]="role.value" 
                              [nzLabel]="role.label">
@@ -248,9 +248,9 @@
           </div>
           <div nz-col [nzSpan]="12">
             <nz-form-item>
-              <nz-form-label nzRequired>Trạng thái</nz-form-label>
+              <nz-form-label nzRequired>{{ 'USER_MANAGEMENT.FORM.STATUS' | translate }}</nz-form-label>
               <nz-form-control>
-                <nz-select formControlName="status" nzPlaceHolder="Chọn trạng thái">
+                <nz-select formControlName="status" [nzPlaceHolder]="'USER_MANAGEMENT.FORM.STATUS_PLACEHOLDER' | translate">
                   <nz-option *ngFor="let status of userStatuses" 
                              [nzValue]="status.value" 
                              [nzLabel]="status.label"
@@ -264,15 +264,15 @@
 
         <nz-form-item>
           <nz-form-label [nzRequired]="!editingUser">
-            Mật khẩu
-            <span *ngIf="editingUser" class="text-muted ml-2">(để trống nếu không đổi)</span>
+            {{ 'USER_MANAGEMENT.FORM.PASSWORD' | translate }}
+            <span *ngIf="editingUser" class="text-muted ml-2">{{ 'USER_MANAGEMENT.FORM.PASSWORD_LEAVE_BLANK' | translate }}</span>
           </nz-form-label>
-          <nz-form-control [nzErrorTip]="editingUser ? '' : 'Mật khẩu tối thiểu 6 ký tự'">
+          <nz-form-control [nzErrorTip]="editingUser ? '' : ('USER_MANAGEMENT.FORM.PASSWORD_MIN' | translate)">
             <nz-input-group [nzSuffix]="passwordSuffix">
               <input nz-input 
                      formControlName="password" 
                      [type]="passwordVisible ? 'text' : 'password'"
-                     placeholder="Nhập mật khẩu" />
+                     [placeholder]="'USER_MANAGEMENT.FORM.PASSWORD_PLACEHOLDER' | translate" />
             </nz-input-group>
             <ng-template #passwordSuffix>
               <i nz-icon 
@@ -287,17 +287,17 @@
         <div *ngIf="isAdmin" nz-row [nzGutter]="16">
           <div nz-col [nzSpan]="12">
             <nz-form-item>
-              <nz-form-label>Business ID</nz-form-label>
+              <nz-form-label>{{ 'USER_MANAGEMENT.FORM.BUSINESS_ID_LABEL' | translate }}</nz-form-label>
               <nz-form-control>
-                <input nz-input formControlName="businessId" placeholder="ID của Business" />
+                <input nz-input formControlName="businessId" [placeholder]="'USER_MANAGEMENT.FORM.BUSINESS_ID_PLACEHOLDER' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           <div nz-col [nzSpan]="12">
             <nz-form-item>
-              <nz-form-label>Hotel ID</nz-form-label>
+              <nz-form-label>{{ 'USER_MANAGEMENT.FORM.HOTEL_ID_LABEL' | translate }}</nz-form-label>
               <nz-form-control>
-                <input nz-input formControlName="hotelId" placeholder="ID của Hotel" />
+                <input nz-input formControlName="hotelId" [placeholder]="'USER_MANAGEMENT.FORM.HOTEL_ID_PLACEHOLDER' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
@@ -307,22 +307,22 @@
         <nz-form-item>
           <nz-form-control>
             <label nz-checkbox formControlName="twoFactorEnabled">
-              <span>Bật xác thực hai yếu tố (2FA)</span>
+              <span>{{ 'USER_MANAGEMENT.FORM.TWO_FACTOR_ENABLED' | translate }}</span>
             </label>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Phân quyền tính năng - Chỉ hiển thị cho Admin/Superadmin -->
-        <nz-divider *ngIf="isAdmin" nzText="Phân quyền tính năng" nzOrientation="left"></nz-divider>
+        <nz-divider *ngIf="isAdmin" [nzText]="'USER_MANAGEMENT.FORM.FEATURE_PERMISSIONS' | translate" nzOrientation="left"></nz-divider>
 
         <!-- Tính năng (Features) - Tương tự pricing-management -->
         <nz-form-item *ngIf="isAdmin">
-          <nz-form-label>Tính năng</nz-form-label>
+          <nz-form-label>{{ 'USER_MANAGEMENT.FORM.FEATURES' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
               formControlName="features" 
               nzMode="multiple" 
-              nzPlaceHolder="Chọn các tính năng"
+              [nzPlaceHolder]="'USER_MANAGEMENT.FORM.FEATURES_PLACEHOLDER' | translate"
               [nzMaxTagCount]="3"
               nzShowSearch>
               <nz-option 
@@ -332,14 +332,14 @@
               </nz-option>
             </nz-select>
             <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
-              Chọn các tính năng mà người dùng này sẽ có quyền truy cập
+              {{ 'USER_MANAGEMENT.FORM.FEATURES_HINT' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Feature Flags - Tương tự pricing-management -->
         <nz-form-item *ngIf="isAdmin">
-          <nz-form-label>Tính năng đặc biệt</nz-form-label>
+          <nz-form-label>{{ 'USER_MANAGEMENT.FORM.SPECIAL_FEATURES' | translate }}</nz-form-label>
           <nz-form-control>
             <div style="display: flex; flex-direction: column; gap: 16px;">
               <div *ngFor="let flag of availableFeatureFlags" style="border: 1px solid #f0f0f0; border-radius: 4px; padding: 12px;">
@@ -352,7 +352,7 @@
               </div>
             </div>
             <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
-              Bật/tắt các tính năng đặc biệt cho người dùng này. Các tính năng này tương đương với các tính năng trong gói đăng ký.
+              {{ 'USER_MANAGEMENT.FORM.SPECIAL_FEATURES_HINT' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>
@@ -362,16 +362,16 @@
           *ngIf="userForm.get('role')?.value === 'business' && userForm.get('status')?.value === 'suspended'"
           nzType="warning"
           nzShowIcon
-          nzMessage="Cảnh báo"
-          nzDescription="Khi khóa tài khoản Business, tất cả khách sạn và nhân viên thuộc business này sẽ bị tạm ngưng hoạt động.">
+          [nzMessage]="'USER_MANAGEMENT.ALERTS.BUSINESS_SUSPEND_WARNING' | translate"
+          [nzDescription]="'USER_MANAGEMENT.ALERTS.BUSINESS_SUSPEND_DESC' | translate">
         </nz-alert>
 
         <nz-alert 
           *ngIf="userForm.get('role')?.value === 'hotel' && userForm.get('status')?.value === 'suspended'"
           nzType="warning"
           nzShowIcon
-          nzMessage="Cảnh báo"
-          nzDescription="Khi khóa tài khoản Hotel Manager, tất cả nhân viên thuộc hotel này sẽ bị tạm ngưng hoạt động.">
+          [nzMessage]="'USER_MANAGEMENT.ALERTS.HOTEL_SUSPEND_WARNING' | translate"
+          [nzDescription]="'USER_MANAGEMENT.ALERTS.HOTEL_SUSPEND_DESC' | translate">
         </nz-alert>
       </form>
     </ng-container>

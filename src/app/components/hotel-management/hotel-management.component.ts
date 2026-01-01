@@ -15,6 +15,7 @@ import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { TranslateService } from '@ngx-translate/core';
 
 type HotelStatusType = 'active' | 'inactive' | 'maintenance' | 'suspended';
 
@@ -24,7 +25,7 @@ type HotelStatusType = 'active' | 'inactive' | 'maintenance' | 'suspended';
   styleUrls: ['./hotel-management.component.css']
 })
 export class HotelManagementComponent implements OnInit {
-  hotelForm: FormGroup;
+  hotelForm!: FormGroup;
   hotels: Hotel[] = [];
   businesses: Business[] = [];
   availableManagers: User[] = [];
@@ -49,12 +50,17 @@ export class HotelManagementComponent implements OnInit {
   logoId: string | null = null;
   isLoadingUpload = false;
 
-  hotelStatusOptions: { label: string, value: HotelStatusType }[] = [
-    { label: 'Hoạt động', value: 'active' },
-    { label: 'Không hoạt động', value: 'inactive' },
-    { label: 'Bảo trì', value: 'maintenance' },
-    { label: 'Bị đình chỉ', value: 'suspended' }
-  ];
+  hotelStatusOptions: { label: string, value: HotelStatusType }[] = [];
+
+
+  private initStatusOptions(): void {
+    this.hotelStatusOptions = [
+      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS.ACTIVE'), value: 'active' },
+      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS.INACTIVE'), value: 'inactive' },
+      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS.MAINTENANCE'), value: 'maintenance' },
+      { label: this.translate.instant('HOTEL_MANAGEMENT.STATUS.SUSPENDED'), value: 'suspended' }
+    ];
+  }
 
   constructor(
     private hotelService: HotelService,
@@ -66,8 +72,10 @@ export class HotelManagementComponent implements OnInit {
     private fb: FormBuilder,
     private message: NzMessageService,
     private modal: NzModalService,
-    private http: HttpClient
+    private http: HttpClient,
+    private translate: TranslateService
   ) {
+    this.initStatusOptions();
     this.hotelForm = this.fb.group({
       name: ['', Validators.required],
       businessId: [null, Validators.required],
@@ -260,7 +268,7 @@ export class HotelManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error fetching hotels:', error);
-        this.message.error('Không thể tải danh sách khách sạn.');
+        this.message.error(this.translate.instant('HOTEL_MANAGEMENT.LOAD_HOTELS_ERROR'));
         this.isLoading = false;
       }
     });
@@ -279,7 +287,7 @@ export class HotelManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error fetching businesses:', error);
-        this.message.error('Không thể tải danh sách doanh nghiệp.');
+        this.message.error(this.translate.instant('HOTEL_MANAGEMENT.LOAD_BUSINESSES_ERROR'));
       }
     });
   }
@@ -304,7 +312,7 @@ export class HotelManagementComponent implements OnInit {
   startEdit(hotel: Hotel | null): void {
     if (hotel) {
       if (!this.canManage(hotel._id)) {
-        this.message.warning('Bạn không có quyền chỉnh sửa khách sạn này');
+        this.message.warning(this.translate.instant('HOTEL_MANAGEMENT.NO_EDIT_PERMISSION'));
         return;
       }
       
@@ -364,7 +372,7 @@ export class HotelManagementComponent implements OnInit {
     } else {
       // Tạo mới
       if (!this.canCreateHotel) {
-        this.message.warning('Bạn không có quyền tạo khách sạn mới');
+        this.message.warning(this.translate.instant('HOTEL_MANAGEMENT.NO_CREATE_PERMISSION'));
         return;
       }
       
@@ -421,7 +429,7 @@ export class HotelManagementComponent implements OnInit {
     const beneficiaryName = bankAccountGroup?.get('beneficiaryName')?.value?.trim() || '';
 
     if (!bankName || !accountNumber) {
-      this.message.warning('Vui lòng nhập tên ngân hàng và số tài khoản');
+      this.message.warning(this.translate.instant('HOTEL_MANAGEMENT.BANK_INFO_REQUIRED'));
       return;
     }
 
@@ -434,7 +442,7 @@ export class HotelManagementComponent implements OnInit {
     this.qrBeneficiaryName = beneficiaryName || bankAccountGroup?.get('accountHolderName')?.value?.trim() || '';
     
     this.showQrPreview = true;
-    this.message.success('Đã tạo QR thanh toán thành công. Vui lòng bấm "Cập nhật" để lưu vào hệ thống.');
+    this.message.success(this.translate.instant('HOTEL_MANAGEMENT.QR_SUCCESS'));
   }
 
   /**
@@ -448,13 +456,13 @@ export class HotelManagementComponent implements OnInit {
 
   submitForm(): void {
     if (this.hotelForm.invalid) {
-      Object.values(this.hotelForm.controls).forEach(control => {
+      Object.values(this.hotelForm.controls).forEach((control: any) => {
         if (control.invalid) {
           control.markAsDirty();
           control.updateValueAndValidity({ onlySelf: true });
         }
         if (control instanceof FormGroup) {
-          Object.values(control.controls).forEach(innerControl => {
+          Object.values(control.controls).forEach((innerControl: any) => {
             if (innerControl.invalid) {
               innerControl.markAsDirty();
               innerControl.updateValueAndValidity({ onlySelf: true });
@@ -462,7 +470,7 @@ export class HotelManagementComponent implements OnInit {
           });
         }
       });
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      this.message.warning(this.translate.instant('HOTEL_MANAGEMENT.FILL_REQUIRED_FIELDS'));
       return;
     }
 
@@ -517,12 +525,12 @@ export class HotelManagementComponent implements OnInit {
             this.hotels = [...this.hotels];
           }
           this.stopEdit();
-          this.message.success('Cập nhật khách sạn thành công!');
+          this.message.success(this.translate.instant('HOTEL_MANAGEMENT.UPDATE_SUCCESS'));
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error updating hotel:', error);
-          this.message.error(error.error?.message || 'Lỗi khi cập nhật khách sạn.');
+          this.message.error(error.error?.message || this.translate.instant('HOTEL_MANAGEMENT.UPDATE_ERROR'));
           this.isLoading = false;
         }
       });
@@ -531,12 +539,12 @@ export class HotelManagementComponent implements OnInit {
         next: (newHotel) => {
           this.hotels = [...this.hotels, newHotel];
           this.stopEdit();
-          this.message.success('Tạo khách sạn mới thành công!');
+          this.message.success(this.translate.instant('HOTEL_MANAGEMENT.CREATE_SUCCESS'));
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error creating hotel:', error);
-          this.message.error(error.error?.message || 'Lỗi khi tạo khách sạn.');
+          this.message.error(error.error?.message || this.translate.instant('HOTEL_MANAGEMENT.CREATE_ERROR'));
           this.isLoading = false;
         }
       });
@@ -545,14 +553,14 @@ export class HotelManagementComponent implements OnInit {
 
   deleteHotel(id: string): void {
     if (!this.canDelete(id)) {
-      this.message.error('Bạn không có quyền xóa khách sạn này');
+      this.message.error(this.translate.instant('HOTEL_MANAGEMENT.NO_DELETE_PERMISSION'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận xóa khách sạn',
-      nzContent: 'Bạn có chắc chắn muốn xóa khách sạn này? Hành động này sẽ ảnh hưởng đến tất cả phòng và nhân viên thuộc khách sạn.',
-      nzOkText: 'Xóa',
+      nzTitle: this.translate.instant('HOTEL_MANAGEMENT.CONFIRM_DELETE_TITLE'),
+      nzContent: this.translate.instant('HOTEL_MANAGEMENT.CONFIRM_DELETE_MESSAGE'),
+      nzOkText: this.translate.instant('HOTEL_MANAGEMENT.DELETE'),
       nzOkType: 'primary',
       nzOkDanger: true,
       nzOnOk: () => {
@@ -565,15 +573,15 @@ export class HotelManagementComponent implements OnInit {
             if (this.selectedViewHotel?._id === id) {
               this.closeHotelDetails();
             }
-            this.message.success('Xóa khách sạn thành công!');
+            this.message.success(this.translate.instant('HOTEL_MANAGEMENT.DELETE_SUCCESS'));
           },
           error: (error) => {
             console.error('Error deleting hotel:', error);
-            this.message.error(error.error?.message || 'Lỗi khi xóa khách sạn.');
+            this.message.error(error.error?.message || this.translate.instant('HOTEL_MANAGEMENT.DELETE_ERROR'));
           }
         });
       },
-      nzCancelText: 'Hủy'
+      nzCancelText: this.translate.instant('HOTEL_MANAGEMENT.CANCEL')
     });
   }
 
@@ -584,21 +592,25 @@ export class HotelManagementComponent implements OnInit {
    */
   blockHotel(hotelId: string): void {
     if (!this.canBlockHotel(this.hotels.find(h => h._id === hotelId)!)) {
-      this.message.error('Bạn không có quyền đình chỉ khách sạn này');
+      this.message.error(this.translate.instant('HOTEL_MANAGEMENT.NO_SUSPEND_PERMISSION'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận đình chỉ khách sạn',
-      nzContent: `<b style="color: red;">Cảnh báo:</b> Khi đình chỉ khách sạn, tất cả phòng và nhân viên thuộc khách sạn này sẽ không thể hoạt động.`,
-      nzOkText: 'Đình chỉ',
+      nzTitle: this.translate.instant('HOTEL_MANAGEMENT.CONFIRM_SUSPEND_TITLE'),
+      nzContent: `<b style="color: red;">${this.translate.instant('COMMON.WARNING')}:</b> ${this.translate.instant('HOTEL_MANAGEMENT.CONFIRM_SUSPEND_MESSAGE')}`,
+      nzOkText: this.translate.instant('HOTEL_MANAGEMENT.SUSPEND'),
       nzOkType: 'primary',
       nzOkDanger: true,
       nzOnOk: () => {
         this.updateHotelStatusLogic(hotelId, 'suspended', 'Khách sạn và tất cả nhân viên đã bị đình chỉ.');
       },
-      nzCancelText: 'Hủy'
+      nzCancelText: this.translate.instant('HOTEL_MANAGEMENT.CANCEL')
     });
+  }
+
+  getActivatedMessage(): string {
+    return this.translate.instant('HOTEL_MANAGEMENT.ACTIVATED');
   }
 
   updateHotelStatusLogic(hotelId: string, status: HotelStatusType, successMessage: string): void {
@@ -620,7 +632,7 @@ export class HotelManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error updating hotel status:', error);
-        this.message.error(error.error?.message || 'Không thể cập nhật trạng thái khách sạn');
+        this.message.error(error.error?.message || this.translate.instant('HOTEL_MANAGEMENT.UPDATE_STATUS_ERROR'));
         this.isLoading = false;
       }
     });
@@ -645,14 +657,19 @@ export class HotelManagementComponent implements OnInit {
       : businessId;
     
     if (!id || typeof id !== 'string') return 'N/A';
-    const business = this.businesses.find(b => b._id === id);
+    const business = this.businesses.find((b: Business) => b._id === id);
     return business ? business.name : 'N/A';
   }
 
   getHotelStatusLabel(statusValue: HotelStatusType | undefined): string {
     if (!statusValue) return 'N/A';
-    const statusOption = this.hotelStatusOptions.find(s => s.value === statusValue);
-    return statusOption ? statusOption.label : statusValue;
+    const statusMap: { [key: string]: string } = {
+      'active': this.translate.instant('HOTEL_MANAGEMENT.STATUS.ACTIVE'),
+      'inactive': this.translate.instant('HOTEL_MANAGEMENT.STATUS.INACTIVE'),
+      'maintenance': this.translate.instant('HOTEL_MANAGEMENT.STATUS.MAINTENANCE'),
+      'suspended': this.translate.instant('HOTEL_MANAGEMENT.STATUS.SUSPENDED')
+    };
+    return statusMap[statusValue] || statusValue;
   }
 
   getStatusColor(status?: HotelStatusType): string {
@@ -671,7 +688,7 @@ export class HotelManagementComponent implements OnInit {
       return managerId.fullName || managerId.username || 'N/A';
     }
     if (typeof managerId === 'string') {
-      const manager = this.availableManagers.find(m => m._id === managerId);
+      const manager = this.availableManagers.find((m: User) => m._id === managerId);
       return manager ? (manager.fullName || manager.username || 'N/A') : 'N/A';
     }
     return 'N/A';
@@ -709,11 +726,11 @@ export class HotelManagementComponent implements OnInit {
         this.hotelForm.patchValue({
           logo: imageUrl
         });
-        this.message.success('Tải lên logo thành công');
+        this.message.success(this.translate.instant('HOTEL_MANAGEMENT.UPLOAD_LOGO_SUCCESS'));
       }
       this.isLoadingUpload = false;
     } else if (info.file.status === 'error') {
-      this.message.error(`Lỗi khi tải lên logo: ${info.file.error?.message || 'Không xác định'}`);
+      this.message.error(`${this.translate.instant('HOTEL_MANAGEMENT.UPLOAD_LOGO_ERROR')} ${info.file.error?.message || this.translate.instant('COMMON.ERROR')}`);
       console.error('Upload error:', info.file.error);
       this.isLoadingUpload = false;
     }
@@ -722,12 +739,12 @@ export class HotelManagementComponent implements OnInit {
   beforeUpload = (file: NzUploadFile): boolean => {
     const isImage = file.type?.startsWith('image/');
     if (!isImage) {
-      this.message.error('Bạn chỉ có thể tải lên file hình ảnh!');
+      this.message.error(this.translate.instant('HOTEL_MANAGEMENT.IMAGE_ONLY'));
       return false;
     }
     const isLt5M = (file.size || 0) / 1024 / 1024 < 5;
     if (!isLt5M) {
-      this.message.error('Hình ảnh phải nhỏ hơn 5MB!');
+      this.message.error(this.translate.instant('HOTEL_MANAGEMENT.IMAGE_SIZE_LIMIT'));
       return false;
     }
     this.fileList = this.fileList.concat(file);

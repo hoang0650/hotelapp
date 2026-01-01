@@ -1,15 +1,15 @@
 <nz-card>
-  <h2 class="mb-4">Quản Lý Phòng</h2>
+  <h2 class="mb-4">{{ 'ROOM_MANAGEMENT.TITLE' | translate }}</h2>
 
   <!-- Bộ lọc phòng theo khách sạn và tầng -->
   <div class="mb-4 filter-section">
     <div nz-row [nzGutter]="16">
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Khách sạn</nz-form-label>
+          <nz-form-label>{{ 'ROOM_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Chọn khách sạn" 
+              [nzPlaceHolder]="'ROOM_MANAGEMENT.SELECT_HOTEL' | translate" 
               [(ngModel)]="selectedHotelId" 
               (ngModelChange)="onHotelChange($event)"
               nzAllowClear
@@ -21,23 +21,23 @@
       </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Tầng</nz-form-label>
+          <nz-form-label>{{ 'ROOM_MANAGEMENT.FLOOR' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Chọn tầng" 
+              [nzPlaceHolder]="'ROOM_MANAGEMENT.SELECT_FLOOR' | translate" 
               [ngModel]="roomForm.get('floor')!.value" 
               (ngModelChange)="filterRoomsByFloor($event)" 
               [disabled]="!selectedHotelId || floors.length === 0"
               nzAllowClear
               class="w-100">
-              <nz-option *ngFor="let floor_opt of floors" [nzValue]="floor_opt" [nzLabel]="'Tầng ' + floor_opt"></nz-option>
+              <nz-option *ngFor="let floor_opt of floors" [nzValue]="floor_opt" [nzLabel]="('ROOM_MANAGEMENT.FLOOR_PREFIX' | translate) + ' ' + floor_opt"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
       </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" class="d-flex align-items-end">
         <button nz-button nzType="default" (click)="selectedHotelId ? loadRooms(selectedHotelId) : loadRooms()" [disabled]="!selectedHotelId" class="mt-2">
-          <i nz-icon nzType="reload"></i> Tải lại phòng
+          <i nz-icon nzType="reload"></i> {{ 'ROOM_MANAGEMENT.RELOAD_ROOMS' | translate }}
         </button>
       </div>
     </div>
@@ -55,15 +55,15 @@
       [nzTotal]="total">
       <thead>
         <tr>
-          <th nzWidth="100px">Số Phòng</th>
-          <th nzWidth="80px">Tầng</th>
-          <th nzWidth="120px">Loại Phòng</th>
-          <th nzWidth="120px">Trạng Thái</th>
-          <th nzWidth="100px">Giá Giờ</th>
-          <th nzWidth="100px">Giá Đêm</th>
-          <th nzWidth="100px">Giá Ngày</th>
-          <th nzWidth="120px">Sức chứa (NL/TE)</th>
-          <th nzWidth="150px">Thao tác</th>
+          <th nzWidth="100px">{{ 'ROOM_MANAGEMENT.ROOM_NUMBER' | translate }}</th>
+          <th nzWidth="80px">{{ 'ROOM_MANAGEMENT.FLOOR' | translate }}</th>
+          <th nzWidth="120px">{{ 'ROOM_MANAGEMENT.ROOM_TYPE' | translate }}</th>
+          <th nzWidth="120px">{{ 'ROOM_MANAGEMENT.STATUS' | translate }}</th>
+          <th nzWidth="100px">{{ 'ROOM_MANAGEMENT.HOURLY_PRICE' | translate }}</th>
+          <th nzWidth="100px">{{ 'ROOM_MANAGEMENT.NIGHTLY_PRICE' | translate }}</th>
+          <th nzWidth="100px">{{ 'ROOM_MANAGEMENT.DAILY_PRICE' | translate }}</th>
+          <th nzWidth="120px">{{ 'ROOM_MANAGEMENT.CAPACITY' | translate }}</th>
+          <th nzWidth="150px">{{ 'ROOM_MANAGEMENT.ACTIONS' | translate }}</th>
         </tr>
       </thead>
       <tbody>
@@ -87,16 +87,16 @@
           <td>{{ room.pricing?.daily | currency: 'VND':'đ' }}</td>
           <td>{{ room.capacity?.adults }}/{{ room.capacity?.children || 0 }}</td>
           <td>
-            <button nz-button nzType="primary" nzShape="circle" (click)="startEdit(room._id)" *ngIf="editId !== room._id && canEditRoom && canManage(room._id)" title="Chỉnh sửa phòng">
+            <button nz-button nzType="primary" nzShape="circle" (click)="startEdit(room._id)" *ngIf="editId !== room._id && canEditRoom && canManage(room._id)" [title]="'ROOM_MANAGEMENT.EDIT' | translate">
               <i nz-icon nzType="edit"></i>
             </button>
             <nz-divider nzType="vertical" *ngIf="editId !== room._id && canEditRoom && canManage(room._id)"></nz-divider>
-            <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa?" (nzOnConfirm)="deleteRoom(room._id)" *ngIf="editId !== room._id && canManage(room._id)" title="Xóa phòng">
-              <button nz-button nzType="primary" nzDanger nzShape="circle" title="Xóa phòng">
+            <a nz-popconfirm [nzPopconfirmTitle]="'ROOM_MANAGEMENT.CONFIRM_DELETE' | translate" (nzOnConfirm)="deleteRoom(room._id)" *ngIf="editId !== room._id && canManage(room._id)" [title]="'ROOM_MANAGEMENT.DELETE' | translate">
+              <button nz-button nzType="primary" nzDanger nzShape="circle" [title]="'ROOM_MANAGEMENT.DELETE' | translate">
                 <i nz-icon nzType="delete"></i>
               </button>
             </a>
-            <button nz-button nzType="default" nzShape="circle" (click)="stopEdit()" *ngIf="editId === room._id" title="Hủy chỉnh sửa">
+            <button nz-button nzType="default" nzShape="circle" (click)="stopEdit()" *ngIf="editId === room._id" [title]="'ROOM_MANAGEMENT.CANCEL_EDIT' | translate">
               <i nz-icon nzType="close"></i>
             </button>
           </td>

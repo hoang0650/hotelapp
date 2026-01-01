@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-debt-management',
@@ -43,33 +44,9 @@ export class DebtManagementComponent implements OnInit {
   newLabelInput: string[] = [];
   isUpdatingLabels = false;
   selectedLabelColor: string = 'default';
-  suggestedLabels = [
-    { name: 'Quan trọng', color: 'red' },
-    { name: 'Cần theo dõi', color: 'orange' },
-    { name: 'Khách VIP', color: 'purple' },
-    { name: 'Quá hạn', color: 'volcano' },
-    { name: 'Đã liên hệ', color: 'blue' },
-    { name: 'Chờ xác nhận', color: 'gold' }
-  ];
-  availableColors = [
-    { value: 'default', label: 'Mặc định' },
-    { value: 'red', label: 'Đỏ' },
-    { value: 'orange', label: 'Cam' },
-    { value: 'gold', label: 'Vàng' },
-    { value: 'green', label: 'Xanh lá' },
-    { value: 'blue', label: 'Xanh dương' },
-    { value: 'purple', label: 'Tím' },
-    { value: 'volcano', label: 'Đỏ cam' },
-    { value: 'cyan', label: 'Xanh lơ' },
-    { value: 'magenta', label: 'Hồng' }
-  ];
-
-  paymentMethods = [
-    { value: 'cash', label: 'Tiền mặt' },
-    { value: 'bank_transfer', label: 'Chuyển khoản' },
-    { value: 'card', label: 'Thẻ ngân hàng' },
-    { value: 'other', label: 'Khác' }
-  ];
+  suggestedLabels: Array<{ name: string; color: string }> = [];
+  availableColors: Array<{ value: string; label: string }> = [];
+  paymentMethods: Array<{ value: string; label: string }> = [];
 
   constructor(
     private debtService: DebtService,
@@ -77,7 +54,8 @@ export class DebtManagementComponent implements OnInit {
     public authService: AuthService,
     private message: NzMessageService,
     private modal: NzModalService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private translate: TranslateService
   ) {
     this.settleForm = this.fb.group({
       amount: [0, [Validators.required, Validators.min(0.01)]],
@@ -88,8 +66,45 @@ export class DebtManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
+    this.initTranslationArrays();
     this.loadHotels();
     this.loadDebts();
+
+    // Subscribe to language changes
+    this.translate.onLangChange.subscribe(() => {
+      this.initTranslationArrays();
+    });
+  }
+
+  private initTranslationArrays(): void {
+    this.suggestedLabels = [
+      { name: this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.IMPORTANT'), color: 'red' },
+      { name: this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.NEED_FOLLOW_UP'), color: 'orange' },
+      { name: this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.VIP_GUEST'), color: 'purple' },
+      { name: this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.OVERDUE'), color: 'volcano' },
+      { name: this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.CONTACTED'), color: 'blue' },
+      { name: this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.PENDING_CONFIRMATION'), color: 'gold' }
+    ];
+
+    this.availableColors = [
+      { value: 'default', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.DEFAULT') },
+      { value: 'red', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.RED') },
+      { value: 'orange', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.ORANGE') },
+      { value: 'gold', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.GOLD') },
+      { value: 'green', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.GREEN') },
+      { value: 'blue', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.BLUE') },
+      { value: 'purple', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.PURPLE') },
+      { value: 'volcano', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.VOLCANO') },
+      { value: 'cyan', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.CYAN') },
+      { value: 'magenta', label: this.translate.instant('DEBT_MANAGEMENT.COLORS.MAGENTA') }
+    ];
+
+    this.paymentMethods = [
+      { value: 'cash', label: this.translate.instant('DEBT_MANAGEMENT.PAYMENT_METHODS.CASH') },
+      { value: 'bank_transfer', label: this.translate.instant('DEBT_MANAGEMENT.PAYMENT_METHODS.BANK_TRANSFER') },
+      { value: 'card', label: this.translate.instant('DEBT_MANAGEMENT.PAYMENT_METHODS.CARD') },
+      { value: 'other', label: this.translate.instant('DEBT_MANAGEMENT.PAYMENT_METHODS.OTHER') }
+    ];
   }
 
   get isAdmin(): boolean {
@@ -134,7 +149,7 @@ export class DebtManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi tải danh sách khách sạn:', error);
-        this.message.error('Không thể tải danh sách khách sạn.');
+        this.message.error(this.translate.instant('DEBT_MANAGEMENT.LOAD_HOTELS_ERROR'));
       }
     });
   }
@@ -158,7 +173,7 @@ export class DebtManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi tải danh sách công nợ:', error);
-        this.message.error('Không thể tải danh sách công nợ.');
+        this.message.error(this.translate.instant('DEBT_MANAGEMENT.LOAD_DEBTS_ERROR'));
         this.isLoading = false;
       }
     });
@@ -203,10 +218,10 @@ export class DebtManagementComponent implements OnInit {
 
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      'pending': 'Chưa thanh toán',
-      'partial': 'Thanh toán một phần',
-      'settled': 'Đã quyết toán',
-      'cancelled': 'Đã hủy'
+      'pending': this.translate.instant('DEBT_MANAGEMENT.STATUS.PENDING'),
+      'partial': this.translate.instant('DEBT_MANAGEMENT.STATUS.PARTIAL'),
+      'settled': this.translate.instant('DEBT_MANAGEMENT.STATUS.SETTLED'),
+      'cancelled': this.translate.instant('DEBT_MANAGEMENT.STATUS.CANCELLED')
     };
     return labels[status] || status;
   }
@@ -257,7 +272,7 @@ export class DebtManagementComponent implements OnInit {
 
   handleSettle(): void {
     if (this.settleForm.invalid || !this.selectedDebt) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin');
+      this.message.warning(this.translate.instant('DEBT_MANAGEMENT.FILL_REQUIRED_FIELDS'));
       return;
     }
 
@@ -265,12 +280,12 @@ export class DebtManagementComponent implements OnInit {
     const amount = Number(formValue.amount);
     
     if (amount <= 0) {
-      this.message.warning('Số tiền thanh toán phải lớn hơn 0');
+      this.message.warning(this.translate.instant('DEBT_MANAGEMENT.AMOUNT_MUST_BE_GREATER_THAN_ZERO'));
       return;
     }
 
     if (amount > this.selectedDebt.remainingAmount) {
-      this.message.warning('Số tiền thanh toán không được vượt quá số tiền còn lại');
+      this.message.warning(this.translate.instant('DEBT_MANAGEMENT.AMOUNT_EXCEEDS_REMAINING'));
       return;
     }
 
@@ -283,14 +298,14 @@ export class DebtManagementComponent implements OnInit {
 
     this.debtService.settleDebt(this.selectedDebt._id!, request).subscribe({
       next: (response) => {
-        this.message.success('Thanh toán công nợ thành công');
+        this.message.success(this.translate.instant('DEBT_MANAGEMENT.SETTLE_SUCCESS'));
         this.closeSettleModal();
         this.loadDebts();
         this.isSettling = false;
       },
       error: (error) => {
         console.error('Lỗi khi thanh toán công nợ:', error);
-        this.message.error(error.error?.message || 'Lỗi khi thanh toán công nợ');
+        this.message.error(error.error?.message || this.translate.instant('DEBT_MANAGEMENT.SETTLE_ERROR'));
         this.isSettling = false;
       }
     });
@@ -298,26 +313,26 @@ export class DebtManagementComponent implements OnInit {
 
   deleteDebt(debt: Debt): void {
     if (debt.paidAmount > 0) {
-      this.message.warning('Không thể xóa công nợ đã có thanh toán');
+      this.message.warning(this.translate.instant('DEBT_MANAGEMENT.CANNOT_DELETE_WITH_PAYMENT'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận xóa công nợ',
-      nzContent: `Bạn có chắc muốn xóa công nợ của ${debt.customerName}?`,
-      nzOkText: 'Xóa',
+      nzTitle: this.translate.instant('DEBT_MANAGEMENT.CONFIRM_DELETE_TITLE'),
+      nzContent: this.translate.instant('DEBT_MANAGEMENT.CONFIRM_DELETE_CONTENT', { customerName: debt.customerName }),
+      nzOkText: this.translate.instant('COMMON.DELETE'),
       nzOkType: 'primary',
       nzOkDanger: true,
-      nzCancelText: 'Hủy',
+      nzCancelText: this.translate.instant('COMMON.CANCEL'),
       nzOnOk: () => {
         this.debtService.deleteDebt(debt._id!).subscribe({
           next: () => {
-            this.message.success('Xóa công nợ thành công');
+            this.message.success(this.translate.instant('DEBT_MANAGEMENT.DELETE_SUCCESS'));
             this.loadDebts();
           },
           error: (error) => {
             console.error('Lỗi khi xóa công nợ:', error);
-            this.message.error(error.error?.message || 'Lỗi khi xóa công nợ');
+            this.message.error(error.error?.message || this.translate.instant('DEBT_MANAGEMENT.DELETE_ERROR'));
           }
         });
       }
@@ -412,14 +427,14 @@ export class DebtManagementComponent implements OnInit {
     this.isUpdatingLabels = true;
     this.debtService.updateDebtLabels(this.selectedDebt._id!, this.currentLabels).subscribe({
       next: (response) => {
-        this.message.success('Cập nhật nhãn thành công');
+        this.message.success(this.translate.instant('DEBT_MANAGEMENT.UPDATE_LABELS_SUCCESS'));
         this.closeLabelModal();
         this.loadDebts();
         this.isUpdatingLabels = false;
       },
       error: (error) => {
         console.error('Lỗi khi cập nhật nhãn:', error);
-        this.message.error(error.error?.message || 'Lỗi khi cập nhật nhãn');
+        this.message.error(error.error?.message || this.translate.instant('DEBT_MANAGEMENT.UPDATE_LABELS_ERROR'));
         this.isUpdatingLabels = false;
       }
     });
@@ -450,12 +465,12 @@ export class DebtManagementComponent implements OnInit {
   getDefaultLabelColor(labelName: string): string {
     // Màu sắc mặc định dựa trên nhãn
     const colorMap: Record<string, string> = {
-      'Quan trọng': 'red',
-      'Cần theo dõi': 'orange',
-      'Khách VIP': 'purple',
-      'Quá hạn': 'volcano',
-      'Đã liên hệ': 'blue',
-      'Chờ xác nhận': 'gold'
+      [this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.IMPORTANT')]: 'red',
+      [this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.NEED_FOLLOW_UP')]: 'orange',
+      [this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.VIP_GUEST')]: 'purple',
+      [this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.OVERDUE')]: 'volcano',
+      [this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.CONTACTED')]: 'blue',
+      [this.translate.instant('DEBT_MANAGEMENT.LABEL_OPTIONS.PENDING_CONFIRMATION')]: 'gold'
     };
     return colorMap[labelName] || 'default';
   }

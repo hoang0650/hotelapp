@@ -6,6 +6,7 @@ import { NzModalService } from 'ng-zorro-antd/modal';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { formatCurrency } from '@angular/common';
 import { PermissionFeature } from '../../services/permission.service';
+import { TranslateService } from '@ngx-translate/core';
 
 interface PricingPackage {
   id: string;
@@ -57,24 +58,7 @@ export class PricingManagementComponent implements OnInit {
   currentUserPackage: any = null;
   isAdmin = false;
   isSuperAdmin = false;
-  availableFeatures: { value: PermissionFeature; label: string }[] = [
-    { value: 'room_management', label: 'Quản lý phòng' },
-    { value: 'hotel_management', label: 'Quản lý khách sạn' },
-    { value: 'company_management', label: 'Quản lý doanh nghiệp' },
-    { value: 'staff_management', label: 'Quản lý nhân viên' },
-    { value: 'service_management', label: 'Quản lý dịch vụ' },
-    { value: 'user_management', label: 'Quản lý người dùng' },
-    { value: 'pricing_management', label: 'Quản lý gói giá' },
-    { value: 'ota_management', label: 'Quản lý OTA' },
-    { value: 'revenue_chart', label: 'Biểu đồ doanh thu' },
-    { value: 'shift_handover', label: 'Giao ca' },
-    { value: 'bank_transfer_history', label: 'Lịch sử chuyển khoản' },
-    { value: 'calendar', label: 'Lịch' },
-    { value: 'email_admin', label: 'Quản lý email' },
-    { value: 'qr_payment', label: 'Thanh toán QR' },
-    { value: 'visa_payment', label: 'Thanh toán Visa' },
-    { value: 'electric_management', label: 'Quản lý điện' }
-  ];
+  availableFeatures: { value: PermissionFeature; label: string }[] = [];
   packageForm!: FormGroup;
 
   numberFormatter = (value: number): string => {
@@ -87,7 +71,8 @@ export class PricingManagementComponent implements OnInit {
     private pricingService: PricingService,
     private authService: AuthService,
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private translate: TranslateService
   ) {
     this.initForm();
   }
@@ -96,6 +81,7 @@ export class PricingManagementComponent implements OnInit {
     this.currentUser = this.authService.getCurrentUser();
     this.isAdmin = this.authService.isSuperAdmin() || this.authService.isAdmin();
     this.isSuperAdmin = this.authService.isSuperAdmin();
+    this.initTranslationArrays();
     
     if (this.isAdmin) {
       this.loadPackages();
@@ -114,6 +100,28 @@ export class PricingManagementComponent implements OnInit {
         this.loadCurrentUserPackage();
       }
     });
+  }
+
+  private initTranslationArrays(): void {
+    // Initialize availableFeatures
+    this.availableFeatures.push(
+      { value: 'room_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ROOM_MANAGEMENT') },
+      { value: 'hotel_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.HOTEL_MANAGEMENT') },
+      { value: 'company_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.COMPANY_MANAGEMENT') },
+      { value: 'staff_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.STAFF_MANAGEMENT') },
+      { value: 'service_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.SERVICE_MANAGEMENT') },
+      { value: 'user_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.USER_MANAGEMENT') },
+      { value: 'pricing_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.PRICING_MANAGEMENT') },
+      { value: 'ota_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.OTA_MANAGEMENT') },
+      { value: 'revenue_chart', label: this.translate.instant('USER_MANAGEMENT.FEATURES.REVENUE_CHART') },
+      { value: 'shift_handover', label: this.translate.instant('USER_MANAGEMENT.FEATURES.SHIFT_HANDOVER') },
+      { value: 'bank_transfer_history', label: this.translate.instant('USER_MANAGEMENT.FEATURES.BANK_TRANSFER_HISTORY') },
+      { value: 'calendar', label: this.translate.instant('USER_MANAGEMENT.FEATURES.CALENDAR') },
+      { value: 'email_admin', label: this.translate.instant('USER_MANAGEMENT.FEATURES.EMAIL_ADMIN') },
+      { value: 'qr_payment', label: this.translate.instant('USER_MANAGEMENT.FEATURES.QR_PAYMENT') },
+      { value: 'visa_payment', label: this.translate.instant('USER_MANAGEMENT.FEATURES.VISA_PAYMENT') },
+      { value: 'electric_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ELECTRIC_MANAGEMENT') }
+    );
   }
 
   initForm(): void {
@@ -174,7 +182,7 @@ export class PricingManagementComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        this.message.error('Không thể tải danh sách gói');
+        this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.LOAD_PACKAGES_ERROR'));
         this.loading = false;
       }
     });
@@ -182,7 +190,7 @@ export class PricingManagementComponent implements OnInit {
 
   loadCurrentUserPackage(): void {
     if (!this.currentUser?._id) {
-      this.message.error('Không tìm thấy thông tin người dùng');
+      this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.USER_NOT_FOUND'));
       return;
     }
     
@@ -201,7 +209,7 @@ export class PricingManagementComponent implements OnInit {
       },
       error: (error) => {
         if (error.status !== 404) {
-          this.message.error('Không thể tải thông tin gói của bạn');
+          this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.LOAD_USER_PACKAGE_ERROR'));
         }
         this.packages = [];
         this.currentUserPackage = null;
@@ -218,7 +226,7 @@ export class PricingManagementComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        this.message.error('Không thể tải danh sách người đăng ký');
+        this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.LOAD_SUBSCRIBERS_ERROR'));
         this.loading = false;
       }
     });
@@ -343,15 +351,15 @@ export class PricingManagementComponent implements OnInit {
         this.pricingService.updatePackage(this.editingPackageId, payload).subscribe({
           next: (response) => {
             if (response.success) {
-              this.message.success(response.message || 'Cập nhật gói thành công');
+              this.message.success(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.UPDATE_SUCCESS'));
               this.loadPackages();
               this.handleCancel();
             } else {
-              this.message.error(response.message || 'Cập nhật gói thất bại');
+              this.message.error(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.UPDATE_ERROR'));
             }
           },
           error: (error) => {
-            this.message.error(error.error?.message || 'Cập nhật gói thất bại');
+            this.message.error(error.error?.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.UPDATE_ERROR'));
           },
           complete: () => {
             this.loading = false;
@@ -361,15 +369,15 @@ export class PricingManagementComponent implements OnInit {
         this.pricingService.createPackage(payload).subscribe({
           next: (response) => {
             if (response.success) {
-              this.message.success(response.message || 'Tạo gói thành công');
+              this.message.success(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.CREATE_SUCCESS'));
               this.loadPackages();
               this.handleCancel();
             } else {
-              this.message.error(response.message || 'Tạo gói thất bại');
+              this.message.error(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.CREATE_ERROR'));
             }
           },
           error: (error) => {
-            this.message.error(error.error?.message || 'Tạo gói thất bại');
+            this.message.error(error.error?.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.CREATE_ERROR'));
           },
           complete: () => {
             this.loading = false;
@@ -398,14 +406,14 @@ export class PricingManagementComponent implements OnInit {
         this.pricingService.deletePackage(packageId).subscribe({
           next: (response) => {
             if (response.success) {
-              this.message.success(response.message || 'Xóa gói thành công');
+              this.message.success(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.DELETE_SUCCESS'));
               this.loadPackages();
             } else {
-              this.message.error(response.message || 'Xóa gói thất bại');
+              this.message.error(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.DELETE_ERROR'));
             }
           },
           error: (error) => {
-            this.message.error(error.error?.message || 'Xóa gói thất bại');
+            this.message.error(error.error?.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.DELETE_ERROR'));
           },
           complete: () => {
             this.loading = false;
@@ -464,18 +472,18 @@ export class PricingManagementComponent implements OnInit {
     const userId = 'USER_ID_TEST'; // Thay bằng userId thực tế khi test
     this.pricingService.subscribe(userId, packageId).subscribe({
       next: (res) => {
-        this.message.success('Đăng ký gói thành công');
+        this.message.success(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.SUBSCRIBE_SUCCESS'));
         this.loadSubscribers();
       },
       error: (err) => {
-        this.message.error('Đăng ký gói thất bại');
+        this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.SUBSCRIBE_ERROR'));
       }
     });
   }
 
   subscribeToPackage(packageId: string, billingType: 'monthly' | 'yearly' = 'monthly'): void {
     if (!this.currentUser?._id) {
-      this.message.error('Không tìm thấy thông tin người dùng');
+      this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.USER_NOT_FOUND'));
       return;
     }
 
@@ -513,18 +521,18 @@ export class PricingManagementComponent implements OnInit {
 
   upgradeOrDowngradePackage(packageId: string, billingType: 'monthly' | 'yearly' = 'monthly'): void {
     if (!this.currentUser?._id) {
-      this.message.error('Không tìm thấy thông tin người dùng');
+      this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.USER_NOT_FOUND'));
       return;
     }
 
     if (!this.currentUserPackage) {
-      this.message.warning('Bạn chưa đăng ký gói nào');
+      this.message.warning(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.NO_PACKAGE_SUBSCRIBED'));
       return;
     }
 
     const selectedPackage = this.packages.find(p => (p._id === packageId || p.id === packageId));
     if (!selectedPackage) {
-      this.message.error('Không tìm thấy gói');
+      this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.PACKAGE_NOT_FOUND'));
       return;
     }
 
@@ -533,36 +541,54 @@ export class PricingManagementComponent implements OnInit {
     const isDowngrade = selectedPackage.monthlyPrice < (this.currentUserPackage.monthlyPrice || 0);
     const isSamePackage = currentPackageId === packageId;
     
-    let actionText = 'cập nhật';
+    let actionType: 'update' | 'upgrade' | 'downgrade' = 'update';
     if (isSamePackage && this.currentUserPackage.billingType !== billingType) {
-      actionText = 'cập nhật';
+      actionType = 'update';
     } else if (isUpgrade) {
-      actionText = 'nâng cấp';
+      actionType = 'upgrade';
     } else if (isDowngrade) {
-      actionText = 'hạ cấp';
+      actionType = 'downgrade';
+    }
+
+    const billingTypeText = billingType === 'yearly' 
+      ? this.translate.instant('PRICING_MANAGEMENT.MESSAGES.YEARLY')
+      : this.translate.instant('PRICING_MANAGEMENT.MESSAGES.MONTHLY');
+
+    let titleKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_UPDATE_TITLE';
+    let contentKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_UPDATE_CONTENT';
+    let okTextKey = 'PRICING_MANAGEMENT.MESSAGES.UPDATE';
+
+    if (actionType === 'upgrade') {
+      titleKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_UPGRADE_TITLE';
+      contentKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_UPGRADE_CONTENT';
+      okTextKey = 'PRICING_MANAGEMENT.MESSAGES.UPGRADE';
+    } else if (actionType === 'downgrade') {
+      titleKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_DOWNGRADE_TITLE';
+      contentKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_DOWNGRADE_CONTENT';
+      okTextKey = 'PRICING_MANAGEMENT.MESSAGES.DOWNGRADE';
     }
 
     this.modal.confirm({
-      nzTitle: `Xác nhận ${actionText} gói`,
-      nzContent: `Bạn có chắc chắn muốn ${actionText} lên ${selectedPackage.name} ${billingType === 'yearly' ? 'theo năm' : 'theo tháng'}?`,
-      nzOkText: actionText === 'nâng cấp' ? 'Nâng cấp' : actionText === 'hạ cấp' ? 'Hạ cấp' : 'Cập nhật',
-      nzCancelText: 'Hủy',
+      nzTitle: this.translate.instant(titleKey),
+      nzContent: `${this.translate.instant(contentKey)} ${selectedPackage.name} ${billingTypeText}?`,
+      nzOkText: this.translate.instant(okTextKey),
+      nzCancelText: this.translate.instant('COMMON.CANCEL'),
       nzOnOk: () => {
         this.loading = true;
         // Non-admin chỉ có thể subscribe cho chính mình (nâng cấp/hạ cấp cũng là subscribe)
         this.pricingService.subscribe(this.currentUser._id, packageId, billingType).subscribe({
           next: (response) => {
             if (response.success) {
-              this.message.success(response.message || `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} gói thành công`);
+              this.message.success(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.UPGRADE_DOWNGRADE_SUCCESS'));
               this.loadPackages();
               this.loadCurrentUserPackage();
             } else {
-              this.message.error(response.message || `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} gói thất bại`);
+              this.message.error(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.UPGRADE_DOWNGRADE_ERROR'));
             }
             this.loading = false;
           },
           error: (error) => {
-            this.message.error(error.error?.message || `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} gói thất bại`);
+            this.message.error(error.error?.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.UPGRADE_DOWNGRADE_ERROR'));
             this.loading = false;
           }
         });
@@ -602,7 +628,7 @@ export class PricingManagementComponent implements OnInit {
 
   sendPaymentReminder(subscriber: any): void {
     if (!subscriber.userId) {
-      this.message.error('Không tìm thấy thông tin người dùng');
+      this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.USER_NOT_FOUND'));
       return;
     }
 
@@ -612,15 +638,15 @@ export class PricingManagementComponent implements OnInit {
     this.pricingService.sendPaymentReminder(subscriber.userId).subscribe({
       next: (response) => {
         if (response.success) {
-          this.message.success(`Đã gửi thông báo nhắc nhở thanh toán đến ${subscriber.username}`);
+          this.message.success(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.SEND_NOTIFICATION_SUCCESS') + ' ' + subscriber.username);
         } else {
-          this.message.error(response.message || 'Gửi thông báo thất bại');
+          this.message.error(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.SEND_NOTIFICATION_ERROR'));
         }
         subscriber.sendingReminder = false;
       },
       error: (error) => {
         console.error('Error sending payment reminder:', error);
-        this.message.error(error.error?.message || 'Gửi thông báo thất bại');
+        this.message.error(error.error?.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.SEND_NOTIFICATION_ERROR'));
         subscriber.sendingReminder = false;
       }
     });

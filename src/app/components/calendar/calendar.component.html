@@ -7,7 +7,7 @@
     </div>
     <button nz-button nzType="default" nzSize="small" (click)="loadAllBookings()" [nzLoading]="isLoading">
       <i nz-icon nzType="reload" nzTheme="outline"></i>
-      Làm mới
+      {{ 'CALENDAR.REFRESH' | translate }}
     </button>
   </header>
   <div class="calendar-grid">
@@ -21,17 +21,17 @@
     >
       <div class="date">{{ date.getDate() }}</div>
       <div class="booking-info" *ngFor="let booking of getBookingsForDate(date)">
-        <div class="booking-timeline" [title]="booking.roomNumber ? 'Phòng ' + booking.roomNumber : ''">
+        <div class="booking-timeline" [title]="booking.roomNumber ? (('CALENDAR.ROOM' | translate) + ' ' + booking.roomNumber) : ''">
           {{ booking.startTime }} - {{ booking.endTime }}
         </div>
         <div class="booking-user" [title]="booking.guestInfo?.phone || ''">
-          {{ booking.userName || booking.guestInfo?.name || 'Khách đặt trước' }}
+          {{ booking.userName || booking.guestInfo?.name || ('CALENDAR.GUEST_PRE_BOOKED' | translate) }}
         </div>
         <div class="booking-room" *ngIf="booking.roomNumber">
-          Phòng {{ booking.roomNumber }}
+          {{ 'CALENDAR.ROOM' | translate }} {{ booking.roomNumber }}
         </div>
       </div>
-      <div class="add-booking-btn" *ngIf="!getBookingsForDate(date).length" (click)="selectDate(date); $event.stopPropagation()" title="Đặt phòng">
+      <div class="add-booking-btn" *ngIf="!getBookingsForDate(date).length" (click)="selectDate(date); $event.stopPropagation()" [title]="'CALENDAR.ADD_BOOKING' | translate">
         <i nz-icon nzType="plus" nzTheme="outline"></i>
       </div>
     </div>
@@ -40,7 +40,7 @@
 <br>
 <!-- Lịch sử đặt phòng -->
 <div class="booking-history-section">
-  <h3 class="booking-history-title">Lịch sử đặt phòng</h3>
+  <h3 class="booking-history-title">{{ 'CALENDAR.BOOKING_HISTORY' | translate }}</h3>
   <nz-table 
     [nzData]="allBookings" 
     [nzPageSize]="10" 
@@ -51,11 +51,11 @@
     class="booking-table">
     <thead>
       <tr>
-        <th nzWidth="120px" class="col-room-guest">Phòng Khách</th>
-        <th nzWidth="180px" class="col-checkin hide-on-mobile">Ngày đến</th>
-        <th nzWidth="180px" class="col-checkout hide-on-mobile">Ngày đi</th>
-        <th nzWidth="120px" class="col-status">Trạng thái</th>
-        <th nzWidth="100px" class="col-actions">Thao tác</th>
+        <th nzWidth="120px" class="col-room-guest">{{ 'CALENDAR.ROOM_GUEST' | translate }}</th>
+        <th nzWidth="180px" class="col-checkin hide-on-mobile">{{ 'CALENDAR.CHECKIN_DATE' | translate }}</th>
+        <th nzWidth="180px" class="col-checkout hide-on-mobile">{{ 'CALENDAR.CHECKOUT_DATE' | translate }}</th>
+        <th nzWidth="120px" class="col-status">{{ 'CALENDAR.STATUS' | translate }}</th>
+        <th nzWidth="100px" class="col-actions">{{ 'CALENDAR.ACTIONS' | translate }}</th>
       </tr>
     </thead>
     <tbody>
@@ -65,15 +65,15 @@
             <strong>{{ booking.roomNumber || 'N/A' }}</strong>
           </div>
           <div class="guest-name">
-            {{ booking.userName || booking.guestInfo?.name || 'Khách đặt trước' }}
+            {{ booking.userName || booking.guestInfo?.name || ('CALENDAR.GUEST_PRE_BOOKED' | translate) }}
           </div>
           <div class="mobile-dates">
             <div class="mobile-date-item">
-              <span class="date-label">Đến:</span>
+              <span class="date-label">{{ 'CALENDAR.CHECKIN_DATE' | translate }}:</span>
               <span class="date-value">{{ formatDateTime(booking.checkInDate) }}</span>
             </div>
             <div class="mobile-date-item">
-              <span class="date-label">Đi:</span>
+              <span class="date-label">{{ 'CALENDAR.CHECKOUT_DATE' | translate }}:</span>
               <span class="date-value">{{ formatDateTime(booking.checkOutDate) }}</span>
             </div>
           </div>
@@ -82,7 +82,7 @@
         <td class="col-checkout hide-on-mobile">{{ formatDateTime(booking.checkOutDate) }}</td>
         <td class="col-status">
           <nz-tag [nzColor]="booking.status === 'checked_in' ? 'blue' : booking.status === 'booked' ? 'green' : booking.status === 'cancelled' ? 'red' : 'default'">
-            {{ booking.status === 'checked_in' ? 'Đã nhận phòng' : booking.status === 'booked' ? 'Đã đặt' : booking.status === 'cancelled' ? 'Đã hủy' : 'Đặt trước' }}
+            {{ booking.status === 'checked_in' ? ('CALENDAR.CHECKED_IN' | translate) : booking.status === 'booked' ? ('CALENDAR.BOOKED' | translate) : booking.status === 'cancelled' ? ('CALENDAR.CANCELLED' | translate) : ('CALENDAR.PRE_BOOKED' | translate) }}
           </nz-tag>
         </td>
         <td class="col-actions">
@@ -96,9 +96,9 @@
               *ngIf="booking.roomId && booking.status !== 'cancelled' && booking.status !== 'checked_in'"
               [nzLoading]="isCheckingIn"
               [disabled]="isLoading"
-              title="Nhận phòng cho khách đặt trước"
+              [title]="'CALENDAR.CHECKIN' | translate"
               class="action-btn">
-              Nhận phòng
+              {{ 'CALENDAR.CHECKIN' | translate }}
             </button>
             <!-- Nút Hủy - hiển thị cho booking chưa bị hủy và chưa check-in -->
             <button 
@@ -111,18 +111,18 @@
               [nzLoading]="isLoading"
               [disabled]="isCheckingIn"
               class="action-btn">
-              Hủy
+              {{ 'CALENDAR.CANCEL' | translate }}
             </button>
             <!-- Trạng thái đã hủy -->
-            <span *ngIf="booking.status === 'cancelled'" class="status-text cancelled">Đã hủy</span>
+            <span *ngIf="booking.status === 'cancelled'" class="status-text cancelled">{{ 'CALENDAR.CANCELLED' | translate }}</span>
             <!-- Trạng thái đã nhận phòng -->
-            <span *ngIf="booking.status === 'checked_in'" class="status-text checked-in">Đã nhận phòng</span>
+            <span *ngIf="booking.status === 'checked_in'" class="status-text checked-in">{{ 'CALENDAR.CHECKED_IN' | translate }}</span>
           </div>
         </td>
       </tr>
       <tr *ngIf="allBookings.length === 0 && !isLoading">
         <td colspan="5" class="empty-state">
-          <nz-empty [nzNotFoundContent]="'Chưa có đặt phòng nào'" [nzNotFoundImage]="'simple'"></nz-empty>
+          <nz-empty [nzNotFoundContent]="'CALENDAR.NO_BOOKINGS' | translate" [nzNotFoundImage]="'simple'"></nz-empty>
         </td>
       </tr>
     </tbody>

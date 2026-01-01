@@ -6,6 +6,7 @@ import { UserService } from '../../services/user.service';
 import { AuthService, PermissionRules } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
 import { PermissionFeature } from '../../services/permission.service';
+import { TranslateService } from '@ngx-translate/core';
 
 type UserRole = 'superadmin' | 'admin' | 'business' | 'hotel' | 'staff' | 'guest';
 type UserStatus = 'active' | 'inactive' | 'suspended' | 'deleted';
@@ -38,54 +39,14 @@ export class UserManagementComponent implements OnInit {
   passwordVisible = false;
   
   // Available features (tương tự pricing-management)
-  availableFeatures: { value: PermissionFeature; label: string }[] = [
-    { value: 'room_management', label: 'Quản lý phòng' },
-    { value: 'hotel_management', label: 'Quản lý khách sạn' },
-    { value: 'company_management', label: 'Quản lý doanh nghiệp' },
-    { value: 'staff_management', label: 'Quản lý nhân viên' },
-    { value: 'service_management', label: 'Quản lý dịch vụ' },
-    { value: 'user_management', label: 'Quản lý người dùng' },
-    { value: 'pricing_management', label: 'Quản lý gói giá' },
-    { value: 'ota_management', label: 'Quản lý OTA' },
-    { value: 'revenue_chart', label: 'Biểu đồ doanh thu' },
-    { value: 'shift_handover', label: 'Giao ca' },
-    { value: 'bank_transfer_history', label: 'Lịch sử chuyển khoản' },
-    { value: 'calendar', label: 'Lịch' },
-    { value: 'email_admin', label: 'Quản lý email' },
-    { value: 'qr_payment', label: 'Thanh toán QR' },
-    { value: 'visa_payment', label: 'Thanh toán Visa' },
-    { value: 'electric_management', label: 'Quản lý điện' }
-  ];
+  availableFeatures: { value: PermissionFeature; label: string }[] = [];
   
   // Feature flags (tương tự pricing-management)
-  availableFeatureFlags: { value: string; label: string; description: string }[] = [
-    { value: 'qrPaymentFeature', label: 'QR thanh toán', description: 'Bật tính năng QR thanh toán tự động' },
-    { value: 'otaManagementFeature', label: 'Quản lý OTA', description: 'Bật tính năng quản lý OTA' },
-    { value: 'emailManagementFeature', label: 'Quản lý email', description: 'Bật tính năng quản lý email' },
-    { value: 'electricManagementFeature', label: 'Quản lý điện', description: 'Bật tính năng quản lý điện' },
-    { value: 'paypalPaymentFeature', label: 'Thanh toán PayPal', description: 'Bật tính năng thanh toán PayPal' },
-    { value: 'cryptoPaymentFeature', label: 'Thanh toán Crypto', description: 'Bật tính năng thanh toán Crypto' },
-    { value: 'draftInvoiceFeature', label: 'Xem hóa đơn nháp', description: 'Bật tính năng xem hóa đơn nháp' },
-    { value: 'exportInvoiceFeature', label: 'Xuất hóa đơn', description: 'Bật tính năng xuất hóa đơn' },
-    { value: 'aiChatboxFeature', label: 'AI Chatbox', description: 'Bật tính năng AI Chatbox' }
-  ];
+  availableFeatureFlags: { value: string; label: string; description: string }[] = [];
 
   // Role và Status options
-  readonly userRoles: { label: string; value: UserRole }[] = [
-    { label: 'Super Admin', value: 'superadmin' },
-    { label: 'Admin', value: 'admin' },
-    { label: 'Business', value: 'business' },
-    { label: 'Hotel Manager', value: 'hotel' },
-    { label: 'Staff', value: 'staff' },
-    { label: 'Guest', value: 'guest' }
-  ];
-
-  readonly userStatuses: { label: string; value: UserStatus }[] = [
-    { label: 'Hoạt động', value: 'active' },
-    { label: 'Không hoạt động', value: 'inactive' },
-    { label: 'Tạm khóa', value: 'suspended' },
-    { label: 'Đã xóa', value: 'deleted' }
-  ];
+  readonly userRoles: { label: string; value: UserRole }[] = [];
+  readonly userStatuses: { label: string; value: UserStatus }[] = [];
 
   // Roles mà user hiện tại có thể quản lý
   manageableRoles: { label: string; value: UserRole }[] = [];
@@ -95,7 +56,8 @@ export class UserManagementComponent implements OnInit {
     private authService: AuthService,
     private fb: FormBuilder,
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private translate: TranslateService
   ) {
     this.initForm();
   }
@@ -103,8 +65,62 @@ export class UserManagementComponent implements OnInit {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.permissions = this.authService.getPermissionRules();
+    this.initTranslationArrays();
     this.setupManageableRoles();
     this.loadUsers();
+  }
+
+  private initTranslationArrays(): void {
+    // Initialize userRoles
+    this.userRoles.push(
+      { label: this.translate.instant('USER_MANAGEMENT.ROLES.SUPERADMIN'), value: 'superadmin' },
+      { label: this.translate.instant('USER_MANAGEMENT.ROLES.ADMIN'), value: 'admin' },
+      { label: this.translate.instant('USER_MANAGEMENT.ROLES.BUSINESS'), value: 'business' },
+      { label: this.translate.instant('USER_MANAGEMENT.ROLES.HOTEL'), value: 'hotel' },
+      { label: this.translate.instant('USER_MANAGEMENT.ROLES.STAFF'), value: 'staff' },
+      { label: this.translate.instant('USER_MANAGEMENT.ROLES.GUEST'), value: 'guest' }
+    );
+
+    // Initialize userStatuses
+    this.userStatuses.push(
+      { label: this.translate.instant('USER_MANAGEMENT.STATUSES.ACTIVE'), value: 'active' },
+      { label: this.translate.instant('USER_MANAGEMENT.STATUSES.INACTIVE'), value: 'inactive' },
+      { label: this.translate.instant('USER_MANAGEMENT.STATUSES.SUSPENDED'), value: 'suspended' },
+      { label: this.translate.instant('USER_MANAGEMENT.STATUSES.DELETED'), value: 'deleted' }
+    );
+
+    // Initialize availableFeatures
+    this.availableFeatures.push(
+      { value: 'room_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ROOM_MANAGEMENT') },
+      { value: 'hotel_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.HOTEL_MANAGEMENT') },
+      { value: 'company_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.COMPANY_MANAGEMENT') },
+      { value: 'staff_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.STAFF_MANAGEMENT') },
+      { value: 'service_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.SERVICE_MANAGEMENT') },
+      { value: 'user_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.USER_MANAGEMENT') },
+      { value: 'pricing_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.PRICING_MANAGEMENT') },
+      { value: 'ota_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.OTA_MANAGEMENT') },
+      { value: 'revenue_chart', label: this.translate.instant('USER_MANAGEMENT.FEATURES.REVENUE_CHART') },
+      { value: 'shift_handover', label: this.translate.instant('USER_MANAGEMENT.FEATURES.SHIFT_HANDOVER') },
+      { value: 'bank_transfer_history', label: this.translate.instant('USER_MANAGEMENT.FEATURES.BANK_TRANSFER_HISTORY') },
+      { value: 'calendar', label: this.translate.instant('USER_MANAGEMENT.FEATURES.CALENDAR') },
+      { value: 'email_admin', label: this.translate.instant('USER_MANAGEMENT.FEATURES.EMAIL_ADMIN') },
+      { value: 'qr_payment', label: this.translate.instant('USER_MANAGEMENT.FEATURES.QR_PAYMENT') },
+      { value: 'visa_payment', label: this.translate.instant('USER_MANAGEMENT.FEATURES.VISA_PAYMENT') },
+      { value: 'electric_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ELECTRIC_MANAGEMENT') }
+    );
+
+    // Initialize availableFeatureFlags
+    this.availableFeatureFlags.push(
+      { value: 'qrPaymentFeature', label: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.QR_PAYMENT'), description: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.QR_PAYMENT_DESC') },
+      { value: 'otaManagementFeature', label: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.OTA_MANAGEMENT'), description: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.OTA_MANAGEMENT_DESC') },
+      { value: 'emailManagementFeature', label: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.EMAIL_MANAGEMENT'), description: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.EMAIL_MANAGEMENT_DESC') },
+      { value: 'electricManagementFeature', label: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.ELECTRIC_MANAGEMENT'), description: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.ELECTRIC_MANAGEMENT_DESC') },
+      { value: 'paypalPaymentFeature', label: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.PAYPAL_PAYMENT'), description: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.PAYPAL_PAYMENT_DESC') },
+      { value: 'cryptoPaymentFeature', label: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.CRYPTO_PAYMENT'), description: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.CRYPTO_PAYMENT_DESC') },
+      { value: 'draftInvoiceFeature', label: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.DRAFT_INVOICE'), description: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.DRAFT_INVOICE_DESC') },
+      { value: 'exportInvoiceFeature', label: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.EXPORT_INVOICE'), description: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.EXPORT_INVOICE_DESC') },
+      { value: 'aiChatboxFeature', label: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.AI_CHATBOX'), description: this.translate.instant('USER_MANAGEMENT.FEATURE_FLAGS.AI_CHATBOX_DESC') }
+    );
   }
 
   // ============ QUYỀN HẠN ============
@@ -298,7 +314,7 @@ export class UserManagementComponent implements OnInit {
       this.users = [];
       this.filteredUsers = [];
       this.isLoading = false;
-      this.message.warning('Bạn không có quyền quản lý người dùng. Chỉ Superadmin và Admin mới có quyền này.');
+      this.message.warning(this.translate.instant('USER_MANAGEMENT.MESSAGES.NO_PERMISSION'));
     }
   }
 
@@ -393,7 +409,7 @@ export class UserManagementComponent implements OnInit {
 
   showCreateModal(): void {
     if (!this.canCreateUser) {
-      this.message.warning('Bạn không có quyền tạo người dùng mới. Chỉ Admin mới có thể tạo người dùng.');
+      this.message.warning(this.translate.instant('USER_MANAGEMENT.MESSAGES.NO_CREATE_PERMISSION'));
       return;
     }
     
@@ -419,7 +435,7 @@ export class UserManagementComponent implements OnInit {
 
   showEditModal(user: User): void {
     if (!this.canManageUser(user)) {
-      this.message.warning('Bạn không có quyền chỉnh sửa người dùng này');
+      this.message.warning(this.translate.instant('USER_MANAGEMENT.MESSAGES.NO_EDIT_PERMISSION'));
       return;
     }
     
@@ -521,7 +537,7 @@ export class UserManagementComponent implements OnInit {
       // Update
       this.userService.updateUser(this.selectedUser._id, userData).subscribe({
         next: () => {
-          this.message.success('Cập nhật người dùng thành công');
+          this.message.success(this.translate.instant('USER_MANAGEMENT.MESSAGES.UPDATE_SUCCESS'));
           this.loadUsers();
           this.handleCancel();
         },
@@ -544,7 +560,7 @@ export class UserManagementComponent implements OnInit {
       // Create
       this.userService.signUp(userData).subscribe({
         next: () => {
-          this.message.success('Thêm người dùng mới thành công');
+          this.message.success(this.translate.instant('USER_MANAGEMENT.MESSAGES.CREATE_SUCCESS'));
           this.loadUsers();
           this.handleCancel();
         },
@@ -581,7 +597,7 @@ export class UserManagementComponent implements OnInit {
    */
   blockUser(user: User): void {
     if (!this.canBlockUser(user)) {
-      this.message.error('Bạn không có quyền khóa tài khoản này');
+      this.message.error(this.translate.instant('USER_MANAGEMENT.MESSAGES.NO_BLOCK_PERMISSION'));
       return;
     }
 
@@ -607,7 +623,7 @@ export class UserManagementComponent implements OnInit {
    */
   activateUser(user: User): void {
     if (!this.canManageUser(user)) {
-      this.message.error('Bạn không có quyền thao tác với tài khoản này');
+      this.message.error(this.translate.instant('USER_MANAGEMENT.MESSAGES.NO_ACTION_PERMISSION'));
       return;
     }
 
@@ -619,7 +635,7 @@ export class UserManagementComponent implements OnInit {
    */
   deleteUser(user: User): void {
     if (!this.canDeleteUser(user)) {
-      this.message.error('Bạn không có quyền xóa tài khoản này');
+      this.message.error(this.translate.instant('USER_MANAGEMENT.MESSAGES.NO_DELETE_PERMISSION'));
       return;
     }
 
@@ -648,7 +664,7 @@ export class UserManagementComponent implements OnInit {
         this.loadUsers();
       },
       error: (error) => {
-        this.message.error(error.error?.message || 'Lỗi khi thay đổi trạng thái người dùng');
+        this.message.error(error.error?.message || this.translate.instant('USER_MANAGEMENT.MESSAGES.STATUS_CHANGE_ERROR'));
         this.isLoading = false;
       }
     });

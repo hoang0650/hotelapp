@@ -13,6 +13,7 @@ import { Subscription } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { TranslateService } from '@ngx-translate/core';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
 declare global {
@@ -36,20 +37,9 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   hotels: any[] = [];
   users: User[] = [];  // Danh sách users để assign
   
-  // Options
-  positions = [
-    { value: 'manager', label: 'Quản lý' },
-    { value: 'receptionist', label: 'Lễ tân' },
-    { value: 'housekeeper', label: 'Housekeeping' },
-    { value: 'maintenance', label: 'Bảo trì' },
-    { value: 'other', label: 'Khác' }
-  ];
-  
-  statuses = [
-    { value: 'active', label: 'Đang làm việc' },
-    { value: 'on_leave', label: 'Nghỉ phép' },
-    { value: 'terminated', label: 'Đã nghỉ việc' }
-  ];
+  // Options - sẽ được khởi tạo trong ngOnInit
+  positions: { value: string, label: string }[] = [];
+  statuses: { value: string, label: string }[] = [];
   
   shifts = [
     { value: 'morning', label: 'Ca sáng' },
@@ -92,7 +82,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private message: NzMessageService,
     private modal: NzModalService,
-    private http: HttpClient
+    private http: HttpClient,
+    private translate: TranslateService
   ) {
     this.initForm();
     this.initSalaryForm();
@@ -391,7 +382,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
           this.loadUsers(); // Reload users sau khi có danh sách staff
         },
         (error) => {
-          this.message.error('Không thể tải danh sách nhân viên: ' + (error.error?.message || error.message));
+          this.message.error(this.translate.instant('STAFF_MANAGEMENT.LOAD_STAFF_ERROR') + ': ' + (error.error?.message || error.message));
           this.isLoading = false;
         }
       )
@@ -523,7 +514,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   createStaff(): void {
     if (this.staffForm.invalid) {
       this.markFormDirty();
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc');
+      this.message.warning(this.translate.instant('STAFF_MANAGEMENT.FILL_REQUIRED_FIELDS'));
       return;
     }
 
@@ -533,13 +524,13 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.staffService.createStaff(newStaff).subscribe(
         (data: Staff) => {
-          this.message.success('Đã tạo nhân viên thành công!');
+          this.message.success(this.translate.instant('STAFF_MANAGEMENT.CREATE_SUCCESS'));
           this.staffs.push(data);
           this.stopEdit();
           this.isLoading = false;
         },
         (error) => {
-          this.message.error('Lỗi khi tạo nhân viên: ' + (error.error?.message || error.message));
+          this.message.error(this.translate.instant('STAFF_MANAGEMENT.CREATE_ERROR') + ': ' + (error.error?.message || error.message));
           this.isLoading = false;
         }
       )
@@ -549,7 +540,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   updateStaff(): void {
     if (!this.selectedStaff || this.staffForm.invalid) {
       this.markFormDirty();
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc');
+      this.message.warning(this.translate.instant('STAFF_MANAGEMENT.FILL_REQUIRED_FIELDS'));
       return;
     }
 
@@ -558,13 +549,13 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.staffService.updateStaff(this.selectedStaff._id!, this.staffForm.value).subscribe(
         () => {
-          this.message.success('Đã cập nhật nhân viên thành công!');
+          this.message.success(this.translate.instant('STAFF_MANAGEMENT.UPDATE_SUCCESS'));
           this.loadStaff();
           this.stopEdit();
           this.isLoading = false;
         },
         (error) => {
-          this.message.error('Lỗi khi cập nhật nhân viên: ' + (error.error?.message || error.message));
+          this.message.error(this.translate.instant('STAFF_MANAGEMENT.UPDATE_ERROR') + ': ' + (error.error?.message || error.message));
           this.isLoading = false;
         }
       )
@@ -584,12 +575,12 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
         this.subscriptions.add(
           this.staffService.deleteStaff(staff._id!).subscribe(
             () => {
-              this.message.success('Đã xóa nhân viên thành công!');
+              this.message.success(this.translate.instant('STAFF_MANAGEMENT.DELETE_SUCCESS'));
               this.staffs = this.staffs.filter(s => s._id !== staff._id);
               this.isLoading = false;
             },
             (error) => {
-              this.message.error('Lỗi khi xóa nhân viên: ' + (error.error?.message || error.message));
+              this.message.error(this.translate.instant('STAFF_MANAGEMENT.DELETE_ERROR') + ': ' + (error.error?.message || error.message));
               this.isLoading = false;
             }
           )

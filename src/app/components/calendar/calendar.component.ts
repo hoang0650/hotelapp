@@ -3,6 +3,7 @@ import { CaliendarModalComponent } from '../caliendar-modal/caliendar-modal.comp
 import { NzModalService, NzModalRef } from 'ng-zorro-antd/modal';
 import { RoomsService } from '../../services/rooms.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 
 interface Booking {
   _id?: string;
@@ -41,7 +42,7 @@ export class CalendarComponent implements OnInit {
   
   currentMonth!: number;
   currentYear!: number;
-  daysOfWeek: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  daysOfWeek: string[] = [];
   datesInMonth: Date[] = [];
   selectedDate: Date | null = null;
   private modalRef: NzModalRef | null = null;
@@ -55,8 +56,23 @@ export class CalendarComponent implements OnInit {
   constructor(
     private modalService: NzModalService,
     private roomsService: RoomsService,
-    private message: NzMessageService
-  ) {}
+    private message: NzMessageService,
+    private translate: TranslateService
+  ) {
+    this.initDaysOfWeek();
+  }
+
+  private initDaysOfWeek(): void {
+    this.daysOfWeek = [
+      this.translate.instant('CALENDAR.DAYS_OF_WEEK.SUN'),
+      this.translate.instant('CALENDAR.DAYS_OF_WEEK.MON'),
+      this.translate.instant('CALENDAR.DAYS_OF_WEEK.TUE'),
+      this.translate.instant('CALENDAR.DAYS_OF_WEEK.WED'),
+      this.translate.instant('CALENDAR.DAYS_OF_WEEK.THU'),
+      this.translate.instant('CALENDAR.DAYS_OF_WEEK.FRI'),
+      this.translate.instant('CALENDAR.DAYS_OF_WEEK.SAT')
+    ];
+  }
 
   ngOnInit(): void {
     this.initializeCalendar();
@@ -86,7 +102,7 @@ export class CalendarComponent implements OnInit {
           const checkInDate = booking.checkInDate ? new Date(booking.checkInDate) : null;
           return {
             ...booking,
-            userName: booking.guestInfo?.name || 'Khách đặt trước',
+            userName: booking.guestInfo?.name || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED'),
             startTime: checkInDate ? this.formatTime(checkInDate) : '',
             endTime: booking.checkOutDate ? this.formatTime(new Date(booking.checkOutDate)) : '',
             date: checkInDate || new Date(booking.createdAt || Date.now()),
@@ -188,8 +204,9 @@ export class CalendarComponent implements OnInit {
     this.loadBookings(); // Reload bookings khi đổi tháng
   }
 
-  getDisplayMonth(): number {
-    return this.currentMonth + 1; // Cộng 1 để hiển thị đúng tháng (1-12)
+  getDisplayMonth(): string {
+    const monthNumber = this.currentMonth + 1; // Cộng 1 để hiển thị đúng tháng (1-12)
+    return this.translate.instant(`CALENDAR.MONTHS.${monthNumber}`);
   }
 
   confirmBooking() {
@@ -231,23 +248,23 @@ export class CalendarComponent implements OnInit {
     }
 
     this.modalService.confirm({
-      nzTitle: 'Xác nhận hủy đặt phòng',
+      nzTitle: this.translate.instant('CALENDAR.CONFIRM_CANCEL_TITLE'),
       nzContent: `
         <div style="margin-bottom: 16px;">
-          <p>Bạn có chắc chắn muốn hủy đặt phòng này?</p>
-          <p><strong>Khách:</strong> ${booking.userName || booking.guestInfo?.name || 'N/A'}</p>
-          <p><strong>Phòng:</strong> ${booking.roomNumber || 'N/A'}</p>
-          <p><strong>Ngày đến:</strong> ${booking.checkInDate ? new Date(booking.checkInDate).toLocaleString('vi-VN') : 'N/A'}</p>
-          <input type="text" id="cancelReason" placeholder="Lý do hủy (không bắt buộc)" 
+          <p>${this.translate.instant('CALENDAR.CONFIRM_CANCEL_MESSAGE')}</p>
+          <p><strong>${this.translate.instant('CALENDAR.GUEST')}:</strong> ${booking.userName || booking.guestInfo?.name || 'N/A'}</p>
+          <p><strong>${this.translate.instant('CALENDAR.ROOM')}:</strong> ${booking.roomNumber || 'N/A'}</p>
+          <p><strong>${this.translate.instant('CALENDAR.CHECKIN_DATE')}:</strong> ${booking.checkInDate ? new Date(booking.checkInDate).toLocaleString('vi-VN') : 'N/A'}</p>
+          <input type="text" id="cancelReason" placeholder="${this.translate.instant('CALENDAR.CANCEL_REASON')}" 
             style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; margin-top: 8px;" />
         </div>
       `,
-      nzOkText: 'Hủy đặt phòng',
+      nzOkText: this.translate.instant('CALENDAR.CANCEL_BOOKING'),
       nzOkDanger: true,
-      nzCancelText: 'Không',
+      nzCancelText: this.translate.instant('CALENDAR.NO'),
       nzOnOk: () => {
         const reasonInput = document.getElementById('cancelReason') as HTMLInputElement;
-        const reason = reasonInput ? reasonInput.value : 'Hủy từ calendar';
+        const reason = reasonInput ? reasonInput.value : this.translate.instant('CALENDAR.CANCEL_BOOKING');
         
         this.isLoading = true;
         this.roomsService.cancelBooking(
@@ -257,13 +274,13 @@ export class CalendarComponent implements OnInit {
           booking.checkInDate ? new Date(booking.checkInDate) : undefined
         ).subscribe(
           () => {
-            this.message.success('Đã hủy đặt phòng thành công.');
+            this.message.success(this.translate.instant('CALENDAR.CANCEL_SUCCESS'));
             this.isLoading = false;
             this.loadBookings(); // Reload bookings cho calendar
             this.loadAllBookings(); // Reload tất cả bookings cho bảng
           },
           (error) => {
-            this.message.error(error.error?.message || 'Không thể hủy đặt phòng.');
+            this.message.error(error.error?.message || this.translate.instant('CALENDAR.CANCEL_ERROR'));
             this.isLoading = false;
           }
         );
@@ -288,7 +305,7 @@ export class CalendarComponent implements OnInit {
           const status = booking.status || 'booked';
           return {
             ...booking,
-            userName: booking.guestInfo?.name || booking.guestDetails?.name || 'Khách đặt trước',
+            userName: booking.guestInfo?.name || booking.guestDetails?.name || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED'),
             startTime: checkInDate ? this.formatTime(checkInDate) : '',
             endTime: booking.checkOutDate ? this.formatTime(new Date(booking.checkOutDate)) : '',
             date: checkInDate || new Date(booking.createdAt || Date.now()),
@@ -349,7 +366,7 @@ export class CalendarComponent implements OnInit {
   // Nhận phòng từ booking
   checkinBooking(booking: Booking): void {
     if (!booking.roomId || !booking._id) {
-      this.message.error('Không tìm thấy thông tin phòng.');
+      this.message.error(this.translate.instant('CALENDAR.ROOM_NOT_FOUND'));
       return;
     }
 
@@ -362,29 +379,29 @@ export class CalendarComponent implements OnInit {
     // Đảm bảo roomId là string (không phải undefined)
     const roomId = booking.roomId;
     if (!roomId) {
-      this.message.error('Không tìm thấy ID phòng.');
+      this.message.error(this.translate.instant('CALENDAR.ROOM_ID_NOT_FOUND'));
       return;
     }
 
     this.modalService.confirm({
-      nzTitle: 'Xác nhận nhận phòng',
+      nzTitle: this.translate.instant('CALENDAR.CONFIRM_CHECKIN_TITLE'),
       nzContent: `
         <div style="margin-bottom: 16px;">
-          <p><strong>Phòng:</strong> ${booking.roomNumber || 'N/A'}</p>
-          <p><strong>Khách:</strong> ${booking.guestInfo?.name || booking.userName || 'Khách đặt trước'}</p>
-          <p><strong>Ngày đến:</strong> ${this.formatDateTime(booking.checkInDate)}</p>
-          <p><strong>Ngày đi:</strong> ${this.formatDateTime(booking.checkOutDate)}</p>
-          <p>Bạn có chắc chắn muốn nhận phòng cho booking này?</p>
+          <p><strong>${this.translate.instant('CALENDAR.ROOM')}:</strong> ${booking.roomNumber || 'N/A'}</p>
+          <p><strong>${this.translate.instant('CALENDAR.GUEST')}:</strong> ${booking.guestInfo?.name || booking.userName || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED')}</p>
+          <p><strong>${this.translate.instant('CALENDAR.CHECKIN_DATE')}:</strong> ${this.formatDateTime(booking.checkInDate)}</p>
+          <p><strong>${this.translate.instant('CALENDAR.CHECKOUT_DATE')}:</strong> ${this.formatDateTime(booking.checkOutDate)}</p>
+          <p>${this.translate.instant('CALENDAR.CONFIRM_CHECKIN_MESSAGE')}</p>
         </div>
       `,
-      nzOkText: 'Xác nhận',
-      nzCancelText: 'Hủy',
+      nzOkText: this.translate.instant('COMMON.CONFIRM'),
+      nzCancelText: this.translate.instant('CALENDAR.CANCEL'),
       nzOnOk: () => {
         this.isCheckingIn = true;
         
         // Lấy thông tin từ booking để check-in
         const checkInTime = booking.checkInDate ? new Date(booking.checkInDate) : new Date();
-        const guestInfo = booking.guestInfo || { name: booking.userName || 'Khách đặt trước' };
+        const guestInfo = booking.guestInfo || { name: booking.userName || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED') };
         
         const checkinData = {
           status: 'occupied',
@@ -397,7 +414,7 @@ export class CalendarComponent implements OnInit {
             advancePayment: booking.advancePayment || 0,
             additionalCharges: 0,
             discount: 0,
-            notes: booking.notes || `Nhận phòng từ booking ${booking._id}`,
+            notes: booking.notes || `${this.translate.instant('CALENDAR.CHECKIN')} từ booking ${booking._id}`,
             selectedServices: []
           }],
           bookingId: booking._id // Đánh dấu booking này đã được check-in
@@ -405,7 +422,7 @@ export class CalendarComponent implements OnInit {
 
         this.roomsService.checkInRoom(roomId, checkinData).subscribe(
           (response) => {
-            this.message.success('Nhận phòng thành công.');
+            this.message.success(this.translate.instant('CALENDAR.CHECKIN_SUCCESS'));
             this.isCheckingIn = false;
             
             // Đợi một chút để backend cập nhật booking status
@@ -419,7 +436,7 @@ export class CalendarComponent implements OnInit {
             this.roomsService.notifyRoomDataUpdated();
           },
           (error) => {
-            this.message.error(error.error?.message || 'Không thể nhận phòng.');
+            this.message.error(error.error?.message || this.translate.instant('CALENDAR.CHECKIN_ERROR'));
             this.isCheckingIn = false;
           }
         );

@@ -3,7 +3,7 @@
     <div class="header-section">
       <h2 class="mb-4">
         <i nz-icon nzType="file-text" nzTheme="outline"></i>
-        Quản Lý Công Nợ
+        {{ 'DEBT_MANAGEMENT.TITLE' | translate }}
       </h2>
     </div>
 
@@ -11,7 +11,7 @@
     <nz-alert 
       *ngIf="isBusiness && !isAdmin" 
       nzType="info" 
-      nzMessage="Bạn đang xem danh sách công nợ của các khách sạn thuộc doanh nghiệp mình."
+      [nzMessage]="'DEBT_MANAGEMENT.VIEW_BUSINESS_DEBTS' | translate"
       [nzCloseable]="true"
       class="mb-3">
     </nz-alert>
@@ -19,7 +19,7 @@
     <nz-alert 
       *ngIf="isHotelManager && !isAdmin && !isBusiness" 
       nzType="info" 
-      nzMessage="Bạn đang xem danh sách công nợ của khách sạn mình."
+      [nzMessage]="'DEBT_MANAGEMENT.VIEW_HOTEL_DEBTS' | translate"
       [nzCloseable]="true"
       class="mb-3">
     </nz-alert>
@@ -28,10 +28,10 @@
     <div nz-row [nzGutter]="16" class="mb-4 filter-section">
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Khách sạn</nz-form-label>
+          <nz-form-label>{{ 'DEBT_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Chọn khách sạn"
+              [nzPlaceHolder]="'DEBT_MANAGEMENT.SELECT_HOTEL' | translate"
               [ngModel]="selectedHotelId" 
               (ngModelChange)="onHotelChange($event)"
               nzAllowClear
@@ -45,17 +45,17 @@
       
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Trạng thái</nz-form-label>
+          <nz-form-label>{{ 'DEBT_MANAGEMENT.STATUS' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-select 
-              nzPlaceHolder="Tất cả"
+              [nzPlaceHolder]="'DEBT_MANAGEMENT.ALL' | translate"
               [ngModel]="selectedStatus" 
               (ngModelChange)="onStatusChange($event)"
               nzAllowClear
               class="w-100">
-              <nz-option nzValue="pending" nzLabel="Chưa thanh toán"></nz-option>
-              <nz-option nzValue="partial" nzLabel="Thanh toán một phần"></nz-option>
-              <nz-option nzValue="settled" nzLabel="Đã quyết toán"></nz-option>
+              <nz-option nzValue="pending" [nzLabel]="'DEBT_MANAGEMENT.STATUS.PENDING' | translate"></nz-option>
+              <nz-option nzValue="partial" [nzLabel]="'DEBT_MANAGEMENT.STATUS.PARTIAL' | translate"></nz-option>
+              <nz-option nzValue="settled" [nzLabel]="'DEBT_MANAGEMENT.STATUS.SETTLED' | translate"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
@@ -63,7 +63,7 @@
 
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Khoảng thời gian</nz-form-label>
+          <nz-form-label>{{ 'DEBT_MANAGEMENT.TIME_RANGE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-range-picker
               [ngModel]="dateRange"
@@ -94,16 +94,16 @@
           [nzSize]="'small'">
           <thead>
             <tr>
-              <th nzWidth="120px">Mã hóa đơn</th>
-              <th nzWidth="150px">Khách hàng</th>
-              <th nzWidth="100px">Số phòng</th>
-              <th nzWidth="120px">Ngày tạo công nợ</th>
-              <th nzWidth="120px">Số tiền công nợ</th>
-              <th nzWidth="120px">Đã thanh toán</th>
-              <th nzWidth="120px">Còn lại</th>
-              <th nzWidth="150px">Nhãn</th>
-              <th nzWidth="120px">Trạng thái</th>
-              <th nzWidth="200px">Thao tác</th>
+              <th nzWidth="120px">{{ 'DEBT_MANAGEMENT.INVOICE_NUMBER' | translate }}</th>
+              <th nzWidth="150px">{{ 'DEBT_MANAGEMENT.CUSTOMER' | translate }}</th>
+              <th nzWidth="100px">{{ 'DEBT_MANAGEMENT.ROOM_NUMBER' | translate }}</th>
+              <th nzWidth="120px">{{ 'DEBT_MANAGEMENT.DEBT_DATE' | translate }}</th>
+              <th nzWidth="120px">{{ 'DEBT_MANAGEMENT.DEBT_AMOUNT' | translate }}</th>
+              <th nzWidth="120px">{{ 'DEBT_MANAGEMENT.PAID_AMOUNT' | translate }}</th>
+              <th nzWidth="120px">{{ 'DEBT_MANAGEMENT.REMAINING_AMOUNT' | translate }}</th>
+              <th nzWidth="150px">{{ 'DEBT_MANAGEMENT.LABELS' | translate }}</th>
+              <th nzWidth="120px">{{ 'DEBT_MANAGEMENT.STATUS' | translate }}</th>
+              <th nzWidth="200px">{{ 'DEBT_MANAGEMENT.ACTIONS' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -139,21 +139,21 @@
                   <button nz-button nzSize="small" nzType="default" 
                           (click)="openLabelModal(debt)"
                           *ngIf="canManageLabels(debt)"
-                          nz-tooltip nzTooltipTitle="Quản lý nhãn">
+                          nz-tooltip [nzTooltipTitle]="'DEBT_MANAGEMENT.MANAGE_LABELS' | translate">
                     <i nz-icon nzType="tags"></i>
                   </button>
                   <button nz-button nzSize="small" nzType="primary" 
                           (click)="openSettleModal(debt)" 
                           *ngIf="canSettle(debt)"
-                          nz-tooltip nzTooltipTitle="Thanh toán">
+                          nz-tooltip [nzTooltipTitle]="'DEBT_MANAGEMENT.SETTLE' | translate">
                     <i nz-icon nzType="dollar"></i>
                   </button>
                   <button nz-button nzSize="small" nzType="text" nzDanger
                           *ngIf="canDelete(debt)"
                           nz-popconfirm 
-                          nzPopconfirmTitle="Bạn có chắc muốn xóa?" 
+                          [nzPopconfirmTitle]="'DEBT_MANAGEMENT.CONFIRM_DELETE' | translate"
                           (nzOnConfirm)="deleteDebt(debt)"
-                          nz-tooltip nzTooltipTitle="Xóa">
+                          nz-tooltip [nzTooltipTitle]="'DEBT_MANAGEMENT.DELETE' | translate">
                     <i nz-icon nzType="delete"></i>
                   </button>
                   <span *ngIf="!canManageLabels(debt) && !canSettle(debt) && !canDelete(debt)" class="text-muted">-</span>
@@ -168,19 +168,19 @@
     <!-- Modal thanh toán công nợ -->
     <nz-modal
       [(nzVisible)]="isSettleModalVisible"
-      nzTitle="Thanh toán công nợ"
+      [nzTitle]="'DEBT_MANAGEMENT.SETTLE_DEBT' | translate"
       (nzOnCancel)="closeSettleModal()"
       [nzFooter]="null"
       [nzWidth]="600">
       <div *nzModalContent>
         <div class="mb-3" *ngIf="selectedDebt">
           <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
-            <nz-descriptions-item nzTitle="Khách hàng">{{ selectedDebt.customerName }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Số phòng">{{ selectedDebt.roomNumber }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Mã hóa đơn">{{ selectedDebt.invoiceNumber }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Số tiền công nợ">{{ formatCurrency(selectedDebt.debtAmount) }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Đã thanh toán">{{ formatCurrency(selectedDebt.paidAmount) }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Còn lại">
+            <nz-descriptions-item [nzTitle]="'DEBT_MANAGEMENT.CUSTOMER_NAME' | translate">{{ selectedDebt.customerName }}</nz-descriptions-item>
+            <nz-descriptions-item [nzTitle]="'DEBT_MANAGEMENT.ROOM_NUMBER' | translate">{{ selectedDebt.roomNumber }}</nz-descriptions-item>
+            <nz-descriptions-item [nzTitle]="'DEBT_MANAGEMENT.INVOICE_NUMBER' | translate">{{ selectedDebt.invoiceNumber }}</nz-descriptions-item>
+            <nz-descriptions-item [nzTitle]="'DEBT_MANAGEMENT.DEBT_AMOUNT' | translate">{{ formatCurrency(selectedDebt.debtAmount) }}</nz-descriptions-item>
+            <nz-descriptions-item [nzTitle]="'DEBT_MANAGEMENT.PAID_AMOUNT' | translate">{{ formatCurrency(selectedDebt.paidAmount) }}</nz-descriptions-item>
+            <nz-descriptions-item [nzTitle]="'DEBT_MANAGEMENT.REMAINING_AMOUNT' | translate">
               <strong>{{ formatCurrency(selectedDebt.remainingAmount) }}</strong>
             </nz-descriptions-item>
           </nz-descriptions>
@@ -188,8 +188,8 @@
 
         <form nz-form [formGroup]="settleForm">
           <nz-form-item>
-            <nz-form-label nzRequired>Số tiền thanh toán</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập số tiền hợp lệ">
+            <nz-form-label nzRequired>{{ 'DEBT_MANAGEMENT.PAYMENT_AMOUNT' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'DEBT_MANAGEMENT.PAYMENT_AMOUNT_REQUIRED' | translate">
               <nz-input-number 
                 formControlName="amount" 
                 [nzMin]="0.01"
@@ -203,7 +203,7 @@
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label nzRequired>Phương thức thanh toán</nz-form-label>
+            <nz-form-label nzRequired>{{ 'DEBT_MANAGEMENT.PAYMENT_METHOD' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-select formControlName="paymentMethod" class="w-100">
                 <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label"></nz-option>
@@ -212,18 +212,18 @@
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Ghi chú</nz-form-label>
+            <nz-form-label>{{ 'DEBT_MANAGEMENT.NOTES' | translate }}</nz-form-label>
             <nz-form-control>
-              <textarea nz-input formControlName="notes" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
+              <textarea nz-input formControlName="notes" rows="3" [placeholder]="'DEBT_MANAGEMENT.ENTER_NOTES' | translate"></textarea>
             </nz-form-control>
           </nz-form-item>
 
           <div class="text-right mt-3">
             <button nz-button nzType="default" (click)="closeSettleModal()" [disabled]="isSettling">
-              Hủy
+              {{ 'DEBT_MANAGEMENT.CANCEL' | translate }}
             </button>
             <button nz-button nzType="primary" (click)="handleSettle()" [nzLoading]="isSettling" class="ml-2">
-              Xác nhận thanh toán
+              {{ 'DEBT_MANAGEMENT.CONFIRM_SETTLE' | translate }}
             </button>
           </div>
         </form>
@@ -233,16 +233,16 @@
     <!-- Modal quản lý nhãn -->
     <nz-modal
       [(nzVisible)]="isLabelModalVisible"
-      nzTitle="Quản lý nhãn công nợ"
+      [nzTitle]="'DEBT_MANAGEMENT.MANAGE_DEBT_LABELS' | translate"
       (nzOnCancel)="closeLabelModal()"
       [nzFooter]="null"
       [nzWidth]="500">
       <div *nzModalContent>
         <div class="mb-3" *ngIf="selectedDebt">
           <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
-            <nz-descriptions-item nzTitle="Khách hàng">{{ selectedDebt.customerName }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Mã hóa đơn">{{ selectedDebt.invoiceNumber }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Số tiền còn lại">
+            <nz-descriptions-item [nzTitle]="'DEBT_MANAGEMENT.CUSTOMER_NAME' | translate">{{ selectedDebt.customerName }}</nz-descriptions-item>
+            <nz-descriptions-item [nzTitle]="'DEBT_MANAGEMENT.INVOICE_NUMBER' | translate">{{ selectedDebt.invoiceNumber }}</nz-descriptions-item>
+            <nz-descriptions-item [nzTitle]="'DEBT_MANAGEMENT.REMAINING_AMOUNT' | translate">
               <strong>{{ formatCurrency(selectedDebt.remainingAmount) }}</strong>
             </nz-descriptions-item>
           </nz-descriptions>
@@ -250,7 +250,7 @@
 
         <div class="mb-3">
           <nz-form-item>
-            <nz-form-label>Nhãn hiện tại</nz-form-label>
+            <nz-form-label>{{ 'DEBT_MANAGEMENT.CURRENT_LABELS' | translate }}</nz-form-label>
             <nz-form-control>
               <div class="current-labels mb-2">
                 <div *ngFor="let label of currentLabels" class="label-item mb-2">
@@ -268,25 +268,25 @@
                     <nz-option *ngFor="let color of availableColors" [nzValue]="color.value" [nzLabel]="color.label"></nz-option>
                   </nz-select>
                 </div>
-                <span *ngIf="currentLabels.length === 0" class="text-muted">Chưa có nhãn</span>
+                <span *ngIf="currentLabels.length === 0" class="text-muted">{{ 'DEBT_MANAGEMENT.NO_LABELS' | translate }}</span>
               </div>
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Thêm nhãn mới</nz-form-label>
+            <nz-form-label>{{ 'DEBT_MANAGEMENT.ADD_NEW_LABEL' | translate }}</nz-form-label>
             <nz-form-control>
               <div class="add-label-section">
                 <nz-select
                   nzMode="tags"
-                  nzPlaceHolder="Nhập nhãn và nhấn Enter"
+                  [nzPlaceHolder]="'DEBT_MANAGEMENT.ENTER_LABEL_AND_PRESS_ENTER' | translate"
                   [(ngModel)]="newLabelInput"
                   (ngModelChange)="onNewLabelInput($event)"
                   [nzTokenSeparators]="[',']"
                   class="w-100 mb-2">
                 </nz-select>
                 <nz-form-item>
-                  <nz-form-label>Chọn màu cho nhãn mới</nz-form-label>
+                  <nz-form-label>{{ 'DEBT_MANAGEMENT.SELECT_COLOR_FOR_NEW_LABEL' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select
                       [(ngModel)]="selectedLabelColor"
@@ -300,7 +300,7 @@
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Nhãn gợi ý</nz-form-label>
+            <nz-form-label>{{ 'DEBT_MANAGEMENT.SUGGESTED_LABELS' | translate }}</nz-form-label>
             <nz-form-control>
               <div class="suggested-labels">
                 <nz-tag 
@@ -317,10 +317,10 @@
 
         <div class="text-right mt-3">
           <button nz-button nzType="default" (click)="closeLabelModal()" [disabled]="isUpdatingLabels">
-            Hủy
+            {{ 'DEBT_MANAGEMENT.CANCEL' | translate }}
           </button>
           <button nz-button nzType="primary" (click)="saveLabels()" [nzLoading]="isUpdatingLabels" class="ml-2">
-            Lưu nhãn
+            {{ 'DEBT_MANAGEMENT.SAVE_LABELS' | translate }}
           </button>
         </div>
       </div>

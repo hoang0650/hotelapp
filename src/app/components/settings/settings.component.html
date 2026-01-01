@@ -1,26 +1,26 @@
 <div class="settings-container">
-  <nz-page-header nzTitle="Cài đặt hệ thống" nzSubtitle="Quản lý cấu hình toàn hệ thống">
+  <nz-page-header [nzTitle]="'SETTINGS.TITLE' | translate" [nzSubtitle]="'SETTINGS.SUBTITLE' | translate">
   </nz-page-header>
 
   <nz-card [nzBordered]="false" style="margin-top: 16px;">
     <nz-tabset [(nzSelectedIndex)]="activeTab" nzType="card">
       <!-- Tab 1: Cài đặt hệ thống -->
-      <nz-tab nzTitle="Cài đặt hệ thống" nzIcon="setting">
+      <nz-tab [nzTitle]="'SETTINGS.TAB_SYSTEM' | translate" nzIcon="setting">
         <form nz-form [formGroup]="systemForm" nzLayout="vertical" style="margin-top: 16px;">
           <div nz-row [nzGutter]="16">
             <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
               <nz-form-item>
-                <nz-form-label nzRequired>Tên hệ thống</nz-form-label>
-                <nz-form-control nzErrorTip="Vui lòng nhập tên hệ thống!">
-                  <input nz-input formControlName="systemName" placeholder="Tên hệ thống" />
+                <nz-form-label nzRequired>{{ 'SETTINGS.SYSTEM_NAME' | translate }}</nz-form-label>
+                <nz-form-control [nzErrorTip]="'SETTINGS.SYSTEM_NAME_REQUIRED' | translate">
+                  <input nz-input formControlName="systemName" [placeholder]="'SETTINGS.SYSTEM_NAME_PLACEHOLDER' | translate" />
                 </nz-form-control>
               </nz-form-item>
             </div>
             <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
               <nz-form-item>
-                <nz-form-label>Phiên bản</nz-form-label>
+                <nz-form-label>{{ 'SETTINGS.VERSION' | translate }}</nz-form-label>
                 <nz-form-control>
-                  <input nz-input formControlName="systemVersion" placeholder="1.0.0" />
+                  <input nz-input formControlName="systemVersion" [placeholder]="'SETTINGS.VERSION_PLACEHOLDER' | translate" />
                 </nz-form-control>
               </nz-form-item>
             </div>

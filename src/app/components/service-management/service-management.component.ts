@@ -11,6 +11,7 @@ import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { forkJoin } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-service-management',
@@ -28,8 +29,8 @@ export class ServiceManagementComponent implements OnInit {
   currentUser: User | null = null;
   permissions: PermissionRules | null = null;
 
-  // Sử dụng ALL_SERVICE_CATEGORIES cho dropdown
-  serviceCategoryOptions = ALL_SERVICE_CATEGORIES.map(cat => ({ label: this.getCategoryLabel(cat), value: cat }));
+  // Sử dụng ALL_SERVICE_CATEGORIES cho dropdown - sẽ được khởi tạo trong ngOnInit
+  serviceCategoryOptions: { label: string, value: ServiceCategory }[] = [];
 
   // Lấy token xác thực
   get authToken(): string {
@@ -62,7 +63,8 @@ export class ServiceManagementComponent implements OnInit {
     private serviceService: ServiceService,
     private hotelService: HotelService,
     public authService: AuthService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {
     this.serviceForm = this.fb.group({
       hotelId: [null, Validators.required],
@@ -84,12 +86,20 @@ export class ServiceManagementComponent implements OnInit {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.permissions = this.authService.getPermissionRules();
+    this.initServiceCategoryOptions();
     this.loadHotels();
     
     // Nếu là business và không có hotel được chọn, load tất cả dịch vụ của business
     if (this.isBusiness && !this.isAdmin && !this.selectedHotelId) {
       this.loadServices(); // Load tất cả dịch vụ của business (không truyền hotelId)
     }
+  }
+
+  private initServiceCategoryOptions(): void {
+    this.serviceCategoryOptions = ALL_SERVICE_CATEGORIES.map(cat => ({ 
+      label: this.getCategoryLabel(cat), 
+      value: cat 
+    }));
   }
 
   // ============ KIỂM TRA QUYỀN ============
@@ -140,12 +150,12 @@ export class ServiceManagementComponent implements OnInit {
 
   getCategoryLabel(category: ServiceCategory): string {
     switch (category) {
-      case 'room_service': return 'Dịch vụ phòng';
-      case 'food': return 'Đồ ăn';
-      case 'beverage': return 'Đồ uống';
-      case 'spa': return 'Spa/Massage';
-      case 'transport': return 'Di chuyển';
-      case 'custom': return 'Khác';
+      case 'room_service': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.ROOM_SERVICE');
+      case 'food': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.FOOD');
+      case 'beverage': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.BEVERAGE');
+      case 'spa': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.SPA');
+      case 'transport': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.TRANSPORT');
+      case 'custom': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.CUSTOM');
       default: return category;
     }
   }
@@ -192,7 +202,7 @@ export class ServiceManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi tải danh sách dịch vụ:', error);
-        this.message.error('Không thể tải danh sách dịch vụ.');
+        this.message.error(this.translate.instant('SERVICE_MANAGEMENT.LOAD_SERVICES_ERROR'));
         this.isLoading = false;
       }
     });
@@ -241,7 +251,7 @@ export class ServiceManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi tải danh sách khách sạn:', error);
-        this.message.error('Không thể tải danh sách khách sạn.');
+        this.message.error(this.translate.instant('SERVICE_MANAGEMENT.LOAD_HOTELS_ERROR'));
       }
     });
   }
@@ -268,12 +278,12 @@ export class ServiceManagementComponent implements OnInit {
     if (hotelId && this.isBusiness && !this.isAdmin && this.currentUser?.businessId) {
       const selectedHotel = this.hotels.find(h => h._id === hotelId);
       if (!selectedHotel) {
-        this.message.warning('Bạn không có quyền xem dịch vụ của khách sạn này');
+        this.message.warning(this.translate.instant('SERVICE_MANAGEMENT.NO_PERMISSION'));
         return;
       }
       const hotelBusinessId = this.extractBusinessId(selectedHotel);
       if (hotelBusinessId !== this.currentUser.businessId) {
-        this.message.warning('Bạn không có quyền xem dịch vụ của khách sạn này');
+        this.message.warning(this.translate.instant('SERVICE_MANAGEMENT.NO_PERMISSION'));
         return;
       }
     }
@@ -350,7 +360,7 @@ export class ServiceManagementComponent implements OnInit {
 
   submitForm(): void {
     if (this.serviceForm.invalid) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      this.message.warning(this.translate.instant('SERVICE_MANAGEMENT.FILL_REQUIRED_FIELDS'));
       Object.values(this.serviceForm.controls).forEach(control => {
         if (control.invalid) {
           control.markAsDirty();
@@ -385,12 +395,12 @@ export class ServiceManagementComponent implements OnInit {
             this.services[index] = updatedService;
             this.services = [...this.services];
           }
-          this.message.success('Đã cập nhật dịch vụ thành công');
+          this.message.success(this.translate.instant('SERVICE_MANAGEMENT.UPDATE_SUCCESS'));
           this.stopEdit();
         },
         error => {
           console.error('Lỗi khi cập nhật dịch vụ:', error);
-          this.message.error(error.error?.message || 'Không thể cập nhật dịch vụ.');
+          this.message.error(error.error?.message || this.translate.instant('SERVICE_MANAGEMENT.UPDATE_ERROR'));
         }
       );
     } else {
@@ -398,12 +408,12 @@ export class ServiceManagementComponent implements OnInit {
         (newService: Service) => {
           this.services.push(newService);
           this.services = [...this.services];
-          this.message.success('Đã tạo dịch vụ thành công');
+          this.message.success(this.translate.instant('SERVICE_MANAGEMENT.CREATE_SUCCESS'));
           this.stopEdit();
         },
         error => {
           console.error('Lỗi khi tạo dịch vụ:', error);
-          this.message.error(error.error?.message || 'Không thể tạo dịch vụ.');
+          this.message.error(error.error?.message || this.translate.instant('SERVICE_MANAGEMENT.CREATE_ERROR'));
         }
       );
     }
@@ -413,14 +423,14 @@ export class ServiceManagementComponent implements OnInit {
     this.serviceService.deleteService(id).subscribe(
       () => {
         this.services = this.services.filter(s => s._id !== id);
-        this.message.success('Đã xóa dịch vụ thành công');
+        this.message.success(this.translate.instant('SERVICE_MANAGEMENT.DELETE_SUCCESS'));
         if (this.editId === id) {
           this.stopEdit();
         }
       },
       error => {
         console.error('Lỗi khi xóa dịch vụ:', error);
-        this.message.error(error.error?.message || 'Không thể xóa dịch vụ.');
+        this.message.error(error.error?.message || this.translate.instant('SERVICE_MANAGEMENT.DELETE_ERROR'));
       }
     );
   }

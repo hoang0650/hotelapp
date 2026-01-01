@@ -11,6 +11,7 @@ import { UserService } from '../../services/user.service';
 import { User } from '../../interfaces/user';
 import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient } from '@angular/common/http';
+import { TranslateService } from '@ngx-translate/core';
 
 const businessStatusesList = ['pending', 'active', 'inactive', 'suspended'] as const;
 type BusinessStatus = typeof businessStatusesList[number];
@@ -36,13 +37,8 @@ export class CompanyManagementComponent implements OnInit {
   logoId: string | null = null;
   isLoadingUpload = false;
 
-  // Trạng thái hiển thị
-  statusOptions: { value: BusinessStatus, label: string }[] = [
-    { value: 'pending', label: 'Chờ duyệt' },
-    { value: 'active', label: 'Hoạt động' },
-    { value: 'inactive', label: 'Không hoạt động' },
-    { value: 'suspended', label: 'Bị đình chỉ' }
-  ];
+  // Trạng thái hiển thị - sẽ được khởi tạo trong ngOnInit
+  statusOptions: { value: BusinessStatus, label: string }[] = [];
 
   readonly businessStatuses = businessStatusesList;
 
@@ -54,7 +50,8 @@ export class CompanyManagementComponent implements OnInit {
     private message: NzMessageService,
     private modal: NzModalService,
     private userService: UserService,
-    private http: HttpClient
+    private http: HttpClient,
+    private translate: TranslateService
   ) { 
     this.businessForm = this.fb.group({
       name: ['', Validators.required],
@@ -79,10 +76,20 @@ export class CompanyManagementComponent implements OnInit {
   }
 
   ngOnInit(): void { 
+    this.initStatusOptions();
     this.currentUser = this.authService.getCurrentUser();
     this.permissions = this.authService.getPermissionRules();
     this.loadBusinesses();
     this.loadHotels();
+  }
+
+  private initStatusOptions(): void {
+    this.statusOptions = [
+      { value: 'pending', label: this.translate.instant('COMPANY_MANAGEMENT.STATUS_PENDING') },
+      { value: 'active', label: this.translate.instant('COMPANY_MANAGEMENT.STATUS_ACTIVE') },
+      { value: 'inactive', label: this.translate.instant('COMPANY_MANAGEMENT.STATUS_INACTIVE') },
+      { value: 'suspended', label: this.translate.instant('COMPANY_MANAGEMENT.STATUS_SUSPENDED') }
+    ];
   }
 
   // ============ KIỂM TRA QUYỀN ============
@@ -213,7 +220,7 @@ export class CompanyManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error fetching hotels:', error);
-        this.message.error('Không thể tải danh sách khách sạn');
+        this.message.error(this.translate.instant('COMPANY_MANAGEMENT.LOAD_HOTELS_ERROR'));
         this.isLoading = false;
       }
     });
@@ -252,7 +259,7 @@ export class CompanyManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error fetching businesses:', error);
-        this.message.error(error.message || 'Không thể tải danh sách doanh nghiệp');
+        this.message.error(error.message || this.translate.instant('COMPANY_MANAGEMENT.LOAD_BUSINESSES_ERROR'));
         this.isLoading = false;
       }
     });
@@ -262,7 +269,7 @@ export class CompanyManagementComponent implements OnInit {
 
   startEdit(businessId: string): void {
     if (!this.canManage(businessId)) {
-      this.message.warning('Bạn không có quyền chỉnh sửa doanh nghiệp này');
+      this.message.warning(this.translate.instant('COMPANY_MANAGEMENT.NO_EDIT_PERMISSION'));
       return;
     }
 
@@ -316,13 +323,13 @@ export class CompanyManagementComponent implements OnInit {
 
   createBusiness(): void {
     if (!this.canCreateBusiness) {
-      this.message.error('Bạn không có quyền tạo doanh nghiệp mới');
+      this.message.error(this.translate.instant('COMPANY_MANAGEMENT.NO_CREATE_PERMISSION'));
       return;
     }
 
     if (this.businessForm.invalid) {
       this.markFormGroupTouched(this.businessForm);
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      this.message.warning(this.translate.instant('COMPANY_MANAGEMENT.FILL_REQUIRED_FIELDS'));
       return;
     }
 
@@ -339,7 +346,7 @@ export class CompanyManagementComponent implements OnInit {
       next: (createdBusiness: Business) => {
         this.businesses = [...this.businesses, createdBusiness];
         this.stopEdit();
-        this.message.success('Đã tạo doanh nghiệp thành công');
+        this.message.success(this.translate.instant('COMPANY_MANAGEMENT.CREATE_SUCCESS'));
         this.isLoading = false;
       },
       error: (error) => {
@@ -354,18 +361,18 @@ export class CompanyManagementComponent implements OnInit {
 
   updateBusiness(): void {
     if (!this.editId || !this.selectedBusiness) {
-      this.message.error('Không có doanh nghiệp nào được chọn để cập nhật.');
+      this.message.error(this.translate.instant('COMPANY_MANAGEMENT.NO_BUSINESS_SELECTED'));
       return;
     }
 
     if (!this.canManage(this.editId)) {
-      this.message.error('Bạn không có quyền cập nhật doanh nghiệp này');
+      this.message.error(this.translate.instant('COMPANY_MANAGEMENT.NO_UPDATE_PERMISSION'));
       return;
     }
 
     if (this.businessForm.invalid) {
       this.markFormGroupTouched(this.businessForm);
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      this.message.warning(this.translate.instant('COMPANY_MANAGEMENT.FILL_REQUIRED_FIELDS'));
       return;
     }
 
@@ -407,12 +414,12 @@ export class CompanyManagementComponent implements OnInit {
           this.businesses = [...this.businesses];
         }
         this.stopEdit();
-        this.message.success('Đã cập nhật doanh nghiệp thành công');
+        this.message.success(this.translate.instant('COMPANY_MANAGEMENT.UPDATE_SUCCESS'));
         this.isLoading = false;
       },
       error: (error) => {
         console.error('Error updating business:', error);
-        this.message.error(error.error?.message || error.message || 'Không thể cập nhật doanh nghiệp');
+        this.message.error(error.error?.message || error.message || this.translate.instant('COMPANY_MANAGEMENT.UPDATE_ERROR'));
         this.isLoading = false;
       }
     });
@@ -420,21 +427,21 @@ export class CompanyManagementComponent implements OnInit {
 
   deleteBusiness(id: string): void {
     if (!this.isAdmin) {
-      this.message.error('Chỉ admin mới có quyền xóa doanh nghiệp');
+      this.message.error(this.translate.instant('COMPANY_MANAGEMENT.NO_DELETE_PERMISSION'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận xóa doanh nghiệp',
-      nzContent: 'Bạn có chắc chắn muốn xóa doanh nghiệp này? Hành động này sẽ ảnh hưởng đến tất cả khách sạn và nhân viên thuộc doanh nghiệp.',
-      nzOkText: 'Xóa',
+      nzTitle: this.translate.instant('COMPANY_MANAGEMENT.CONFIRM_DELETE_TITLE'),
+      nzContent: this.translate.instant('COMPANY_MANAGEMENT.CONFIRM_DELETE_MESSAGE'),
+      nzOkText: this.translate.instant('COMPANY_MANAGEMENT.DELETE'),
       nzOkType: 'primary',
       nzOkDanger: true,
       nzOnOk: () => {
         this.businessService.deleteBusiness(id).subscribe({
           next: () => {
-            this.businesses = this.businesses.filter(b => b._id !== id);
-            this.message.success('Đã xóa doanh nghiệp thành công');
+            this.businesses = this.businesses.filter((b: Business) => b._id !== id);
+            this.message.success(this.translate.instant('COMPANY_MANAGEMENT.DELETE_SUCCESS'));
             if (this.selectedBusiness?._id === id) {
               this.stopEdit();
             }
@@ -444,11 +451,11 @@ export class CompanyManagementComponent implements OnInit {
           },
           error: (error) => {
             console.error('Error deleting business:', error);
-            this.message.error(error.error?.message || error.message || 'Không thể xóa doanh nghiệp');
+            this.message.error(error.error?.message || error.message || this.translate.instant('COMPANY_MANAGEMENT.DELETE_ERROR'));
           }
         });
       },
-      nzCancelText: 'Hủy'
+      nzCancelText: this.translate.instant('COMPANY_MANAGEMENT.CANCEL')
     });
   }
 
@@ -459,38 +466,39 @@ export class CompanyManagementComponent implements OnInit {
    */
   blockBusiness(businessId: string): void {
     if (!this.isAdmin) {
-      this.message.error('Chỉ admin mới có quyền đình chỉ doanh nghiệp');
+      this.message.error(this.translate.instant('COMPANY_MANAGEMENT.NO_SUSPEND_PERMISSION'));
       return;
     }
 
     this.modal.confirm({
-      nzTitle: 'Xác nhận đình chỉ doanh nghiệp',
-      nzContent: `<b style="color: red;">Cảnh báo:</b> Khi đình chỉ doanh nghiệp, tất cả khách sạn, phòng và nhân viên thuộc doanh nghiệp này sẽ không thể hoạt động.`,
-      nzOkText: 'Đình chỉ',
+      nzTitle: this.translate.instant('COMPANY_MANAGEMENT.CONFIRM_SUSPEND_TITLE'),
+      nzContent: this.translate.instant('COMPANY_MANAGEMENT.CONFIRM_SUSPEND_MESSAGE'),
+      nzOkText: this.translate.instant('COMPANY_MANAGEMENT.SUSPEND'),
       nzOkType: 'primary',
       nzOkDanger: true,
       nzOnOk: () => {
-        this.updateBusinessStatusLogic(businessId, 'suspended', 'Doanh nghiệp và tất cả cấp dưới đã bị đình chỉ.');
+        this.updateBusinessStatusLogic(businessId, 'suspended', this.translate.instant('COMPANY_MANAGEMENT.SUSPEND_SUCCESS'));
       },
-      nzCancelText: 'Hủy'
+      nzCancelText: this.translate.instant('COMPANY_MANAGEMENT.CANCEL')
     });
   }
 
-  updateBusinessStatusLogic(businessId: string, status: BusinessStatus, successMessage: string): void {
+  updateBusinessStatusLogic(businessId: string, status: BusinessStatus, successMessage?: string): void {
     if (!this.isAdmin) {
-      this.message.error('Bạn không có quyền thay đổi trạng thái doanh nghiệp');
+      this.message.error(this.translate.instant('COMPANY_MANAGEMENT.NO_STATUS_CHANGE_PERMISSION'));
       return;
     }
 
     this.isLoading = true;
     this.businessService.updateBusinessStatus(businessId, status).subscribe({
       next: (updatedBusiness: Business) => {
-        const index = this.businesses.findIndex(b => b._id === businessId);
+        const index = this.businesses.findIndex((b: Business) => b._id === businessId);
         if (index !== -1) {
           this.businesses[index] = updatedBusiness;
           this.businesses = [...this.businesses];
         }
-        this.message.success(successMessage || `Trạng thái doanh nghiệp được cập nhật thành ${this.getStatusLabel(status)}`);
+        const successMsg = successMessage || this.translate.instant('COMPANY_MANAGEMENT.UPDATE_STATUS_SUCCESS', { status: this.getStatusLabel(status) });
+        this.message.success(successMsg);
         this.isLoading = false;
         
         if (this.selectedViewBusiness?._id === businessId) {
@@ -502,7 +510,7 @@ export class CompanyManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error updating business status:', error);
-        this.message.error(error.error?.message || error.message || 'Không thể cập nhật trạng thái doanh nghiệp');
+        this.message.error(error.error?.message || error.message || this.translate.instant('COMPANY_MANAGEMENT.UPDATE_STATUS_ERROR'));
         this.isLoading = false;
       }
     });
@@ -543,8 +551,8 @@ export class CompanyManagementComponent implements OnInit {
   }
 
   getStatusLabel(statusValue?: BusinessStatus): string {
-    if (!statusValue) return 'Không xác định';
-    const option = this.statusOptions.find(opt => opt.value === statusValue);
+    if (!statusValue) return this.translate.instant('COMPANY_MANAGEMENT.STATUS_UNKNOWN');
+    const option = this.statusOptions.find((opt: { value: BusinessStatus, label: string }) => opt.value === statusValue);
     return option ? option.label : statusValue;
   }
 
