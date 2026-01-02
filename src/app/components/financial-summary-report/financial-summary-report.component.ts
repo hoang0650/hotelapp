@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FinancialSummaryService, FinancialSummary, FinancialSummaryQuery, FinancialConfig } from '../../services/financial-summary.service';
 import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
+import { TranslateService } from '@ngx-translate/core';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 
 @Component({
@@ -26,7 +27,8 @@ export class FinancialSummaryReportComponent implements OnInit {
     private financialSummaryService: FinancialSummaryService,
     private authService: AuthService,
     private hotelService: HotelService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private translate: TranslateService
   ) {
     this.configForm = this.fb.group({
       depreciationRate: [10, [Validators.required, Validators.min(0), Validators.max(100)]],
@@ -225,7 +227,8 @@ export class FinancialSummaryReportComponent implements OnInit {
       return;
     }
 
-    const newInvestment = prompt('Nhập vốn đầu tư ban đầu (VND):', this.financialSummary.initialInvestment.toString());
+    const promptMessage = this.translate.instant('FINANCIAL_REPORT.UPDATE_INVESTMENT') + ' (VND):';
+    const newInvestment = prompt(promptMessage, this.financialSummary.initialInvestment.toString());
     if (newInvestment && !isNaN(Number(newInvestment))) {
       this.financialSummaryService.updateInitialInvestment(
         this.selectedHotelId,
@@ -237,7 +240,7 @@ export class FinancialSummaryReportComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error updating initial investment:', error);
-          alert('Có lỗi xảy ra khi cập nhật vốn đầu tư');
+          alert(this.translate.instant('FINANCIAL_REPORT.UPDATE_INVESTMENT_ERROR'));
         }
       });
     }
@@ -290,7 +293,7 @@ export class FinancialSummaryReportComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error updating financial config:', error);
-        alert('Có lỗi xảy ra khi cập nhật cấu hình tài chính: ' + (error.error?.message || error.message));
+        alert(this.translate.instant('FINANCIAL_REPORT.UPDATE_CONFIG_ERROR') + ': ' + (error.error?.message || error.message));
       }
     });
   }
@@ -330,7 +333,7 @@ export class FinancialSummaryReportComponent implements OnInit {
 
   exportToExcel(): void {
     if (!this.selectedHotelId) {
-      alert('Vui lòng chọn khách sạn');
+      alert(this.translate.instant('FINANCIAL_REPORT.SELECT_HOTEL_ERROR'));
       return;
     }
 
@@ -347,7 +350,7 @@ export class FinancialSummaryReportComponent implements OnInit {
     const token = localStorage.getItem('token');
     
     if (!token) {
-      alert('Vui lòng đăng nhập để xuất file Excel');
+      alert(this.translate.instant('FINANCIAL_REPORT.LOGIN_REQUIRED'));
       this.exporting = false;
       return;
     }
@@ -360,7 +363,7 @@ export class FinancialSummaryReportComponent implements OnInit {
     })
     .then(response => {
       if (!response.ok) {
-        throw new Error('Lỗi khi xuất file Excel');
+        throw new Error(this.translate.instant('FINANCIAL_REPORT.EXPORT_ERROR'));
       }
       return response.blob();
     })
@@ -377,7 +380,7 @@ export class FinancialSummaryReportComponent implements OnInit {
     })
     .catch(error => {
       console.error('Error exporting Excel:', error);
-      alert('Có lỗi xảy ra khi xuất file Excel');
+      alert(this.translate.instant('FINANCIAL_REPORT.EXPORT_EXCEL_ERROR'));
       this.exporting = false;
     });
   }

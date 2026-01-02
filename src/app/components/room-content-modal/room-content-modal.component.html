@@ -459,66 +459,103 @@
         </div>
         
         <!-- Hiển thị chi tiết diễn giải tính tiền phòng -->
-        <div *ngIf="roomPriceDetails" style="margin-bottom: 8px; padding: 8px; background: #fff; border-radius: 4px; font-size: 12px; color: #666; border: 1px solid #e0e0e0;">
-          <!-- Thông tin theo giờ (hourly) -->
-          <div *ngIf="roomPriceDetails.rateType === 'hourly' && getHours() > 0 && getHourlyPrice() > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 4px; background: #f0f9ff; border-radius: 4px; border-left: 3px solid #1890ff;">
-            <span style="font-size: 12px; color: #666;">
-              <i nz-icon nzType="clock-circle" nzTheme="outline" style="margin-right: 4px; color: #1890ff;"></i>
-              Theo giờ ({{ getHours() | number:'1.1-1' }} giờ × {{ getHourlyPrice() | number }} đ/giờ):
-            </span>
-            <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
-              {{ (getHours() * getHourlyPrice()) | number }} đ
-            </span>
+        <div *ngIf="roomPriceDetails" style="margin-bottom: 8px; padding: 12px; background: #f0f9ff; border-radius: 8px; font-size: 12px; color: #666; border-left: 3px solid #1890ff;">
+          <!-- Chi tiết theo giờ (hourly) -->
+          <div *ngIf="roomPriceDetails.rateType === 'hourly'">
+            <!-- Giờ đầu tiên -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px;">
+              <span style="font-size: 12px; color: #666;">
+                Giờ đầu tiên:
+              </span>
+              <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
+                {{ (roomPriceDetails.firstHourPrice || 0) | number }} đ
+              </span>
+            </div>
+            
+            <!-- Các giờ tiếp theo -->
+            <div *ngIf="roomPriceDetails.additionalHoursCount > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px;">
+              <span style="font-size: 12px; color: #666;">
+                {{ roomPriceDetails.additionalHoursCount }} giờ tiếp theo ({{ ((roomPriceDetails.additionalHoursPrice || 0) / (roomPriceDetails.additionalHoursCount || 1)) | number }} đ/giờ):
+              </span>
+              <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
+                {{ (roomPriceDetails.additionalHoursPrice || 0) | number }} đ
+              </span>
+            </div>
+            
+            <!-- Thông tin thời gian -->
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
+              <div style="font-size: 11px; color: #999; margin-bottom: 4px;">
+                Tổng thời gian: {{ (roomPriceDetails.totalHours || roomPriceDetails.durationInHours || 0) | number:'1.1-1' }} giờ
+                <span *ngIf="roomPriceDetails.remainingMinutes > 0"> ({{ roomPriceDetails.remainingMinutes }} phút)</span>
+              </div>
+              <div style="font-size: 11px; color: #999;">
+                Thời gian miễn phí: {{ roomPriceDetails.gracePeriodMinutes || 15 }} phút
+              </div>
+            </div>
           </div>
           
-          <!-- Thông tin qua đêm -->
-          <div *ngIf="getBaseRoomPrice() > 0 && getNights() > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 4px; background: #f0f9ff; border-radius: 4px; border-left: 3px solid #1890ff;">
-            <span style="font-size: 12px; color: #666;">
-              <i nz-icon nzType="moon" nzTheme="outline" style="margin-right: 4px; color: #1890ff;"></i>
-              Qua đêm ({{ getNights() }} đêm × {{ getBaseRoomPrice() | number }} đ/đêm):
-            </span>
-            <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
-              {{ (getBaseRoomPrice() * getNights()) | number }} đ
-            </span>
+          <!-- Chi tiết theo ngày (daily) -->
+          <div *ngIf="roomPriceDetails.rateType === 'daily'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px;">
+              <span style="font-size: 12px; color: #666;">
+                {{ roomPriceDetails.days }} ngày × {{ (roomPriceDetails.basePrice || 0) | number }} đ/ngày:
+              </span>
+              <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
+                {{ ((roomPriceDetails.days || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ
+              </span>
+            </div>
+            
+            <!-- Phụ thu check-in sớm -->
+            <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
+              <span style="font-size: 12px; color: #666;">
+                Phụ thu check-in sớm ({{ roomPriceDetails.earlyCheckinHours }} giờ):
+              </span>
+              <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
+                + {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ
+              </span>
+            </div>
+            
+            <!-- Phụ thu check-out trễ -->
+            <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
+              <span style="font-size: 12px; color: #666;">
+                Phụ thu check-out trễ ({{ roomPriceDetails.lateCheckoutHours }} giờ):
+              </span>
+              <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
+                + {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ
+              </span>
+            </div>
           </div>
           
-          <!-- Thông tin theo ngày (nếu có) -->
-          <div *ngIf="getBaseRoomPrice() > 0 && roomPriceDetails.days > 0 && !getNights()" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 4px; background: #f0f9ff; border-radius: 4px; border-left: 3px solid #1890ff;">
-            <span style="font-size: 12px; color: #666;">
-              <i nz-icon nzType="calendar" nzTheme="outline" style="margin-right: 4px; color: #1890ff;"></i>
-              Theo ngày ({{ roomPriceDetails.days }} ngày × {{ getBaseRoomPrice() | number }} đ/ngày):
-            </span>
-            <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
-              {{ (getBaseRoomPrice() * roomPriceDetails.days) | number }} đ
-            </span>
-          </div>
-          
-          <!-- Phụ thu checkin sớm -->
-          <div *ngIf="getEarlyCheckinHours() > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 4px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
-            <span style="font-size: 12px; color: #666;">
-              <i nz-icon nzType="clock-circle" nzTheme="outline" style="margin-right: 4px; color: #ff9800;"></i>
-              Phụ thu checkin sớm ({{ getEarlyCheckinHours() | number:'1.1-1' }} giờ):
-            </span>
-            <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
-              + {{ getEarlyCheckinSurcharge() | number }} đ
-            </span>
-          </div>
-          
-          <!-- Phụ thu checkout trễ -->
-          <div *ngIf="getLateCheckoutHours() > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 4px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
-            <span style="font-size: 12px; color: #666;">
-              <i nz-icon nzType="clock-circle" nzTheme="outline" style="margin-right: 4px; color: #ff9800;"></i>
-              Phụ thu checkout trễ ({{ getLateCheckoutHours() | number:'1.1-1' }} giờ):
-            </span>
-            <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
-              + {{ getLateCheckoutSurcharge() | number }} đ
-            </span>
-          </div>
-          
-          <!-- Thông tin loại giá -->
-          <div *ngIf="roomPriceDetails.rateType" style="font-size: 11px; color: #999; margin-top: 4px; padding-top: 4px; border-top: 1px solid #f0f0f0;">
-            <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 4px;"></i>
-            Loại giá: <strong>{{ roomPriceDetails.rateType === 'hourly' ? 'Theo giờ' : roomPriceDetails.rateType === 'daily' ? 'Theo ngày' : roomPriceDetails.rateType === 'nightly' ? 'Theo đêm' : roomPriceDetails.rateType }}</strong>
+          <!-- Chi tiết qua đêm (nightly) -->
+          <div *ngIf="roomPriceDetails.rateType === 'nightly'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px;">
+              <span style="font-size: 12px; color: #666;">
+                {{ roomPriceDetails.nights }} đêm × {{ (roomPriceDetails.basePrice || 0) | number }} đ/đêm:
+              </span>
+              <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
+                {{ ((roomPriceDetails.nights || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ
+              </span>
+            </div>
+            
+            <!-- Phụ thu check-in sớm -->
+            <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
+              <span style="font-size: 12px; color: #666;">
+                Phụ thu check-in sớm ({{ roomPriceDetails.earlyCheckinHours }} giờ):
+              </span>
+              <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
+                + {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ
+              </span>
+            </div>
+            
+            <!-- Phụ thu check-out trễ -->
+            <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
+              <span style="font-size: 12px; color: #666;">
+                Phụ thu check-out trễ ({{ roomPriceDetails.lateCheckoutHours }} giờ):
+              </span>
+              <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
+                + {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ
+              </span>
+            </div>
           </div>
         </div>
         

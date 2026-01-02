@@ -7,6 +7,7 @@ import { TranslateService } from '@ngx-translate/core';
 
 interface Booking {
   _id?: string;
+  bookingId?: string; // ID từ Booking collection
   roomId?: string;
   roomNumber?: string;
   hotelId?: string;
@@ -267,17 +268,27 @@ export class CalendarComponent implements OnInit {
         const reason = reasonInput ? reasonInput.value : this.translate.instant('CALENDAR.CANCEL_BOOKING');
         
         this.isLoading = true;
+        // Lấy bookingId từ booking (có thể là bookingId hoặc _id)
+        const bookingId = booking.bookingId || booking._id;
         this.roomsService.cancelBooking(
           booking.roomId!, 
           reason, 
-          booking._id, 
+          bookingId, 
           booking.checkInDate ? new Date(booking.checkInDate) : undefined
         ).subscribe(
           () => {
             this.message.success(this.translate.instant('CALENDAR.CANCEL_SUCCESS'));
             this.isLoading = false;
-            this.loadBookings(); // Reload bookings cho calendar
-            this.loadAllBookings(); // Reload tất cả bookings cho bảng
+            
+            // Đợi một chút để backend cập nhật xong
+            setTimeout(() => {
+              // Reload bookings để cập nhật trạng thái thành 'cancelled'
+              this.loadBookings(); // Reload bookings cho calendar
+              this.loadAllBookings(); // Reload tất cả bookings cho bảng
+            }, 300);
+            
+            // Notify để reload rooms (phòng sẽ chuyển sang vacant và có thể đặt lại)
+            this.roomsService.notifyRoomDataUpdated();
           },
           (error) => {
             this.message.error(error.error?.message || this.translate.instant('CALENDAR.CANCEL_ERROR'));
@@ -403,6 +414,9 @@ export class CalendarComponent implements OnInit {
         const checkInTime = booking.checkInDate ? new Date(booking.checkInDate) : new Date();
         const guestInfo = booking.guestInfo || { name: booking.userName || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED') };
         
+        // Lấy bookingId từ booking (có thể là _id hoặc bookingId)
+        const bookingId = booking.bookingId || booking._id;
+        
         const checkinData = {
           status: 'occupied',
           events: [{
@@ -414,10 +428,10 @@ export class CalendarComponent implements OnInit {
             advancePayment: booking.advancePayment || 0,
             additionalCharges: 0,
             discount: 0,
-            notes: booking.notes || `${this.translate.instant('CALENDAR.CHECKIN')} từ booking ${booking._id}`,
+            notes: booking.notes || `${this.translate.instant('CALENDAR.CHECKIN')} từ booking ${bookingId}`,
             selectedServices: []
           }],
-          bookingId: booking._id // Đánh dấu booking này đã được check-in
+          bookingId: bookingId // Đánh dấu booking này đã được check-in
         };
 
         this.roomsService.checkInRoom(roomId, checkinData).subscribe(
@@ -425,12 +439,12 @@ export class CalendarComponent implements OnInit {
             this.message.success(this.translate.instant('CALENDAR.CHECKIN_SUCCESS'));
             this.isCheckingIn = false;
             
-            // Đợi một chút để backend cập nhật booking status
+            // Đợi một chút để backend cập nhật booking status thành 'checked_in'
             setTimeout(() => {
-              // Reload bookings để cập nhật trạng thái
+              // Reload bookings để cập nhật trạng thái thành 'checked_in'
               this.loadBookings();
               this.loadAllBookings();
-            }, 300);
+            }, 500); // Tăng delay lên 500ms để đảm bảo backend đã cập nhật xong
             
             // Notify để reload rooms
             this.roomsService.notifyRoomDataUpdated();

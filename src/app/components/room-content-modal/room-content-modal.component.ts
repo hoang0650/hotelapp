@@ -1125,7 +1125,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this._hasRoomPriceFromAPI = true; // Đánh dấu đã có giá trị từ API
         
         // Lưu priceDetails để hiển thị chi tiết phụ thu sớm/trễ
-        this.roomPriceDetails = priceResponse.priceDetails || null;
+        // Nếu API không trả về priceDetails, tạo từ thông tin có sẵn
+        if (priceResponse.priceDetails) {
+          this.roomPriceDetails = priceResponse.priceDetails;
+        } else {
+          // Tạo priceDetails từ thông tin có sẵn
+          this.roomPriceDetails = {
+            rateType: finalRateType,
+            totalPrice: roomPrice,
+          };
+        }
         
         console.log(`Room price (${finalRateType}): ${roomPrice}`, {
           rateType: finalRateType,
@@ -1202,7 +1211,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this._roomPriceTotal = roomPrice;
         this._hasRoomPriceFromAPI = true; // Đánh dấu đã tính toán (dù là fallback)
         
-        console.log(`[calculateTotalPrice] Fallback room price calculated: ${roomPrice}`);
+        // roomPriceDetails đã được set trong calculateRoomTotalByRateType
+        console.log(`[calculateTotalPrice] Fallback room price calculated: ${roomPrice}`, this.roomPriceDetails);
         
         // Force change detection để cập nhật UI
         this.cdr.detectChanges();
@@ -3024,23 +3034,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
         }
         
-        // KHÔNG tự động chuyển sang nightly khi chọn hourly
-        // Nếu user chọn hourly, luôn tính theo giờ bình thường
-        // Chỉ kiểm tra maxHoursBeforeDay để chuyển sang daily (nếu cần)
-        if (durationInHours > maxHoursBeforeDay && dailyRate > 0) {
-          // Chuyển sang tính giá ngày nếu vượt quá số giờ tối đa
-          total = dailyRate;
-          priceDetails = {
-            basePrice: dailyRate,
-            rateType: 'daily',
-            autoConverted: true,
-            originalRateType: 'hourly',
-            reason: `Vượt quá ${maxHoursBeforeDay} giờ (${durationInHours} giờ)`
-          };
-        } else {
-          priceDetails.rateType = 'hourly';
-          priceDetails.note = 'Tính theo giờ bình thường, không tính phụ thu sớm/trễ';
-        }
+        // Lưu thêm thông tin để hiển thị chi tiết
+        priceDetails.durationInHours = durationInHours;
+        priceDetails.totalHours = durationInHours + (remainingMinutes / 60);
+        
+        // KHÔNG tự động chuyển sang daily khi chọn hourly - để user xem cách tính
+        // Bỏ logic tự động chuyển sang daily
+        priceDetails.rateType = 'hourly';
+        priceDetails.note = 'Tính theo giờ bình thường, không tính phụ thu sớm/trễ';
         break;
         
       case 'daily':
@@ -3180,7 +3181,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       default:
         // Mặc định tính theo giờ
         total = hourlyRate * durationInHours;
+        priceDetails.rateType = 'hourly';
+        priceDetails.basePrice = hourlyRate;
     }
+    
+    // Lưu priceDetails vào this.roomPriceDetails để hiển thị trong UI
+    this.roomPriceDetails = priceDetails;
     
     return Math.max(0, Math.round(total));
   }

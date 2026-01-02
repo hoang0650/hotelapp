@@ -1,16 +1,16 @@
 <div class="financial-summary-container" *ngIf="canAccess()">
-  <nz-card [nzTitle]="'Báo cáo tổng hợp tài chính' | translate" [nzBordered]="true">
+  <nz-card [nzTitle]="'FINANCIAL_REPORT.TITLE' | translate" [nzBordered]="true">
     <!-- Bộ lọc -->
     <div class="filters-section">
       <nz-row [nzGutter]="16">
         <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Khách sạn</nz-form-label>
+            <nz-form-label>{{ 'FINANCIAL_REPORT.HOTEL' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-select
                 [(ngModel)]="selectedHotelId"
                 (ngModelChange)="onHotelChange()"
-                [nzPlaceHolder]="'Chọn khách sạn' | translate"
+                [nzPlaceHolder]="'FINANCIAL_REPORT.SELECT_HOTEL' | translate"
                 [nzLoading]="loading">
                 <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
               </nz-select>
@@ -19,13 +19,13 @@
         </nz-col>
         <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Khoảng thời gian</nz-form-label>
+            <nz-form-label>{{ 'FINANCIAL_REPORT.TIME_RANGE' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-range-picker
                 [(ngModel)]="dateRange"
                 (ngModelChange)="onDateRangeChange()"
                 [nzFormat]="'dd/MM/yyyy'"
-                [nzPlaceHolder]="['Từ ngày', 'Đến ngày']">
+                [nzPlaceHolder]="['FINANCIAL_REPORT.FROM_DATE' | translate, 'FINANCIAL_REPORT.TO_DATE' | translate]">
               </nz-range-picker>
             </nz-form-control>
           </nz-form-item>
@@ -36,7 +36,7 @@
             <nz-form-control>
               <button nz-button nzType="primary" (click)="loadFinancialSummary()" [nzLoading]="loading" style="margin-right: 8px;">
                 <span nz-icon nzType="reload"></span>
-                {{ 'Tải lại' | translate }}
+                {{ 'FINANCIAL_REPORT.RELOAD' | translate }}
               </button>
               <button nz-button nzType="default" *ngIf="canExportExcel()" (click)="exportToExcel()" [nzLoading]="exporting">
                 <span nz-icon nzType="download"></span>
@@ -59,7 +59,7 @@
                 <span nz-icon nzType="dollar" nzTheme="outline"></span>
               </div>
               <div class="card-info">
-                <div class="card-label">Tổng doanh thu</div>
+                <div class="card-label">{{ 'FINANCIAL_REPORT.TOTAL_REVENUE' | translate }}</div>
                 <div class="card-value">{{ formatCurrency(financialSummary.totalRevenue) }}</div>
               </div>
             </div>
@@ -72,7 +72,7 @@
                 <span nz-icon nzType="shopping-cart" nzTheme="outline"></span>
               </div>
               <div class="card-info">
-                <div class="card-label">Tổng chi phí</div>
+                <div class="card-label">{{ 'FINANCIAL_REPORT.TOTAL_COSTS' | translate }}</div>
                 <div class="card-value">{{ formatCurrency(financialSummary.totalCosts) }}</div>
               </div>
             </div>
@@ -85,7 +85,7 @@
                 <span nz-icon nzType="rise" nzTheme="outline"></span>
               </div>
               <div class="card-info">
-                <div class="card-label">Lợi nhuận</div>
+                <div class="card-label">{{ 'FINANCIAL_REPORT.PROFIT' | translate }}</div>
                 <div class="card-value" [class.negative]="financialSummary.profit < 0">
                   {{ formatCurrency(financialSummary.profit) }}
                 </div>
@@ -100,10 +100,10 @@
                 <span nz-icon nzType="bank" nzTheme="outline"></span>
               </div>
               <div class="card-info">
-                <div class="card-label">Vốn đầu tư</div>
+                <div class="card-label">{{ 'FINANCIAL_REPORT.INITIAL_INVESTMENT' | translate }}</div>
                 <div class="card-value">
                   {{ formatCurrency(financialSummary.initialInvestment) }}
-                  <button nz-button nzType="link" nzSize="small" (click)="updateInitialInvestment()" title="Cập nhật vốn đầu tư">
+                  <button nz-button nzType="link" nzSize="small" (click)="updateInitialInvestment()" [title]="'FINANCIAL_REPORT.UPDATE_INVESTMENT' | translate">
                     <span nz-icon nzType="edit"></span>
                   </button>
                 </div>
@@ -114,73 +114,73 @@
         </nz-row>
 
       <!-- Cấu hình tài chính -->
-      <nz-card class="config-card" [nzTitle]="'Cấu hình tài chính' | translate" *ngIf="financialSummary.financialConfig">
+      <nz-card class="config-card" [nzTitle]="'FINANCIAL_REPORT.FINANCIAL_CONFIG' | translate" *ngIf="financialSummary.financialConfig">
         <div class="config-content">
           <nz-row [nzGutter]="16">
             <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
               <div class="config-item">
-                <span class="label">Khấu hao:</span>
-                <span class="value">{{ financialSummary.financialConfig.depreciationRate }}% /năm</span>
+                <span class="label">{{ 'FINANCIAL_REPORT.DEPRECIATION' | translate }}:</span>
+                <span class="value">{{ financialSummary.financialConfig.depreciationRate }}% {{ 'FINANCIAL_REPORT.PER_YEAR' | translate }}</span>
               </div>
             </nz-col>
             <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
               <div class="config-item">
-                <span class="label">% Vốn vay:</span>
+                <span class="label">{{ 'FINANCIAL_REPORT.LOAN_PERCENTAGE' | translate }}:</span>
                 <span class="value">{{ financialSummary.financialConfig.loanPercentage }}%</span>
               </div>
             </nz-col>
             <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
               <div class="config-item">
-                <span class="label">Lãi suất vay:</span>
-                <span class="value">{{ financialSummary.financialConfig.interestRate }}% /năm</span>
+                <span class="label">{{ 'FINANCIAL_REPORT.INTEREST_RATE' | translate }}:</span>
+                <span class="value">{{ financialSummary.financialConfig.interestRate }}% {{ 'FINANCIAL_REPORT.PER_YEAR' | translate }}</span>
               </div>
             </nz-col>
             <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
               <div class="config-item">
-                <span class="label">Thuế suất:</span>
+                <span class="label">{{ 'FINANCIAL_REPORT.TAX_RATE' | translate }}:</span>
                 <span class="value">{{ financialSummary.financialConfig.taxRate }}%</span>
               </div>
             </nz-col>
             <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
               <div class="config-item">
-                <span class="label">WACC:</span>
+                <span class="label">{{ 'FINANCIAL_REPORT.WACC' | translate }}:</span>
                 <span class="value">{{ financialSummary.financialConfig.wacc }}%</span>
               </div>
             </nz-col>
             <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
               <div class="config-item">
-                <span class="label">Số năm projection:</span>
-                <span class="value">{{ financialSummary.financialConfig.projectionYears }} năm</span>
+                <span class="label">{{ 'FINANCIAL_REPORT.PROJECTION_YEARS' | translate }}:</span>
+                <span class="value">{{ financialSummary.financialConfig.projectionYears }} {{ 'FINANCIAL_REPORT.YEARS' | translate }}</span>
               </div>
             </nz-col>
           </nz-row>
             <div class="config-actions" style="margin-top: 16px;">
               <button nz-button nzType="default" (click)="openConfigModal()">
                 <span nz-icon nzType="setting"></span>
-                Cập nhật cấu hình
+                {{ 'FINANCIAL_REPORT.UPDATE_CONFIG' | translate }}
               </button>
             </div>
         </div>
       </nz-card>
 
       <!-- Thông tin tài chính chi tiết -->
-      <nz-card class="financial-details-card" [nzTitle]="'Thông tin tài chính chi tiết' | translate">
+      <nz-card class="financial-details-card" [nzTitle]="'FINANCIAL_REPORT.DETAILED_FINANCIAL_INFO' | translate">
         <nz-row [nzGutter]="16">
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.depreciation !== undefined">
             <div class="breakdown-item">
-              <span class="label">Khấu hao:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.DEPRECIATION_AMOUNT' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.depreciation) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.interest !== undefined">
             <div class="breakdown-item">
-              <span class="label">Lãi vay:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.INTEREST_AMOUNT' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.interest) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.profitBeforeTax !== undefined">
             <div class="breakdown-item">
-              <span class="label">Lợi nhuận trước thuế:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.PROFIT_BEFORE_TAX' | translate }}</span>
               <span class="value" [class.negative]="financialSummary.profitBeforeTax < 0">
                 {{ formatCurrency(financialSummary.profitBeforeTax) }}
               </span>
@@ -188,13 +188,13 @@
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.tax !== undefined">
             <div class="breakdown-item">
-              <span class="label">Thuế:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.TAX_AMOUNT' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.tax) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.profitAfterTax !== undefined">
             <div class="breakdown-item highlight-item">
-              <span class="label">Lợi nhuận sau thuế:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.PROFIT_AFTER_TAX' | translate }}</span>
               <span class="value" [class.negative]="financialSummary.profitAfterTax < 0">
                 {{ formatCurrency(financialSummary.profitAfterTax) }}
               </span>
@@ -204,7 +204,7 @@
       </nz-card>
 
       <!-- Đánh giá hiệu quả -->
-      <nz-card class="evaluation-card" [nzTitle]="'Đánh giá hiệu quả' | translate" *ngIf="financialSummary.npv !== undefined || financialSummary.irr !== undefined">
+      <nz-card class="evaluation-card" [nzTitle]="'FINANCIAL_REPORT.EFFICIENCY_EVALUATION' | translate" *ngIf="financialSummary.npv !== undefined || financialSummary.irr !== undefined">
         <nz-row [nzGutter]="16">
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" *ngIf="financialSummary.npv !== undefined">
             <div class="evaluation-item npv-item">
@@ -212,15 +212,15 @@
                 <span nz-icon nzType="line-chart" nzTheme="outline"></span>
               </div>
               <div class="evaluation-info">
-                <div class="evaluation-label">NPV (Net Present Value)</div>
+                <div class="evaluation-label">{{ 'FINANCIAL_REPORT.NPV' | translate }}</div>
                 <div class="evaluation-value" [class.positive]="financialSummary.npv > 0" [class.negative]="financialSummary.npv < 0">
-                  {{ formatNumber(financialSummary.npv) }} triệu đồng
+                  {{ formatNumber(financialSummary.npv) }} {{ 'FINANCIAL_REPORT.MILLION_VND' | translate }}
                 </div>
                 <div class="evaluation-note" *ngIf="financialSummary.npv > 0">
-                  Dự án có giá trị hiện tại ròng dương, đáng đầu tư
+                  {{ 'FINANCIAL_REPORT.NPV_POSITIVE_NOTE' | translate }}
                 </div>
                 <div class="evaluation-note negative" *ngIf="financialSummary.npv < 0">
-                  Dự án có giá trị hiện tại ròng âm, cần xem xét lại
+                  {{ 'FINANCIAL_REPORT.NPV_NEGATIVE_NOTE' | translate }}
                 </div>
               </div>
             </div>
@@ -231,15 +231,15 @@
                 <span nz-icon nzType="rise" nzTheme="outline"></span>
               </div>
               <div class="evaluation-info">
-                <div class="evaluation-label">IRR (Internal Rate of Return)</div>
+                <div class="evaluation-label">{{ 'FINANCIAL_REPORT.IRR' | translate }}</div>
                 <div class="evaluation-value" [class.positive]="financialSummary.irr > 9" [class.negative]="financialSummary.irr < 9">
                   {{ formatNumber(financialSummary.irr) }}%
                 </div>
                 <div class="evaluation-note" *ngIf="financialSummary.irr > 9">
-                  Tỷ suất sinh lời nội bộ cao hơn WACC (9%), dự án khả thi
+                  {{ 'FINANCIAL_REPORT.IRR_POSITIVE_NOTE' | translate }}
                 </div>
                 <div class="evaluation-note negative" *ngIf="financialSummary.irr < 9">
-                  Tỷ suất sinh lời nội bộ thấp hơn WACC (9%), cần xem xét lại
+                  {{ 'FINANCIAL_REPORT.IRR_NEGATIVE_NOTE' | translate }}
                 </div>
               </div>
             </div>
@@ -248,83 +248,83 @@
       </nz-card>
 
       <!-- Thời gian hoàn vốn -->
-      <nz-card class="payback-card" [nzTitle]="'Thời gian hoàn vốn' | translate">
+      <nz-card class="payback-card" [nzTitle]="'FINANCIAL_REPORT.PAYBACK_PERIOD' | translate">
         <div class="payback-content">
           <div class="payback-info">
             <div class="payback-item">
-              <span class="label">Lợi nhuận trung bình/tháng:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.AVG_MONTHLY_PROFIT' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.monthlyProfit) }}</span>
             </div>
             <div class="payback-item">
-              <span class="label">Thời gian hoàn vốn:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.PAYBACK_TIME' | translate }}</span>
               <span class="value highlight">
-                {{ financialSummary.paybackPeriod > 0 ? formatNumber(financialSummary.paybackPeriod) + ' tháng' : 'Chưa xác định' }}
+                {{ financialSummary.paybackPeriod > 0 ? formatNumber(financialSummary.paybackPeriod) + ' ' + ('FINANCIAL_REPORT.MONTHS' | translate) : ('FINANCIAL_REPORT.UNDETERMINED' | translate) }}
                 <span *ngIf="financialSummary.paybackPeriod > 0">
-                  ({{ formatNumber(financialSummary.paybackPeriodDays) }} ngày)
+                  ({{ formatNumber(financialSummary.paybackPeriodDays) }} {{ 'FINANCIAL_REPORT.DAYS' | translate }})
                 </span>
               </span>
             </div>
             <div class="payback-note" *ngIf="financialSummary.monthlyProfit <= 0">
-              <nz-alert nzType="warning" [nzMessage]="'Lợi nhuận âm hoặc bằng 0, không thể tính thời gian hoàn vốn' | translate" [nzShowIcon]="true"></nz-alert>
+              <nz-alert nzType="warning" [nzMessage]="'FINANCIAL_REPORT.NEGATIVE_PROFIT_WARNING' | translate" [nzShowIcon]="true"></nz-alert>
             </div>
           </div>
         </div>
       </nz-card>
 
       <!-- Chi tiết doanh thu -->
-      <nz-card class="breakdown-card" [nzTitle]="'Chi tiết doanh thu' | translate">
+      <nz-card class="breakdown-card" [nzTitle]="'FINANCIAL_REPORT.REVENUE_BREAKDOWN' | translate">
         <nz-row [nzGutter]="16">
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Doanh thu phòng:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.ROOM_REVENUE' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.roomRevenue) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.roomRevenueDaily">
             <div class="breakdown-item">
-              <span class="label">Doanh thu phòng/ngày:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.ROOM_REVENUE_DAILY' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.roomRevenueDaily) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.roomRevenueMonthly">
             <div class="breakdown-item">
-              <span class="label">Doanh thu phòng/tháng:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.ROOM_REVENUE_MONTHLY' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.roomRevenueMonthly) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.roomRevenueYearly">
             <div class="breakdown-item">
-              <span class="label">Doanh thu phòng/năm:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.ROOM_REVENUE_YEARLY' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.roomRevenueYearly) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Doanh thu dịch vụ:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.SERVICE_REVENUE' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.serviceRevenue) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.cafeRevenue">
             <div class="breakdown-item">
-              <span class="label">Doanh thu café:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.CAFE_REVENUE' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.cafeRevenue) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.revenue.otherServiceRevenue">
             <div class="breakdown-item">
-              <span class="label">Doanh thu dịch vụ khác:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.OTHER_SERVICE_REVENUE' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.otherServiceRevenue) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Doanh thu từ phiếu thu:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.RECEIPT_REVENUE' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.receiptRevenue ?? 0) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Doanh thu khác:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.OTHER_REVENUE' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.revenue.otherRevenue) }}</span>
             </div>
           </nz-col>
@@ -332,65 +332,65 @@
       </nz-card>
 
       <!-- Chi tiết chi phí -->
-      <nz-card class="breakdown-card" [nzTitle]="'Chi tiết chi phí' | translate">
+      <nz-card class="breakdown-card" [nzTitle]="'FINANCIAL_REPORT.COST_BREAKDOWN' | translate">
         <nz-row [nzGutter]="16">
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Tổng chi phí:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.TOTAL_COST' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.expenses) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Tổng phiếu chi:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.TOTAL_RECEIPT_EXPENSES' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.receiptExpenses || financialSummary.breakdown.costs.expenses || 0) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Chi phí lương:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.SALARY_COST' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.salary) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Chi bán hàng, quảng cáo:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.MARKETING_COST' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.marketing) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Chi phí bảo trì:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.MAINTENANCE_COST' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.maintenance) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.costs.training">
             <div class="breakdown-item">
-              <span class="label">Chi phí đào tạo:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.TRAINING_COST' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.training) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" *ngIf="financialSummary.breakdown.costs.serviceCost">
             <div class="breakdown-item">
-              <span class="label">Chi phí giá vốn (Dịch vụ):</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.SERVICE_COST' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.serviceCost) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Chi phí hoạt động KS (điện nước, khăn):</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.UTILITIES_COST' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.utilities) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Vật tư:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.SUPPLIES_COST' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.supplies) }}</span>
             </div>
           </nz-col>
           <nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
             <div class="breakdown-item">
-              <span class="label">Khác:</span>
+              <span class="label">{{ 'FINANCIAL_REPORT.OTHER_COST' | translate }}</span>
               <span class="value">{{ formatCurrency(financialSummary.breakdown.costs.other) }}</span>
             </div>
           </nz-col>
@@ -405,29 +405,29 @@
 
     <!-- Empty state -->
     <div *ngIf="!financialSummary && !loading" class="empty-container">
-      <nz-empty [nzNotFoundContent]="'Chưa có dữ liệu' | translate"></nz-empty>
+      <nz-empty [nzNotFoundContent]="'FINANCIAL_REPORT.NO_DATA' | translate"></nz-empty>
     </div>
   </nz-card>
 </div>
 
 <div *ngIf="!canAccess()" class="unauthorized-container">
-  <nz-result nzStatus="403" [nzTitle]="'Không có quyền truy cập' | translate" [nzSubTitle]="'Bạn không có quyền xem báo cáo này' | translate"></nz-result>
+  <nz-result nzStatus="403" [nzTitle]="'FINANCIAL_REPORT.NO_ACCESS' | translate" [nzSubTitle]="'FINANCIAL_REPORT.NO_ACCESS_DESC' | translate"></nz-result>
 </div>
 
 <!-- Modal cấu hình tài chính -->
 <nz-modal
   [(nzVisible)]="configModalVisible"
-  nzTitle="Cấu hình tài chính"
+  [nzTitle]="'FINANCIAL_REPORT.FINANCIAL_CONFIG' | translate"
   (nzOnCancel)="closeConfigModal()"
   (nzOnOk)="updateFinancialConfig()"
-  [nzOkText]="'Lưu' | translate"
-  [nzCancelText]="'Hủy' | translate"
+  [nzOkText]="'FINANCIAL_REPORT.SAVE' | translate"
+  [nzCancelText]="'FINANCIAL_REPORT.CANCEL' | translate"
   [nzWidth]="600">
   <div *nzModalContent>
     <form [formGroup]="configForm">
       <nz-form-item>
-        <nz-form-label [nzSpan]="8">Khấu hao (%/năm)</nz-form-label>
-        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % khấu hao từ 0 đến 100'">
+        <nz-form-label [nzSpan]="8">{{ 'FINANCIAL_REPORT.DEPRECIATION_RATE' | translate }}</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'FINANCIAL_REPORT.ENTER_DEPRECIATION' | translate">
           <nz-input-number
             formControlName="depreciationRate"
             [nzMin]="0"
@@ -441,8 +441,8 @@
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="8">% Vốn vay</nz-form-label>
-        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % vốn vay từ 0 đến 100'">
+        <nz-form-label [nzSpan]="8">{{ 'FINANCIAL_REPORT.LOAN_PERCENTAGE' | translate }}</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'FINANCIAL_REPORT.ENTER_LOAN_PERCENTAGE' | translate">
           <nz-input-number
             formControlName="loanPercentage"
             [nzMin]="0"
@@ -456,8 +456,8 @@
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="8">Lãi suất vay (%/năm)</nz-form-label>
-        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % lãi suất từ 0 đến 100'">
+        <nz-form-label [nzSpan]="8">{{ 'FINANCIAL_REPORT.INTEREST_RATE' | translate }}</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'FINANCIAL_REPORT.ENTER_INTEREST_RATE' | translate">
           <nz-input-number
             formControlName="interestRate"
             [nzMin]="0"
@@ -471,8 +471,8 @@
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="8">Thuế suất (%)</nz-form-label>
-        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % thuế suất từ 0 đến 100'">
+        <nz-form-label [nzSpan]="8">{{ 'FINANCIAL_REPORT.TAX_RATE' | translate }}</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'FINANCIAL_REPORT.ENTER_TAX_RATE' | translate">
           <nz-input-number
             formControlName="taxRate"
             [nzMin]="0"
@@ -486,8 +486,8 @@
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="8">WACC (%)</nz-form-label>
-        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập % WACC từ 0 đến 100'">
+        <nz-form-label [nzSpan]="8">{{ 'FINANCIAL_REPORT.WACC' | translate }}</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'FINANCIAL_REPORT.ENTER_WACC' | translate">
           <nz-input-number
             formControlName="wacc"
             [nzMin]="0"
@@ -501,8 +501,8 @@
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label [nzSpan]="8">Số năm projection</nz-form-label>
-        <nz-form-control [nzSpan]="16" [nzErrorTip]="'Vui lòng nhập số năm từ 1 đến 50'">
+        <nz-form-label [nzSpan]="8">{{ 'FINANCIAL_REPORT.PROJECTION_YEARS' | translate }}</nz-form-label>
+        <nz-form-control [nzSpan]="16" [nzErrorTip]="'FINANCIAL_REPORT.ENTER_PROJECTION_YEARS' | translate">
           <nz-input-number
             formControlName="projectionYears"
             [nzMin]="1"
@@ -515,4 +515,3 @@
     </form>
   </div>
 </nz-modal>
-
