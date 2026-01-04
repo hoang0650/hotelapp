@@ -74,6 +74,12 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   currentFilterType = 'checkout'; // Giá trị mặc định là checkout
   paymentStatusFilter: 'all' | 'paid' | 'pending' | 'unpaid' = 'all'; // Bộ lọc trạng thái thanh toán
   
+  // Phân trang
+  currentPage: number = 1;
+  pageSize: number = 10; // Hiển thị 10 phòng mỗi trang
+  totalItems: number = 0;
+  totalPages: number = 0;
+  
   // Subscription để tự động reload khi có cập nhật dữ liệu phòng
   private roomDataUpdateSubscription?: Subscription;
   
@@ -2594,13 +2600,16 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
 
   onFilterChange(filterType: string): void {
     this.currentFilterType = filterType;
-    this.loadHistory(filterType);
+    // Reset về trang 1 khi thay đổi filter
+    this.currentPage = 1;
+    this.loadHistory(filterType, 1);
   }
 
   onPaymentStatusFilterChange(status: 'all' | 'paid' | 'pending' | 'unpaid'): void {
     this.paymentStatusFilter = status;
-    // Không cần reload, chỉ cần filter lại dữ liệu hiện tại
-    this.calculateTotalPayment();
+    // Reset về trang 1 khi thay đổi filter
+    this.currentPage = 1;
+    this.loadHistory(this.currentFilterType, 1);
   }
 
   // Getter để đếm số lượng đã thanh toán
@@ -2655,7 +2664,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     }).length;
   }
   
-  loadHistory(filterType: string = 'all'): void {
+  loadHistory(filterType: string = 'all', page: number = 1): void {
     if (!this.hotelId) return;
     
     // Đảm bảo hotelId là string, không phải object
@@ -2667,18 +2676,53 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     }
     
     this.settingValue.loading = true;
+    this.currentPage = page;
     
-    this.roomService.getRoomHistory(hotelIdStr, filterType)
+    // Lấy tất cả các phòng có trạng thái thanh toán (paid, pending, unpaid)
+    // Không giới hạn 20, sử dụng pageSize lớn hơn để lấy nhiều dữ liệu hơn
+    this.roomService.getRoomHistory(hotelIdStr, filterType, page, this.pageSize)
       .subscribe({
         next: (response: any) => {
           if (response && response.history) {
+            // Lưu tất cả dữ liệu vào listOfData (bao gồm cả paid, pending, unpaid)
+            // Không filter ở đây, để paidData getter xử lý
             this.listOfData = response.history;
+            
+            // Cập nhật pagination info từ response
+            // Nếu có totalItems từ backend, dùng nó; nếu không, tính từ dữ liệu hiện tại
+            if (response.totalItems !== undefined) {
+              this.totalItems = response.totalItems;
+            } else {
+              // Nếu không có totalItems từ backend, tính từ paidData
+              // Lưu ý: totalItems sẽ được cập nhật sau khi paidData được tính
+              this.totalItems = response.history.length;
+            }
+            
+            this.totalPages = response.totalPages || Math.ceil(this.totalItems / this.pageSize);
+            
             // Tính lại tổng tiền sau khi cập nhật dữ liệu
             // Sử dụng setTimeout để đảm bảo Angular detect change và cập nhật UI
             setTimeout(() => {
               this.calculateTotalPayment();
+              // Cập nhật totalItems dựa trên paidData sau khi filter
+              // Nếu đang filter theo payment status, cần tính lại totalItems
+              if (this.paymentStatusFilter !== 'all') {
+                // totalItems sẽ được tính từ paidData length
+                // Nhưng vì đây là server-side pagination, ta cần giữ nguyên totalItems từ backend
+                // Chỉ cập nhật nếu không có từ backend
+                if (response.totalItems === undefined) {
+                  this.totalItems = this.paidData.length;
+                  this.totalPages = Math.ceil(this.totalItems / this.pageSize);
+                }
+              } else {
+                // Nếu không filter, dùng totalItems từ backend
+                if (response.totalItems !== undefined) {
+                  this.totalItems = response.totalItems;
+                  this.totalPages = response.totalPages || Math.ceil(this.totalItems / this.pageSize);
+                }
+              }
               // Log để debug
-              console.log('Reloaded data - paidData.length:', this.paidData.length, 'totalPayment:', this.totalPayment);
+              console.log('Reloaded data - paidData.length:', this.paidData.length, 'totalPayment:', this.totalPayment, 'page:', page, 'totalItems:', this.totalItems, 'totalPages:', this.totalPages);
             }, 0);
           }
           this.settingValue.loading = false;
@@ -2691,5 +2735,15 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           this.calculateTotalPayment();
         }
       });
+  }
+  
+  onPageChange(page: number): void {
+    this.loadHistory(this.currentFilterType, page);
+  }
+  
+  onPageSizeChange(pageSize: number): void {
+    this.pageSize = pageSize;
+    this.currentPage = 1;
+    this.loadHistory(this.currentFilterType, 1);
   }
 }

@@ -220,7 +220,7 @@ export class RoomsService {
   }
 
   // Lịch sử phòng
-  getRoomHistory(hotelId?: string, filterType?: string, page: number = 1, limit: number = 20): Observable<{
+  getRoomHistory(hotelId?: string, filterType?: string, page: number = 1, limit: number = 10): Observable<{
     history: BookingHistory[],
     totalPages: number,
     currentPage: number,
