@@ -1,0 +1,154 @@
+<div class="e-invoice-container">
+  <div class="e-invoice-header">
+    <h1>Chọn gói hóa đơn điện tử</h1>
+    <p class="subtitle">Có thể chọn nhiều gói cùng lúc để phù hợp với nhu cầu</p>
+  </div>
+
+  <div class="e-invoice-content">
+    <!-- Pricing Table -->
+    <div class="pricing-table-wrapper">
+      <nz-table 
+        [nzData]="packages" 
+        [nzLoading]="loading"
+        [nzShowPagination]="false"
+        [nzBordered]="true"
+        class="e-invoice-table">
+        <thead>
+          <tr>
+            <th>Gói</th>
+            <th>Giá</th>
+            <th>Số lượng</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let pkg of packages" [class.selected-row]="pkg.selected">
+            <td>
+              <div class="package-info">
+                <div class="package-name">{{ pkg.name }}</div>
+                <div class="package-count">{{ pkg.invoiceCount | number }} hóa đơn</div>
+              </div>
+            </td>
+            <td>
+              <div class="price-info">
+                <div class="package-price">{{ formatPrice(pkg.packagePrice) }} ₫/gói</div>
+                <div class="price-per-invoice">{{ formatPrice(pkg.pricePerInvoice) }} ₫ /hóa đơn</div>
+              </div>
+            </td>
+            <td>
+              <div class="quantity-control">
+                <button 
+                  *ngIf="!pkg.selected"
+                  nz-button 
+                  nzType="primary"
+                  nzSize="small"
+                  (click)="onPackageSelect(pkg)"
+                  class="select-button">
+                  Chọn
+                </button>
+                <div *ngIf="pkg.selected" class="selected-control">
+                  <nz-input-number 
+                    [(ngModel)]="pkg.quantity"
+                    [nzMin]="1"
+                    [nzMax]="100"
+                    [nzSize]="'small'"
+                    (ngModelChange)="onQuantityChange(pkg, $event)"
+                    style="width: 100px; margin-right: 8px;">
+                  </nz-input-number>
+                  <button 
+                    nz-button 
+                    nzType="default"
+                    nzSize="small"
+                    nzDanger
+                    (click)="onPackageDeselect(pkg)"
+                    class="deselect-button">
+                    <i nz-icon nzType="close" nzTheme="outline"></i>
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </div>
+
+    <!-- Summary Section -->
+    <div class="summary-section">
+      <div class="summary-content">
+        <div *ngIf="selectedPackages.length === 0" class="no-selection">
+          <span>Chưa chọn gói nào</span>
+          <div class="total-amount zero">0 ₫</div>
+        </div>
+        <div *ngIf="selectedPackages.length > 0" class="has-selection">
+          <div class="selected-packages-info">
+            <div class="selected-count">Đã chọn {{ selectedPackages.length }} gói</div>
+            <div class="selected-details">
+              <div *ngFor="let pkg of selectedPackages" class="selected-item">
+                <span>{{ pkg.name }} x{{ pkg.quantity }}</span>
+                <span class="item-total">{{ formatPrice(pkg.packagePrice * pkg.quantity) }} ₫</span>
+              </div>
+            </div>
+          </div>
+          <div class="total-amount">
+            <span class="total-label">Tổng cộng:</span>
+            <span class="total-value">{{ formatPrice(totalAmount) }} ₫</span>
+          </div>
+        </div>
+      </div>
+      <button 
+        nz-button 
+        nzType="primary" 
+        nzSize="large"
+        [nzLoading]="loading"
+        [disabled]="selectedPackages.length === 0"
+        (click)="onSubmit()"
+        class="submit-button">
+        <i nz-icon nzType="check-circle" nzTheme="outline"></i>
+        Đăng ký
+      </button>
+    </div>
+
+    <!-- Important Notice -->
+    <div class="important-notice">
+      <div class="notice-header">
+        <i nz-icon nzType="info-circle" nzTheme="fill" class="notice-icon"></i>
+        <span class="notice-title">Quan trọng</span>
+      </div>
+      <div class="notice-content">
+        <p>
+          SePay chỉ hỗ trợ xuất hóa đơn điện tử với chữ ký số tập trung (HSM) tại MAT BAO INVOICE.
+        </p>
+        <a 
+          href="#" 
+          (click)="onDigitalSignatureLinkClick(); $event.preventDefault()"
+          class="digital-signature-link">
+          <i nz-icon nzType="link" nzTheme="outline"></i>
+          Bảng giá Chữ ký số Tập trung tại MAT BAO INVOICE
+        </a>
+      </div>
+    </div>
+
+    <!-- Digital Signature Pricing -->
+    <div class="digital-signature-section">
+      <h2>Bảng giá Chữ ký số Tập trung</h2>
+      <div class="signature-pricing-table">
+        <div class="signature-pricing-header">
+          <div class="signature-header-cell">1 năm</div>
+          <div class="signature-header-cell">2 năm</div>
+          <div class="signature-header-cell">3 năm</div>
+        </div>
+        <div class="signature-pricing-row">
+          <div class="signature-label">Phí kích hoạt/gia hạn</div>
+          <div class="signature-price-cell">{{ formatPrice(digitalSignaturePricing[0].price) }} ₫</div>
+          <div class="signature-price-cell">{{ formatPrice(digitalSignaturePricing[1].price) }} ₫</div>
+          <div class="signature-price-cell">{{ formatPrice(digitalSignaturePricing[2].price) }} ₫</div>
+        </div>
+      </div>
+      <div class="signature-disclaimer">
+        <p>
+          * Đây là dịch vụ của MAT BAO INVOICE, không phải của SePay. Chi phí chữ ký số tập trung sẽ không bao gồm trong đơn đặt hàng.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+

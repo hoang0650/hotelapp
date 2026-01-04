@@ -87,7 +87,7 @@
     </nz-select>
     
     <!-- Nút tải lại dữ liệu -->
-    <button nz-button nzType="default" (click)="loadHistory(currentFilterType)" [nzLoading]="settingValue.loading" [nz-tooltip]="'TABLE.RELOAD_DATA' | translate" [attr.aria-label]="'TABLE.RELOAD_DATA' | translate" class="btn-icon-only">
+    <button nz-button nzType="default" (click)="reloadData()" [nzLoading]="settingValue.loading" [nz-tooltip]="'TABLE.RELOAD_DATA' | translate" [attr.aria-label]="'TABLE.RELOAD_DATA' | translate" class="btn-icon-only">
       <i nz-icon nzType="reload"></i>
     </button>
   </div>
@@ -122,7 +122,7 @@
 
 <nz-table
   #basicTable
-  [nzData]="paidData | filter:searchText:['roomNumber', 'customerName']"
+  [nzData]="paginatedPaidData | filter:searchText:['roomNumber', 'customerName']"
   [nzBordered]="settingValue.bordered"
   [nzLoading]="settingValue.loading"
   [nzPaginationType]="settingValue.paginationType"

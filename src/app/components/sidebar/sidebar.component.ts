@@ -166,6 +166,24 @@ export class SidebarComponent implements OnInit, OnDestroy {
         icon: 'credit-card',
         route: '/admin/visa-payment',
         feature: 'visa_payment'
+      },
+      {
+        title: this.translate.instant('SIDEBAR.E_INVOICE'),
+        icon: 'file-text',
+        children: [
+          {
+            title: this.translate.instant('SIDEBAR.E_INVOICE_REGISTRATION'),
+            route: '/e-invoice-registration'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.E_INVOICE_MANAGEMENT'),
+            route: '/admin/e-invoice-management'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.E_INVOICE_TEMPLATE'),
+            route: '/admin/e-invoice-template'
+          }
+        ]
       }
     ];
 

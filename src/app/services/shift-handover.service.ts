@@ -181,6 +181,57 @@ export class ShiftHandoverService {
     return this.http.get<RevenueResponse>(`${this.apiUrl}/revenue`, { params: httpParams });
   }
 
+  /**
+   * Lấy doanh thu theo period (ngày/tuần/tháng)
+   * GET /shift-handover/revenue/period
+   * Tính từ Lịch sử phòng trong ca (roomHistory) và expenses trong shift handover
+   * Không tính giao tiền quản lý (managerHandoverAmount)
+   */
+  getRevenueByPeriod(params: {
+    hotelId: string;
+    period?: 'day' | 'week' | 'month';
+    startDate?: string;
+    endDate?: string;
+  }): Observable<{
+    message: string;
+    labels: string[];
+    revenueData: number[];
+    paymentData: number[];
+    expenseData: number[];
+    totalRevenue: number;
+    totalPayment: number;
+    totalExpense: number;
+    period: string;
+    startDate: Date;
+    endDate: Date;
+  }> {
+    let httpParams = new HttpParams().set('hotelId', params.hotelId);
+    
+    if (params.period) {
+      httpParams = httpParams.set('period', params.period);
+    }
+    if (params.startDate) {
+      httpParams = httpParams.set('startDate', params.startDate);
+    }
+    if (params.endDate) {
+      httpParams = httpParams.set('endDate', params.endDate);
+    }
+    
+    return this.http.get<{
+      message: string;
+      labels: string[];
+      revenueData: number[];
+      paymentData: number[];
+      expenseData: number[];
+      totalRevenue: number;
+      totalPayment: number;
+      totalExpense: number;
+      period: string;
+      startDate: Date;
+      endDate: Date;
+    }>(`${this.apiUrl}/revenue/period`, { params: httpParams });
+  }
+
   // ============ LẤY SỐ TIỀN CA TRƯỚC ============
 
   /**

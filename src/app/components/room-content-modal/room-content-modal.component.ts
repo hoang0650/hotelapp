@@ -261,6 +261,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestInfo: this.fb.group({
         name: ['Khách lẻ'], // Mặc định là "Khách lẻ", không bắt buộc
         idNumber: [''],
+        tax_code: [''], // Mã số thuế (cho công ty)
         phone: ['', [Validators.pattern('^[0-9]{10}$')]],
         email: ['', [Validators.email]],
         address: [''],
@@ -463,6 +464,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       checkInGuestInfoFormGroup.patchValue({
         name: guestInfo.name || 'Khách lẻ',
         idNumber: guestInfo.idNumber || '',
+        tax_code: guestInfo.tax_code || '',
         phone: guestInfo.phone || '',
         email: guestInfo.email || '',
         address: guestInfo.address || ''
@@ -496,6 +498,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       checkOutGuestInfoFormGroup.patchValue({
         name: guestInfo.name || 'Khách lẻ',
         idNumber: guestInfo.idNumber || '',
+        tax_code: guestInfo.tax_code || '',
         phone: guestInfo.phone || '',
         email: guestInfo.email || '',
         address: guestInfo.address || ''
@@ -899,6 +902,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       const updatedGuestInfo = {
         name: guestInfo.name || 'Khách lẻ',
         idNumber: guestInfo.idNumber || '',
+        tax_code: guestInfo.tax_code || '',
         phone: guestInfo.phone || '',
         email: guestInfo.email || '',
         address: guestInfo.address || '',
@@ -984,6 +988,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       const updatedGuestInfo = {
         name: guestInfo.name || 'Khách lẻ',
         idNumber: guestInfo.idNumber || '',
+        tax_code: guestInfo.tax_code || '',
         phone: guestInfo.phone || '',
         email: guestInfo.email || '',
         address: guestInfo.address || '',
@@ -1302,6 +1307,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const guestInfo = {
       name: guestInfoForm.name || 'Khách lẻ',
       idNumber: guestInfoForm.idNumber || '',
+      tax_code: guestInfoForm.tax_code || '',
       phone: guestInfoForm.phone || '',
       email: guestInfoForm.email || '',
       address: guestInfoForm.address || '',
@@ -1793,6 +1799,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const updatedGuestInfo = {
       name: formGuestInfoValue.name || customerName || 'Khách lẻ',
       idNumber: formGuestInfoValue.idNumber || '',
+      tax_code: formGuestInfoValue.tax_code || '',
       phone: formGuestInfoValue.phone || customerPhone || '',
       email: formGuestInfoValue.email || customerEmail || '',
       address: formGuestInfoValue.address || '',
@@ -3444,6 +3451,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestInfo: this.fb.group({
         name: ['Khách lẻ'],
         idNumber: [''],
+        tax_code: [''], // Mã số thuế (cho công ty)
         phone: ['', [Validators.pattern('^[0-9]{10}$')]],
         email: ['', [Validators.email]],
         address: [''],
@@ -3658,6 +3666,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const updatedGuestInfo = {
       name: guestInfo.name || 'Khách lẻ',
       idNumber: guestInfo.idNumber || '',
+      tax_code: guestInfo.tax_code || '',
       phone: guestInfo.phone || '',
       email: guestInfo.email || '',
       address: guestInfo.address || '',
@@ -3749,6 +3758,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               updatedGuestInfoFormGroup.patchValue({
                 name: updatedGuestInfo.name,
                 idNumber: updatedGuestInfo.idNumber,
+                tax_code: updatedGuestInfo.tax_code || '',
                 phone: updatedGuestInfo.phone,
                 email: updatedGuestInfo.email,
                 address: updatedGuestInfo.address
@@ -3842,6 +3852,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                         reloadedGuestInfoFormGroup.patchValue({
                           name: reloadedGuestInfo.name || 'Khách lẻ',
                           idNumber: reloadedGuestInfo.idNumber || '',
+                          tax_code: reloadedGuestInfo.tax_code || '',
                           phone: reloadedGuestInfo.phone || '',
                           email: reloadedGuestInfo.email || '',
                           address: reloadedGuestInfo.address || ''

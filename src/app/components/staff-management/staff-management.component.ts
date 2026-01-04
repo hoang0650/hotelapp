@@ -103,6 +103,20 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       { value: 'other', label: this.translate.instant('STAFF_MANAGEMENT.GENDERS.OTHER') }
     ];
     
+    this.positions = [
+      { value: 'manager', label: this.translate.instant('STAFF_MANAGEMENT.POSITIONS.MANAGER') || 'Quản lý' },
+      { value: 'receptionist', label: this.translate.instant('STAFF_MANAGEMENT.POSITIONS.RECEPTIONIST') || 'Lễ tân' },
+      { value: 'housekeeper', label: this.translate.instant('STAFF_MANAGEMENT.POSITIONS.HOUSEKEEPER') || 'Housekeeping' },
+      { value: 'maintenance', label: this.translate.instant('STAFF_MANAGEMENT.POSITIONS.MAINTENANCE') || 'Bảo trì' },
+      { value: 'other', label: this.translate.instant('STAFF_MANAGEMENT.POSITIONS.OTHER') || 'Khác' }
+    ];
+    
+    this.statuses = [
+      { value: 'active', label: this.translate.instant('STAFF_MANAGEMENT.STATUSES.ACTIVE') || 'Đang làm việc' },
+      { value: 'on_leave', label: this.translate.instant('STAFF_MANAGEMENT.STATUSES.ON_LEAVE') || 'Nghỉ phép' },
+      { value: 'terminated', label: this.translate.instant('STAFF_MANAGEMENT.STATUSES.TERMINATED') || 'Đã nghỉ việc' }
+    ];
+    
     this.permissions = [
       { value: 'view', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.VIEW') },
       { value: 'create', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.CREATE') },

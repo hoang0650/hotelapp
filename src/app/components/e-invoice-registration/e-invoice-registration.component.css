@@ -1,0 +1,442 @@
+.e-invoice-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  background: #f5f5f5;
+  min-height: calc(100vh - 64px);
+}
+
+.e-invoice-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.e-invoice-header h1 {
+  font-size: 2rem;
+  color: #1f1f1f;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.e-invoice-header .subtitle {
+  font-size: 1rem;
+  color: #666;
+  margin: 0;
+}
+
+.e-invoice-content {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Pricing Table */
+.pricing-table-wrapper {
+  margin-bottom: 32px;
+  overflow-x: auto;
+}
+
+.e-invoice-table {
+  width: 100%;
+}
+
+.e-invoice-table ::ng-deep .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  color: #1f1f1f;
+  border-bottom: 2px solid #e8e8e8;
+  padding: 16px;
+  text-align: center;
+}
+
+.e-invoice-table ::ng-deep .ant-table-tbody > tr > td {
+  padding: 20px 16px;
+  vertical-align: middle;
+}
+
+.e-invoice-table ::ng-deep .ant-table-tbody > tr:hover {
+  background: #fafafa;
+}
+
+.e-invoice-table ::ng-deep .ant-table-tbody > tr.selected-row {
+  background: #e6f7ff;
+  border-left: 3px solid #1890ff;
+}
+
+.package-info {
+  text-align: left;
+}
+
+.package-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f1f1f;
+  margin-bottom: 6px;
+}
+
+.package-count {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.price-info {
+  text-align: center;
+}
+
+.package-price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f1f1f;
+  margin-bottom: 6px;
+}
+
+.price-per-invoice {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.select-button {
+  min-width: 80px;
+}
+
+.selected-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.deselect-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 0;
+}
+
+/* Summary Section */
+.summary-section {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 32px;
+  border: 1px solid #e8e8e8;
+}
+
+.summary-content {
+  margin-bottom: 20px;
+}
+
+.no-selection {
+  text-align: center;
+  color: #999;
+}
+
+.no-selection span {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.total-amount {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.total-amount.zero {
+  color: #999;
+}
+
+.has-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.selected-packages-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.selected-count {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.selected-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.selected-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.selected-item .item-total {
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.total-amount {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 2px solid #e8e8e8;
+}
+
+.total-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.total-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1890ff;
+}
+
+.submit-button {
+  width: 100%;
+  height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Important Notice */
+.important-notice {
+  background: #fff7e6;
+  border-left: 4px solid #faad14;
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 32px;
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.notice-icon {
+  color: #faad14;
+  font-size: 20px;
+}
+
+.notice-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.notice-content p {
+  margin: 0 0 12px 0;
+  color: #666;
+  line-height: 1.6;
+}
+
+.digital-signature-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #1890ff;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.digital-signature-link:hover {
+  color: #096dd9;
+  text-decoration: underline;
+}
+
+/* Digital Signature Section */
+.digital-signature-section {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 2px solid #e8e8e8;
+}
+
+.digital-signature-section h2 {
+  font-size: 1.5rem;
+  color: #1f1f1f;
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+.signature-pricing-table {
+  background: #fafafa;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.signature-pricing-header {
+  display: grid;
+  grid-template-columns: 200px repeat(3, 1fr);
+  background: #1890ff;
+  color: white;
+  font-weight: 600;
+}
+
+.signature-header-cell {
+  padding: 16px;
+  text-align: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.signature-header-cell:last-child {
+  border-right: none;
+}
+
+.signature-pricing-row {
+  display: grid;
+  grid-template-columns: 200px repeat(3, 1fr);
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.signature-pricing-row:last-child {
+  border-bottom: none;
+}
+
+.signature-label {
+  padding: 16px;
+  background: white;
+  font-weight: 500;
+  color: #1f1f1f;
+  border-right: 1px solid #e8e8e8;
+}
+
+.signature-price-cell {
+  padding: 16px;
+  text-align: center;
+  background: white;
+  font-weight: 600;
+  color: #1890ff;
+  border-right: 1px solid #e8e8e8;
+}
+
+.signature-price-cell:last-child {
+  border-right: none;
+}
+
+.signature-disclaimer {
+  padding: 12px 16px;
+  background: #fff7e6;
+  border-radius: 6px;
+  border-left: 3px solid #faad14;
+}
+
+.signature-disclaimer p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .e-invoice-container {
+    padding: 20px 12px;
+  }
+
+  .e-invoice-content {
+    padding: 20px;
+  }
+
+  .e-invoice-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .e-invoice-table ::ng-deep .ant-table-thead > tr > th,
+  .e-invoice-table ::ng-deep .ant-table-tbody > tr > td {
+    padding: 12px 8px;
+    font-size: 0.9rem;
+  }
+
+  .package-name {
+    font-size: 1rem;
+  }
+
+  .package-price {
+    font-size: 0.9rem;
+  }
+
+  .signature-pricing-header,
+  .signature-pricing-row {
+    grid-template-columns: 120px repeat(3, 1fr);
+    font-size: 0.85rem;
+  }
+
+  .signature-header-cell,
+  .signature-label,
+  .signature-price-cell {
+    padding: 12px 8px;
+  }
+
+  .total-value {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .e-invoice-container {
+    padding: 16px 8px;
+  }
+
+  .e-invoice-content {
+    padding: 16px;
+  }
+
+  .e-invoice-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .e-invoice-header .subtitle {
+    font-size: 0.9rem;
+  }
+
+  .pricing-table-wrapper {
+    overflow-x: scroll;
+  }
+
+  .e-invoice-table {
+    min-width: 600px;
+  }
+
+  .signature-pricing-header,
+  .signature-pricing-row {
+    grid-template-columns: 100px repeat(3, 80px);
+    font-size: 0.8rem;
+  }
+
+  .signature-header-cell,
+  .signature-label,
+  .signature-price-cell {
+    padding: 10px 6px;
+  }
+}
+

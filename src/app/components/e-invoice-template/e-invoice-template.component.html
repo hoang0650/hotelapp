@@ -1,0 +1,67 @@
+<div class="e-invoice-template-container">
+  <div class="page-header">
+    <h1>Mẫu hóa đơn điện tử</h1>
+    <p class="subtitle">Chọn và quản lý mẫu hóa đơn điện tử</p>
+  </div>
+
+  <div class="content-wrapper">
+    <nz-spin [nzSpinning]="loading">
+      <nz-empty 
+        *ngIf="!loading && templates.length === 0"
+        nzNotFoundContent="Chưa có mẫu hóa đơn nào"
+        [nzNotFoundImage]="'simple'">
+      </nz-empty>
+
+      <div *ngIf="!loading && templates.length > 0" class="templates-grid">
+        <div 
+          *ngFor="let template of templates"
+          class="template-card"
+          [class.selected]="selectedTemplate?.id === template.id"
+          [class.default]="template.isDefault"
+          (click)="selectTemplate(template)">
+          <div class="template-header">
+            <h3>{{ template.name }}</h3>
+            <nz-tag *ngIf="template.isDefault" nzColor="blue">Mặc định</nz-tag>
+          </div>
+          <div class="template-preview">
+            <div *ngIf="template.previewImage" class="preview-image">
+              <img [src]="template.previewImage" [alt]="template.name" />
+            </div>
+            <div *ngIf="!template.previewImage" class="preview-placeholder">
+              <i nz-icon nzType="file-text" nzTheme="outline" style="font-size: 48px; color: #d9d9d9;"></i>
+            </div>
+          </div>
+          <div class="template-description">
+            <p>{{ template.description }}</p>
+            <div class="template-meta">
+              <span class="template-date">
+                <i nz-icon nzType="calendar" nzTheme="outline"></i>
+                {{ formatDate(template.createdAt) }}
+              </span>
+            </div>
+          </div>
+          <div class="template-actions">
+            <button 
+              nz-button 
+              nzType="default"
+              nzSize="small"
+              (click)="previewTemplate(template); $event.stopPropagation()">
+              <i nz-icon nzType="eye" nzTheme="outline"></i>
+              Xem trước
+            </button>
+            <button 
+              *ngIf="!template.isDefault"
+              nz-button 
+              nzType="primary"
+              nzSize="small"
+              (click)="setAsDefault(template); $event.stopPropagation()">
+              <i nz-icon nzType="check-circle" nzTheme="outline"></i>
+              Đặt mặc định
+            </button>
+          </div>
+        </div>
+      </div>
+    </nz-spin>
+  </div>
+</div>
+

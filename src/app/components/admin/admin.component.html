@@ -92,6 +92,15 @@
         </ul>
       </li>
 
+      <!-- Hóa đơn điện tử -->
+      <li nz-submenu *ngIf="canAccessEInvoice()" [nzTitle]="'ADMIN_SIDEBAR.E_INVOICE' | translate" nzIcon="file-text">
+        <ul>
+          <li nz-menu-item routerLink="/admin/e-invoice-registration">{{ 'ADMIN_SIDEBAR.E_INVOICE_REGISTRATION' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/e-invoice-management">{{ 'ADMIN_SIDEBAR.E_INVOICE_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item routerLink="/admin/e-invoice-template">{{ 'ADMIN_SIDEBAR.E_INVOICE_TEMPLATE' | translate }}</li>
+        </ul>
+      </li>
+
       <!-- Cài đặt hệ thống -->
       <li nz-submenu *ngIf="canAccessSettings() || canAccessEmailAdmin() || canAccessFile()" [nzTitle]="'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate" nzIcon="setting">
         <ul>

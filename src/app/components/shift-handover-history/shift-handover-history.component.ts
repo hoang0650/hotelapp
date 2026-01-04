@@ -292,7 +292,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   // Lấy guestSource từ nhiều nguồn
   getGuestSource(room: any): string {
     // Ưu tiên lấy từ nhiều nguồn theo thứ tự
-    let source = 'walkin';
+    let source: any = 'walkin';
     
     // Ưu tiên 1: Từ room.guestSource (đã được backend optimize)
     if (room.guestSource) {
@@ -313,26 +313,47 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
                  room.bookingId.guestInfo?.guestSource || 
                  room.bookingId.guestDetails?.guestSource || 
                  'walkin';
+      } else if (typeof room.bookingId === 'string') {
+        // Nếu bookingId là string, không có thông tin source, dùng walkin
+        source = 'walkin';
       }
     }
     
-    return source;
+    // Đảm bảo luôn trả về string, không phải object
+    if (typeof source !== 'string') {
+      source = 'walkin';
+    }
+    
+    // Chuyển về lowercase và loại bỏ khoảng trắng để đảm bảo match với sourceMap
+    return String(source).toLowerCase().trim() || 'walkin';
   }
 
   // Lấy label cho nguồn khách
   getGuestSourceLabel(room: any): string {
     const source = this.getGuestSource(room);
     const sourceMap: { [key: string]: string } = {
-      'walkin': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.WALKIN'),
-      'booking': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.BOOKING'),
-      'agoda': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.AGODA'),
-      'traveloka': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.TRAVELOKA'),
-      'expedia': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.EXPEDIA'),
-      'trip': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.TRIP'),
-      'g2j': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.G2J'),
-      'other': this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.OTHER')
+      'walkin': this.translate.instant('SHIFT_HANDOVER.HISTORY.GUEST_SOURCE.WALKIN'),
+      'booking': this.translate.instant('SHIFT_HANDOVER.HISTORY.GUEST_SOURCE.BOOKING'),
+      'agoda': this.translate.instant('SHIFT_HANDOVER.HISTORY.GUEST_SOURCE.AGODA'),
+      'traveloka': this.translate.instant('SHIFT_HANDOVER.HISTORY.GUEST_SOURCE.TRAVELOKA'),
+      'expedia': this.translate.instant('SHIFT_HANDOVER.HISTORY.GUEST_SOURCE.EXPEDIA'),
+      'trip': this.translate.instant('SHIFT_HANDOVER.HISTORY.GUEST_SOURCE.TRIP'),
+      'g2j': this.translate.instant('SHIFT_HANDOVER.HISTORY.GUEST_SOURCE.G2J'),
+      'other': this.translate.instant('SHIFT_HANDOVER.HISTORY.GUEST_SOURCE.OTHER')
     };
-    return sourceMap[source] || source || this.translate.instant('SHIFT_HANDOVER.HISTORY.SOURCE.OTHER');
+    
+    // Đảm bảo source là string và lowercase
+    const normalizedSource = String(source).toLowerCase().trim();
+    
+    // Lấy label từ map, đảm bảo trả về string
+    const label = sourceMap[normalizedSource];
+    
+    // Nếu label là object hoặc không tồn tại, trả về default
+    if (typeof label !== 'string' || !label) {
+      return this.translate.instant('SHIFT_HANDOVER.HISTORY.GUEST_SOURCE.OTHER');
+    }
+    
+    return label;
   }
 
   // Lấy màu cho nguồn khách

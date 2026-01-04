@@ -1,9 +1,10 @@
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
 import { CaliendarModalComponent } from '../caliendar-modal/caliendar-modal.component';
 import { NzModalService, NzModalRef } from 'ng-zorro-antd/modal';
 import { RoomsService } from '../../services/rooms.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 
 interface Booking {
   _id?: string;
@@ -36,7 +37,7 @@ interface Booking {
   templateUrl: './calendar.component.html',
   styleUrls: ['./calendar.component.css']
 })
-export class CalendarComponent implements OnInit {
+export class CalendarComponent implements OnInit, OnDestroy {
   @Input() hotelId: string | null = null;
   @Input() roomId: string | null = null;
   @Output() bookingSelected = new EventEmitter<{ date: Date, roomId?: string }>();
@@ -53,6 +54,7 @@ export class CalendarComponent implements OnInit {
   bookings: Booking[] = [];
   allBookings: Booking[] = []; // Tất cả bookings để hiển thị bên dưới
   isCheckingIn = false; // Flag để hiển thị loading khi check-in
+  private translateSubscription?: Subscription;
 
   constructor(
     private modalService: NzModalService,
@@ -60,10 +62,17 @@ export class CalendarComponent implements OnInit {
     private message: NzMessageService,
     private translate: TranslateService
   ) {
+    // Khởi tạo lần đầu
     this.initDaysOfWeek();
+    
+    // Subscribe để cập nhật khi ngôn ngữ thay đổi
+    this.translateSubscription = this.translate.onLangChange.subscribe(() => {
+      this.initDaysOfWeek();
+    });
   }
 
   private initDaysOfWeek(): void {
+    // Khởi tạo ngay với instant() để có giá trị ngay lập tức
     this.daysOfWeek = [
       this.translate.instant('CALENDAR.DAYS_OF_WEEK.SUN'),
       this.translate.instant('CALENDAR.DAYS_OF_WEEK.MON'),
@@ -73,9 +82,38 @@ export class CalendarComponent implements OnInit {
       this.translate.instant('CALENDAR.DAYS_OF_WEEK.FRI'),
       this.translate.instant('CALENDAR.DAYS_OF_WEEK.SAT')
     ];
+    
+    // Sau đó cập nhật bằng get() để đảm bảo translation được load đầy đủ
+    this.translate.get([
+      'CALENDAR.DAYS_OF_WEEK.SUN',
+      'CALENDAR.DAYS_OF_WEEK.MON',
+      'CALENDAR.DAYS_OF_WEEK.TUE',
+      'CALENDAR.DAYS_OF_WEEK.WED',
+      'CALENDAR.DAYS_OF_WEEK.THU',
+      'CALENDAR.DAYS_OF_WEEK.FRI',
+      'CALENDAR.DAYS_OF_WEEK.SAT'
+    ]).subscribe(translations => {
+      this.daysOfWeek = [
+        translations['CALENDAR.DAYS_OF_WEEK.SUN'],
+        translations['CALENDAR.DAYS_OF_WEEK.MON'],
+        translations['CALENDAR.DAYS_OF_WEEK.TUE'],
+        translations['CALENDAR.DAYS_OF_WEEK.WED'],
+        translations['CALENDAR.DAYS_OF_WEEK.THU'],
+        translations['CALENDAR.DAYS_OF_WEEK.FRI'],
+        translations['CALENDAR.DAYS_OF_WEEK.SAT']
+      ];
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.translateSubscription) {
+      this.translateSubscription.unsubscribe();
+    }
   }
 
   ngOnInit(): void {
+    // Đảm bảo daysOfWeek được load trước khi render
+    this.initDaysOfWeek();
     this.initializeCalendar();
     this.loadBookings();
     this.loadAllBookings(); // Load tất cả bookings để hiển thị bên dưới

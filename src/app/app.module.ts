@@ -141,6 +141,9 @@ import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-poli
 import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
 import { ContactComponent } from './components/contact/contact.component';
 import { ContactManagementComponent } from './components/contact-management/contact-management.component';
+import { EInvoiceRegistrationComponent } from './components/e-invoice-registration/e-invoice-registration.component';
+import { EInvoiceManagementComponent } from './components/e-invoice-management/e-invoice-management.component';
+import { EInvoiceTemplateComponent } from './components/e-invoice-template/e-invoice-template.component';
 
 registerLocaleData(vi);
 
@@ -269,7 +272,10 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         PrivacyPolicyComponent,
         TermsOfServiceComponent,
         ContactComponent,
-        ContactManagementComponent
+        ContactManagementComponent,
+        EInvoiceRegistrationComponent,
+        EInvoiceManagementComponent,
+        EInvoiceTemplateComponent
     ],
     bootstrap: [AppComponent],
     imports: [

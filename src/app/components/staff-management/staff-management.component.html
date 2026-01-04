@@ -149,11 +149,11 @@
           
           <!-- User ID - Chọn từ danh sách users -->
           <nz-form-item>
-            <nz-form-label nzRequired>Tài khoản người dùng</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng chọn tài khoản người dùng">
+            <nz-form-label nzRequired>{{ 'STAFF_MANAGEMENT.FORM.USER_ACCOUNT' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'STAFF_MANAGEMENT.FORM.USER_ACCOUNT_REQUIRED' | translate">
               <nz-select 
                 formControlName="userId" 
-                nzPlaceHolder="Chọn tài khoản để gán làm nhân viên"
+                [nzPlaceHolder]="'STAFF_MANAGEMENT.FORM.USER_ACCOUNT_PLACEHOLDER' | translate"
                 nzShowSearch
                 nzAllowClear
                 [nzDisabled]="!!selectedStaff"
@@ -165,35 +165,35 @@
                 </nz-option>
               </nz-select>
               <ng-template #notFoundTpl>
-                <nz-empty nzNotFoundContent="Không tìm thấy tài khoản phù hợp" [nzNotFoundImage]="null"></nz-empty>
+                <nz-empty [nzNotFoundContent]="'STAFF_MANAGEMENT.FORM.USER_ACCOUNT_NOT_FOUND' | translate" [nzNotFoundImage]="null"></nz-empty>
               </ng-template>
-              <small *ngIf="selectedStaff" class="text-muted">Không thể thay đổi tài khoản sau khi đã tạo</small>
+              <small *ngIf="selectedStaff" class="text-muted">{{ 'STAFF_MANAGEMENT.FORM.USER_ACCOUNT_CANNOT_CHANGE' | translate }}</small>
               <small *ngIf="!selectedStaff && users.length === 0" class="text-warning">
-                <i nz-icon nzType="warning"></i> Không có tài khoản nào khả dụng. Vui lòng tạo tài khoản người dùng mới trước.
+                <i nz-icon nzType="warning"></i> {{ 'STAFF_MANAGEMENT.FORM.NO_AVAILABLE_USERS' | translate }}
               </small>
               <small *ngIf="!selectedStaff && users.length > 0" class="text-info">
-                Có {{ users.length }} tài khoản khả dụng
+                {{ 'STAFF_MANAGEMENT.FORM.AVAILABLE_USERS_COUNT' | translate: { count: users.length } }}
               </small>
             </nz-form-control>
           </nz-form-item>
 
-          <nz-divider nzText="Thông tin cá nhân"></nz-divider>
+          <nz-divider [nzText]="'STAFF_MANAGEMENT.FORM.PERSONAL_INFO' | translate"></nz-divider>
 
           <div formGroupName="personalInfo">
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="12">
                 <nz-form-item>
-                  <nz-form-label nzRequired>Họ</nz-form-label>
-                  <nz-form-control nzErrorTip="Vui lòng nhập họ">
-                    <input nz-input formControlName="firstName" placeholder="Họ" />
+                  <nz-form-label nzRequired>{{ 'STAFF_MANAGEMENT.FORM.FIRST_NAME' | translate }}</nz-form-label>
+                  <nz-form-control [nzErrorTip]="'STAFF_MANAGEMENT.FORM.FIRST_NAME_REQUIRED' | translate">
+                    <input nz-input formControlName="firstName" [placeholder]="'STAFF_MANAGEMENT.FORM.FIRST_NAME_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzSpan]="12">
                 <nz-form-item>
-                  <nz-form-label nzRequired>Tên</nz-form-label>
-                  <nz-form-control nzErrorTip="Vui lòng nhập tên">
-                    <input nz-input formControlName="lastName" placeholder="Tên" />
+                  <nz-form-label nzRequired>{{ 'STAFF_MANAGEMENT.FORM.LAST_NAME' | translate }}</nz-form-label>
+                  <nz-form-control [nzErrorTip]="'STAFF_MANAGEMENT.FORM.LAST_NAME_REQUIRED' | translate">
+                    <input nz-input formControlName="lastName" [placeholder]="'STAFF_MANAGEMENT.FORM.LAST_NAME_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
@@ -202,7 +202,7 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Ngày sinh</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.DATE_OF_BIRTH' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-date-picker formControlName="dateOfBirth" nzFormat="dd/MM/yyyy" style="width: 100%"></nz-date-picker>
                   </nz-form-control>
@@ -210,7 +210,7 @@
               </div>
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Giới tính</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.GENDER' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="gender">
                       <nz-option *ngFor="let g of genders" [nzValue]="g.value" [nzLabel]="g.label"></nz-option>
@@ -220,9 +220,9 @@
               </div>
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Quốc tịch</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.NATIONALITY' | translate }}</nz-form-label>
                   <nz-form-control>
-                    <input nz-input formControlName="nationality" placeholder="Quốc tịch" />
+                    <input nz-input formControlName="nationality" [placeholder]="'STAFF_MANAGEMENT.FORM.NATIONALITY_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
@@ -231,27 +231,27 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Loại giấy tờ</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.ID_TYPE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="idType">
-                      <nz-option nzValue="CMND" nzLabel="CMND"></nz-option>
-                      <nz-option nzValue="CCCD" nzLabel="CCCD"></nz-option>
-                      <nz-option nzValue="Passport" nzLabel="Hộ chiếu"></nz-option>
+                      <nz-option nzValue="CMND" [nzLabel]="'STAFF_MANAGEMENT.FORM.ID_TYPE_CMND' | translate"></nz-option>
+                      <nz-option nzValue="CCCD" [nzLabel]="'STAFF_MANAGEMENT.FORM.ID_TYPE_CCCD' | translate"></nz-option>
+                      <nz-option nzValue="Passport" [nzLabel]="'STAFF_MANAGEMENT.FORM.ID_TYPE_PASSPORT' | translate"></nz-option>
                     </nz-select>
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Số giấy tờ</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.ID_NUMBER' | translate }}</nz-form-label>
                   <nz-form-control>
-                    <input nz-input formControlName="idNumber" placeholder="Số CMND/CCCD" />
+                    <input nz-input formControlName="idNumber" [placeholder]="'STAFF_MANAGEMENT.FORM.ID_NUMBER_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Ngày hết hạn</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.ID_EXPIRY_DATE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-date-picker formControlName="idExpiryDate" nzFormat="dd/MM/yyyy" style="width: 100%"></nz-date-picker>
                   </nz-form-control>
@@ -260,23 +260,23 @@
             </div>
           </div>
 
-          <nz-divider nzText="Thông tin liên hệ"></nz-divider>
+          <nz-divider [nzText]="'STAFF_MANAGEMENT.FORM.CONTACT_INFO' | translate"></nz-divider>
 
           <div formGroupName="contactInfo">
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="12">
                 <nz-form-item>
-                  <nz-form-label nzRequired>Số điện thoại</nz-form-label>
-                  <nz-form-control nzErrorTip="Vui lòng nhập số điện thoại">
-                    <input nz-input formControlName="phone" placeholder="Số điện thoại" />
+                  <nz-form-label nzRequired>{{ 'STAFF_MANAGEMENT.FORM.PHONE' | translate }}</nz-form-label>
+                  <nz-form-control [nzErrorTip]="'STAFF_MANAGEMENT.FORM.PHONE_REQUIRED' | translate">
+                    <input nz-input formControlName="phone" [placeholder]="'STAFF_MANAGEMENT.FORM.PHONE_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzSpan]="12">
                 <nz-form-item>
-                  <nz-form-label>Email</nz-form-label>
-                  <nz-form-control nzErrorTip="Email không hợp lệ">
-                    <input nz-input formControlName="email" type="email" placeholder="Email" />
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.EMAIL' | translate }}</nz-form-label>
+                  <nz-form-control [nzErrorTip]="'STAFF_MANAGEMENT.FORM.EMAIL_INVALID' | translate">
+                    <input nz-input formControlName="email" type="email" [placeholder]="'STAFF_MANAGEMENT.FORM.EMAIL_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
@@ -286,9 +286,9 @@
               <div nz-row [nzGutter]="16">
                 <div nz-col [nzSpan]="24">
                   <nz-form-item>
-                    <nz-form-label>Địa chỉ</nz-form-label>
+                    <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.ADDRESS' | translate }}</nz-form-label>
                     <nz-form-control>
-                      <input nz-input formControlName="street" placeholder="Số nhà, đường" />
+                      <input nz-input formControlName="street" [placeholder]="'STAFF_MANAGEMENT.FORM.STREET_PLACEHOLDER' | translate" />
                     </nz-form-control>
                   </nz-form-item>
                 </div>
@@ -297,21 +297,21 @@
                 <div nz-col [nzSpan]="8">
                   <nz-form-item>
                     <nz-form-control>
-                      <input nz-input formControlName="city" placeholder="Thành phố" />
+                      <input nz-input formControlName="city" [placeholder]="'STAFF_MANAGEMENT.FORM.CITY_PLACEHOLDER' | translate" />
                     </nz-form-control>
                   </nz-form-item>
                 </div>
                 <div nz-col [nzSpan]="8">
                   <nz-form-item>
                     <nz-form-control>
-                      <input nz-input formControlName="state" placeholder="Tỉnh/Thành" />
+                      <input nz-input formControlName="state" [placeholder]="'STAFF_MANAGEMENT.FORM.STATE_PLACEHOLDER' | translate" />
                     </nz-form-control>
                   </nz-form-item>
                 </div>
                 <div nz-col [nzSpan]="8">
                   <nz-form-item>
                     <nz-form-control>
-                      <input nz-input formControlName="country" placeholder="Quốc gia" />
+                      <input nz-input formControlName="country" [placeholder]="'STAFF_MANAGEMENT.FORM.COUNTRY_PLACEHOLDER' | translate" />
                     </nz-form-control>
                   </nz-form-item>
                 </div>
@@ -319,30 +319,30 @@
             </div>
 
             <nz-collapse>
-              <nz-collapse-panel nzHeader="Liên hệ khẩn cấp" [nzActive]="false">
+              <nz-collapse-panel [nzHeader]="'STAFF_MANAGEMENT.FORM.EMERGENCY_CONTACT' | translate" [nzActive]="false">
                 <div formGroupName="emergencyContact">
                   <div nz-row [nzGutter]="16">
                     <div nz-col [nzSpan]="8">
                       <nz-form-item>
-                        <nz-form-label>Tên người liên hệ</nz-form-label>
+                        <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.EMERGENCY_CONTACT_NAME' | translate }}</nz-form-label>
                         <nz-form-control>
-                          <input nz-input formControlName="name" placeholder="Tên" />
+                          <input nz-input formControlName="name" [placeholder]="'STAFF_MANAGEMENT.FORM.EMERGENCY_CONTACT_NAME_PLACEHOLDER' | translate" />
                         </nz-form-control>
                       </nz-form-item>
                     </div>
                     <div nz-col [nzSpan]="8">
                       <nz-form-item>
-                        <nz-form-label>Quan hệ</nz-form-label>
+                        <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.EMERGENCY_CONTACT_RELATIONSHIP' | translate }}</nz-form-label>
                         <nz-form-control>
-                          <input nz-input formControlName="relationship" placeholder="Quan hệ" />
+                          <input nz-input formControlName="relationship" [placeholder]="'STAFF_MANAGEMENT.FORM.EMERGENCY_CONTACT_RELATIONSHIP_PLACEHOLDER' | translate" />
                         </nz-form-control>
                       </nz-form-item>
                     </div>
                     <div nz-col [nzSpan]="8">
                       <nz-form-item>
-                        <nz-form-label>Số điện thoại</nz-form-label>
+                        <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.EMERGENCY_CONTACT_PHONE' | translate }}</nz-form-label>
                         <nz-form-control>
-                          <input nz-input formControlName="phone" placeholder="SĐT" />
+                          <input nz-input formControlName="phone" [placeholder]="'STAFF_MANAGEMENT.FORM.EMERGENCY_CONTACT_PHONE_PLACEHOLDER' | translate" />
                         </nz-form-control>
                       </nz-form-item>
                     </div>
@@ -352,15 +352,15 @@
             </nz-collapse>
           </div>
 
-          <nz-divider nzText="Thông tin công việc"></nz-divider>
+          <nz-divider [nzText]="'STAFF_MANAGEMENT.FORM.EMPLOYMENT_INFO' | translate"></nz-divider>
 
           <div formGroupName="employmentInfo">
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label nzRequired>Chức vụ</nz-form-label>
-                  <nz-form-control nzErrorTip="Vui lòng chọn chức vụ">
-                    <nz-select formControlName="position" nzPlaceHolder="Chọn chức vụ">
+                  <nz-form-label nzRequired>{{ 'STAFF_MANAGEMENT.FORM.POSITION' | translate }}</nz-form-label>
+                  <nz-form-control [nzErrorTip]="'STAFF_MANAGEMENT.FORM.POSITION_REQUIRED' | translate">
+                    <nz-select formControlName="position" [nzPlaceHolder]="'STAFF_MANAGEMENT.FORM.POSITION_PLACEHOLDER' | translate">
                       <nz-option *ngFor="let pos of positions" [nzValue]="pos.value" [nzLabel]="pos.label"></nz-option>
                     </nz-select>
                   </nz-form-control>
@@ -368,15 +368,15 @@
               </div>
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Phòng ban</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.DEPARTMENT' | translate }}</nz-form-label>
                   <nz-form-control>
-                    <input nz-input formControlName="department" placeholder="Phòng ban" />
+                    <input nz-input formControlName="department" [placeholder]="'STAFF_MANAGEMENT.FORM.DEPARTMENT_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label nzRequired>Trạng thái</nz-form-label>
+                  <nz-form-label nzRequired>{{ 'STAFF_MANAGEMENT.FORM.STATUS' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="status">
                       <nz-option *ngFor="let s of statuses" [nzValue]="s.value" [nzLabel]="s.label"></nz-option>
@@ -389,7 +389,7 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Ngày bắt đầu</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.START_DATE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-date-picker formControlName="startDate" nzFormat="dd/MM/yyyy" style="width: 100%"></nz-date-picker>
                   </nz-form-control>
@@ -397,7 +397,7 @@
               </div>
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Ngày kết thúc</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.END_DATE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-date-picker formControlName="endDate" nzFormat="dd/MM/yyyy" style="width: 100%"></nz-date-picker>
                   </nz-form-control>
@@ -405,7 +405,7 @@
               </div>
               <div nz-col [nzSpan]="8">
                 <nz-form-item>
-                  <nz-form-label>Lương cơ bản</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.BASE_SALARY' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="salary" 
@@ -423,7 +423,7 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzSpan]="6">
                 <nz-form-item>
-                  <nz-form-label>Phụ cấp</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.ALLOWANCE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="allowance" 
@@ -438,7 +438,7 @@
               </div>
               <div nz-col [nzSpan]="6">
                 <nz-form-item>
-                  <nz-form-label>Bảo hiểm</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.INSURANCE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="insurance" 
@@ -453,7 +453,7 @@
               </div>
               <div nz-col [nzSpan]="6">
                 <nz-form-item>
-                  <nz-form-label>Phạt</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.PENALTY' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="penalty" 
@@ -468,7 +468,7 @@
               </div>
               <div nz-col [nzSpan]="6">
                 <nz-form-item>
-                  <nz-form-label>Thưởng</nz-form-label>
+                  <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.BONUS' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number 
                       formControlName="bonus" 
@@ -484,30 +484,30 @@
             </div>
 
             <nz-collapse>
-              <nz-collapse-panel nzHeader="Thông tin ngân hàng" [nzActive]="false">
+              <nz-collapse-panel [nzHeader]="'STAFF_MANAGEMENT.FORM.BANK_INFO' | translate" [nzActive]="false">
                 <div formGroupName="bankAccount">
                   <div nz-row [nzGutter]="16">
                     <div nz-col [nzSpan]="8">
                       <nz-form-item>
-                        <nz-form-label>Tên ngân hàng</nz-form-label>
+                        <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.BANK_NAME' | translate }}</nz-form-label>
                         <nz-form-control>
-                          <input nz-input formControlName="bankName" placeholder="Tên ngân hàng" />
+                          <input nz-input formControlName="bankName" [placeholder]="'STAFF_MANAGEMENT.FORM.BANK_NAME_PLACEHOLDER' | translate" />
                         </nz-form-control>
                       </nz-form-item>
                     </div>
                     <div nz-col [nzSpan]="8">
                       <nz-form-item>
-                        <nz-form-label>Số tài khoản</nz-form-label>
+                        <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.ACCOUNT_NUMBER' | translate }}</nz-form-label>
                         <nz-form-control>
-                          <input nz-input formControlName="accountNumber" placeholder="Số tài khoản" />
+                          <input nz-input formControlName="accountNumber" [placeholder]="'STAFF_MANAGEMENT.FORM.ACCOUNT_NUMBER_PLACEHOLDER' | translate" />
                         </nz-form-control>
                       </nz-form-item>
                     </div>
                     <div nz-col [nzSpan]="8">
                       <nz-form-item>
-                        <nz-form-label>Tên chủ TK</nz-form-label>
+                        <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.ACCOUNT_NAME' | translate }}</nz-form-label>
                         <nz-form-control>
-                          <input nz-input formControlName="accountName" placeholder="Tên chủ tài khoản" />
+                          <input nz-input formControlName="accountName" [placeholder]="'STAFF_MANAGEMENT.FORM.ACCOUNT_NAME_PLACEHOLDER' | translate" />
                         </nz-form-control>
                       </nz-form-item>
                     </div>
@@ -517,25 +517,25 @@
             </nz-collapse>
           </div>
 
-          <nz-divider nzText="Quyền hạn"></nz-divider>
+          <nz-divider [nzText]="'STAFF_MANAGEMENT.FORM.PERMISSIONS' | translate"></nz-divider>
 
           <nz-form-item>
-            <nz-form-label>Phân quyền</nz-form-label>
+            <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.PERMISSIONS_LABEL' | translate }}</nz-form-label>
             <nz-form-control>
-              <nz-select formControlName="permissions" nzMode="multiple" nzPlaceHolder="Chọn quyền">
+              <nz-select formControlName="permissions" nzMode="multiple" [nzPlaceHolder]="'STAFF_MANAGEMENT.FORM.PERMISSIONS_PLACEHOLDER' | translate">
                 <nz-option *ngFor="let perm of permissions" [nzValue]="perm.value" [nzLabel]="perm.label"></nz-option>
               </nz-select>
             </nz-form-control>
           </nz-form-item>
 
-          <nz-divider nzText="Lịch làm việc"></nz-divider>
+          <nz-divider [nzText]="'STAFF_MANAGEMENT.FORM.SCHEDULE' | translate"></nz-divider>
 
           <div formArrayName="schedule">
             <div *ngFor="let scheduleItem of scheduleArray.controls; let i = index" [formGroupName]="i" class="schedule-item">
               <div nz-row [nzGutter]="16" nzAlign="middle">
                 <div nz-col [nzSpan]="7">
                   <nz-form-item>
-                    <nz-form-label>Ngày</nz-form-label>
+                    <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.SCHEDULE_DAY' | translate }}</nz-form-label>
                     <nz-form-control>
                       <nz-date-picker formControlName="date" nzFormat="dd/MM/yyyy" style="width: 100%"></nz-date-picker>
                     </nz-form-control>
@@ -543,7 +543,7 @@
                 </div>
                 <div nz-col [nzSpan]="6">
                   <nz-form-item>
-                    <nz-form-label>Ca</nz-form-label>
+                    <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.SCHEDULE_SHIFT' | translate }}</nz-form-label>
                     <nz-form-control>
                       <nz-select formControlName="shift">
                         <nz-option *ngFor="let shift of shifts" [nzValue]="shift.value" [nzLabel]="shift.label"></nz-option>
@@ -553,7 +553,7 @@
                 </div>
                 <div nz-col [nzSpan]="4">
                   <nz-form-item>
-                    <nz-form-label>Bắt đầu</nz-form-label>
+                    <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.SCHEDULE_START_TIME' | translate }}</nz-form-label>
                     <nz-form-control>
                       <input nz-input formControlName="startTime" placeholder="08:00" />
                     </nz-form-control>
@@ -561,7 +561,7 @@
                 </div>
                 <div nz-col [nzSpan]="4">
                   <nz-form-item>
-                    <nz-form-label>Kết thúc</nz-form-label>
+                    <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.SCHEDULE_END_TIME' | translate }}</nz-form-label>
                     <nz-form-control>
                       <input nz-input formControlName="endTime" placeholder="16:00" />
                     </nz-form-control>
@@ -569,30 +569,30 @@
                 </div>
                 <div nz-col [nzSpan]="3">
                   <button nz-button nzType="text" nzDanger (click)="removeScheduleItem(i)" type="button" style="margin-top: 30px;">
-                    <i nz-icon nzType="delete"></i>
+                    <i nz-icon nzType="delete"></i> {{ 'STAFF_MANAGEMENT.FORM.SCHEDULE_REMOVE' | translate }}
                   </button>
                 </div>
               </div>
             </div>
             
             <button nz-button type="button" nzType="dashed" (click)="addScheduleItem()" style="width: 100%">
-              <i nz-icon nzType="plus"></i> Thêm lịch làm việc
+              <i nz-icon nzType="plus"></i> {{ 'STAFF_MANAGEMENT.FORM.SCHEDULE_ADD' | translate }}
             </button>
           </div>
 
           <nz-divider></nz-divider>
 
           <nz-form-item>
-            <nz-form-label>Ghi chú</nz-form-label>
+            <nz-form-label>{{ 'STAFF_MANAGEMENT.FORM.NOTES' | translate }}</nz-form-label>
             <nz-form-control>
-              <textarea nz-input formControlName="notes" rows="3" placeholder="Ghi chú..."></textarea>
+              <textarea nz-input formControlName="notes" rows="3" [placeholder]="'STAFF_MANAGEMENT.FORM.NOTES_PLACEHOLDER' | translate"></textarea>
             </nz-form-control>
           </nz-form-item>
 
           <div class="form-actions">
-            <button nz-button type="button" (click)="stopEdit()">Hủy</button>
+            <button nz-button type="button" (click)="stopEdit()">{{ 'STAFF_MANAGEMENT.CANCEL' | translate }}</button>
             <button nz-button nzType="primary" type="submit" [nzLoading]="isLoading">
-              {{ selectedStaff ? 'Cập nhật' : 'Thêm nhân viên' }}
+              {{ selectedStaff ? ('STAFF_MANAGEMENT.UPDATE_STAFF' | translate) : ('STAFF_MANAGEMENT.ADD_NEW_STAFF' | translate) }}
             </button>
           </div>
         </form>

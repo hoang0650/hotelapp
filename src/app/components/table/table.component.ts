@@ -79,11 +79,13 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   pageSize: number = 10; // Hiển thị 10 phòng mỗi trang
   totalItems: number = 0;
   totalPages: number = 0;
+  lastFilterType: string = ''; // Lưu filterType cuối cùng để tránh load lại không cần thiết
   
   // Subscription để tự động reload khi có cập nhật dữ liệu phòng
   private roomDataUpdateSubscription?: Subscription;
   
   // Getter để lọc các bản ghi checkout (bao gồm cả đã thanh toán và chưa thanh toán)
+  // Không paginate ở đây, để dùng cho tính stats
   get paidData(): any[] {
     if (!this.listOfData) return [];
     return this.listOfData.filter(item => {
@@ -163,6 +165,14 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       
       return true;
     });
+  }
+  
+  // Getter để paginate paidData
+  get paginatedPaidData(): any[] {
+    const filtered = this.paidData;
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    return filtered.slice(startIndex, endIndex);
   }
   
   searchText: string = '';
@@ -2609,7 +2619,12 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     this.paymentStatusFilter = status;
     // Reset về trang 1 khi thay đổi filter
     this.currentPage = 1;
-    this.loadHistory(this.currentFilterType, 1);
+    // Tính lại totalItems và totalPages dựa trên paidData (đã filter payment status)
+    setTimeout(() => {
+      const filteredItems = this.paidData.length;
+      this.totalItems = filteredItems;
+      this.totalPages = Math.ceil(filteredItems / this.pageSize);
+    }, 0);
   }
 
   // Getter để đếm số lượng đã thanh toán
@@ -2664,7 +2679,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     }).length;
   }
   
-  loadHistory(filterType: string = 'all', page: number = 1): void {
+  loadHistory(filterType: string = 'all', page: number = 1, forceReload: boolean = false): void {
     if (!this.hotelId) return;
     
     // Đảm bảo hotelId là string, không phải object
@@ -2675,70 +2690,97 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     
-    this.settingValue.loading = true;
-    this.currentPage = page;
+    // Chỉ load dữ liệu nếu chưa có hoặc filterType thay đổi hoặc force reload
+    // Nếu chỉ đổi trang, không cần load lại
+    const shouldLoadData = forceReload || !this.listOfData || this.listOfData.length === 0 || 
+                           this.lastFilterType !== filterType;
     
-    // Lấy tất cả các phòng có trạng thái thanh toán (paid, pending, unpaid)
-    // Không giới hạn 20, sử dụng pageSize lớn hơn để lấy nhiều dữ liệu hơn
-    this.roomService.getRoomHistory(hotelIdStr, filterType, page, this.pageSize)
-      .subscribe({
-        next: (response: any) => {
-          if (response && response.history) {
-            // Lưu tất cả dữ liệu vào listOfData (bao gồm cả paid, pending, unpaid)
-            // Không filter ở đây, để paidData getter xử lý
-            this.listOfData = response.history;
-            
-            // Cập nhật pagination info từ response
-            // Nếu có totalItems từ backend, dùng nó; nếu không, tính từ dữ liệu hiện tại
-            if (response.totalItems !== undefined) {
-              this.totalItems = response.totalItems;
-            } else {
-              // Nếu không có totalItems từ backend, tính từ paidData
-              // Lưu ý: totalItems sẽ được cập nhật sau khi paidData được tính
-              this.totalItems = response.history.length;
+    if (shouldLoadData) {
+      this.settingValue.loading = true;
+      // Load tất cả dữ liệu để filter đúng ở frontend, sau đó paginate
+      // Sử dụng limit lớn để lấy tất cả dữ liệu
+      this.roomService.getRoomHistory(hotelIdStr, filterType, 1, 1000)
+        .subscribe({
+          next: (response: any) => {
+            if (response && response.history) {
+              // Lưu tất cả dữ liệu vào listOfData
+              // paidData getter sẽ filter theo payment status
+              this.listOfData = response.history;
+              this.lastFilterType = filterType;
+              
+              // Set currentPage sau khi load dữ liệu
+              this.currentPage = page;
+              
+              // Tính lại pagination sau khi filter
+              // Sử dụng setTimeout để đảm bảo paidData getter đã được tính
+              setTimeout(() => {
+                // Tính totalItems từ paidData (đã filter payment status)
+                const filteredItems = this.paidData.length;
+                this.totalItems = filteredItems;
+                this.totalPages = Math.ceil(filteredItems / this.pageSize);
+                
+                // Đảm bảo currentPage không vượt quá totalPages
+                if (this.currentPage > this.totalPages && this.totalPages > 0) {
+                  this.currentPage = this.totalPages;
+                } else if (this.currentPage < 1) {
+                  this.currentPage = 1;
+                }
+                
+                // Tính lại tổng tiền
+                this.calculateTotalPayment();
+                
+                // Log để debug
+                console.log('Reloaded data - paidData.length:', this.paidData.length, 'totalPayment:', this.totalPayment, 'currentPage:', this.currentPage, 'totalItems:', this.totalItems, 'totalPages:', this.totalPages);
+              }, 0);
             }
-            
-            this.totalPages = response.totalPages || Math.ceil(this.totalItems / this.pageSize);
-            
-            // Tính lại tổng tiền sau khi cập nhật dữ liệu
-            // Sử dụng setTimeout để đảm bảo Angular detect change và cập nhật UI
-            setTimeout(() => {
-              this.calculateTotalPayment();
-              // Cập nhật totalItems dựa trên paidData sau khi filter
-              // Nếu đang filter theo payment status, cần tính lại totalItems
-              if (this.paymentStatusFilter !== 'all') {
-                // totalItems sẽ được tính từ paidData length
-                // Nhưng vì đây là server-side pagination, ta cần giữ nguyên totalItems từ backend
-                // Chỉ cập nhật nếu không có từ backend
-                if (response.totalItems === undefined) {
-                  this.totalItems = this.paidData.length;
-                  this.totalPages = Math.ceil(this.totalItems / this.pageSize);
-                }
-              } else {
-                // Nếu không filter, dùng totalItems từ backend
-                if (response.totalItems !== undefined) {
-                  this.totalItems = response.totalItems;
-                  this.totalPages = response.totalPages || Math.ceil(this.totalItems / this.pageSize);
-                }
-              }
-              // Log để debug
-              console.log('Reloaded data - paidData.length:', this.paidData.length, 'totalPayment:', this.totalPayment, 'page:', page, 'totalItems:', this.totalItems, 'totalPages:', this.totalPages);
-            }, 0);
+            this.settingValue.loading = false;
+          },
+          error: (error: any) => {
+            console.error('Error loading history:', error);
+            this.message.error('Không thể tải lịch sử phòng');
+            this.settingValue.loading = false;
+            // Vẫn tính lại tổng tiền ngay cả khi có lỗi (với dữ liệu hiện tại)
+            this.calculateTotalPayment();
           }
-          this.settingValue.loading = false;
-        },
-        error: (error: any) => {
-          console.error('Error loading history:', error);
-          this.message.error('Không thể tải lịch sử phòng');
-          this.settingValue.loading = false;
-          // Vẫn tính lại tổng tiền ngay cả khi có lỗi (với dữ liệu hiện tại)
-          this.calculateTotalPayment();
+        });
+    } else {
+      // Chỉ cập nhật currentPage, không load lại dữ liệu
+      this.currentPage = page;
+      
+      // Tính lại pagination
+      setTimeout(() => {
+        const filteredItems = this.paidData.length;
+        this.totalItems = filteredItems;
+        this.totalPages = Math.ceil(filteredItems / this.pageSize);
+        
+        // Đảm bảo currentPage không vượt quá totalPages
+        if (this.currentPage > this.totalPages && this.totalPages > 0) {
+          this.currentPage = this.totalPages;
+        } else if (this.currentPage < 1) {
+          this.currentPage = 1;
         }
-      });
+      }, 0);
+    }
   }
   
   onPageChange(page: number): void {
-    this.loadHistory(this.currentFilterType, page);
+    // Chỉ cập nhật currentPage, không load lại dữ liệu
+    // Dữ liệu đã được load và lưu trong listOfData
+    // paginatedPaidData getter sẽ tự động paginate dựa trên currentPage
+    this.currentPage = page;
+    
+    // Đảm bảo currentPage hợp lệ
+    if (this.currentPage > this.totalPages && this.totalPages > 0) {
+      this.currentPage = this.totalPages;
+    } else if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+  }
+  
+  reloadData(): void {
+    // Reset về trang 1 và force reload dữ liệu
+    this.currentPage = 1;
+    this.loadHistory(this.currentFilterType, 1, true);
   }
   
   onPageSizeChange(pageSize: number): void {

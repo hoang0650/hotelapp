@@ -49,6 +49,9 @@ import { BlogComponent } from './components/blog/blog.component';
 import { FinancialSummaryReportComponent } from './components/financial-summary-report/financial-summary-report.component';
 import { ContactComponent } from './components/contact/contact.component';
 import { ContactManagementComponent } from './components/contact-management/contact-management.component';
+import { EInvoiceRegistrationComponent } from './components/e-invoice-registration/e-invoice-registration.component';
+import { EInvoiceManagementComponent } from './components/e-invoice-management/e-invoice-management.component';
+import { EInvoiceTemplateComponent } from './components/e-invoice-template/e-invoice-template.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -98,6 +101,9 @@ const routes: Routes = [
       { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },
       { path: 'settings', component: SettingsComponent, canActivate: [PermissionGuard] },
       { path: 'contact-management', component: ContactManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'e-invoice-management', component: EInvoiceManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'e-invoice-template', component: EInvoiceTemplateComponent, canActivate: [PermissionGuard] },
+      { path: 'e-invoice-registration', component: EInvoiceRegistrationComponent, canActivate: [PermissionGuard] },
       // Thêm các route con khác nếu cần
     ]
   },

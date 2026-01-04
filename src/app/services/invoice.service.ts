@@ -244,13 +244,134 @@ export class InvoiceService {
     return this.http.get(`${this.apiUrl}/invoice/statistics/${hotelId}`, { params });
   }
 
-  // Xem hóa đơn nháp (EasyInvoice)
-  previewDraftInvoice(invoiceData: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/invoices/easy-invoice/preview`, invoiceData);
+  // ============ SEPAY EINVOICE API ============
+
+  // Đăng nhập Sepay eInvoice
+  loginEInvoice(username: string, password: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/e-invoice/login`, {
+      username,
+      password
+    });
   }
 
-  // Xuất hóa đơn điện tử (EasyInvoice)
+  // Đăng xuất Sepay eInvoice
+  logoutEInvoice(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/e-invoice/logout`, {});
+  }
+
+  // Lấy danh sách tài khoản nhà cung cấp
+  getEInvoiceProviderAccounts(): Observable<any> {
+    // Thêm timestamp để tránh cache
+    const timestamp = new Date().getTime();
+    return this.http.get(`${this.apiUrl}/e-invoice/provider-accounts`, {
+      params: { _t: timestamp.toString() }
+    });
+  }
+
+  // Lấy chi tiết tài khoản nhà cung cấp
+  getEInvoiceProviderAccountDetails(accountId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/provider-accounts/${accountId}`);
+  }
+
+  // Tạo hóa đơn điện tử (Sepay eInvoice)
+  createEInvoice(invoiceData: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/e-invoice/create`, invoiceData);
+  }
+
+  // Kiểm tra trạng thái tạo hóa đơn
+  checkEInvoiceCreateStatus(trackingCode: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/create/check/${trackingCode}`);
+  }
+
+  // Phát hành hóa đơn điện tử
+  issueEInvoice(issueData: { reference_code: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/e-invoice/issue`, issueData);
+  }
+
+  // Kiểm tra trạng thái phát hành hóa đơn
+  checkEInvoiceIssueStatus(trackingCode: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/issue/check/${trackingCode}`);
+  }
+
+  // Lấy chi tiết hóa đơn điện tử
+  getEInvoiceDetails(referenceCode: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/${referenceCode}`);
+  }
+
+  // Kiểm tra hạn ngạch
+  getEInvoiceUsage(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/usage`);
+  }
+
+  // Danh sách hóa đơn điện tử
+  listEInvoices(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.page) httpParams = httpParams.set('page', params.page.toString());
+      if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
+      if (params.status) httpParams = httpParams.set('status', params.status);
+      if (params.startDate) httpParams = httpParams.set('startDate', params.startDate);
+      if (params.endDate) httpParams = httpParams.set('endDate', params.endDate);
+    }
+    return this.http.get(`${this.apiUrl}/e-invoice`, { params: httpParams });
+  }
+
+  // ============ LEGACY METHODS (giữ lại để tương thích) ============
+
+  // Xem hóa đơn nháp (EasyInvoice) - DEPRECATED: Sử dụng createEInvoice với is_draft: true
+  previewDraftInvoice(invoiceData: any): Observable<any> {
+    // Chuyển sang sử dụng Sepay eInvoice API
+    const sepayData = this.convertToSepayFormat(invoiceData, true);
+    return this.createEInvoice(sepayData);
+  }
+
+  // Xuất hóa đơn điện tử (EasyInvoice) - DEPRECATED: Sử dụng createEInvoice và issueEInvoice
   exportEasyInvoice(invoiceData: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/invoices/easy-invoice/export`, invoiceData);
+    // Chuyển sang sử dụng Sepay eInvoice API
+    const sepayData = this.convertToSepayFormat(invoiceData, false);
+    return this.createEInvoice(sepayData);
+  }
+
+  // Chuyển đổi dữ liệu từ format cũ sang format Sepay eInvoice
+  private convertToSepayFormat(invoiceData: any, isDraft: boolean): any {
+    return {
+      provider_account_id: invoiceData.providerAccountId || invoiceData.provider_account_id,
+      is_draft: isDraft,
+      invoice: {
+        seller: {
+          name: invoiceData.company?.name || invoiceData.company?.legalName || '',
+          tax_code: invoiceData.company?.taxCode || invoiceData.company?.taxId || '',
+          address: invoiceData.company?.address || '',
+          email: invoiceData.company?.email || invoiceData.company?.contactInfo?.email || '',
+          phone: invoiceData.company?.phone || invoiceData.company?.contactInfo?.phone || ''
+        },
+        buyer: {
+          name: invoiceData.customer?.name || '',
+          tax_code: invoiceData.customer?.taxCode || invoiceData.customer?.tax_code || '',
+          address: invoiceData.customer?.address || '',
+          email: invoiceData.customer?.email || '',
+          phone: invoiceData.customer?.phone || ''
+        },
+        items: (invoiceData.items || []).map((item: any) => ({
+          name: item.name,
+          quantity: item.quantity || 1,
+          unit_price: item.unitPrice || item.price || 0,
+          total_price: (item.unitPrice || item.price || 0) * (item.quantity || 1),
+          unit: item.unit || 'cái',
+          note: item.note || item.description || ''
+        })),
+        total_amount: invoiceData.totalAmount || 0,
+        discount_amount: invoiceData.discount || 0,
+        tax_amount: invoiceData.tax || 0,
+        note: invoiceData.notes || invoiceData.note || ''
+      },
+      invoiceId: invoiceData.invoiceId || invoiceData._id
+    };
   }
 } 

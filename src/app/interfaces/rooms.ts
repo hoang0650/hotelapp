@@ -147,6 +147,7 @@ export interface Event {
 export interface GuestInfo {
   name: string;
   idNumber?: string; 
+  tax_code?: string; // Mã số thuế (cho công ty)
   phone?: string;
   email?: string;
   address?: string;

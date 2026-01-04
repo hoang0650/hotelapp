@@ -301,11 +301,15 @@
             </nz-checkbox>
             <nz-input-number 
               formControlName="maxUsers" 
-              [nzMin]="1" 
+              [nzMin]="0" 
               [nzStep]="1" 
               [nzDisabled]="packageForm.get('unlimitedUsers')?.value"
+              [nzPlaceHolder]="'PRICING_MANAGEMENT.FORM.MAX_USERS_PLACEHOLDER' | translate"
               style="width: 100%">
             </nz-input-number>
+            <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+              {{ 'PRICING_MANAGEMENT.FORM.MAX_USERS_HINT' | translate }}
+            </div>
           </nz-form-control>
         </nz-form-item>
 
@@ -431,6 +435,19 @@
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
               {{ 'PRICING_MANAGEMENT.FEATURES.AI_CHATBOX_DESC' | translate }}
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Tính năng Thông báo Khách sạn -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.HOTEL_NOTIFICATION' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <label nz-checkbox formControlName="hotelNotificationFeature">
+              {{ 'PRICING_MANAGEMENT.FEATURES.HOTEL_NOTIFICATION_ENABLE' | translate }}
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              {{ 'PRICING_MANAGEMENT.FEATURES.HOTEL_NOTIFICATION_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>

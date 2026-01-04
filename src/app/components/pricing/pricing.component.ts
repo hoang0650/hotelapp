@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { PricingService } from '../../services/pricing.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
@@ -31,7 +31,7 @@ interface PricingPlan {
   templateUrl: './pricing.component.html',
   styleUrl: './pricing.component.css'
 })
-export class PricingComponent implements OnInit, OnDestroy {
+export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   billingType: 'monthly' | 'yearly' = 'monthly';
   packages: any[] = [];
   currentPackage: any;
@@ -71,6 +71,11 @@ export class PricingComponent implements OnInit, OnDestroy {
   systemAccountNumber: string = ''; // Số tài khoản từ superadmin hoặc settings
   hasQRCode: boolean = false; // Kiểm tra có QR code không
   private paymentStatusCheckInterval: any = null; // Interval để kiểm tra trạng thái thanh toán
+  
+  // Navigation buttons
+  @ViewChild('pricingPlansContainer', { static: false }) pricingPlansContainer!: ElementRef<HTMLDivElement>;
+  canScrollLeft = false;
+  canScrollRight = false;
 
   plans: PricingPlan[] = [
     {
@@ -191,6 +196,68 @@ export class PricingComponent implements OnInit, OnDestroy {
 
     // Xử lý callback từ SePay sau khi thanh toán
     this.handlePaymentCallback();
+  }
+
+  ngAfterViewInit(): void {
+    // Đợi view render xong rồi mới kiểm tra scroll
+    setTimeout(() => {
+      this.updateScrollButtons();
+      if (this.pricingPlansContainer) {
+        this.pricingPlansContainer.nativeElement.addEventListener('scroll', () => {
+          this.updateScrollButtons();
+        });
+        
+        // Cập nhật khi window resize
+        window.addEventListener('resize', () => {
+          setTimeout(() => {
+            this.updateScrollButtons();
+          }, 100);
+        });
+      }
+    }, 300);
+  }
+
+  scrollPlans(direction: 'left' | 'right'): void {
+    if (!this.pricingPlansContainer) return;
+    
+    const container = this.pricingPlansContainer.nativeElement;
+    // Tính toán scroll amount dựa trên width của 1 card + gap
+    const cardWidth = container.querySelector('.pricing-plan')?.clientWidth || 350;
+    const gap = 24;
+    const scrollAmount = cardWidth + gap;
+    
+    if (direction === 'left') {
+      container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    } else {
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+    
+    // Cập nhật lại trạng thái nút sau khi scroll
+    setTimeout(() => {
+      this.updateScrollButtons();
+    }, 400);
+  }
+
+  updateScrollButtons(): void {
+    if (!this.pricingPlansContainer) {
+      this.canScrollLeft = false;
+      this.canScrollRight = false;
+      return;
+    }
+    
+    const container = this.pricingPlansContainer.nativeElement;
+    const scrollLeft = container.scrollLeft;
+    const scrollWidth = container.scrollWidth;
+    const clientWidth = container.clientWidth;
+    
+    // Kiểm tra xem có thể scroll không
+    const canScroll = scrollWidth > clientWidth;
+    
+    this.canScrollLeft = canScroll && scrollLeft > 5; // 5px để tránh lỗi làm tròn
+    this.canScrollRight = canScroll && scrollLeft < (scrollWidth - clientWidth - 5); // 5px để tránh lỗi làm tròn
+    
+    // Force change detection
+    this.cdr.detectChanges();
   }
 
   /**
@@ -351,6 +418,10 @@ export class PricingComponent implements OnInit, OnDestroy {
           }
         }
         this.loading = false;
+        // Cập nhật scroll buttons sau khi load packages
+        setTimeout(() => {
+          this.updateScrollButtons();
+        }, 200);
       },
       error: (error) => {
         console.error('Error loading packages:', error);
@@ -1176,12 +1247,48 @@ export class PricingComponent implements OnInit, OnDestroy {
     }
   }
 
+  getPaymentMethodBgColor(method: string): string {
+    switch (method) {
+      case 'paypal':
+        return 'rgba(0, 112, 186, 0.1)';
+      case 'sepay':
+        return 'rgba(102, 126, 234, 0.1)';
+      case 'crypto_usdt':
+        return 'rgba(38, 161, 123, 0.1)';
+      default:
+        return 'rgba(153, 153, 153, 0.1)';
+    }
+  }
+
+  getPaymentStatusIcon(status: string): string {
+    switch (status) {
+      case 'completed':
+      case 'paid':
+        return 'check-circle';
+      case 'pending':
+        return 'clock-circle';
+      case 'failed':
+        return 'close-circle';
+      case 'cancelled':
+        return 'stop';
+      case 'refunded':
+        return 'undo';
+      default:
+        return 'question-circle';
+    }
+  }
+
+  trackByPaymentId(index: number, item: any): string {
+    return item._id || item.id || item.transactionId || index.toString();
+  }
+
   /**
    * Lấy text cho status
    */
   getPaymentStatusText(status: string): string {
     switch (status) {
       case 'completed':
+      case 'paid':
         return 'Hoàn thành';
       case 'pending':
         return 'Đang chờ';

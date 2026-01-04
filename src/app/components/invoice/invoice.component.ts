@@ -6,6 +6,8 @@ import { InvoiceService } from '../../services/invoice.service';
 import { AuthService } from '../../services/auth.service';
 import { SettingsService } from '../../services/settings.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { EInvoiceProviderService } from '../../services/e-invoice-provider.service';
 import { take } from 'rxjs/operators';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
@@ -76,6 +78,7 @@ interface InvoiceData {
     phone?: string;
     email?: string;
     idNumber?: string;
+    tax_code?: string; // Mã số thuế (cho công ty)
     address?: string;
     guestSource?: string; // Nguồn khách: walkin, booking, agoda, etc.
   };
@@ -185,7 +188,9 @@ export class InvoiceComponent implements OnInit {
     private invoiceService: InvoiceService,
     private authService: AuthService,
     private settingsService: SettingsService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private modal: NzModalService,
+    private providerService: EInvoiceProviderService
   ) {
     console.log('=== InvoiceComponent Constructor ===');
     console.log('Raw data received:', this.data);
@@ -1289,82 +1294,464 @@ export class InvoiceComponent implements OnInit {
     });
   }
 
-  // Xem hóa đơn nháp (EasyInvoice)
+  // Xem hóa đơn nháp (Sepay eInvoice)
   xemHoaDonNhap(): void {
     if (!this.hotelInfo) {
       this.message.warning('Chưa có thông tin khách sạn. Vui lòng đợi...');
       return;
     }
 
+    // Kiểm tra đã chọn provider chưa
+    const selectedProvider = this.providerService.getSelectedProvider();
+    if (!selectedProvider) {
+      this.modal.warning({
+        nzTitle: 'Chưa chọn tài khoản nhà cung cấp',
+        nzContent: 'Vui lòng chọn tài khoản nhà cung cấp trước khi tạo hóa đơn nháp. Bạn có muốn chuyển đến trang quản lý hóa đơn điện tử để chọn không?',
+        nzOkText: 'Chuyển đến',
+        nzCancelText: 'Hủy',
+        nzOnOk: () => {
+          // TODO: Navigate to e-invoice-management page
+          this.message.info('Vui lòng vào "Quản lý hóa đơn điện tử" để chọn tài khoản nhà cung cấp trước');
+        }
+      });
+      return;
+    }
+
     this.isLoadingEasyInvoice = true;
-    const invoiceData = this.prepareEasyInvoiceData();
+    const invoiceData = this.prepareSepayEInvoiceData(true); // is_draft = true
     
-    this.invoiceService.previewDraftInvoice(invoiceData).subscribe({
+    this.invoiceService.createEInvoice(invoiceData).subscribe({
       next: (response: any) => {
-        this.isLoadingEasyInvoice = false;
-        // Mở hóa đơn nháp trong tab mới hoặc iframe
-        if (response.data?.previewUrl) {
-          window.open(response.data.previewUrl, '_blank');
-        } else if (response.previewUrl) {
-          window.open(response.previewUrl, '_blank');
+        // Backend trả về: { success: true, data: { tracking_code }, tracking_code }
+        const trackingCode = response.data?.tracking_code || response.tracking_code;
+        if (trackingCode) {
+          // Kiểm tra trạng thái tạo hóa đơn
+          this.checkCreateStatusAndShowPreview(trackingCode);
         } else {
-          this.message.success('Xem hóa đơn nháp thành công');
-          console.log('Preview data:', response);
+          this.isLoadingEasyInvoice = false;
+          this.message.error('Không nhận được tracking code từ server');
         }
       },
       error: (error: any) => {
         this.isLoadingEasyInvoice = false;
-        console.error('Error previewing draft invoice:', error);
-        const errorMessage = error.error?.message || error.message || 'Vui lòng thử lại sau';
-        this.message.error('Lỗi khi xem hóa đơn nháp: ' + errorMessage);
+        console.error('Error creating draft invoice:', error);
+        // Backend trả về: { success: false, error: { code, message, details } }
+        const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
+        this.message.error('Lỗi khi tạo hóa đơn nháp: ' + errorMessage);
       }
     });
   }
 
-  // Xuất hóa đơn điện tử (EasyInvoice)
+  // Kiểm tra trạng thái tạo và hiển thị preview
+  private checkCreateStatusAndShowPreview(trackingCode: string, retries: number = 0): void {
+    const maxRetries = 10; // Tối đa 10 lần thử
+    const delay = 2000; // Đợi 2 giây giữa mỗi lần thử
+
+    if (retries >= maxRetries) {
+      this.isLoadingEasyInvoice = false;
+      this.message.warning('Đang xử lý hóa đơn nháp. Vui lòng kiểm tra lại sau.');
+      return;
+    }
+
+    setTimeout(() => {
+      this.invoiceService.checkEInvoiceCreateStatus(trackingCode).subscribe({
+        next: (response: any) => {
+          // Backend trả về: { success: true, data: { status, message, reference_code } }
+          const statusData = response.data || response;
+          const status = statusData.status;
+          
+          if (status === 'success') {
+            this.isLoadingEasyInvoice = false;
+            const referenceCode = statusData.reference_code;
+            if (referenceCode) {
+              // Lấy chi tiết hóa đơn để xem preview
+              this.getInvoiceDetailsAndShowPreview(referenceCode);
+            } else {
+              this.message.success('Tạo hóa đơn nháp thành công');
+            }
+          } else if (status === 'processing' || status === 'pending') {
+            // Tiếp tục kiểm tra
+            this.checkCreateStatusAndShowPreview(trackingCode, retries + 1);
+          } else if (status === 'failed' || status === 'error') {
+            this.isLoadingEasyInvoice = false;
+            const errorMsg = statusData.message || statusData.error || 'Tạo hóa đơn nháp thất bại';
+            this.message.error('Lỗi: ' + errorMsg);
+          } else {
+            // Tiếp tục kiểm tra nếu chưa có kết quả
+            this.checkCreateStatusAndShowPreview(trackingCode, retries + 1);
+          }
+        },
+        error: (error: any) => {
+          this.isLoadingEasyInvoice = false;
+          console.error('Error checking create status:', error);
+          // Backend trả về: { success: false, error: { code, message, details } }
+          const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
+          this.message.error('Lỗi khi kiểm tra trạng thái: ' + errorMessage);
+        }
+      });
+    }, delay);
+  }
+
+  // Lấy chi tiết hóa đơn và hiển thị preview
+  private getInvoiceDetailsAndShowPreview(referenceCode: string): void {
+    this.invoiceService.getEInvoiceDetails(referenceCode).subscribe({
+      next: (response: any) => {
+        // Backend trả về: { success: true, data: { invoice_url, pdf_url, ... } }
+        const invoiceData = response.data || response;
+        const invoiceUrl = invoiceData.invoice_url || invoiceData.invoiceUrl;
+        const pdfUrl = invoiceData.pdf_url || invoiceData.pdfUrl;
+        
+        if (invoiceUrl) {
+          window.open(invoiceUrl, '_blank');
+        } else if (pdfUrl) {
+          window.open(pdfUrl, '_blank');
+        } else {
+          this.message.success('Tạo hóa đơn nháp thành công. Reference code: ' + referenceCode);
+        }
+      },
+      error: (error: any) => {
+        console.error('Error getting invoice details:', error);
+        // Backend trả về: { success: false, error: { code, message } }
+        const errorMessage = error.error?.error?.message || error.error?.message || 'Không thể lấy chi tiết hóa đơn';
+        this.message.warning(errorMessage + ', nhưng đã tạo thành công');
+      }
+    });
+  }
+
+  // Xuất hóa đơn điện tử (Sepay eInvoice)
   xuatHoaDon(): void {
     if (!this.hotelInfo) {
       this.message.warning('Chưa có thông tin khách sạn. Vui lòng đợi...');
       return;
     }
 
+    // Kiểm tra đã chọn provider chưa
+    const selectedProvider = this.providerService.getSelectedProvider();
+    if (!selectedProvider) {
+      this.modal.warning({
+        nzTitle: 'Chưa chọn tài khoản nhà cung cấp',
+        nzContent: 'Vui lòng chọn tài khoản nhà cung cấp trước khi xuất hóa đơn. Bạn có muốn chuyển đến trang quản lý hóa đơn điện tử để chọn không?',
+        nzOkText: 'Chuyển đến',
+        nzCancelText: 'Hủy',
+        nzOnOk: () => {
+          // TODO: Navigate to e-invoice-management page
+          this.message.info('Vui lòng vào "Quản lý hóa đơn điện tử" để chọn tài khoản nhà cung cấp trước');
+        }
+      });
+      return;
+    }
+
     this.isLoadingEasyInvoice = true;
-    const invoiceData = this.prepareEasyInvoiceData();
+    const invoiceData = this.prepareSepayEInvoiceData(false); // is_draft = false (phát hành ngay)
     
-    this.invoiceService.exportEasyInvoice(invoiceData).subscribe({
+    // Bước 1: Tạo hóa đơn
+    this.invoiceService.createEInvoice(invoiceData).subscribe({
       next: (response: any) => {
-        this.isLoadingEasyInvoice = false;
-        this.message.success('Xuất hóa đơn điện tử thành công!');
-        
-        // Mở hóa đơn đã xuất trong tab mới hoặc tải xuống
-        if (response.data?.invoiceUrl) {
-          window.open(response.data.invoiceUrl, '_blank');
-        } else if (response.invoiceUrl) {
-          window.open(response.invoiceUrl, '_blank');
-        } else if (response.data?.pdfUrl) {
-          window.open(response.data.pdfUrl, '_blank');
-        } else if (response.pdfUrl) {
-          window.open(response.pdfUrl, '_blank');
-        }
-        
-        // Cập nhật invoiceData với thông tin hóa đơn điện tử nếu có
-        if (response.data?.invoiceId) {
-          this.invoiceData['easyInvoiceId'] = response.data.invoiceId;
-        }
-        if (response.data?.invoiceNumber) {
-          this.invoiceData['easyInvoiceNumber'] = response.data.invoiceNumber;
+        // Backend trả về: { success: true, data: { tracking_code }, tracking_code }
+        const trackingCode = response.data?.tracking_code || response.tracking_code;
+        if (trackingCode) {
+          // Kiểm tra trạng thái tạo và sau đó phát hành
+          this.checkCreateStatusAndIssue(trackingCode);
+        } else {
+          this.isLoadingEasyInvoice = false;
+          this.message.error('Không nhận được tracking code từ server');
         }
       },
       error: (error: any) => {
         this.isLoadingEasyInvoice = false;
-        console.error('Error exporting easy invoice:', error);
-        const errorMessage = error.error?.message || error.message || 'Vui lòng thử lại sau';
-        this.message.error('Lỗi khi xuất hóa đơn điện tử: ' + errorMessage);
+        console.error('Error creating invoice:', error);
+        // Backend trả về: { success: false, error: { code, message, details } }
+        const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
+        this.message.error('Lỗi khi tạo hóa đơn: ' + errorMessage);
       }
     });
   }
 
-  // Chuẩn bị dữ liệu cho EasyInvoice từ hotelInfo và invoiceData
+  // Kiểm tra trạng thái tạo và phát hành hóa đơn
+  private checkCreateStatusAndIssue(trackingCode: string, retries: number = 0): void {
+    const maxRetries = 10;
+    const delay = 2000;
+
+    if (retries >= maxRetries) {
+      this.isLoadingEasyInvoice = false;
+      this.message.warning('Đang xử lý hóa đơn. Vui lòng kiểm tra lại sau.');
+      return;
+    }
+
+    setTimeout(() => {
+      this.invoiceService.checkEInvoiceCreateStatus(trackingCode).subscribe({
+        next: (response: any) => {
+          // Backend trả về: { success: true, data: { status, message, reference_code } }
+          const statusData = response.data || response;
+          const status = statusData.status;
+          
+          if (status === 'success') {
+            const referenceCode = statusData.reference_code;
+            if (referenceCode) {
+              // Phát hành hóa đơn
+              this.issueInvoice(referenceCode);
+            } else {
+              this.isLoadingEasyInvoice = false;
+              this.message.error('Không nhận được reference code');
+            }
+          } else if (status === 'processing' || status === 'pending') {
+            // Tiếp tục kiểm tra
+            this.checkCreateStatusAndIssue(trackingCode, retries + 1);
+          } else if (status === 'failed' || status === 'error') {
+            this.isLoadingEasyInvoice = false;
+            const errorMsg = statusData.message || statusData.error || 'Tạo hóa đơn thất bại';
+            this.message.error('Lỗi: ' + errorMsg);
+          } else {
+            // Tiếp tục kiểm tra
+            this.checkCreateStatusAndIssue(trackingCode, retries + 1);
+          }
+        },
+        error: (error: any) => {
+          this.isLoadingEasyInvoice = false;
+          console.error('Error checking create status:', error);
+          // Backend trả về: { success: false, error: { code, message, details } }
+          const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
+          this.message.error('Lỗi khi kiểm tra trạng thái: ' + errorMessage);
+        }
+      });
+    }, delay);
+  }
+
+  // Phát hành hóa đơn
+  private issueInvoice(referenceCode: string): void {
+    this.invoiceService.issueEInvoice({ reference_code: referenceCode }).subscribe({
+      next: (response: any) => {
+        // Backend trả về: { success: true, data: { tracking_code }, tracking_code }
+        const issueTrackingCode = response.data?.tracking_code || response.tracking_code;
+        if (issueTrackingCode) {
+          // Kiểm tra trạng thái phát hành
+          this.checkIssueStatusAndShowResult(issueTrackingCode, referenceCode);
+        } else {
+          this.isLoadingEasyInvoice = false;
+          this.message.error('Không nhận được tracking code phát hành');
+        }
+      },
+      error: (error: any) => {
+        this.isLoadingEasyInvoice = false;
+        console.error('Error issuing invoice:', error);
+        // Backend trả về: { success: false, error: { code, message, details } }
+        const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
+        this.message.error('Lỗi khi phát hành hóa đơn: ' + errorMessage);
+      }
+    });
+  }
+
+  // Kiểm tra trạng thái phát hành và hiển thị kết quả
+  private checkIssueStatusAndShowResult(trackingCode: string, referenceCode: string, retries: number = 0): void {
+    const maxRetries = 10;
+    const delay = 2000;
+
+    if (retries >= maxRetries) {
+      this.isLoadingEasyInvoice = false;
+      this.message.warning('Đang xử lý phát hành hóa đơn. Vui lòng kiểm tra lại sau.');
+      return;
+    }
+
+    setTimeout(() => {
+      this.invoiceService.checkEInvoiceIssueStatus(trackingCode).subscribe({
+        next: (response: any) => {
+          // Backend trả về: { success: true, data: { status, message, invoice_url, pdf_url } }
+          const statusData = response.data || response;
+          const status = statusData.status;
+          
+          if (status === 'success') {
+            this.isLoadingEasyInvoice = false;
+            this.message.success('Xuất hóa đơn điện tử thành công!');
+            
+            // Lấy chi tiết hóa đơn để hiển thị
+            this.getInvoiceDetailsAndShowResult(referenceCode);
+          } else if (status === 'processing' || status === 'pending') {
+            // Tiếp tục kiểm tra
+            this.checkIssueStatusAndShowResult(trackingCode, referenceCode, retries + 1);
+          } else if (status === 'failed' || status === 'error') {
+            this.isLoadingEasyInvoice = false;
+            const errorMsg = statusData.message || statusData.error || 'Phát hành hóa đơn thất bại';
+            this.message.error('Lỗi: ' + errorMsg);
+          } else {
+            // Tiếp tục kiểm tra
+            this.checkIssueStatusAndShowResult(trackingCode, referenceCode, retries + 1);
+          }
+        },
+        error: (error: any) => {
+          this.isLoadingEasyInvoice = false;
+          console.error('Error checking issue status:', error);
+          // Backend trả về: { success: false, error: { code, message, details } }
+          const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
+          this.message.error('Lỗi khi kiểm tra trạng thái phát hành: ' + errorMessage);
+        }
+      });
+    }, delay);
+  }
+
+  // Lấy chi tiết hóa đơn và hiển thị kết quả
+  private getInvoiceDetailsAndShowResult(referenceCode: string): void {
+    this.invoiceService.getEInvoiceDetails(referenceCode).subscribe({
+      next: (response: any) => {
+        // Backend trả về: { success: true, data: { invoice_url, pdf_url, ... } }
+        const invoiceData = response.data || response;
+        const invoiceUrl = invoiceData.invoice_url || invoiceData.invoiceUrl;
+        const pdfUrl = invoiceData.pdf_url || invoiceData.pdfUrl;
+        
+        if (invoiceUrl) {
+          window.open(invoiceUrl, '_blank');
+        } else if (pdfUrl) {
+          window.open(pdfUrl, '_blank');
+        } else {
+          this.message.info('Hóa đơn đã được phát hành thành công');
+        }
+        
+        // Cập nhật invoiceData với thông tin hóa đơn điện tử
+        if (referenceCode) {
+          this.invoiceData['einvoiceReferenceCode'] = referenceCode;
+        }
+      },
+      error: (error: any) => {
+        console.error('Error getting invoice details:', error);
+        // Backend trả về: { success: false, error: { code, message } }
+        // Không hiển thị lỗi vì đã phát hành thành công
+      }
+    });
+  }
+
+  // Chuẩn bị dữ liệu cho Sepay eInvoice từ hotelInfo và invoiceData
+  // Theo tài liệu: https://developer.sepay.vn/vi/einvoice-api/xuat-hoa-don-dien-tu
+  private prepareSepayEInvoiceData(isDraft: boolean = true): any {
+    // Lấy provider account từ service
+    const selectedProvider = this.providerService.getSelectedProvider();
+    if (!selectedProvider || !selectedProvider.id) {
+      throw new Error('Vui lòng chọn tài khoản nhà cung cấp trước khi tạo hóa đơn');
+    }
+
+    const providerAccountId = selectedProvider.id;
+
+    // Lấy template từ provider (mặc định lấy template đầu tiên)
+    const template = selectedProvider.templates && selectedProvider.templates.length > 0 
+      ? selectedProvider.templates[0] 
+      : null;
+
+    if (!template) {
+      throw new Error('Không tìm thấy mẫu hóa đơn. Vui lòng kiểm tra lại tài khoản nhà cung cấp.');
+    }
+
+    const templateCode = template.template_code || '2'; // Mặc định template 2 (hóa đơn bán hàng)
+    const invoiceSeries = template.invoice_series || 'C25HTV'; // Mặc định series
+
+    // Format ngày phát hành: yyyy-MM-dd HH:mm:ss
+    const issuedDate = this.formatDateForSepay(this.invoiceData.date || new Date());
+
+    // Chuẩn bị danh sách sản phẩm/dịch vụ theo format Sepay
+    const items: any[] = [];
+    let lineNumber = 1;
+    
+    // Thêm products
+    if (this.invoiceData.products && this.invoiceData.products.length > 0) {
+      this.invoiceData.products.forEach((product: any) => {
+        items.push({
+          line_number: lineNumber++,
+          line_type: 1, // 1 = sản phẩm/dịch vụ
+          item_code: product.code || `SP${lineNumber - 1}`,
+          item_name: product.name,
+          unit: product.unit || 'cái',
+          quantity: product.quantity || 1,
+          unit_price: product.price || 0,
+          tax_rate: product.tax_rate || 0 // 0% thuế suất mặc định (có thể điều chỉnh)
+        });
+      });
+    }
+
+    // Thêm services (chỉ những service không có trong products)
+    if (this.invoiceData.services && this.invoiceData.services.length > 0) {
+      this.invoiceData.services.forEach((service: any) => {
+        if (!this.isServiceInProducts(service)) {
+          items.push({
+            line_number: lineNumber++,
+            line_type: 1, // 1 = sản phẩm/dịch vụ
+            item_code: service.code || `DV${lineNumber - 1}`,
+            item_name: service.name,
+            unit: service.unit || 'cái',
+            quantity: service.quantity || 1,
+            unit_price: service.price || 0,
+            tax_rate: service.tax_rate || 0
+          });
+        }
+      });
+    }
+
+    // Nếu không có items, thêm tiền phòng
+    if (items.length === 0) {
+      items.push({
+        line_number: 1,
+        line_type: 1,
+        item_code: 'PHONG',
+        item_name: `Tiền phòng ${this.invoiceData.roomNumber || ''}`,
+        unit: 'đêm',
+        quantity: 1,
+        unit_price: this.invoiceData.roomAmount || this.invoiceData.roomTotal || this.invoiceData['amount'] || 0,
+        tax_rate: 0
+      });
+    }
+
+    // Thêm chiết khấu nếu có (line_type = 3)
+    const discount = this.invoiceData.discount || 0;
+    if (discount > 0) {
+      items.push({
+        line_number: lineNumber++,
+        line_type: 3, // 3 = chiết khấu trên tổng đơn
+        item_name: 'Chiết khấu thương mại',
+        amount: discount,
+        tax_rate: 0
+      });
+    }
+
+    // Thông tin khách hàng (buyer)
+    // Ưu tiên tax_code từ guestInfo, nếu không có thì dùng idNumber
+    const taxCode = this.invoiceData.guestInfo?.tax_code || 
+                    this.invoiceData['customerTaxCode'] || 
+                    this.invoiceData['customerIdNumber'] || 
+                    this.invoiceData.guestInfo?.idNumber || 
+                    '';
+    
+    const buyer = {
+      name: this.getCustomerName() || 'Khách lẻ',
+      tax_code: taxCode,
+      address: this.invoiceData.guestInfo?.address || this.invoiceData['customerAddress'] || '',
+      email: this.getCustomerEmail() || '',
+      phone: this.getCustomerPhone() || ''
+    };
+
+    // Format theo tài liệu Sepay
+    return {
+      template_code: templateCode,
+      invoice_series: invoiceSeries,
+      issued_date: issuedDate,
+      currency: 'VND',
+      provider_account_id: providerAccountId,
+      buyer: buyer,
+      items: items,
+      notes: this.invoiceData.notes || '',
+      is_draft: isDraft,
+      invoiceId: this.invoiceData['_id'] || this.invoiceData['invoiceId']
+    };
+  }
+
+  // Format ngày theo format Sepay: yyyy-MM-dd HH:mm:ss
+  private formatDateForSepay(date: Date | string): string {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  // Chuẩn bị dữ liệu cho EasyInvoice từ hotelInfo và invoiceData (LEGACY - giữ lại để tương thích)
   private prepareEasyInvoiceData(): any {
     // Lấy thông tin công ty từ hotelInfo
     const companyInfo = {

@@ -242,6 +242,15 @@ export class AdminComponent implements OnInit {
            this.authService.isBusiness();
   }
 
+  // E-Invoice - superadmin, admin, business, hotel, staff
+  canAccessEInvoice(): boolean {
+    return this.authService.isSuperAdmin() || 
+           this.authService.isAdmin() || 
+           this.authService.isBusiness() || 
+           this.authService.isHotelManager() ||
+           this.authService.isStaff();
+  }
+
   // Mở trang Settings
   openSettings(): void {
     if (this.canAccessSettings()) {

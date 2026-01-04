@@ -6,18 +6,12 @@
         <p style="margin-bottom: 16px; color: #666; font-size: 14px;">
           Chọn hình thức thanh toán cho gói đăng ký:
         </p>
-        <nz-radio-group [ngModel]="billingType" (ngModelChange)="onBillingTypeChange($event)">
-          <label nz-radio-button [nzValue]="'monthly'">
+        <nz-radio-group [ngModel]="billingType" (ngModelChange)="onBillingTypeChange($event)" style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+          <label nz-radio-button [nzValue]="'monthly'" style="flex: 1; min-width: 200px; max-width: 280px;">
             <span>Thanh toán theo tháng</span>
-            <span style="font-size: 12px; color: #999; display: block; margin-top: 4px;">
-              Thanh toán hàng tháng
-            </span>
           </label>
-          <label nz-radio-button [nzValue]="'yearly'">
+          <label nz-radio-button [nzValue]="'yearly'" style="flex: 1; min-width: 200px; max-width: 280px;">
             <span>Thanh toán theo năm</span>
-            <span style="font-size: 12px; color: #999; display: block; margin-top: 4px;">
-              Tiết kiệm hơn với gói năm
-            </span>
           </label>
         </nz-radio-group>
         <div *ngIf="billingType === 'yearly'" style="margin-top: 12px; padding: 8px 12px; background: #e6f7ff; border-radius: 4px; border-left: 3px solid #1890ff;">
@@ -44,8 +38,17 @@
       </p>
     </div>
 
-    <div class="pricing-plans">
-      <div *ngFor="let package of packages" class="pricing-plan" 
+    <div class="pricing-plans-wrapper">
+      <button 
+        *ngIf="canScrollLeft || canScrollRight"
+        class="nav-button prev" 
+        (click)="scrollPlans('left')"
+        [disabled]="!canScrollLeft"
+        title="Xem các gói trước">
+        <i nz-icon nzType="left" nzTheme="outline" style="font-size: 20px;"></i>
+      </button>
+      <div class="pricing-plans" #pricingPlansContainer>
+        <div *ngFor="let package of packages" class="pricing-plan" 
            [class.current-plan]="isCurrentPackage(package._id || package.id)"
            [class.selected-plan]="selectedPackage && (selectedPackage.packageId === (package._id || package.id))">
         <div class="plan-header">
@@ -85,8 +88,8 @@
             </li>
             <li *ngIf="package.maxUsers !== undefined && package.maxUsers !== null">
               <i nz-icon nzType="user" nzTheme="outline"></i>
-              <span *ngIf="package.maxUsers === -1">Không giới hạn người dùng</span>
-              <span *ngIf="package.maxUsers !== -1">Tối đa {{ package.maxUsers }} người dùng</span>
+              <span *ngIf="package.maxUsers === 0 || package.maxUsers === null">Không giới hạn người dùng</span>
+              <span *ngIf="package.maxUsers !== 0 && package.maxUsers !== null">Tối đa {{ package.maxUsers }} người dùng</span>
             </li>
             <li *ngIf="package.permissions && package.permissions.length > 0">
               <i nz-icon nzType="safety-certificate" nzTheme="outline"></i>
@@ -199,91 +202,190 @@
           </ng-template>
         </div>
       </div>
+      </div>
+      <button 
+        *ngIf="canScrollLeft || canScrollRight"
+        class="nav-button next" 
+        (click)="scrollPlans('right')"
+        [disabled]="!canScrollRight"
+        title="Xem các gói tiếp theo">
+        <i nz-icon nzType="right" nzTheme="outline" style="font-size: 20px;"></i>
+      </button>
+    </div>
+
+    <!-- Phần tính phí riêng và phí khởi tạo -->
+    <div class="additional-fees-section" style="margin-top: 60px; padding: 30px; background: #f8f9fa; border-radius: 12px; max-width: 900px; margin-left: auto; margin-right: auto;">
+      <h2 style="text-align: center; margin-bottom: 24px; color: #1f1f1f; font-size: 1.75rem;">
+        <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 8px; color: #1890ff;"></i>
+        Thông tin phí bổ sung
+      </h2>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px;">
+        <!-- Phí riêng -->
+        <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          <div style="display: flex; align-items: center; margin-bottom: 16px;">
+            <i nz-icon nzType="dollar-circle" nzTheme="fill" style="font-size: 24px; color: #52c41a; margin-right: 12px;"></i>
+            <h3 style="margin: 0; color: #1f1f1f; font-size: 1.25rem;">Phí riêng</h3>
+          </div>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 16px;">
+            Dịch vụ phí riêng với các tính năng tùy chỉnh theo yêu cầu đặc biệt của khách sạn bạn:
+          </p>
+          <ul style="list-style: none; padding: 0; margin: 0 0 16px 0;">
+            <li style="display: flex; align-items: flex-start; margin-bottom: 12px; color: #333;">
+              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 8px; margin-top: 2px; flex-shrink: 0;"></i>
+              <span><strong>Số lượng giao dịch chuyển khoản:</strong> Tùy chỉnh số lượng giao dịch theo nhu cầu thực tế của bạn</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; margin-bottom: 12px; color: #333;">
+              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 8px; margin-top: 2px; flex-shrink: 0;"></i>
+              <span><strong>Hóa đơn điện tử:</strong> Tích hợp hệ thống hóa đơn điện tử chuyên nghiệp</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; margin-bottom: 12px; color: #333;">
+              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 8px; margin-top: 2px; flex-shrink: 0;"></i>
+              <span><strong>Chữ ký số tập trung:</strong> Quản lý và sử dụng chữ ký số tập trung cho toàn bộ hệ thống</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; margin-bottom: 12px; color: #333;">
+              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 8px; margin-top: 2px; flex-shrink: 0;"></i>
+              <span><strong>Các tính năng thiết kế theo yêu cầu riêng:</strong> Phát triển tính năng đặc biệt phù hợp với quy trình của bạn</span>
+            </li>
+          </ul>
+          <div style="margin-top: 16px; padding: 12px; background: #f6ffed; border-radius: 6px; border-left: 3px solid #52c41a;">
+            <p style="margin: 0; font-size: 0.9rem; color: #389e0d;">
+              <strong>Liên hệ:</strong> Để biết thêm chi tiết về phí riêng, vui lòng liên hệ với chúng tôi.
+            </p>
+          </div>
+        </div>
+
+        <!-- Phí khởi tạo -->
+        <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          <div style="display: flex; align-items: center; margin-bottom: 16px;">
+            <i nz-icon nzType="rocket" nzTheme="fill" style="font-size: 24px; color: #1890ff; margin-right: 12px;"></i>
+            <h3 style="margin: 0; color: #1f1f1f; font-size: 1.25rem;">Phí khởi tạo</h3>
+          </div>
+          <p style="color: #666; line-height: 1.6; margin: 0;">
+            Phí khởi tạo một lần khi bạn đăng ký gói dịch vụ mới. 
+            Phí này bao gồm việc thiết lập tài khoản, cấu hình hệ thống và hướng dẫn sử dụng.
+          </p>
+          <div style="margin-top: 16px; padding: 12px; background: #e6f7ff; border-radius: 6px; border-left: 3px solid #1890ff;">
+            <p style="margin: 0; font-size: 0.9rem; color: #0958d9;">
+              <strong>Lưu ý:</strong> Phí khởi tạo chỉ áp dụng cho lần đăng ký đầu tiên.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align: center; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <p style="margin: 0; color: #666; font-size: 0.95rem;">
+          <i nz-icon nzType="phone" nzTheme="outline" style="margin-right: 8px; color: #1890ff;"></i>
+          Để biết thêm thông tin chi tiết về phí riêng và phí khởi tạo, vui lòng 
+          <a href="/contact" style="color: #1890ff; font-weight: 600; text-decoration: none;">liên hệ với chúng tôi</a> 
+          hoặc gọi hotline hỗ trợ.
+        </p>
+      </div>
     </div>
 
     <!-- Lịch sử thanh toán -->
-    <div *ngIf="userId" class="payment-history-section" style="margin-top: 40px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h2 style="margin: 0;">Lịch sử thanh toán</h2>
+    <div *ngIf="userId" class="payment-history-section">
+      <div class="payment-history-header">
+        <div class="payment-history-title">
+          <i nz-icon nzType="history" nzTheme="outline" class="history-icon"></i>
+          <h2>Lịch sử thanh toán</h2>
+          <nz-badge [nzCount]="paymentHistory.length" [nzShowZero]="false" class="history-badge"></nz-badge>
+        </div>
         <button 
           nz-button 
           nzType="default" 
           nzSize="small"
           (click)="togglePaymentHistory()"
-          [nzLoading]="paymentHistoryLoading">
+          [nzLoading]="paymentHistoryLoading"
+          class="toggle-history-btn">
           <i nz-icon [nzType]="showPaymentHistory ? 'up' : 'down'" nzTheme="outline"></i>
           {{ showPaymentHistory ? 'Ẩn' : 'Hiển thị' }} lịch sử
         </button>
       </div>
 
-      <nz-collapse *ngIf="showPaymentHistory" nzAccordion>
-        <nz-collapse-panel 
-          nzHeader="Lịch sử thanh toán của tôi" 
-          [nzActive]="true"
-          [nzDisabled]="false">
-          <nz-spin [nzSpinning]="paymentHistoryLoading">
-            <nz-empty 
-              *ngIf="!paymentHistoryLoading && paymentHistory.length === 0"
-              nzNotFoundContent="Chưa có lịch sử thanh toán">
-            </nz-empty>
+      <div *ngIf="showPaymentHistory" class="payment-history-content">
+        <nz-spin [nzSpinning]="paymentHistoryLoading">
+          <nz-empty 
+            *ngIf="!paymentHistoryLoading && paymentHistory.length === 0"
+            nzNotFoundContent="Chưa có lịch sử thanh toán"
+            [nzNotFoundImage]="'simple'">
+          </nz-empty>
 
-            <nz-list 
-              *ngIf="!paymentHistoryLoading && paymentHistory.length > 0"
-              [nzDataSource]="paymentHistory"
-              [nzRenderItem]="payment"
-              nzBordered>
-              <ng-template #payment let-item>
-                <nz-list-item>
-                  <nz-list-item-meta>
-                    <nz-list-item-meta-title>
-                      <div style="display: flex; align-items: center; gap: 12px;">
-                        <i 
-                          nz-icon 
-                          [nzType]="item.paymentMethodIcon || 'credit-card'" 
-                          [nzTheme]="item.paymentMethod === 'crypto_usdt' ? 'fill' : 'outline'"
-                          [style.color]="getPaymentMethodColor(item.paymentMethod)">
-                        </i>
-                        <span style="font-weight: 600;">{{ item.paymentMethodLabel || item.paymentMethod }}</span>
-                        <nz-tag [nzColor]="getPaymentStatusColor(item.status)">
-                          {{ getPaymentStatusText(item.status) }}
-                        </nz-tag>
-                      </div>
-                    </nz-list-item-meta-title>
-                    <nz-list-item-meta-description>
-                      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                        <div>
-                          <strong>Gói:</strong> {{ item.packageId?.name || 'N/A' }}
-                        </div>
-                        <div>
-                          <strong>Số tiền:</strong> 
-                          <span *ngIf="item.currency === 'USD'">
-                            ${{ item.amount | number:'1.2-2' }}
-                          </span>
-                          <span *ngIf="item.currency !== 'USD'">
-                            {{ item.amount | number:'1.0-0' }} {{ item.currency || 'VND' }}
-                          </span>
-                          <span *ngIf="item.cryptoAmount" style="color: #26a17b; margin-left: 8px;">
-                            ({{ item.cryptoAmount }} USDT)
-                          </span>
-                        </div>
-                        <div>
-                          <strong>Ngày:</strong> {{ (item.createdAt || item.created_at) | date:'dd/MM/yyyy HH:mm' }}
-                        </div>
-                        <div *ngIf="item.transactionId">
-                          <strong>Mã GD:</strong> 
-                          <code style="font-size: 11px; background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">
-                            {{ item.transactionId }}
-                          </code>
-                        </div>
-                      </div>
-                    </nz-list-item-meta-description>
-                  </nz-list-item-meta>
-                </nz-list-item>
-              </ng-template>
-            </nz-list>
-          </nz-spin>
-        </nz-collapse-panel>
-      </nz-collapse>
+          <div 
+            *ngIf="!paymentHistoryLoading && paymentHistory.length > 0"
+            class="payment-history-list">
+            <div 
+              *ngFor="let item of paymentHistory; trackBy: trackByPaymentId"
+              class="payment-history-item"
+              [class.payment-success]="item.status === 'completed' || item.status === 'paid'"
+              [class.payment-pending]="item.status === 'pending'"
+              [class.payment-failed]="item.status === 'failed' || item.status === 'cancelled'">
+              <div class="payment-item-header">
+                <div class="payment-method-info">
+                  <div class="payment-method-icon" [style.background]="getPaymentMethodBgColor(item.paymentMethod)">
+                    <i 
+                      nz-icon 
+                      [nzType]="item.paymentMethodIcon || 'credit-card'" 
+                      [nzTheme]="item.paymentMethod === 'crypto_usdt' ? 'fill' : 'outline'"
+                      [style.color]="getPaymentMethodColor(item.paymentMethod)">
+                    </i>
+                  </div>
+                  <div class="payment-method-details">
+                    <div class="payment-method-name">{{ item.paymentMethodLabel || item.paymentMethod }}</div>
+                    <div class="payment-date">
+                      <i nz-icon nzType="calendar" nzTheme="outline"></i>
+                      {{ (item.createdAt || item.created_at) | date:'dd/MM/yyyy HH:mm' }}
+                    </div>
+                  </div>
+                </div>
+                <nz-tag [nzColor]="getPaymentStatusColor(item.status)" class="payment-status-tag">
+                  <i nz-icon [nzType]="getPaymentStatusIcon(item.status)" nzTheme="outline"></i>
+                  {{ getPaymentStatusText(item.status) }}
+                </nz-tag>
+              </div>
+
+              <div class="payment-item-body">
+                <div class="payment-info-row">
+                  <div class="payment-info-item">
+                    <span class="payment-info-label">
+                      <i nz-icon nzType="gift" nzTheme="outline"></i>
+                      Gói dịch vụ:
+                    </span>
+                    <span class="payment-info-value">{{ item.packageId?.name || 'N/A' }}</span>
+                  </div>
+                  <div class="payment-info-item payment-amount">
+                    <span class="payment-info-label">
+                      <i nz-icon nzType="dollar" nzTheme="outline"></i>
+                      Số tiền:
+                    </span>
+                    <span class="payment-info-value amount-value">
+                      <span *ngIf="item.currency === 'USD'">
+                        ${{ item.amount | number:'1.2-2' }}
+                      </span>
+                      <span *ngIf="item.currency !== 'USD'">
+                        {{ item.amount | number:'1.0-0' }} {{ item.currency || 'VND' }}
+                      </span>
+                      <span *ngIf="item.cryptoAmount" class="crypto-amount">
+                        ({{ item.cryptoAmount }} USDT)
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                <div *ngIf="item.transactionId" class="payment-info-row">
+                  <div class="payment-info-item payment-transaction">
+                    <span class="payment-info-label">
+                      <i nz-icon nzType="file-text" nzTheme="outline"></i>
+                      Mã giao dịch:
+                    </span>
+                    <code class="transaction-code">{{ item.transactionId }}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nz-spin>
+      </div>
     </div>
   </nz-spin>
 
