@@ -619,6 +619,160 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     this.message.warning('Không tìm thấy hóa đơn trong database. Hiển thị từ dữ liệu hiện tại.');
     this.showInvoiceModal(item);
   }
+
+  // Sửa thông tin hóa đơn (chỉnh sửa trước khi xuất hóa đơn nháp)
+  editInvoice(item: any): void {
+    if (!item) {
+      this.message.warning('Không thể chỉnh sửa hóa đơn: Thiếu thông tin phòng');
+      return;
+    }
+    
+    // Đảm bảo item có hotelId - lấy từ item hoặc localStorage
+    if (!item.hotelId) {
+      item.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+    }
+    
+    // Lấy thông tin để tìm invoice từ database
+    const roomId = item.roomId || item._id;
+    const checkOutTime = item.checkOutTime || item.checkoutTime || item.date;
+    const invoiceId = item.invoiceId || item.invoice?._id;
+    
+    if (!roomId && !invoiceId) {
+      this.message.warning('Không thể tìm hóa đơn: Thiếu thông tin phòng hoặc ID hóa đơn');
+      return;
+    }
+    
+    // Nếu có invoiceId, lấy trực tiếp từ database
+    if (invoiceId) {
+      this.loadInvoiceForEdit(invoiceId);
+      return;
+    }
+    
+    // Nếu không có invoiceId, tìm invoice theo roomId và checkOutTime
+    if (roomId && checkOutTime) {
+      this.loadInvoiceByRoomAndDateForEdit(roomId, checkOutTime, item);
+      return;
+    }
+    
+    // Fallback: sử dụng dữ liệu từ item
+    this.showInvoiceModalForEdit(item);
+  }
+
+  // Lấy hóa đơn theo ID để chỉnh sửa
+  loadInvoiceForEdit(invoiceId: string): void {
+    this.settingValue.loading = true;
+    this.invoiceService.getInvoiceByIdNew(invoiceId).subscribe({
+      next: (response: any) => {
+        this.settingValue.loading = false;
+        if (response && response.data) {
+          const invoiceData = this.mapInvoiceToInvoiceData(response.data);
+          // Đảm bảo hotelId có trong invoiceData
+          if (!invoiceData.hotelId) {
+            invoiceData.hotelId = this.hotelId || 
+                                  localStorage.getItem('selectedHotelId') || 
+                                  localStorage.getItem('hotelId') || '';
+          }
+          this.showInvoiceModalForEdit(invoiceData);
+        } else {
+          this.message.error('Không tìm thấy hóa đơn trong database');
+        }
+      },
+      error: (error: any) => {
+        this.settingValue.loading = false;
+        console.error('Error loading invoice for edit:', error);
+        this.message.error('Lỗi khi tải hóa đơn: ' + (error.error?.message || error.message));
+      }
+    });
+  }
+
+  // Lấy hóa đơn theo roomId và checkOutTime để chỉnh sửa
+  loadInvoiceByRoomAndDateForEdit(roomId: string, checkOutTime: any, fallbackItem: any): void {
+    this.settingValue.loading = true;
+    
+    // Đảm bảo fallbackItem có hotelId
+    if (fallbackItem && !fallbackItem.hotelId) {
+      fallbackItem.hotelId = this.hotelId || 
+                             localStorage.getItem('selectedHotelId') || 
+                             localStorage.getItem('hotelId') || '';
+    }
+    
+    // Tìm invoice theo roomId và checkOutTime
+    const checkOutDate = new Date(checkOutTime);
+    const startDate = new Date(checkOutDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(checkOutDate);
+    endDate.setHours(23, 59, 59, 999);
+    
+    const hotelId = fallbackItem?.hotelId || this.hotelId || 
+                    localStorage.getItem('selectedHotelId') || 
+                    localStorage.getItem('hotelId');
+    
+    const queryParams: any = {
+      roomId: roomId,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      limit: 10
+    };
+    
+    if (hotelId) {
+      queryParams.hotelId = hotelId;
+    }
+    
+    this.invoiceService.getInvoices(queryParams).subscribe({
+      next: (response: any) => {
+        this.settingValue.loading = false;
+        if (response && response.data && response.data.length > 0) {
+          // Lấy invoice đầu tiên (hoặc tìm chính xác theo checkOutTime)
+          const invoice = response.data[0];
+          const invoiceData = this.mapInvoiceToInvoiceData(invoice);
+          if (!invoiceData.hotelId) {
+            invoiceData.hotelId = hotelId || '';
+          }
+          this.showInvoiceModalForEdit(invoiceData);
+        } else {
+          // Không tìm thấy trong database, sử dụng fallbackItem
+          this.showInvoiceModalForEdit(fallbackItem);
+        }
+      },
+      error: (error: any) => {
+        this.settingValue.loading = false;
+        console.error('Error loading invoice for edit:', error);
+        // Fallback: sử dụng dữ liệu từ item
+        this.showInvoiceModalForEdit(fallbackItem);
+      }
+    });
+  }
+
+  // Hiển thị modal chỉnh sửa hóa đơn
+  showInvoiceModalForEdit(invoiceData: any): void {
+    // Đảm bảo hotelId luôn có trong invoiceData
+    if (!invoiceData.hotelId) {
+      invoiceData.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+    }
+    
+    const modal = this.modalService.create({
+      nzTitle: 'Chỉnh sửa thông tin hóa đơn',
+      nzContent: InvoiceComponent,
+      nzWidth: '90%',
+      nzStyle: { top: '20px' },
+      nzFooter: null,
+      nzMaskClosable: false,
+      nzClassName: 'invoice-modal-edit',
+      nzData: {
+        invoiceData: invoiceData,
+        businessInfo: invoiceData.businessInfo || null,
+        isEditMode: true // Đánh dấu là chế độ chỉnh sửa
+      }
+    });
+    
+    // Lắng nghe khi modal đóng để reload dữ liệu nếu cần
+    modal.afterClose.subscribe((result) => {
+      if (result === 'updated') {
+        // Reload dữ liệu nếu hóa đơn đã được cập nhật
+        this.reloadData();
+      }
+    });
+  }
   
   // Lấy hóa đơn theo ID
   loadInvoiceById(invoiceId: string): void {

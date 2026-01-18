@@ -25,6 +25,21 @@
   margin: 0;
 }
 
+/* Header Title and Info Row */
+.header-title {
+  margin-bottom: 24px;
+}
+
+.header-info-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.info-card {
+  margin: 0;
+}
+
 .content-wrapper {
   background: white;
   border-radius: 8px;
@@ -78,13 +93,44 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
 }
 
 .auth-error {
   margin-top: 8px;
+}
+
+.quota-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quota-display {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quota-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quota-stats {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.quota-warning {
+  margin-top: 8px;
+}
+
+.quota-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .provider-info {
@@ -211,13 +257,8 @@
     gap: 4px;
   }
 
-  .header-content {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .provider-section {
-    min-width: 100%;
+  .header-info-row {
+    grid-template-columns: 1fr;
   }
 }
 

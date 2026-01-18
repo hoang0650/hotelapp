@@ -303,6 +303,23 @@ export class InvoiceService {
     return this.http.get(`${this.apiUrl}/e-invoice/usage`);
   }
 
+  // Phân chia quota cho hotel (chỉ admin/superadmin)
+  allocateQuota(data: {
+    hotelId: string;
+    quota: number;
+    packageId?: string;
+    packageName?: string;
+    invoiceCount?: number;
+    paymentStatus?: 'pending' | 'paid' | 'cancelled';
+  }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/e-invoice/quota/allocate`, data);
+  }
+
+  // Lấy danh sách quota của các hotel (chỉ admin/superadmin)
+  getHotelQuotas(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/quota/hotels`);
+  }
+
   // Danh sách hóa đơn điện tử
   listEInvoices(params?: {
     page?: number;

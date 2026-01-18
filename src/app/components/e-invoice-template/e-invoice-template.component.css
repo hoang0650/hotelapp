@@ -120,16 +120,33 @@
 
 .template-meta {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.template-date {
+.template-code,
+.template-series {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 0.85rem;
-  color: #999;
+  color: #666;
+}
+
+.template-code i,
+.template-series i {
+  font-size: 14px;
+}
+
+.provider-info {
+  margin-top: 12px;
+}
+
+.provider-info nz-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
 }
 
 .template-actions {

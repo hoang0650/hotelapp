@@ -1,88 +1,137 @@
 <div class="e-invoice-management-container">
   <div class="page-header">
-    <div class="header-content">
-      <div>
-        <h1>Quản lý hóa đơn điện tử</h1>
-        <p class="subtitle">Xem và quản lý bản nháp, danh sách hóa đơn đã xuất</p>
-      </div>
-      <div class="provider-section">
-        <nz-card [nzBordered]="false" nzSize="small" class="provider-card">
-          <!-- Trạng thái đăng nhập -->
-          <div class="auth-status">
-            <div class="provider-label">
-              <i nz-icon [nzType]="isAuthenticated ? 'check-circle' : 'close-circle'" 
-                 [nzTheme]="'fill'" 
-                 [style.color]="isAuthenticated ? '#52c41a' : '#ff4d4f'"></i>
-              <span>Trạng thái đăng nhập:</span>
+    <div class="header-title">
+      <h1>Quản lý hóa đơn điện tử</h1>
+      <p class="subtitle">Xem và quản lý bản nháp, danh sách hóa đơn đã xuất</p>
+    </div>
+    <div class="header-info-row">
+      <!-- Trạng thái đăng nhập -->
+      <nz-card [nzBordered]="false" nzSize="small" class="info-card">
+        <div class="auth-status">
+          <div class="provider-label">
+            <i nz-icon [nzType]="isAuthenticated ? 'check-circle' : 'close-circle'" 
+               [nzTheme]="'fill'" 
+               [style.color]="isAuthenticated ? '#52c41a' : '#ff4d4f'"></i>
+            <span>Trạng thái đăng nhập:</span>
+          </div>
+          <div class="provider-value">
+            <nz-spin *ngIf="checkingAuth" nzSimple [nzSize]="'small'"></nz-spin>
+            <div *ngIf="!checkingAuth && isAuthenticated" class="auth-actions">
+              <nz-tag nzColor="success">
+                <i nz-icon nzType="check-circle" nzTheme="outline"></i>
+                Đã đăng nhập
+              </nz-tag>
+              <button nz-button nzType="link" nzSize="small" nzDanger (click)="logout()">
+                <i nz-icon nzType="logout" nzTheme="outline"></i>
+                Đăng xuất
+              </button>
             </div>
-            <div class="provider-value">
-              <nz-spin *ngIf="checkingAuth" nzSimple [nzSize]="'small'"></nz-spin>
-              <div *ngIf="!checkingAuth && isAuthenticated" class="auth-actions">
-                <nz-tag nzColor="success">
-                  <i nz-icon nzType="check-circle" nzTheme="outline"></i>
-                  Đã đăng nhập
-                </nz-tag>
-                <button nz-button nzType="link" nzSize="small" nzDanger (click)="logout()">
-                  <i nz-icon nzType="logout" nzTheme="outline"></i>
-                  Đăng xuất
-                </button>
-              </div>
-              <div *ngIf="!checkingAuth && !isAuthenticated" class="auth-actions">
-                <nz-tag nzColor="error">
-                  <i nz-icon nzType="close-circle" nzTheme="outline"></i>
-                  Chưa đăng nhập
-                </nz-tag>
-                <button nz-button nzType="primary" nzSize="small" (click)="openLoginModal()">
-                  <i nz-icon nzType="login" nzTheme="outline"></i>
-                  Đăng nhập
-                </button>
-              </div>
-            </div>
-            <div class="auth-error" *ngIf="authError && !checkingAuth">
-              <nz-alert 
-                [nzType]="'error'" 
-                [nzMessage]="authError" 
-                [nzShowIcon]="true"
-                nzCloseable
-                (nzOnClose)="authError = null">
-              </nz-alert>
+            <div *ngIf="!checkingAuth && !isAuthenticated" class="auth-actions">
+              <nz-tag nzColor="error">
+                <i nz-icon nzType="close-circle" nzTheme="outline"></i>
+                Chưa đăng nhập
+              </nz-tag>
+              <button nz-button nzType="primary" nzSize="small" (click)="openLoginModal()">
+                <i nz-icon nzType="login" nzTheme="outline"></i>
+                Đăng nhập
+              </button>
             </div>
           </div>
+          <div class="auth-error" *ngIf="authError && !checkingAuth">
+            <nz-alert 
+              [nzType]="'error'" 
+              [nzMessage]="authError" 
+              [nzShowIcon]="true"
+              nzCloseable
+              (nzOnClose)="authError = null">
+            </nz-alert>
+          </div>
+        </div>
+      </nz-card>
 
-          <!-- Chọn provider (chỉ hiển thị khi đã đăng nhập) -->
-          <div class="provider-info" *ngIf="isAuthenticated && !checkingAuth">
-            <div class="provider-label">
-              <i nz-icon nzType="cloud-server" nzTheme="outline"></i>
-              <span>Tài khoản nhà cung cấp:</span>
-            </div>
-            <div class="provider-value" *ngIf="selectedProvider">
-              <nz-spin [nzSpinning]="loadingProviderDetails" nzSize="small">
-                <nz-tag [nzColor]="selectedProvider.active ? 'success' : 'default'">
-                  {{ selectedProvider.provider }}
-                </nz-tag>
-                <span *ngIf="selectedProvider.templates && selectedProvider.templates.length > 0" class="templates-count">
+      <!-- Hạn ngạch (chỉ hiển thị khi đã đăng nhập) -->
+      <nz-card [nzBordered]="false" nzSize="small" class="info-card" *ngIf="isAuthenticated && !checkingAuth">
+        <div class="quota-info">
+          <div class="provider-label">
+            <i nz-icon nzType="database" nzTheme="outline"></i>
+            <span *ngIf="isAdminOrSuperadmin">Tổng hạn ngạch hệ thống:</span>
+            <span *ngIf="!isAdminOrSuperadmin">Hạn ngạch đã đăng ký:</span>
+          </div>
+          <div class="provider-value">
+            <nz-spin *ngIf="loadingQuota" nzSimple [nzSize]="'small'"></nz-spin>
+            <div *ngIf="!loadingQuota && quotaRemaining !== null" class="quota-display">
+              <!-- Admin/Superadmin: Hiển thị tổng quota -->
+              <div *ngIf="isAdminOrSuperadmin" class="quota-details">
+                <nz-tag [nzColor]="quotaRemaining > 100 ? 'success' : quotaRemaining > 50 ? 'warning' : 'error'">
                   <i nz-icon nzType="file-text" nzTheme="outline"></i>
-                  {{ selectedProvider.templates.length }} mẫu
-                </span>
-              </nz-spin>
-              <button nz-button nzType="link" nzSize="small" (click)="openProviderModal()" [disabled]="loadingProviderDetails">
-                <i nz-icon nzType="edit" nzTheme="outline"></i>
-                Đổi
-              </button>
-              <button nz-button nzType="link" nzSize="small" nzDanger (click)="clearProvider()" [disabled]="loadingProviderDetails">
-                <i nz-icon nzType="close" nzTheme="outline"></i>
+                  Còn lại: {{ quotaRemaining | number }} / {{ quotaTotal !== null ? (quotaTotal | number) : 'N/A' }}
+                </nz-tag>
+                <div class="quota-stats" *ngIf="quotaTotal !== null">
+                  <small>Đã dùng: {{ quotaUsed !== null ? (quotaUsed | number) : 0 }}</small>
+                </div>
+              </div>
+              <!-- Hotel/Staff/Business: Hiển thị quota đã đăng ký -->
+              <div *ngIf="!isAdminOrSuperadmin" class="quota-details">
+                <nz-tag [nzColor]="quotaRemaining > 0 ? 'success' : 'error'">
+                  <i nz-icon nzType="file-text" nzTheme="outline"></i>
+                  Còn lại: {{ quotaRemaining | number }} / {{ quotaTotal !== null ? (quotaTotal | number) : 0 }}
+                </nz-tag>
+                <div class="quota-stats" *ngIf="quotaTotal !== null && quotaTotal > 0">
+                  <small>Đã dùng: {{ quotaUsed !== null ? (quotaUsed | number) : 0 }}</small>
+                </div>
+                <div class="quota-warning" *ngIf="quotaRemaining === 0">
+                  <nz-alert nzType="warning" nzMessage="Vui lòng đăng ký gói mới." [nzShowIcon]="true" nzSize="small"></nz-alert>
+                </div>
+              </div>
+              <button nz-button nzType="link" nzSize="small" (click)="loadQuota()" [nzLoading]="loadingQuota">
+                <i nz-icon nzType="reload" nzTheme="outline"></i>
+                Làm mới
               </button>
             </div>
-            <div class="provider-value" *ngIf="!selectedProvider">
-              <nz-tag nzColor="warning">Chưa chọn</nz-tag>
-              <button nz-button nzType="primary" nzSize="small" (click)="openProviderModal()">
-                <i nz-icon nzType="plus" nzTheme="outline"></i>
-                Chọn tài khoản
-              </button>
+            <div *ngIf="!loadingQuota && quotaRemaining === null && quotaError" class="quota-error">
+              <nz-tag nzColor="error">
+                <i nz-icon nzType="exclamation-circle" nzTheme="outline"></i>
+                {{ quotaError }}
+              </nz-tag>
             </div>
           </div>
-        </nz-card>
-      </div>
+        </div>
+      </nz-card>
+
+      <!-- Chọn provider (chỉ hiển thị khi đã đăng nhập) -->
+      <nz-card [nzBordered]="false" nzSize="small" class="info-card" *ngIf="isAuthenticated && !checkingAuth">
+        <div class="provider-info">
+          <div class="provider-label">
+            <i nz-icon nzType="cloud-server" nzTheme="outline"></i>
+            <span>Tài khoản nhà cung cấp:</span>
+          </div>
+          <div class="provider-value" *ngIf="selectedProvider">
+            <nz-spin [nzSpinning]="loadingProviderDetails" nzSize="small">
+              <nz-tag [nzColor]="selectedProvider.active ? 'success' : 'default'">
+                {{ selectedProvider.provider }}
+              </nz-tag>
+              <span *ngIf="selectedProvider.templates && selectedProvider.templates.length > 0" class="templates-count">
+                <i nz-icon nzType="file-text" nzTheme="outline"></i>
+                {{ selectedProvider.templates.length }} mẫu
+              </span>
+            </nz-spin>
+            <button nz-button nzType="link" nzSize="small" (click)="openProviderModal()" [disabled]="loadingProviderDetails">
+              <i nz-icon nzType="edit" nzTheme="outline"></i>
+              Đổi
+            </button>
+            <button nz-button nzType="link" nzSize="small" nzDanger (click)="clearProvider()" [disabled]="loadingProviderDetails">
+              <i nz-icon nzType="close" nzTheme="outline"></i>
+            </button>
+          </div>
+          <div class="provider-value" *ngIf="!selectedProvider">
+            <nz-tag nzColor="warning">Chưa chọn</nz-tag>
+            <button nz-button nzType="primary" nzSize="small" (click)="openProviderModal()">
+              <i nz-icon nzType="plus" nzTheme="outline"></i>
+              Chọn tài khoản
+            </button>
+          </div>
+        </div>
+      </nz-card>
     </div>
   </div>
 
@@ -145,11 +194,21 @@
                         nz-button 
                         nzType="link"
                         nzSize="small"
+                        (click)="downloadInvoice(invoice)">
+                        <i nz-icon nzType="download" nzTheme="outline"></i>
+                        Tải xuống
+                      </button>
+                      <button 
+                        *ngIf="invoice.status === 'draft'"
+                        nz-button 
+                        nzType="link"
+                        nzSize="small"
                         (click)="editDraft(invoice)">
                         <i nz-icon nzType="edit" nzTheme="outline"></i>
                         Sửa
                       </button>
                       <button 
+                        *ngIf="invoice.status === 'draft'"
                         nz-button 
                         nzType="link"
                         nzSize="small"
@@ -227,16 +286,6 @@
                         (click)="downloadInvoice(invoice)">
                         <i nz-icon nzType="download" nzTheme="outline"></i>
                         Tải xuống
-                      </button>
-                      <button 
-                        *ngIf="invoice.status === 'issued'"
-                        nz-button 
-                        nzType="link"
-                        nzSize="small"
-                        nzDanger
-                        (click)="cancelInvoice(invoice)">
-                        <i nz-icon nzType="stop" nzTheme="outline"></i>
-                        Hủy
                       </button>
                     </div>
                   </td>
@@ -351,6 +400,229 @@
             </small>
           </div>
         </div>
+      </div>
+    </nz-spin>
+  </div>
+</nz-modal>
+
+<!-- Modal chỉnh sửa/xem hóa đơn nháp -->
+<nz-modal
+  [(nzVisible)]="showEditDraftModal"
+  [nzTitle]="isViewMode ? 'Xem hóa đơn' : 'Chỉnh sửa hóa đơn nháp'"
+  [nzWidth]="900"
+  (nzOnCancel)="closeEditDraftModal()"
+  [nzFooter]="null">
+  <div *nzModalContent>
+    <nz-spin [nzSpinning]="loadingDraftDetails">
+      <div *ngIf="draftForm" class="edit-draft-form">
+        <!-- Thông tin khách hàng -->
+        <nz-card nzTitle="Thông tin khách hàng" [nzBordered]="true" style="margin-bottom: 16px;">
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzSpan]="12">
+              <label>Tên khách hàng <span style="color: red;">*</span></label>
+              <input
+                nz-input
+                [(ngModel)]="draftForm.buyer.name"
+                placeholder="Nhập tên khách hàng"
+                style="width: 100%; margin-top: 8px;" />
+            </div>
+            <div nz-col [nzSpan]="12">
+              <label>Mã số thuế</label>
+              <input
+                nz-input
+                [(ngModel)]="draftForm.buyer.tax_code"
+                [readonly]="isViewMode"
+                placeholder="Nhập mã số thuế"
+                style="width: 100%; margin-top: 8px;" />
+            </div>
+          </div>
+          <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+            <div nz-col [nzSpan]="12">
+              <label>Địa chỉ <span style="color: red;">*</span></label>
+              <input
+                nz-input
+                [(ngModel)]="draftForm.buyer.address"
+                [readonly]="isViewMode"
+                placeholder="Nhập địa chỉ"
+                style="width: 100%; margin-top: 8px;" />
+            </div>
+            <div nz-col [nzSpan]="12">
+              <label>Email <span style="color: red;">*</span></label>
+              <input
+                nz-input
+                type="email"
+                [(ngModel)]="draftForm.buyer.email"
+                [readonly]="isViewMode"
+                placeholder="Nhập email"
+                style="width: 100%; margin-top: 8px;" />
+            </div>
+          </div>
+          <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+            <div nz-col [nzSpan]="12">
+              <label>Số điện thoại</label>
+              <input
+                nz-input
+                [(ngModel)]="draftForm.buyer.phone"
+                [readonly]="isViewMode"
+                placeholder="Nhập số điện thoại"
+                style="width: 100%; margin-top: 8px;" />
+            </div>
+          </div>
+        </nz-card>
+
+        <!-- Danh sách sản phẩm/dịch vụ -->
+        <nz-card nzTitle="Danh sách sản phẩm/dịch vụ" [nzBordered]="true" style="margin-bottom: 16px;">
+          <nz-table
+            [nzData]="draftForm.items"
+            [nzShowPagination]="false"
+            nzBordered
+            [nzSize]="'small'">
+            <thead>
+              <tr>
+                <th>STT</th>
+                <th>Tên sản phẩm</th>
+                <th>Đơn vị</th>
+                <th>Số lượng</th>
+                <th>Đơn giá</th>
+                <th>Thuế (%)</th>
+                <th>Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of draftForm.items; let i = index">
+                <td>{{ item.line_number }}</td>
+                <td>
+                  <input
+                    nz-input
+                    [(ngModel)]="item.item_name"
+                    [readonly]="isViewMode"
+                    placeholder="Tên sản phẩm"
+                    style="width: 100%;" />
+                </td>
+                <td>
+                  <input
+                    nz-input
+                    [(ngModel)]="item.unit"
+                    [readonly]="isViewMode"
+                    placeholder="Đơn vị"
+                    style="width: 80px;" />
+                </td>
+                <td>
+                  <input
+                    nz-input
+                    type="number"
+                    [(ngModel)]="item.quantity"
+                    [readonly]="isViewMode"
+                    (ngModelChange)="item.total_price = item.quantity * item.unit_price * (1 + item.tax_rate / 100)"
+                    placeholder="SL"
+                    style="width: 80px;" />
+                </td>
+                <td>
+                  <input
+                    nz-input
+                    type="number"
+                    [(ngModel)]="item.unit_price"
+                    [readonly]="isViewMode"
+                    (ngModelChange)="item.total_price = item.quantity * item.unit_price * (1 + item.tax_rate / 100)"
+                    placeholder="Đơn giá"
+                    style="width: 120px;" />
+                </td>
+                <td>
+                  <input
+                    nz-input
+                    type="number"
+                    [(ngModel)]="item.tax_rate"
+                    [readonly]="isViewMode"
+                    (ngModelChange)="item.total_price = item.quantity * item.unit_price * (1 + item.tax_rate / 100)"
+                    placeholder="%"
+                    style="width: 80px;" />
+                </td>
+                <td>{{ formatPrice(item.total_price) }} ₫</td>
+              </tr>
+            </tbody>
+          </nz-table>
+        </nz-card>
+
+        <!-- Ghi chú -->
+        <nz-card nzTitle="Ghi chú" [nzBordered]="true" style="margin-bottom: 16px;">
+          <textarea
+            nz-input
+            [(ngModel)]="draftForm.notes"
+            [readonly]="isViewMode"
+            placeholder="Nhập ghi chú (nếu có)"
+            [nzAutosize]="{ minRows: 3, maxRows: 6 }"
+            style="width: 100%;"></textarea>
+        </nz-card>
+
+        <!-- Tổng tiền -->
+        <div style="text-align: right; margin-bottom: 16px; font-size: 18px; font-weight: bold;">
+          <span>Tổng tiền: </span>
+          <span style="color: #1890ff;">
+            {{ formatPrice(calculateTotalAmount()) }} ₫
+          </span>
+        </div>
+      </div>
+    </nz-spin>
+
+    <!-- Footer buttons -->
+    <div style="text-align: right; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
+      <button
+        nz-button
+        nzType="default"
+        (click)="closeEditDraftModal()">
+        Đóng
+      </button>
+      <ng-container *ngIf="!isViewMode">
+        <button
+          nz-button
+          nzType="primary"
+          [nzLoading]="savingDraft"
+          (click)="saveDraft()"
+          style="margin-left: 8px;">
+          Lưu hóa đơn nháp
+        </button>
+        <button
+          nz-button
+          nzType="primary"
+          nzDanger
+          [nzLoading]="issuingDraft"
+          (click)="issueDraft()"
+          style="margin-left: 8px;">
+          Xuất hóa đơn
+        </button>
+      </ng-container>
+    </div>
+  </div>
+</nz-modal>
+
+<!-- Modal xem PDF -->
+<nz-modal
+  [(nzVisible)]="showPdfModal"
+  nzTitle="Xem hóa đơn PDF"
+  [nzWidth]="'90%'"
+  [nzStyle]="{ top: '20px' }"
+  [nzBodyStyle]="{ height: 'calc(100vh - 200px)', padding: '0', position: 'relative' }"
+  (nzOnCancel)="closePdfModal()"
+  [nzFooter]="null">
+  <div *nzModalContent style="height: 100%; width: 100%; position: relative;">
+    <nz-spin [nzSpinning]="loadingPdf" [nzTip]="'Đang tải PDF...'">
+      <object 
+        *ngIf="safePdfUrl && !loadingPdf"
+        [data]="safePdfUrl"
+        type="application/pdf"
+        style="width: 100%; height: calc(100vh - 200px); border: none; display: block;"
+        title="PDF Viewer">
+        <iframe 
+          [src]="safePdfUrl"
+          style="width: 100%; height: calc(100vh - 200px); border: none; display: block;"
+          title="PDF Viewer">
+          <p>Trình duyệt của bạn không hỗ trợ hiển thị PDF. 
+            <a [href]="pdfUrl" target="_blank">Nhấn vào đây để tải xuống</a>
+          </p>
+        </iframe>
+      </object>
+      <div *ngIf="!safePdfUrl && !loadingPdf" style="text-align: center; padding: 50px;">
+        <nz-empty nzNotFoundContent="Không có PDF để hiển thị"></nz-empty>
       </div>
     </nz-spin>
   </div>

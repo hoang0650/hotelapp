@@ -1,8 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { AuthService } from '../../services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { InvoiceService } from '../../services/invoice.service';
+import { HotelService } from '../../services/hotel.service';
+import { SePayService, SePayPaymentData } from '../../services/sepay.service';
 
 interface EInvoicePackage {
   id: string;
@@ -24,12 +27,31 @@ interface DigitalSignaturePricing {
   templateUrl: './e-invoice-registration.component.html',
   styleUrls: ['./e-invoice-registration.component.css']
 })
-export class EInvoiceRegistrationComponent implements OnInit {
+export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
   loading = false;
   packages: EInvoicePackage[] = [];
   selectedPackages: EInvoicePackage[] = [];
   totalAmount = 0;
   currentUser: any = null;
+  
+  // Quota allocation (cho admin/superadmin)
+  isAdmin = false;
+  hotels: any[] = [];
+  loadingHotels = false;
+  selectedHotelId: string | null = null;
+  showQuotaAllocation = false;
+  systemQuota: any = null;
+  loadingSystemQuota = false;
+  
+  // Payment modal
+  showPaymentModal = false;
+  paymentAmount = 0;
+  paymentQrUrl = '';
+  paymentBeneficiaryName = '';
+  paymentBankName = '';
+  paymentAccountNumber = '';
+  paymentHistoryId = '';
+  private paymentStatusCheckInterval: any = null;
   
   // Digital signature pricing
   digitalSignaturePricing: DigitalSignaturePricing[] = [
@@ -41,14 +63,54 @@ export class EInvoiceRegistrationComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private message: NzMessageService,
-    private authService: AuthService
+    private authService: AuthService,
+    private invoiceService: InvoiceService,
+    private hotelService: HotelService,
+    private sepayService: SePayService
   ) {
     this.initializePackages();
   }
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
+    this.isAdmin = this.authService.isAdmin() || this.authService.isSuperAdmin();
     this.loadExistingPackages();
+    
+    // Nếu là admin, load danh sách hotel và system quota
+    if (this.isAdmin) {
+      this.loadHotels();
+      this.loadSystemQuota();
+    }
+  }
+  
+  loadHotels(): void {
+    this.loadingHotels = true;
+    this.hotelService.getHotels().subscribe({
+      next: (hotels: any[]) => {
+        this.loadingHotels = false;
+        this.hotels = hotels || [];
+      },
+      error: (error) => {
+        this.loadingHotels = false;
+        console.error('Error loading hotels:', error);
+      }
+    });
+  }
+  
+  loadSystemQuota(): void {
+    this.loadingSystemQuota = true;
+    this.invoiceService.getEInvoiceUsage().subscribe({
+      next: (response: any) => {
+        this.loadingSystemQuota = false;
+        if (response.success !== false && response.data) {
+          this.systemQuota = response.data;
+        }
+      },
+      error: (error) => {
+        this.loadingSystemQuota = false;
+        console.error('Error loading system quota:', error);
+      }
+    });
   }
 
   initializePackages(): void {
@@ -187,10 +249,141 @@ export class EInvoiceRegistrationComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
+    // Nếu là admin và đã chọn hotel, phân chia quota
+    if (this.isAdmin && this.selectedHotelId && this.showQuotaAllocation) {
+      this.allocateQuotaToHotel();
+      return;
+    }
+
+    // Nếu không phải admin hoặc chưa chọn hotel, hiển thị modal thanh toán
+    this.openPaymentModal();
+  }
+  
+  openPaymentModal(): void {
+    if (this.totalAmount <= 0) {
+      this.message.warning('Tổng tiền phải lớn hơn 0');
+      return;
+    }
+
+    // Tạo payment history cho e-invoice packages
+    // Không truyền packageId vì e-invoice packages không phải pricing packages
+    const userId = this.currentUser._id || this.currentUser.id;
+    const packageNames = this.selectedPackages.map(pkg => `${pkg.name} x${pkg.quantity}`).join(', ');
     
+    // Gọi trực tiếp API create-payment-history với payload đơn giản
+    const payload = {
+      userId: userId,
+      amount: this.totalAmount,
+      currency: 'VND',
+      description: `Đăng ký gói hóa đơn điện tử: ${packageNames}`,
+      // Không truyền packageId vì e-invoice packages không phải pricing packages
+      // Backend sẽ xử lý như một payment thông thường
+    };
+
+    this.loading = true;
+    // Gọi trực tiếp API create-payment-history
+    this.http.post(`${environment.apiUrl}/sepay/create-payment-history`, payload).subscribe({
+      next: (response: any) => {
+        this.loading = false;
+        console.log('[EInvoice Registration] Payment history response:', JSON.stringify(response, null, 2));
+        
+        // Kiểm tra response.success (có thể là true, false, hoặc undefined)
+        if (response.success !== false) {
+          // Lấy QR code và thông tin thanh toán từ response
+          const qrUrl = response.qrPaymentUrl || response.data?.qrPaymentUrl;
+          const beneficiaryName = response.beneficiaryName || response.data?.beneficiaryName || '';
+          const bankName = response.bankName || response.data?.bankName || '';
+          const accountNumber = response.accountNumber || response.data?.accountNumber || '';
+          const paymentHistoryId = response.paymentHistoryId || response.data?.paymentHistoryId || '';
+          
+          console.log('[EInvoice Registration] QR URL from response:', qrUrl ? `Found: ${qrUrl.substring(0, 50)}...` : 'Not found');
+          console.log('[EInvoice Registration] Response keys:', Object.keys(response));
+          
+          if (!qrUrl) {
+            // Nếu không có QR code, có thể là do hệ thống chưa có QR code
+            // Nhưng vẫn cho phép tiếp tục nếu có paymentHistoryId (để user có thể thanh toán sau)
+            console.warn('[EInvoice Registration] No QR code in response, but payment history created');
+            this.message.warning('Hệ thống chưa có QR code thanh toán. Vui lòng liên hệ quản trị viên để cập nhật. Mã thanh toán: ' + (response.paymentCode || paymentHistoryId));
+            return;
+          }
+          
+          // Lưu thông tin thanh toán và hiển thị modal
+          this.paymentAmount = this.totalAmount;
+          this.paymentQrUrl = qrUrl;
+          this.paymentBeneficiaryName = beneficiaryName;
+          this.paymentBankName = bankName;
+          this.paymentAccountNumber = accountNumber;
+          this.paymentHistoryId = paymentHistoryId;
+          
+          // Hiển thị modal
+          this.showPaymentModal = true;
+          
+          // Bắt đầu polling để kiểm tra trạng thái thanh toán
+          this.startPaymentStatusPolling();
+        } else {
+          // Response có success: false hoặc error
+          console.error('[EInvoice Registration] Payment history creation failed:', response);
+          const errorMsg = response.error || response.message || 'Có lỗi xảy ra khi tạo payment history';
+          this.message.error(errorMsg);
+        }
+      },
+      error: (error: any) => {
+        this.loading = false;
+        console.error('Error creating payment history:', error);
+        const errorMessage = error.error?.error || error.error?.message || error.message || 'Có lỗi xảy ra khi tạo payment history. Vui lòng thử lại.';
+        this.message.error(errorMessage);
+      }
+    });
+  }
+  
+  /**
+   * Bắt đầu polling để kiểm tra trạng thái thanh toán
+   */
+  startPaymentStatusPolling(): void {
+    // Dừng interval cũ nếu có
+    if (this.paymentStatusCheckInterval) {
+      clearInterval(this.paymentStatusCheckInterval);
+    }
+    
+    // Kiểm tra trạng thái mỗi 5 giây
+    this.paymentStatusCheckInterval = setInterval(() => {
+      if (!this.paymentHistoryId) {
+        return;
+      }
+      
+      // Gọi API để kiểm tra trạng thái thanh toán
+      this.http.get(`${environment.apiUrl}/sepay/payment-history/${this.paymentHistoryId}`).subscribe({
+        next: (response: any) => {
+          if (response.success && response.data) {
+            const status = response.data.status;
+            if (status === 'completed' || status === 'success') {
+              // Thanh toán thành công
+              this.message.success('Thanh toán thành công! Hệ thống đang xử lý đăng ký gói...');
+              this.closePaymentModal();
+              
+              // Gọi API đăng ký gói sau khi thanh toán thành công
+              this.registerPackagesAfterPayment();
+            } else if (status === 'failed' || status === 'cancelled') {
+              // Thanh toán thất bại hoặc bị hủy
+              clearInterval(this.paymentStatusCheckInterval);
+              this.paymentStatusCheckInterval = null;
+            }
+          }
+        },
+        error: (error) => {
+          console.error('Error checking payment status:', error);
+        }
+      });
+    }, 5000); // Kiểm tra mỗi 5 giây
+  }
+  
+  /**
+   * Đăng ký gói sau khi thanh toán thành công
+   */
+  registerPackagesAfterPayment(): void {
+    const userId = this.currentUser._id || this.currentUser.id;
     const orderData = {
-      userId: this.currentUser._id || this.currentUser.id,
+      userId: userId,
       packages: this.selectedPackages.map(pkg => ({
         packageId: pkg.id,
         packageName: pkg.name,
@@ -199,15 +392,19 @@ export class EInvoiceRegistrationComponent implements OnInit {
         packagePrice: pkg.packagePrice,
         totalPrice: pkg.packagePrice * pkg.quantity
       })),
-      totalAmount: this.totalAmount
+      totalAmount: this.totalAmount,
+      paymentHistoryId: this.paymentHistoryId
     };
 
-    // TODO: Call API to create order
     this.http.post(`${environment.apiUrl}/e-invoice/register`, orderData).subscribe({
       next: (response: any) => {
-        this.loading = false;
         if (response.success !== false) {
           this.message.success('Đăng ký gói hóa đơn điện tử thành công!');
+          
+          // Emit event để e-invoice-management component reload quota
+          // Hoặc có thể dùng service để notify
+          window.dispatchEvent(new CustomEvent('eInvoiceQuotaUpdated'));
+          
           // Reset form
           this.selectedPackages = [];
           this.packages.forEach(pkg => {
@@ -215,15 +412,92 @@ export class EInvoiceRegistrationComponent implements OnInit {
             pkg.quantity = 0;
           });
           this.totalAmount = 0;
+          this.closePaymentModal();
         } else {
           this.message.error(response.message || 'Có lỗi xảy ra khi đăng ký');
         }
       },
       error: (error) => {
-        this.loading = false;
         console.error('Error registering e-invoice packages:', error);
-        this.message.error(error.error?.message || 'Có lỗi xảy ra khi đăng ký');
+        this.message.error(error.error?.error?.message || error.error?.message || 'Có lỗi xảy ra khi đăng ký');
       }
+    });
+  }
+  
+  /**
+   * Đóng modal thanh toán
+   */
+  closePaymentModal(): void {
+    this.showPaymentModal = false;
+    
+    // Dừng polling
+    if (this.paymentStatusCheckInterval) {
+      clearInterval(this.paymentStatusCheckInterval);
+      this.paymentStatusCheckInterval = null;
+    }
+  }
+  
+  ngOnDestroy(): void {
+    // Dừng polling khi component bị destroy
+    if (this.paymentStatusCheckInterval) {
+      clearInterval(this.paymentStatusCheckInterval);
+    }
+  }
+  
+  allocateQuotaToHotel(): void {
+    if (!this.selectedHotelId) {
+      this.message.warning('Vui lòng chọn khách sạn để phân chia quota');
+      return;
+    }
+
+    // Tính tổng quota từ các gói đã chọn
+    const totalQuota = this.selectedPackages.reduce((sum, pkg) => {
+      return sum + (pkg.invoiceCount * pkg.quantity);
+    }, 0);
+
+    if (totalQuota <= 0) {
+      this.message.warning('Tổng quota phải lớn hơn 0');
+      return;
+    }
+
+    // Kiểm tra system quota còn đủ không
+    if (this.systemQuota && this.systemQuota.unallocatedQuota < totalQuota) {
+      this.message.error(`Không đủ quota để phân chia. Quota còn lại: ${this.systemQuota.unallocatedQuota}, yêu cầu: ${totalQuota}`);
+      return;
+    }
+
+    this.loading = true;
+
+    // Phân chia quota cho từng gói
+    const allocationPromises = this.selectedPackages.map(pkg => {
+      const quota = pkg.invoiceCount * pkg.quantity;
+      return this.invoiceService.allocateQuota({
+        hotelId: this.selectedHotelId!,
+        quota: quota,
+        packageId: pkg.id,
+        packageName: pkg.name,
+        invoiceCount: pkg.invoiceCount,
+        paymentStatus: 'paid' // Giả sử đã thanh toán khi admin phân chia
+      }).toPromise();
+    });
+
+    Promise.all(allocationPromises).then(() => {
+      this.loading = false;
+      this.message.success(`Đã phân chia ${totalQuota} quota cho khách sạn thành công!`);
+      // Reset form
+      this.selectedPackages = [];
+      this.packages.forEach(pkg => {
+        pkg.selected = false;
+        pkg.quantity = 0;
+      });
+      this.totalAmount = 0;
+      this.selectedHotelId = null;
+      // Reload system quota
+      this.loadSystemQuota();
+    }).catch((error) => {
+      this.loading = false;
+      console.error('Error allocating quota:', error);
+      this.message.error(error.error?.error?.message || 'Có lỗi xảy ra khi phân chia quota');
     });
   }
 

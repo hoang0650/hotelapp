@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, Inject } from '@angular/core';
-import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
+import { NZ_MODAL_DATA, NzModalRef } from 'ng-zorro-antd/modal';
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
 import { InvoiceService } from '../../services/invoice.service';
@@ -9,6 +9,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { EInvoiceProviderService } from '../../services/e-invoice-provider.service';
 import { take } from 'rxjs/operators';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
 declare global {
@@ -23,6 +25,7 @@ interface InvoiceProduct {
   name: string;
   price: number;
   quantity?: number;
+  totalPrice?: number;
 }
 
 // Interface cho dữ liệu duration
@@ -39,6 +42,7 @@ interface Service {
   name: string;
   price: number;
   quantity?: number;
+  totalPrice?: number;
 }
 
 // Interface cho dữ liệu hóa đơn
@@ -181,8 +185,14 @@ export class InvoiceComponent implements OnInit {
     return !!this.invoiceData.services && this.invoiceData.services.length > 0;
   }
 
+  // Chế độ chỉnh sửa
+  isEditMode: boolean = false;
+  editForm!: FormGroup;
+  editableProducts: any[] = [];
+  isSaving: boolean = false;
+
   constructor(
-    @Inject(NZ_MODAL_DATA) private data: { invoiceData: InvoiceData, businessInfo: any },
+    @Inject(NZ_MODAL_DATA) private data: { invoiceData: InvoiceData, businessInfo: any, isEditMode?: boolean },
     private hotelService: HotelService,
     private businessService: BusinessService,
     private invoiceService: InvoiceService,
@@ -190,7 +200,9 @@ export class InvoiceComponent implements OnInit {
     private settingsService: SettingsService,
     private message: NzMessageService,
     private modal: NzModalService,
-    private providerService: EInvoiceProviderService
+    private providerService: EInvoiceProviderService,
+    private fb: FormBuilder,
+    private modalRef: NzModalRef
   ) {
     console.log('=== InvoiceComponent Constructor ===');
     console.log('Raw data received:', this.data);
@@ -204,9 +216,11 @@ export class InvoiceComponent implements OnInit {
       totalAmount: 0
     };
     this.businessInfo = this.data?.businessInfo;
+    this.isEditMode = this.data?.isEditMode || false;
     
     console.log('Assigned invoiceData:', this.invoiceData);
     console.log('Products from data:', this.invoiceData.products);
+    console.log('Is Edit Mode:', this.isEditMode);
   }
 
   ngOnInit(): void {
@@ -221,6 +235,12 @@ export class InvoiceComponent implements OnInit {
     console.log('invoiceData.rateType:', this.invoiceData.rateType);
     console.log('invoiceData.guestSource:', this.invoiceData.guestSource);
     console.log('invoiceData.guestInfo:', this.invoiceData.guestInfo);
+    
+    // Khởi tạo form chỉnh sửa nếu ở chế độ edit
+    if (this.isEditMode) {
+      this.initEditForm();
+      this.initEditableProducts();
+    }
     
     // Parse Date objects từ ISO strings nếu cần
     if (this.invoiceData.checkInTime && typeof this.invoiceData.checkInTime === 'string') {
@@ -421,6 +441,11 @@ export class InvoiceComponent implements OnInit {
     // Đảm bảo guestInfo có guestSource
     if (!this.invoiceData.guestInfo.guestSource) {
       this.invoiceData.guestInfo.guestSource = guestSource;
+    }
+    // Đảm bảo guestInfo có tax_code (ưu tiên từ guestInfo, sau đó từ customerTaxCode)
+    if (!this.invoiceData.guestInfo.tax_code) {
+      // Thử lấy từ customerTaxCode nếu chưa có (không fallback sang idNumber vì khác nhau)
+      this.invoiceData.guestInfo.tax_code = this.invoiceData['customerTaxCode'] || '';
     }
     
     console.log('Customer info loaded:', {
@@ -1317,8 +1342,52 @@ export class InvoiceComponent implements OnInit {
       return;
     }
 
+    // Tiếp tục tạo hóa đơn (không kiểm tra quota nữa vì đã ẩn nút khi 0/0)
+    this.proceedWithDraftCreation();
+  }
+
+  /**
+   * Tiếp tục tạo hóa đơn nháp sau khi đã check quota
+   */
+  private proceedWithDraftCreation(): void {
+
     this.isLoadingEasyInvoice = true;
-    const invoiceData = this.prepareSepayEInvoiceData(true); // is_draft = true
+    let invoiceData: any;
+    try {
+      invoiceData = this.prepareSepayEInvoiceData(true); // is_draft = true
+      console.log('[Invoice Component] Prepared invoice data for draft:', JSON.stringify(invoiceData, null, 2));
+      
+      // Validate dữ liệu trước khi gửi
+      const requiredFields = ['template_code', 'invoice_series', 'issued_date', 'currency', 'provider_account_id', 'buyer', 'items', 'is_draft'];
+      const missingFields = requiredFields.filter(field => invoiceData[field] === undefined || invoiceData[field] === null);
+      if (missingFields.length > 0) {
+        this.isLoadingEasyInvoice = false;
+        this.message.error(`Thiếu các trường bắt buộc: ${missingFields.join(', ')}`);
+        console.error('[Invoice Component] Missing required fields:', missingFields);
+        return;
+      }
+      
+      // Validate buyer
+      if (!invoiceData.buyer || !invoiceData.buyer.name) {
+        this.isLoadingEasyInvoice = false;
+        this.message.error('Thiếu thông tin khách hàng (buyer.name)');
+        console.error('[Invoice Component] Missing buyer.name');
+        return;
+      }
+      
+      // Validate items
+      if (!invoiceData.items || !Array.isArray(invoiceData.items) || invoiceData.items.length === 0) {
+        this.isLoadingEasyInvoice = false;
+        this.message.error('Thiếu danh sách sản phẩm/dịch vụ (items)');
+        console.error('[Invoice Component] Missing or empty items array');
+        return;
+      }
+    } catch (error: any) {
+      this.isLoadingEasyInvoice = false;
+      console.error('[Invoice Component] Error preparing invoice data:', error);
+      this.message.error(error.message || 'Lỗi khi chuẩn bị dữ liệu hóa đơn');
+      return;
+    }
     
     this.invoiceService.createEInvoice(invoiceData).subscribe({
       next: (response: any) => {
@@ -1336,8 +1405,25 @@ export class InvoiceComponent implements OnInit {
         this.isLoadingEasyInvoice = false;
         console.error('Error creating draft invoice:', error);
         // Backend trả về: { success: false, error: { code, message, details } }
+        const errorCode = error.error?.error?.code || error.error?.code;
         const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
-        this.message.error('Lỗi khi tạo hóa đơn nháp: ' + errorMessage);
+        
+        // Kiểm tra nếu lỗi liên quan đến quota
+        if (errorCode === 'INSUFFICIENT_QUOTA' || errorCode === 'QUOTA_EXCEEDED' || 
+            errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('hạn ngạch')) {
+          this.modal.warning({
+            nzTitle: 'Đã hết hạn ngạch',
+            nzContent: 'Đã hết hạn ngạch. Vui lòng đăng ký gói mới và thử lại sau.',
+            nzOkText: 'Đăng ký ngay',
+            nzCancelText: 'Đóng',
+            nzOnOk: () => {
+              // TODO: Navigate to e-invoice-registration page
+              this.message.info('Vui lòng vào "Đăng ký gói hóa đơn điện tử" để đăng ký gói mới');
+            }
+          });
+        } else {
+          this.message.error('Lỗi khi tạo hóa đơn nháp: ' + errorMessage);
+        }
       }
     });
   }
@@ -1349,7 +1435,8 @@ export class InvoiceComponent implements OnInit {
 
     if (retries >= maxRetries) {
       this.isLoadingEasyInvoice = false;
-      this.message.warning('Đang xử lý hóa đơn nháp. Vui lòng kiểm tra lại sau.');
+      // Kiểm tra quota trước khi hiển thị thông báo
+      this.checkQuotaAndShowError();
       return;
     }
 
@@ -1375,7 +1462,12 @@ export class InvoiceComponent implements OnInit {
           } else if (status === 'failed' || status === 'error') {
             this.isLoadingEasyInvoice = false;
             const errorMsg = statusData.message || statusData.error || 'Tạo hóa đơn nháp thất bại';
-            this.message.error('Lỗi: ' + errorMsg);
+            // Kiểm tra nếu lỗi liên quan đến quota
+            if (errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('hạn ngạch')) {
+              this.checkQuotaAndShowError();
+            } else {
+              this.message.error('Lỗi: ' + errorMsg);
+            }
           } else {
             // Tiếp tục kiểm tra nếu chưa có kết quả
             this.checkCreateStatusAndShowPreview(trackingCode, retries + 1);
@@ -1385,11 +1477,28 @@ export class InvoiceComponent implements OnInit {
           this.isLoadingEasyInvoice = false;
           console.error('Error checking create status:', error);
           // Backend trả về: { success: false, error: { code, message, details } }
+          const errorCode = error.error?.error?.code || error.error?.code;
           const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
-          this.message.error('Lỗi khi kiểm tra trạng thái: ' + errorMessage);
+          
+          // Kiểm tra nếu lỗi liên quan đến quota
+          if (errorCode === 'INSUFFICIENT_QUOTA' || errorCode === 'QUOTA_EXCEEDED' || 
+              errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('hạn ngạch')) {
+            this.checkQuotaAndShowError();
+          } else {
+            this.message.error('Lỗi khi kiểm tra trạng thái: ' + errorMessage);
+          }
         }
       });
     }, delay);
+  }
+
+  /**
+   * Kiểm tra quota và hiển thị thông báo lỗi phù hợp
+   * (Đã bỏ - không còn sử dụng vì đã ẩn nút khi 0/0)
+   */
+  private checkQuotaAndShowError(): void {
+    // Hiển thị thông báo chung
+    this.message.warning('Đang xử lý hóa đơn nháp. Vui lòng kiểm tra lại sau.');
   }
 
   // Lấy chi tiết hóa đơn và hiển thị preview
@@ -1401,19 +1510,25 @@ export class InvoiceComponent implements OnInit {
         const invoiceUrl = invoiceData.invoice_url || invoiceData.invoiceUrl;
         const pdfUrl = invoiceData.pdf_url || invoiceData.pdfUrl;
         
+        // Hiển thị thông báo thành công với thông tin về draft
+        this.message.success(`Tạo hóa đơn nháp thành công! Hóa đơn đã được lưu vào "Hóa đơn nháp". Reference code: ${referenceCode}`, {
+          nzDuration: 5000
+        });
+        
         if (invoiceUrl) {
           window.open(invoiceUrl, '_blank');
         } else if (pdfUrl) {
           window.open(pdfUrl, '_blank');
-        } else {
-          this.message.success('Tạo hóa đơn nháp thành công. Reference code: ' + referenceCode);
         }
       },
       error: (error: any) => {
         console.error('Error getting invoice details:', error);
         // Backend trả về: { success: false, error: { code, message } }
         const errorMessage = error.error?.error?.message || error.error?.message || 'Không thể lấy chi tiết hóa đơn';
-        this.message.warning(errorMessage + ', nhưng đã tạo thành công');
+        // Vẫn hiển thị thông báo thành công vì đã tạo draft
+        this.message.success(`Tạo hóa đơn nháp thành công! Hóa đơn đã được lưu vào "Hóa đơn nháp". Reference code: ${referenceCode}`, {
+          nzDuration: 5000
+        });
       }
     });
   }
@@ -1440,6 +1555,72 @@ export class InvoiceComponent implements OnInit {
       });
       return;
     }
+
+    // Kiểm tra quota (chỉ cho hotel/staff/business, không check cho admin/superadmin)
+    const currentUser = this.authService?.getCurrentUser?.();
+    const userRole = currentUser?.role;
+    const isAdminOrSuperadmin = userRole === 'superadmin' || userRole === 'admin';
+    
+    if (!isAdminOrSuperadmin) {
+      // Kiểm tra quota trước khi xuất hóa đơn
+      this.invoiceService.getEInvoiceUsage().subscribe({
+        next: (response: any) => {
+          if (response.success !== false && response.data) {
+            const quotaRemaining = response.data.quota_remaning || response.data.quota_remaining;
+            const allocatedQuota = response.data.allocatedQuota || 0;
+            const remaining = quotaRemaining ? parseInt(quotaRemaining, 10) : 0;
+            const allocated = parseInt(allocatedQuota, 10) || 0;
+            
+            // Kiểm tra nếu chưa đăng ký (0/0) hoặc đã hết quota
+            if (allocated === 0 && remaining === 0) {
+              // Chưa đăng ký gói nào - hiển thị modal yêu cầu đăng ký
+              this.modal.warning({
+                nzTitle: 'Chưa đăng ký gói hóa đơn điện tử',
+                nzContent: 'Bạn chưa đăng ký gói hóa đơn điện tử nào. Vui lòng đăng ký gói mới để tiếp tục xuất hóa đơn. Bạn có muốn chuyển đến trang đăng ký gói không?',
+                nzOkText: 'Đăng ký ngay',
+                nzCancelText: 'Hủy',
+                nzOnOk: () => {
+                  // TODO: Navigate to e-invoice-registration page
+                  this.message.info('Vui lòng vào "Đăng ký gói hóa đơn điện tử" để đăng ký gói mới');
+                }
+              });
+              return;
+            } else if (remaining <= 0) {
+              // Đã đăng ký nhưng hết quota - hiển thị modal yêu cầu đăng ký thêm
+              this.modal.warning({
+                nzTitle: 'Đã hết hạn ngạch',
+                nzContent: `Bạn đã sử dụng hết ${allocated} hóa đơn đã đăng ký. Vui lòng đăng ký gói mới để tiếp tục xuất hóa đơn. Bạn có muốn chuyển đến trang đăng ký gói không?`,
+                nzOkText: 'Đăng ký ngay',
+                nzCancelText: 'Hủy',
+                nzOnOk: () => {
+                  // TODO: Navigate to e-invoice-registration page
+                  this.message.info('Vui lòng vào "Đăng ký gói hóa đơn điện tử" để đăng ký gói mới');
+                }
+              });
+              return;
+            }
+            
+            // Có quota, tiếp tục xuất hóa đơn
+            this.proceedWithInvoiceIssue();
+          } else {
+            this.message.error('Không thể kiểm tra hạn ngạch. Vui lòng thử lại.');
+          }
+        },
+        error: (error: any) => {
+          console.error('Error checking quota:', error);
+          this.message.error('Không thể kiểm tra hạn ngạch. Vui lòng thử lại.');
+        }
+      });
+    } else {
+      // Admin/Superadmin: Không cần check quota, tiếp tục xuất hóa đơn
+      this.proceedWithInvoiceIssue();
+    }
+  }
+
+  /**
+   * Tiếp tục xuất hóa đơn sau khi đã check quota
+   */
+  private proceedWithInvoiceIssue(): void {
 
     this.isLoadingEasyInvoice = true;
     const invoiceData = this.prepareSepayEInvoiceData(false); // is_draft = false (phát hành ngay)
@@ -1561,7 +1742,11 @@ export class InvoiceComponent implements OnInit {
           
           if (status === 'success') {
             this.isLoadingEasyInvoice = false;
-            this.message.success('Xuất hóa đơn điện tử thành công!');
+            
+            // Hiển thị thông báo thành công với thông tin về issued invoice
+            this.message.success(`Xuất hóa đơn điện tử thành công! Hóa đơn đã được lưu vào "Hóa đơn đã xuất". Reference code: ${referenceCode}`, {
+              nzDuration: 5000
+            });
             
             // Lấy chi tiết hóa đơn để hiển thị
             this.getInvoiceDetailsAndShowResult(referenceCode);
@@ -1597,12 +1782,11 @@ export class InvoiceComponent implements OnInit {
         const invoiceUrl = invoiceData.invoice_url || invoiceData.invoiceUrl;
         const pdfUrl = invoiceData.pdf_url || invoiceData.pdfUrl;
         
+        // Mở URL hóa đơn nếu có
         if (invoiceUrl) {
           window.open(invoiceUrl, '_blank');
         } else if (pdfUrl) {
           window.open(pdfUrl, '_blank');
-        } else {
-          this.message.info('Hóa đơn đã được phát hành thành công');
         }
         
         // Cập nhật invoiceData với thông tin hóa đơn điện tử
@@ -1613,7 +1797,7 @@ export class InvoiceComponent implements OnInit {
       error: (error: any) => {
         console.error('Error getting invoice details:', error);
         // Backend trả về: { success: false, error: { code, message } }
-        // Không hiển thị lỗi vì đã phát hành thành công
+        // Không hiển thị lỗi vì đã phát hành thành công và đã hiển thị thông báo ở trên
       }
     });
   }
@@ -1629,10 +1813,23 @@ export class InvoiceComponent implements OnInit {
 
     const providerAccountId = selectedProvider.id;
 
-    // Lấy template từ provider (mặc định lấy template đầu tiên)
-    const template = selectedProvider.templates && selectedProvider.templates.length > 0 
-      ? selectedProvider.templates[0] 
-      : null;
+    // Lấy template từ provider: ưu tiên template đã chọn, sau đó là template đầu tiên
+    let template: any = null;
+    
+    // Thử lấy template đã chọn từ service
+    const selectedTemplate = this.providerService.getSelectedTemplate();
+    if (selectedTemplate && selectedProvider.templates && selectedProvider.templates.length > 0) {
+      // Tìm template đã chọn trong danh sách templates của provider
+      template = selectedProvider.templates.find(
+        (t: any) => t.template_code === selectedTemplate.template_code && 
+                    t.invoice_series === selectedTemplate.invoice_series
+      );
+    }
+    
+    // Nếu không tìm thấy template đã chọn, lấy template đầu tiên
+    if (!template && selectedProvider.templates && selectedProvider.templates.length > 0) {
+      template = selectedProvider.templates[0];
+    }
 
     if (!template) {
       throw new Error('Không tìm thấy mẫu hóa đơn. Vui lòng kiểm tra lại tài khoản nhà cung cấp.');
@@ -1651,12 +1848,20 @@ export class InvoiceComponent implements OnInit {
     // Thêm products
     if (this.invoiceData.products && this.invoiceData.products.length > 0) {
       this.invoiceData.products.forEach((product: any) => {
+        // Xác định unit dựa trên tên sản phẩm
+        let unit = product.unit || 'cái';
+        const productName = (product.name || '').toLowerCase();
+        // Nếu là tiền phòng, dùng "ngày"
+        if (productName.includes('tiền phòng') || productName.includes('phòng')) {
+          unit = 'ngày';
+        }
+        
         items.push({
           line_number: lineNumber++,
           line_type: 1, // 1 = sản phẩm/dịch vụ
           item_code: product.code || `SP${lineNumber - 1}`,
           item_name: product.name,
-          unit: product.unit || 'cái',
+          unit: unit,
           quantity: product.quantity || 1,
           unit_price: product.price || 0,
           tax_rate: product.tax_rate || 0 // 0% thuế suất mặc định (có thể điều chỉnh)
@@ -1673,7 +1878,7 @@ export class InvoiceComponent implements OnInit {
             line_type: 1, // 1 = sản phẩm/dịch vụ
             item_code: service.code || `DV${lineNumber - 1}`,
             item_name: service.name,
-            unit: service.unit || 'cái',
+            unit: service.unit || 'lon', // Dịch vụ mặc định là "lon"
             quantity: service.quantity || 1,
             unit_price: service.price || 0,
             tax_rate: service.tax_rate || 0
@@ -1689,7 +1894,7 @@ export class InvoiceComponent implements OnInit {
         line_type: 1,
         item_code: 'PHONG',
         item_name: `Tiền phòng ${this.invoiceData.roomNumber || ''}`,
-        unit: 'đêm',
+        unit: 'ngày', // Tiền phòng dùng "ngày"
         quantity: 1,
         unit_price: this.invoiceData.roomAmount || this.invoiceData.roomTotal || this.invoiceData['amount'] || 0,
         tax_rate: 0
@@ -1709,23 +1914,49 @@ export class InvoiceComponent implements OnInit {
     }
 
     // Thông tin khách hàng (buyer)
-    // Ưu tiên tax_code từ guestInfo, nếu không có thì dùng idNumber
+    // Ưu tiên tax_code từ guestInfo, sau đó từ customerTaxCode (không dùng idNumber vì khác nhau)
     const taxCode = this.invoiceData.guestInfo?.tax_code || 
                     this.invoiceData['customerTaxCode'] || 
-                    this.invoiceData['customerIdNumber'] || 
-                    this.invoiceData.guestInfo?.idNumber || 
                     '';
     
-    const buyer = {
-      name: this.getCustomerName() || 'Khách lẻ',
-      tax_code: taxCode,
-      address: this.invoiceData.guestInfo?.address || this.invoiceData['customerAddress'] || '',
-      email: this.getCustomerEmail() || '',
-      phone: this.getCustomerPhone() || ''
+    // Chuẩn bị buyer - chỉ thêm các trường có giá trị hợp lệ
+    const buyer: any = {
+      name: this.getCustomerName() || 'Khách lẻ'
     };
+    
+    // Chỉ thêm address nếu có giá trị (không phải empty string)
+    const address = this.invoiceData.guestInfo?.address || this.invoiceData['customerAddress'] || '';
+    if (address && address.trim() !== '') {
+      buyer.address = address.trim();
+    } else {
+      // Nếu không có address, dùng giá trị mặc định hợp lệ
+      buyer.address = 'Chưa cập nhật';
+    }
+    
+    // Chỉ thêm email nếu là email hợp lệ (không phải "N/A" hoặc empty)
+    const email = this.getCustomerEmail() || '';
+    // Validate email format đơn giản
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && email !== 'N/A' && email.trim() !== '' && emailRegex.test(email.trim())) {
+      buyer.email = email.trim();
+    } else {
+      // Nếu không có email hợp lệ, dùng email mặc định hợp lệ
+      buyer.email = 'customer@example.com';
+    }
+    
+    // Chỉ thêm phone nếu có giá trị (không phải "N/A" hoặc empty)
+    const phone = this.getCustomerPhone() || '';
+    if (phone && phone !== 'N/A' && phone.trim() !== '') {
+      buyer.phone = phone.trim();
+    }
+    
+    // Chỉ thêm tax_code nếu có giá trị (không phải empty string)
+    if (taxCode && taxCode.trim() !== '') {
+      buyer.tax_code = taxCode.trim();
+    }
 
     // Format theo tài liệu Sepay
-    return {
+    const sepayInvoiceData: any = {
       template_code: templateCode,
       invoice_series: invoiceSeries,
       issued_date: issuedDate,
@@ -1733,10 +1964,22 @@ export class InvoiceComponent implements OnInit {
       provider_account_id: providerAccountId,
       buyer: buyer,
       items: items,
-      notes: this.invoiceData.notes || '',
-      is_draft: isDraft,
-      invoiceId: this.invoiceData['_id'] || this.invoiceData['invoiceId']
+      is_draft: isDraft === true // Đảm bảo là boolean
     };
+    
+    // Chỉ thêm notes nếu có giá trị
+    if (this.invoiceData.notes && this.invoiceData.notes.trim() !== '') {
+      sepayInvoiceData.notes = this.invoiceData.notes.trim();
+    }
+    
+    // Thêm invoiceId nếu có (để lưu vào database)
+    if (this.invoiceData['_id'] || this.invoiceData['invoiceId']) {
+      sepayInvoiceData.invoiceId = this.invoiceData['_id'] || this.invoiceData['invoiceId'];
+    }
+    
+    console.log('[Invoice Component] Final Sepay invoice data:', JSON.stringify(sepayInvoiceData, null, 2));
+    
+    return sepayInvoiceData;
   }
 
   // Format ngày theo format Sepay: yyyy-MM-dd HH:mm:ss
@@ -1881,6 +2124,44 @@ export class InvoiceComponent implements OnInit {
       // Nếu không có hotel info, kiểm tra từ pricing package
       this.checkPricingPackagePermissions();
     }
+    
+    // Kiểm tra quota để ẩn nút "Xem hóa đơn nháp" nếu quota là 0/0
+    this.checkQuotaForButtonVisibility();
+  }
+  
+  /**
+   * Kiểm tra quota để ẩn nút "Xem hóa đơn nháp" nếu quota là 0/0
+   */
+  checkQuotaForButtonVisibility(): void {
+    const currentUser = this.authService?.getCurrentUser?.();
+    const userRole = currentUser?.role;
+    const isAdminOrSuperadmin = userRole === 'superadmin' || userRole === 'admin';
+    
+    // Admin/Superadmin: Luôn hiển thị nút
+    if (isAdminOrSuperadmin) {
+      return;
+    }
+    
+    // Hotel/Staff/Business: Kiểm tra quota
+    this.invoiceService.getEInvoiceUsage().subscribe({
+      next: (response: any) => {
+        if (response.success !== false && response.data) {
+          const quotaRemaining = response.data.quota_remaning || response.data.quota_remaining;
+          const allocatedQuota = response.data.allocatedQuota || 0;
+          const remaining = quotaRemaining ? parseInt(quotaRemaining, 10) : 0;
+          const allocated = parseInt(allocatedQuota, 10) || 0;
+          
+          // Nếu quota là 0/0, ẩn nút "Xem hóa đơn nháp"
+          if (allocated === 0 && remaining === 0) {
+            this.canViewDraftInvoice = false;
+          }
+        }
+      },
+      error: (error: any) => {
+        console.error('Error checking quota for button visibility:', error);
+        // Nếu không thể kiểm tra quota, giữ nguyên trạng thái hiện tại
+      }
+    });
   }
   
   checkPricingPackagePermissions(): void {
@@ -1911,5 +2192,199 @@ export class InvoiceComponent implements OnInit {
         this.canExportInvoice = false;
       }
     });
+  }
+
+  /**
+   * Khởi tạo form chỉnh sửa
+   */
+  initEditForm(): void {
+    const customerName = this.getCustomerName();
+    const customerPhone = this.getCustomerPhone();
+    const customerIdNumber = this.invoiceData['customerIdNumber'] || this.invoiceData.guestInfo?.idNumber || '';
+    const taxCode = this.invoiceData.guestInfo?.tax_code || this.invoiceData['customerTaxCode'] || '';
+    const customerAddress = this.invoiceData.guestInfo?.address || this.invoiceData['customerAddress'] || '';
+    const guestSource = this.getGuestSource();
+    const paymentMethod = this.invoiceData.paymentMethod || 'cash';
+    
+    this.editForm = this.fb.group({
+      customerName: [customerName, Validators.required],
+      customerPhone: [customerPhone],
+      customerIdNumber: [customerIdNumber],
+      taxCode: [taxCode],
+      customerAddress: [customerAddress],
+      guestSource: [guestSource],
+      paymentMethod: [paymentMethod]
+    });
+  }
+
+  /**
+   * Khởi tạo danh sách sản phẩm/dịch vụ có thể chỉnh sửa
+   */
+  initEditableProducts(): void {
+    // Kết hợp products và services thành một mảng
+    this.editableProducts = [];
+    
+    // Thêm products
+    if (this.invoiceData.products && Array.isArray(this.invoiceData.products)) {
+      this.invoiceData.products.forEach((product: any) => {
+        this.editableProducts.push({
+          name: product.name || 'Sản phẩm',
+          price: product.price || 0,
+          quantity: product.quantity || 1,
+          type: 'product'
+        });
+      });
+    }
+    
+    // Thêm services
+    if (this.invoiceData.services && Array.isArray(this.invoiceData.services)) {
+      this.invoiceData.services.forEach((service: any) => {
+        this.editableProducts.push({
+          name: service.name || service.serviceName || 'Dịch vụ',
+          price: service.price || 0,
+          quantity: service.quantity || 1,
+          type: 'service'
+        });
+      });
+    }
+    
+    // Nếu không có sản phẩm/dịch vụ nào, thêm một dòng mặc định
+    if (this.editableProducts.length === 0) {
+      this.editableProducts.push({
+        name: 'Tiền phòng',
+        price: this.invoiceData.roomAmount || this.invoiceData.roomTotal || 0,
+        quantity: 1,
+        type: 'room'
+      });
+    }
+  }
+
+  /**
+   * Cập nhật tổng tiền của sản phẩm
+   */
+  updateProductTotal(index: number): void {
+    const product = this.editableProducts[index];
+    if (product) {
+      // Tự động tính lại tổng tiền
+      const total = (product.price || 0) * (product.quantity || 1);
+      // Có thể cập nhật totalAmount nếu cần
+    }
+  }
+
+  /**
+   * Thêm sản phẩm/dịch vụ mới
+   */
+  addProduct(): void {
+    this.editableProducts.push({
+      name: 'Sản phẩm/Dịch vụ mới',
+      price: 0,
+      quantity: 1,
+      type: 'product'
+    });
+  }
+
+  /**
+   * Xóa sản phẩm/dịch vụ
+   */
+  removeProduct(index: number): void {
+    if (this.editableProducts.length > 1) {
+      this.editableProducts.splice(index, 1);
+    } else {
+      this.message.warning('Phải có ít nhất một sản phẩm/dịch vụ');
+    }
+  }
+
+  /**
+   * Lưu thay đổi hóa đơn
+   */
+  saveInvoiceChanges(): void {
+    if (!this.editForm || this.editForm.invalid) {
+      this.message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      return;
+    }
+
+    this.isSaving = true;
+
+    // Cập nhật thông tin khách hàng
+    if (!this.invoiceData.guestInfo) {
+      this.invoiceData.guestInfo = {};
+    }
+    
+    this.invoiceData.guestInfo.name = this.editForm.value.customerName;
+    this.invoiceData.guestInfo.phone = this.editForm.value.customerPhone;
+    this.invoiceData.guestInfo.idNumber = this.editForm.value.customerIdNumber;
+    this.invoiceData.guestInfo.tax_code = this.editForm.value.taxCode;
+    this.invoiceData.guestInfo.address = this.editForm.value.customerAddress;
+    this.invoiceData.guestInfo.guestSource = this.editForm.value.guestSource;
+    
+    // Cập nhật thông tin khách hàng trực tiếp
+    this.invoiceData.customerName = this.editForm.value.customerName;
+    this.invoiceData.customerPhone = this.editForm.value.customerPhone;
+    this.invoiceData['customerIdNumber'] = this.editForm.value.customerIdNumber;
+    this.invoiceData['customerTaxCode'] = this.editForm.value.taxCode;
+    this.invoiceData['customerAddress'] = this.editForm.value.customerAddress;
+    this.invoiceData.guestSource = this.editForm.value.guestSource;
+    this.invoiceData.paymentMethod = this.editForm.value.paymentMethod;
+
+    // Cập nhật products và services từ editableProducts
+    this.invoiceData.products = this.editableProducts
+      .filter(p => p.type === 'product' || p.type === 'room')
+      .map(p => ({
+        name: p.name,
+        price: p.price,
+        quantity: p.quantity,
+        totalPrice: (p.price || 0) * (p.quantity || 1)
+      }));
+    
+    this.invoiceData.services = this.editableProducts
+      .filter(p => p.type === 'service')
+      .map(p => ({
+        name: p.name,
+        serviceName: p.name,
+        price: p.price,
+        quantity: p.quantity,
+        totalPrice: (p.price || 0) * (p.quantity || 1)
+      }));
+
+    // Tính lại tổng tiền
+    const productsTotal = this.invoiceData.products.reduce((sum, p) => sum + (p.totalPrice || 0), 0);
+    const servicesTotal = this.invoiceData.services.reduce((sum, s) => sum + (s.totalPrice || 0), 0);
+    this.invoiceData.totalAmount = productsTotal + servicesTotal + (this.invoiceData.additionalCharges || 0) - (this.invoiceData.discount || 0);
+
+    // Lưu vào database
+    const invoiceId = this.invoiceData['_id'] || this.invoiceData['invoiceId'];
+    if (invoiceId) {
+      this.invoiceService.updateInvoice(invoiceId, this.invoiceData).subscribe({
+        next: (response: any) => {
+          this.isSaving = false;
+          this.message.success('Cập nhật hóa đơn thành công');
+          // Đóng modal và trả về kết quả
+          if (this.modalRef) {
+            this.modalRef.close('updated');
+          }
+        },
+        error: (error: any) => {
+          this.isSaving = false;
+          console.error('Error updating invoice:', error);
+          this.message.error('Lỗi khi cập nhật hóa đơn: ' + (error.error?.message || error.message));
+        }
+      });
+    } else {
+      // Nếu không có invoiceId, chỉ cập nhật local data
+      this.isSaving = false;
+      this.message.success('Đã cập nhật thông tin hóa đơn');
+      if (this.modalRef) {
+        this.modalRef.close('updated');
+      }
+    }
+  }
+
+  /**
+   * Hủy chỉnh sửa
+   */
+  cancelEdit(): void {
+    if (this.modalRef) {
+      this.modalRef.close();
+    }
   }
 }

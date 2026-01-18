@@ -745,16 +745,25 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.sepayService.createPaymentHistory(sepayPaymentData).subscribe({
       next: (response: any) => {
         this.loading = false;
-        if (response.success) {
+        console.log('[Pricing] Payment history response:', JSON.stringify(response, null, 2));
+        
+        // Kiểm tra response.success (có thể là true, false, hoặc undefined)
+        if (response.success !== false) {
           // Ưu tiên sử dụng QR code từ backend response (từ hệ thống/superadmin)
           // Nếu không có, fallback về QR code đã lấy từ frontend
-          const finalQrUrl = response.qrPaymentUrl || qrPaymentUrl;
-          const finalBeneficiaryName = response.beneficiaryName || beneficiaryName;
-          const finalBankName = response.bankName || '';
-          const finalAccountNumber = response.accountNumber || '';
+          const finalQrUrl = response.qrPaymentUrl || response.data?.qrPaymentUrl || qrPaymentUrl;
+          const finalBeneficiaryName = response.beneficiaryName || response.data?.beneficiaryName || beneficiaryName;
+          const finalBankName = response.bankName || response.data?.bankName || '';
+          const finalAccountNumber = response.accountNumber || response.data?.accountNumber || '';
+          
+          console.log('[Pricing] Final QR URL:', finalQrUrl ? `Found: ${finalQrUrl.substring(0, 50)}...` : 'Not found');
+          console.log('[Pricing] Response keys:', Object.keys(response));
           
           if (!finalQrUrl) {
-            this.message.error('Chưa có QR code thanh toán. Vui lòng liên hệ quản trị viên để cập nhật thông tin thanh toán.');
+            // Nếu không có QR code, có thể là do hệ thống chưa có QR code
+            // Nhưng vẫn cho phép tiếp tục nếu có paymentHistoryId (để user có thể thanh toán sau)
+            console.warn('[Pricing] No QR code in response, but payment history created');
+            this.message.warning('Hệ thống chưa có QR code thanh toán. Vui lòng liên hệ quản trị viên để cập nhật. Mã thanh toán: ' + (response.paymentCode || response.paymentHistoryId));
             return;
           }
           
@@ -777,7 +786,10 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
           // Bắt đầu polling để kiểm tra trạng thái thanh toán và tự động đóng modal khi thành công
           this.startPaymentStatusPolling();
         } else {
-          this.message.error(response.error || response.message || 'Có lỗi xảy ra khi tạo payment history');
+          // Response có success: false hoặc error
+          console.error('[Pricing] Payment history creation failed:', response);
+          const errorMsg = response.error || response.message || 'Có lỗi xảy ra khi tạo payment history';
+          this.message.error(errorMsg);
         }
       },
       error: (error: any) => {

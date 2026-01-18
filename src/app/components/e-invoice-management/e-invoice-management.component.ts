@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth.service';
 import { NzTabChangeEvent } from 'ng-zorro-antd/tabs';
 import { InvoiceService } from '../../services/invoice.service';
 import { EInvoiceProviderService, ProviderAccount } from '../../services/e-invoice-provider.service';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 interface EInvoice {
   id: string;
@@ -16,6 +17,38 @@ interface EInvoice {
   totalAmount: number;
   status: 'draft' | 'issued' | 'cancelled';
   createdAt: Date;
+  referenceCode?: string;
+  trackingCode?: string;
+  invoiceUrl?: string;
+  pdfUrl?: string;
+  sepayData?: any;
+}
+
+interface DraftInvoiceForm {
+  template_code: string;
+  invoice_series: string;
+  issued_date: string;
+  currency: string;
+  provider_account_id: string;
+  buyer: {
+    name: string;
+    tax_code?: string;
+    address: string;
+    email: string;
+    phone?: string;
+  };
+  items: Array<{
+    line_number: number;
+    line_type: number;
+    item_code?: string;
+    item_name: string;
+    unit: string;
+    quantity: number;
+    unit_price: number;
+    tax_rate: number;
+    total_price: number;
+  }>;
+  notes?: string;
 }
 
 @Component({
@@ -54,17 +87,43 @@ export class EInvoiceManagementComponent implements OnInit {
   };
   loggingIn = false;
 
+  // Edit draft modal
+  showEditDraftModal = false;
+  editingDraft: EInvoice | null = null;
+  draftForm: DraftInvoiceForm | null = null;
+  loadingDraftDetails = false;
+  savingDraft = false;
+  issuingDraft = false;
+  isViewMode = false; // true = chỉ xem, false = có thể chỉnh sửa
+  showPdfModal = false;
+  pdfUrl: string | null = null;
+  safePdfUrl: SafeResourceUrl | null = null;
+  loadingPdf = false;
+
+  // Quota/Usage
+  quotaRemaining: number | null = null;
+  loadingQuota = false;
+  quotaError: string | null = null;
+  quotaTotal: number | null = null; // Tổng quota (cho admin/superadmin)
+  quotaUsed: number | null = null; // Quota đã dùng (cho admin/superadmin)
+  isAdminOrSuperadmin = false; // Flag để phân biệt role
+
   constructor(
     private http: HttpClient,
     private message: NzMessageService,
     private modal: NzModalService,
     private authService: AuthService,
     private invoiceService: InvoiceService,
-    private providerService: EInvoiceProviderService
+    private providerService: EInvoiceProviderService,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
+    
+    // Kiểm tra role để phân biệt admin/superadmin và các role khác
+    const userRole = this.currentUser?.role;
+    this.isAdminOrSuperadmin = userRole === 'superadmin' || userRole === 'admin';
     
     // Load provider đã chọn
     this.selectedProvider = this.providerService.getSelectedProvider();
@@ -79,6 +138,13 @@ export class EInvoiceManagementComponent implements OnInit {
     
     // Load drafts
     this.loadDrafts();
+    
+    // Listen for quota update events (khi đăng ký packages thành công)
+    window.addEventListener('eInvoiceQuotaUpdated', () => {
+      if (this.isAuthenticated) {
+        this.loadQuota();
+      }
+    });
     
     // Nếu đã có provider được chọn, load lại chi tiết để đảm bảo có thông tin mới nhất
     if (this.selectedProvider && this.selectedProvider.id) {
@@ -107,7 +173,6 @@ export class EInvoiceManagementComponent implements OnInit {
 
   loadDrafts(): void {
     this.loading = true;
-    // TODO: Call API to load drafts
     this.http.get(`${environment.apiUrl}/e-invoice/drafts`, {
       params: {
         page: this.pageIndex.toString(),
@@ -117,17 +182,23 @@ export class EInvoiceManagementComponent implements OnInit {
       next: (response: any) => {
         this.loading = false;
         if (response.success !== false) {
-          this.drafts = response.data?.drafts || response.drafts || [];
-          this.totalDrafts = response.data?.total || response.total || 0;
+          // Backend đã tự động lọc theo hotelId, chỉ cần lấy dữ liệu
+          const allDrafts = response.data?.drafts || response.drafts || [];
+          // Đảm bảo chỉ lấy hóa đơn có status = 'draft' (backend đã filter nhưng double-check)
+          this.drafts = allDrafts.filter((invoice: any) => {
+            const status = invoice.status?.toLowerCase();
+            return status === 'draft';
+          });
+          this.totalDrafts = response.data?.total || this.drafts.length;
         } else {
           this.message.error(response.message || 'Không thể tải danh sách bản nháp');
           this.drafts = [];
+          this.totalDrafts = 0;
         }
       },
       error: (error) => {
         this.loading = false;
         console.error('Error loading drafts:', error);
-        // Mock data for development
         this.drafts = [];
         this.totalDrafts = 0;
       }
@@ -136,7 +207,6 @@ export class EInvoiceManagementComponent implements OnInit {
 
   loadIssuedInvoices(): void {
     this.loading = true;
-    // TODO: Call API to load issued invoices
     this.http.get(`${environment.apiUrl}/e-invoice/issued`, {
       params: {
         page: this.pageIndex.toString(),
@@ -146,17 +216,23 @@ export class EInvoiceManagementComponent implements OnInit {
       next: (response: any) => {
         this.loading = false;
         if (response.success !== false) {
-          this.issuedInvoices = response.data?.invoices || response.invoices || [];
-          this.totalIssued = response.data?.total || response.total || 0;
+          // Backend đã tự động lọc theo hotelId, chỉ cần lấy dữ liệu
+          const allInvoices = response.data?.invoices || response.invoices || [];
+          // Đảm bảo chỉ lấy hóa đơn có status = 'issued' (backend đã filter nhưng double-check)
+          this.issuedInvoices = allInvoices.filter((invoice: any) => {
+            const status = invoice.status?.toLowerCase();
+            return status === 'issued';
+          });
+          this.totalIssued = response.data?.total || this.issuedInvoices.length;
         } else {
           this.message.error(response.message || 'Không thể tải danh sách hóa đơn');
           this.issuedInvoices = [];
+          this.totalIssued = 0;
         }
       },
       error: (error) => {
         this.loading = false;
         console.error('Error loading issued invoices:', error);
-        // Mock data for development
         this.issuedInvoices = [];
         this.totalIssued = 0;
       }
@@ -173,13 +249,319 @@ export class EInvoiceManagementComponent implements OnInit {
   }
 
   viewDraft(invoice: EInvoice): void {
-    // TODO: Open modal or navigate to view draft
-    this.message.info(`Xem bản nháp: ${invoice.invoiceNumber}`);
+    // Kiểm tra nếu có pdf_url, mở PDF trong tab mới
+    const pdfUrl = invoice.pdfUrl || 
+                   invoice.sepayData?.pdf_url ||
+                   (invoice.sepayData && invoice.sepayData.pdf_url);
+    
+    if (pdfUrl) {
+      // Fetch PDF qua HttpClient (có auth headers) rồi mở blob URL trong tab mới
+      this.loadPdfAndOpenInNewTab(pdfUrl);
+      return;
+    }
+    
+    // Nếu không có pdf_url, mở modal xem hóa đơn (read-only)
+    this.editingDraft = invoice;
+    this.isViewMode = true; // Chế độ xem
+    this.showEditDraftModal = true;
+    this.loadingDraftDetails = true;
+    
+    // Lấy chi tiết hóa đơn từ Sepay
+    const referenceCode = invoice.referenceCode || 
+                          invoice.trackingCode || 
+                          invoice.invoiceNumber || 
+                          invoice.id ||
+                          (invoice.sepayData && (invoice.sepayData.reference_code || invoice.sepayData.tracking_code || invoice.sepayData.invoice_number || invoice.sepayData.id));
+    
+    if (!referenceCode) {
+      this.message.error('Không tìm thấy mã tham chiếu của hóa đơn');
+      this.loadingDraftDetails = false;
+      return;
+    }
+
+    this.invoiceService.getEInvoiceDetails(referenceCode).subscribe({
+      next: (response: any) => {
+        this.loadingDraftDetails = false;
+        if (response.success !== false && response.data) {
+          const invoiceData = response.data;
+          
+          // Nếu có pdf_url trong response, mở PDF trong tab mới
+          if (invoiceData.pdf_url) {
+            this.loadPdfAndOpenInNewTab(invoiceData.pdf_url);
+            this.closeEditDraftModal();
+            return;
+          }
+          
+          // Map dữ liệu từ Sepay sang form (read-only)
+          this.draftForm = {
+            template_code: invoiceData.template_code || '',
+            invoice_series: invoiceData.invoice_series || '',
+            issued_date: invoiceData.issued_date || new Date().toISOString().split('T')[0],
+            currency: invoiceData.currency || 'VND',
+            provider_account_id: invoiceData.provider_account_id || this.selectedProvider?.id || '',
+            buyer: {
+              name: invoiceData.buyer?.name || invoice.customerName || '',
+              tax_code: invoiceData.buyer?.tax_code || '',
+              address: invoiceData.buyer?.address || '',
+              email: invoiceData.buyer?.email || '',
+              phone: invoiceData.buyer?.phone || ''
+            },
+            items: (invoiceData.items || []).map((item: any, index: number) => ({
+              line_number: item.line_number || index + 1,
+              line_type: item.line_type || 1,
+              item_code: item.item_code || '',
+              item_name: item.item_name || '',
+              unit: item.unit || 'cái',
+              quantity: item.quantity || 1,
+              unit_price: item.unit_price || 0,
+              tax_rate: item.tax_rate || 0,
+              total_price: item.total_price || (item.unit_price || 0) * (item.quantity || 1)
+            })),
+            notes: invoiceData.notes || ''
+          };
+        } else {
+          this.message.error('Không thể tải chi tiết hóa đơn');
+          this.closeEditDraftModal();
+        }
+      },
+      error: (error) => {
+        this.loadingDraftDetails = false;
+        console.error('Error loading invoice details:', error);
+        this.message.error('Lỗi khi tải chi tiết hóa đơn: ' + (error.error?.error?.message || error.message));
+        this.closeEditDraftModal();
+      }
+    });
   }
 
   editDraft(invoice: EInvoice): void {
-    // TODO: Navigate to edit draft
-    this.message.info(`Chỉnh sửa bản nháp: ${invoice.invoiceNumber}`);
+    // Kiểm tra nếu hóa đơn đã xuất thì không cho chỉnh sửa
+    if (invoice.status === 'issued') {
+      this.message.warning('Hóa đơn đã xuất không thể chỉnh sửa. Vui lòng sử dụng chức năng "Xem" để xem chi tiết.');
+      return;
+    }
+    
+    this.editingDraft = invoice;
+    this.isViewMode = false; // Chế độ chỉnh sửa
+    this.showEditDraftModal = true;
+    this.loadingDraftDetails = true;
+    
+    // Lấy chi tiết hóa đơn từ Sepay
+    // Ưu tiên: referenceCode > trackingCode > invoiceNumber > id
+    const referenceCode = invoice.referenceCode || 
+                          invoice.trackingCode || 
+                          invoice.invoiceNumber || 
+                          invoice.id ||
+                          (invoice.sepayData && (invoice.sepayData.reference_code || invoice.sepayData.tracking_code || invoice.sepayData.invoice_number || invoice.sepayData.id));
+    
+    if (!referenceCode) {
+      this.message.error('Không tìm thấy mã tham chiếu của hóa đơn');
+      this.loadingDraftDetails = false;
+      return;
+    }
+
+    this.invoiceService.getEInvoiceDetails(referenceCode).subscribe({
+      next: (response: any) => {
+        this.loadingDraftDetails = false;
+        if (response.success !== false && response.data) {
+          const invoiceData = response.data;
+          // Map dữ liệu từ Sepay sang form
+          this.draftForm = {
+            template_code: invoiceData.template_code || '',
+            invoice_series: invoiceData.invoice_series || '',
+            issued_date: invoiceData.issued_date || new Date().toISOString().split('T')[0],
+            currency: invoiceData.currency || 'VND',
+            provider_account_id: invoiceData.provider_account_id || this.selectedProvider?.id || '',
+            buyer: {
+              name: invoiceData.buyer?.name || invoice.customerName || '',
+              tax_code: invoiceData.buyer?.tax_code || '',
+              address: invoiceData.buyer?.address || '',
+              email: invoiceData.buyer?.email || '',
+              phone: invoiceData.buyer?.phone || ''
+            },
+            items: (invoiceData.items || []).map((item: any, index: number) => ({
+              line_number: item.line_number || index + 1,
+              line_type: item.line_type || 1,
+              item_code: item.item_code || '',
+              item_name: item.item_name || '',
+              unit: item.unit || 'cái',
+              quantity: item.quantity || 1,
+              unit_price: item.unit_price || 0,
+              tax_rate: item.tax_rate || 0,
+              total_price: item.total_price || (item.unit_price || 0) * (item.quantity || 1)
+            })),
+            notes: invoiceData.notes || ''
+          };
+        } else {
+          this.message.error('Không thể tải chi tiết hóa đơn');
+          this.closeEditDraftModal();
+        }
+      },
+      error: (error) => {
+        this.loadingDraftDetails = false;
+        console.error('Error loading draft details:', error);
+        this.message.error('Lỗi khi tải chi tiết hóa đơn: ' + (error.error?.error?.message || error.message));
+        this.closeEditDraftModal();
+      }
+    });
+  }
+
+  closeEditDraftModal(): void {
+    this.showEditDraftModal = false;
+    this.editingDraft = null;
+    this.draftForm = null;
+    this.isViewMode = false;
+  }
+
+  loadPdfForViewing(pdfUrl: string): void {
+    this.loadingPdf = true;
+    this.pdfUrl = pdfUrl;
+    this.showPdfModal = true;
+    
+    // Sử dụng proxy endpoint từ backend để fetch PDF
+    const proxyUrl = `${environment.apiUrl}/e-invoice/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`;
+    
+    console.log('[EInvoice Management] Loading PDF via proxy:', proxyUrl);
+    
+    this.http.get(proxyUrl, { 
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/pdf'
+      }
+    }).subscribe({
+      next: (blob: Blob) => {
+        console.log('[EInvoice Management] PDF blob received, size:', blob.size, 'type:', blob.type);
+        
+        // Đảm bảo blob có type là application/pdf
+        let pdfBlob = blob;
+        if (blob.type !== 'application/pdf' && blob.size > 0) {
+          // Nếu không phải PDF nhưng có data, tạo blob với type PDF
+          pdfBlob = new Blob([blob], { type: 'application/pdf' });
+        }
+        
+        // Tạo blob URL
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(blobUrl);
+        
+        this.loadingPdf = false;
+        console.log('[EInvoice Management] PDF URL created:', blobUrl);
+      },
+      error: (error) => {
+        console.error('[EInvoice Management] Error loading PDF via proxy:', error);
+        console.error('[EInvoice Management] Error status:', error.status);
+        console.error('[EInvoice Management] Error details:', error.error);
+        
+        // Nếu proxy thất bại, thử dùng URL trực tiếp với object tag
+        this.message.warning('Không thể tải PDF qua proxy, đang thử cách khác...');
+        this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(pdfUrl + '#toolbar=0&navpanes=0');
+        this.loadingPdf = false;
+      }
+    });
+  }
+
+  closePdfModal(): void {
+    this.showPdfModal = false;
+    this.pdfUrl = null;
+    // Revoke blob URL để giải phóng memory
+    if (this.safePdfUrl) {
+      const url = this.safePdfUrl.toString();
+      if (url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    }
+    this.safePdfUrl = null;
+    this.loadingPdf = false;
+  }
+
+  saveDraft(): void {
+    if (!this.draftForm || !this.editingDraft) {
+      return;
+    }
+
+    // Validate form
+    if (!this.draftForm.template_code || !this.draftForm.invoice_series || !this.draftForm.buyer.name) {
+      this.message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      return;
+    }
+
+    if (!this.draftForm.items || this.draftForm.items.length === 0) {
+      this.message.error('Hóa đơn phải có ít nhất một sản phẩm/dịch vụ');
+      return;
+    }
+
+    this.savingDraft = true;
+
+    // Chuẩn bị dữ liệu để tạo lại draft
+    const invoiceData = {
+      ...this.draftForm,
+      is_draft: true
+    };
+
+    this.invoiceService.createEInvoice(invoiceData).subscribe({
+      next: (response: any) => {
+        this.savingDraft = false;
+        if (response.success !== false) {
+          this.message.success('Lưu hóa đơn nháp thành công');
+          this.closeEditDraftModal();
+          this.loadDrafts(); // Reload danh sách
+        } else {
+          this.message.error(response.error?.message || 'Lỗi khi lưu hóa đơn nháp');
+        }
+      },
+      error: (error) => {
+        this.savingDraft = false;
+        console.error('Error saving draft:', error);
+        this.message.error('Lỗi khi lưu hóa đơn nháp: ' + (error.error?.error?.message || error.message));
+      }
+    });
+  }
+
+  issueDraft(): void {
+    if (!this.editingDraft) {
+      return;
+    }
+
+    // Lấy reference code từ hóa đơn đang chỉnh sửa
+    // Ưu tiên: referenceCode > trackingCode > invoiceNumber > id
+    const referenceCode = this.editingDraft.referenceCode || 
+                          this.editingDraft.trackingCode || 
+                          this.editingDraft.invoiceNumber || 
+                          this.editingDraft.id ||
+                          (this.editingDraft.sepayData && (this.editingDraft.sepayData.reference_code || this.editingDraft.sepayData.tracking_code || this.editingDraft.sepayData.invoice_number || this.editingDraft.sepayData.id));
+    
+    if (!referenceCode) {
+      this.message.error('Không tìm thấy mã tham chiếu của hóa đơn');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: 'Xác nhận xuất hóa đơn',
+      nzContent: `Bạn có chắc chắn muốn xuất hóa đơn "${this.editingDraft.invoiceNumber}"? Hóa đơn sẽ không thể chỉnh sửa sau khi xuất.`,
+      nzOkText: 'Xuất hóa đơn',
+      nzOkType: 'primary',
+      nzCancelText: 'Hủy',
+      nzOnOk: () => {
+        this.issuingDraft = true;
+        this.invoiceService.issueEInvoice({ reference_code: referenceCode }).subscribe({
+          next: (response: any) => {
+            this.issuingDraft = false;
+            if (response.success !== false) {
+              this.message.success('Đã gửi yêu cầu xuất hóa đơn. Đang xử lý...');
+              this.closeEditDraftModal();
+              // Chuyển sang tab hóa đơn đã xuất
+              this.currentTab = 'issued';
+              this.loadIssuedInvoices();
+            } else {
+              this.message.error(response.error?.message || 'Lỗi khi xuất hóa đơn');
+            }
+          },
+          error: (error) => {
+            this.issuingDraft = false;
+            console.error('Error issuing draft:', error);
+            this.message.error('Lỗi khi xuất hóa đơn: ' + (error.error?.error?.message || error.message));
+          }
+        });
+      }
+    });
   }
 
   deleteDraft(invoice: EInvoice): void {
@@ -209,13 +591,95 @@ export class EInvoiceManagementComponent implements OnInit {
   }
 
   viewInvoice(invoice: EInvoice): void {
-    // TODO: Open modal or navigate to view invoice
-    this.message.info(`Xem hóa đơn: ${invoice.invoiceNumber}`);
+    // Kiểm tra nếu có pdf_url, mở PDF trong tab mới (giống viewDraft)
+    const pdfUrl = invoice.pdfUrl || 
+                   invoice.sepayData?.pdf_url ||
+                   (invoice.sepayData && invoice.sepayData.pdf_url);
+    
+    if (pdfUrl) {
+      // Mở PDF trong tab mới với token trong URL (tạm thời) hoặc fetch và mở blob URL
+      // Vì window.open không tự động gửi auth headers, ta cần fetch trước rồi mở blob URL
+      this.loadPdfAndOpenInNewTab(pdfUrl);
+      return;
+    }
+    
+    // Nếu không có pdf_url, mở modal xem hóa đơn (read-only) - giống viewDraft
+    this.viewDraft(invoice);
+  }
+
+  loadPdfAndOpenInNewTab(pdfUrl: string): void {
+    // Fetch PDF qua proxy với authentication
+    const proxyUrl = `${environment.apiUrl}/e-invoice/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`;
+    
+    this.http.get(proxyUrl, { responseType: 'blob' }).subscribe({
+      next: (blob: Blob) => {
+        // Tạo blob URL và mở trong tab mới
+        const blobUrl = URL.createObjectURL(blob);
+        const newWindow = window.open(blobUrl, '_blank');
+        
+        if (!newWindow) {
+          this.message.error('Trình duyệt đã chặn popup. Vui lòng cho phép popup để xem PDF.');
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+        
+        // Revoke URL sau khi window đóng (nếu có thể detect)
+        newWindow.addEventListener('beforeunload', () => {
+          URL.revokeObjectURL(blobUrl);
+        });
+      },
+      error: (error) => {
+        console.error('Error loading PDF:', error);
+        // Nếu proxy thất bại, thử mở URL trực tiếp
+        window.open(pdfUrl, '_blank');
+        this.message.warning('Đang mở PDF trực tiếp từ URL gốc...');
+      }
+    });
   }
 
   downloadInvoice(invoice: EInvoice): void {
-    // TODO: Download invoice PDF
-    this.message.info(`Tải xuống hóa đơn: ${invoice.invoiceNumber}`);
+    // Lấy PDF URL từ invoice
+    const pdfUrl = invoice.pdfUrl || 
+                   invoice.sepayData?.pdf_url ||
+                   (invoice.sepayData && invoice.sepayData.pdf_url);
+    
+    if (!pdfUrl) {
+      this.message.error('Không tìm thấy PDF để tải xuống');
+      return;
+    }
+    
+    // Sử dụng proxy endpoint để tải PDF
+    const proxyUrl = `${environment.apiUrl}/e-invoice/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`;
+    
+    // Fetch PDF và tải xuống
+    this.http.get(proxyUrl, { responseType: 'blob' }).subscribe({
+      next: (blob: Blob) => {
+        // Tạo blob URL và tải xuống
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `HoaDon_${invoice.invoiceNumber || invoice.id}_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+        
+        this.message.success('Đã tải xuống hóa đơn thành công');
+      },
+      error: (error) => {
+        console.error('Error downloading PDF:', error);
+        // Nếu proxy thất bại, thử tải trực tiếp từ URL
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `HoaDon_${invoice.invoiceNumber || invoice.id}_${new Date().toISOString().split('T')[0]}.pdf`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        this.message.success('Đang tải xuống hóa đơn...');
+      }
+    });
   }
 
   cancelInvoice(invoice: EInvoice): void {
@@ -246,6 +710,13 @@ export class EInvoiceManagementComponent implements OnInit {
 
   formatPrice(price: number): string {
     return new Intl.NumberFormat('vi-VN').format(price);
+  }
+
+  calculateTotalAmount(): number {
+    if (!this.draftForm || !this.draftForm.items) {
+      return 0;
+    }
+    return this.draftForm.items.reduce((sum, item) => sum + (item.total_price || 0), 0);
   }
 
   formatDate(date: Date | string): string {
@@ -307,6 +778,8 @@ export class EInvoiceManagementComponent implements OnInit {
           
           // Load danh sách provider accounts
           this.loadProviderAccounts();
+          // Load hạn ngạch khi đăng nhập thành công
+          this.loadQuota();
         } else {
           this.isAuthenticated = false;
           this.authError = response.message || 'Không thể xác thực với Sepay eInvoice API';
@@ -326,6 +799,88 @@ export class EInvoiceManagementComponent implements OnInit {
         }
         
         console.error('Authentication error:', error);
+      }
+    });
+  }
+
+  /**
+   * Load hạn ngạch từ Sepay API
+   */
+  loadQuota(): void {
+    if (!this.isAuthenticated) {
+      return;
+    }
+
+    this.loadingQuota = true;
+    this.quotaError = null;
+
+    this.invoiceService.getEInvoiceUsage().subscribe({
+      next: (response: any) => {
+        this.loadingQuota = false;
+        
+        if (response.success !== false && response.data) {
+          // Phân biệt theo role
+          if (this.isAdminOrSuperadmin) {
+            // Admin/Superadmin: Hiển thị tổng quota từ Sepay
+            const quotaRemaining = response.data.quota_remaning || response.data.quota_remaining;
+            this.quotaRemaining = quotaRemaining ? parseInt(quotaRemaining, 10) : null;
+            this.quotaTotal = response.data.totalQuota || null;
+            this.quotaUsed = response.data.usedQuota || null;
+            
+            if (this.quotaRemaining === null) {
+              this.quotaError = 'Không thể lấy thông tin hạn ngạch';
+            }
+          } else {
+            // Hotel/Staff/Business: Hiển thị quota đã đăng ký của mình
+            const quotaRemaining = response.data.quota_remaning || response.data.quota_remaining;
+            const allocatedQuota = response.data.allocatedQuota || 0;
+            
+            // Nếu chưa đăng ký (allocatedQuota = 0), hiển thị 0/0
+            if (allocatedQuota === 0) {
+              this.quotaRemaining = 0;
+              this.quotaTotal = 0;
+              this.quotaUsed = 0;
+            } else {
+              // Đã đăng ký: hiển thị remaining/allocated
+              this.quotaRemaining = quotaRemaining ? parseInt(quotaRemaining, 10) : 0;
+              this.quotaTotal = allocatedQuota;
+              this.quotaUsed = response.data.usedQuota || 0;
+              
+              // Đảm bảo remaining không âm
+              if (this.quotaRemaining < 0) {
+                this.quotaRemaining = 0;
+              }
+            }
+          }
+        } else {
+          this.quotaError = response.message || 'Không thể lấy thông tin hạn ngạch';
+          // Nếu không phải admin và không có data, mặc định là 0
+          if (!this.isAdminOrSuperadmin) {
+            this.quotaRemaining = 0;
+            this.quotaTotal = 0;
+            this.quotaUsed = 0;
+          }
+        }
+      },
+      error: (error: any) => {
+        this.loadingQuota = false;
+        console.error('Error loading quota:', error);
+        
+        // Xử lý các loại lỗi
+        if (error.error?.error?.code === 'EINVOICE_CONFIG_MISSING') {
+          this.quotaError = 'Chưa cấu hình Sepay eInvoice API';
+        } else if (error.error?.error?.code === 'EINVOICE_AUTH_FAILED' || error.status === 401) {
+          this.quotaError = 'Chưa đăng nhập hoặc token đã hết hạn';
+        } else {
+          this.quotaError = error.error?.error?.message || error.error?.message || 'Không thể kết nối với Sepay eInvoice API';
+        }
+        
+        // Nếu không phải admin và có lỗi, mặc định là 0
+        if (!this.isAdminOrSuperadmin) {
+          this.quotaRemaining = 0;
+          this.quotaTotal = 0;
+          this.quotaUsed = 0;
+        }
       }
     });
   }

@@ -2,6 +2,33 @@
   <div class="e-invoice-header">
     <h1>Chọn gói hóa đơn điện tử</h1>
     <p class="subtitle">Có thể chọn nhiều gói cùng lúc để phù hợp với nhu cầu</p>
+    <div *ngIf="isAdmin" class="admin-actions" style="margin-top: 16px;">
+      <nz-switch 
+        [(ngModel)]="showQuotaAllocation" 
+        nzCheckedChildren="Phân chia quota"
+        nzUnCheckedChildren="Đăng ký gói">
+      </nz-switch>
+      <span style="margin-left: 8px;">Chế độ phân chia quota cho khách sạn</span>
+    </div>
+    <div *ngIf="isAdmin && showQuotaAllocation" class="hotel-selection" style="margin-top: 16px;">
+      <nz-select
+        [(ngModel)]="selectedHotelId"
+        nzPlaceHolder="Chọn khách sạn"
+        nzAllowClear
+        style="width: 300px;">
+        <nz-option 
+          *ngFor="let hotel of hotels" 
+          [nzValue]="hotel._id || hotel.id"
+          [nzLabel]="hotel.name">
+        </nz-option>
+      </nz-select>
+      <div *ngIf="systemQuota" style="margin-top: 8px; color: #666; font-size: 0.875rem;">
+        <span>Quota hệ thống còn lại: </span>
+        <strong [style.color]="systemQuota.unallocatedQuota > 0 ? '#52c41a' : '#ff4d4f'">
+          {{ systemQuota.unallocatedQuota | number }} hóa đơn
+        </strong>
+      </div>
+    </div>
   </div>
 
   <div class="e-invoice-content">
@@ -99,11 +126,11 @@
         nzType="primary" 
         nzSize="large"
         [nzLoading]="loading"
-        [disabled]="selectedPackages.length === 0"
+        [disabled]="selectedPackages.length === 0 || (isAdmin && showQuotaAllocation && !selectedHotelId)"
         (click)="onSubmit()"
         class="submit-button">
-        <i nz-icon nzType="check-circle" nzTheme="outline"></i>
-        Đăng ký
+        <i nz-icon [nzType]="isAdmin && showQuotaAllocation ? 'share-alt' : 'check-circle'" nzTheme="outline"></i>
+        {{ isAdmin && showQuotaAllocation ? 'Phân chia quota' : 'Đăng ký' }}
       </button>
     </div>
 
@@ -151,4 +178,70 @@
     </div>
   </div>
 </div>
+
+<!-- Payment Modal -->
+<nz-modal
+  [(nzVisible)]="showPaymentModal"
+  nzTitle="Thanh toán đăng ký gói hóa đơn điện tử"
+  [nzWidth]="600"
+  [nzFooter]="null"
+  (nzOnCancel)="closePaymentModal()">
+  <div *nzModalContent>
+    <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
+      <nz-descriptions-item nzTitle="Gói đã chọn">
+        <div *ngFor="let pkg of selectedPackages" style="margin-bottom: 8px;">
+          <strong>{{ pkg.name }} x{{ pkg.quantity }}</strong>
+          <span style="margin-left: 8px; color: #666;">
+            ({{ formatPrice(pkg.packagePrice * pkg.quantity) }} ₫)
+          </span>
+        </div>
+      </nz-descriptions-item>
+      <nz-descriptions-item nzTitle="Tổng tiền">
+        <strong style="font-size: 18px; color: #1890ff;">
+          {{ formatPrice(paymentAmount) }} ₫
+        </strong>
+      </nz-descriptions-item>
+      <nz-descriptions-item *ngIf="paymentBeneficiaryName" nzTitle="Tên người thụ hưởng">
+        <strong>{{ paymentBeneficiaryName }}</strong>
+      </nz-descriptions-item>
+    </nz-descriptions>
+
+    <!-- QR Code -->
+    <div *ngIf="paymentQrUrl" style="text-align: center; margin: 20px 0;">
+      <div style="margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 600;">
+          <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
+          Quét QR để thanh toán
+        </h3>
+      </div>
+      <div style="display: inline-block; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <img 
+          [src]="paymentQrUrl" 
+          alt="QR Code thanh toán" 
+          style="max-width: 300px; width: 100%; height: auto; display: block;"
+          onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
+        />
+      </div>
+      <div style="margin-top: 12px; font-size: 12px; color: #666;">
+        <p style="margin: 4px 0;" *ngIf="paymentBeneficiaryName">
+          <strong>Người thụ hưởng:</strong> {{ paymentBeneficiaryName }}
+        </p>
+        <p style="margin: 4px 0;" *ngIf="paymentBankName">
+          <strong>Ngân hàng:</strong> {{ paymentBankName }}
+        </p>
+        <p style="margin: 4px 0;" *ngIf="paymentAccountNumber">
+          <strong>Số tài khoản:</strong> {{ paymentAccountNumber }}
+        </p>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px; padding: 12px; background: #f0f9ff; border-radius: 4px; border-left: 4px solid #1890ff;">
+      <p style="margin: 0; color: #1890ff; font-size: 13px;">
+        <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 6px;"></i>
+        Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và đăng ký gói cho bạn trong vòng vài phút.
+        <strong>Modal này sẽ tự động đóng khi thanh toán thành công.</strong>
+      </p>
+    </div>
+  </div>
+</nz-modal>
 

@@ -2046,6 +2046,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         phone: customerPhone && customerPhone !== 'N/A' ? customerPhone : '',
         email: customerEmail && customerEmail !== 'N/A' ? customerEmail : '',
         idNumber: formGuestInfo.idNumber || '',
+        tax_code: formGuestInfo.tax_code || '', // Mã số thuế (cho công ty)
         address: formGuestInfo.address || '',
         guestSource: guestSource // Thêm guestSource vào guestInfo
       },

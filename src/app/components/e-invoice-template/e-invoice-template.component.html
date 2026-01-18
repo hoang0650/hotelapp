@@ -1,14 +1,20 @@
 <div class="e-invoice-template-container">
   <div class="page-header">
     <h1>Mẫu hóa đơn điện tử</h1>
-    <p class="subtitle">Chọn và quản lý mẫu hóa đơn điện tử</p>
+    <p class="subtitle">Chọn và quản lý mẫu hóa đơn điện tử từ nhà cung cấp</p>
+    <div *ngIf="providerService.getSelectedProvider()" class="provider-info">
+      <nz-tag [nzColor]="providerService.getSelectedProvider()?.active ? 'success' : 'default'">
+        <i nz-icon nzType="cloud-server" nzTheme="outline"></i>
+        {{ providerService.getSelectedProvider()?.provider }}
+      </nz-tag>
+    </div>
   </div>
 
   <div class="content-wrapper">
     <nz-spin [nzSpinning]="loading">
       <nz-empty 
         *ngIf="!loading && templates.length === 0"
-        nzNotFoundContent="Chưa có mẫu hóa đơn nào"
+        nzNotFoundContent="Chưa có mẫu hóa đơn nào. Vui lòng chọn tài khoản nhà cung cấp trước."
         [nzNotFoundImage]="'simple'">
       </nz-empty>
 
@@ -16,27 +22,31 @@
         <div 
           *ngFor="let template of templates"
           class="template-card"
-          [class.selected]="selectedTemplate?.id === template.id"
+          [class.selected]="selectedTemplate?.template_code === template.template_code"
           [class.default]="template.isDefault"
           (click)="selectTemplate(template)">
           <div class="template-header">
-            <h3>{{ template.name }}</h3>
+            <h3>{{ getTemplateDisplayName(template) }}</h3>
             <nz-tag *ngIf="template.isDefault" nzColor="blue">Mặc định</nz-tag>
           </div>
           <div class="template-preview">
             <div *ngIf="template.previewImage" class="preview-image">
-              <img [src]="template.previewImage" [alt]="template.name" />
+              <img [src]="template.previewImage" [alt]="getTemplateDisplayName(template)" />
             </div>
             <div *ngIf="!template.previewImage" class="preview-placeholder">
               <i nz-icon nzType="file-text" nzTheme="outline" style="font-size: 48px; color: #d9d9d9;"></i>
             </div>
           </div>
           <div class="template-description">
-            <p>{{ template.description }}</p>
+            <p>{{ getTemplateDescription(template) }}</p>
             <div class="template-meta">
-              <span class="template-date">
-                <i nz-icon nzType="calendar" nzTheme="outline"></i>
-                {{ formatDate(template.createdAt) }}
+              <span class="template-code">
+                <i nz-icon nzType="barcode" nzTheme="outline"></i>
+                Mã: {{ template.template_code }}
+              </span>
+              <span class="template-series">
+                <i nz-icon nzType="number" nzTheme="outline"></i>
+                Series: {{ template.invoice_series }}
               </span>
             </div>
           </div>

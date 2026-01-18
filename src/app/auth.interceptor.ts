@@ -38,6 +38,7 @@ export class AuthInterceptor implements HttpInterceptor {
                           request.url.includes('/staffs') ||
                           request.url.includes('/transactions') ||
                           request.url.includes('/invoices') ||
+                          request.url.includes('/e-invoice') ||
                           request.url.includes('/shift-handover') ||
                           request.url.includes('/services') ||
                           request.url.includes('/tuya') ||
