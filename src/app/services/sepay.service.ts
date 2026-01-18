@@ -198,6 +198,14 @@ export class SePayService {
     });
   }
 
+  generatePaymentSound(payload: {
+    message: string;
+    speed?: number | string;
+    voice?: string;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/fpt-tts`, payload);
+  }
+
   /**
    * Submit form đến SePay
    */
