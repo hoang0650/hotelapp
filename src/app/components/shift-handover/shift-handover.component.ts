@@ -203,8 +203,12 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
   }
 
   getTotalRevenue(): number {
+    if (this.revenueData) {
+      const totalRoomRevenue = this.revenueData.totalRevenue || 0;
+      const incomeAmount = this.revenueData.incomeTotal || 0;
+      return totalRoomRevenue + incomeAmount;
+    }
     const values = this.handoverForm.value;
-    // Tổng doanh thu = Tiền mặt + Chuyển khoản + Cà thẻ - Tiền chi
     return this.shiftHandoverService.calculateTotalRevenue(
       values.cashAmount || 0,
       values.bankTransferAmount || 0,

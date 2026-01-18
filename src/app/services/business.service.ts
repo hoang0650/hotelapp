@@ -3,14 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { Business } from '../interfaces/business';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment';
 
 
 @Injectable({
   providedIn: 'root'
 })
 export class BusinessService {
-  // private apiUrl = 'https://hotel-app-smp2.onrender.com/businesses';
-  private apiUrl = 'https://nest-production-8106.up.railway.app/businesses'
+  private apiUrl = `${environment.apiUrl}/businesses`;
 
   constructor(
     private http: HttpClient,

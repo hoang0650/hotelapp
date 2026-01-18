@@ -1917,6 +1917,7 @@
     "DISCOUNT": "Rabatt",
     "SERVICE_AMOUNT": "Dienstleistungsbetrag",
     "ADVANCE_PAYMENT": "Vorauszahlung",
+    "ADVANCE_PAYMENT_METHOD": "Zahlungsmethode der Vorauszahlung",
     "AMOUNT": "Betrag",
     "PAYMENT_METHOD": "Zahlungsmethode",
     "CASH": "Bargeld",

@@ -7,6 +7,7 @@ import { User } from '../../interfaces/user';
 import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-profile',
@@ -23,7 +24,7 @@ export class ProfileComponent implements OnInit {
   qrPaymentUrl: string = ''; // URL QR thanh toán SePay
   showQrPreview: boolean = false; // Hiển thị preview QR code
   qrBeneficiaryName: string = ''; // Tên người thụ hưởng cho QR code
-  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  apiBaseUrl = environment.apiUrl;
   uploadUrl = `${this.apiBaseUrl}/files/upload`;
   fileList: any[] = [];
   avatarId: string | null = null;

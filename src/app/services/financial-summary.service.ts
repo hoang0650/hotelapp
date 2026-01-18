@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface FinancialConfig {
   depreciationRate?: number;      // % khấu hao mỗi năm
@@ -68,7 +69,7 @@ export interface FinancialSummaryQuery {
   providedIn: 'root'
 })
 export class FinancialSummaryService {
-  private apiUrl = 'https://nest-production-8106.up.railway.app/financial-summary';
+  private apiUrl = `${environment.apiUrl}/financial-summary`;
 
   constructor(private http: HttpClient) { }
 

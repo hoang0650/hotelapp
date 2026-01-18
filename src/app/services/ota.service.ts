@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 import { 
   OtaIntegration, 
   OtaBooking, 
@@ -28,7 +29,7 @@ export interface OtaBookingsResponse {
   providedIn: 'root'
 })
 export class OtaService {
-  private apiUrl = 'https://nest-production-8106.up.railway.app/ota-integrations';
+  private apiUrl = `${environment.apiUrl}/ota-integrations`;
   
   constructor(private http: HttpClient) { }
 

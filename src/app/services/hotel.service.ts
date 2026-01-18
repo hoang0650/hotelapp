@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Hotel, HotelStatus } from '../interfaces/hotel';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 interface RevenueData {
   labels: string[];
@@ -18,8 +19,7 @@ interface RevenueData {
   providedIn: 'root'
 })
 export class HotelService {
-  //private apiUrl = 'https://hotel-app-smp2.onrender.com/hotels';
-  private apiUrl = 'https://nest-production-8106.up.railway.app/hotels'
+  private apiUrl = `${environment.apiUrl}/hotels`;
 
   constructor(private http: HttpClient) { }
 
@@ -108,7 +108,7 @@ export class HotelService {
 
   // Lấy doanh thu khách sạn theo period từ shift-handover API
   getHotelRevenueByPeriod(hotelId: string, period: 'day' | 'week' | 'month' = 'day'): Observable<RevenueData> {
-    const apiUrl = 'https://nest-production-8106.up.railway.app/shift-handover/revenue/period';
+    const apiUrl = `${environment.apiUrl}/shift-handover/revenue/period`;
     const params = new HttpParams()
       .set('hotelId', hotelId)
       .set('period', period);

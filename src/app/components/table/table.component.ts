@@ -115,11 +115,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       
       // Áp dụng bộ lọc trạng thái thanh toán
       if (this.paymentStatusFilter !== 'all') {
-        // Lấy paymentStatus từ nhiều nguồn, ưu tiên paymentStatus trực tiếp
-        const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || item.status || 'unpaid';
-        
-        // Chuẩn hóa trạng thái: 'completed' từ SePay = 'paid'
-        const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
+        const normalizedStatus = this.getNormalizedPaymentStatus(item);
         
         if (this.paymentStatusFilter === 'paid') {
           // Chỉ hiển thị các giao dịch đã thanh toán (bao gồm cả 'completed' từ SePay)
@@ -165,6 +161,16 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       
       return true;
     });
+  }
+  
+  private getNormalizedPaymentStatus(item: any): string {
+    const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || item.status || 'unpaid';
+    return paymentStatus === 'completed' ? 'paid' : paymentStatus;
+  }
+  
+  private isPaidTransaction(item: any): boolean {
+    const normalizedStatus = this.getNormalizedPaymentStatus(item);
+    return normalizedStatus === 'paid';
   }
   
   // Getter để paginate paidData
@@ -1092,11 +1098,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   }
   
   calculateTotalPayment(): void {
-    // Tính tổng tiền chỉ từ các bản ghi đã thanh toán (paymentStatus = 'paid' hoặc 'completed')
-    let baseTotal = this.paidData.reduce((sum, current) => {
-      // Chỉ tính tiền từ các bản ghi đã thanh toán
+    let invoiceTotal = this.paidData.reduce((sum, current) => {
       const paymentStatus = current.paymentStatus || current.payment?.status || current.payment?.paymentStatus || current.status || 'pending';
-      // Chuẩn hóa: 'completed' từ SePay = 'paid'
       const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
       if (normalizedStatus !== 'paid') {
         return sum;
@@ -1105,12 +1108,20 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0);
     
-    // Trừ đi tiền giao quản lý và tiền chi (nếu có) từ form giao ca
-    const managerHandoverAmount = this.shiftHandoverForm?.get('managerHandoverAmount')?.value || 0;
-    const expenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
+    let advancePaymentTotal = this.listOfData.reduce((sum, current) => {
+      const advancePayment = current?.advancePayment || 0;
+      if (advancePayment > 0) {
+        const eventType = (current.event || current.type || '').toLowerCase();
+        if (eventType === 'check-in' || eventType === 'checkin') {
+          return sum + (typeof advancePayment === 'number' ? advancePayment : 0);
+        }
+      }
+      return sum;
+    }, 0);
     
-    // Tổng tiền = tổng tiền ban đầu - tiền giao quản lý
-    this.totalPayment = Math.max(0, baseTotal - managerHandoverAmount);
+    const incomeAmount = this.shiftHandoverForm?.get('incomeAmount')?.value || 0;
+    
+    this.totalPayment = invoiceTotal + advancePaymentTotal + incomeAmount;
   }
   
   exportToExcel(): void {
@@ -1217,13 +1228,33 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   getPaymentMethodLabel(method: string): string {
-    const found = this.paymentMethodOptions.find(option => option.value === method);
-    return found ? found.label : 'Tiền mặt';
+    const m = (method || 'cash').toLowerCase();
+    const found = this.paymentMethodOptions.find(option => option.value === m);
+    if (found) {
+      return found.label;
+    }
+    if (m === 'bank_transfer' || m === 'banking' || m === 'transfer') {
+      return 'Chuyển khoản';
+    }
+    if (m === 'card' || m === 'credit_card' || m === 'virtual_card' || m === 'visa') {
+      return 'Thẻ ngân hàng';
+    }
+    return 'Tiền mặt';
   }
-
+ 
   getPaymentMethodColor(method: string): string {
-    const found = this.paymentMethodOptions.find(option => option.value === method);
-    return found ? found.color : 'green';
+    const m = (method || 'cash').toLowerCase();
+    const found = this.paymentMethodOptions.find(option => option.value === m);
+    if (found) {
+      return found.color;
+    }
+    if (m === 'bank_transfer' || m === 'banking' || m === 'transfer') {
+      return 'purple';
+    }
+    if (m === 'card' || m === 'credit_card' || m === 'virtual_card' || m === 'visa') {
+      return 'blue';
+    }
+    return 'green';
   }
 
   // Lấy label cho nguồn khách
@@ -1409,17 +1440,35 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     this.loadStaffList();
     this.loadPreviousShiftAmount();
     
-    // Tính tổng doanh thu từ paidData (getter tự động tính từ listOfData)
-    // paidData là getter nên không cần gán, chỉ cần đảm bảo listOfData có dữ liệu
-    const totalCash = this.paidData
+    const paidItems = this.paidData.filter(item => this.isPaidTransaction(item));
+    
+    let totalCash = paidItems
       .filter(item => item.paymentMethod === 'cash')
       .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
-    const totalBankTransfer = this.paidData
+    let totalBankTransfer = paidItems
       .filter(item => ['transfer', 'bank_transfer', 'banking'].includes(item.paymentMethod))
       .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
-    const totalCard = this.paidData
+    let totalCard = paidItems
       .filter(item => ['card', 'credit_card', 'visa'].includes(item.paymentMethod))
       .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+    
+    // Tính từ đặt trước (advancePayment) theo hình thức thanh toán
+    this.listOfData.forEach(item => {
+      const advancePayment = item?.advancePayment || 0;
+      if (advancePayment > 0) {
+        const eventType = (item.event || item.type || '').toLowerCase();
+        if (eventType === 'check-in' || eventType === 'checkin') {
+          const advancePaymentMethod = (item?.advancePaymentMethod || item.paymentMethod || 'cash') as string;
+          if (advancePaymentMethod === 'cash') {
+            totalCash += advancePayment;
+          } else if (['transfer', 'bank_transfer', 'banking'].includes(advancePaymentMethod)) {
+            totalBankTransfer += advancePayment;
+          } else if (['card', 'credit_card', 'visa'].includes(advancePaymentMethod)) {
+            totalCard += advancePayment;
+          }
+        }
+      }
+    });
     
     // Load thời điểm giao tiền quản lý cuối cùng, sau đó mới load expenses
     this.loadLastManagerHandoverTime(() => {
@@ -1626,8 +1675,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     // Tính tổng doanh thu = Tiền giao quản lý + Phiếu chi
     const totalRevenue = (formData.managerHandoverAmount || 0) + (formData.expenseAmount || 0);
     
-    // Tạo roomHistory từ paidData
-    const roomHistory = this.paidData.map(item => {
+    const roomHistory = this.paidData
+      .filter(item => this.isPaidTransaction(item))
+      .map(item => {
       // Lấy guestSource từ nhiều nguồn theo thứ tự ưu tiên
       let guestSource = 'walkin';
       if (item.guestSource) {
@@ -1660,12 +1710,14 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         discount: item.discount || 0,
         serviceAmount: item.servicesTotal || item.serviceDetails?.amount || 0,
         advancePayment: item.advancePayment || 0,
+        advancePaymentMethod: (item.advancePaymentMethod || item.paymentMethod || 'cash') as string,
         checkinTime: item.checkInTime || item.checkinTime || null
       };
     });
     
-    // Tạo invoices từ paidData
-    const invoices = this.paidData.map(item => ({
+    const invoices = this.paidData
+      .filter(item => this.isPaidTransaction(item))
+      .map(item => ({
       invoiceNumber: item.invoiceNumber,
       bookingId: item.bookingId,
       roomId: item.roomId,
@@ -1800,9 +1852,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       data.hotelId = this.hotelId;
     }
     
-    // Sử dụng API endpoint đúng từ backend
-    const apiUrl = `https://nest-production-8106.up.railway.app/shift-handover`;
-    
+    const apiUrl = `${environment.apiUrl}/shift-handover`;
     this.http.post(apiUrl, data).pipe(
       catchError((error: HttpErrorResponse) => {
         let errorMessage = 'Có lỗi xảy ra khi gửi dữ liệu giao ca';
@@ -1925,8 +1975,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   
   loadDataAfterHandover(): void {
     if (this.hotelId) {
-      const apiUrl = `https://nest-production-8106.up.railway.app/rooms?hotelId=${this.hotelId}`;
-      
+      const apiUrl = `${environment.apiUrl}/rooms?hotelId=${this.hotelId}`;
       this.http.get(apiUrl).pipe(
         catchError((error: HttpErrorResponse) => {
           console.error('Lỗi khi tải lại dữ liệu sau giao ca:', error);
@@ -2160,9 +2209,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   
   // Tính tiền mặt thực tế trong ca (từ thanh toán, trừ tiền mặt chi và cộng tiền mặt thu từ phiếu thu)
   getActualCashInShift(): number {
-    // Tính tiền mặt thu được từ thanh toán
     const cashReceived = this.paidData
-      .filter(item => item.paymentMethod === 'cash')
+      .filter(item => this.isPaidTransaction(item) && item.paymentMethod === 'cash')
       .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
     
     // Tiền mặt trong ca = Tiền mặt thu - Tiền mặt chi (từ phiếu chi) + Tiền mặt thu (từ phiếu thu)
@@ -2335,15 +2383,16 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       guestSource: r.guestSource
     })));
     
-    // Tính tổng tiền chuyển khoản và cà thẻ từ paidData
-    const totalBankTransfer = this.paidData.reduce((sum, item) => {
+    const paidItems = this.paidData.filter(item => this.isPaidTransaction(item));
+    
+    const totalBankTransfer = paidItems.reduce((sum, item) => {
       if (item.paymentMethod === 'bank_transfer' || item.paymentMethod === 'transfer' || item.paymentMethod === 'banking') {
         return sum + (item.totalAmount || item.amount || 0);
       }
       return sum;
     }, 0);
     
-    const totalCardPayment = this.paidData.reduce((sum, item) => {
+    const totalCardPayment = paidItems.reduce((sum, item) => {
       if (item.paymentMethod === 'card' || item.paymentMethod === 'credit_card' || item.paymentMethod === 'visa') {
         return sum + (item.totalAmount || item.amount || 0);
       }
@@ -2565,7 +2614,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     }
     
     // Gọi API để xác thực và lưu
-    this.http.post(`${environment.apiUrl || 'https://nest-production-8106.up.railway.app'}/shift-handover/manager`, managerHandoverData).pipe(
+    this.http.post(`${environment.apiUrl}/shift-handover/manager`, managerHandoverData).pipe(
       catchError((error: HttpErrorResponse) => {
         let errorMessage = 'Có lỗi xảy ra khi giao tiền quản lý';
         

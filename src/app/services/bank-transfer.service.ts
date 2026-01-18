@@ -39,7 +39,7 @@ export interface SepayTransactionsResponse {
   providedIn: 'root'
 })
 export class BankTransferService {
-  private apiUrl = 'https://nest-production-8106.up.railway.app/sepay'; // Backend endpoint cho SePay
+  private apiUrl = `${environment.apiUrl}/sepay`; // Backend endpoint cho SePay
   private bankTransfersUrl = 'api/bank-transfers'; // URL API cho bank transfers nội bộ
 
   constructor(private http: HttpClient) { }

@@ -153,7 +153,7 @@ export class SePayService {
 
     // Gọi đến webhook endpoint để tạo payment history
     // Note: Endpoint này sẽ tạo payment history với status 'pending'
-    const webhookUrl = 'https://nest-production-8106.up.railway.app/hooks/sepay-payment';
+    const webhookUrl = `${environment.apiUrl}/hooks/sepay-payment`;
     
     // Tạo payload để tạo payment history
     const payload = {

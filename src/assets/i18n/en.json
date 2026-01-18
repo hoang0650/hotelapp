@@ -687,6 +687,7 @@
       "DISCOUNT": "Discount",
       "SERVICE_AMOUNT": "Service Amount",
       "ADVANCE_PAYMENT": "Advance Payment",
+      "ADVANCE_PAYMENT_METHOD": "Advance Payment Method",
       "CHECK_IN": "Check-in",
       "CHECK_OUT": "Check-out",
       "N_A": "N/A",

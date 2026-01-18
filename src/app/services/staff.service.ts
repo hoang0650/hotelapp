@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Staff } from '../interfaces/staff';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class StaffService {
   // private baseUrl = 'https://hotel-app-smp2.onrender.com/staffs';
-  private baseUrl = 'https://nest-production-8106.up.railway.app/staffs';
+  private baseUrl = `${environment.apiUrl}/staffs`;
 
   constructor(private http: HttpClient) {}
 

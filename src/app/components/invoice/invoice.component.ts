@@ -632,18 +632,21 @@ export class InvoiceComponent implements OnInit {
     const rateTypes: { [key: string]: string } = {
       'hourly': 'Theo giờ',
       'daily': 'Ngày đêm',
-      'nightly': 'Qua đêm'
+      'nightly': 'Qua đêm',
+      'weekly': 'Theo tuần',
+      'monthly': 'Theo tháng'
     };
     return rateTypes[rateType.toLowerCase()] || rateType;
   }
 
   // Lấy label cho nguồn khách
   getGuestSourceLabel(guestSource: string | undefined): string {
-    if (!guestSource) return 'Walk-in';
+    if (!guestSource) return 'Khách lẻ';
     
     const sourceMap: { [key: string]: string } = {
-      'walkin': 'Walk-in',
-      'booking': 'Booking',
+      'walkin': 'Khách lẻ',
+      'walk-in': 'Khách lẻ',
+      'booking': 'Đặt phòng',
       'agoda': 'Agoda',
       'traveloka': 'Traveloka',
       'expedia': 'Expedia',
@@ -667,6 +670,8 @@ export class InvoiceComponent implements OnInit {
       'expedia': 'cyan',
       'trip': 'magenta',
       'g2j': 'gold',
+      'fanpage': 'blue',
+      'zalo': 'white',
       'other': 'default'
     };
     
@@ -679,6 +684,7 @@ export class InvoiceComponent implements OnInit {
     const paymentMethods: { [key: string]: string } = {
       'cash': 'Tiền mặt',
       'card': 'Thẻ tín dụng',
+      'bank_transfer': 'Chuyển khoản',
       'transfer': 'Chuyển khoản',
       'banking': 'Chuyển khoản',
       'qr': 'QR Code',

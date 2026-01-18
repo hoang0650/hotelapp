@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Blog } from '../components/blog-management/blog-management.component';
+import { environment } from '../../environments/environment';
 
 export interface BlogQuery {
   page?: number;
@@ -22,7 +23,7 @@ export interface BlogResponse {
   providedIn: 'root'
 })
 export class BlogService {
-  private apiUrl = 'https://nest-production-8106.up.railway.app/blogs';
+  private apiUrl = `${environment.apiUrl}/blogs`;
 
   constructor(private http: HttpClient) { }
 

@@ -698,6 +698,7 @@
       "DISCOUNT": "Khuyến mãi",
       "SERVICE_AMOUNT": "Tiền dịch vụ",
       "ADVANCE_PAYMENT": "Tiền đặt trước",
+      "ADVANCE_PAYMENT_METHOD": "Hình thức TT tiền đặt trước",
       "CHECK_IN": "Nhận phòng",
       "CHECK_OUT": "Trả phòng",
       "N_A": "N/A",
@@ -2845,4 +2846,3 @@
     "EXPORT_ERROR": "Lỗi khi xuất file Excel"
   }
 }
-

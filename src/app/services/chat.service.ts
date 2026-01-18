@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
   private socket: Socket;
-  private baseUrl: string = 'https://nest-production-8106.up.railway.app';
+  private baseUrl: string = environment.apiUrl;
 
   constructor(private http: HttpClient) {
     this.socket = io('https://hotel-app-smp2.onrender.com', {

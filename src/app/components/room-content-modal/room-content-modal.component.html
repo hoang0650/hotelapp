@@ -112,6 +112,8 @@
             <label nz-radio-button nzValue="hourly">Theo giờ</label>
             <label nz-radio-button nzValue="daily">Theo ngày</label>
             <label nz-radio-button nzValue="nightly">Qua đêm</label>
+            <label nz-radio-button nzValue="weekly">Theo tuần</label>
+            <label nz-radio-button nzValue="monthly">Theo tháng</label>
           </nz-radio-group>
         </nz-form-control>
       </nz-form-item>
@@ -186,6 +188,16 @@
                 [nzParser]="parserVND"
                 style="width: 100%">
               </nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12" *ngIf="checkInForm.get('advancePayment')?.value > 0">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">Hình thức thanh toán trả trước</nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-select formControlName="advancePaymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+                <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label | translate"></nz-option>
+              </nz-select>
             </nz-form-control>
           </nz-form-item>
         </div>
@@ -398,6 +410,8 @@
             <label nz-radio-button nzValue="hourly">Theo giờ</label>
             <label nz-radio-button nzValue="daily">Theo ngày</label>
             <label nz-radio-button nzValue="nightly">Qua đêm</label>
+            <label nz-radio-button nzValue="weekly">Theo tuần</label>
+            <label nz-radio-button nzValue="monthly">Theo tháng</label>
           </nz-radio-group>
         </nz-form-control>
       </nz-form-item>
@@ -677,6 +691,16 @@
                 [nzParser]="parserVND"
                 style="width: 100%">
               </nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12" *ngIf="checkOutForm.get('advancePayment')?.value > 0">
+          <nz-form-item>
+            <nz-form-label [nzSpan]="8">Hình thức thanh toán trả trước</nz-form-label>
+            <nz-form-control [nzSpan]="16">
+              <nz-select formControlName="advancePaymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+                <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label | translate"></nz-option>
+              </nz-select>
             </nz-form-control>
           </nz-form-item>
         </div>

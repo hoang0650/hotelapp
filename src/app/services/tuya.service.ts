@@ -27,7 +27,7 @@ export interface TuyaSwitchResponse {
   providedIn: 'root'
 })
 export class TuyaService {
-  private apiUrl = `${environment.apiUrl || 'https://nest-production-8106.up.railway.app'}/tuya`;
+  private apiUrl = `${environment.apiUrl}/tuya`;
 
   constructor(private http: HttpClient) { }
 

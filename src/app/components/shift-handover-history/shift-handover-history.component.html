@@ -253,7 +253,7 @@
               <td><strong class="text-danger">{{ formatCurrency(expense.amount || 0) }}</strong></td>
               <td>
                 <nz-tag [nzColor]="expense.method === 'cash' ? 'red' : expense.method === 'bank_transfer' ? 'blue' : 'green'">
-                  {{ expense.method === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : expense.method === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : ('SHIFT_HANDOVER_EXPORT.CARD' | translate) }}
+                  {{ expense.method === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : expense.method === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate) }}
                 </nz-tag>
               </td>
               <td>{{ formatDate(expense.timestamp) }}</td>
@@ -291,7 +291,7 @@
               <td><strong class="text-success">{{ formatCurrency(income.amount || 0) }}</strong></td>
               <td>
                 <nz-tag [nzColor]="income.method === 'cash' ? 'red' : income.method === 'bank_transfer' ? 'blue' : 'green'">
-                  {{ income.method === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : income.method === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : income.method === 'card' ? ('SHIFT_HANDOVER_EXPORT.CARD' | translate) : ('SHIFT_HANDOVER_EXPORT.OTHER' | translate) }}
+                  {{ income.method === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : income.method === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : income.method === 'card' ? ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate) : 'Khác' }}
                 </nz-tag>
               </td>
               <td>{{ formatDate(income.timestamp) }}</td>
@@ -321,6 +321,7 @@
                 <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.DISCOUNT' | translate }}</th>
                 <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.SERVICE_AMOUNT' | translate }}</th>
                 <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ADVANCE_PAYMENT' | translate }}</th>
+                <th nzWidth="120px">{{ 'SHIFT_HANDOVER.HISTORY.ADVANCE_PAYMENT_METHOD' | translate }}</th>
                 <th nzWidth="120px"><strong>{{ 'SHIFT_HANDOVER.HISTORY.AMOUNT' | translate }}</strong></th>
                 <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.PAYMENT_METHOD' | translate }}</th>
                 <th nzWidth="140px">{{ 'SHIFT_HANDOVER.HISTORY.CHECK_IN' | translate }}</th>
@@ -344,8 +345,17 @@
                 <td class="text-right">{{ formatCurrency(getDiscount(room)) }}</td>
                 <td class="text-right">{{ formatCurrency(getServiceAmount(room)) }}</td>
                 <td class="text-right">{{ formatCurrency(getAdvancePayment(room)) }}</td>
+                <td>
+                  {{ (room.advancePaymentMethod || room.paymentMethod) === 'cash'
+                    ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate)
+                    : (room.advancePaymentMethod || room.paymentMethod) === 'bank_transfer'
+                      ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate)
+                      : (room.advancePaymentMethod || room.paymentMethod) === 'card'
+                        ? ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate)
+                        : 'Khác' }}
+                </td>
                 <td class="text-right"><strong>{{ formatCurrency(room.amount || 0) }}</strong></td>
-                <td>{{ room.paymentMethod === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : room.paymentMethod === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : room.paymentMethod === 'card' ? ('SHIFT_HANDOVER_EXPORT.CARD' | translate) : ('SHIFT_HANDOVER_EXPORT.OTHER' | translate) }}</td>
+                <td>{{ room.paymentMethod === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : room.paymentMethod === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : room.paymentMethod === 'card' ? ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate) : 'Khác' }}</td>
                 <td class="text-ellipsis">
                   <span [nz-tooltip]="getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : 'N/A'" nzTooltipPlacement="top">
                     {{ getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : ('SHIFT_HANDOVER.HISTORY.N_A' | translate) }}

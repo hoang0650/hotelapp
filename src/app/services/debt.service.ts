@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Debt {
   _id?: string;
@@ -78,7 +79,7 @@ export interface SettleDebtRequest {
   providedIn: 'root'
 })
 export class DebtService {
-  private apiUrl = 'https://nest-production-8106.up.railway.app/debts';
+  private apiUrl = `${environment.apiUrl}/debts`;
 
   constructor(private http: HttpClient) { }
 

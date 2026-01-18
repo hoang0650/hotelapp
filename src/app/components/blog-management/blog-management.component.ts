@@ -8,6 +8,7 @@ import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
+import { environment } from '../../../environments/environment';
 
 export interface BlogSection {
   title: string;
@@ -51,7 +52,7 @@ export class BlogManagementComponent implements OnInit {
   currentUser: User | null = null;
   imageUrl: string | ArrayBuffer | null = '';
   fileList: any[] = [];
-  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  apiBaseUrl = environment.apiUrl;
   uploadUrl = `${this.apiBaseUrl}/files/upload`;
   pageIndex = 1;
   pageSize = 10;

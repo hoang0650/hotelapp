@@ -12,6 +12,7 @@ import {
   ManagerHandover
 } from '../interfaces/shift-handover';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment';
 
 export interface PreviousShiftAmountResponse {
   message: string;
@@ -29,7 +30,7 @@ export interface PreviousShiftAmountResponse {
   providedIn: 'root'
 })
 export class ShiftHandoverService {
-  private apiUrl = 'https://nest-production-8106.up.railway.app/shift-handover';
+  private apiUrl = `${environment.apiUrl}/shift-handover`;
 
   constructor(
     private http: HttpClient,

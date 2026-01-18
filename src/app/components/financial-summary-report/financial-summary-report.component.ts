@@ -5,6 +5,7 @@ import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
 import { TranslateService } from '@ngx-translate/core';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-financial-summary-report',
@@ -344,7 +345,7 @@ export class FinancialSummaryReportComponent implements OnInit {
       endDate: format(this.endDate, 'yyyy-MM-dd')
     });
 
-    const url = `https://nest-production-8106.up.railway.app/financial-summary/export-excel?${queryParams.toString()}`;
+    const url = `${environment.apiUrl}/financial-summary/export-excel?${queryParams.toString()}`;
     
     // Lấy token từ localStorage
     const token = localStorage.getItem('token');

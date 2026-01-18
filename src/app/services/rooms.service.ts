@@ -6,14 +6,14 @@ import * as XLSX from 'xlsx';
 import { Room, Event, BookingHistory, ShiftHandover } from '../interfaces/rooms';
 import { tap, catchError } from 'rxjs/operators';
 import { throwError, of } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class RoomsService {
   private roomDataUpdated$ = new BehaviorSubject<any>(null);
-  //private apiUrl = 'https://hotel-app-smp2.onrender.com/rooms';
-  private apiUrl = 'https://nest-production-8106.up.railway.app/rooms';
+  private apiUrl = `${environment.apiUrl}/rooms`;
 
   constructor(private http: HttpClient) { }
 
@@ -322,11 +322,14 @@ export class RoomsService {
   }
 
   // Cập nhật thông tin khách và tiền đặt trước
-  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number, rateType?: string, additionalCharges?: number, discount?: number, selectedServices?: any[]): Observable<any> {
+  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number, rateType?: string, additionalCharges?: number, discount?: number, selectedServices?: any[], advancePaymentMethod?: string): Observable<any> {
     const body: any = {
       guestInfo,
       advancePayment
     };
+    if (advancePaymentMethod) {
+      body.advancePaymentMethod = advancePaymentMethod;
+    }
     // Thêm rateType nếu có
     if (rateType) {
       body.rateType = rateType;
@@ -372,7 +375,7 @@ export class RoomsService {
     phoneNumber: string;
     [key: string]: any;
   }> {
-    return this.http.get<any>(`https://nest-production-8106.up.railway.app/hotels/${hotelId}`);
+    return this.http.get<any>(`${environment.apiUrl}/hotels/${hotelId}`);
   }
 
   // Lưu hóa đơn
@@ -389,7 +392,7 @@ export class RoomsService {
     rateType: string;
     originalRateType?: string;
   }> {
-    const priceConfigApiUrl = 'https://nest-production-8106.up.railway.app/priceConfig';
+    const priceConfigApiUrl = `${environment.apiUrl}/priceConfig`;
     return this.http.post<{
       roomId: string;
       totalPrice: number;

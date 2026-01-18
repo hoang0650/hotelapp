@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { OrderedService } from '../interfaces/rooms';
+import { environment } from '../../environments/environment';
 
 export interface RoomService {
   _id: string;
@@ -36,7 +37,7 @@ export interface ServiceOrder {
   providedIn: 'root'
 })
 export class RoomServiceService {
-  private apiUrl = 'https://nest-production-8106.up.railway.app/services';
+  private apiUrl = `${environment.apiUrl}/services`;
 
   constructor(private http: HttpClient) { }
 

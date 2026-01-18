@@ -13,6 +13,7 @@ import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 const businessStatusesList = ['pending', 'active', 'inactive', 'suspended'] as const;
 type BusinessStatus = typeof businessStatusesList[number];
@@ -32,7 +33,7 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
   selectedViewBusiness: Business | null = null;
   currentUser: User | null = null;
   permissions: PermissionRules | null = null;
-  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  apiBaseUrl = environment.apiUrl;
   uploadUrl = `${this.apiBaseUrl}/files/upload`;
   fileList: any[] = [];
   logoId: string | null = null;

@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Service, ServiceOrder } from '../interfaces/service';
+import { environment } from '../../environments/environment';
 
 export interface ServiceCheckoutResponse {
   message: string;
@@ -49,7 +50,7 @@ export interface ServiceModalResponse {
   providedIn: 'root'
 })
 export class ServiceService {
-  private apiUrl = 'https://nest-production-8106.up.railway.app/services';
+  private apiUrl = `${environment.apiUrl}/services`;
 
   constructor(private http: HttpClient) { }
 

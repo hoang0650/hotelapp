@@ -12,6 +12,7 @@ export interface ShiftRoomHistory {
     bookingId?: string;
     action: RoomActionType;
     guestName?: string;
+    guestSource?: string;
     amount: number;
     paymentMethod: PaymentMethodType;
     timestamp: Date;
@@ -22,6 +23,7 @@ export interface ShiftRoomHistory {
     discount?: number;          // Khuyến mãi
     serviceAmount?: number;     // Tiền dịch vụ
     advancePayment?: number;    // Tiền đặt trước
+    advancePaymentMethod?: PaymentMethodType; // Hình thức thanh toán tiền đặt trước
 }
 
 // Hóa đơn trong ca

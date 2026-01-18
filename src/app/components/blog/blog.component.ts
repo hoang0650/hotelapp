@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth.service';
 import { Blog } from '../blog-management/blog-management.component';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-blog',
@@ -453,7 +454,7 @@ export class BlogComponent implements OnInit {
     return content.substring(0, maxLength) + '...';
   }
 
-  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  apiBaseUrl = environment.apiUrl;
 
   getImageUrl(urlOrId: string | null | undefined): string {
     if (!urlOrId) return '';

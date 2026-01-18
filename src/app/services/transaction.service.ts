@@ -43,7 +43,7 @@ export interface ExpenseListResponse {
   providedIn: 'root'
 })
 export class TransactionService {
-  private apiUrl = `${environment.apiUrl || 'https://nest-production-8106.up.railway.app'}/transactions`;
+  private apiUrl = `${environment.apiUrl}/transactions`;
 
   constructor(private http: HttpClient) { }
 

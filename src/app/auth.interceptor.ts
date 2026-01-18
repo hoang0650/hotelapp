@@ -23,13 +23,9 @@ export class AuthInterceptor implements HttpInterceptor {
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const authToken = this.authService.getToken();
 
-    // Clone request và thêm header nếu có token
-    // Chỉ thêm token cho các request đến API của bạn, không phải các request bên ngoài
     if (authToken) {
-      // Kiểm tra nếu URL bắt đầu bằng apiUrl từ environment hoặc localhost:3000
-      const apiUrl = environment.apiUrl || 'https://nest-production-8106.up.railway.app';
+      const apiUrl = environment.apiUrl;
       const isApiRequest = request.url.startsWith(apiUrl) || 
-                          request.url.startsWith('https://nest-production-8106.up.railway.app') ||
                           request.url.includes('/pricing-packages') ||
                           request.url.includes('/users') ||
                           request.url.includes('/rooms') ||

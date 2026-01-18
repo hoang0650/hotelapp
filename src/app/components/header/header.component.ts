@@ -10,6 +10,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { TranslationService } from '../../services/translation.service';
 import { Announcement } from '../../services/notifications.service';
 import { catchError, map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-header',
@@ -484,7 +485,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     return labelMap[type] || this.translate.instant('NOTIFICATIONS.TYPE_GENERAL');
   }
 
-  apiBaseUrl = 'https://nest-production-8106.up.railway.app';
+  apiBaseUrl = environment.apiUrl;
 
   getImageUrl(urlOrId: string | null | undefined): string {
     if (!urlOrId) return '';

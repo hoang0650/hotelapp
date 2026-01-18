@@ -256,11 +256,19 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     return colorMap[category] || 'default';
   }
 
-  // Tính tổng doanh thu = Tổng tiền phòng (totalRoomRevenue) + Phiếu thu (incomeAmount)
   getTotalRevenue(record: ShiftHandover): number {
-    const totalRoomRevenue = record.totalRoomRevenue || 0;
+    const roomRevenue = (record.roomHistory || []).reduce((sum, room: any) => {
+      const roomTotal = room.roomTotal || 0;
+      const serviceAmount = room.serviceAmount || room.serviceTotal || 0;
+      const additionalCharges = room.additionalCharges || 0;
+      const discount = room.discount || 0;
+      return sum + roomTotal + serviceAmount + additionalCharges - discount;
+    }, 0);
+    const advanceTotal = (record.roomHistory || []).reduce((sum, room: any) => {
+      return sum + (room.advancePayment || 0);
+    }, 0);
     const incomeAmount = record.incomeAmount || 0;
-    return totalRoomRevenue + incomeAmount;
+    return roomRevenue + advanceTotal + incomeAmount;
   }
 
   // Helper methods để lấy các giá trị từ room history
@@ -289,43 +297,74 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     return checkinTime ? new Date(checkinTime) : null;
   }
 
-  // Lấy guestSource từ nhiều nguồn
   getGuestSource(room: any): string {
-    // Ưu tiên lấy từ nhiều nguồn theo thứ tự
     let source: any = 'walkin';
-    
-    // Ưu tiên 1: Từ room.guestSource (đã được backend optimize)
     if (room.guestSource) {
       source = room.guestSource;
     }
-    // Ưu tiên 2: Từ room.guestInfo.guestSource
     else if (room.guestInfo?.guestSource) {
       source = room.guestInfo.guestSource;
     }
-    // Ưu tiên 3: Từ room.event?.guestInfo?.guestSource (nếu có event)
     else if (room.event?.guestInfo?.guestSource) {
       source = room.event.guestInfo.guestSource;
     }
-    // Ưu tiên 4: Từ room.bookingId?.guestSource hoặc bookingId?.guestInfo?.guestSource
     else if (room.bookingId) {
       if (typeof room.bookingId === 'object') {
         source = room.bookingId.guestSource || 
                  room.bookingId.guestInfo?.guestSource || 
                  room.bookingId.guestDetails?.guestSource || 
+                 room.bookingId.source || 
+                 room.bookingId.otaSource || 
                  'walkin';
       } else if (typeof room.bookingId === 'string') {
-        // Nếu bookingId là string, không có thông tin source, dùng walkin
         source = 'walkin';
       }
     }
-    
-    // Đảm bảo luôn trả về string, không phải object
     if (typeof source !== 'string') {
       source = 'walkin';
     }
-    
-    // Chuyển về lowercase và loại bỏ khoảng trắng để đảm bảo match với sourceMap
-    return String(source).toLowerCase().trim() || 'walkin';
+    let normalized = String(source).toLowerCase().trim();
+    if ((!normalized || normalized === 'ota') && room.bookingId && typeof room.bookingId === 'object') {
+      const booking = room.bookingId;
+      if (booking.otaSource) {
+        normalized = String(booking.otaSource).toLowerCase().trim();
+      }
+    }
+    if (
+      normalized === 'walkin' ||
+      normalized === 'walk-in' ||
+      normalized === 'walk_in' ||
+      normalized === 'direct' ||
+      normalized === 'phone' ||
+      normalized === 'regular' ||
+      normalized === 'guest' ||
+      normalized === 'khach le' ||
+      normalized === 'khách lẻ'
+    ) {
+      return 'walkin';
+    }
+    if (normalized.includes('booking')) {
+      return 'booking';
+    }
+    if (normalized.includes('agoda')) {
+      return 'agoda';
+    }
+    if (normalized.includes('traveloka')) {
+      return 'traveloka';
+    }
+    if (normalized.includes('expedia')) {
+      return 'expedia';
+    }
+    if (normalized.includes('trip')) {
+      return 'trip';
+    }
+    if (normalized.includes('g2j')) {
+      return 'g2j';
+    }
+    if (!normalized) {
+      return 'walkin';
+    }
+    return 'other';
   }
 
   // Lấy label cho nguồn khách
@@ -532,13 +571,13 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
             // Thêm lịch sử phòng
             if (record.roomHistory && Array.isArray(record.roomHistory)) {
               record.roomHistory.forEach(room => {
-                // Lấy các giá trị từ room object, nếu không có thì để 0
                 const roomTotal = (room as any).roomTotal || 0;
                 const additionalCharges = (room as any).additionalCharges || 0;
                 const discount = (room as any).discount || 0;
                 const serviceAmount = (room as any).serviceAmount || (room as any).serviceTotal || 0;
                 const advancePayment = (room as any).advancePayment || 0;
                 const checkinTime = (room as any).checkinTime || (room as any).checkInTime || null;
+                const advancePaymentMethod = (room as any).advancePaymentMethod || (room as any).paymentMethod || 'cash';
                 
                 allRoomHistory.push({
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.HANDOVER_TIME')]: format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
@@ -551,6 +590,14 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.DISCOUNT')]: discount,
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.SERVICE_AMOUNT')]: serviceAmount,
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.ADVANCE_PAYMENT')]: advancePayment,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.ADVANCE_PAYMENT_METHOD')]:
+                    advancePaymentMethod === 'cash'
+                      ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CASH')
+                      : advancePaymentMethod === 'bank_transfer'
+                        ? this.translate.instant('SHIFT_HANDOVER_EXPORT.BANK_TRANSFER')
+                        : advancePaymentMethod === 'card'
+                          ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CARD')
+                          : this.translate.instant('SHIFT_HANDOVER_EXPORT.OTHER'),
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.AMOUNT')]: room.amount || 0,
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.PAYMENT_METHOD')]: room.paymentMethod === 'cash' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CASH') : 
                   room.paymentMethod === 'bank_transfer' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.BANK_TRANSFER') : 

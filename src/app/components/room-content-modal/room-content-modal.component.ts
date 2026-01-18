@@ -42,8 +42,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   selectedServices: OrderedService[] = [];
   paymentMethods = [
     { value: 'cash', label: 'ROOM_CONTENT_MODAL.CASH' },
-    { value: 'card', label: 'ROOM_CONTENT_MODAL.CARD' },
-    { value: 'transfer', label: 'ROOM_CONTENT_MODAL.BANK_TRANSFER' }
+    { value: 'bank_transfer', label: 'ROOM_CONTENT_MODAL.BANK_TRANSFER' },
+    { value: 'card', label: 'ROOM_CONTENT_MODAL.CARD' }
   ];
   
   // Get translated payment method label
@@ -270,6 +270,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       paymentMethod: ['cash', this.skipValidation ? [] : [Validators.required]],
       rateType: ['hourly', this.skipValidation ? [] : [Validators.required]],
       advancePayment: [0, [Validators.min(0)]],
+      advancePaymentMethod: ['cash', this.skipValidation ? [] : [Validators.required]], // Hình thức thanh toán cho trả trước
       additionalCharges: [0, [Validators.min(0)]],
       discount: [0, [Validators.min(0)]],
       notes: ['']
@@ -485,6 +486,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         paymentMethod: session.paymentMethod,
         rateType: session.rateType,
         advancePayment: this.advancePayment,
+        advancePaymentMethod: session.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
         additionalCharges: this.initialCharges,
         discount: this.initialDiscount,
         notes: this.initialNotes
@@ -519,6 +521,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         paymentMethod: session.paymentMethod,
         rateType: session.rateType || 'hourly',
         advancePayment: session.advancePayment || 0,
+        advancePaymentMethod: session.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
         additionalCharges: this.initialCharges, // Patch additionalCharges từ session
         discount: this.initialDiscount // Patch discount từ session
     });
@@ -615,6 +618,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             checkinTime: lastCheckinEvent.checkinTime,
             rateType: lastCheckinEvent.rateType || 'hourly',
             advancePayment: eventAdvancePayment, // Đảm bảo là số
+            advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
             guestInfo: guestInfo, // Sử dụng guestInfo đã được xử lý từ nhiều nguồn
             additionalCharges: eventAdditionalCharges, // Đảm bảo là số
             discount: eventDiscount, // Đảm bảo là số
@@ -724,6 +728,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             paymentMethod: lastCheckinEvent.paymentMethod || 'cash',
             rateType: lastCheckinEvent.rateType || 'hourly', // Thêm rateType từ check-in event
             advancePayment: eventAdvancePayment, // Sử dụng giá trị đã đảm bảo là số
+            advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
             // QUAN TRỌNG: KHÔNG patch additionalCharges và discount từ event vào form checkout
             // Form checkout sẽ bắt đầu từ 0, và giá trị từ check-in event được lưu trong initialCharges/initialDiscount
             // Khi tính tổng: totalAdditionalCharges = initialCharges + checkoutCharges (chỉ giá trị người dùng nhập thêm)
@@ -1106,162 +1111,45 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     } else {
       console.error('[calculateTotalPrice] Invalid dates:', { checkInTime, checkOutTime });
     }
-    
-    // Gọi backend API để tính giá chính xác theo priceConfig
-    this.roomsService.calculateRoomPrice(
-      this.roomData._id,
-      checkInTime,
-      checkOutTime,
-      rateType as 'hourly' | 'daily' | 'nightly'
-    ).subscribe({
-      next: (priceResponse) => {
-        // Cập nhật rateType từ backend (có thể đã được tự động chuyển đổi)
-        const finalRateType = priceResponse.rateType || rateType;
-        
-        // Cập nhật rateType trong form nếu đã thay đổi
-        if (priceResponse.originalRateType && priceResponse.rateType !== priceResponse.originalRateType) {
-          this.checkOutForm.patchValue({ rateType: finalRateType }, { emitEvent: false });
-          console.log(`RateType tự động chuyển từ ${priceResponse.originalRateType} sang ${finalRateType}`);
-        }
-        
-        // Sử dụng giá từ backend
-        const roomPrice = priceResponse.totalPrice || 0;
-        this._roomPriceTotal = roomPrice;
-        this._hasRoomPriceFromAPI = true; // Đánh dấu đã có giá trị từ API
-        
-        // Lưu priceDetails để hiển thị chi tiết phụ thu sớm/trễ
-        // Nếu API không trả về priceDetails, tạo từ thông tin có sẵn
-        if (priceResponse.priceDetails) {
-          this.roomPriceDetails = priceResponse.priceDetails;
-        } else {
-          // Tạo priceDetails từ thông tin có sẵn
-          this.roomPriceDetails = {
-            rateType: finalRateType,
-            totalPrice: roomPrice,
-          };
-        }
-        
-        console.log(`Room price (${finalRateType}): ${roomPrice}`, {
-          rateType: finalRateType,
-          originalRateType: priceResponse.originalRateType,
-          formRateType: this.checkOutForm?.get('rateType')?.value,
-          lastCheckInRateType: lastCheckIn.rateType,
-          priceDetails: priceResponse.priceDetails,
-          _roomPriceTotal: this._roomPriceTotal,
-          _hasRoomPriceFromAPI: this._hasRoomPriceFromAPI
-        });
-        
-        // Force change detection để cập nhật UI
-        this.cdr.detectChanges();
-        
-        // Tính tổng tiền dịch vụ
-        const serviceTotal = this.selectedServices.reduce((total, service) => {
-          // Sử dụng totalPrice nếu có, nếu không thì tính từ price và quantity
-          const serviceAmount = service.totalPrice !== undefined ? 
-            service.totalPrice : (service.price * (service.quantity || 1));
-          return total + serviceAmount;
-        }, 0);
-        this._servicesPriceTotal = serviceTotal; // Lưu tổng tiền dịch vụ
-        console.log(`Service total: ${serviceTotal}`);
-        
-        // Lấy giá trị phụ thu và giảm giá TỪ FORM CHECKOUT
-        const checkoutCharges = +(this.checkOutForm?.get('additionalCharges')?.value || 0);
-        const checkoutDiscount = +(this.checkOutForm?.get('discount')?.value || 0);
-        
-        // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu
-        // Công thức: totalPrice = roomPrice + totalAdditionalCharges + serviceTotal - totalDiscount - advancePayment
-        // Trong đó: 
-        // - totalAdditionalCharges = initialCharges (từ check-in event) + checkoutCharges (người dùng nhập thêm vào form checkout)
-        // - totalDiscount = initialDiscount (từ check-in event) + checkoutDiscount (người dùng nhập thêm vào form checkout)
-        // - Form checkout bắt đầu từ 0, không bao gồm giá trị từ check-in event
-        const totalAdditionalCharges = this.initialCharges + checkoutCharges;
-        const totalDiscount = this.initialDiscount + checkoutDiscount;
-        
-        // Lấy tiền trả trước (luôn lấy từ initial state hoặc checkin event)
-        const lastCheckInEvent = this.listData && this.listData.length > 0 ? this.listData[0] : null;
-        this.advancePayment = lastCheckInEvent?.advancePayment || 0;
-        
-        // Công thức mới:
-        // Tổng cộng = tiền phòng + phụ thu + tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
-        this.totalPrice = roomPrice + totalAdditionalCharges + serviceTotal;
-        
-        // Lưu totalPrice vào roomData để room.component có thể sử dụng
-        if (this.roomData && this.roomData._id) {
-          this.roomData.totalPrice = this.totalPrice;
-          // Lưu vào localStorage với key là roomId để room.component có thể đọc
-          localStorage.setItem(`room_${this.roomData._id}_totalPrice`, this.totalPrice.toString());
-        }
-        
-        // Còn lại phải thanh toán = Tổng cộng - đặt trước - khuyến mãi (cho phép số âm)
-        this.remainingAmount = this.totalPrice - this.advancePayment - totalDiscount;
-        
-        console.log(`Final price calculation: ${roomPrice} (room) + ${totalAdditionalCharges} (total charges: ${this.initialCharges} initial + ${checkoutCharges} checkout) + ${serviceTotal} (services) = ${this.totalPrice} (Tổng cộng)`);
-        console.log(`Remaining amount: ${this.totalPrice} (Tổng cộng) - ${this.advancePayment} (đặt trước) - ${totalDiscount} (total discount: ${this.initialDiscount} initial + ${checkoutDiscount} checkout) = ${this.remainingAmount} (Còn lại phải thanh toán)`);
-      },
-      error: (error) => {
-        console.error('[calculateTotalPrice] Error calculating room price from backend:', error);
-        console.error('[calculateTotalPrice] Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          message: error.message,
-          url: error.url,
-          error: error.error
-        });
-        // Fallback: sử dụng tính toán frontend đơn giản
-        // Đảm bảo validDurationInHours tối thiểu là 1 để tránh lỗi tính toán
-        const safeDurationInHours = Math.max(1, validDurationInHours);
-        const safeDurationInDays = Math.max(1, validDurationInDays);
-        console.log(`[calculateTotalPrice] Using fallback calculation with duration: ${safeDurationInHours} hours, rateType: ${rateType}`);
-        const roomPrice = this.calculateRoomTotalByRateType(safeDurationInHours, safeDurationInDays, rateType, remainingMinutes);
-        this._roomPriceTotal = roomPrice;
-        this._hasRoomPriceFromAPI = true; // Đánh dấu đã tính toán (dù là fallback)
-        
-        // roomPriceDetails đã được set trong calculateRoomTotalByRateType
-        console.log(`[calculateTotalPrice] Fallback room price calculated: ${roomPrice}`, this.roomPriceDetails);
-        
-        // Force change detection để cập nhật UI
-        this.cdr.detectChanges();
-        
-        // Tính tổng tiền dịch vụ
-        const serviceTotal = this.selectedServices.reduce((total, service) => {
-          const serviceAmount = service.totalPrice !== undefined ? 
-            service.totalPrice : (service.price * (service.quantity || 1));
-          return total + serviceAmount;
-        }, 0);
-        this._servicesPriceTotal = serviceTotal;
-        
-        // Lấy giá trị phụ thu và giảm giá TỪ FORM CHECKOUT (chỉ giá trị người dùng nhập thêm)
-        // Form checkout bắt đầu từ 0, không bao gồm giá trị từ check-in event
-        const checkoutCharges = +(this.checkOutForm?.get('additionalCharges')?.value || 0);
-        const checkoutDiscount = +(this.checkOutForm?.get('discount')?.value || 0);
-        
-        // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu
-        // Công thức: totalPrice = roomPrice + totalAdditionalCharges + serviceTotal - totalDiscount - advancePayment
-        // Trong đó: 
-        // - totalAdditionalCharges = initialCharges (từ check-in event) + checkoutCharges (người dùng nhập thêm)
-        // - totalDiscount = initialDiscount (từ check-in event) + checkoutDiscount (người dùng nhập thêm)
-        const totalAdditionalCharges = this.initialCharges + checkoutCharges;
-        const totalDiscount = this.initialDiscount + checkoutDiscount;
-        
-        // Lấy tiền trả trước
-        const lastCheckInEvent = this.listData && this.listData.length > 0 ? this.listData[0] : null;
-        this.advancePayment = lastCheckInEvent?.advancePayment || 0;
-        
-        // Công thức mới:
-        // Tổng cộng = tiền phòng + phụ thu + tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
-        this.totalPrice = roomPrice + totalAdditionalCharges + serviceTotal;
-        
-        // Lưu totalPrice vào roomData để room.component có thể sử dụng
-        if (this.roomData && this.roomData._id) {
-          this.roomData.totalPrice = this.totalPrice;
-          // Lưu vào localStorage với key là roomId để room.component có thể đọc
-          localStorage.setItem(`room_${this.roomData._id}_totalPrice`, this.totalPrice.toString());
-        }
-        
-        // Còn lại phải thanh toán = Tổng cộng - đặt trước - khuyến mãi (cho phép số âm)
-        this.remainingAmount = this.totalPrice - this.advancePayment - totalDiscount;
-      }
-    });
+
+    const roomPrice = this.calculateRoomTotalByRateType(validDurationInHours, validDurationInDays, rateType, remainingMinutes);
+    this._roomPriceTotal = roomPrice;
+    this._hasRoomPriceFromAPI = true;
+
+    this.cdr.detectChanges();
+
+    const serviceTotal = this.selectedServices.reduce((total, service) => {
+      const serviceAmount = service.totalPrice !== undefined ? 
+        service.totalPrice : (service.price * (service.quantity || 1));
+      return total + serviceAmount;
+    }, 0);
+    this._servicesPriceTotal = serviceTotal;
+    console.log(`Service total: ${serviceTotal}`);
+
+    const checkoutCharges = +(this.checkOutForm?.get('additionalCharges')?.value || 0);
+    const checkoutDiscount = +(this.checkOutForm?.get('discount')?.value || 0);
+
+    const totalAdditionalCharges = this.initialCharges + checkoutCharges;
+    const totalDiscount = this.initialDiscount + checkoutDiscount;
+
+    const lastCheckInEvent = this.listData && this.listData.length > 0 ? this.listData[0] : null;
+    const formAdvancePayment = this.checkOutForm?.get('advancePayment')?.value;
+    const normalizedFormAdvancePayment = Number(formAdvancePayment);
+    this.advancePayment = !isNaN(normalizedFormAdvancePayment)
+      ? normalizedFormAdvancePayment
+      : (lastCheckInEvent?.advancePayment || 0);
+
+    this.totalPrice = roomPrice + totalAdditionalCharges + serviceTotal;
+
+    if (this.roomData && this.roomData._id) {
+      this.roomData.totalPrice = this.totalPrice;
+      localStorage.setItem(`room_${this.roomData._id}_totalPrice`, this.totalPrice.toString());
+    }
+
+    this.remainingAmount = this.totalPrice - this.advancePayment - totalDiscount;
+
+    console.log(`Final price calculation: ${roomPrice} (room) + ${totalAdditionalCharges} (total charges: ${this.initialCharges} initial + ${checkoutCharges} checkout) + ${serviceTotal} (services) = ${this.totalPrice} (Tổng cộng)`);
+    console.log(`Remaining amount: ${this.totalPrice} (Tổng cộng) - ${this.advancePayment} (đặt trước) - ${totalDiscount} (total discount: ${this.initialDiscount} initial + ${checkoutDiscount} checkout) = ${this.remainingAmount} (Còn lại phải thanh toán)`);
   }
 
   // Xử lý check-in
@@ -1328,6 +1216,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     // Đảm bảo advancePayment luôn là số, mặc định 0
     const advancePayment = Number(this.checkInForm.get('advancePayment')?.value) || 0;
+    const advancePaymentMethod = this.checkInForm.get('advancePaymentMethod')?.value || 'cash';
     const additionalCharges = Number(this.checkInForm.get('additionalCharges')?.value) || 0;
     const discount = Number(this.checkInForm.get('discount')?.value) || 0;
     
@@ -1338,6 +1227,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         paymentMethod: this.checkInForm.get('paymentMethod')?.value || 'cash',
         rateType: this.checkInForm.get('rateType')?.value || 'hourly',
         advancePayment: advancePayment, // Đảm bảo là số
+        advancePaymentMethod: advancePaymentMethod, // Hình thức thanh toán cho trả trước
         additionalCharges: additionalCharges, // Đảm bảo là số
         discount: discount, // Đảm bảo là số
         notes: this.checkInForm.get('notes')?.value || '',
@@ -1619,91 +1509,37 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const additionalCharges = this.initialCharges + checkoutCharges;
     const discount = this.initialDiscount + checkoutDiscount;
     
-    // Trừ tiền đã trả trước (nếu có) - lấy từ lastCheckinEvent
-    const advancePayment = Number(lastCheckinEvent.advancePayment) || 0;
+    // Trừ tiền đã trả trước (nếu có) - lấy từ lastCheckinEvent hoặc form
+    const advancePayment = Number(this.checkOutForm?.get('advancePayment')?.value) || 
+                           Number(lastCheckinEvent.advancePayment) || 0;
+    const advancePaymentMethod = this.checkOutForm?.get('advancePaymentMethod')?.value || 
+                                 lastCheckinEvent.advancePaymentMethod || 'cash';
     
-    // Gọi backend API để tính giá và tự động cập nhật rateType nếu cần
-    this.roomsService.calculateRoomPrice(
-      this.roomData._id,
+    const roomTotal = this.calculateRoomTotalByRateType(durationInHours, durationInDays, rateType, remainingMinutes);
+    const grandTotal = Math.max(0, roomTotal + additionalCharges + servicesTotal - discount - advancePayment);
+    const remainingAmount = grandTotal;
+
+    this.processCheckoutWithPrice(
+      roomTotal, 
+      rateType, 
+      lastCheckinEvent, 
+      customerName, 
+      customerPhone, 
+      customerEmail, 
+      guestSource, 
+      formGuestInfo, 
+      advancePayment,
+      advancePaymentMethod,
+      servicesTotal, 
+      additionalCharges, 
+      discount, 
+      remainingAmount, 
+      grandTotal, 
+      currentTime, 
       checkInTime,
-      currentTime,
-      rateType as 'hourly' | 'daily' | 'nightly'
-    ).subscribe({
-      next: (priceResponse) => {
-        // Cập nhật rateType từ backend (có thể đã được tự động chuyển đổi)
-        const finalRateType = priceResponse.rateType || rateType;
-        rateType = finalRateType;
-        
-        // Cập nhật rateType trong form nếu đã thay đổi
-        if (priceResponse.originalRateType && priceResponse.rateType !== priceResponse.originalRateType) {
-          this.checkOutForm.patchValue({ rateType: finalRateType }, { emitEvent: false });
-          console.log(`RateType tự động chuyển từ ${priceResponse.originalRateType} sang ${finalRateType}`);
-        }
-        
-        // Sử dụng giá từ backend
-        const roomTotal = priceResponse.totalPrice || 0;
-        
-        // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu
-        // Công thức mới: grandTotal = roomTotal + additionalCharges + servicesTotal - discount - advancePayment
-        // remainingAmount = grandTotal (bằng nhau theo yêu cầu)
-        const grandTotal = Math.max(0, roomTotal + additionalCharges + servicesTotal - discount - advancePayment);
-        const remainingAmount = grandTotal; // Còn thu = Tổng tiền
-        
-        // Tiếp tục xử lý checkout với giá đã tính
-        this.processCheckoutWithPrice(
-          roomTotal, 
-          finalRateType, 
-          lastCheckinEvent, 
-          customerName, 
-          customerPhone, 
-          customerEmail, 
-          guestSource, 
-          formGuestInfo, 
-          advancePayment, 
-          servicesTotal, 
-          additionalCharges, 
-          discount, 
-          remainingAmount, 
-          grandTotal, 
-          currentTime, 
-          checkInTime,
-          durationInHours,
-          durationInDays
-        );
-      },
-      error: (error) => {
-        console.error('Error calculating room price from backend:', error);
-        // Fallback: sử dụng tính toán frontend
-        const roomTotal = this.calculateRoomTotalByRateType(durationInHours, durationInDays, rateType, remainingMinutes);
-        // Tổng tiền = tiền phòng + phụ thu + dịch vụ - khuyến mãi - đặt trước = còn thu
-        const grandTotal = Math.max(0, roomTotal + additionalCharges + servicesTotal - discount - advancePayment);
-        const remainingAmount = grandTotal; // Còn thu = Tổng tiền
-        
-        this.processCheckoutWithPrice(
-          roomTotal, 
-          rateType, 
-          lastCheckinEvent, 
-          customerName, 
-          customerPhone, 
-          customerEmail, 
-          guestSource, 
-          formGuestInfo, 
-          advancePayment, 
-          servicesTotal, 
-          additionalCharges, 
-          discount, 
-          remainingAmount, 
-          grandTotal, 
-          currentTime, 
-          checkInTime,
-          durationInHours,
-          durationInDays
-        );
-      }
-    });
-    
-    // Tạm thời return để đợi API response
-    return;
+      durationInHours,
+      durationInDays
+    );
   }
   
   // Xử lý checkout với thông tin mặc định khi không tìm thấy event check-in
@@ -1755,6 +1591,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     guestSource: string,
     formGuestInfo: any,
     advancePayment: number,
+    advancePaymentMethod: string,
     servicesTotal: number,
     additionalCharges: number,
     discount: number,
@@ -1813,9 +1650,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       updatedGuestInfo,
       advancePayment,
       rateType,
-      additionalCharges, // Tổng = initialCharges + checkoutCharges
-      discount, // Tổng = initialDiscount + checkoutDiscount
-      this.selectedServices
+      additionalCharges,
+      discount,
+      this.selectedServices,
+      advancePaymentMethod
     ).subscribe({
       next: (updateResponse) => {
         console.log('Updated check-in event before checkout:', {
@@ -1907,7 +1745,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // Lưu paymentMethod vào checkoutData để sử dụng sau khi kiểm tra QR setting
     const checkoutData = {
       status: 'dirty',
-      paymentStatus: createDebt ? 'pending' : (paymentMethod === 'transfer' ? 'pending' : 'paid'), // Sẽ được cập nhật sau khi kiểm tra QR setting
+      paymentStatus: createDebt ? 'pending' : ((paymentMethod === 'bank_transfer' || paymentMethod === 'transfer' || paymentMethod === 'banking') ? 'pending' : 'paid'), // Sẽ được cập nhật sau khi kiểm tra QR setting
       checkoutTime: currentTime,
       roomTotal: validRoomTotal, // Gửi validRoomTotal đã được validate
       rateType: rateType, // Gửi rateType đã được tính toán từ backend
@@ -2036,6 +1874,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       totalAmount: grandTotal,
       grandTotal: grandTotal,
       advancePayment: advancePayment || 0,
+      advancePaymentMethod: (this.checkOutForm?.get('advancePaymentMethod')?.value ||
+                             lastCheckinEvent?.advancePaymentMethod ||
+                             'cash'),
       remainingAmount: remainingAmount,
       paymentMethod: paymentMethod,
       paymentStatus: checkoutData.paymentStatus || 'paid', // Thêm paymentStatus từ checkoutData
@@ -2054,7 +1895,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     };
     
     // Kiểm tra nếu payment method là 'transfer' (chuyển khoản)
-    if (paymentMethod === 'transfer') {
+    if (paymentMethod === 'bank_transfer' || paymentMethod === 'transfer' || paymentMethod === 'banking') {
       // Kiểm tra xem có nên hiển thị QR payment không
       this.checkAndHandleTransferPayment(remainingAmount, invoiceData, checkoutData);
     } else {
@@ -2942,6 +2783,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const hourlyRate = this.roomData.pricing?.hourly || this.roomData.firstHourRate || priceConfig?.hourlyRates?.firstHourPrice || 0;
     const dailyRate = this.roomData.pricing?.daily || priceConfig?.dailyRates?.standardPrice || 0;
     const nightlyRate = this.roomData.pricing?.nightly || priceConfig?.nightlyRates?.standardPrice || 0;
+    const weeklyRate = this.roomData.pricing?.weekly || priceConfig?.weeklyRates?.standardPrice || 0;
+    const monthlyRate = this.roomData.pricing?.monthly || priceConfig?.monthlyRates?.standardPrice || 0;
     const additionalHourRate = this.roomData.additionalHourRate || priceConfig?.hourlyRates?.additionalHourPrice || (hourlyRate * 0.8);
     
     // Lấy các tham số từ priceConfig hoặc giá trị mặc định
@@ -3184,6 +3027,24 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         }
         
         console.log(`Nightly rate calculation: ${durationInNights} nights * ${nightlyRate} = ${total}`);
+        break;
+      
+      case 'weekly':
+        const weeks = Math.max(1, Math.ceil(durationInDays / 7));
+        total = weeks * weeklyRate;
+        priceDetails.basePrice = weeklyRate;
+        priceDetails.rateType = 'weekly';
+        priceDetails.weeks = weeks;
+        console.log(`Weekly rate calculation: ${weeks} weeks * ${weeklyRate} = ${total}`);
+        break;
+
+      case 'monthly':
+        const months = Math.max(1, Math.ceil(durationInDays / 30));
+        total = months * monthlyRate;
+        priceDetails.basePrice = monthlyRate;
+        priceDetails.rateType = 'monthly';
+        priceDetails.months = months;
+        console.log(`Monthly rate calculation: ${months} months * ${monthlyRate} = ${total}`);
         break;
         
       default:
@@ -3460,11 +3321,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }),
       paymentMethod: ['cash', [Validators.required]],
       rateType: ['hourly', [Validators.required]], // Thêm rateType với giá trị mặc định là 'hourly'
+      advancePayment: [0, [Validators.min(0)]],
+      advancePaymentMethod: ['cash', [Validators.required]], // Hình thức thanh toán cho trả trước
       notes: [''],
       additionalCharges: [0],
       discount: [0],
       reason: [''],
-      advancePayment: [0, [Validators.min(0)]],
       createDebt: [false] // Checkbox để đưa vào công nợ
     });
     
@@ -3620,6 +3482,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // Đảm bảo advancePayment luôn là số
     const advancePayment = Number(this.checkOutForm.get('advancePayment')?.value) || 0;
     
+    const advancePaymentMethodControl = this.checkOutForm.get('advancePaymentMethod');
+    const advancePaymentMethod = advancePaymentMethodControl ? (advancePaymentMethodControl.value || 'cash') : 'cash';
+    
     // Lấy giá trị phụ thu và khuyến mãi từ form checkout (chỉ giá trị người dùng nhập thêm)
     // Form checkout bắt đầu từ 0, không bao gồm giá trị từ check-in event
     const checkoutCharges = Number(this.checkOutForm.get('additionalCharges')?.value) || 0;
@@ -3684,7 +3549,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       checkinTime: new Date(),
       guestInfo: updatedGuestInfo,
       advancePayment: advancePayment,
-      rateType: rateType // Lưu rateType vào localStorage
+      advancePaymentMethod: advancePaymentMethod,
+      rateType: rateType
     };
     
     if (savedCheckinData) {
@@ -3694,7 +3560,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           ...existingData,
           guestInfo: updatedGuestInfo,
           advancePayment: advancePayment,
-          rateType: rateType // Cập nhật rateType
+          advancePaymentMethod: advancePaymentMethod,
+          rateType: rateType
         };
       } catch (e) {
         console.error('Error parsing existing checkin data:', e);
@@ -3713,10 +3580,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           this.roomData._id,
           updatedGuestInfo,
           advancePayment,
-          rateType, // Gửi rateType
-          additionalCharges, // Gửi additionalCharges
-          discount, // Gửi discount
-          this.selectedServices // Gửi selectedServices
+          rateType,
+          additionalCharges,
+          discount,
+          this.selectedServices,
+          advancePaymentMethod
         ).subscribe({
           next: (response) => {
             console.log('Update checkin info response:', response);
@@ -3736,9 +3604,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             if (this.listData && this.listData.length > 0) {
               this.listData[0].guestInfo = updatedGuestInfo;
               this.listData[0].advancePayment = advancePayment;
-              this.listData[0].rateType = rateType; // Cập nhật rateType
-              this.listData[0].additionalCharges = additionalCharges; // Cập nhật additionalCharges (tổng = initialCharges + checkoutCharges)
-              this.listData[0].discount = discount; // Cập nhật discount (tổng = initialDiscount + checkoutDiscount)
+              this.listData[0].advancePaymentMethod = advancePaymentMethod;
+              this.listData[0].rateType = rateType;
+              this.listData[0].additionalCharges = additionalCharges;
+              this.listData[0].discount = discount;
               this.advancePayment = advancePayment;
               console.log('Updated listData:', this.listData[0]);
             }
@@ -3828,6 +3697,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                         checkinTime: lastCheckin.checkinTime,
                         rateType: lastCheckin.rateType || rateType || 'hourly', // Ưu tiên từ backend, nếu không có thì dùng rateType đã lưu
                         advancePayment: lastCheckin.advancePayment || 0,
+                        advancePaymentMethod: lastCheckin.advancePaymentMethod || 'cash',
                         guestInfo: lastCheckin.guestInfo || { name: 'Khách lẻ' },
                         additionalCharges: lastCheckin.additionalCharges || this.initialCharges || 0,
                         discount: lastCheckin.discount || this.initialDiscount || 0,
@@ -3889,6 +3759,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                       const reloadedRateType = lastCheckin.rateType || rateType || 'hourly';
                       this.checkOutForm.patchValue({
                         advancePayment: lastCheckin.advancePayment || 0,
+                        advancePaymentMethod: lastCheckin.advancePaymentMethod || 'cash',
                         rateType: reloadedRateType, // Cập nhật rateType trong form
                         additionalCharges: lastCheckin.additionalCharges || 0,
                         discount: lastCheckin.discount || 0,

@@ -1035,6 +1035,48 @@ export class RoomComponent implements OnInit, OnDestroy {
     return sourceMap[guestSource] || { label: guestSource, color: 'default' };
   }
 
+  private normalizeGuestSource(source: any, booking?: any): string {
+    let normalized = String(source || '').toLowerCase().trim();
+    if ((!normalized || normalized === 'ota') && booking && booking.otaSource) {
+      normalized = String(booking.otaSource).toLowerCase().trim();
+    }
+    if (
+      normalized === 'walkin' ||
+      normalized === 'walk-in' ||
+      normalized === 'walk_in' ||
+      normalized === 'direct' ||
+      normalized === 'phone' ||
+      normalized === 'regular' ||
+      normalized === 'guest' ||
+      normalized === 'khach le' ||
+      normalized === 'khách lẻ'
+    ) {
+      return 'walkin';
+    }
+    if (normalized.includes('booking')) {
+      return 'booking';
+    }
+    if (normalized.includes('agoda')) {
+      return 'agoda';
+    }
+    if (normalized.includes('traveloka')) {
+      return 'traveloka';
+    }
+    if (normalized.includes('expedia')) {
+      return 'expedia';
+    }
+    if (normalized.includes('trip')) {
+      return 'trip';
+    }
+    if (normalized.includes('g2j')) {
+      return 'g2j';
+    }
+    if (!normalized) {
+      return 'walkin';
+    }
+    return 'other';
+  }
+
   getHotelName(hotelId: string | undefined): string {
     if (!hotelId) return '';
     const hotel = this.hotels.find(h => h._id === hotelId);
@@ -1484,7 +1526,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       const rateTypeLabels: {[key: string]: string} = {
         'hourly': this.translate.instant('ROOM.RATE_TYPE_HOURLY') || 'Theo giờ',
         'daily': this.translate.instant('ROOM.RATE_TYPE_DAILY') || 'Ngày đêm',
-        'nightly': this.translate.instant('ROOM.RATE_TYPE_NIGHTLY') || 'Qua đêm'
+        'nightly': this.translate.instant('ROOM.RATE_TYPE_NIGHTLY') || 'Qua đêm',
+        'weekly': this.translate.instant('ROOM.RATE_TYPE_WEEKLY') || 'Theo tuần',
+        'monthly': this.translate.instant('ROOM.RATE_TYPE_MONTHLY') || 'Theo tháng'
       };
       const rateTypeLabel = rateTypeLabels[rateType] || this.translate.instant('ROOM.RATE_TYPE_HOURLY') || 'Theo giờ';
       
@@ -1521,7 +1565,9 @@ export class RoomComponent implements OnInit, OnDestroy {
         const rateTypeLabels: {[key: string]: string} = {
           'hourly': this.translate.instant('ROOM.RATE_TYPE_HOURLY') || 'Theo giờ',
           'daily': this.translate.instant('ROOM.RATE_TYPE_DAILY') || 'Ngày đêm',
-          'nightly': this.translate.instant('ROOM.RATE_TYPE_NIGHTLY') || 'Qua đêm'
+          'nightly': this.translate.instant('ROOM.RATE_TYPE_NIGHTLY') || 'Qua đêm',
+          'weekly': this.translate.instant('ROOM.RATE_TYPE_WEEKLY') || 'Theo tuần',
+          'monthly': this.translate.instant('ROOM.RATE_TYPE_MONTHLY') || 'Theo tháng'
         };
         const rateTypeLabel = rateTypeLabels[bookingEvent.rateType || 'hourly'] || this.translate.instant('ROOM.RATE_TYPE_HOURLY') || 'Theo giờ';
         
@@ -1732,10 +1778,10 @@ export class RoomComponent implements OnInit, OnDestroy {
     
     const checkinTime = new Date(checkinEvent.checkinTime);
     const checkoutTime = new Date(); // Thời gian hiện tại
-    const rateType = (checkinEvent.rateType || 'hourly') as 'hourly' | 'daily' | 'nightly';
+    const rawRateType = (checkinEvent.rateType || 'hourly') as 'hourly' | 'daily' | 'nightly' | 'weekly' | 'monthly';
     
     // Tạo cache key dựa trên roomId, checkinTime và rateType
-    const cacheKey = `${room._id}_${checkinTime.getTime()}_${rateType}`;
+    const cacheKey = `${room._id}_${checkinTime.getTime()}_${rawRateType}`;
     
     // Kiểm tra cache trước
     if (this.roomPriceCache.has(cacheKey)) {
@@ -1750,10 +1796,20 @@ export class RoomComponent implements OnInit, OnDestroy {
       return;
     }
     
+    // Nếu là weekly/monthly: không gọi API (backend chưa hỗ trợ), dùng luôn tính local
+    if (rawRateType === 'weekly' || rawRateType === 'monthly') {
+      const fallbackPrice = this.calculateRoomPriceLocal(room, checkinTime, rawRateType);
+      this.roomPriceCache.set(cacheKey, fallbackPrice);
+      this.roomPriceMap.set(cacheKey, fallbackPrice);
+      this.cdr.detectChanges();
+      return;
+    }
+
     // Đánh dấu đang load
     this.roomPriceCache.set(loadingKey, 0);
     
-    // Gọi API để tính giá phòng
+    // Gọi API để tính giá phòng (chỉ hỗ trợ hourly/daily/nightly)
+    const rateType = rawRateType as 'hourly' | 'daily' | 'nightly';
     this.roomsService.calculateRoomPrice(room._id, checkinTime, checkoutTime, rateType).subscribe({
       next: (priceResponse) => {
         const roomPrice = priceResponse.totalPrice || 0;
@@ -1779,7 +1835,11 @@ export class RoomComponent implements OnInit, OnDestroy {
         console.error(`[loadRoomPriceFromAPI] Error loading price for room ${room.roomNumber}:`, error);
         // Xóa flag loading
         this.roomPriceCache.delete(loadingKey);
-        // Không cache giá trị lỗi, sẽ fallback về tính local
+        // Cache giá trị fallback local để tránh gọi lại API nhiều lần khi không có priceConfig
+        const fallbackPrice = this.calculateRoomPriceLocal(room, checkinTime, rawRateType);
+        this.roomPriceCache.set(cacheKey, fallbackPrice);
+        this.roomPriceMap.set(cacheKey, fallbackPrice);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -1797,18 +1857,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       console.log(`[getRoomPrice] Using cached price for room ${room.roomNumber}:`, cachedPrice);
       return cachedPrice;
     }
-    
-    // Nếu chưa có trong cache, trigger load từ API ngay lập tức
-    // Tìm checkin event để load giá
-    if (room.events && room.events.length > 0) {
-      const checkinEvent = room.events.find(e => e.type === 'checkin' && e.checkinTime);
-      if (checkinEvent) {
-        // Trigger load từ API (async, sẽ cập nhật cache sau)
-        this.loadRoomPriceFromAPI(room, checkinEvent);
-      }
-    }
-    
-    // Fallback: tính local nếu chưa có trong cache (tạm thời cho đến khi API trả về)
+
+    // Fallback: tính local nếu chưa có trong cache
     const fallbackPrice = this.calculateRoomPriceLocal(room, checkinTime, rateType);
     console.warn(`[getRoomPrice] No cached price for room ${room.roomNumber}, using fallback:`, fallbackPrice);
     return fallbackPrice;
@@ -1823,6 +1873,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     const hourlyRate = room.pricing?.hourly || room.firstHourRate || 0;
     const dailyRate = room.pricing?.daily || 0;
     const nightlyRate = room.pricing?.nightly || 0;
+    const weeklyRate = room.pricing?.weekly || 0;
+    const monthlyRate = room.pricing?.monthly || 0;
     const additionalHourRate = room.additionalHourRate || (hourlyRate * 0.8);
     
     let roomPrice = 0;
@@ -1853,6 +1905,24 @@ export class RoomComponent implements OnInit, OnDestroy {
         checkOutDateForNightly.setHours(0, 0, 0, 0);
         const actualNights = Math.max(1, Math.ceil((checkOutDateForNightly.getTime() - checkInDateForNightly.getTime()) / (1000 * 60 * 60 * 24)));
         roomPrice = nightlyRate * actualNights;
+        break;
+      case 'weekly':
+        if (weeklyRate > 0) {
+          const weeks = Math.max(1, Math.ceil(durationInDays / 7));
+          roomPrice = weeklyRate * weeks;
+        } else {
+          const daysFromWeekly = Math.max(1, Math.ceil(durationInDays / 7) * 7);
+          roomPrice = dailyRate * daysFromWeekly;
+        }
+        break;
+      case 'monthly':
+        if (monthlyRate > 0) {
+          const months = Math.max(1, Math.ceil(durationInDays / 30));
+          roomPrice = monthlyRate * months;
+        } else {
+          const daysFromMonthly = Math.max(1, Math.ceil(durationInDays / 30) * 30);
+          roomPrice = dailyRate * daysFromMonthly;
+        }
         break;
       default:
         roomPrice = hourlyRate * durationInHours;
@@ -1961,7 +2031,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     const rateTypeLabels: {[key: string]: string} = {
       'hourly': 'Theo giờ',
       'daily': 'Ngày đêm',
-      'nightly': 'Qua đêm'
+      'nightly': 'Qua đêm',
+      'weekly': 'Theo tuần',
+      'monthly': 'Theo tháng'
     };
     const rateTypeLabel = rateTypeLabels[rateType] || 'Theo giờ';
     
@@ -2144,27 +2216,22 @@ export class RoomComponent implements OnInit, OnDestroy {
   getRoomGuestSource(room: Room): string {
     if (room.status !== 'occupied') return 'walkin';
     
-    // Ưu tiên 1: Từ events (checkin event)
     const checkinInfo = this.getRoomCheckinInfo(room);
     if (checkinInfo?.guestSource) {
-      return checkinInfo.guestSource;
+      return this.normalizeGuestSource(checkinInfo.guestSource);
     }
     
-    // Ưu tiên 2: Từ currentBooking nếu có
     if (room.currentBooking) {
       const currentBooking = typeof room.currentBooking === 'object' ? room.currentBooking : null;
       const bookingAny = currentBooking as any;
-      // Kiểm tra guestInfo trước (tương thích với code cũ)
       if (bookingAny?.guestInfo?.guestSource) {
-        return bookingAny.guestInfo.guestSource;
+        return this.normalizeGuestSource(bookingAny.guestInfo.guestSource, bookingAny);
       } else if (bookingAny?.guestDetails) {
-        // Booking model không có guestSource trong guestDetails, nhưng có thể có trong metadata
-        // Hoặc có thể lấy từ source field
-        return bookingAny.source === 'walk_in' ? 'walkin' : (bookingAny.source || 'walkin');
+        const rawSource = bookingAny.source || bookingAny.otaSource || '';
+        return this.normalizeGuestSource(rawSource, bookingAny);
       }
     }
     
-    // Mặc định
     return 'walkin';
   }
 

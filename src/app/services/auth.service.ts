@@ -5,6 +5,7 @@ import { map, catchError, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { User } from '../interfaces/user';
 import { jwtDecode } from 'jwt-decode';
+import { environment } from '../../environments/environment';
 
 interface AuthResponse {
   token: string;
@@ -31,7 +32,7 @@ export interface PermissionRules {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'https://nest-production-8106.up.railway.app/api';
+  private apiUrl = `${environment.apiUrl}/api`;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   private tokenExpirationTimer: any;

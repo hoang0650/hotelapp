@@ -290,10 +290,11 @@ export class DebtManagementComponent implements OnInit {
     }
 
     this.isSettling = true;
+    const userNote = (formValue.notes || '').trim();
     const request: SettleDebtRequest = {
       amount: amount,
       paymentMethod: formValue.paymentMethod,
-      notes: formValue.notes || ''
+      notes: userNote || ''
     };
 
     this.debtService.settleDebt(this.selectedDebt._id!, request).subscribe({

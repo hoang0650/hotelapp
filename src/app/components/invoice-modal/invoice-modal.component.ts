@@ -235,10 +235,11 @@ export class InvoiceModalComponent implements OnInit, OnDestroy {
 
   // Lấy label hình thức thanh toán
   getPaymentMethodLabel(): string {
-    const method = this.invoiceData.paymentMethod || 'cash';
+    const method = (this.invoiceData.paymentMethod || 'cash').toLowerCase();
     const labels: {[key: string]: string} = {
       'cash': 'Tiền mặt',
       'card': 'Thẻ ngân hàng',
+      'bank_transfer': 'Chuyển khoản',
       'transfer': 'Chuyển khoản',
       'banking': 'Chuyển khoản',
       'qr': 'Quét mã QR',
@@ -253,7 +254,9 @@ export class InvoiceModalComponent implements OnInit, OnDestroy {
     const labels: {[key: string]: string} = {
       'hourly': 'Theo giờ',
       'daily': 'Ngày đêm',
-      'nightly': 'Qua đêm'
+      'nightly': 'Qua đêm',
+      'weekly': 'Theo tuần',
+      'monthly': 'Theo tháng'
     };
     return labels[rateType] || rateType;
   }

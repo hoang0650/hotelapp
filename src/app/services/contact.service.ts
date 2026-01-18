@@ -53,7 +53,7 @@ export interface ContactStats {
   providedIn: 'root'
 })
 export class ContactService {
-  private apiUrl = `${environment.apiUrl || 'https://nest-production-8106.up.railway.app'}/contacts`;
+  private apiUrl = `${environment.apiUrl}/contacts`;
 
   constructor(private http: HttpClient) { }
 
