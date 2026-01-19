@@ -2584,14 +2584,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     try {
       console.log('[playPaymentSuccessSound] Bắt đầu phát thông báo, số tiền:', amount);
       const roundedAmount = Math.round(amount);
-      const formattedAmount = roundedAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-      const message = `Đã thanh toán thành công ${formattedAmount} đồng`;
+      const formattedAmount = roundedAmount.toString();
+      const message = `Thanh toán thành công số tiền ${formattedAmount} đồng`;
       console.log('[playPaymentSuccessSound] Nội dung thông báo:', message);
 
       this.sepayService.generatePaymentSound({
         message: message,
-        speed: 0,
-        voice: 'banmai'
+        speed: -1,
+        voice: 'banmai',
+        format: 'mp3'
       }).subscribe({
         next: (response) => {
           console.log('[playPaymentSuccessSound] FPT.AI TTS response:', response);
@@ -2605,25 +2606,27 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           const maxAttempts = 12;
           const checkAudioAvailability = setInterval(() => {
             attempts += 1;
-            this.http.get(asyncUrl, { responseType: 'blob' }).subscribe({
-              next: (blob: Blob) => {
-                clearInterval(checkAudioAvailability);
-                const audioUrl = URL.createObjectURL(blob);
-                const audio = new Audio(audioUrl);
-                audio.play();
-                audio.onended = () => {
-                  URL.revokeObjectURL(audioUrl);
-                };
-              },
-              error: (error) => {
-                if (attempts >= maxAttempts) {
-                  clearInterval(checkAudioAvailability);
-                  console.error('[playPaymentSuccessSound] Không thể tải file âm thanh sau nhiều lần thử:', error);
-                } else {
-                  console.warn('[playPaymentSuccessSound] File âm thanh chưa sẵn sàng, sẽ thử lại:', error);
-                }
+            const src = `${asyncUrl}?t=${Date.now()}`;
+            const audio = new Audio();
+            audio.src = src;
+            audio.oncanplaythrough = () => {
+              clearInterval(checkAudioAvailability);
+              const playPromise = audio.play();
+              if (playPromise && typeof (playPromise as any).catch === 'function') {
+                (playPromise as Promise<void>).catch((err) => {
+                  console.error('Audio play error:', err);
+                });
               }
-            });
+            };
+            audio.onerror = (e) => {
+              if (attempts >= maxAttempts) {
+                clearInterval(checkAudioAvailability);
+                console.error('[playPaymentSuccessSound] Không thể tải file âm thanh sau nhiều lần thử:', e);
+              } else {
+                console.warn('[playPaymentSuccessSound] File âm thanh chưa sẵn sàng, sẽ thử lại:', e);
+              }
+            };
+            audio.load();
           }, 5000);
         },
         error: (error) => {

@@ -202,8 +202,15 @@ export class SePayService {
     message: string;
     speed?: number | string;
     voice?: string;
+    format?: 'mp3' | 'wav' | string;
+    callbackUrl?: string;
   }): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/fpt-tts`, payload);
+  }
+
+  getTtsFile(asyncUrl: string): Observable<Blob> {
+    const proxyUrl = `${this.apiUrl}/fpt-tts-file?url=${encodeURIComponent(asyncUrl)}`;
+    return this.http.get(proxyUrl, { responseType: 'blob' });
   }
 
   /**
