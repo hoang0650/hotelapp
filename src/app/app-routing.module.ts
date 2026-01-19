@@ -52,6 +52,7 @@ import { ContactManagementComponent } from './components/contact-management/cont
 import { EInvoiceRegistrationComponent } from './components/e-invoice-registration/e-invoice-registration.component';
 import { EInvoiceManagementComponent } from './components/e-invoice-management/e-invoice-management.component';
 import { EInvoiceTemplateComponent } from './components/e-invoice-template/e-invoice-template.component';
+import { HotelFilesComponent } from './components/hotel-files/hotel-files.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -82,6 +83,7 @@ const routes: Routes = [
       { path: 'debt-management', component: DebtManagementComponent, canActivate: [PermissionGuard] },
       { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
       {
         path: 'users-management',
         component: UserManagementComponent,
@@ -113,6 +115,7 @@ const routes: Routes = [
   { path: 'bill', component: InvoiceComponent },
   { path: 'email-list', component: EmailListComponent },
   { path: 'email-compose', component: EmailComposeComponent },
+  { path: 'hotel-files', component: HotelFilesComponent },
   { path: 'about-us', component: AboutUsComponent },
   { path: 'chat', component: ChatComponent },
   { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },

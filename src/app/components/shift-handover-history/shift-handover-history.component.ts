@@ -161,6 +161,24 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     this.selectedRecord = null;
   }
   
+  getCustomerPayments(record: any): any[] {
+    const list = Array.isArray(record?.roomHistory) ? record.roomHistory : [];
+    return list.filter((r: any) => String(r.action || '').toLowerCase() === 'check_out');
+  }
+  
+  getAdvancePayments(record: any): any[] {
+    const list = Array.isArray(record?.roomHistory) ? record.roomHistory : [];
+    return list.filter((r: any) => {
+      const isDepositAction = String(r.action || '').toLowerCase() === 'check_in';
+      const hasAdvance = (r.advancePayment || 0) > 0 || (r.amount || 0) > 0;
+      return isDepositAction && hasAdvance;
+    });
+  }
+  
+  getTotalAmount(list: any[]): number {
+    return (list || []).reduce((sum, i) => sum + (i.amount || 0), 0);
+  }
+  
   resetFilters(): void {
     this.startDate = null;
     this.endDate = null;
@@ -257,18 +275,16 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
 
   getTotalRevenue(record: ShiftHandover): number {
-    const roomRevenue = (record.roomHistory || []).reduce((sum, room: any) => {
+    const adjustedRoomRevenue = (record.roomHistory || []).reduce((sum, room: any) => {
       const roomTotal = room.roomTotal || 0;
       const serviceAmount = room.serviceAmount || room.serviceTotal || 0;
       const additionalCharges = room.additionalCharges || 0;
       const discount = room.discount || 0;
-      return sum + roomTotal + serviceAmount + additionalCharges - discount;
-    }, 0);
-    const advanceTotal = (record.roomHistory || []).reduce((sum, room: any) => {
-      return sum + (room.advancePayment || 0);
+      const advancePayment = room.advancePayment || 0;
+      return sum + (roomTotal + serviceAmount + additionalCharges - discount - advancePayment);
     }, 0);
     const incomeAmount = record.incomeAmount || 0;
-    return roomRevenue + advanceTotal + incomeAmount;
+    return adjustedRoomRevenue + incomeAmount;
   }
 
   // Helper methods để lấy các giá trị từ room history
@@ -290,6 +306,19 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
 
   getAdvancePayment(room: any): number {
     return room.advancePayment || 0;
+  }
+
+  getAdjustedTotal(room: any): number {
+    const roomTotal = this.getRoomTotal(room);
+    const serviceAmount = this.getServiceAmount(room);
+    const additionalCharges = this.getAdditionalCharges(room);
+    const discount = this.getDiscount(room);
+    const advancePayment = this.getAdvancePayment(room);
+    return roomTotal + serviceAmount + additionalCharges - discount - advancePayment;
+  }
+
+  getRemainingAmount(room: any): number {
+    return this.getAdjustedTotal(room);
   }
 
   getCheckinTime(room: any): Date | null {

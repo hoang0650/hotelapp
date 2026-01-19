@@ -977,12 +977,10 @@ export class EInvoiceManagementComponent implements OnInit {
    */
   loadProviderAccounts(): void {
     this.loadingProviders = true;
-    console.log('[EInvoice Management] Loading provider accounts...');
     
     this.invoiceService.getEInvoiceProviderAccounts().subscribe({
       next: (response: any) => {
         this.loadingProviders = false;
-        console.log('[EInvoice Management] Provider accounts response:', response);
         
         if (response && response.success !== false) {
           // Backend trả về: { success: true, data: [...], paging: {...} }

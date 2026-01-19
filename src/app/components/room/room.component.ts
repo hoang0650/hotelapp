@@ -974,6 +974,12 @@ export class RoomComponent implements OnInit, OnDestroy {
       return;
     }
     const roomForInvoice = this.rooms.find(r => r._id === item.roomId);
+    const normalizePaymentMethod = (method: any): string => {
+      const m = String(method || '').toLowerCase().trim();
+      if (m === 'bank_transfer' || m === 'banking' || m === 'transfer') return 'transfer';
+      if (m === 'card' || m === 'credit_card' || m === 'visa' || m === 'mastercard') return 'card';
+      return 'cash';
+    };
 
     const invoiceData = {
         invoiceNumber: item._id || new Date().getTime().toString(),
@@ -987,7 +993,7 @@ export class RoomComponent implements OnInit, OnDestroy {
             { name: `Tiền phòng ${item.roomNumber || roomForInvoice?.roomNumber}`, price: item.totalAmount || item.amount || 0, quantity: 1, totalPrice: item.totalAmount || item.amount || 0 }
         ],
         totalAmount: item.totalAmount || item.amount || 0,
-        paymentMethod: item.paymentMethod || 'cash',
+        paymentMethod: normalizePaymentMethod(item.paymentMethod || 'cash'),
         hotelId: this.selectedHotelId ?? undefined,
         businessName: this.selectedHotelId ? this.hotels.find(h => h._id === this.selectedHotelId)?.name : 'Khách sạn',
     };
@@ -1741,18 +1747,6 @@ export class RoomComponent implements OnInit, OnDestroy {
                   : 0
               };
               
-              // Log để debug nếu là checkin event
-              if (event.type === 'checkin') {
-                console.log(`Loaded checkin event for room ${this.rooms[roomIndex].roomNumber}:`, {
-                  eventId: event._id,
-                  eventRoomId: event.roomId,
-                  currentRoomId: roomId,
-                  additionalCharges: mappedEvent.additionalCharges,
-                  discount: mappedEvent.discount,
-                  transferredFrom: mappedEvent.transferredFrom
-                });
-              }
-              
               return mappedEvent;
             });
             
@@ -1820,14 +1814,6 @@ export class RoomComponent implements OnInit, OnDestroy {
         // Xóa flag loading
         this.roomPriceCache.delete(loadingKey);
         
-        console.log(`[loadRoomPriceFromAPI] Loaded price from API for room ${room.roomNumber}:`, {
-          roomPrice,
-          rateType,
-          checkinTime: checkinTime.toISOString(),
-          checkoutTime: checkoutTime.toISOString(),
-          cacheKey
-        });
-        
         // Trigger change detection để cập nhật UI
         this.cdr.detectChanges();
       },
@@ -1854,13 +1840,11 @@ export class RoomComponent implements OnInit, OnDestroy {
     // Kiểm tra cache trước
     if (this.roomPriceCache.has(cacheKey)) {
       const cachedPrice = this.roomPriceCache.get(cacheKey)!;
-      console.log(`[getRoomPrice] Using cached price for room ${room.roomNumber}:`, cachedPrice);
       return cachedPrice;
     }
 
     // Fallback: tính local nếu chưa có trong cache
     const fallbackPrice = this.calculateRoomPriceLocal(room, checkinTime, rateType);
-    console.warn(`[getRoomPrice] No cached price for room ${room.roomNumber}, using fallback:`, fallbackPrice);
     return fallbackPrice;
   }
   
@@ -2114,16 +2098,6 @@ export class RoomComponent implements OnInit, OnDestroy {
         : Number(lastCheckin.discount) || 0)
       : 0;
     
-    // Log để debug
-    console.log(`getRoomCheckinInfo for room ${room.roomNumber}:`, {
-      lastCheckinEventId: lastCheckin._id,
-      additionalCharges: additionalCharges,
-      discount: discount,
-      originalAdditionalCharges: lastCheckin.additionalCharges,
-      originalDiscount: lastCheckin.discount,
-      eventType: lastCheckin.type
-    });
-    
     // Công thức mới:
     // Tổng tiền = tiền phòng + phụ thu + tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
     // ĐỒNG BỘ: Công thức này phải khớp với room-content-modal.component.ts:
@@ -2138,19 +2112,6 @@ export class RoomComponent implements OnInit, OnDestroy {
     // Trong đó: totalDiscount = initialDiscount + checkoutDiscount
     // Khi chưa checkout: checkoutDiscount = 0, nên totalDiscount = initialDiscount = discount
     const remainingAmount = totalAmount - advancePayment - discount;
-    
-    // Log để debug và đảm bảo đồng bộ
-    console.log(`[getRoomCheckinInfo] Room ${room.roomNumber} calculation:`, {
-      roomPrice,
-      additionalCharges,
-      serviceAmount,
-      discount,
-      advancePayment,
-      totalAmount,
-      remainingAmount,
-      formula: `${roomPrice} + ${additionalCharges} + ${serviceAmount} - ${discount} - ${advancePayment} = ${totalAmount}`
-    });
-
     // Lấy thông tin chuyển phòng từ nhiều nguồn
     let transferredFrom: string | undefined = undefined;
     let transferredAt: Date | undefined = undefined;

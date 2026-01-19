@@ -135,16 +135,17 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         }
       }
       
-      // Tính lại totalAmount theo công thức: tiền phòng + tiền dịch vụ + phụ thu - khuyến mãi
-      // Nếu có đủ thông tin để tính lại
+      // Tính lại totalAmount theo công thức: tiền phòng + tiền dịch vụ + phụ thu - khuyến mãi - đặt trước
+      // Nếu có đủ thông tin để tính
       const roomAmount = item.roomAmount || item.roomTotal || 0;
       const serviceAmount = item.serviceAmount || item.servicesTotal || 0;
       const additionalCharges = item.additionalCharges || 0;
       const discount = item.discount || 0;
+      const advancePayment = item.advancePayment || 0;
       
-      // Chỉ tính lại nếu có ít nhất một trong các giá trị và totalAmount chưa được tính đúng
-      if (roomAmount > 0 || serviceAmount > 0 || additionalCharges > 0 || discount > 0) {
-        const calculatedTotal = roomAmount + serviceAmount + additionalCharges - discount;
+      // Chỉ tính lại nếu có ít nhất một trong các giá trị
+      if (roomAmount > 0 || serviceAmount > 0 || additionalCharges > 0 || discount > 0 || advancePayment > 0) {
+        const calculatedTotal = roomAmount + serviceAmount + additionalCharges - discount - advancePayment;
         // Cập nhật totalAmount nếu chưa có hoặc khác với giá trị tính được
         if (!item.totalAmount || Math.abs(item.totalAmount - calculatedTotal) > 0.01) {
           item.totalAmount = calculatedTotal;
@@ -340,7 +341,6 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     // Subscribe vào roomDataUpdated$ để tự động reload khi có cập nhật
     this.roomDataUpdateSubscription = this.roomService.getRoomDataUpdated$().subscribe(() => {
-      console.log('[TableComponent] Room data updated, reloading history...');
       if (this.hotelId) {
         // Đợi một chút để đảm bảo backend đã cập nhật xong
         setTimeout(() => {
@@ -953,8 +953,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       additionalCharges: invoice.additionalCharges || 0,
       discount: invoice.discount || 0,
       advancePayment: invoice.advancePayment || 0,
-      // Tính totalAmount theo công thức: tiền phòng + tiền dịch vụ + phụ thu - khuyến mãi
-      totalAmount: (invoice.roomAmount || 0) + (invoice.serviceAmount || 0) + (invoice.additionalCharges || 0) - (invoice.discount || 0),
+      // Tính totalAmount theo công thức: tiền phòng + tiền dịch vụ + phụ thu - khuyến mãi - đặt trước
+      totalAmount: ((invoice.roomAmount || 0) + (invoice.serviceAmount || 0) + (invoice.additionalCharges || 0) - (invoice.discount || 0) - (invoice.advancePayment || 0)),
       paymentMethod: invoice.paymentMethod || 'cash',
       paymentStatus: invoice.paymentStatus || 'paid',
       notes: invoice.notes || '',
@@ -1098,7 +1098,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   }
   
   calculateTotalPayment(): void {
-    let invoiceTotal = this.paidData.reduce((sum, current) => {
+    const invoiceTotal = this.paidData.reduce((sum, current) => {
       const paymentStatus = current.paymentStatus || current.payment?.status || current.payment?.paymentStatus || current.status || 'pending';
       const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
       if (normalizedStatus !== 'paid') {
@@ -1107,21 +1107,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       const amount = current?.totalAmount || current?.amount || current?.payment?.amount || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0);
-    
-    let advancePaymentTotal = this.listOfData.reduce((sum, current) => {
-      const advancePayment = current?.advancePayment || 0;
-      if (advancePayment > 0) {
-        const eventType = (current.event || current.type || '').toLowerCase();
-        if (eventType === 'check-in' || eventType === 'checkin') {
-          return sum + (typeof advancePayment === 'number' ? advancePayment : 0);
-        }
-      }
-      return sum;
-    }, 0);
-    
     const incomeAmount = this.shiftHandoverForm?.get('incomeAmount')?.value || 0;
-    
-    this.totalPayment = invoiceTotal + advancePaymentTotal + incomeAmount;
+    const expenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
+    this.totalPayment = Math.max(0, invoiceTotal + incomeAmount - expenseAmount);
   }
   
   exportToExcel(): void {
@@ -1715,6 +1703,45 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       };
     });
     
+    const depositHistory = this.listOfData
+      .filter(item => {
+        const adv = item?.advancePayment || 0;
+        if (!(adv > 0)) return false;
+        const eventType = (item.event || item.type || '').toLowerCase();
+        if (!(eventType === 'check-in' || eventType === 'checkin')) return false;
+        if (this.lastManagerHandoverTime) {
+          const ct = item.checkInTime || item.checkinTime;
+          if (!ct) return true;
+          return new Date(ct) > this.lastManagerHandoverTime!;
+        }
+        return true;
+      })
+      .map(item => {
+        const guestSource = item.guestInfo?.guestSource || item.event?.guestInfo?.guestSource || 'walkin';
+        const methodRaw = (item?.advancePaymentMethod || item.paymentMethod || 'cash') as string;
+        const m = String(methodRaw || '').toLowerCase().trim();
+        const method = m === 'bank_transfer' || m === 'transfer' || m === 'banking' ? 'bank_transfer' : (m === 'card' || m === 'credit_card' || m === 'visa' ? 'card' : 'cash');
+        return {
+          roomId: item.roomId || item._id,
+          roomNumber: item.roomNumber,
+          bookingId: item.bookingId,
+          action: 'check_in',
+          guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
+          guestSource: guestSource,
+          amount: item.advancePayment || 0,
+          paymentMethod: method,
+          timestamp: item.checkInTime || item.checkinTime || new Date(),
+          notes: 'Đặt cọc',
+          roomTotal: item.roomTotal || 0,
+          additionalCharges: item.additionalCharges || 0,
+          discount: item.discount || 0,
+          serviceAmount: item.servicesTotal || item.serviceDetails?.amount || 0,
+          advancePayment: item.advancePayment || 0,
+          advancePaymentMethod: method,
+          checkinTime: item.checkInTime || item.checkinTime || null
+        };
+      });
+    
     const invoices = this.paidData
       .filter(item => this.isPaidTransaction(item))
       .map(item => ({
@@ -1729,8 +1756,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       timestamp: item.checkOutTime || item.checkoutTime || new Date()
     }));
     
-    // Lấy expenses từ database để lưu vào lịch sử giao ca
-    this.loadExpensesForShiftHandover(roomHistory, invoices, formData, handoverAmount, totalRevenue);
+    this.loadExpensesForShiftHandover([...roomHistory, ...depositHistory], invoices, formData, handoverAmount, totalRevenue);
   }
   
   // Load expenses và incomes từ database và gửi dữ liệu giao ca
@@ -2788,18 +2814,14 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
 
   // Tính tổng số tiền
   getTotalAmount(): number {
-    // Tính tổng từ các bản ghi đã thanh toán
-    let baseTotal = this.paidData.reduce((total, item) => {
+    // Công thức cũ: tổng hóa đơn (đã thanh toán) + phiếu thu - phiếu chi
+    const baseTotal = this.paidData.reduce((total, item) => {
       const amount = item.totalAmount || item.amount || item.payment?.amount || 0;
       return total + (typeof amount === 'number' ? amount : 0);
     }, 0);
-    
-    // Trừ đi tiền giao quản lý và tiền chi (nếu có) từ form giao ca
-    const managerHandoverAmount = this.shiftHandoverForm?.get('managerHandoverAmount')?.value || 0;
+    const incomeAmount = this.shiftHandoverForm?.get('incomeAmount')?.value || 0;
     const expenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
-    
-    // Tổng tiền = tổng tiền ban đầu - tiền giao quản lý - tiền chi
-    return Math.max(0, baseTotal - managerHandoverAmount - expenseAmount);
+    return Math.max(0, baseTotal + incomeAmount - expenseAmount);
   }
   
   // Mở modal lịch sử giao ca
@@ -2931,9 +2953,6 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
                 
                 // Tính lại tổng tiền
                 this.calculateTotalPayment();
-                
-                // Log để debug
-                console.log('Reloaded data - paidData.length:', this.paidData.length, 'totalPayment:', this.totalPayment, 'currentPage:', this.currentPage, 'totalItems:', this.totalItems, 'totalPages:', this.totalPages);
               }, 0);
             }
             this.settingValue.loading = false;

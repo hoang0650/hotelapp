@@ -27,6 +27,7 @@
     "@ngx-translate/http-loader": "^17.0.0",
     "@tinymce/tinymce-angular": "^9.1.1",
     "bootstrap": "^5.2.3",
+    "docx-preview": "^0.3.7",
     "echarts": "^5.5.1",
     "express": "^4.18.2",
     "highcharts": "^11.4.6",

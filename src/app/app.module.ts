@@ -77,6 +77,7 @@ import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzRateModule } from 'ng-zorro-antd/rate';
+import { NzOutletModule } from 'ng-zorro-antd/core/outlet';
 
 import { SortByCheckinTimePipe } from './pipes/sort-by-checkin-time.pipe';
 import { FilterPipe } from './pipes/filter.pipe';
@@ -144,6 +145,7 @@ import { ContactManagementComponent } from './components/contact-management/cont
 import { EInvoiceRegistrationComponent } from './components/e-invoice-registration/e-invoice-registration.component';
 import { EInvoiceManagementComponent } from './components/e-invoice-management/e-invoice-management.component';
 import { EInvoiceTemplateComponent } from './components/e-invoice-template/e-invoice-template.component';
+import { HotelFilesComponent } from './components/hotel-files/hotel-files.component';
 
 registerLocaleData(vi);
 
@@ -276,6 +278,8 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         EInvoiceRegistrationComponent,
         EInvoiceManagementComponent,
         EInvoiceTemplateComponent
+        ,
+        HotelFilesComponent
     ],
     bootstrap: [AppComponent],
     imports: [
@@ -332,6 +336,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         NzProgressModule,
         NzPaginationModule,
         NzRateModule,
+        NzOutletModule,
         BrowserAnimationsModule,
         PricingManagementModule,
         EditorModule,

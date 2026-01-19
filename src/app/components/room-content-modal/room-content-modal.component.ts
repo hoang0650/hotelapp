@@ -20,6 +20,7 @@ import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
+import { TransactionService } from '../../services/transaction.service';
 
 // Interface cho dữ liệu cập nhật phòng
 interface RoomUpdate {
@@ -43,13 +44,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   selectedServices: OrderedService[] = [];
   paymentMethods = [
     { value: 'cash', label: 'ROOM_CONTENT_MODAL.CASH' },
-    { value: 'bank_transfer', label: 'ROOM_CONTENT_MODAL.BANK_TRANSFER' },
+    { value: 'transfer', label: 'ROOM_CONTENT_MODAL.BANK_TRANSFER' },
     { value: 'card', label: 'ROOM_CONTENT_MODAL.CARD' }
   ];
   
   // Get translated payment method label
   getPaymentMethodLabel(method: any): string {
     return this.translate.instant(method.label);
+  }
+  private normalizePaymentMethod(method: any): string {
+    const m = String(method || '').toLowerCase().trim();
+    if (m === 'bank_transfer' || m === 'banking' || m === 'transfer') return 'transfer';
+    if (m === 'card' || m === 'credit_card' || m === 'visa' || m === 'mastercard') return 'card';
+    return 'cash';
   }
   isLoading = false;
   isSaving = false;
@@ -246,7 +253,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
     private translate: TranslateService,
-    private http: HttpClient
+    private http: HttpClient,
+    private transactionService: TransactionService
   ) {
     // Log dữ liệu nhận được từ directive để debug
     console.log('Room Content Modal received data:', data);
@@ -485,7 +493,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
     
     this.checkInForm.patchValue({
-        paymentMethod: session.paymentMethod,
+        paymentMethod: this.normalizePaymentMethod(session.paymentMethod),
         rateType: session.rateType,
         advancePayment: this.advancePayment,
         advancePaymentMethod: session.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
@@ -520,7 +528,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
     
     this.checkOutForm.patchValue({
-        paymentMethod: session.paymentMethod,
+        paymentMethod: this.normalizePaymentMethod(session.paymentMethod),
         rateType: session.rateType || 'hourly',
         advancePayment: session.advancePayment || 0,
         advancePaymentMethod: session.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
@@ -677,7 +685,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
           
           this.checkInForm.patchValue({
-              paymentMethod: lastCheckinEvent.paymentMethod,
+              paymentMethod: this.normalizePaymentMethod(lastCheckinEvent.paymentMethod),
               rateType: lastCheckinEvent.rateType,
               advancePayment: this.advancePayment,
               additionalCharges: this.initialCharges,
@@ -727,7 +735,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
           
           this.checkOutForm.patchValue({ 
-            paymentMethod: lastCheckinEvent.paymentMethod || 'cash',
+            paymentMethod: this.normalizePaymentMethod(lastCheckinEvent.paymentMethod || 'cash'),
             rateType: lastCheckinEvent.rateType || 'hourly', // Thêm rateType từ check-in event
             advancePayment: eventAdvancePayment, // Sử dụng giá trị đã đảm bảo là số
             advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
@@ -1226,7 +1234,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         type: 'checkin',
         checkinTime: checkinTime, // Sử dụng thời gian đã tạo
         guestInfo: guestInfo,
-        paymentMethod: this.checkInForm.get('paymentMethod')?.value || 'cash',
+        paymentMethod: this.normalizePaymentMethod(this.checkInForm.get('paymentMethod')?.value || 'cash'),
         rateType: this.checkInForm.get('rateType')?.value || 'hourly',
         advancePayment: advancePayment, // Đảm bảo là số
         advancePaymentMethod: advancePaymentMethod, // Hình thức thanh toán cho trả trước
@@ -1251,7 +1259,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         checkinInfo: {
           checkinTime: checkinTime, // Sử dụng cùng thời gian
           guestInfo: this.checkInForm.get('guestInfo')?.value,
-          paymentMethod: this.checkInForm.get('paymentMethod')?.value,
+            paymentMethod: this.normalizePaymentMethod(this.checkInForm.get('paymentMethod')?.value),
           rateType: this.checkInForm.get('rateType')?.value,
           advancePayment: this.checkInForm.get('advancePayment')?.value,
           notes: this.checkInForm.get('notes')?.value,
@@ -1266,6 +1274,28 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         (room) => {
           setTimeout(() => {
             this.message.success('Nhận phòng thành công');
+            
+            // Tạo phiếu thu cho tiền đặt trước nếu có
+            try {
+              const hotelId = this.authService.getHotelId();
+              const payerName = guestInfo?.name || 'Khách lẻ';
+              if (hotelId && advancePayment > 0) {
+                this.transactionService.createIncome({
+                  hotelId,
+                  amount: advancePayment,
+                  method: 'other',
+                  incomeCategory: 'other',
+                  description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
+                  notes: `Đặt trước lúc nhận phòng ${this.roomData.roomNumber}`,
+                  payer: payerName
+                }).subscribe({
+                  next: () => console.log('Đã tạo phiếu thu đặt trước cho phòng', this.roomData.roomNumber),
+                  error: (err) => console.error('Lỗi tạo phiếu thu đặt trước:', err)
+                });
+              }
+            } catch (e) {
+              console.error('Lỗi khi tạo phiếu thu đặt trước:', e);
+            }
             
             // Log để debug - dữ liệu đã được lưu vào RoomEvent qua backend
             console.log('Check-in data saved to RoomEvent:', {
@@ -1742,12 +1772,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     durationInDays: number
   ): void {
     // Chuẩn bị dữ liệu checkout
-    const paymentMethod = this.checkOutForm.get('paymentMethod')?.value;
+    const paymentMethod = this.normalizePaymentMethod(this.checkOutForm.get('paymentMethod')?.value);
     const createDebt = this.checkOutForm.get('createDebt')?.value || false;
     // Lưu paymentMethod vào checkoutData để sử dụng sau khi kiểm tra QR setting
     const checkoutData = {
       status: 'dirty',
-      paymentStatus: createDebt ? 'pending' : ((paymentMethod === 'bank_transfer' || paymentMethod === 'transfer' || paymentMethod === 'banking') ? 'pending' : 'paid'), // Sẽ được cập nhật sau khi kiểm tra QR setting
+      paymentStatus: createDebt ? 'pending' : ((paymentMethod === 'transfer') ? 'pending' : 'paid'),
       checkoutTime: currentTime,
       roomTotal: validRoomTotal, // Gửi validRoomTotal đã được validate
       rateType: rateType, // Gửi rateType đã được tính toán từ backend
@@ -1897,7 +1927,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     };
     
     // Kiểm tra nếu payment method là 'transfer' (chuyển khoản)
-    if (paymentMethod === 'bank_transfer' || paymentMethod === 'transfer' || paymentMethod === 'banking') {
+    if (paymentMethod === 'transfer') {
       // Kiểm tra xem có nên hiển thị QR payment không
       this.checkAndHandleTransferPayment(remainingAmount, invoiceData, checkoutData);
     } else {
@@ -1988,23 +2018,32 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
    * Kiểm tra và xử lý thanh toán chuyển khoản với QR (nếu được bật)
    */
   checkAndHandleTransferPayment(amount: number, invoiceData: any, checkoutData: any): void {
-    // Kiểm tra hotel settings và pricing package
+    // Ưu tiên: nếu có QR từ các nguồn business/hotel/manager/user thì hiển thị ngay
+    const manager = (this.businessInfo && typeof this.businessInfo.managerId === 'object') ? this.businessInfo.managerId : null;
+    const isQrAvailable = !!(
+      this.businessOwner?.bankAccount?.qrPaymentUrl ||
+      this.hotelBankAccount?.qrPaymentUrl ||
+      manager?.bankAccount?.qrPaymentUrl ||
+      this.currentUser?.bankAccount?.qrPaymentUrl
+    );
+    if (isQrAvailable) {
+      this.handleTransferPayment(amount, invoiceData, checkoutData);
+      return;
+    }
+    
+    // Nếu không có QR sẵn có, kiểm tra hotel settings và pricing package
     if (this.roomData?.hotelId) {
       this.hotelService.getHotelById(this.roomData.hotelId).subscribe({
         next: (hotel: any) => {
           const hotelSettings = hotel.settings || {};
           const enableQRFromSettings = hotelSettings.enableQRPaymentForBankTransfer || false;
           
-          // Kiểm tra pricing package nếu có businessId
           if (hotel.businessId) {
-            // Lấy business để kiểm tra pricing package
             this.checkPricingPackageAndHandlePayment(hotel.businessId, enableQRFromSettings, amount, invoiceData, checkoutData);
           } else {
-            // Không có business, chỉ kiểm tra hotel settings
             if (enableQRFromSettings) {
               this.handleTransferPayment(amount, invoiceData, checkoutData);
             } else {
-              // Không bật QR, set paymentStatus = 'paid' và checkout với xuất hóa đơn
               checkoutData.paymentStatus = 'paid';
               invoiceData.paymentStatus = 'paid';
               this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
@@ -2013,15 +2052,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading hotel settings:', error);
-          // Nếu lỗi, vẫn thử hiển thị QR (fallback)
+          // Fallback: thử xử lý transfer payment (sẽ tự động checkout trực tiếp nếu không có QR)
           this.handleTransferPayment(amount, invoiceData, checkoutData);
         }
       });
     } else {
-      // Không có hotelId, set paymentStatus = 'paid' và checkout với xuất hóa đơn
-      checkoutData.paymentStatus = 'paid';
-      invoiceData.paymentStatus = 'paid';
-      this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
+      // Không có hotelId, xử lý transfer payment (sẽ tự động checkout trực tiếp nếu không có QR)
+      this.handleTransferPayment(amount, invoiceData, checkoutData);
     }
   }
   
@@ -3544,6 +3581,28 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           next: (response) => {
             console.log('Update checkin info response:', response);
             this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
+            
+            // Tạo phiếu thu cho tiền đặt trước nếu có
+            try {
+              const hotelId = this.authService.getHotelId();
+              const payerName = updatedGuestInfo?.name || 'Khách lẻ';
+              if (hotelId && advancePayment > 0) {
+                this.transactionService.createIncome({
+                  hotelId,
+                  amount: advancePayment,
+                  method: 'other',
+                  incomeCategory: 'other',
+                  description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
+                  notes: `Đặt trước lúc lưu thông tin phòng ${this.roomData.roomNumber}`,
+                  payer: payerName
+                }).subscribe({
+                  next: () => console.log('Đã tạo phiếu thu đặt trước (saveGuestInfo) phòng', this.roomData.roomNumber),
+                  error: (err) => console.error('Lỗi tạo phiếu thu đặt trước (saveGuestInfo):', err)
+                });
+              }
+            } catch (e) {
+              console.error('Lỗi khi tạo phiếu thu đặt trước (saveGuestInfo):', e);
+            }
             this.isSaving = false;
             
             // Đóng modal sau khi lưu thành công

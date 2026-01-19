@@ -191,11 +191,11 @@
             </nz-form-control>
           </nz-form-item>
         </div>
-        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12" *ngIf="checkInForm.get('advancePayment')?.value > 0">
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
           <nz-form-item>
-            <nz-form-label [nzSpan]="8">Hình thức thanh toán trả trước</nz-form-label>
+            <nz-form-label [nzSpan]="8">Hình thức trả trước</nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-select formControlName="advancePaymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+              <nz-select formControlName="advancePaymentMethod" nzPlaceHolder="Chọn hình thức trả trước">
                 <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label | translate"></nz-option>
               </nz-select>
             </nz-form-control>
@@ -666,7 +666,7 @@
           </nz-form-item>
         </div>
       </div>
-      
+            
       <div nz-row [nzGutter]="16">
         <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
           <nz-form-item>
@@ -694,11 +694,11 @@
             </nz-form-control>
           </nz-form-item>
         </div>
-        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12" *ngIf="checkOutForm.get('advancePayment')?.value > 0">
+        <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
           <nz-form-item>
-            <nz-form-label [nzSpan]="8">Hình thức thanh toán trả trước</nz-form-label>
+            <nz-form-label [nzSpan]="8">Hình thức trả trước</nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-select formControlName="advancePaymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+              <nz-select formControlName="advancePaymentMethod" nzPlaceHolder="Chọn hình thức trả trước">
                 <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label | translate"></nz-option>
               </nz-select>
             </nz-form-control>

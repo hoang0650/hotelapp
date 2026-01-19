@@ -299,12 +299,10 @@
           </tbody>
         </nz-table>
         
-        <!-- Room History -->
-        <nz-divider [nzText]="'SHIFT_HANDOVER.HISTORY.ROOM_HISTORY_IN_SHIFT' | translate" *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"></nz-divider>
-        <div class="table-responsive-wrapper">
+        <nz-divider [nzText]="'Lịch sử tiền nhận từ khách đến trong ca - Tổng tiền ' + formatCurrency(getTotalAmount(getCustomerPayments(selectedRecord)))" *ngIf="getCustomerPayments(selectedRecord).length > 0"></nz-divider>
+        <div class="table-responsive-wrapper" *ngIf="getCustomerPayments(selectedRecord).length > 0">
           <nz-table
-            *ngIf="selectedRecord.roomHistory && selectedRecord.roomHistory.length > 0"
-            [nzData]="selectedRecord.roomHistory"
+            [nzData]="getCustomerPayments(selectedRecord)"
             nzSize="small"
             nzBordered
             [nzScroll]="{ x: '1200px' }"
@@ -322,6 +320,8 @@
                 <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.SERVICE_AMOUNT' | translate }}</th>
                 <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ADVANCE_PAYMENT' | translate }}</th>
                 <th nzWidth="120px">{{ 'SHIFT_HANDOVER.HISTORY.ADVANCE_PAYMENT_METHOD' | translate }}</th>
+                <th nzWidth="120px"><strong>{{ 'SHIFT_HANDOVER.HISTORY.ADJUSTED_TOTAL' | translate }}</strong></th>
+                <th nzWidth="120px">{{ 'SHIFT_HANDOVER.HISTORY.REMAINING_AMOUNT' | translate }}</th>
                 <th nzWidth="120px"><strong>{{ 'SHIFT_HANDOVER.HISTORY.AMOUNT' | translate }}</strong></th>
                 <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.PAYMENT_METHOD' | translate }}</th>
                 <th nzWidth="140px">{{ 'SHIFT_HANDOVER.HISTORY.CHECK_IN' | translate }}</th>
@@ -329,7 +329,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let room of selectedRecord.roomHistory">
+              <tr *ngFor="let room of getCustomerPayments(selectedRecord)">
                 <td>{{ room.roomNumber }}</td>
                 <td>{{ room.action }}</td>
                 <td class="text-ellipsis">
@@ -354,6 +354,82 @@
                         ? ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate)
                         : 'Khác' }}
                 </td>
+                <td class="text-right"><strong>{{ formatCurrency(getAdjustedTotal(room)) }}</strong></td>
+                <td class="text-right">{{ formatCurrency(getRemainingAmount(room)) }}</td>
+                <td class="text-right"><strong>{{ formatCurrency(room.amount || 0) }}</strong></td>
+                <td>{{ room.paymentMethod === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : room.paymentMethod === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : room.paymentMethod === 'card' ? ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate) : 'Khác' }}</td>
+                <td class="text-ellipsis">
+                  <span [nz-tooltip]="getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : 'N/A'" nzTooltipPlacement="top">
+                    {{ getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : ('SHIFT_HANDOVER.HISTORY.N_A' | translate) }}
+                  </span>
+                </td>
+                <td class="text-ellipsis">
+                  <span [nz-tooltip]="formatDate(room.timestamp)" nzTooltipPlacement="top">
+                    {{ formatDate(room.timestamp) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </nz-table>
+        </div>
+        
+        <nz-divider [nzText]="'Lịch sử tiền nhận từ đặt cọc trong ca - Tổng tiền ' + formatCurrency(getTotalAmount(getAdvancePayments(selectedRecord)))" *ngIf="getAdvancePayments(selectedRecord).length > 0"></nz-divider>
+        <div class="table-responsive-wrapper" *ngIf="getAdvancePayments(selectedRecord).length > 0">
+          <nz-table
+            [nzData]="getAdvancePayments(selectedRecord)"
+            nzSize="small"
+            nzBordered
+            [nzScroll]="{ x: '1200px' }"
+            class="responsive-table"
+          >
+            <thead>
+              <tr>
+                <th nzWidth="80px">{{ 'SHIFT_HANDOVER.HISTORY.ROOM' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ACTION' | translate }}</th>
+                <th nzWidth="120px">{{ 'SHIFT_HANDOVER.HISTORY.GUEST' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.SOURCE' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ROOM_TOTAL' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ADDITIONAL_CHARGES' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.DISCOUNT' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.SERVICE_AMOUNT' | translate }}</th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.ADVANCE_PAYMENT' | translate }}</th>
+                <th nzWidth="120px">{{ 'SHIFT_HANDOVER.HISTORY.ADVANCE_PAYMENT_METHOD' | translate }}</th>
+                <th nzWidth="120px"><strong>{{ 'SHIFT_HANDOVER.HISTORY.ADJUSTED_TOTAL' | translate }}</strong></th>
+                <th nzWidth="120px">{{ 'SHIFT_HANDOVER.HISTORY.REMAINING_AMOUNT' | translate }}</th>
+                <th nzWidth="120px"><strong>{{ 'SHIFT_HANDOVER.HISTORY.AMOUNT' | translate }}</strong></th>
+                <th nzWidth="100px">{{ 'SHIFT_HANDOVER.HISTORY.PAYMENT_METHOD' | translate }}</th>
+                <th nzWidth="140px">{{ 'SHIFT_HANDOVER.HISTORY.CHECK_IN' | translate }}</th>
+                <th nzWidth="140px">{{ 'SHIFT_HANDOVER.HISTORY.CHECK_OUT' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let room of getAdvancePayments(selectedRecord)">
+                <td>{{ room.roomNumber }}</td>
+                <td>{{ room.action }}</td>
+                <td class="text-ellipsis">
+                  <span [nz-tooltip]="getGuestName(room)" nzTooltipPlacement="top">{{ getGuestName(room) }}</span>
+                </td>
+                <td>
+                  <nz-tag [nzColor]="getGuestSourceColor(room)">
+                    {{ getGuestSourceLabel(room) }}
+                  </nz-tag>
+                </td>
+                <td class="text-right">{{ formatCurrency(getRoomTotal(room)) }}</td>
+                <td class="text-right">{{ formatCurrency(getAdditionalCharges(room)) }}</td>
+                <td class="text-right">{{ formatCurrency(getDiscount(room)) }}</td>
+                <td class="text-right">{{ formatCurrency(getServiceAmount(room)) }}</td>
+                <td class="text-right">{{ formatCurrency(getAdvancePayment(room)) }}</td>
+                <td>
+                  {{ (room.advancePaymentMethod || room.paymentMethod) === 'cash'
+                    ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate)
+                    : (room.advancePaymentMethod || room.paymentMethod) === 'bank_transfer'
+                      ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate)
+                      : (room.advancePaymentMethod || room.paymentMethod) === 'card'
+                        ? ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate)
+                        : 'Khác' }}
+                </td>
+                <td class="text-right"><strong>{{ formatCurrency(getAdjustedTotal(room)) }}</strong></td>
+                <td class="text-right">{{ formatCurrency(getRemainingAmount(room)) }}</td>
                 <td class="text-right"><strong>{{ formatCurrency(room.amount || 0) }}</strong></td>
                 <td>{{ room.paymentMethod === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : room.paymentMethod === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : room.paymentMethod === 'card' ? ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate) : 'Khác' }}</td>
                 <td class="text-ellipsis">

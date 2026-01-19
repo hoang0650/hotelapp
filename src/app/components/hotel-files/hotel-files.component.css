@@ -1,0 +1,17 @@
+.hotel-files {
+  padding: 12px;
+}
+.toolbar {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+}
+.mr-1 {
+  margin-right: 8px;
+}
+.viewer {
+  margin-top: 12px;
+}
+.text-muted {
+  color: #6c757d;
+}

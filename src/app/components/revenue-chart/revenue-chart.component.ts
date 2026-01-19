@@ -122,12 +122,6 @@ export class RevenueChartComponent implements OnInit, OnChanges {
       endDate: format(endDate, 'yyyy-MM-dd')
     }).subscribe({
       next: (response) => {
-        console.log('Revenue loaded from backend:', {
-          labels: response.labels?.length || 0,
-          revenueData: response.revenueData?.length || 0,
-          totalRevenue: response.totalRevenue,
-          totalExpense: response.totalExpense,
-        });
         
         this.labels = response.labels || [];
         this.revenueData = response.revenueData || [];
