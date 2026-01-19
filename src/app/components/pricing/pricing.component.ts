@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { PricingService } from '../../services/pricing.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
@@ -173,7 +174,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     private cryptoService: CryptoService,
     private userService: UserService,
     private settingsService: SettingsService,
-    private notificationsService: NotificationsService
+    private notificationsService: NotificationsService,
+    private http: HttpClient
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -1412,100 +1414,53 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   private playPaymentSuccessSound(amount: number): void {
     try {
       console.log('[playPaymentSuccessSound] Bắt đầu phát thông báo, số tiền:', amount);
-      
-      // Kiểm tra xem trình duyệt có hỗ trợ Web Speech API không
-      if (!('speechSynthesis' in window)) {
-        console.warn('[playPaymentSuccessSound] Trình duyệt không hỗ trợ Web Speech API');
-        return;
-      }
-      
-      // Dừng tất cả các utterance đang phát (nếu có)
-      window.speechSynthesis.cancel();
-      
-      // Format số tiền: làm tròn và chuyển thành số nguyên, không có dấu phẩy để dễ đọc hơn khi phát âm
       const roundedAmount = Math.round(amount);
-      const formattedAmount = roundedAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' '); // Thêm khoảng trắng mỗi 3 chữ số
-      
-      // Tạo nội dung thông báo theo format: "đã thanh toán thành công {{số tiền}} đồng"
+      const formattedAmount = roundedAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
       const message = `Đã thanh toán thành công ${formattedAmount} đồng`;
       console.log('[playPaymentSuccessSound] Nội dung thông báo:', message);
-      
-      // Hàm phát âm thanh (sau khi voices đã load)
-      const speak = () => {
-        try {
-          // Tạo utterance
-          const utterance = new SpeechSynthesisUtterance(message);
-          
-          // Cấu hình giọng nói (ưu tiên tiếng Việt nếu có)
-          utterance.lang = 'vi-VN';
-          utterance.rate = 1.0; // Tốc độ nói (0.1 - 10)
-          utterance.pitch = 1.0; // Độ cao giọng (0 - 2)
-          utterance.volume = 1.0; // Âm lượng (0 - 1)
-          
-          // Tìm giọng nói tiếng Việt nếu có
-          const voices = window.speechSynthesis.getVoices();
-          console.log('[playPaymentSuccessSound] Số lượng voices:', voices.length);
-          
-          const vietnameseVoice = voices.find(voice => 
-            voice.lang.includes('vi') || voice.name.toLowerCase().includes('vietnamese')
-          );
-          
-          if (vietnameseVoice) {
-            utterance.voice = vietnameseVoice;
-            console.log('[playPaymentSuccessSound] Sử dụng giọng tiếng Việt:', vietnameseVoice.name);
-          } else {
-            console.log('[playPaymentSuccessSound] Không tìm thấy giọng tiếng Việt, sử dụng giọng mặc định');
+
+      this.sepayService.generatePaymentSound({
+        message: message,
+        speed: 0,
+        voice: 'banmai'
+      }).subscribe({
+        next: (response) => {
+          console.log('[playPaymentSuccessSound] FPT.AI TTS response:', response);
+          const asyncUrl = response && response.async;
+          if (!asyncUrl) {
+            console.warn('[playPaymentSuccessSound] Không tìm thấy async URL trong response');
+            return;
           }
-          
-          // Thêm event handlers để debug
-          utterance.onstart = () => {
-            console.log('[playPaymentSuccessSound] Bắt đầu phát âm thanh');
-          };
-          
-          utterance.onend = () => {
-            console.log('[playPaymentSuccessSound] Kết thúc phát âm thanh');
-          };
-          
-          utterance.onerror = (event) => {
-            console.error('[playPaymentSuccessSound] Lỗi khi phát âm thanh:', event);
-          };
-          
-          // Phát âm thanh
-          window.speechSynthesis.speak(utterance);
-          console.log('[playPaymentSuccessSound] Đã gọi speak()');
-        } catch (error) {
-          console.error('[playPaymentSuccessSound] Lỗi trong hàm speak():', error);
+
+          let attempts = 0;
+          const maxAttempts = 12;
+          const checkAudioAvailability = setInterval(() => {
+            attempts += 1;
+            this.http.get(asyncUrl, { responseType: 'blob' }).subscribe({
+              next: (blob: Blob) => {
+                clearInterval(checkAudioAvailability);
+                const audioUrl = URL.createObjectURL(blob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+                audio.onended = () => {
+                  URL.revokeObjectURL(audioUrl);
+                };
+              },
+              error: (error) => {
+                if (attempts >= maxAttempts) {
+                  clearInterval(checkAudioAvailability);
+                  console.error('[playPaymentSuccessSound] Không thể tải file âm thanh sau nhiều lần thử:', error);
+                } else {
+                  console.warn('[playPaymentSuccessSound] File âm thanh chưa sẵn sàng, sẽ thử lại:', error);
+                }
+              }
+            });
+          }, 5000);
+        },
+        error: (error) => {
+          console.error('[playPaymentSuccessSound] Lỗi khi gọi FPT.AI TTS API:', error);
         }
-      };
-      
-      // Kiểm tra xem voices đã load chưa
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        // Voices đã load, phát ngay
-        speak();
-      } else {
-        // Chưa load, đợi event voiceschanged
-        console.log('[playPaymentSuccessSound] Chờ voices load...');
-        const onVoicesChanged = () => {
-          console.log('[playPaymentSuccessSound] Voices đã load');
-          window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
-          speak();
-        };
-        window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
-        
-        // Timeout sau 2 giây nếu voices vẫn chưa load
-        setTimeout(() => {
-          window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
-          const voicesAfterTimeout = window.speechSynthesis.getVoices();
-          if (voicesAfterTimeout.length > 0) {
-            console.log('[playPaymentSuccessSound] Phát sau timeout');
-            speak();
-          } else {
-            console.warn('[playPaymentSuccessSound] Không thể load voices sau 2 giây, thử phát với giọng mặc định');
-            speak(); // Vẫn thử phát với giọng mặc định
-          }
-        }, 2000);
-      }
+      });
     } catch (error) {
       console.error('[playPaymentSuccessSound] Lỗi khi phát âm thanh:', error);
     }
