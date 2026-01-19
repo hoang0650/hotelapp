@@ -569,7 +569,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     if (!name || name.length < 8 || name.length > 100) return false;
     
     // Loại bỏ các tên có chứa header
-    const headerKeywords = ['VIỆT NAM', 'VIETNAM', 'SOCIALIST', 'REPUBLIC', 'CỘNG HÒA', 'XÃ HỘI', 'CHỦ NGHĨA', 'CĂN CƯỚC', 'CÔNG DÂN', 'CAN CƯỚC', 'CONG DAN', 'CONG DAN'];
+    const headerKeywords = [
+      'VIỆT NAM', 'VIETNAM', 'VIET NA',
+      'SOCIALIST', 'SOCIALIS',
+      'REPUBLIC', 'REPUBLIC OF',
+      'CỘNG HÒA', 'CONG HOA', 'XÃ HỘI', 'XA HOI', 'CHỦ NGHĨA', 'CHU NGHIA',
+      'CĂN CƯỚC', 'CAN CƯỚC', 'CAN CUOC',
+      'CÔNG DÂN', 'CONG DAN'
+    ];
     const upperName = name.toUpperCase();
     if (headerKeywords.some(keyword => upperName.includes(keyword))) {
       return false;
@@ -577,11 +584,16 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     // Loại bỏ các tên không hợp lý (OCR nhầm)
     const invalidNamePatterns = [
+      'CONG HOA XA HOI CHU NGHIA',
+      'CONG HOA XA HOI',
+      'SOCIALIST REPUBLIC',
+      'SOCIALIS REPUBLIC',
+      'INDEPENDENCE', 'FREEDOM', 'HAPPINESS', 'HAPINESS', 'HAPIR',
+      'VIET NAM', 'VIET NA',
+      'CITIZEN IDENTITY CARD', 'CITIZEN', 'IDENTITY', 'CARD',
       'PERSONAL IDENTIFICATION',
       'IDENTIFICATION',
       'PERSONAL',
-      'IDENTITY',
-      'CARD',
       'NGHY PANG',
       'NKO MT',
       'AYN DARE',
@@ -1384,10 +1396,26 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         'INDEPENDENCE', 'FREEDOM', 'HAPPINESS',
         'CĂN CƯỚC', 'CAN CƯỚC', 'CAN CUOC', 'CÔNG DÂN', 'CONG DAN', 'CONG DÂN',
         'CITIZEN', 'IDENTITY', 'CARD',
-        'BỘ CÔNG AN', 'MINISTRY', 'PUBLIC', 'SECURITY'
+        'BỘ CÔNG AN', 'MINISTRY', 'PUBLIC', 'SECURITY',
+        // Khẩu hiệu mặt trước (không dấu và các biến thể thường bị OCR sai)
+        'DOC LAP', 'TU DO', 'HANH PHUC', 'FREDOM', 'HAPIR', 'HAPINESS'
       ];
       
       const upperLine = line.toUpperCase();
+      
+      // Phát hiện khẩu hiệu "Độc lập - Tự do - Hạnh phúc" và bản tiếng Anh với lỗi OCR
+      const vnMottoGroups = [
+        ['DOC','LAP'],
+        ['TU','DO'],
+        ['HANH','PHUC']
+      ];
+      const hasVnMotto = vnMottoGroups.filter(g => g.every(w => upperLine.includes(w))).length >= 2;
+      const hasEnMotto = upperLine.includes('INDEPENDENCE') &&
+                         (upperLine.includes('FREEDOM') || upperLine.includes('FREDOM')) &&
+                         (upperLine.includes('HAPPINESS') || upperLine.includes('HAPINESS') || upperLine.includes('HAPIR'));
+      if (hasVnMotto || hasEnMotto) {
+        return true;
+      }
       // Nếu dòng chứa 2 hoặc nhiều từ khóa header, coi như header
       const keywordCount = headerKeywords.filter(keyword => 
         upperLine.includes(keyword.toUpperCase())
@@ -2237,6 +2265,22 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
     }
     
+    // Fallback bổ sung: bắt giới tính trong MRZ gần mã quốc gia VNM
+    if (!genderFound) {
+      for (const line of lines) {
+        const mrz = line.toUpperCase();
+        if (/^[A-Z0-9<]{20,}$/.test(mrz) && mrz.includes('VNM')) {
+          const nearNationality = mrz.match(/([MF])(?=\d{6}VNM)/);
+          if (nearNationality && nearNationality[1]) {
+            parsedData.gender = nearNationality[1] === 'M' ? 'male' : 'female';
+            genderFound = true;
+            console.log('Found gender (MRZ VNM-near):', parsedData.gender, 'from line:', line);
+            break;
+          }
+        }
+      }
+    }
+    
     // Log kết quả giới tính
     if (parsedData.gender) {
       console.log('Gender found:', parsedData.gender);
@@ -2329,6 +2373,16 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
     }
     
+    // Pattern 4: Fallback từ MRZ - nếu có mã quốc gia VNM ở bất kỳ dòng MRZ nào
+    if (!nationalityFound) {
+      const mrzLines = lines.filter(l => /^[A-Z0-9<]{20,}$/.test(l));
+      if (mrzLines.some(l => /VNM/.test(l))) {
+        parsedData.nationality = 'Việt Nam';
+        nationalityFound = true;
+        console.log('Found nationality (Pattern 4 - MRZ VNM):', parsedData.nationality);
+      }
+    }
+    
     // Tìm nơi thường trú (thường ở mặt sau CCCD) - cải thiện logic
     let permanentAddressFound = false;
     
@@ -2352,6 +2406,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       clean = clean.replace(/CÔNG\s+DÂN/gi, '').trim();
       clean = clean.replace(/CONG\s+DAN/gi, '').trim();
       clean = clean.replace(/CONG\s+DÂN/gi, '').trim();
+      // Loại bỏ khẩu hiệu mặt trước (bao gồm các biến thể OCR sai)
+      clean = clean.replace(/\b(DOC\s+LAP|TU\s+DO|HANH\s+PHUC|INDEPENDENCE|INDEPENDENS|INDEPENGES|INDEPENGENS|FREEDOM|FREDOM|HAPPINESS|HAPINESS|HAPIR|SOCIALIS|SOCIALIST)\b/gi, ' ').trim();
       // Loại bỏ "Số định danh cá nhân / Personal identification" - có thể bị OCR nhầm vào địa chỉ
       clean = clean.replace(/SỐ\s+ĐỊNH\s+DANH\s+CÁ\s+NHÂN|SO\s+DINH\s+DANH\s+CA\s+NHAN|PERSONAL\s+IDENTIFICATION/gi, '').trim();
       
@@ -3258,7 +3314,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       // Chỉ điền tên nếu hợp lệ (không phải "Khách lẻ" hoặc các giá trị không hợp lý)
       if (data.fullName && this.isValidName(data.fullName)) {
         // Loại bỏ các giá trị không hợp lý như "Khách lẻ", "Khách lư"
-        const invalidNames = ['Khách lẻ', 'Khách lư', 'Khách', 'lẻ', 'lư', 'CAN CƯỚC CONG DAN', 'CAN CUOC CONG DAN'];
+        const invalidNames = [
+          'Khách lẻ', 'Khách lư', 'Khách', 'lẻ', 'lư',
+          'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', 'CONG HOA XA HOI CHU NGHIA VIET NAM', 'CONG HOA XA HOI CHU NGHIA', 'CONG HOA XA HOI',
+          'SOCIALIST REPUBLIC OF VIET NAM', 'SOCIALIS REPUBLIC',
+          'INDEPENDENCE', 'FREEDOM', 'HAPPINESS', 'HAPINESS', 'HAPIR',
+          'CĂN CƯỚC CÔNG DÂN', 'CAN CUOC CONG DAN', 'CAN CUOC', 'CONG DAN',
+          'VIỆT NAM', 'VIET NAM', 'VIET NA'
+        ];
         const upperName = data.fullName.toUpperCase();
         if (!invalidNames.some(invalid => upperName.includes(invalid.toUpperCase()))) {
         this.personalInfoFormGroup.patchValue({ fullName: data.fullName });
