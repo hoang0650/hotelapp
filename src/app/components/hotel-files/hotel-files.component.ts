@@ -108,6 +108,18 @@ export class HotelFilesComponent {
     const p = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
     return `${origin}${p}`.replace(/([^:]\/)\/+/g, '$1');
   }
+  
+  openInNewTab(file: FileItem): void {
+    const asset = this.getAssetUrl(file.path);
+    if (file.type === 'doc' || file.type === 'docx') {
+      const absolute = this.toAbsoluteUrl(asset);
+      const officeViewer = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(absolute)}`;
+      window.open(officeViewer, '_blank');
+      return;
+    }
+    const absoluteUrl = this.toAbsoluteUrl(asset);
+    window.open(absoluteUrl, '_blank');
+  }
 
   private loadXlsx(path: string): void {
     this.http.get(path, { responseType: 'arraybuffer' }).subscribe({
@@ -184,6 +196,18 @@ export class HotelFilesComponent {
         this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(path);
       }
     });
+  }
+  
+  closeOverlay(): void {
+    this.selectedFile = null;
+    this.pdfUrl = null;
+    this.officeUrl = null;
+    this.xlsxRows = [];
+    this.xlsxColumns = [];
+    this.isDocx = false;
+    if (this.docxContainer && this.docxContainer.nativeElement) {
+      this.docxContainer.nativeElement.innerHTML = '';
+    }
   }
 
   download(file: FileItem): void {
