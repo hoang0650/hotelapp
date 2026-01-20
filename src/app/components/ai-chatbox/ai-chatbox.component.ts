@@ -172,7 +172,27 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       fileType = this.selectedFile.type;
       fileUrl = this.selectedFilePreview || '';
     }
-    await this.aiService.sendMessage(content, fileUrl, fileType);
+    
+    const tenantId = this.getTenantIdForAI();
+    if (this.selectedFile && this.selectedFile.type.includes('application/json')) {
+      try {
+        const text = await this.readFileText(this.selectedFile);
+        const json = JSON.parse(text);
+        const products = Array.isArray(json.products) ? json.products : (Array.isArray(json) ? json : []);
+        if (!Array.isArray(products) || products.length === 0) {
+          this.message.warning('Dataset JSON không hợp lệ hoặc trống.');
+        } else {
+          await this.aiService.uploadDatasetExternal(tenantId, products);
+          this.message.success('Đã tải dataset lên AI.');
+        }
+      } catch (e) {
+        console.error('Dataset parse error:', e);
+        this.message.error('Không thể đọc dataset JSON.');
+      }
+      this.removeSelectedFile();
+    } else {
+      await this.aiService.sendMessageExternal(content, tenantId);
+    }
     this.removeSelectedFile();
   }
 
@@ -185,6 +205,29 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.selectedFileType = undefined;
     this.selectedFilePreview = undefined;
     this.selectedFileName = undefined;
+  }
+  
+  private getTenantIdForAI(): string {
+    const u = this.authService.getCurrentUser();
+    return (u?.hotelId || u?.businessId || 'default').toString();
+  }
+  
+  private readFileText(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string) || '');
+      reader.onerror = (e) => reject(e);
+      reader.readAsText(file, 'utf-8');
+    });
+  }
+
+  connectFanpage(): void {
+    const tenantId = this.getTenantIdForAI();
+    this.aiService.getFacebookOAuthUrl(tenantId).then(url => {
+      if (url) {
+        window.open(url, '_blank');
+      }
+    });
   }
 
   /**

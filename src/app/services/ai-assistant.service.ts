@@ -3,6 +3,13 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { firstValueFrom } from 'rxjs';
+ 
+interface Product {
+  name: string;
+  price: string;
+  description: string;
+  use_case?: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -34,6 +41,7 @@ interface ChatHistoryResponse {
 export class AiAssistantService {
   private messages = new BehaviorSubject<ChatMessage[]>([]);
   private isTyping = new BehaviorSubject<boolean>(false);
+  private aiUrl = `${environment.aiUrl}`;
 
   constructor(private http: HttpClient) {
     // Load lịch sử chat khi khởi tạo
@@ -136,6 +144,83 @@ export class AiAssistantService {
     } finally {
       this.isTyping.next(false);
     }
+  }
+ 
+  /**
+   * Gửi tin nhắn tới AI FastAPI (/chat) sử dụng tenant_id và question
+   */
+  async sendMessageExternal(question: string, tenantId: string): Promise<void> {
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: question,
+      role: 'user',
+      timestamp: new Date()
+    };
+    this.addMessage(userMessage);
+    this.isTyping.next(true);
+    try {
+      const response = await firstValueFrom(
+        this.http.post<any>(`${this.aiUrl}/chat`, { tenant_id: tenantId, question })
+      );
+      const answerText = response?.answer || 'Xin lỗi, tôi chưa có dữ liệu để tư vấn.';
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: answerText,
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      this.addMessage(assistantMessage);
+    } catch (error: any) {
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: error?.error?.error || 'Lỗi gọi AI tư vấn.',
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      this.addMessage(assistantMessage);
+    } finally {
+      this.isTyping.next(false);
+    }
+  }
+ 
+  /**
+   * Upload dataset sản phẩm/dịch vụ lên AI FastAPI (/dataset) cho tenant
+   */
+  async uploadDatasetExternal(tenantId: string, products: Product[]): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http.post<any>(`${this.aiUrl}/dataset`, { tenant_id: tenantId, products })
+      );
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `Đã cập nhật dataset cho tenant ${tenantId}. Bạn có thể bắt đầu chat.`,
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      this.addMessage(assistantMessage);
+    } catch (error: any) {
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: error?.error?.error || 'Lỗi cập nhật dataset.',
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      this.addMessage(assistantMessage);
+    }
+  }
+
+  async getFacebookOAuthUrl(tenantId: string): Promise<string> {
+    const resp = await firstValueFrom(
+      this.http.get<any>(`${this.aiUrl}/facebook/oauth-url`, { params: { tenant_id: tenantId } })
+    );
+    return resp?.url || '';
+  }
+
+  async getFacebookPages(tenantId: string): Promise<any[]> {
+    const resp = await firstValueFrom(
+      this.http.get<any>(`${this.aiUrl}/facebook/pages`, { params: { tenant_id: tenantId } })
+    );
+    return resp?.pages || [];
   }
 
   /**

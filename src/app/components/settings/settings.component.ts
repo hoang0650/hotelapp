@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SettingsService, EmailSettings } from '../../services/settings.service';
+import { AiAssistantService } from '../../services/ai-assistant.service';
 import { NotificationsService, Announcement } from '../../services/notifications.service';
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
@@ -72,7 +73,8 @@ export class SettingsComponent implements OnInit {
     private hotelService: HotelService,
     private businessService: BusinessService,
     private pricingService: PricingService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private aiAssistant: AiAssistantService
   ) {
     this.initForms();
   }
@@ -1365,5 +1367,37 @@ export class SettingsComponent implements OnInit {
     const numValue = value.replace(/\s?/g, '').replace(/,/g, '');
     return numValue;
   };
+
+  facebookPages: any[] = [];
+  loadingFacebook = false;
+
+  private getTenantIdForAI(): string {
+    const u = this.authService.getCurrentUser();
+    return (u?.hotelId || u?.businessId || 'default').toString();
+  }
+
+  connectFanpage(): void {
+    const tenantId = this.getTenantIdForAI();
+    this.aiAssistant.getFacebookOAuthUrl(tenantId).then(url => {
+      if (url) {
+        window.open(url, '_blank');
+      }
+    });
+  }
+
+  loadFacebookPages(): void {
+    const tenantId = this.getTenantIdForAI();
+    this.loadingFacebook = true;
+    this.aiAssistant.getFacebookPages(tenantId).then(pages => {
+      this.facebookPages = pages || [];
+      this.loadingFacebook = false;
+      if (!this.facebookPages.length) {
+        this.message.info('Chưa có fanpage liên kết. Vui lòng bấm Kết nối Fanpage.');
+      }
+    }).catch(() => {
+      this.loadingFacebook = false;
+      this.message.error('Lỗi tải danh sách fanpage');
+    });
+  }
 }
 

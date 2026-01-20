@@ -44,6 +44,8 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       nationality: ocrData.nationality,
       idNumber: ocrData.idNumber,
       dateOfBirth: ocrData.dateOfBirth,
+      dateOfIssue: ocrData.dateOfIssue,
+      dateOfExpiry: ocrData.dateOfExpiry,
       address: ocrData.address ? ocrData.address.substring(0, 50) + '...' : null
     });
     
@@ -58,6 +60,11 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         const dob = ocrData.dateOfBirth instanceof Date ? ocrData.dateOfBirth : new Date(ocrData.dateOfBirth);
         this.personalInfoForm.patchValue({ dateOfBirth: dob });
         console.log('[GuestSaveModal] Set dateOfBirth:', dob);
+      }
+      if (ocrData.dateOfExpiry) {
+        const doe = ocrData.dateOfExpiry instanceof Date ? ocrData.dateOfExpiry : new Date(ocrData.dateOfExpiry);
+        this.personalInfoForm.patchValue({ idExpiryDate: doe });
+        console.log('[GuestSaveModal] Set idExpiryDate:', doe);
       }
       if (ocrData.gender && (ocrData.gender === 'male' || ocrData.gender === 'female')) {
         this.personalInfoForm.patchValue({ gender: ocrData.gender });

@@ -52,6 +52,21 @@ export class FileService {
     }
   }
 
+  async ocrCard(front: File | null, back: File | null): Promise<any> {
+    const formData = new FormData();
+    if (front) formData.append('front', front);
+    if (back) formData.append('back', back);
+    try {
+      const response = await firstValueFrom(
+        this.http.post<any>(`${this.aiUrl}/ocr-card`, formData)
+      );
+      return response;
+    } catch (error: any) {
+      console.error('Error calling OCR card service:', error);
+      throw error;
+    }
+  }
+
   async geminiParse(prompt: string): Promise<string> {
     const formData = new FormData();
     formData.append('prompt', prompt);

@@ -96,8 +96,10 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     if (validFiles.length === 0) return;
     
-    // Xử lý OCR: nếu allowMultiple, xử lý tuần tự để đảm bảo thứ tự
-    if (this.allowMultiple && validFiles.length > 1) {
+    if (this.useExternalAI && this.allowMultiple && validFiles.length === 2) {
+      this.scannedData = [];
+      this.scanOCRTwoFiles(validFiles[0], validFiles[1]);
+    } else if (this.allowMultiple && validFiles.length > 1) {
       // Reset queue và thêm file theo đúng thứ tự upload với index rõ ràng
       this.scanningQueue = [];
       // Thêm vào queue với index để đảm bảo thứ tự: ảnh 0 = mặt trước, ảnh 1 = mặt sau
@@ -116,6 +118,92 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     // Reset input để có thể chọn lại file cùng tên
     event.target.value = '';
+  }
+
+  private async scanOCRTwoFiles(front: File, back: File): Promise<void> {
+    this.isScanning = true;
+    this.ocrProgress = 0;
+    try {
+      this.ocrStatus = 'Đang tối ưu hai ảnh...';
+      const frontProcessed = await this.preprocessImage(front);
+      const backProcessed = await this.preprocessImage(back);
+      this.ocrStatus = 'Đang gửi hai ảnh lên AI để OCR...';
+      const aiResult = await this.fileService.ocrCard(frontProcessed, backProcessed);
+      const lines = Array.isArray(aiResult?.rawText) ? aiResult.rawText : [];
+      const joined = lines.join('\n');
+      const dobStr: string | undefined = aiResult?.dateOfBirth;
+      let dobVal: Date | null = null;
+      if (dobStr && typeof dobStr === 'string') {
+        const norm = dobStr.replace(/[\.\-\s]/g, '/').trim();
+        const parts = norm.split('/');
+        if (parts.length === 3) {
+          const day = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1;
+          const year = parseInt(parts[2], 10);
+          if (year >= 1950 && year <= 2015 && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+            const dt = new Date(year, month, day);
+            if (!isNaN(dt.getTime())) {
+              dobVal = dt;
+            }
+          }
+        }
+      }
+      const parsedData: any = {
+        fullName: aiResult?.fullName || '',
+        idNumber: aiResult?.idNumber || '',
+        dateOfBirth: dobVal,
+        gender: aiResult?.gender || '',
+        nationality: aiResult?.nationality || '',
+        address: aiResult?.address || '',
+        dateOfIssue: aiResult?.dateOfIssue || '',
+        dateOfExpiry: aiResult?.dateOfExpiry || ''
+      };
+      if (this.useGemini) {
+        const prompt = `Hãy trích xuất JSON với các khóa: fullName, idNumber, dateOfBirth(dd/mm/yyyy), gender(male|female), nationality, address từ văn bản OCR sau:\n${joined}\nChỉ trả về JSON hợp lệ.`;
+        const geminiText = await this.fileService.geminiParse(prompt);
+        let obj: any = null;
+        try {
+          obj = JSON.parse(geminiText);
+        } catch {
+          const m = geminiText.match(/\{[\s\S]*\}/);
+          if (m) {
+            try { obj = JSON.parse(m[0]); } catch {}
+          }
+        }
+        if (obj && typeof obj === 'object') {
+          parsedData.fullName = obj.fullName || parsedData.fullName;
+          parsedData.idNumber = obj.idNumber || parsedData.idNumber;
+          parsedData.gender = obj.gender || parsedData.gender;
+          parsedData.nationality = obj.nationality || parsedData.nationality;
+          parsedData.address = obj.address || parsedData.address;
+          const gDob: string | undefined = obj.dateOfBirth;
+          if (gDob && typeof gDob === 'string') {
+            const norm = gDob.replace(/[\.\-\s]/g, '/').trim();
+            const parts = norm.split('/');
+            if (parts.length === 3) {
+              const day = parseInt(parts[0], 10);
+              const month = parseInt(parts[1], 10) - 1;
+              const year = parseInt(parts[2], 10);
+              if (year >= 1950 && year <= 2015 && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+                const dt = new Date(year, month, day);
+                if (!isNaN(dt.getTime())) {
+                  parsedData.dateOfBirth = dt;
+                }
+              }
+            }
+          }
+        }
+      }
+      this.message.success('Đã nhận dạng hai ảnh với /ocr-card!');
+      this.scanComplete.emit(parsedData);
+      this.fillFormFromOCRData(parsedData);
+    } catch (error: any) {
+      this.message.error(error?.message || 'Lỗi OCR hai ảnh');
+    } finally {
+      this.isScanning = false;
+      this.ocrProgress = 0;
+      this.ocrStatus = '';
+    }
   }
 
   /**

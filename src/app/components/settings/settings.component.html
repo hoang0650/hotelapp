@@ -1332,6 +1332,28 @@
             </div>
           </div>
 
+          <nz-divider nzText="Facebook Fanpage"></nz-divider>
+          <div style="margin-bottom: 12px;">
+            <button nz-button nzType="primary" (click)="connectFanpage()">Kết nối Fanpage</button>
+            <button nz-button nzType="default" [nzLoading]="loadingFacebook" (click)="loadFacebookPages()" style="margin-left: 8px;">Tải danh sách</button>
+          </div>
+          <nz-table [nzData]="facebookPages" [nzLoading]="loadingFacebook" [nzPageSize]="5" *ngIf="facebookPages && facebookPages.length">
+            <thead>
+              <tr>
+                <th>Tên Page</th>
+                <th>ID</th>
+                <th>Token</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of facebookPages">
+                <td>{{ p.name }}</td>
+                <td>{{ p.id }}</td>
+                <td>{{ p.access_token ? 'Đã lưu' : '-' }}</td>
+              </tr>
+            </tbody>
+          </nz-table>
+
           <div style="margin-top: 24px; text-align: right;">
             <button nz-button nzType="default" (click)="resetForm(generalForm)" style="margin-right: 8px;">
               Khôi phục mặc định

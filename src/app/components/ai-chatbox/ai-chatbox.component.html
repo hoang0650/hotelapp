@@ -7,6 +7,15 @@
       <span class="ai-chatbox-title">{{ 'AI_CHATBOX.TITLE' | translate }}</span>
       <button 
         nz-button 
+        nzType="default" 
+        nzSize="small" 
+        (click)="connectFanpage()" 
+        [title]="'Kết nối Fanpage'">
+        <i nz-icon nzType="link" nzTheme="outline"></i>
+        <span>Kết nối Fanpage</span>
+      </button>
+      <button 
+        nz-button 
         nzType="text" 
         nzSize="small" 
         (click)="clearChatHistory()" 
