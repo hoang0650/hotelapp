@@ -17,6 +17,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
   @Input() buttonText = 'Quét CCCD/GPLX'; // Text cho button
   @Input() allowMultiple = true; // Cho phép scan nhiều ảnh (2 mặt)
   @Input() useBackendPreprocessing = true; // Sử dụng backend sharp (true) hoặc client-side canvas (false)
+  @Input() useExternalAI = true; // Sử dụng PaddleOCR service thay cho Tesseract
   
   @Output() scanComplete = new EventEmitter<any>(); // Emit khi scan xong với dữ liệu đã parse
   @Output() imageSelected = new EventEmitter<File>(); // Emit khi chọn ảnh
@@ -343,6 +344,74 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     const sideLabel = isMultipleFiles ? (fileIndex === 0 ? 'mặt trước' : 'mặt sau') : '';
     
     try {
+      if (this.useExternalAI) {
+        this.ocrStatus = sideLabel ? `Đang tối ưu ${sideLabel}...` : 'Đang tối ưu ảnh...';
+        const processedFile = await this.preprocessImage(file);
+        this.ocrStatus = sideLabel ? `Đang gửi ảnh lên AI để OCR...` : 'Đang gửi ảnh lên AI để OCR...';
+        const aiResult = await this.fileService.ocrWithPaddle(processedFile);
+        const lines = Array.isArray(aiResult?.rawText) ? aiResult.rawText : [];
+        const joined = lines.join('\n');
+        const dobStr: string | undefined = aiResult?.dateOfBirth;
+        let dobVal: Date | null = null;
+        if (dobStr && typeof dobStr === 'string') {
+          const norm = dobStr.replace(/[\.\-\s]/g, '/').trim();
+          const parts = norm.split('/');
+          if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parseInt(parts[2], 10);
+            if (year >= 1950 && year <= 2015 && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+              const dt = new Date(year, month, day);
+              if (!isNaN(dt.getTime())) {
+                dobVal = dt;
+              }
+            }
+          }
+        }
+        const parsedData: any = {
+          fullName: aiResult?.fullName || '',
+          idNumber: aiResult?.idNumber || '',
+          dateOfBirth: dobVal,
+          gender: aiResult?.gender || '',
+          nationality: aiResult?.nationality || '',
+          address: aiResult?.address || ''
+        };
+        const detectedSide = this.detectCardSide(joined || parsedData.address || parsedData.fullName || '');
+        const detectedIsFront = detectedSide === 'front';
+        parsedData.side = detectedSide !== 'unknown' ? detectedSide : (fileIndex === 0 ? 'front' : 'back');
+        parsedData.isFrontSide = parsedData.side === 'front';
+        parsedData.detectedSide = detectedSide;
+        parsedData.fileIndex = fileIndex;
+        parsedData.uploadIndex = fileIndex;
+        while (this.scannedData.length <= fileIndex) {
+          this.scannedData.push(null);
+        }
+        this.scannedData[fileIndex] = parsedData;
+        const allScanned = this.scannedData.filter(data => data !== null).length === this.selectedFiles.length;
+        if (allScanned) {
+          const validScannedData = this.scannedData.filter(data => data !== null);
+          const sortedData = this.sortByCardSide(validScannedData);
+          sortedData.forEach((data, index) => {
+            data.fileIndex = index;
+            if (!data.side || data.side === 'unknown') data.side = index === 0 ? 'front' : 'back';
+            if (!data.detectedSide) data.detectedSide = data.side;
+            data.isFrontSide = data.side === 'front';
+          });
+          const mergedData = this.mergeScannedData(sortedData);
+          this.message.success(`Đã nhận dạng thành công ${this.selectedFiles.length} ảnh!`);
+          this.scanComplete.emit(mergedData);
+          this.fillFormFromOCRData(mergedData);
+        } else if (!this.allowMultiple || this.selectedFiles.length === 1) {
+          const mergedData = this.mergeScannedData([parsedData]);
+          this.message.success('Đã nhận dạng văn bản thành công!');
+          this.scanComplete.emit(mergedData);
+          this.fillFormFromOCRData(mergedData);
+        } else {
+          const scannedCount = this.scannedData.filter(data => data !== null).length;
+          this.message.success(`Đã nhận dạng ${sideLabel} (${scannedCount}/${this.selectedFiles.length})`);
+        }
+        return;
+      }
       // Pre-process ảnh trước khi OCR (backend hoặc client-side)
       if (this.useBackendPreprocessing) {
         this.ocrStatus = sideLabel 
@@ -454,7 +523,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
             fileIndex: d.fileIndex, 
             side: d.side, 
             detectedSide: d.detectedSide,
-            hasAddress: !!d.permanentAddress 
+            hasAddress: !!d.address 
           })));
           
           const mergedData = this.mergeScannedData(sortedData);
@@ -566,63 +635,30 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
    * Kiểm tra xem tên có hợp lệ không (không phải header, không quá ngắn/dài)
    */
   isValidName(name: string): boolean {
-    if (!name || name.length < 8 || name.length > 100) return false;
-    
-    // Loại bỏ các tên có chứa header
-    const headerKeywords = [
-      'VIỆT NAM', 'VIETNAM', 'VIET NA',
-      'SOCIALIST', 'SOCIALIS',
-      'REPUBLIC', 'REPUBLIC OF',
-      'CỘNG HÒA', 'CONG HOA', 'XÃ HỘI', 'XA HOI', 'CHỦ NGHĨA', 'CHU NGHIA',
-      'CĂN CƯỚC', 'CAN CƯỚC', 'CAN CUOC',
-      'CÔNG DÂN', 'CONG DAN'
-    ];
+    if (!name) return false;
     const upperName = name.toUpperCase();
-    if (headerKeywords.some(keyword => upperName.includes(keyword))) {
-      return false;
-    }
-    
     // Loại bỏ các tên không hợp lý (OCR nhầm)
     const invalidNamePatterns = [
-      'CONG HOA XA HOI CHU NGHIA',
-      'CONG HOA XA HOI',
-      'SOCIALIST REPUBLIC',
-      'SOCIALIS REPUBLIC',
-      'INDEPENDENCE', 'FREEDOM', 'HAPPINESS', 'HAPINESS', 'HAPIR',
-      'VIET NAM', 'VIET NA',
-      'CITIZEN IDENTITY CARD', 'CITIZEN', 'IDENTITY', 'CARD',
-      'PERSONAL IDENTIFICATION',
-      'IDENTIFICATION',
-      'PERSONAL',
-      'NGHY PANG',
-      'NKO MT',
-      'AYN DARE',
-      'HAL GANG',
-      'KY KHAI',
-      'IND PINE',
-      'IN DANH',
-      'CD SEN',
-      'IN DANH CD SEN',
-      'IN DANH CD SEN IDENTIFICATION',
-      'CAN CƯỚC CONG DAN',
-      'CAN CUOC CONG DAN',
-      'CAN CUOC',
-      'CONG DAN',
-      'CAN GƯỚC CONG DAN',
-      'CAN GUOC CONG DAN',
-      'EET MANY',
-      'EET',
-      'MANY',
-      'NOD THANG',
-      'AFMCHP',
-      'NOD THANG AFMCHP',
-      'NOD THANG ADECAP',
-      'ADECAP',
-      'THANG'
+      'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', 'CONG HOA XA HOI CHU NGHIA VIET NAM',
+      'ĐỘC LẬP - TỰ DO - HẠNH PHÚC', 'DOC LAP - TU DO - HANH PHUC',
+      'SOCIALIST REPUBLIC OF VIET NAM', 'INDEPENDENCE - FREEDOM - HAPPINESS',
+      'CĂN CƯỚC','CAN CUOC','CĂN CƯỚC CÔNG DÂN', 'CAN CUOC CONG DAN', 'CITIZEN IDENTITY CARD',
+      'BỘ CÔNG AN', 'MINISTRY OF PUBLIC SECURITY',
+      'BỘ GTVT', 'BỘ GIAO THÔNG VẬN TẢI', 'MINISTRY OF TRANSPORT', 'MOT','GIẤY PHÉP LÁI XE', 'DRIVER', 'LICENSE',
+      'CÓ GIÁ TRỊ ĐẾN:','DATE OF EXPIRY','<<<','<<','<'
     ];
     if (invalidNamePatterns.some(pattern => upperName.includes(pattern))) {
       return false;
     }
+    const labelKeywords = [
+      'HỌ, CHỮ ĐỆM VÀ TÊN KHAI SINH / FULL NAME:',
+      'HỌ, CHỮ ĐỆM VÀ TÊN / FULL NAME:',
+      'HỌ VÀ TÊN / FULL NAME:',
+      'HỌ TÊN / FULL NAME:',
+      'FULL NAME:'
+    ];
+    if (labelKeywords.some(keyword => upperName.includes(keyword))) return true;
+    if (name.length < 8 || name.length > 100) return false;
     
     // Tên phải có ít nhất 2 từ, mỗi từ ít nhất 2 ký tự
     const nameParts = name.split(/\s+/).filter(part => part.length >= 2);
@@ -655,7 +691,41 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
    * Kiểm tra xem địa chỉ có hợp lệ không
    */
   isValidAddress(address: string): boolean {
-    if (!address || address.length < 15 || address.length > 500) return false;
+    if (!address) return false;
+    const upperAddress = address.toUpperCase();
+    const invalidAddressPatterns = [
+      'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', 'CONG HOA XA HOI CHU NGHIA VIET NAM',
+      'ĐỘC LẬP - TỰ DO - HẠNH PHÚC', 'DOC LAP - TU DO - HANH PHUC',
+      'SOCIALIST REPUBLIC OF VIET NAM', 'INDEPENDENCE - FREEDOM - HAPPINESS',
+      'CĂN CƯỚC','CAN CUOC','CĂN CƯỚC CÔNG DÂN', 'CAN CUOC CONG DAN', 'CITIZEN IDENTITY CARD',
+      'BỘ CÔNG AN', 'MINISTRY OF PUBLIC SECURITY',
+      'BỘ GTVT', 'BỘ GIAO THÔNG VẬN TẢI', 'MINISTRY OF TRANSPORT', 'MOT','GIẤY PHÉP LÁI XE', 'DRIVER', 'LICENSE',
+      'CÓ GIÁ TRỊ ĐẾN:','DATE OF EXPIRY','<<<','<<','<'
+    ];
+    if (invalidAddressPatterns.some(pattern => upperAddress.includes(pattern))) {
+      return false;
+    }
+    const addressLabelKeywords = [
+      'NƠI CƯ TRÚ / PLACE OF RESIDENCE:',
+      'NƠI THƯỜNG TRÚ / PLACE OF RESIDENCE:',
+      'NƠI CƯ TRÚ/ ADDRESS:',
+      'NƠI CƯ TRÚ:',
+      'NƠI THƯỜNG TRÚ:',
+      'PLACE OF RESIDENCE:',
+      'PERMANENT ADDRESS:',
+      'CURRENT ADDRESS:',
+      'RESIDENTIAL ADDRESS:',
+      'REGISTERED RESIDENCE:',
+      'HOME ADDRESS:',
+      'DOMICILE:',
+      'ĐỊA CHỈ / ADDRESS:',
+      'ADDRESS:'
+    ];
+    if (addressLabelKeywords.some(keyword => upperAddress.includes(keyword))) return true;
+    const addressRegexVN = /(SỐ NHÀ|ĐƯỜNG).*(PHƯỜNG|XÃ).*(QUẬN|HUYỆN).*(TỈNH|THÀNH PHỐ)/i;
+    const addressRegexNoDia = /(SO NHA|DUONG).*(PHUONG|XA).*(QUAN|HUYEN).*(TINH|THANH PHO)/i;
+    if (addressRegexVN.test(upperAddress) || addressRegexNoDia.test(upperAddress)) return true;
+    if (address.length < 15 || address.length > 500) return false;
     
     // Loại bỏ các địa chỉ có quá nhiều ký tự đặc biệt không hợp lý
     const specialCharCount = (address.match(/[^\wÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s,\.\-]/gi) || []).length;
@@ -666,6 +736,42 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     if (addressParts.length < 3) return false;
     
     return true;
+  }
+
+  formatVietnameseAddress(address: string): string {
+    if (!address) return '';
+    let a = address.normalize('NFC');
+    a = a.replace(/\s+/g, ' ').trim();
+    a = a.replace(/,\s*,+/g, ', ');
+    a = a.replace(/\s*,\s*/g, ', ');
+    a = a.replace(/,{2,}/g, ',').replace(/\.{2,}/g, '.');
+    const replacements: Array<[RegExp, string]> = [
+      [/\bTP\s*HCM\b/gi, 'TP. Hồ Chí Minh'],
+      [/\bTP\s*HO\s*CHI\s*MINH\b/gi, 'TP. Hồ Chí Minh'],
+      [/\bHO\s*CHI\s*MINH\b/gi, 'Hồ Chí Minh'],
+      [/\bHCM\b/gi, 'Hồ Chí Minh'],
+      [/\bCHR\s+MINH\b/gi, 'Chí Minh'],
+      [/\bHA\s+NOI\b/gi, 'Hà Nội'],
+      [/\bDA\s+NANG\b/gi, 'Đà Nẵng'],
+      [/\bBINH\s+DUONG\b/gi, 'Bình Dương'],
+      [/\bQUAN\b/gi, 'Quận'],
+      [/\bPHUONG\b/gi, 'Phường'],
+      [/\bHUYEN\b/gi, 'Huyện'],
+      [/\bTINH\b/gi, 'Tỉnh'],
+      [/\bTHANH\s+PHO\b/gi, 'Thành phố'],
+      [/\bTHI\s+TRAN\b/gi, 'Thị trấn'],
+      [/\bTHI\s+XA\b/gi, 'Thị xã'],
+      [/\bXA\b/gi, 'Xã'],
+      [/\bTHON\b/gi, 'Thôn'],
+      [/\bAP\b/gi, 'Ấp'],
+      [/\bDUONG\b/gi, 'Đường'],
+      [/\bSO\b/gi, 'Số']
+    ];
+    for (const [regex, replacement] of replacements) {
+      a = a.replace(regex, replacement);
+    }
+    a = a.replace(/\s{2,}/g, ' ').trim();
+    return a;
   }
 
   mergeScannedData(dataArray: any[]): any {
@@ -680,8 +786,6 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         dateOfBirth: null,
         gender: '',
         nationality: '',
-        permanentAddress: '',
-        phone: '',
         address: ''
       };
     }
@@ -692,8 +796,6 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       dateOfBirth: null,
       gender: '',
       nationality: '',
-      permanentAddress: '', // Nơi thường trú
-      phone: '',
       address: ''
     };
     
@@ -719,8 +821,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
       
       // Nếu cùng side và cùng index, ưu tiên dữ liệu hợp lệ hơn
-      const aValid = (a.fullName && this.isValidName(a.fullName)) || (a.permanentAddress && this.isValidAddress(a.permanentAddress));
-      const bValid = (b.fullName && this.isValidName(b.fullName)) || (b.permanentAddress && this.isValidAddress(b.permanentAddress));
+      const aValid = (a.fullName && this.isValidName(a.fullName)) || (a.address && this.isValidAddress(a.address));
+      const bValid = (b.fullName && this.isValidName(b.fullName)) || (b.address && this.isValidAddress(b.address));
       if (aValid && !bValid) return -1;
       if (!aValid && bValid) return 1;
       
@@ -734,8 +836,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       nameValid: d.fullName ? this.isValidName(d.fullName) : false,
       hasGender: !!d.gender,
       gender: d.gender || 'N/A',
-      hasAddress: !!d.permanentAddress,
-      addressValid: d.permanentAddress ? this.isValidAddress(d.permanentAddress) : false
+      hasAddress: !!d.address,
+      addressValid: (d.address && this.isValidAddress(d.address)) || false
     })));
     
     // Ưu tiên dữ liệu từ mặt trước (fileIndex = 0) trước, sau đó mới lấy từ mặt sau
@@ -743,7 +845,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     // Mặt sau thường có: Nơi thường trú, Địa chỉ
     // Nhưng chỉ lấy dữ liệu hợp lệ (isValidName, isValidAddress)
     for (const data of sortedData) {
-      console.log(`[OCR] Merge: fileIndex=${data.fileIndex}, side=${data.side}, fullName=${data.fullName || 'N/A'}, gender=${data.gender || 'N/A'}, permanentAddress=${data.permanentAddress || 'N/A'}`);
+      console.log(`[OCR] Merge: fileIndex=${data.fileIndex}, side=${data.side}, fullName=${data.fullName || 'N/A'}, gender=${data.gender || 'N/A'}, address=${data.address || 'N/A'}`);
       
       // Họ và tên: LUÔN ưu tiên mặt trước (front) hơn mặt sau (back)
       // QUAN TRỌNG: Chỉ lấy tên từ mặt trước, bỏ qua tên từ mặt sau
@@ -808,60 +910,19 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         }
       }
       
-      // Nơi thường trú: ƯU TIÊN mặt trước, nếu không có thì lấy từ mặt sau
-      // Chỉ lấy nếu hợp lệ
-      if (data.permanentAddress && this.isValidAddress(data.permanentAddress)) {
-        // Nếu chưa có nơi thường trú, lấy từ bất kỳ mặt nào
-        if (!merged.permanentAddress) {
-          merged.permanentAddress = data.permanentAddress;
-          console.log(`[OCR] Merge: Set permanentAddress from ${data.side} (fileIndex=${data.fileIndex}): ${data.permanentAddress.substring(0, 50)}...`);
-        } else {
-          // Nếu đã có nơi thường trú, chỉ thay thế nếu:
-          // 1. Nơi thường trú mới từ mặt trước (front) - ưu tiên mặt trước
-          // 2. Hoặc nơi thường trú hiện tại không hợp lệ
-          if (data.side === 'front' && merged.permanentAddress) {
-            // Luôn ưu tiên nơi thường trú từ mặt trước
-            merged.permanentAddress = data.permanentAddress;
-            console.log(`[OCR] Merge: Replaced permanentAddress with value from front (fileIndex=${data.fileIndex}): ${data.permanentAddress.substring(0, 50)}...`);
-          }
-        }
-      }
-      
-      // Địa chỉ (nơi cư trú): ƯU TIÊN mặt sau, nếu không có thì lấy từ mặt trước (nơi thường trú)
-      // Chỉ lấy nếu hợp lệ
-      if (data.address && this.isValidAddress(data.address)) {
-        // Nếu chưa có địa chỉ, lấy từ bất kỳ mặt nào
+      const addrCandidate = data.address && this.isValidAddress(data.address)
+        ? data.address
+        : '';
+      if (addrCandidate) {
         if (!merged.address) {
-          merged.address = data.address;
-          console.log(`[OCR] Merge: Set address from ${data.side} (fileIndex=${data.fileIndex}): ${data.address.substring(0, 50)}...`);
-        } else {
-          // Nếu đã có địa chỉ, chỉ thay thế nếu:
-          // 1. Địa chỉ mới từ mặt sau (back) - ưu tiên mặt sau cho nơi cư trú
-          // 2. Hoặc địa chỉ hiện tại không hợp lệ
-          if (data.side === 'back' && merged.address) {
-            // Luôn ưu tiên nơi cư trú từ mặt sau
-            merged.address = data.address;
-            console.log(`[OCR] Merge: Replaced address with value from back (fileIndex=${data.fileIndex}): ${data.address.substring(0, 50)}...`);
-          }
+          merged.address = addrCandidate;
+          console.log(`[OCR] Merge: Set address from ${data.side} (fileIndex=${data.fileIndex}): ${addrCandidate.substring(0, 50)}...`);
         }
-      }
-      
-      // Số điện thoại: lấy từ bất kỳ mặt nào
-      if (data.phone && !merged.phone) {
-        merged.phone = data.phone;
       }
     }
     
-    // Logic điền địa chỉ:
-    // - Ưu tiên: "Nơi thường trú" từ mặt trước
-    // - Nếu không có: "Nơi cư trú" từ mặt sau
-    // - Nếu không có cả hai: dùng nơi thường trú làm địa chỉ
     if (!merged.address) {
-      if (merged.permanentAddress) {
-        // Nếu không có địa chỉ (nơi cư trú), dùng nơi thường trú
-        merged.address = merged.permanentAddress;
-        console.log('[OCR] Merge: Using permanentAddress as address (no address found)');
-      }
+      console.log('[OCR] Merge: No valid address found');
     }
     
     // Mặc định quốc tịch là "Việt Nam" nếu không có hoặc không hợp lệ
@@ -876,7 +937,6 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       fullName: merged.fullName || 'N/A',
       gender: merged.gender || 'N/A',
       nationality: merged.nationality || 'N/A',
-      permanentAddress: merged.permanentAddress ? merged.permanentAddress.substring(0, 50) + '...' : 'N/A',
       address: merged.address ? merged.address.substring(0, 50) + '...' : 'N/A',
       idNumber: merged.idNumber || 'N/A',
       dateOfBirth: merged.dateOfBirth || 'N/A'
@@ -1123,6 +1183,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
    */
   fixVietnameseOCRErrors(text: string): string {
     let fixed = text;
+    fixed = fixed.normalize('NFC');
     
     // Sửa các pattern đặc biệt trước (ưu tiên cao nhất)
     // "ade IÃ SST RA" -> "ĐỖ THỊ TRÚC LAN"
@@ -1313,8 +1374,6 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       dateOfBirth: null,
       gender: '',
       nationality: '',
-      permanentAddress: '', // Nơi thường trú
-      phone: '',
       address: ''
     };
     
@@ -1397,6 +1456,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         'CĂN CƯỚC', 'CAN CƯỚC', 'CAN CUOC', 'CÔNG DÂN', 'CONG DAN', 'CONG DÂN',
         'CITIZEN', 'IDENTITY', 'CARD',
         'BỘ CÔNG AN', 'MINISTRY', 'PUBLIC', 'SECURITY',
+        'SỐ ĐỊNH DANH', 'SO DINH DANH', 'PERSONAL IDENTIFICATION', 'ID NUMBER', 'SỐ:', 'NO:',
         // Khẩu hiệu mặt trước (không dấu và các biến thể thường bị OCR sai)
         'DOC LAP', 'TU DO', 'HANH PHUC', 'FREDOM', 'HAPIR', 'HAPINESS'
       ];
@@ -2383,8 +2443,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Tìm nơi thường trú (thường ở mặt sau CCCD) - cải thiện logic
-    let permanentAddressFound = false;
+    // Tìm địa chỉ (thường ở mặt sau CCCD) - cải thiện logic
     
     // Helper function để làm sạch dòng địa chỉ
     // QUAN TRỌNG: Loại bỏ tất cả header từ mặt trước để không lấy vào địa chỉ mặt sau
@@ -2583,15 +2642,15 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           continue; // Bỏ qua địa chỉ không hợp lệ
         }
         if (address.length > 4) {
-          parsedData.permanentAddress = address;
-          console.log('Found permanentAddress (Nơi thường trú - Pattern 1a):', address, 'from line:', line);
+          parsedData.address = address;
+          console.log('Found address (Nơi thường trú - Pattern 1a):', address, 'from line:', line);
           continue; // Bỏ qua pattern 1b nếu đã tìm thấy
         }
       }
       
-      // Kiểm tra "Nơi cư trú" (nếu chưa có permanentAddress)
+      // Kiểm tra "Nơi cư trú" (nếu chưa có địa chỉ)
       const currentAddressMatch = line.match(currentAddressPattern);
-      if (currentAddressMatch && currentAddressMatch[1] && !parsedData.permanentAddress) {
+      if (currentAddressMatch && currentAddressMatch[1] && !parsedData.address) {
         let address = currentAddressMatch[1].trim();
         address = address.replace(/\s*\/\s*Place\s+of\s+residence.*/i, '').trim();
         
@@ -2629,12 +2688,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
       
       // Pattern 1b: Dòng chỉ có "Nơi thường trú" hoặc "Nơi cư trú" (không có địa chỉ), địa chỉ nằm ở các dòng tiếp theo
-      // Phân biệt "Nơi thường trú" (permanentAddress) và "Nơi cư trú" (address)
       const permanentAddressLabelPattern = /^(?:Nơi\s+thường\s+trú|Thường\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|NOI\s+THUONG\s+TRU|NOI\s+THUONG\s+TRU)[\s:]*$/i;
       const currentAddressLabelPattern = /^(?:Nơi\s+cư\s+trú|Cư\s+trú|Current\s+address|NOI\s+CU\s+TRU|NOI\s+CU\s+TRU|Place\s+of\s+residence)[\s:]*$/i;
       
       // Kiểm tra "Nơi thường trú" trước (ưu tiên)
-      if (permanentAddressLabelPattern.test(line) && i + 1 < lines.length && !parsedData.permanentAddress) {
+      if (permanentAddressLabelPattern.test(line) && i + 1 < lines.length && !parsedData.address) {
         const addressLines: string[] = [];
         // Lấy các dòng tiếp theo cho đến khi gặp dòng khác (tối đa 12 dòng để lấy đầy đủ)
         for (let j = i + 1; j < lines.length && j < i + 13; j++) {
@@ -2847,22 +2905,19 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           }
           
           if (address.length > 15) { // Tăng yêu cầu độ dài tối thiểu lên 15 ký tự
-            // Phân biệt "Nơi thường trú" (permanentAddress)
-            parsedData.permanentAddress = address;
-            permanentAddressFound = true;
-            console.log('Found permanentAddress (Nơi thường trú - Pattern 1b):', parsedData.permanentAddress);
+            parsedData.address = address;
+            console.log('Found address (Nơi thường trú - Pattern 1b):', parsedData.address);
             break;
           }
         }
       }
       
       // Pattern 2: Dòng có "Nơi thường trú:" hoặc "Nơi cư trú:" hoặc "Thường trú:" và địa chỉ nằm cùng dòng
-      // Phân biệt "Nơi thường trú" (permanentAddress) và "Nơi cư trú" (address)
       const permanentAddressInLine = line.match(/(?:Nơi\s+thường\s+trú|Thường\s+trú|Hộ\s+khẩu\s+thường\s+trú|Permanent\s+address|NOI\s+THUONG\s+TRU|NOI\s+THUONG\s+TRU)[\s:]+(.+)/i);
       const currentAddressInLine = line.match(/(?:Nơi\s+cư\s+trú|Cư\s+trú|Current\s+address|NOI\s+CU\s+TRU|NOI\s+CU\s+TRU|Place\s+of\s+residence)[\s:]+(.+)/i);
       
       // Kiểm tra "Nơi thường trú" trước (ưu tiên)
-      if (permanentAddressInLine && permanentAddressInLine[1] && !parsedData.permanentAddress) {
+      if (permanentAddressInLine && permanentAddressInLine[1] && !parsedData.address) {
         let address = permanentAddressInLine[1].trim();
         
         // QUAN TRỌNG: Loại bỏ các label và tên không phải địa chỉ trước khi clean
@@ -3048,14 +3103,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         address = address.replace(/\b(\w+)\s+\1\b/gi, '$1').trim();
         
         if (address.length > 15) { // Tăng yêu cầu độ dài tối thiểu lên 15 ký tự
-          parsedData.permanentAddress = address;
-          permanentAddressFound = true;
-          console.log('Found permanentAddress (Nơi thường trú - Pattern 2):', parsedData.permanentAddress);
+          parsedData.address = address;
+          console.log('Found address (Nơi thường trú - Pattern 2):', parsedData.address);
           break;
         }
       }
       
-      // Kiểm tra "Nơi cư trú" (nếu chưa có permanentAddress)
+      // Kiểm tra "Nơi cư trú" (nếu chưa có địa chỉ)
       if (currentAddressInLine && currentAddressInLine[1] && !parsedData.address) {
         let address = cleanAddressLine(currentAddressInLine[1]);
         
@@ -3119,7 +3173,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     // Pattern 3: Tìm địa chỉ từ các dòng có nhiều từ tiếng Việt (thường là địa chỉ) nếu chưa tìm thấy
     // Pattern này tìm các dòng dài có nhiều từ, có thể là địa chỉ mà không có label rõ ràng
     // Cải thiện: tìm và ghép nhiều dòng địa chỉ liên tiếp
-    if (!permanentAddressFound) {
+    if (!parsedData.address) {
       // Tìm các dòng có độ dài hợp lý và có nhiều từ (có thể là địa chỉ)
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -3192,9 +3246,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
               if (addressLines.length > 0) {
                 const combinedAddress = addressLines.join(', ').replace(/\s+/g, ' ').trim();
                 if (combinedAddress.length >= 15 && this.isValidAddress(combinedAddress)) {
-                  parsedData.permanentAddress = combinedAddress;
-                  permanentAddressFound = true;
-                  console.log('Found address (Pattern 3 - multiple lines with address keywords/place names):', parsedData.permanentAddress);
+                  parsedData.address = combinedAddress;
+                  console.log('Found address (Pattern 3 - multiple lines with address keywords/place names):', parsedData.address);
                   break;
                 }
               }
@@ -3206,9 +3259,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
                 !/\bNgo\s+Thi\s+Nham\b/gi.test(line)) {
               const cleanLine = cleanAddressLine(line);
               if (cleanLine.length >= 15 && this.isValidAddress(cleanLine)) {
-                parsedData.permanentAddress = cleanLine;
-                permanentAddressFound = true;
-                console.log('Found address (Pattern 3 - long line):', parsedData.permanentAddress);
+                parsedData.address = cleanLine;
+                console.log('Found address (Pattern 3 - long line):', parsedData.address);
                 break;
               }
             }
@@ -3218,7 +3270,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     }
     
     // Tìm địa chỉ (nơi cư trú hiện tại) - tương tự logic trên
-    if (!permanentAddressFound) {
+    if (!parsedData.address) {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const addressInLine = line.match(/(?:Địa chỉ|Address|Nơi\s+cư\s+trú)[:\s]+(.+)/i);
@@ -3262,43 +3314,26 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Nếu không tìm thấy địa chỉ nhưng có nơi thường trú, dùng nơi thường trú
-    if (!parsedData.address && parsedData.permanentAddress) {
-      parsedData.address = parsedData.permanentAddress;
-    }
-    
-    // Tìm số điện thoại
-    const phonePatterns = [
-      /(?:Điện thoại|Phone|Tel)[:\s]*(\+?84|0)[\d\s]{9,10}/i,
-      /\b(0[\d\s]{9,10})\b/,
-      /\b(\+84[\d\s]{9,10})\b/
-    ];
-    
-    for (const pattern of phonePatterns) {
-      const match = normalizedText.match(pattern);
-      if (match && match[1]) {
-        let phone = match[1].replace(/\s+/g, '');
-        // Chuẩn hóa số điện thoại Việt Nam
-        if (phone.startsWith('+84')) {
-          phone = '0' + phone.substring(3);
-        }
-        if (phone.length >= 10) {
-          parsedData.phone = phone;
-        }
-        break;
-      }
-    }
-    
     console.log('=== PARSED DATA ===');
     console.log('Full Name:', parsedData.fullName);
     console.log('ID Number:', parsedData.idNumber);
     console.log('Date of Birth:', parsedData.dateOfBirth);
     console.log('Gender:', parsedData.gender);
     console.log('Nationality:', parsedData.nationality);
-    console.log('Permanent Address:', parsedData.permanentAddress);
     console.log('Address:', parsedData.address);
-    console.log('Phone:', parsedData.phone);
     console.log('===================');
+    
+    if (parsedData.address) {
+      parsedData.address = this.formatVietnameseAddress(parsedData.address);
+    } else {
+      const textForRegex = fixedText.replace(/\s+/g, ' ').toUpperCase();
+      const reVN = /(SỐ NHÀ|ĐƯỜNG).*(PHƯỜNG|XÃ).*(QUẬN|HUYỆN).*(TỈNH|THÀNH PHỐ)/i;
+      const reNoDia = /(SO NHA|DUONG).*(PHUONG|XA).*(QUAN|HUYEN).*(TINH|THANH PHO)/i;
+      const m = textForRegex.match(reVN) || textForRegex.match(reNoDia);
+      if (m && m[0]) {
+        parsedData.address = this.formatVietnameseAddress(m[0]);
+      }
+    }
     
     return parsedData;
   }
@@ -3315,12 +3350,13 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       if (data.fullName && this.isValidName(data.fullName)) {
         // Loại bỏ các giá trị không hợp lý như "Khách lẻ", "Khách lư"
         const invalidNames = [
-          'Khách lẻ', 'Khách lư', 'Khách', 'lẻ', 'lư',
-          'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', 'CONG HOA XA HOI CHU NGHIA VIET NAM', 'CONG HOA XA HOI CHU NGHIA', 'CONG HOA XA HOI',
-          'SOCIALIST REPUBLIC OF VIET NAM', 'SOCIALIS REPUBLIC',
-          'INDEPENDENCE', 'FREEDOM', 'HAPPINESS', 'HAPINESS', 'HAPIR',
-          'CĂN CƯỚC CÔNG DÂN', 'CAN CUOC CONG DAN', 'CAN CUOC', 'CONG DAN',
-          'VIỆT NAM', 'VIET NAM', 'VIET NA'
+          'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', 'CONG HOA XA HOI CHU NGHIA VIET NAM',
+      'ĐỘC LẬP - TỰ DO - HẠNH PHÚC', 'DOC LAP - TU DO - HANH PHUC',
+      'SOCIALIST REPUBLIC OF VIET NAM', 'INDEPENDENCE - FREEDOM - HAPPINESS',
+      'CĂN CƯỚC','CAN CUOC','CĂN CƯỚC CÔNG DÂN', 'CAN CUOC CONG DAN', 'CITIZEN IDENTITY CARD',
+      'BỘ CÔNG AN', 'MINISTRY OF PUBLIC SECURITY',
+      'BỘ GTVT', 'BỘ GIAO THÔNG VẬN TẢI', 'MINISTRY OF TRANSPORT', 'MOT','GIẤY PHÉP LÁI XE', 'DRIVER', 'LICENSE',
+      'CÓ GIÁ TRỊ ĐẾN:','DATE OF EXPIRY','<<<','<<','<'
         ];
         const upperName = data.fullName.toUpperCase();
         if (!invalidNames.some(invalid => upperName.includes(invalid.toUpperCase()))) {
@@ -3344,16 +3380,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     
     // Điền vào contactInfo form nếu có
     if (this.contactInfoFormGroup) {
-      if (data.phone) {
-        this.contactInfoFormGroup.patchValue({ phone: data.phone });
-      }
-      // Ưu tiên nơi thường trú, nếu không có thì dùng địa chỉ
-      // Chỉ điền nếu địa chỉ hợp lệ
-      const addressValue = data.permanentAddress || data.address;
-      if (addressValue && this.isValidAddress(addressValue)) {
-        // Loại bỏ các pattern không hợp lý
-        let cleanAddress = addressValue;
-        // Loại bỏ các pattern như "Ch B2 TN7 T.., T 40 ổ 6,ú,, à"
+      const addressValue = data.address || '';
+      const reVN = /(SỐ NHÀ|ĐƯỜNG).*(PHƯỜNG|XÃ).*(QUẬN|HUYỆN).*(TỈNH|THÀNH PHỐ)/i;
+      const reNoDia = /(SO NHA|DUONG).*(PHUONG|XA).*(QUAN|HUYEN).*(TINH|THANH PHO)/i;
+      const upper = addressValue.toUpperCase();
+      const matchSeg = upper.match(reVN) || upper.match(reNoDia);
+      const candidate = matchSeg && matchSeg[0] ? matchSeg[0] : addressValue;
+      if (candidate && this.isValidAddress(candidate)) {
+        let cleanAddress = this.formatVietnameseAddress(candidate);
         if (!/Ch\s+B\d+\s+TN\d+\s+T\.\.|T\s+\d+\s+[ổộ]\s+\d+|ú,,|à$/.test(cleanAddress)) {
           const addressGroup = this.contactInfoFormGroup.get('address') as FormGroup;
           if (addressGroup) {
@@ -3364,7 +3398,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           console.log('[OCR] Fill form: Address invalid, skipped:', cleanAddress.substring(0, 50) + '...');
         }
       } else {
-        console.log('[OCR] Fill form: Address not set, permanentAddress =', data.permanentAddress ? data.permanentAddress.substring(0, 50) + '...' : 'N/A', ', address =', data.address ? data.address.substring(0, 50) + '...' : 'N/A');
+        console.log('[OCR] Fill form: Address not set, address =', data.address ? data.address.substring(0, 50) + '...' : 'N/A');
       }
     }
     

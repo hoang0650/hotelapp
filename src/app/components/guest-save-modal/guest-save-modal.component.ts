@@ -44,8 +44,6 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       nationality: ocrData.nationality,
       idNumber: ocrData.idNumber,
       dateOfBirth: ocrData.dateOfBirth,
-      phone: ocrData.phone,
-      permanentAddress: ocrData.permanentAddress ? ocrData.permanentAddress.substring(0, 50) + '...' : null,
       address: ocrData.address ? ocrData.address.substring(0, 50) + '...' : null
     });
     
@@ -77,12 +75,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     
     // Điền vào contactInfo
     if (this.contactInfoForm) {
-      if (ocrData.phone) {
-        this.contactInfoForm.patchValue({ phone: ocrData.phone });
-        console.log('[GuestSaveModal] Set phone:', ocrData.phone);
-      }
-      // Ưu tiên nơi thường trú, nếu không có thì dùng địa chỉ
-      const addressValue = ocrData.permanentAddress || ocrData.address;
+      const addressValue = ocrData.address;
       if (addressValue && this.addressForm) {
         this.addressForm.patchValue({ street: addressValue });
         console.log('[GuestSaveModal] Set address:', addressValue.substring(0, 50) + '...');

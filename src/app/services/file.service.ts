@@ -21,6 +21,7 @@ export interface PreprocessImageResponse {
 })
 export class FileService {
   private apiUrl = `${environment.apiUrl}/files`;
+  private aiUrl = `${environment.aiUrl}`;
 
   constructor(private http: HttpClient) {}
 
@@ -29,6 +30,26 @@ export class FileService {
     return new HttpHeaders({
       'Authorization': `Bearer ${token || ''}`
     });
+  }
+
+  /**
+   * OCR ảnh bằng PaddleOCR (PHGroup-AI FastAPI)
+   */
+  async ocrWithPaddle(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+      const response = await firstValueFrom(
+        this.http.post<any>(
+          `${this.aiUrl}/ocr`,
+          formData
+        )
+      );
+      return response;
+    } catch (error: any) {
+      console.error('Error calling PaddleOCR service:', error);
+      throw error;
+    }
   }
 
   /**

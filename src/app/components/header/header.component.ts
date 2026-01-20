@@ -502,9 +502,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   getAvatarUrl(): string {
-    if (!this.currentUser) return 'https://mdbcdn.b-cdn.net/img/new/avatars/2.webp';
+    if (!this.currentUser) return 'assets/images/avatar.jpg';
     const avatar = this.currentUser.avatar || (this.currentUser as any).avatarId;
-    if (!avatar) return 'https://mdbcdn.b-cdn.net/img/new/avatars/2.webp';
+    if (!avatar) return 'assets/images/avatar.jpg';
     return this.getImageUrl(avatar);
   }
 
