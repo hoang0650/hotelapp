@@ -56,6 +56,9 @@
             [contactInfoFormGroup]="contactInfoForm"
             [showPreview]="true"
             [allowMultiple]="true"
+            [useBackendPreprocessing]="false"
+            [useExternalAI]="true"
+            [useGemini]="true"
             buttonText="Chọn ảnh CCCD/GPLX để quét (có thể chọn 2 mặt)"
             (scanComplete)="onOCRScanComplete($event)">
           </app-ocr-scanner>

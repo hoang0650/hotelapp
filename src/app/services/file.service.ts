@@ -78,9 +78,8 @@ export class FileService {
 
       const response = await firstValueFrom(
         this.http.post<PreprocessImageResponse>(
-          `${this.apiUrl}/preprocess-ocr`,
-          formData,
-          { headers: this.getHeaders() }
+          `${this.aiUrl}/preprocess-ocr`,
+          formData
         )
       );
 
