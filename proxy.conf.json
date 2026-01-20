@@ -4,5 +4,23 @@
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
+  },
+  "/ocr": {
+    "target": "https://phgroup-ai-production.up.railway.app",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/preprocess-ocr": {
+    "target": "https://phgroup-ai-production.up.railway.app",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/chat": {
+    "target": "https://phgroup-ai-production.up.railway.app",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
   }
 } 
