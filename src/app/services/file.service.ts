@@ -52,6 +52,20 @@ export class FileService {
     }
   }
 
+  async geminiParse(prompt: string): Promise<string> {
+    const formData = new FormData();
+    formData.append('prompt', prompt);
+    try {
+      const response = await firstValueFrom(
+        this.http.post<any>(`${this.aiUrl}/chat`, formData)
+      );
+      return response?.text || '';
+    } catch (error: any) {
+      console.error('Error calling Gemini chat service:', error);
+      throw error;
+    }
+  }
+
   /**
    * Pre-process ảnh cho OCR sử dụng sharp trên backend
    * @param file File ảnh cần xử lý

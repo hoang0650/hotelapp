@@ -18,6 +18,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
   @Input() allowMultiple = true; // Cho phép scan nhiều ảnh (2 mặt)
   @Input() useBackendPreprocessing = true; // Sử dụng backend sharp (true) hoặc client-side canvas (false)
   @Input() useExternalAI = true; // Sử dụng PaddleOCR service thay cho Tesseract
+  @Input() useGemini = true;
   
   @Output() scanComplete = new EventEmitter<any>(); // Emit khi scan xong với dữ liệu đã parse
   @Output() imageSelected = new EventEmitter<File>(); // Emit khi chọn ảnh
@@ -376,6 +377,42 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           nationality: aiResult?.nationality || '',
           address: aiResult?.address || ''
         };
+        if (this.useGemini) {
+          const prompt = `Hãy trích xuất JSON với các khóa: fullName, idNumber, dateOfBirth(dd/mm/yyyy), gender(male|female), nationality, address từ văn bản OCR sau:\n${joined}\nChỉ trả về JSON hợp lệ.`;
+          const geminiText = await this.fileService.geminiParse(prompt);
+          let obj: any = null;
+          try {
+            obj = JSON.parse(geminiText);
+          } catch {
+            const m = geminiText.match(/\{[\s\S]*\}/);
+            if (m) {
+              try { obj = JSON.parse(m[0]); } catch {}
+            }
+          }
+          if (obj && typeof obj === 'object') {
+            parsedData.fullName = obj.fullName || parsedData.fullName;
+            parsedData.idNumber = obj.idNumber || parsedData.idNumber;
+            parsedData.gender = obj.gender || parsedData.gender;
+            parsedData.nationality = obj.nationality || parsedData.nationality;
+            parsedData.address = obj.address || parsedData.address;
+            const gDob: string | undefined = obj.dateOfBirth;
+            if (gDob && typeof gDob === 'string') {
+              const norm = gDob.replace(/[\.\-\s]/g, '/').trim();
+              const parts = norm.split('/');
+              if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const year = parseInt(parts[2], 10);
+                if (year >= 1950 && year <= 2015 && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+                  const dt = new Date(year, month, day);
+                  if (!isNaN(dt.getTime())) {
+                    parsedData.dateOfBirth = dt;
+                  }
+                }
+              }
+            }
+          }
+        }
         const detectedSide = this.detectCardSide(joined || parsedData.address || parsedData.fullName || '');
         const detectedIsFront = detectedSide === 'front';
         parsedData.side = detectedSide !== 'unknown' ? detectedSide : (fileIndex === 0 ? 'front' : 'back');
