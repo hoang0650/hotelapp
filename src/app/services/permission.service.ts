@@ -14,6 +14,7 @@ export type PermissionFeature =
   | 'user_management'      // Quản lý người dùng
   | 'pricing_management'   // Quản lý gói giá
   | 'ota_management'       // Quản lý OTA
+  | 'fanpage_messages'     // Tin nhắn Fanpage
   | 'revenue_chart'        // Biểu đồ doanh thu
   | 'shift_handover'       // Giao ca
   | 'bank_transfer_history' // Lịch sử chuyển khoản
@@ -35,6 +36,7 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/users-management': ['user_management'],
   '/admin/pricing-management': ['pricing_management'],
   '/admin/ota-management': ['ota_management'],
+  '/admin/fanpage-messages': ['fanpage_messages'],
   '/admin/chart': ['revenue_chart'],
   '/admin/shift-handover': ['shift_handover'],
   '/admin/shift-handover-history': ['shift_handover'],
@@ -177,6 +179,7 @@ export class PermissionService {
         'staff_management', // Quản lý nhân viên
         'service_management', // Quản lý dịch vụ
         'ota_management', // Quản lý OTA
+        'fanpage_messages', // Tin nhắn Fanpage
         'revenue_chart', // Biểu đồ doanh thu
         'qr_payment', // Thanh toán QR
         'visa_payment', // Thanh toán Visa
@@ -290,6 +293,7 @@ export class PermissionService {
       'user_management': ['manage'],
       'pricing_management': ['manage'],
       'ota_management': ['view', 'edit', 'manage'],
+      'fanpage_messages': ['view', 'manage'],
       'revenue_chart': ['view', 'manage'],
       'shift_handover': ['view', 'edit', 'manage'],
       'bank_transfer_history': ['view', 'manage'],
@@ -334,6 +338,7 @@ export class PermissionService {
       'user_management',
       'pricing_management',
       'ota_management',
+      'fanpage_messages',
       'revenue_chart',
       'shift_handover',
       'bank_transfer_history',

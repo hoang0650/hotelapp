@@ -9,6 +9,14 @@
         nz-button 
         nzType="default" 
         nzSize="small" 
+        (click)="openFanpageMessages()">
+        <i nz-icon nzType="message" nzTheme="outline"></i>
+        <span>Xem lịch sử Fanpage</span>
+      </button>
+      <button 
+        nz-button 
+        nzType="default" 
+        nzSize="small" 
         (click)="connectFanpage()" 
         [title]="'Kết nối Fanpage'">
         <i nz-icon nzType="link" nzTheme="outline"></i>

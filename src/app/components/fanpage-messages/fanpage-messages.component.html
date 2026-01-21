@@ -1,0 +1,14 @@
+<div class="container">
+  <h2>Fanpage Messages</h2>
+  <div *ngIf="loading" class="loading">Đang tải...</div>
+  <div *ngIf="!loading && messages.length === 0" class="empty">Chưa có tin nhắn</div>
+  <div *ngIf="!loading && messages.length > 0" class="list">
+    <div *ngFor="let m of messages" class="item" [class.out]="m.direction==='out'">
+      <div class="meta">
+        <span class="dir">{{ m.direction === 'in' ? 'Khách' : 'Phản hồi' }}</span>
+        <span class="time">{{ m.timestamp | date:'short' }}</span>
+      </div>
+      <div class="text">{{ m.text }}</div>
+    </div>
+  </div>
+</div>

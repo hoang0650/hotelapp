@@ -223,6 +223,14 @@ export class AiAssistantService {
     return resp?.pages || [];
   }
 
+  async getFacebookMessages(tenantId: string): Promise<any[]> {
+    const resp = await firstValueFrom(
+      this.http.get<any>(`${this.aiUrl}/facebook/messages`, { params: { tenant_id: tenantId } })
+    );
+    return resp?.messages || [];
+  }
+
+
   /**
    * Xóa lịch sử chat
    */

@@ -9,6 +9,7 @@ import { NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
+import { Router } from '@angular/router';
 
 // Mở rộng ChatMessage để hỗ trợ file
 interface ChatMessage extends BaseChatMessage {
@@ -47,7 +48,8 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     private hotelService: HotelService,
     private modal: NzModalService,
     private message: NzMessageService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -256,5 +258,9 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
         }
       }
     });
+  }
+
+  openFanpageMessages(): void {
+    this.router.navigate(['/admin/fanpage-messages']);
   }
 }

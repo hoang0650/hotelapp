@@ -119,6 +119,7 @@ import { UserFormModalComponent } from './components/user-management/user-form-m
 import { BankTransferHistoryComponent } from './components/bank-transfer-history/bank-transfer-history.component';
 import { NlToBrPipe } from './pipes/nl-to-br.pipe';
 import { AiChatboxComponent } from './components/ai-chatbox/ai-chatbox.component';
+import { FanpageMessagesComponent } from './components/fanpage-messages/fanpage-messages.component';
 import { PricingComponent } from './components/pricing/pricing.component';
 import { PricingManagementModule } from './components/pricing-management/pricing-management.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -261,6 +262,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         SepayOAuth2CallbackComponent,
         NlToBrPipe,
         AiChatboxComponent,
+        FanpageMessagesComponent,
         PricingComponent,
         OtaManagementComponent, // Thêm OtaManagementComponent vào declarations
         ShiftHandoverHistoryComponent,

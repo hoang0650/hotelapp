@@ -1,0 +1,7 @@
+.container { padding: 16px; }
+.loading, .empty { padding: 8px 0; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.item { border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 12px; background: #fff; }
+.item.out { background: #f6ffed; border-color: #b7eb8f; }
+.meta { display: flex; gap: 12px; font-size: 12px; color: #888; }
+.text { white-space: pre-wrap; }

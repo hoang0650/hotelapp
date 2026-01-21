@@ -203,6 +203,15 @@ export class AdminComponent implements OnInit {
            this.authService.isHotelManager();
   }
 
+  // Fanpage Messages - superadmin, admin, business, hotel
+  canAccessFanpageMessages(): boolean {
+    return this.authService.isSuperAdmin() ||
+           this.authService.isAdmin() ||
+           this.authService.isBusiness() ||
+           this.authService.isHotelManager()||
+           this.authService.isStaff();
+  }
+
   // Payment Menu (QR Payment, Visa Payment) - superadmin, admin, business, hotel
   canAccessPaymentMenu(): boolean {
     return this.authService.isSuperAdmin() || 

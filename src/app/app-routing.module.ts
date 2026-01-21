@@ -53,6 +53,7 @@ import { EInvoiceRegistrationComponent } from './components/e-invoice-registrati
 import { EInvoiceManagementComponent } from './components/e-invoice-management/e-invoice-management.component';
 import { EInvoiceTemplateComponent } from './components/e-invoice-template/e-invoice-template.component';
 import { HotelFilesComponent } from './components/hotel-files/hotel-files.component';
+import { FanpageMessagesComponent } from './components/fanpage-messages/fanpage-messages.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -99,6 +100,7 @@ const routes: Routes = [
       { path: 'bank-transfer-history', component: BankTransferHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'financial-summary-report', component: FinancialSummaryReportComponent, canActivate: [PermissionGuard] },
       { path: 'ota-management', component: OtaManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'fanpage-messages', component: FanpageMessagesComponent, canActivate: [PermissionGuard] },
       { path: 'electric-setting', component: TuyaSwitchComponent, canActivate: [PermissionGuard] },
       { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },
       { path: 'settings', component: SettingsComponent, canActivate: [PermissionGuard] },
@@ -122,7 +124,8 @@ const routes: Routes = [
   { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'sepay-oauth2-callback', component: SepayOAuth2CallbackComponent },
   { path: 'privacy-policy', component: PrivacyPolicyComponent },
-  { path: 'terms-of-service', component: TermsOfServiceComponent }
+  { path: 'terms-of-service', component: TermsOfServiceComponent },
+  { path: 'fanpage-messages', component: FanpageMessagesComponent }
 ];
 
 @NgModule({

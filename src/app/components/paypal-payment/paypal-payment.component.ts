@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter, AfterViewInit, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
@@ -65,7 +66,8 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
   constructor(
     private message: NzMessageService,
     @Inject(PLATFORM_ID) private platformId: Object,
-    public currencyService: CurrencyService
+    public currencyService: CurrencyService,
+    private http: HttpClient
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
@@ -144,26 +146,36 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
       return;
     }
 
-    // Load PayPal SDK
-    // LƯU Ý: Cần cấu hình PayPal Client ID trong environment.ts
+    // Load PayPal SDK từ cấu hình backend
     if (typeof document === 'undefined') {
       return;
     }
 
-    const script = document.createElement('script');
-    script.id = 'paypal-script';
-    const clientId = environment.paypalClientId || 'YOUR_CLIENT_ID';
-    // Sử dụng currency đã chọn
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${this.selectedCurrency}&intent=capture`;
-    script.async = true;
-    script.onload = () => {
-      this.paypalLoaded = true;
-      this.renderPayPalButton();
-    };
-    script.onerror = () => {
-      this.message.error('Không thể tải PayPal SDK. Vui lòng thử lại sau.');
-    };
-    document.body.appendChild(script);
+    this.http.get<{ clientId: string; sandbox?: boolean }>(`${environment.apiUrl}/paypal/config`)
+      .subscribe({
+        next: (cfg) => {
+          const clientId = cfg?.clientId;
+          if (!clientId) {
+            this.message.error('Thiếu cấu hình PayPal Client ID');
+            return;
+          }
+          const script = document.createElement('script');
+          script.id = 'paypal-script';
+          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${this.selectedCurrency}&intent=capture`;
+          script.async = true;
+          script.onload = () => {
+            this.paypalLoaded = true;
+            this.renderPayPalButton();
+          };
+          script.onerror = () => {
+            this.message.error('Không thể tải PayPal SDK. Vui lòng thử lại sau.');
+          };
+          document.body.appendChild(script);
+        },
+        error: () => {
+          this.message.error('Không thể lấy cấu hình PayPal từ hệ thống');
+        }
+      });
   }
 
   renderPayPalButton(): void {
