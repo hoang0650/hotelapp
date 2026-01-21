@@ -2751,6 +2751,13 @@
       "SUBTITLE": "Xem video để hiểu rõ hơn về cách sử dụng phần mềm",
       "DESCRIPTION": "Video này sẽ hướng dẫn bạn cách sử dụng các tính năng chính của phần mềm quản lý khách sạn, bao gồm quản lý phòng, đặt phòng, thanh toán và xem báo cáo."
     },
+    "APP": {
+      "TITLE": "Ứng dụng di động đã ra mắt",
+      "SUBTITLE": "Dùng thử trên Android và iOS",
+      "DESCRIPTION": "Trải nghiệm quản lý khách sạn mọi lúc mọi nơi.",
+      "DOWNLOAD_ANDROID": "Tải bản demo Android",
+      "DOWNLOAD_IOS": "Tải bản demo iOS"
+    },
     "TESTIMONIALS": {
       "TITLE": "Khách hàng nói gì về chúng tôi",
       "SUBTITLE": "Những phản hồi chân thực từ khách hàng đã sử dụng dịch vụ của chúng tôi",

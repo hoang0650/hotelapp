@@ -125,7 +125,7 @@ const routes: Routes = [
   { path: 'sepay-oauth2-callback', component: SepayOAuth2CallbackComponent },
   { path: 'privacy-policy', component: PrivacyPolicyComponent },
   { path: 'terms-of-service', component: TermsOfServiceComponent },
-  { path: 'fanpage-messages', component: FanpageMessagesComponent }
+
 ];
 
 @NgModule({

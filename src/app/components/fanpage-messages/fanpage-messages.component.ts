@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -27,6 +27,10 @@ export class FanpageMessagesComponent implements OnInit {
   replyText: string = '';
   loading = false;
   sending = false;
+  isMobile = false;
+  showSidebar = true;
+  @ViewChild('threadList') threadList?: ElementRef<HTMLDivElement>;
+  private pollTimer?: any;
 
   constructor(private aiAssistant: AiAssistantService, private authService: AuthService) {}
 
@@ -38,6 +42,8 @@ export class FanpageMessagesComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.loading = true;
     try {
+      this.isMobile = window.innerWidth <= 768;
+      this.showSidebar = !this.isMobile;
       const tenantId = this.getTenantId();
       this.pages = await this.aiAssistant.getFacebookPages(tenantId);
       this.selectedPageId = this.pages?.[0]?.id || '';
@@ -86,6 +92,11 @@ export class FanpageMessagesComponent implements OnInit {
       .filter(m => (!this.selectedPageId || m.page_id === this.selectedPageId) && m.sender_id === senderId)
       .sort((a, b) => a.timestamp - b.timestamp);
     this.displayed = thread;
+    if (this.isMobile) this.showSidebar = false;
+    setTimeout(() => {
+      const el = this.threadList?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 0);
   }
 
   async sendReply(): Promise<void> {
@@ -110,6 +121,41 @@ export class FanpageMessagesComponent implements OnInit {
       this.buildConversations();
     } finally {
       this.sending = false;
+    }
+  }
+
+  toggleSidebar(): void {
+    this.showSidebar = !this.showSidebar;
+  }
+
+  onEnterSend(): void {
+    if (!this.sending && this.replyText.trim()) this.sendReply();
+  }
+
+  async refreshFacebookPages(): Promise<void> {
+    const tenantId = this.getTenantId();
+    const pages = await this.aiAssistant.getFacebookPages(tenantId);
+    this.pages = pages || [];
+    if (this.pages.length && !this.selectedPageId) {
+      this.selectedPageId = this.pages[0].id;
+      this.buildConversations();
+    }
+  }
+
+  async connectFanpage(): Promise<void> {
+    const tenantId = this.getTenantId();
+    const url = await this.aiAssistant.getFacebookOAuthUrl(tenantId);
+    if (url) {
+      window.open(url, '_blank');
+      let attempts = 0;
+      clearInterval(this.pollTimer);
+      this.pollTimer = setInterval(async () => {
+        attempts++;
+        await this.refreshFacebookPages();
+        if (this.pages.length || attempts >= 30) {
+          clearInterval(this.pollTimer);
+        }
+      }, 1000);
     }
   }
 }

@@ -2134,6 +2134,13 @@
       "SUBTITLE": "Watch the video to better understand how to use the software",
       "DESCRIPTION": "This video will guide you on how to use the main features of the hotel management software, including room management, bookings, payments and viewing reports."
     },
+    "APP": {
+      "TITLE": "Mobile apps are available",
+      "SUBTITLE": "Try our Android and iOS demos",
+      "DESCRIPTION": "Experience hotel management anytime, anywhere.",
+      "DOWNLOAD_ANDROID": "Download Android demo",
+      "DOWNLOAD_IOS": "Download iOS demo"
+    },
     "TESTIMONIALS": {
       "TITLE": "What our customers say about us",
       "SUBTITLE": "Genuine feedback from customers who have used our services",

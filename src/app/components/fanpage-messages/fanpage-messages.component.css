@@ -17,3 +17,19 @@
 .reply { display: flex; gap: 8px; margin-top: 8px; }
 .reply input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
 .reply button { padding: 8px 12px; border: none; border-radius: 6px; background: #1677ff; color: #fff; }
+.sidebar-toggle { margin-left: auto; }
+.bubble { display: flex; margin: 4px 0; }
+.bubble.out { justify-content: flex-end; }
+.bubble .bubble-inner { max-width: 80%; border-radius: 12px; padding: 8px 10px; background: #fff; border: 1px solid #eee; }
+.bubble.out .bubble-inner { background: #f6ffed; border-color: #b7eb8f; }
+.bubble .meta { text-align: right; font-size: 11px; color: #999; margin-top: 4px; }
+.list { overflow: auto; max-height: 55vh; padding-right: 4px; }
+
+@media (max-width: 768px) {
+  .layout { display: flex; flex-direction: column; }
+  .sidebar { max-height: 40vh; }
+  .sidebar.hidden { display: none; }
+  .list { max-height: 50vh; }
+  .reply { position: sticky; bottom: 0; background: #f7f7f7; padding: 8px; border-top: 1px solid #eee; }
+  .toolbar { gap: 12px; }
+}

@@ -4,12 +4,22 @@
   <div *ngIf="!loading">
     <div class="toolbar">
       <label>Fanpage:</label>
-      <select [ngModel]="selectedPageId" (ngModelChange)="changePage($event)">
-        <option *ngFor="let p of pages" [value]="p.id">{{ p.name }}</option>
-      </select>
+      <nz-select
+        [ngModel]="selectedPageId"
+        (ngModelChange)="changePage($event)"
+        nzShowSearch
+        nzPlaceHolder="Chọn fanpage"
+        style="min-width: 220px">
+        <nz-option *ngFor="let p of pages" [nzValue]="p.id" [nzLabel]="p.name"></nz-option>
+      </nz-select>
+      <button nz-button nzType="default" nzSize="small" (click)="connectFanpage()" title="Kết nối Fanpage">
+        <i nz-icon nzType="link" nzTheme="outline"></i>
+        <span>Kết nối Fanpage</span>
+      </button>
+      <button nz-button nzType="default" nzSize="small" class="sidebar-toggle" (click)="toggleSidebar()">Danh sách</button>
     </div>
     <div class="layout">
-      <div class="sidebar">
+      <div class="sidebar" [class.hidden]="!showSidebar">
         <div class="empty" *ngIf="conversations.length === 0">Chưa có hội thoại</div>
         <div *ngFor="let c of conversations" class="conv" [class.active]="c.sender_id===selectedSenderId" (click)="selectConversation(c.sender_id)">
           <div class="conv-title">{{ c.sender_id }}</div>
@@ -19,18 +29,17 @@
       </div>
       <div class="thread">
         <div class="empty" *ngIf="displayed.length === 0">Chọn hội thoại để xem</div>
-        <div class="list" *ngIf="displayed.length > 0">
-          <div *ngFor="let m of displayed" class="item" [class.out]="m.direction==='out'">
-            <div class="meta">
-              <span class="dir">{{ m.direction === 'in' ? 'Khách' : 'Phản hồi' }}</span>
-              <span class="time">{{ m.timestamp | date:'short' }}</span>
+        <div class="list" #threadList *ngIf="displayed.length > 0">
+          <div *ngFor="let m of displayed" class="bubble" [class.out]="m.direction==='out'">
+            <div class="bubble-inner">
+              <div class="text">{{ m.text }}</div>
+              <div class="meta"><span class="time">{{ m.timestamp | date:'short' }}</span></div>
             </div>
-            <div class="text">{{ m.text }}</div>
           </div>
         </div>
         <div class="reply" *ngIf="selectedSenderId">
-          <input type="text" [(ngModel)]="replyText" placeholder="Nhập nội dung phản hồi..." />
-          <button [disabled]="sending || !replyText.trim()" (click)="sendReply()">Gửi</button>
+          <input nz-input type="text" [(ngModel)]="replyText" placeholder="Nhập nội dung phản hồi..." (keyup.enter)="onEnterSend()" />
+          <button nz-button nzType="primary" [disabled]="sending || !replyText.trim()" (click)="sendReply()">Gửi</button>
         </div>
       </div>
     </div>

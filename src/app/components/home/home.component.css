@@ -583,6 +583,68 @@
         color: #555;
       }
     }
+
+    .app-release {
+      margin-top: 32px;
+      text-align: center;
+
+      .app-title {
+        font-size: 1.6rem;
+        margin-bottom: 8px;
+        color: #333;
+      }
+
+      .app-subtitle {
+        font-size: 1rem;
+        color: #666;
+        margin-bottom: 16px;
+      }
+
+      .app-downloads {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(200px, 280px));
+        gap: 12px;
+        justify-content: center;
+      }
+
+      .store-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border: 1px solid #e5e5e5;
+        border-radius: 10px;
+        background: #fff;
+        color: #333;
+        text-decoration: none;
+        transition: all 0.2s ease;
+      }
+
+      .store-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+      }
+
+      .store-badge.android i {
+        color: #3ddc84;
+      }
+      .store-badge.ios i {
+        color: #000000;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .video-section {
+      .app-release {
+        .app-downloads {
+          grid-template-columns: 1fr;
+        }
+        .store-badge {
+          justify-content: center;
+        }
+      }
+    }
   }
 
   .section-title {

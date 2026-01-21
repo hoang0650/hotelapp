@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
@@ -17,7 +17,7 @@ type FileItem = {
   templateUrl: './hotel-files.component.html',
   styleUrls: ['./hotel-files.component.css']
 })
-export class HotelFilesComponent {
+export class HotelFilesComponent implements OnInit {
   searchText = '';
   selectedFile: FileItem | null = null;
   pdfUrl: SafeResourceUrl | null = null;
@@ -26,6 +26,7 @@ export class HotelFilesComponent {
   xlsxColumns: string[] = [];
   isDocx = false;
   @ViewChild('docxContainer') docxContainer!: ElementRef<HTMLDivElement>;
+  isMobile = false;
 
   files: FileItem[] = [
     { name: 'ACCOMMODATION SERVICE CONTRACT - GDS724 (1) (5) (2).docx', path: 'assets/Hotel/ACCOMMODATION SERVICE CONTRACT - GDS724 (1) (5) (2).docx', type: 'docx' },
@@ -62,6 +63,15 @@ export class HotelFilesComponent {
   ];
 
   constructor(private message: NzMessageService, private sanitizer: DomSanitizer, private http: HttpClient) {}
+
+  ngOnInit(): void {
+    this.isMobile = window.innerWidth <= 768;
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.isMobile = window.innerWidth <= 768;
+  }
 
   get filteredFiles(): FileItem[] {
     const q = (this.searchText || '').toLowerCase();

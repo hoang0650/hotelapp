@@ -3,25 +3,40 @@
   <div class="toolbar">
     <input nz-input [(ngModel)]="searchText" placeholder="Tìm kiếm file..." />
   </div>
-  <nz-table [nzData]="filteredFiles" nzSize="small" [nzShowPagination]="false">
-    <thead>
-      <tr>
-        <th>Tên file</th>
-        <th>Loại</th>
-        <th style="width: 180px; text-align: right;">Thao tác</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let f of filteredFiles">
-        <td>{{ f.name }}</td>
-        <td>{{ f.type.toUpperCase() }}</td>
-        <td style="text-align: right;">
-          <button nz-button nzType="default" (click)="openInNewTab(f)" class="mr-1">Mở</button>
-          <button nz-button nzType="primary" (click)="download(f)">Tải về</button>
-        </td>
-      </tr>
-    </tbody>
-  </nz-table>
+  <div *ngIf="!isMobile" class="table-container">
+    <nz-table [nzData]="filteredFiles" nzSize="small" [nzShowPagination]="false">
+      <thead>
+        <tr>
+          <th>Tên file</th>
+          <th>Loại</th>
+          <th style="width: 180px; text-align: right;">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let f of filteredFiles">
+          <td>{{ f.name }}</td>
+          <td>{{ f.type.toUpperCase() }}</td>
+          <td style="text-align: right;">
+            <button nz-button nzType="default" (click)="openInline(f)" class="mr-1">Xem</button>
+            <button nz-button nzType="default" (click)="openInNewTab(f)" class="mr-1">Mở</button>
+            <button nz-button nzType="primary" (click)="download(f)">Tải về</button>
+          </td>
+        </tr>
+      </tbody>
+    </nz-table>
+  </div>
+
+  <div *ngIf="isMobile" class="cards">
+    <div class="file-card" *ngFor="let f of filteredFiles">
+      <div class="file-name">{{ f.name }}</div>
+      <div class="file-meta">{{ f.type.toUpperCase() }}</div>
+      <div class="file-actions">
+        <button nz-button nzType="default" (click)="openInline(f)">Xem</button>
+        <button nz-button nzType="default" (click)="openInNewTab(f)">Mở</button>
+        <button nz-button nzType="primary" (click)="download(f)">Tải về</button>
+      </div>
+    </div>
+  </div>
 
   <div *ngIf="selectedFile" class="overlay" (click)="closeOverlay()">
     <div class="overlay-content" (click)="$event.stopPropagation()">
