@@ -44,6 +44,7 @@
             <th nzWidth="180px">{{ 'HOTEL_MANAGEMENT.HOTEL_NAME' | translate }}</th>
             <th nzWidth="200px">{{ 'HOTEL_MANAGEMENT.ADDRESS' | translate }}</th>
             <th nzWidth="120px">{{ 'HOTEL_MANAGEMENT.PHONE' | translate }}</th>
+            <th nzWidth="140px">{{ 'HOTEL_MANAGEMENT.TAX_ID' | translate }}</th>
             <th nzWidth="150px" *ngIf="isAdmin">{{ 'HOTEL_MANAGEMENT.BUSINESS' | translate }}</th>
             <th nzWidth="100px">{{ 'HOTEL_MANAGEMENT.STATUS' | translate }}</th>
             <th nzWidth="100px">{{ 'HOTEL_MANAGEMENT.RATING' | translate }}</th>
@@ -66,6 +67,7 @@
               {{ hotel.address?.street }}<span *ngIf="hotel.address?.street && hotel.address?.city">, </span>{{ hotel.address?.city }}
             </td>
             <td>{{ hotel.contactInfo?.phone || '-' }}</td>
+            <td>{{ hotel.taxId || '-' }}</td>
             <td *ngIf="isAdmin">{{ getBusinessName(hotel.businessId) }}</td>
             <td>
               <nz-tag [nzColor]="getStatusColor(hotel.status)">
@@ -321,6 +323,13 @@
                   (error)="handleLogoError($event)">
               </div>
             </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="taxId">{{ 'HOTEL_MANAGEMENT.TAX_ID' | translate }}</nz-form-label>
+          <nz-form-control [nzSm]="14" [nzXs]="24" [nzErrorTip]="'HOTEL_MANAGEMENT.TAX_ID' | translate">
+            <input nz-input formControlName="taxId" id="taxId" [placeholder]="'HOTEL_MANAGEMENT.TAX_ID' | translate" />
           </nz-form-control>
         </nz-form-item>
 

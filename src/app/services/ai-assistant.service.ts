@@ -230,6 +230,18 @@ export class AiAssistantService {
     return resp?.messages || [];
   }
 
+  async sendFacebookMessage(tenantId: string, pageId: string, recipientId: string, text: string): Promise<any> {
+    const resp = await firstValueFrom(
+      this.http.post<any>(`${this.aiUrl}/facebook/send`, {
+        tenant_id: tenantId,
+        page_id: pageId,
+        recipient_id: recipientId,
+        text
+      })
+    );
+    return resp;
+  }
+
 
   /**
    * Xóa lịch sử chat

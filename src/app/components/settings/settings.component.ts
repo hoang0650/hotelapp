@@ -1002,12 +1002,12 @@ export class SettingsComponent implements OnInit {
         this.saving = false;
         this.message.success(response.message || 'Đã lưu cài đặt tính năng cho khách sạn');
         this.currentHotelSettings = response.settings || {};
+        window.dispatchEvent(new CustomEvent('paymentSettingsChanged', { detail: { enablePayPalPayment: settings.enablePayPalPayment, enableCryptoPayment: settings.enableCryptoPayment } }));
         // Reload để cập nhật UI
         this.loadHotelSettings(this.selectedHotelId!);
       },
       error: (error) => {
         this.saving = false;
-        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt tính năng');
       }
     });
   }

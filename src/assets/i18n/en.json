@@ -735,6 +735,7 @@
     "STATUS": "Status",
     "RATING": "Rating",
     "MANAGER": "Manager",
+    "TAX_ID": "Tax ID",
     "ACTIONS": "Actions",
     "EDIT": "Edit",
     "SUSPEND": "Suspend",

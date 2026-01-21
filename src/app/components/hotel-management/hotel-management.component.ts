@@ -82,6 +82,7 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
     this.hotelForm = this.fb.group({
       name: ['', Validators.required],
       businessId: [null, Validators.required],
+      taxId: ['', [Validators.pattern(/^\d{10,15}$/)]],
       address: this.fb.group({
         street: [''],
         city: [''],
@@ -95,7 +96,7 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
         website: ['']
       }),
       description: [''],
-      starRating: [null, [Validators.min(1), Validators.max(5)]],
+      starRating: [null, [Validators.min(0), Validators.max(5)]],
       managerId: [null],
       status: ['active' as HotelStatusType, Validators.required],
       facilities: [[]],
@@ -335,6 +336,7 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
       this.hotelForm.patchValue({
         name: hotel.name,
         businessId: hotel.businessId,
+        taxId: (hotel as any).taxId || '',
         address: {
           street: hotel.address?.street || '',
           city: hotel.address?.city || '',
@@ -394,6 +396,7 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
       this.selectedHotel = {} as Hotel;
       this.hotelForm.reset({
         status: 'active',
+        taxId: '',
         settings: {
           checkInTime: '14:00',
           checkOutTime: '12:00',
@@ -421,6 +424,7 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
     this.fileList = [];
     this.hotelForm.reset({
       status: 'active',
+      taxId: '',
       settings: {
         checkInTime: '14:00',
         checkOutTime: '12:00',

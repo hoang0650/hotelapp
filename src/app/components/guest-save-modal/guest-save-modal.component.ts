@@ -35,6 +35,25 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     return this.contactInfoForm.get('address') as FormGroup;
   }
 
+  private parseDate(input: any): Date | null {
+    if (!input) return null;
+    if (input instanceof Date && !isNaN(input.getTime())) return input;
+    if (typeof input === 'string') {
+      const s = input.replace(/[\.\-\s]/g, '/').trim();
+      const parts = s.split('/');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const y = parseInt(parts[2], 10);
+        if (y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+          const dt = new Date(y, m - 1, d);
+          if (!isNaN(dt.getTime())) return dt;
+        }
+      }
+    }
+    return null;
+  }
+
   onOCRScanComplete(ocrData: any): void {
     if (!ocrData) return;
     
@@ -56,13 +75,12 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         console.log('[GuestSaveModal] Set fullName:', ocrData.fullName);
       }
       if (ocrData.dateOfBirth) {
-        // Đảm bảo dateOfBirth là Date object
-        const dob = ocrData.dateOfBirth instanceof Date ? ocrData.dateOfBirth : new Date(ocrData.dateOfBirth);
+        const dob = this.parseDate(ocrData.dateOfBirth);
         this.personalInfoForm.patchValue({ dateOfBirth: dob });
         console.log('[GuestSaveModal] Set dateOfBirth:', dob);
       }
       if (ocrData.dateOfExpiry) {
-        const doe = ocrData.dateOfExpiry instanceof Date ? ocrData.dateOfExpiry : new Date(ocrData.dateOfExpiry);
+        const doe = this.parseDate(ocrData.dateOfExpiry);
         this.personalInfoForm.patchValue({ idExpiryDate: doe });
         console.log('[GuestSaveModal] Set idExpiryDate:', doe);
       }
@@ -70,12 +88,14 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         this.personalInfoForm.patchValue({ gender: ocrData.gender });
         console.log('[GuestSaveModal] Set gender:', ocrData.gender);
       }
-      if (ocrData.nationality) {
-        this.personalInfoForm.patchValue({ nationality: ocrData.nationality });
+      const nationality = ocrData.nationality || 'Việt Nam';
+      if (nationality) {
+        this.personalInfoForm.patchValue({ nationality });
         console.log('[GuestSaveModal] Set nationality:', ocrData.nationality);
       }
       if (ocrData.idNumber) {
-        this.personalInfoForm.patchValue({ idNumber: ocrData.idNumber });
+        const idNumber = String(ocrData.idNumber).replace(/\s+/g, '').trim();
+        this.personalInfoForm.patchValue({ idNumber });
         console.log('[GuestSaveModal] Set idNumber:', ocrData.idNumber);
       }
     }
@@ -84,7 +104,8 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     if (this.contactInfoForm) {
       const addressValue = ocrData.address;
       if (addressValue && this.addressForm) {
-        this.addressForm.patchValue({ street: addressValue });
+        const street = String(addressValue).replace(/\s+/g, ' ').trim();
+        this.addressForm.patchValue({ street });
         console.log('[GuestSaveModal] Set address:', addressValue.substring(0, 50) + '...');
       }
     }

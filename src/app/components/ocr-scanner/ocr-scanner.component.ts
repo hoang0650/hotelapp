@@ -1077,229 +1077,34 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
    */
   detectCardSide(text: string): 'front' | 'back' | 'unknown' {
     if (!text || text.trim().length === 0) {
-      console.log(`[OCR] Detect side: Empty text - returning unknown`);
-      return 'unknown';
+      return 'back';
     }
-    
     const normalizedText = text.toUpperCase();
-    const lines = text.split(/\r?\n/).map(line => line.trim().toUpperCase());
-    
-    // Log để debug
-    console.log(`[OCR] Detect side: Text preview (first 300 chars):`, text.substring(0, 300));
-    console.log(`[OCR] Detect side: First 5 lines:`, lines.slice(0, 5));
-    
-    // QUAN TRỌNG NHẤT: Kiểm tra trực tiếp các dấu hiệu rõ ràng nhất trước
-    // Kiểm tra cả text gốc, text đã normalize, và từng dòng để tránh bỏ sót do lỗi OCR
-    // Kiểm tra từng dòng riêng lẻ vì OCR có thể nhầm dòng
-    
-    // 0. Kiểm tra "GIẤY PHÉP LÁI XE" hoặc "DRIVER'S LICENSE" - CHẮC CHẮN là GPLX (mặt trước)
-    const gplxPatterns = [
-      /GIẤY\s+PHÉP\s+LÁI\s+XE/i,
-      /GIAY\s+PHEP\s+LAI\s+XE/i,
-      /DRIVER.*LICENSE/i,
-      /DRIVER.*LICENCE/i,
-      /BỘ\s+GTVT|BO\s+GTVT|MOT/i
-    ];
-    
-    for (const pattern of gplxPatterns) {
-      if (pattern.test(text) || pattern.test(normalizedText)) {
-        console.log(`[OCR] Detect side: Found "GIẤY PHÉP LÁI XE" pattern - chắc chắn là GPLX (mặt trước)`);
-        return 'front';
-      }
-    }
-    
-    // Kiểm tra trong từng dòng
-    for (const line of lines) {
-      for (const pattern of gplxPatterns) {
-        if (pattern.test(line)) {
-          console.log(`[OCR] Detect side: Found "GIẤY PHÉP LÁI XE" pattern in line "${line.substring(0, 50)}" - chắc chắn là GPLX (mặt trước)`);
-          return 'front';
-        }
-      }
-    }
-    
-    // 1. Kiểm tra "CĂN CƯỚC" hoặc "CĂN CƯỚC CÔNG DÂN" - CHẮC CHẮN là mặt trước
-    // Thêm nhiều pattern OCR nhầm, kiểm tra cả text gốc, normalized và từng dòng
-    const canCuocPatterns = [
+    const lines = normalizedText.split(/\r?\n/).map(line => line.trim());
+    const frontPatterns = [
       /CĂN\s+CƯỚC\s+CÔNG\s+DÂN/i,
+      /CĂN\s+CƯỚC/i,
       /CAN\s+CƯỚC\s+CONG\s+DAN/i,
       /CAN\s+CUOC\s+CONG\s+DAN/i,
-      /CAN\s+CUOC\s+CONG\s+DÂN/i,
-      /CĂN\s+CƯỚC/i,
-      /CAN\s+CƯỚC/i,
       /CAN\s+CUOC/i,
-      /CAN\s+GUOC/i, // OCR nhầm Ư thành G
-      /CAN\s+GƯỚC/i,
-      /CĂN\s+GUOC/i,
-      /CĂN\s+GƯỚC/i,
-      /CITIZEN\s+IDENTITY\s+CARD/i
+      /GIẤY\s+PHÉP\s+LÁI\s+XE/i,
+      /GIAY\s+PHEP\s+LAI\s+XE/i,
+      /DRIVER'?S\s+LICENSE/i,
+      /DRIVER.*LICENCE/i
     ];
-    
-    // Kiểm tra trong text gốc
-    for (const pattern of canCuocPatterns) {
+    for (const pattern of frontPatterns) {
       if (pattern.test(text) || pattern.test(normalizedText)) {
-        console.log(`[OCR] Detect side: Found "CĂN CƯỚC" pattern in text - chắc chắn là mặt trước`);
         return 'front';
       }
     }
-    
-    // Kiểm tra trong từng dòng (quan trọng vì OCR có thể nhầm dòng)
     for (const line of lines) {
-      for (const pattern of canCuocPatterns) {
+      for (const pattern of frontPatterns) {
         if (pattern.test(line)) {
-          console.log(`[OCR] Detect side: Found "CĂN CƯỚC" pattern in line "${line.substring(0, 50)}" - chắc chắn là mặt trước`);
           return 'front';
         }
       }
     }
-    
-    // 2. Kiểm tra "BỘ CÔNG AN" - CHẮC CHẮN là mặt sau
-    const boCongAnPatterns = [
-      /BỘ\s+CÔNG\s+AN/i,
-      /BO\s+CONG\s+AN/i,
-      /BỘ\s+CONG\s+AN/i,
-      /BO\s+CÔNG\s+AN/i,
-      /MINISTRY\s+OF\s+PUBLIC\s+SECURITY/i
-    ];
-    
-    // Kiểm tra trong text gốc
-    for (const pattern of boCongAnPatterns) {
-      if (pattern.test(text) || pattern.test(normalizedText)) {
-        console.log(`[OCR] Detect side: Found "BỘ CÔNG AN" pattern in text - chắc chắn là mặt sau`);
-        return 'back';
-      }
-    }
-    
-    // Kiểm tra trong từng dòng
-    for (const line of lines) {
-      for (const pattern of boCongAnPatterns) {
-        if (pattern.test(line)) {
-          console.log(`[OCR] Detect side: Found "BỘ CÔNG AN" pattern in line "${line.substring(0, 50)}" - chắc chắn là mặt sau`);
-          return 'back';
-        }
-      }
-    }
-    
-    // 3. Kiểm tra MRZ pattern - CHẮC CHẮN là mặt sau
-    // MRZ thường có: IDVNM ở đầu, nhiều dấu <<<, 2-3 dòng dài ~30 ký tự
-    if (/IDVNM/i.test(text)) {
-      console.log(`[OCR] Detect side: Found MRZ (IDVNM) - chắc chắn là mặt sau`);
-      return 'back';
-    }
-    // Kiểm tra MRZ pattern: 2-3 dòng, mỗi dòng ~30 ký tự, có nhiều dấu <<<
-    const mrzPattern = /[A-Z0-9<]{25,}/g;
-    const mrzMatches = text.match(mrzPattern);
-    if (mrzMatches && mrzMatches.length >= 2 && /\<\<\</.test(text)) {
-      console.log(`[OCR] Detect side: Found MRZ pattern (${mrzMatches.length} lines) - chắc chắn là mặt sau`);
-      return 'back';
-    }
-    
-    // 4. Kiểm tra "Ngày, tháng, năm cấp" hoặc "Ngày, tháng, năm hết hạn" - CHẮC CHẮN là mặt sau
-    const ngayCapPatterns = [
-      /Ngày\s*[,.]?\s*tháng\s*[,.]?\s*năm\s*cấp/i,
-      /Ngày\s*[,.]?\s*tháng\s*[,.]?\s*năm\s*hết\s+hạn/i,
-      /Ngày\s*[,.]?\s*tháng\s*[,.]?\s*năm\s*Cấp/i,
-      /Ngày\s*[,.]?\s*tháng\s*[,.]?\s*năm\s*Hết\s+hạn/i,
-      /Ngày\s*[,.]?\s*tháng\s*[,.]?\s*năm\s*cấp/i,
-      /Ngày\s*[,.]?\s*tháng\s*[,.]?\s*năm\s*hết\s+hạn/i,
-      /(?:Ngày|Tháng|Năm)\s*[,.]?\s*(?:tháng|năm)?\s*[,.]?\s*(?:cấp|hết\s+hạn)/i,
-      /(?:Ngày|Tháng|Năm)\s*[,.]?\s*(?:tháng|năm)?\s*[,.]?\s*(?:Cấp|Hết\s+hạn)/i
-    ];
-    
-    for (const pattern of ngayCapPatterns) {
-      if (pattern.test(text)) {
-        console.log(`[OCR] Detect side: Found "Ngày cấp/hết hạn" pattern (${pattern}) - chắc chắn là mặt sau`);
-        return 'back';
-      }
-    }
-    
-    // 5. Kiểm tra "Nơi thường trú" hoặc "Nơi cư trú" - CHẮC CHẮN là mặt sau
-    const noiThuongTruPatterns = [
-      /NƠI\s+THƯỜNG\s+TRÚ/i,
-      /NOI\s+THUONG\s+TRU/i,
-      /NƠI\s+THUONG\s+TRU/i,
-      /NOI\s+THƯỜNG\s+TRÚ/i,
-      /NƠI\s+CƯ\s+TRÚ/i,
-      /NOI\s+CU\s+TRU/i,
-      /NƠI\s+CU\s+TRU/i,
-      /NOI\s+CƯ\s+TRÚ/i,
-      /PLACE\s+OF\s+RESIDENCE/i
-    ];
-    
-    // Kiểm tra trong text gốc
-    for (const pattern of noiThuongTruPatterns) {
-      if (pattern.test(text) || pattern.test(normalizedText)) {
-        console.log(`[OCR] Detect side: Found "Nơi thường trú/Nơi cư trú" pattern in text - chắc chắn là mặt sau`);
-        return 'back';
-      }
-    }
-    
-    // Kiểm tra trong từng dòng
-    for (const line of lines) {
-      for (const pattern of noiThuongTruPatterns) {
-        if (pattern.test(line)) {
-          console.log(`[OCR] Detect side: Found "Nơi thường trú/Nơi cư trú" pattern in line "${line.substring(0, 50)}" - chắc chắn là mặt sau`);
-          return 'back';
-        }
-      }
-    }
-    
-    // Nếu không có dấu hiệu rõ ràng, tính điểm
-    let frontScore = 0;
-    let backScore = 0;
-    
-    // Dấu hiệu mặt trước - thêm nhiều pattern OCR nhầm
-    if (/CỘNG\s+HÒA\s+XÃ\s+HỘI\s+CHỦ\s+NGHĨA\s+VIỆT\s+NAM/i.test(text)) frontScore += 30;
-    if (/CONG\s+HOA\s+XA\s+HOI\s+CHU\s+NGHIA\s+VIET\s+NAM/i.test(text)) frontScore += 30;
-    if (/SOCIALIST\s+REPUBLIC\s+OF\s+VIET\s+NAM/i.test(text)) frontScore += 30;
-    if (/CITIZEN\s+IDENTITY\s+CARD/i.test(text)) frontScore += 20;
-    if (/SỐ\s+ĐỊNH\s+DANH\s+CÁ\s+NHÂN|PERSONAL\s+IDENTIFICATION\s+NUMBER/i.test(text)) frontScore += 15;
-    if (/SO\s+DINH\s+DANH\s+CA\s+NHAN/i.test(text)) frontScore += 15;
-    // Kiểm tra số định danh cá nhân (12 chữ số) - chỉ có ở mặt trước
-    if (/\b\d{12}\b/.test(text)) frontScore += 12;
-    if (/HỌ\s+VÀ\s+TÊN|HO\s+VA\s+TEN|FULL\s+NAME/i.test(text)) frontScore += 10;
-    if (/NGÀY\s+SINH|NGAY\s+SINH|DATE\s+OF\s+BIRTH/i.test(text)) frontScore += 10;
-    if (/GIỚI\s+TÍNH|GIOI\s+TINH|SEX/i.test(text)) frontScore += 8;
-    if (/QUỐC\s+TỊCH|QUOC\s+TICH|NATIONALITY/i.test(text)) frontScore += 8;
-    
-    // Dấu hiệu mặt sau
-    if (/\<\<\</.test(text)) backScore += 20; // MRZ có nhiều dấu <<<
-    if (/CÓ\s+GIÁ\s+TRỊ\s+ĐẾN|DATE\s+OF\s+EXPIRY/i.test(text)) backScore += 10;
-    if (/QUÊ\s+QUÁN|PLACE\s+OF\s+ORIGIN/i.test(text)) backScore += 8;
-    
-    // Kiểm tra pattern địa chỉ phổ biến (thường ở mặt sau)
-    const addressPatterns = [
-      /\d{1,2}\/\d{1,2}\/\d{1,2}/, // Pattern số nhà như "44/26/53"
-      /(?:Tổ|Cụm|Phường|Xã|Huyện|Tỉnh|Thành|Phố)/i, // Từ khóa địa chỉ
-      /(?:Bình\s+Dương|Dĩ\s+An|Hà\s+Nam|Lý\s+Nhân|Trần\s+Hưng\s+Đạo)/i // Địa danh phổ biến
-    ];
-    const hasAddressPattern = addressPatterns.some(pattern => pattern.test(text));
-    if (hasAddressPattern) {
-      backScore += 8;
-    }
-    
-    console.log(`[OCR] Detect side: frontScore=${frontScore}, backScore=${backScore}, text preview: ${text.substring(0, 100)}...`);
-    
-    // Quyết định dựa trên điểm số
-    if (frontScore > backScore && frontScore >= 15) {
-      return 'front';
-    }
-    
-    if (backScore > frontScore && backScore >= 15) {
-      return 'back';
-    }
-    
-    // Nếu điểm số bằng nhau hoặc không đủ điểm, ưu tiên mặt trước nếu có "CỘNG HÒA" hoặc số định danh
-    if (frontScore === backScore && frontScore > 0) {
-      if (/CỘNG\s+HÒA|SOCIALIST\s+REPUBLIC|\b\d{12}\b/.test(text)) {
-        return 'front';
-      }
-      if (/\<\<\</.test(text)) {
-        return 'back';
-      }
-    }
-    
-    return 'unknown';
+    return 'back';
   }
 
   /**

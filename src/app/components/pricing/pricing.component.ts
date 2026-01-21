@@ -12,6 +12,7 @@ import { UserService } from '../../services/user.service';
 import { SettingsService } from '../../services/settings.service';
 import { NotificationsService, Announcement } from '../../services/notifications.service';
 import { forkJoin } from 'rxjs';
+import { HotelService } from '../../services/hotel.service';
 
 interface PricingPlan {
   name: string;
@@ -57,6 +58,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   // Kiểm tra tính năng thanh toán từ package
   canUsePayPal: boolean = true; // Mặc định cho phép
   canUseCrypto: boolean = true; // Mặc định cho phép
+  enablePayPalPayment: boolean = true;
+  enableCryptoPayment: boolean = true;
 
   // SePay QR code
   showSePayModal = false;
@@ -175,13 +178,45 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     private userService: UserService,
     private settingsService: SettingsService,
     private notificationsService: NotificationsService,
-    private http: HttpClient
+    private http: HttpClient,
+    private hotelService: HotelService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
       this.userId = currentUser._id;
     }
   }
+
+  private loadHotelSettings(): void {
+    const hotelId = this.authService.getHotelId?.() || null;
+    if (!hotelId) {
+      this.enablePayPalPayment = true;
+      this.enableCryptoPayment = true;
+      this.checkPaymentFeatures();
+      return;
+    }
+    this.hotelService.getHotelById(hotelId).subscribe({
+      next: (hotel: any) => {
+        this.enablePayPalPayment = hotel.enablePayPalPayment || false;
+        this.enableCryptoPayment = hotel.enableCryptoPayment || false;
+        this.checkPaymentFeatures();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.enablePayPalPayment = true;
+        this.enableCryptoPayment = true;
+        this.checkPaymentFeatures();
+      }
+    });
+  }
+
+  private onPaymentSettingsChanged = (event: any) => {
+    const detail = event?.detail || {};
+    this.enablePayPalPayment = !!detail.enablePayPalPayment;
+    this.enableCryptoPayment = !!detail.enableCryptoPayment;
+    this.checkPaymentFeatures();
+    this.cdr.detectChanges();
+  };
 
   ngOnInit(): void {
     // Load user trước để kiểm tra role
@@ -198,6 +233,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Xử lý callback từ SePay sau khi thanh toán
     this.handlePaymentCallback();
+    this.loadHotelSettings();
+    window.addEventListener('paymentSettingsChanged', this.onPaymentSettingsChanged as EventListener);
   }
 
   ngAfterViewInit(): void {
@@ -528,16 +565,16 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.selectedPackage) {
       const pkg = this.packages.find(p => p._id === this.selectedPackage.packageId || p._id === this.selectedPackage._id);
       if (pkg) {
-        this.canUsePayPal = pkg.paypalPaymentFeature === true;
-        this.canUseCrypto = pkg.cryptoPaymentFeature === true;
+        this.canUsePayPal = (pkg.paypalPaymentFeature === true) && this.enablePayPalPayment;
+        this.canUseCrypto = (pkg.cryptoPaymentFeature === true) && this.enableCryptoPayment;
         return;
       }
       // Nếu selectedPackage có trực tiếp các fields
       if (this.selectedPackage.paypalPaymentFeature !== undefined) {
-        this.canUsePayPal = this.selectedPackage.paypalPaymentFeature === true;
+        this.canUsePayPal = (this.selectedPackage.paypalPaymentFeature === true) && this.enablePayPalPayment;
       }
       if (this.selectedPackage.cryptoPaymentFeature !== undefined) {
-        this.canUseCrypto = this.selectedPackage.cryptoPaymentFeature === true;
+        this.canUseCrypto = (this.selectedPackage.cryptoPaymentFeature === true) && this.enableCryptoPayment;
       }
       return;
     }
@@ -546,21 +583,20 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.currentPackage) {
       const pkg = this.packages.find(p => p._id === this.currentPackage._id || p._id === this.currentPackage.packageId);
       if (pkg) {
-        this.canUsePayPal = pkg.paypalPaymentFeature === true;
-        this.canUseCrypto = pkg.cryptoPaymentFeature === true;
+        this.canUsePayPal = (pkg.paypalPaymentFeature === true) && this.enablePayPalPayment;
+        this.canUseCrypto = (pkg.cryptoPaymentFeature === true) && this.enableCryptoPayment;
         return;
       }
       // Nếu currentPackage có trực tiếp các fields
       if (this.currentPackage.paypalPaymentFeature !== undefined) {
-        this.canUsePayPal = this.currentPackage.paypalPaymentFeature === true;
+        this.canUsePayPal = (this.currentPackage.paypalPaymentFeature === true) && this.enablePayPalPayment;
       }
       if (this.currentPackage.cryptoPaymentFeature !== undefined) {
-        this.canUseCrypto = this.currentPackage.cryptoPaymentFeature === true;
+        this.canUseCrypto = (this.currentPackage.cryptoPaymentFeature === true) && this.enableCryptoPayment;
       }
     } else {
-      // Nếu không có package nào, mặc định cho phép (để user có thể chọn gói)
-      this.canUsePayPal = true;
-      this.canUseCrypto = true;
+      this.canUsePayPal = this.enablePayPalPayment;
+      this.canUseCrypto = this.enableCryptoPayment;
     }
   }
 
@@ -1726,5 +1762,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   ngOnDestroy(): void {
     this.stopPaymentStatusPolling();
+    window.removeEventListener('paymentSettingsChanged', this.onPaymentSettingsChanged as EventListener);
   }
 }

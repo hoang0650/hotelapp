@@ -646,7 +646,8 @@ export class PricingManagementComponent implements OnInit {
       cryptoPaymentFeature: value,
       draftInvoiceFeature: value,
       exportInvoiceFeature: value,
-      aiChatboxFeature: value
+      aiChatboxFeature: value,
+      hotelNotificationFeature: value
     });
   }
 

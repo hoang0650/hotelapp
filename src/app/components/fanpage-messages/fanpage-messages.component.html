@@ -1,14 +1,38 @@
 <div class="container">
   <h2>Fanpage Messages</h2>
   <div *ngIf="loading" class="loading">Đang tải...</div>
-  <div *ngIf="!loading && messages.length === 0" class="empty">Chưa có tin nhắn</div>
-  <div *ngIf="!loading && messages.length > 0" class="list">
-    <div *ngFor="let m of messages" class="item" [class.out]="m.direction==='out'">
-      <div class="meta">
-        <span class="dir">{{ m.direction === 'in' ? 'Khách' : 'Phản hồi' }}</span>
-        <span class="time">{{ m.timestamp | date:'short' }}</span>
+  <div *ngIf="!loading">
+    <div class="toolbar">
+      <label>Fanpage:</label>
+      <select [ngModel]="selectedPageId" (ngModelChange)="changePage($event)">
+        <option *ngFor="let p of pages" [value]="p.id">{{ p.name }}</option>
+      </select>
+    </div>
+    <div class="layout">
+      <div class="sidebar">
+        <div class="empty" *ngIf="conversations.length === 0">Chưa có hội thoại</div>
+        <div *ngFor="let c of conversations" class="conv" [class.active]="c.sender_id===selectedSenderId" (click)="selectConversation(c.sender_id)">
+          <div class="conv-title">{{ c.sender_id }}</div>
+          <div class="conv-last">{{ c.lastText }}</div>
+          <div class="conv-time">{{ c.lastTime | date:'short' }}</div>
+        </div>
       </div>
-      <div class="text">{{ m.text }}</div>
+      <div class="thread">
+        <div class="empty" *ngIf="displayed.length === 0">Chọn hội thoại để xem</div>
+        <div class="list" *ngIf="displayed.length > 0">
+          <div *ngFor="let m of displayed" class="item" [class.out]="m.direction==='out'">
+            <div class="meta">
+              <span class="dir">{{ m.direction === 'in' ? 'Khách' : 'Phản hồi' }}</span>
+              <span class="time">{{ m.timestamp | date:'short' }}</span>
+            </div>
+            <div class="text">{{ m.text }}</div>
+          </div>
+        </div>
+        <div class="reply" *ngIf="selectedSenderId">
+          <input type="text" [(ngModel)]="replyText" placeholder="Nhập nội dung phản hồi..." />
+          <button [disabled]="sending || !replyText.trim()" (click)="sendReply()">Gửi</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
