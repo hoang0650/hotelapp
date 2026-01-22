@@ -304,7 +304,7 @@
     <!-- Modal thống kê doanh thu dịch vụ -->
     <nz-modal
       [(nzVisible)]="isStatisticsModalVisible"
-      nzTitle="Thống kê doanh thu dịch vụ"
+      [nzTitle]="'SERVICE_MANAGEMENT.STATISTICS_TITLE' | translate"
       (nzOnCancel)="closeStatisticsModal()"
       [nzFooter]="null"
       [nzWidth]="1200"
@@ -312,15 +312,15 @@
       <div *nzModalContent>
         <div class="statistics-content">
           <!-- Bộ lọc thống kê -->
-          <nz-card nzTitle="Bộ lọc" [nzBordered]="false" class="mb-3">
+          <nz-card [nzTitle]="'SERVICE_MANAGEMENT.STATS.FILTER_TITLE' | translate" [nzBordered]="false" class="mb-3">
             <nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
                 <nz-form-item>
-                  <nz-form-label>Khách sạn</nz-form-label>
+                  <nz-form-label>{{ 'SERVICE_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select 
                       [(ngModel)]="statisticsFilter.hotelId"
-                      nzPlaceHolder="Chọn khách sạn"
+                      [nzPlaceHolder]="'SERVICE_MANAGEMENT.SELECT_HOTEL' | translate"
                       nzAllowClear
                       class="w-100">
                       <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
@@ -330,7 +330,7 @@
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
                 <nz-form-item>
-                  <nz-form-label>Từ ngày</nz-form-label>
+                  <nz-form-label>{{ 'SERVICE_MANAGEMENT.STATS.START_DATE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-date-picker 
                       [(ngModel)]="statisticsFilter.startDate"
@@ -341,7 +341,7 @@
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
                 <nz-form-item>
-                  <nz-form-label>Đến ngày</nz-form-label>
+                  <nz-form-label>{{ 'SERVICE_MANAGEMENT.STATS.END_DATE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-date-picker 
                       [(ngModel)]="statisticsFilter.endDate"
@@ -353,21 +353,21 @@
             </nz-row>
             <div class="text-right mt-3">
               <button nz-button nzType="primary" (click)="loadStatistics()" [nzLoading]="isLoadingStatistics">
-                <i nz-icon nzType="search"></i> Xem thống kê
+                <i nz-icon nzType="search"></i> {{ 'SERVICE_MANAGEMENT.STATS.VIEW_STATS' | translate }}
               </button>
               <button nz-button nzType="default" (click)="exportStatisticsToExcel()" [nzLoading]="isExportingStatistics" class="ml-2">
-                <i nz-icon nzType="file-excel" nzTheme="outline"></i> Xuất Excel
+                <i nz-icon nzType="file-excel" nzTheme="outline"></i> {{ 'SERVICE_MANAGEMENT.STATS.EXPORT_EXCEL' | translate }}
               </button>
             </div>
           </nz-card>
 
           <!-- Tổng quan -->
-          <nz-card nzTitle="Tổng quan" [nzBordered]="false" class="mb-3" *ngIf="statisticsData">
+          <nz-card [nzTitle]="'SERVICE_MANAGEMENT.EXPORT.SUMMARY_SHEET' | translate" [nzBordered]="false" class="mb-3" *ngIf="statisticsData">
             <nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
                 <nz-statistic 
                   [nzValue]="statisticsData.totalRevenue || 0" 
-                  nzTitle="Tổng doanh thu"
+                  [nzTitle]="'SERVICE_MANAGEMENT.EXPORT.TOTAL_REVENUE' | translate"
                   [nzPrefix]="'đ'"
                   [nzValueStyle]="{ color: '#3f8600' }">
                 </nz-statistic>
@@ -375,21 +375,21 @@
               <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
                 <nz-statistic 
                   [nzValue]="statisticsData.totalOrders" 
-                  nzTitle="Tổng số đơn"
+                  [nzTitle]="'SERVICE_MANAGEMENT.EXPORT.TOTAL_ORDERS' | translate"
                   [nzValueStyle]="{ color: '#1890ff' }">
                 </nz-statistic>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
                 <nz-statistic 
                   [nzValue]="statisticsData.totalQuantity" 
-                  nzTitle="Tổng số lượng"
+                  [nzTitle]="'SERVICE_MANAGEMENT.EXPORT.TOTAL_QUANTITY' | translate"
                   [nzValueStyle]="{ color: '#722ed1' }">
                 </nz-statistic>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="6">
                 <nz-statistic 
                   [nzValue]="statisticsData.averageOrderValue || 0" 
-                  nzTitle="Giá trị đơn TB"
+                  [nzTitle]="'SERVICE_MANAGEMENT.EXPORT.AVERAGE_ORDER_VALUE' | translate"
                   [nzPrefix]="'đ'"
                   [nzValueStyle]="{ color: '#fa8c16' }">
                 </nz-statistic>
@@ -398,7 +398,7 @@
           </nz-card>
 
           <!-- Thống kê theo dịch vụ -->
-          <nz-card nzTitle="Thống kê theo dịch vụ" [nzBordered]="false" *ngIf="statisticsData && statisticsData.serviceStats">
+          <nz-card [nzTitle]="'SERVICE_MANAGEMENT.EXPORT.SERVICE_STATS_SHEET' | translate" [nzBordered]="false" *ngIf="statisticsData && statisticsData.serviceStats">
             <nz-table 
               [nzData]="statisticsData.serviceStats" 
               nzBordered
@@ -406,12 +406,12 @@
               [nzSize]="'small'">
               <thead>
                 <tr>
-                  <th nzWidth="200px">Tên dịch vụ</th>
-                  <th nzWidth="120px">Danh mục</th>
-                  <th nzWidth="100px">Số lượng bán</th>
-                  <th nzWidth="120px">Doanh thu</th>
-                  <th nzWidth="120px">Giá bán TB</th>
-                  <th nzWidth="100px">Số đơn</th>
+                  <th nzWidth="200px">{{ 'SERVICE_MANAGEMENT.EXPORT.SERVICE_NAME' | translate }}</th>
+                  <th nzWidth="120px">{{ 'SERVICE_MANAGEMENT.EXPORT.CATEGORY' | translate }}</th>
+                  <th nzWidth="100px">{{ 'SERVICE_MANAGEMENT.EXPORT.QUANTITY_SOLD' | translate }}</th>
+                  <th nzWidth="120px">{{ 'SERVICE_MANAGEMENT.EXPORT.REVENUE' | translate }}</th>
+                  <th nzWidth="120px">{{ 'SERVICE_MANAGEMENT.EXPORT.AVERAGE_PRICE' | translate }}</th>
+                  <th nzWidth="100px">{{ 'SERVICE_MANAGEMENT.EXPORT.ORDER_COUNT' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -428,17 +428,17 @@
           </nz-card>
 
           <!-- Thống kê theo danh mục -->
-          <nz-card nzTitle="Thống kê theo danh mục" [nzBordered]="false" class="mt-3" *ngIf="statisticsData && statisticsData.categoryStats">
+          <nz-card [nzTitle]="'SERVICE_MANAGEMENT.EXPORT.CATEGORY_STATS_SHEET' | translate" [nzBordered]="false" class="mt-3" *ngIf="statisticsData && statisticsData.categoryStats">
             <nz-table 
               [nzData]="statisticsData.categoryStats" 
               nzBordered
               [nzSize]="'small'">
               <thead>
                 <tr>
-                  <th nzWidth="200px">Danh mục</th>
-                  <th nzWidth="100px">Số lượng bán</th>
-                  <th nzWidth="120px">Doanh thu</th>
-                  <th nzWidth="100px">Tỷ lệ (%)</th>
+                  <th nzWidth="200px">{{ 'SERVICE_MANAGEMENT.EXPORT.CATEGORY' | translate }}</th>
+                  <th nzWidth="100px">{{ 'SERVICE_MANAGEMENT.EXPORT.QUANTITY_SOLD' | translate }}</th>
+                  <th nzWidth="120px">{{ 'SERVICE_MANAGEMENT.EXPORT.REVENUE' | translate }}</th>
+                  <th nzWidth="100px">{{ 'SERVICE_MANAGEMENT.EXPORT.PERCENTAGE' | translate }}</th>
                 </tr>
               </thead>
               <tbody>

@@ -1697,6 +1697,15 @@
       "SUCCESS": "Đã xuất file Excel thống kê thành công!",
       "ERROR": "Lỗi khi xuất file Excel"
     }
+    ,
+    "STATISTICS_TITLE": "Thống kê doanh thu dịch vụ",
+    "STATS": {
+      "FILTER_TITLE": "Bộ lọc",
+      "START_DATE": "Từ ngày",
+      "END_DATE": "Đến ngày",
+      "VIEW_STATS": "Xem thống kê",
+      "EXPORT_EXCEL": "Xuất Excel"
+    }
   },
   "STAFF_MANAGEMENT": {
     "TITLE": "Quản lý nhân viên",

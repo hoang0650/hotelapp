@@ -67,17 +67,23 @@ export class FileService {
     }
   }
 
-  async geminiParse(prompt: string): Promise<string> {
-    const formData = new FormData();
-    formData.append('prompt', prompt);
+  async geminiParse(prompt: string, tenantId: string = 'default'): Promise<string> {
     try {
       const response = await firstValueFrom(
-        this.http.post<any>(`${this.aiUrl}/chat`, formData)
+        this.http.post<any>(`${this.aiUrl}/chat`, {
+          tenant_id: tenantId,
+          question: prompt
+        })
       );
+      if (response && typeof response.answer === 'string') {
+        return response.answer;
+      }
+      // Backward compatibility if server returns {text}
       return response?.text || '';
     } catch (error: any) {
-      console.error('Error calling Gemini chat service:', error);
-      throw error;
+      console.error('Error calling chat parsing service:', error);
+      // Fallback: return empty string to continue OCR pipeline without hard failure
+      return '';
     }
   }
 

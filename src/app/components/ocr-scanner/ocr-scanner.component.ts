@@ -149,14 +149,24 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         }
       }
       const parsedData: any = {
-        fullName: aiResult?.fullName || '',
+        fullName: ((): string => {
+          const fn = this.extractFullNameFromLines(lines);
+          return fn || (aiResult?.fullName || '');
+        })(),
         idNumber: aiResult?.idNumber || '',
         dateOfBirth: dobVal,
-        gender: aiResult?.gender || '',
+        gender: ((): string => {
+          const gr = this.extractGenderFromLines(lines);
+          return gr || '';
+        })(),
         nationality: aiResult?.nationality || '',
-        address: aiResult?.address || '',
+        address: ((): string => {
+          const ad = this.extractAddressFromLines(lines);
+          return ad || (aiResult?.address || '');
+        })(),
         dateOfIssue: aiResult?.dateOfIssue || '',
-        dateOfExpiry: aiResult?.dateOfExpiry || ''
+        dateOfExpiry: aiResult?.dateOfExpiry || '',
+        rawText: lines
       };
       if (this.useGemini) {
         const prompt = `Hãy trích xuất JSON với các khóa: fullName, idNumber, dateOfBirth(dd/mm/yyyy), gender(male|female), nationality, address từ văn bản OCR sau:\n${joined}\nChỉ trả về JSON hợp lệ.`;
@@ -458,12 +468,22 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           }
         }
         const parsedData: any = {
-          fullName: aiResult?.fullName || '',
+          fullName: ((): string => {
+            const fn = this.extractFullNameFromLines(lines);
+            return fn || '';
+          })(),
           idNumber: aiResult?.idNumber || '',
           dateOfBirth: dobVal,
-          gender: aiResult?.gender || '',
+          gender: ((): string => {
+            const gr = this.extractGenderFromLines(lines);
+            return gr || '';
+          })(),
           nationality: aiResult?.nationality || '',
-          address: aiResult?.address || ''
+          address: ((): string => {
+            const ad = this.extractAddressFromLines(lines);
+            return ad || '';
+          })(),
+          rawText: lines
         };
         if (this.useGemini) {
           const prompt = `Hãy trích xuất JSON với các khóa: fullName, idNumber, dateOfBirth(dd/mm/yyyy), gender(male|female), nationality, address từ văn bản OCR sau:\n${joined}\nChỉ trả về JSON hợp lệ.`;
@@ -1105,6 +1125,118 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       }
     }
     return 'back';
+  }
+
+  private extractGenderFromLines(lines: string[]): string {
+    if (!Array.isArray(lines)) return '';
+    const norm = lines.map(l => (l || '').trim());
+    const hasLabel = (s: string) => /(giới\s*tính|gioi\s*tinh|sex)/iu.test(s);
+    for (const s of norm) {
+      if (hasLabel(s) && (/\bNữ\b/iu.test(s) || /\bNu\b/iu.test(s))) return 'female';
+    }
+    for (const s of norm) {
+      if (hasLabel(s) && /\bNam\b/iu.test(s) && !/\bVi[eẹ]t\s+Nam\b/iu.test(s)) return 'male';
+    }
+    for (const s of norm) {
+      if (/\bNữ\b/iu.test(s) || /\bNu\b/iu.test(s)) return 'female';
+    }
+    for (const s of norm) {
+      if (/\bNam\b/iu.test(s) && !/\bVi[eẹ]t\s+Nam\b/iu.test(s)) return 'male';
+    }
+    return '';
+  }
+
+  private extractFullNameFromLines(lines: string[]): string {
+    if (!Array.isArray(lines)) return '';
+    const norm = lines.map(l => (l || '').trim()).filter(l => l.length > 0);
+    const labelKeywords = [
+      'HỌ, CHỮ ĐỆM VÀ TÊN KHAI SINH / FULL NAME:',
+      'HỌ, CHỮ ĐỆM VÀ TÊN / FULL NAME:',
+      'HỌ VÀ TÊN / FULL NAME:',
+      'HỌ TÊN / FULL NAME:',
+      'FULL NAME:'
+    ];
+    let name = '';
+    // Tìm dòng có nhãn tên
+    const idx = norm.findIndex(l => {
+      const up = l.toUpperCase();
+      return labelKeywords.some(k => up.includes(k));
+    });
+    if (idx >= 0) {
+      const line = norm[idx];
+      const after = line.split(':').slice(1).join(':').trim();
+      if (after && this.isValidName(after)) {
+        name = after;
+      } else {
+        // Lấy dòng kế tiếp nếu hợp lệ
+        const next = norm[idx + 1] || '';
+        if (next && this.isValidName(next)) {
+          name = next;
+        }
+      }
+    }
+    // Fallback: tìm dòng đầu tiên hợp lệ theo isValidName
+    if (!name) {
+      const candidate = norm.find(l => this.isValidName(l));
+      if (candidate) name = candidate;
+    }
+    return (name || '').trim();
+  }
+
+  private extractAddressFromLines(lines: string[]): string {
+    if (!Array.isArray(lines)) return '';
+    const cleanLines = lines.map(l => (l || '').trim()).filter(l => l.length > 0);
+    const addressLabelKeywords = [
+      'NƠI CƯ TRÚ / PLACE OF RESIDENCE:',
+      'NƠI THƯỜNG TRÚ / PLACE OF RESIDENCE:',
+      'NƠI CƯ TRÚ/ ADDRESS:',
+      'NƠI CƯ TRÚ:',
+      'NƠI THƯỜNG TRÚ:',
+      'PLACE OF RESIDENCE:',
+      'PERMANENT ADDRESS:',
+      'CURRENT ADDRESS:',
+      'RESIDENTIAL ADDRESS:',
+      'REGISTERED RESIDENCE:',
+      'HOME ADDRESS:',
+      'DOMICILE:',
+      'ĐỊA CHỈ / ADDRESS:',
+      'ADDRESS:'
+    ];
+    const placeBirthRegex = /\bplace\s*(?:of|ot|o[ft])\s*birth\b/iu;
+    const vnBirthRegex = /(nơi\s*sinh|quê\s*quán|khai\s*sinh)/iu;
+    const idx = cleanLines.findIndex(l => {
+      const up = l.toUpperCase();
+      return addressLabelKeywords.some(k => up.includes(k));
+    });
+    let addr = '';
+    if (idx >= 0) {
+      const line = cleanLines[idx];
+      const after = line.split(':').slice(1).join(':').trim();
+      if (after && this.isValidAddress(after)) {
+        addr = after;
+      } else {
+        // Lấy 1-2 dòng kế tiếp, ghép lại và kiểm tra hợp lệ
+        const next1 = cleanLines[idx + 1] || '';
+        const next2 = cleanLines[idx + 2] || '';
+        const joined = [next1, next2].filter(Boolean).join(' ').trim();
+        if (joined && this.isValidAddress(joined)) {
+          addr = joined;
+        }
+      }
+    }
+    // Fallback: ghép các dòng không phải birthplace, kiểm tra hợp lệ
+    if (!addr) {
+      const filtered = cleanLines.filter(l => !placeBirthRegex.test(l) && !vnBirthRegex.test(l));
+      const joined = filtered.join(' ').trim();
+      if (joined && this.isValidAddress(joined)) {
+        addr = joined;
+      }
+    }
+    // Loại bỏ chuỗi sai và định dạng
+    const specificRemove = /Thù\s*Th(i|ị)êm,\s*TP\.\s*Th(ủ|ù)\s*Đ(ức|ửc),\s*TP\.\s*H(ồ|o)\s*Ch(i|í)\s*Minh/giu;
+    addr = (addr || '').replace(specificRemove, '');
+    addr = this.formatVietnameseAddress(addr);
+    return addr.trim();
   }
 
   /**

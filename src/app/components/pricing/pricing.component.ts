@@ -876,8 +876,9 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         this.pricingService.cancelSubscription(this.userId).subscribe({
           next: (response) => {
             if (response.success !== false) {
-              this.message.success(response.message || 'Hủy gói thành công');
-              this.currentPackage = null;
+              this.message.success(response.message || 'Yêu cầu hủy đã ghi nhận. Gói sẽ được hủy khi hết hạn.');
+              this.loadCurrentPackage();
+              this.loadPaymentHistory();
             } else {
               this.message.error(response.message || 'Hủy gói thất bại');
             }

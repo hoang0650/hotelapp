@@ -148,15 +148,29 @@ export class ServiceManagementComponent implements OnInit {
     return this.canManage(service);
   }
 
-  getCategoryLabel(category: ServiceCategory): string {
-    switch (category) {
+  getCategoryLabel(category: any): string {
+    let key: string = 'custom';
+    if (category) {
+      if (typeof category === 'string') {
+        key = category;
+      } else if (typeof category === 'object') {
+        if (typeof category.category === 'string') {
+          key = category.category;
+        } else if (typeof (category as any).type === 'string') {
+          key = (category as any).type;
+        } else if (typeof (category as any).key === 'string') {
+          key = (category as any).key;
+        }
+      }
+    }
+    switch (key) {
       case 'room_service': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.ROOM_SERVICE');
       case 'food': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.FOOD');
       case 'beverage': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.BEVERAGE');
       case 'spa': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.SPA');
       case 'transport': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.TRANSPORT');
       case 'custom': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.CUSTOM');
-      default: return category;
+      default: return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.CUSTOM');
     }
   }
 

@@ -676,4 +676,36 @@ export class PricingManagementComponent implements OnInit {
       }
     });
   }
+
+  cancelUserSubscription(): void {
+    if (!this.currentUser?._id) {
+      this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.USER_NOT_FOUND'));
+      return;
+    }
+    this.modal.confirm({
+      nzTitle: 'Xác nhận hủy gói',
+      nzContent: 'Hủy gói sẽ có hiệu lực khi hết hạn nếu gói đã được thanh toán.',
+      nzOkText: 'Hủy gói',
+      nzCancelText: this.translate.instant('COMMON.CANCEL'),
+      nzOnOk: () => {
+        this.loading = true;
+        this.pricingService.cancelSubscription(this.currentUser._id).subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.message.success(response.message || 'Đã ghi nhận yêu cầu hủy gói');
+              this.loadPackages();
+              this.loadCurrentUserPackage();
+            } else {
+              this.message.error(response.message || 'Hủy gói thất bại');
+            }
+            this.loading = false;
+          },
+          error: (error) => {
+            this.message.error(error.error?.message || 'Hủy gói thất bại');
+            this.loading = false;
+          }
+        });
+      }
+    });
+  }
 } 

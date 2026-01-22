@@ -93,6 +93,15 @@
                     (click)="upgradeOrDowngradePackage(pkg._id || pkg.id, 'yearly')">
                     {{ 'PRICING_MANAGEMENT.UPGRADE_DOWNGRADE_YEARLY' | translate }}
                   </button>
+                  <button
+                    *ngIf="currentUserPackage && (currentUserPackage._id === pkg._id || currentUserPackage.id === pkg.id)"
+                    nz-button
+                    nzType="default"
+                    nzDanger
+                    style="margin-left: 8px;"
+                    (click)="cancelUserSubscription()">
+                    Hủy gói
+                  </button>
                 </ng-container>
                 <button *ngIf="isAdmin" nz-button nzType="default" (click)="onAdminSubscribe(pkg._id || pkg.id)">{{ 'PRICING_MANAGEMENT.ADMIN_SUBSCRIBE_TEST' | translate }}</button>
               </td>
@@ -435,19 +444,6 @@
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
               {{ 'PRICING_MANAGEMENT.FEATURES.AI_CHATBOX_DESC' | translate }}
-            </div>
-          </nz-form-control>
-        </nz-form-item>
-
-        <!-- Tính năng Thông báo Khách sạn -->
-        <nz-form-item>
-          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.HOTEL_NOTIFICATION' | translate }}</nz-form-label>
-          <nz-form-control [nzSpan]="18">
-            <label nz-checkbox formControlName="hotelNotificationFeature">
-              {{ 'PRICING_MANAGEMENT.FEATURES.HOTEL_NOTIFICATION_ENABLE' | translate }}
-            </label>
-            <div style="margin-top: 8px; color: #666; font-size: 12px;">
-              {{ 'PRICING_MANAGEMENT.FEATURES.HOTEL_NOTIFICATION_DESC' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>

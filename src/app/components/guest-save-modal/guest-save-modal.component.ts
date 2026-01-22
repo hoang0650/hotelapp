@@ -68,6 +68,48 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       address: ocrData.address ? ocrData.address.substring(0, 50) + '...' : null
     });
     
+    const rawLines: string[] = Array.isArray(ocrData.rawText)
+      ? ocrData.rawText
+      : typeof ocrData.rawText === 'string'
+        ? ocrData.rawText.split(/\r?\n/)
+        : [];
+    const normLines = rawLines.map(l => (l || '').trim()).filter(l => l.length > 0);
+    let parsedFullName = '';
+    const nameLabelIdx = normLines.findIndex(l => /(họ\s*và\s*tên|ho\s*va\s*ten|full\s*name)/i.test(l));
+    if (nameLabelIdx >= 0) {
+      const line = normLines[nameLabelIdx];
+      const afterColon = line.split(':').slice(1).join(':').trim();
+      if (afterColon && !/^\d{9,12}$/.test(afterColon)) {
+        parsedFullName = afterColon;
+      } else {
+        const next = normLines[nameLabelIdx + 1] || '';
+        if (next && !/^\d{9,12}$/.test(next)) {
+          parsedFullName = next;
+        }
+      }
+    }
+    if (!parsedFullName && typeof ocrData.fullName === 'string') {
+      parsedFullName = String(ocrData.fullName).trim();
+    }
+    if (parsedFullName && !/khách\s*lẻ/i.test(parsedFullName)) {
+      ocrData.fullName = parsedFullName;
+    }
+    
+    const addressValue = typeof ocrData.address === 'string' ? ocrData.address : '';
+    const placeBirthRegex = /\bplace\s*(?:of|ot|o[ft])\s*birth\b/iu;
+    const vnBirthRegex = /(nơi\s*sinh|quê\s*quán|khai\s*sinh)/iu;
+    let cleanedAddress = addressValue.replace(placeBirthRegex, '').replace(vnBirthRegex, '');
+    const specificRemove = /Thù\s*Th(i|ị)êm,\s*TP\.\s*Th(ủ|ù)\s*Đ(ức|ửc),\s*TP\.\s*H(ồ|o)\s*Ch(i|í)\s*Minh/giu;
+    cleanedAddress = cleanedAddress.replace(specificRemove, '');
+    if (!cleanedAddress && normLines.length) {
+      const addrLines = normLines.filter(l => !placeBirthRegex.test(l) && !vnBirthRegex.test(l));
+      cleanedAddress = addrLines.join(' ');
+    }
+    cleanedAddress = cleanedAddress.replace(/\s+/g, ' ').trim();
+    if (cleanedAddress) {
+      ocrData.address = cleanedAddress;
+    }
+    
     // Điền vào personalInfo
     if (this.personalInfoForm) {
       if (ocrData.fullName) {
@@ -102,11 +144,11 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     
     // Điền vào contactInfo
     if (this.contactInfoForm) {
-      const addressValue = ocrData.address;
-      if (addressValue && this.addressForm) {
-        const street = String(addressValue).replace(/\s+/g, ' ').trim();
+      const addr = ocrData.address;
+      if (addr && this.addressForm) {
+        const street = String(addr).replace(/\s+/g, ' ').trim();
         this.addressForm.patchValue({ street });
-        console.log('[GuestSaveModal] Set address:', addressValue.substring(0, 50) + '...');
+        console.log('[GuestSaveModal] Set address:', addr.substring(0, 50) + '...');
       }
     }
     
