@@ -1,0 +1,110 @@
+:host {
+  display: block;
+  padding: 16px;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.actions button + button {
+  margin-left: 8px;
+}
+.section {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.section label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.room-card {
+  border: 1px dashed #d9d9d9;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.room-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.sub-section {
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 8px;
+}
+.sub-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.list .list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.bot-setting {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  :host {
+    padding: 12px;
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+  .actions button {
+    flex: 1;
+  }
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .room-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .list .list-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

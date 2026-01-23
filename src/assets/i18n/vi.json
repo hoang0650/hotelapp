@@ -115,8 +115,9 @@
     "PAYMENT_FINANCE": "Thanh toán & Tài chính",
     "INTEGRATION_CONFIG": "Tích hợp & Cấu hình",
     "SYSTEM_SETTINGS": "Cài đặt hệ thống",
+    "BOT_SETTING": "Cấu hình Bot",
     "SHIFT_HANDOVER_HISTORY": "Lịch sử giao ca",
-    "FANPAGE_MESSAGES": "Tin nhắn Fanpage",
+    "FANPAGE_MESSAGES": "Quản lí Fanpage",
     "DEBT_MANAGEMENT": "Quản lý công nợ",
     "CONTACT_MANAGEMENT": "Quản lý Liên hệ",
     "BLOG_MANAGEMENT": "Quản lý Blog",
@@ -1665,7 +1666,7 @@
     "NO_PERMISSION": "Bạn không có quyền thực hiện thao tác này",
     "LOAD_HOTELS_ERROR": "Không thể tải danh sách khách sạn",
     "FILL_REQUIRED_FIELDS": "Vui lòng điền đầy đủ thông tin bắt buộc",
-    "CATEGORY": {
+    "CATEGORY_LABELS": {
       "ROOM_SERVICE": "Dịch vụ phòng",
       "FOOD": "Đồ ăn",
       "BEVERAGE": "Đồ uống",
@@ -2310,6 +2311,7 @@
       "DISCOUNT": "Giảm giá (%)",
       "DURATION": "Thời hạn",
       "MAX_USERS": "Số người dùng tối đa",
+      "MAX_ROOMS": "Số phòng tối đa",
       "STATUS": "Trạng thái",
       "ACTIONS": "Thao tác",
       "USER": "Người dùng",

@@ -111,8 +111,9 @@
     "PAYMENT_FINANCE": "Zahlung & Finanzen",
     "INTEGRATION_CONFIG": "Integration & Konfiguration",
     "SYSTEM_SETTINGS": "Systemeinstellungen",
+    "BOT_SETTING": "Bot-Einstellungen",
     "SHIFT_HANDOVER_HISTORY": "Schichtübergabe-Verlauf",
-    "FANPAGE_MESSAGES": "Fanpage-Nachrichten",
+    "FANPAGE_MESSAGES": "Fanpageverwaltung",
     "DEBT_MANAGEMENT": "Schuldenverwaltung",
     "CONTACT_MANAGEMENT": "Kontaktverwaltung",
     "BLOG_MANAGEMENT": "Blog-Verwaltung"
@@ -258,7 +259,7 @@
     "NO_PERMISSION": "Sie haben keine Berechtigung für diese Aktion",
     "LOAD_HOTELS_ERROR": "Hotelliste kann nicht geladen werden",
     "FILL_REQUIRED_FIELDS": "Bitte erforderliche Felder ausfüllen",
-    "CATEGORY": {
+    "CATEGORY_LABELS": {
       "ROOM_SERVICE": "Zimmerservice",
       "FOOD": "Essen",
       "BEVERAGE": "Getränk",
@@ -1641,6 +1642,11 @@
       "SCHEDULE_ADD": "Schicht hinzufügen",
       "NOTES": "Notizen",
       "NOTES_PLACEHOLDER": "Notizen..."
+    }
+  },
+  "PRICING_MANAGEMENT": {
+    "TABLE_HEADERS": {
+      "MAX_ROOMS": "Maximale Zimmeranzahl"
     }
   },
   "ABOUT_US": {

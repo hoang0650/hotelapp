@@ -5,6 +5,8 @@ import { Hotel } from '../../interfaces/hotel';
 import { RoomsService } from '../../services/rooms.service';
 import { HotelService } from '../../services/hotel.service';
 import { AuthService } from '../../services/auth.service';
+import { PermissionService } from '../../services/permission.service';
+import { PricingPackage } from '../../services/pricing.service';
 import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
@@ -35,6 +37,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   priceConfigId: string | null = null;
   hasPriceConfig: boolean = false;
   currentUser: User | null = null;
+  currentPackage: PricingPackage | null = null;
   
   private subscriptions = new Subscription();
 
@@ -65,6 +68,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
     private roomService: RoomsService, 
     private hotelService: HotelService,
     private authService: AuthService,
+    private permissionService: PermissionService,
     private message: NzMessageService,
     private translate: TranslateService
   ) {
@@ -123,6 +127,13 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       this.hasPriceConfig = !!priceConfigId && priceConfigId !== '';
       this.updatePriceFieldsDisabledState();
     });
+
+    // Theo dõi gói hiện tại của người dùng (để lấy maxRooms)
+    this.subscriptions.add(
+      this.permissionService.currentPackage$.subscribe(pkg => {
+        this.currentPackage = pkg;
+      })
+    );
   }
 
   ngOnInit(): void {
@@ -653,6 +664,18 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
         }
       );
     } else {
+      // Kiểm tra giới hạn số phòng theo gói
+      if (!this.authService.isSuperAdmin()) {
+        const maxRooms = (this.currentPackage?.maxRooms ?? 0);
+        if (maxRooms && maxRooms > 0) {
+          const currentHotelId = this.selectedHotelId || roomData.hotelId;
+          const currentCount = this.rooms.filter(r => r.hotelId === currentHotelId).length;
+          if (currentCount >= maxRooms) {
+            this.message.warning(`Gói hiện tại chỉ cho phép tạo tối đa ${maxRooms} phòng. Vui lòng nâng cấp gói để tạo thêm phòng.`);
+            return;
+          }
+        }
+      }
       const { _id, ...dataToSend } = roomData;
       this.roomService.createRoom(dataToSend as Room).subscribe(
         (newRoom: Room) => {

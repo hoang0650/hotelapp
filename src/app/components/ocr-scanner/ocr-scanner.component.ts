@@ -156,10 +156,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         idNumber: aiResult?.idNumber || '',
         dateOfBirth: dobVal,
         gender: ((): string => {
+          const fromServer = (aiResult?.gender || '').toLowerCase();
+          if (fromServer === 'male' || fromServer === 'female') return fromServer;
           const gr = this.extractGenderFromLines(lines);
           return gr || '';
         })(),
-        nationality: aiResult?.nationality || '',
+        nationality: aiResult?.nationality || 'Việt Nam',
         address: ((): string => {
           const ad = this.extractAddressFromLines(lines);
           return ad || (aiResult?.address || '');
@@ -475,10 +477,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           idNumber: aiResult?.idNumber || '',
           dateOfBirth: dobVal,
           gender: ((): string => {
+            const fromServer = (aiResult?.gender || '').toLowerCase();
+            if (fromServer === 'male' || fromServer === 'female') return fromServer;
             const gr = this.extractGenderFromLines(lines);
             return gr || '';
           })(),
-          nationality: aiResult?.nationality || '',
+          nationality: aiResult?.nationality || 'Việt Nam',
           address: ((): string => {
             const ad = this.extractAddressFromLines(lines);
             return ad || '';

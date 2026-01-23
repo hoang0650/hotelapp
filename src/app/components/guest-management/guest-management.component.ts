@@ -44,7 +44,7 @@ export class GuestManagementComponent implements OnInit {
 
   // Lấy token xác thực
   get authToken(): string {
-    return localStorage.getItem('token') || '';
+    return this.authService.getToken() || '';
   }
 
   constructor(

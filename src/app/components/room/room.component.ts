@@ -1623,22 +1623,17 @@ export class RoomComponent implements OnInit, OnDestroy {
       ? `${checkinInfo.checkinTime.getHours().toString().padStart(2, '0')}:${checkinInfo.checkinTime.getMinutes().toString().padStart(2, '0')} ${checkinInfo.checkinTime.getDate().toString().padStart(2, '0')}/${(checkinInfo.checkinTime.getMonth() + 1).toString().padStart(2, '0')}/${checkinInfo.checkinTime.getFullYear()}`
       : '';
     
-    // Lấy totalAmount từ room.totalPrice (được tính từ room-content-modal) nếu có
-    // Nếu không có thì tính lại theo công thức cũ
     let totalAmount = 0;
     if (room._id) {
       const savedTotalPrice = localStorage.getItem(`room_${room._id}_totalPrice`);
       if (savedTotalPrice) {
-        totalAmount = parseFloat(savedTotalPrice) || 0;
+        const parsed = Number(savedTotalPrice);
+        if (!isNaN(parsed)) {
+          totalAmount = parsed;
+        }
       }
     }
-    
-    // Nếu không có totalPrice từ modal, tính lại theo công thức
     if (totalAmount === 0) {
-      // Công thức mới:
-      // Tổng tiền = tiền phòng + phụ thu + tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
-      // ĐỒNG BỘ: Công thức này phải khớp với room-content-modal.component.ts:
-      // totalPrice = roomPrice + totalAdditionalCharges + serviceTotal
       totalAmount = checkinInfo.roomPrice + checkinInfo.additionalCharges + checkinInfo.serviceAmount;
     }
     

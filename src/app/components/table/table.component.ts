@@ -25,6 +25,7 @@ import { TransactionService } from '../../services/transaction.service';
 import { take } from 'rxjs/operators';
 import { forkJoin } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
+import { User } from '../../interfaces/user';
 
 type TableScroll = 'unset' | 'scroll' | 'fixed';
 
@@ -1911,12 +1912,25 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         
         // Nếu có thông tin login mới, cập nhật localStorage và services
         if (response.login?.token) {
-          localStorage.setItem('token', response.login.token);
           
           if (response.login.user) {
             localStorage.setItem('user', JSON.stringify(response.login.user));
             // Cập nhật AuthService
-            this.authService.loginFromShiftHandover(response.login.token, response.login.user);
+            const current = this.authService.getCurrentUser();
+            const ur = response.login.user;
+            const normalizedUser: User = {
+              _id: ur._id,
+              username: ur.username,
+              email: ur.email,
+              fullName: ur.fullName,
+              role: (ur.role as User['role']),
+              status: current?.status ?? 'active',
+              createdAt: current?.createdAt ?? new Date(),
+              updatedAt: current?.updatedAt ?? new Date(),
+              businessId: current?.businessId,
+              hotelId: ur.hotelId ?? current?.hotelId
+            };
+            this.authService.loginFromShiftHandover(response.login.token, normalizedUser);
             // Cập nhật UserService để header tự động refresh
             this.userService.setCurrentUser(response.login.user);
           }

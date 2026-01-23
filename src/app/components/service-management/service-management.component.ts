@@ -34,7 +34,7 @@ export class ServiceManagementComponent implements OnInit {
 
   // Lấy token xác thực
   get authToken(): string {
-    return localStorage.getItem('token') || '';
+    return this.authService.getToken() || '';
   }
 
   // Định dạng tiền tệ VND
@@ -164,13 +164,13 @@ export class ServiceManagementComponent implements OnInit {
       }
     }
     switch (key) {
-      case 'room_service': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.ROOM_SERVICE');
-      case 'food': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.FOOD');
-      case 'beverage': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.BEVERAGE');
-      case 'spa': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.SPA');
-      case 'transport': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.TRANSPORT');
-      case 'custom': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.CUSTOM');
-      default: return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY.CUSTOM');
+      case 'room_service': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY_LABELS.ROOM_SERVICE');
+      case 'food': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY_LABELS.FOOD');
+      case 'beverage': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY_LABELS.BEVERAGE');
+      case 'spa': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY_LABELS.SPA');
+      case 'transport': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY_LABELS.TRANSPORT');
+      case 'custom': return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY_LABELS.CUSTOM');
+      default: return this.translate.instant('SERVICE_MANAGEMENT.CATEGORY_LABELS.CUSTOM');
     }
   }
 

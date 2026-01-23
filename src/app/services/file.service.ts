@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface PreprocessImageResponse {
   success: boolean;
@@ -23,10 +24,10 @@ export class FileService {
   private apiUrl = `${environment.apiUrl}/files`;
   private aiUrl = `${environment.aiUrl}`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private authService: AuthService) {}
 
   private getHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
+    const token = this.authService.getToken();
     return new HttpHeaders({
       'Authorization': `Bearer ${token || ''}`
     });

@@ -54,6 +54,7 @@ import { EInvoiceManagementComponent } from './components/e-invoice-management/e
 import { EInvoiceTemplateComponent } from './components/e-invoice-template/e-invoice-template.component';
 import { HotelFilesComponent } from './components/hotel-files/hotel-files.component';
 import { FanpageMessagesComponent } from './components/fanpage-messages/fanpage-messages.component';
+import { BotSettingComponent } from './components/bot-setting/bot-setting.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -101,6 +102,7 @@ const routes: Routes = [
       { path: 'financial-summary-report', component: FinancialSummaryReportComponent, canActivate: [PermissionGuard] },
       { path: 'ota-management', component: OtaManagementComponent, canActivate: [PermissionGuard] },
       { path: 'fanpage-messages', component: FanpageMessagesComponent, canActivate: [PermissionGuard] },
+      { path: 'bot-setting', component: BotSettingComponent, canActivate: [PermissionGuard] },
       { path: 'electric-setting', component: TuyaSwitchComponent, canActivate: [PermissionGuard] },
       { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },
       { path: 'settings', component: SettingsComponent, canActivate: [PermissionGuard] },

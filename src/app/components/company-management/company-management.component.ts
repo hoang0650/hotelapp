@@ -611,7 +611,7 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
   }
 
   get uploadHeaders(): { [key: string]: string } {
-    const token = localStorage.getItem('token');
+    const token = this.authService.getToken();
     return {
       'Authorization': token || ''
     };

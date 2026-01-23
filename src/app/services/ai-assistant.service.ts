@@ -186,14 +186,14 @@ export class AiAssistantService {
   /**
    * Upload dataset sản phẩm/dịch vụ lên AI FastAPI (/dataset) cho tenant
    */
-  async uploadDatasetExternal(tenantId: string, products: Product[]): Promise<void> {
+  async uploadDatasetExternal(tenantId: string, products: Product[], botContext?: any): Promise<void> {
     try {
       await firstValueFrom(
-        this.http.post<any>(`${this.aiUrl}/dataset`, { tenant_id: tenantId, products })
+        this.http.post<any>(`${this.aiUrl}/dataset`, { tenant_id: tenantId, products, bot_context: botContext })
       );
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: `Đã cập nhật dataset cho tenant ${tenantId}. Bạn có thể bắt đầu chat.`,
+        content: `Đã cập nhật dataset cho tenant ${tenantId}.`,
         role: 'assistant',
         timestamp: new Date()
       };

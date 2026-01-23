@@ -111,8 +111,9 @@
     "PAYMENT_FINANCE": "Payment & Finance",
     "INTEGRATION_CONFIG": "Integration & Configuration",
     "SYSTEM_SETTINGS": "System Settings",
+    "BOT_SETTING": "Bot Settings",
     "SHIFT_HANDOVER_HISTORY": "Shift Handover History",
-    "FANPAGE_MESSAGES": "Fanpage Messages",
+    "FANPAGE_MESSAGES": "Fanpage Management",
     "DEBT_MANAGEMENT": "Debt Management",
     "CONTACT_MANAGEMENT": "Contact Management",
     "BLOG_MANAGEMENT": "Blog Management"
@@ -1592,6 +1593,11 @@
       "NOTES_PLACEHOLDER": "Notes..."
     }
   },
+  "PRICING_MANAGEMENT": {
+    "TABLE_HEADERS": {
+      "MAX_ROOMS": "Max Rooms"
+    }
+  },
   "ABOUT_US": {
     "HERO_SUBTITLE": "Creative connection, reaching for the future",
     "COMPANY_INFO": "Company Information",
@@ -1974,7 +1980,7 @@
     "NO_PERMISSION": "You do not have permission to perform this action",
     "LOAD_HOTELS_ERROR": "Unable to load hotels list",
     "FILL_REQUIRED_FIELDS": "Please fill in all required fields",
-    "CATEGORY": {
+    "CATEGORY_LABELS": {
       "ROOM_SERVICE": "Room Service",
       "FOOD": "Food",
       "BEVERAGE": "Beverage",

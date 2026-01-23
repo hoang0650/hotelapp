@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, map, BehaviorSubject } from 'rxjs';
 import { User } from '../interfaces/user';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface BusinessInfo {
   name: string;
@@ -58,22 +59,21 @@ export class UserService {
   private apiUrl = `${environment.apiUrl}/users`;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private authService: AuthService) {
     this.checkAuthStatus();
   }
 
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
+    const token = this.authService.getToken();
     return new HttpHeaders().set('Authorization', `Bearer ${token}`);
   }
 
   private checkAuthStatus(): void {
-    const token = localStorage.getItem('token');
+    const token = this.authService.getToken();
     if (token) {
       this.getUserInfo().subscribe({
         next: (user) => this.currentUserSubject.next(user),
         error: () => {
-          localStorage.removeItem('token');
           this.currentUserSubject.next(null);
         }
       });
@@ -104,10 +104,9 @@ export class UserService {
   }
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials).pipe(
+    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials, { withCredentials: true }).pipe(
       map(response => {
         if (!response.requireTwoFactor) {
-          localStorage.setItem('token', response.token);
           this.currentUserSubject.next(response.user);
         }
         return response;
@@ -124,7 +123,10 @@ export class UserService {
   }
 
   logout(): void {
-    localStorage.removeItem('token');
+    this.http.post(`${this.apiUrl}/logout`, {}, { withCredentials: true }).subscribe({
+      next: () => {},
+      error: () => {}
+    });
     this.currentUserSubject.next(null);
   }
 

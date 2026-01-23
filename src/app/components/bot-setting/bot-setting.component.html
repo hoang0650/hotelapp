@@ -1,0 +1,108 @@
+<div class="bot-setting">
+  <div class="header">
+    <h2>Cấu hình Bot Tư vấn Khách sạn</h2>
+    <div class="actions">
+      <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveSettings()">Lưu cấu hình</button>
+      <button nz-button nzType="default" [nzLoading]="syncing" (click)="syncAI()">Đồng bộ AI</button>
+    </div>
+  </div>
+
+  <form [formGroup]="form" class="form">
+    <div class="section">
+      <h3>Thông tin khách sạn</h3>
+      <div class="grid-2">
+        <label>
+          Tên khách sạn
+          <input nz-input formControlName="hotelName" placeholder="Ví dụ: PH Hotel Saigon" />
+        </label>
+        <div formGroupName="location">
+          <div class="grid-3">
+            <label>
+              Đường
+              <input nz-input formControlName="street" placeholder="Số nhà, đường" />
+            </label>
+            <label>
+              Thành phố
+              <input nz-input formControlName="city" placeholder="TP. Hồ Chí Minh" />
+            </label>
+            <label>
+              Quốc gia
+              <input nz-input formControlName="country" placeholder="Việt Nam" />
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <label>
+          Giờ nhận phòng
+          <input nz-input formControlName="checkin_time" placeholder="14:00" />
+        </label>
+        <label>
+          Giờ trả phòng
+          <input nz-input formControlName="checkout_time" placeholder="12:00" />
+        </label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h3>Hạng phòng, giá và tiện ích</h3>
+        <button nz-button nzType="dashed" (click)="addRoom()">Thêm hạng phòng</button>
+      </div>
+      <div formArrayName="rooms">
+        <div class="room-card" *ngFor="let r of rooms.controls; let i = index" [formGroupName]="i">
+          <div class="room-head">
+            <strong>Hạng phòng #{{ i + 1 }}</strong>
+            <button nz-button nzType="text" nzDanger (click)="removeRoom(i)">Xóa</button>
+          </div>
+          <div class="grid-2">
+            <label>
+              Tên hạng phòng
+              <input nz-input formControlName="name" placeholder="Phòng Deluxe Twin" />
+            </label>
+            <label>
+              Giá tham khảo
+              <input nz-input formControlName="price" placeholder="850000 VND" />
+            </label>
+          </div>
+          <label>
+            Mô tả
+            <textarea nz-input formControlName="description" rows="2" placeholder="Mô tả ngắn"></textarea>
+          </label>
+          <label>
+            Trải nghiệm phù hợp
+            <input nz-input formControlName="use_case" placeholder="Công tác, cặp đôi, gia đình" />
+          </label>
+
+          <div class="grid-2">
+            <div class="sub-section" formArrayName="images">
+              <div class="sub-head">
+                <span>Hình ảnh (URL)</span>
+                <button nz-button nzType="dashed" (click)="addImage(i)">Thêm ảnh</button>
+              </div>
+              <div class="list">
+                <div class="list-item" *ngFor="let ctrl of getImages(i).controls; let j = index">
+                  <input nz-input [formControlName]="j" placeholder="https://..." />
+                  <button nz-button nzType="text" nzDanger (click)="removeImage(i, j)">Xóa</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="sub-section" formArrayName="amenities">
+              <div class="sub-head">
+                <span>Tiện ích</span>
+                <button nz-button nzType="dashed" (click)="addAmenity(i)">Thêm tiện ích</button>
+              </div>
+              <div class="list">
+                <div class="list-item" *ngFor="let ctrl of getAmenities(i).controls; let j = index">
+                  <input nz-input [formControlName]="j" placeholder="Wifi, Buffet sáng..." />
+                  <button nz-button nzType="text" nzDanger (click)="removeAmenity(i, j)">Xóa</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>

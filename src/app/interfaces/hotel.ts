@@ -48,6 +48,7 @@ export interface HotelSettings {
   enableDraftInvoice?: boolean;
   enableExportInvoice?: boolean;
   enableAiChatbox?: boolean;
+  botContext?: any;
   notificationSettings?: HotelNotificationSettings;
 }
 

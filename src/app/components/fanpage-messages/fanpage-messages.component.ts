@@ -136,9 +136,14 @@ export class FanpageMessagesComponent implements OnInit {
     const tenantId = this.getTenantId();
     const pages = await this.aiAssistant.getFacebookPages(tenantId);
     this.pages = pages || [];
-    if (this.pages.length && !this.selectedPageId) {
+    if (!this.selectedPageId && this.pages.length) {
       this.selectedPageId = this.pages[0].id;
-      this.buildConversations();
+    }
+    const messages = await this.aiAssistant.getFacebookMessages(tenantId);
+    this.messages = messages || [];
+    this.buildConversations();
+    if (this.conversations.length) {
+      this.selectConversation(this.conversations[0].sender_id);
     }
   }
 

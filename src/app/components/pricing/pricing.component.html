@@ -52,7 +52,7 @@
            [class.current-plan]="isCurrentPackage(package._id || package.id)"
            [class.selected-plan]="selectedPackage && (selectedPackage.packageId === (package._id || package.id))">
         <div class="plan-header">
-          <h2>{{ package.name }}</h2>
+          <h2 nz-tooltip [nzTooltipTitle]="package.name" class="package-name">{{ package.name }}</h2>
           <div class="price">
             <span class="amount">{{ formatPrice(getPackagePrice(package)) }}</span>
             <span class="period">/{{ billingType === 'yearly' ? 'năm' : 'tháng' }}</span>
@@ -90,6 +90,11 @@
               <i nz-icon nzType="user" nzTheme="outline"></i>
               <span *ngIf="package.maxUsers === 0 || package.maxUsers === null">Không giới hạn người dùng</span>
               <span *ngIf="package.maxUsers !== 0 && package.maxUsers !== null">Tối đa {{ package.maxUsers }} người dùng</span>
+            </li>
+            <li *ngIf="package.maxRooms !== undefined && package.maxRooms !== null">
+              <i nz-icon nzType="home" nzTheme="outline"></i>
+              <span *ngIf="package.maxRooms === 0 || package.maxRooms === null">Không giới hạn số phòng</span>
+              <span *ngIf="package.maxRooms !== 0 && package.maxRooms !== null">Tối đa {{ package.maxRooms }} phòng</span>
             </li>
             <li *ngIf="package.permissions && package.permissions.length > 0">
               <i nz-icon nzType="safety-certificate" nzTheme="outline"></i>

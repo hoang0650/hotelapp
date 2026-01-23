@@ -13,6 +13,7 @@ export interface PricingPackage {
   features: string[];
   permissions: string[];
   maxUsers: number;
+  maxRooms?: number;
   isActive: boolean;
 }
 

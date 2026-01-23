@@ -6,8 +6,8 @@ import {
   HttpInterceptor,
   HttpErrorResponse
 } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, throwError, of } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { Router } from '@angular/router';
 import { environment } from '../environments/environment';
@@ -51,23 +51,35 @@ export class AuthInterceptor implements HttpInterceptor {
     
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Kiểm tra lỗi maintenance mode (503)
+        const isRefreshEndpoint = typeof request.url === 'string' && request.url.includes('/users/refresh-token');
+        if (error.status === 401 && !isRefreshEndpoint) {
+          return this.authService.refreshAccessToken().pipe(
+            switchMap((success) => {
+              if (success) {
+                const newToken = this.authService.getToken();
+                if (newToken) {
+                  const retried = request.clone({
+                    setHeaders: { Authorization: `Bearer ${newToken}` }
+                  });
+                  return next.handle(retried);
+                }
+              }
+              this.authService.logout();
+              this.router.navigate(['/login']);
+              return throwError(() => error);
+            })
+          );
+        }
         if (error.status === 503 && error.error?.maintenance) {
-          // Lưu maintenance message vào localStorage
           if (error.error.maintenanceMessage) {
             localStorage.setItem('maintenanceMessage', error.error.maintenanceMessage);
           }
           localStorage.setItem('maintenanceMode', 'true');
-          
-          // Chỉ redirect nếu user không phải admin
-          const currentUser = this.authService.getCurrentUser();
           const isAdmin = this.authService.isSuperAdmin() || this.authService.isAdmin();
-          
           if (!isAdmin) {
             this.router.navigate(['/maintenance']);
           }
         }
-        
         return throwError(() => error);
       })
     );

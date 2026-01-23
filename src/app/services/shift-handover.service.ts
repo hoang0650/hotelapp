@@ -13,6 +13,7 @@ import {
 } from '../interfaces/shift-handover';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
+import { User } from '../interfaces/user';
 
 export interface PreviousShiftAmountResponse {
   message: string;
@@ -55,7 +56,21 @@ export class ShiftHandoverService {
       tap(response => {
         // Nếu giao ca thành công và có thông tin login, cập nhật auth
         if (response.login?.token) {
-          localStorage.setItem('token', response.login.token);
+          const existing = this.authService.getCurrentUser();
+          const u = response.login.user;
+          const normalizedUser: User = {
+            _id: u._id,
+            username: u.username,
+            email: u.email,
+            fullName: u.fullName,
+            role: (u.role as User['role']),
+            status: existing?.status ?? 'active',
+            createdAt: existing?.createdAt ?? new Date(),
+            updatedAt: existing?.updatedAt ?? new Date(),
+            businessId: existing?.businessId,
+            hotelId: u.hotelId ?? existing?.hotelId
+          };
+          this.authService.loginFromShiftHandover(response.login.token, normalizedUser);
           // Lưu thông tin user mới
           if (response.login.user) {
             localStorage.setItem('user', JSON.stringify(response.login.user));

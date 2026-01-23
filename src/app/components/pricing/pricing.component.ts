@@ -39,6 +39,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   currentPackage: any;
   loading = false;
   userId: string = '';
+  private preselectPackageId: string | null = null;
+  private preselectBillingType: 'monthly' | 'yearly' | null = null;
   showPayPalModal = false;
   payPalPaymentData: PayPalPaymentData | null = null;
   showCryptoModal = false;
@@ -221,6 +223,12 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit(): void {
     // Load user trước để kiểm tra role
     this.loadCurrentUser();
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const upgradeId = urlParams.get('upgradePackageId') || urlParams.get('packageId');
+    const billing = urlParams.get('billingType') as ('monthly' | 'yearly') | null;
+    this.preselectPackageId = upgradeId;
+    this.preselectBillingType = billing;
     
     this.loadPackages();
     if (this.userId) {
@@ -426,6 +434,16 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       next: (response) => {
         if (response.success !== false) {
           this.packages = response.data || response || [];
+          
+          if (this.preselectPackageId) {
+            const type: 'monthly' | 'yearly' = this.preselectBillingType || this.billingType;
+            this.performPreselect(this.preselectPackageId, type);
+            this.preselectPackageId = null;
+            this.preselectBillingType = null;
+            try {
+              window.history.replaceState({}, '', '/pricing');
+            } catch {}
+          }
           
           // Nếu user là guest và chưa có package, tự động map với gói free (giá = 0)
           if (this.currentUser && this.currentUser.role === 'guest' && !this.currentPackage) {
@@ -650,17 +668,58 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    // Lưu gói đã chọn để hiển thị nút thanh toán
+    // Tính số tiền cần thanh toán ròng (khấu trừ phần còn lại của gói hiện tại nếu nâng cấp)
+    const netAmount = this.computeNetAmount(pkg, this.billingType);
+
+    // Nếu số tiền gói mới <= gói hiện tại (hạ gói) hoặc netAmount = 0 => tự động cập nhật gói không cần thanh toán
+    const currentPkgObj = this.packages.find(p => (p._id || p.id) === (this.currentPackage?._id || this.currentPackage?.packageId));
+    const originalBilling = this.billingType;
+    let isDowngrade = false;
+    if (currentPkgObj) {
+      this.billingType = this.currentPackage?.billingType || this.billingType;
+      const currentPrice = this.getPackagePrice(currentPkgObj);
+      this.billingType = originalBilling;
+      const targetPrice = this.getPackagePrice(pkg);
+      isDowngrade = (targetPrice <= currentPrice);
+    }
+
+    if (isDowngrade || netAmount === 0) {
+      this.loading = true;
+      this.pricingService.subscribe(this.userId, packageId, this.billingType).subscribe({
+        next: (response: any) => {
+          if (response.success !== false) {
+            const billingTypeText = this.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+            this.message.success(response.message || `Đã chuyển sang gói ${pkg.name} ${billingTypeText} mà không cần thanh toán`);
+            this.loadCurrentPackage();
+            this.selectedPackage = null;
+            // Tạo thông báo hệ thống (hạ gói/cập nhật)
+            this.createSubscriptionAnnouncement(pkg.name, billingTypeText, isDowngrade ? 'update' : 'subscribe');
+          } else {
+            this.message.error(response.message || 'Cập nhật gói thất bại');
+          }
+          this.loading = false;
+        },
+        error: (error: any) => {
+          console.error('Subscribe (downgrade/no-charge) error:', error);
+          this.message.error(error.error?.message || 'Có lỗi xảy ra khi cập nhật gói');
+          this.loading = false;
+        }
+      });
+      return;
+    }
+
+    // Lưu gói đã chọn để hiển thị nút thanh toán, kèm netAmount để các phương thức thanh toán dùng
     this.selectedPackage = {
       ...pkg,
       packageId: packageId,
-      billingType: this.billingType
+      billingType: this.billingType,
+      netAmount
     };
     
     // Kiểm tra tính năng thanh toán từ package đã chọn
     this.checkPaymentFeatures();
 
-    this.message.success(`Đã chọn gói ${pkg.name} - ${billingTypeText}. Vui lòng thanh toán để hoàn tất đăng ký.`);
+    this.message.success(`Đã chọn gói ${pkg.name} - ${billingTypeText}. Số tiền cần thanh toán: ${this.formatPrice(netAmount)}.`);
   }
 
   /**
@@ -680,7 +739,9 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const packageId = this.selectedPackage.packageId;
     const pkg = this.selectedPackage;
-    const packagePrice = this.getPackagePrice(pkg);
+    const packagePrice = (this.selectedPackage.netAmount !== undefined) 
+      ? this.selectedPackage.netAmount 
+      : this.getPackagePrice(pkg);
     const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
 
     this.payPalPaymentData = {
@@ -711,7 +772,9 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const packageId = this.selectedPackage.packageId;
     const pkg = this.selectedPackage;
-    const packagePrice = this.getPackagePrice(pkg);
+    const packagePrice = (this.selectedPackage.netAmount !== undefined) 
+      ? this.selectedPackage.netAmount 
+      : this.getPackagePrice(pkg);
 
     this.cryptoPaymentData = {
       packageId: packageId,
@@ -744,7 +807,9 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const packageId = this.selectedPackage.packageId;
     const pkg = this.selectedPackage;
-    const packagePrice = this.getPackagePrice(pkg);
+    const packagePrice = (this.selectedPackage.netAmount !== undefined) 
+      ? this.selectedPackage.netAmount 
+      : this.getPackagePrice(pkg);
     const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
 
     // Luôn load lại QR code từ superadmin profile trước khi thanh toán
@@ -981,6 +1046,71 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       // Khi chọn tháng, hiển thị giá tháng
       return pkg.monthlyPrice || pkg.price || 0;
     }
+  }
+
+  /**
+   * Tính số tiền còn lại (credit) của gói hiện tại theo thời gian chưa sử dụng
+   * - monthly: chia theo 30 ngày
+   * - yearly: chia theo 365 ngày
+   */
+  private getRemainingCredit(billing: 'monthly' | 'yearly'): number {
+    if (!this.currentPackage) return 0;
+    const now = new Date();
+    const expiry = new Date(this.currentPackage.expiryDate || this.currentPackage.packageExpiryDate || 0);
+    if (isNaN(expiry.getTime()) || expiry <= now) return 0;
+    const totalDays = billing === 'yearly' ? 365 : 30;
+    const remainingDays = Math.max(0, Math.min(totalDays, Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))));
+    // Lấy giá gói hiện tại theo billing
+    let currentPrice = 0;
+    const currentPkgObj = this.packages.find(p => (p._id || p.id) === (this.currentPackage._id || this.currentPackage.packageId));
+    if (currentPkgObj) {
+      // Tạm mượn billingType hiện tại để tính đúng discount năm
+      const originalBilling = this.billingType;
+      this.billingType = billing;
+      currentPrice = this.getPackagePrice(currentPkgObj);
+      this.billingType = originalBilling;
+    } else {
+      // Fallback từ currentPackage nếu có field giá
+      if (billing === 'yearly') {
+        const yearlyPrice = this.currentPackage.yearlyPrice || ((this.currentPackage.monthlyPrice || this.currentPackage.price || 0) * 12);
+        const discount = this.currentPackage.yearlyDiscount || 0;
+        currentPrice = yearlyPrice * (1 - discount / 100);
+      } else {
+        currentPrice = this.currentPackage.monthlyPrice || this.currentPackage.price || 0;
+      }
+    }
+    return Math.round((currentPrice * remainingDays / totalDays));
+  }
+
+  /**
+   * Tính số tiền thực phải thanh toán khi nâng gói (gói mới - credit còn lại)
+   * Nếu bằng 0 hoặc âm, coi như hạ gói/không cần thanh toán.
+   */
+  private computeNetAmount(targetPkg: any, billing: 'monthly' | 'yearly'): number {
+    // Tạm mượn billingType để dùng getPackagePrice với đúng kiểu
+    const originalBilling = this.billingType;
+    this.billingType = billing;
+    const targetPrice = this.getPackagePrice(targetPkg);
+    this.billingType = originalBilling;
+    const credit = this.getRemainingCredit(billing);
+    return Math.max(0, Math.round(targetPrice - credit));
+  }
+
+  private performPreselect(packageId: string, billing: 'monthly' | 'yearly'): void {
+    const pkg = this.packages.find(p => (p._id || p.id) === packageId);
+    if (!pkg) {
+      return;
+    }
+    this.billingType = billing;
+    const netAmount = this.computeNetAmount(pkg, this.billingType);
+    this.selectedPackage = {
+      ...pkg,
+      packageId: packageId,
+      billingType: this.billingType,
+      netAmount
+    };
+    this.checkPaymentFeatures();
+    this.cdr.detectChanges();
   }
 
   // Tính giá gốc (trước khi giảm) khi chọn năm

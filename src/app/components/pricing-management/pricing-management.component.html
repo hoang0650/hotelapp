@@ -20,6 +20,7 @@
               <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.DISCOUNT' | translate }}</th>
               <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.DURATION' | translate }}</th>
               <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.MAX_USERS' | translate }}</th>
+              <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.MAX_ROOMS' | translate }}</th>
               <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.STATUS' | translate }}</th>
               <th>{{ 'PRICING_MANAGEMENT.TABLE_HEADERS.ACTIONS' | translate }}</th>
             </tr>
@@ -47,6 +48,7 @@
                 </span>
               </td>
               <td>{{ pkg.maxUsers === 0 || pkg.maxUsers === null ? ('PRICING_MANAGEMENT.UNLIMITED' | translate) : pkg.maxUsers }}</td>
+              <td>{{ (pkg.maxRooms === 0 || pkg.maxRooms === null) ? ('PRICING_MANAGEMENT.UNLIMITED' | translate) : (pkg.maxRooms || 0) }}</td>
               <td>
                 <nz-tag [nzColor]="pkg.isActive ? 'success' : 'error'">
                   {{ pkg.isActive ? ('PRICING_MANAGEMENT.ACTIVE' | translate) : ('PRICING_MANAGEMENT.INACTIVE' | translate) }}
@@ -319,6 +321,24 @@
             <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
               {{ 'PRICING_MANAGEMENT.FORM.MAX_USERS_HINT' | translate }}
             </div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- Số phòng tối đa -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">Max Rooms</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-checkbox formControlName="unlimitedRooms" style="margin-bottom: 8px;">
+              Không giới hạn phòng
+            </nz-checkbox>
+            <nz-input-number 
+              formControlName="maxRooms" 
+              [nzMin]="0" 
+              [nzStep]="1" 
+              [nzDisabled]="packageForm.get('unlimitedRooms')?.value"
+              [nzPlaceHolder]="'Nhập số phòng tối đa (0 = không giới hạn)'" 
+              style="width: 100%">
+            </nz-input-number>
           </nz-form-control>
         </nz-form-item>
 

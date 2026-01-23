@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { UserService, LoginRequest } from '../../services/user.service';
 import { TranslateService } from '@ngx-translate/core';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -24,13 +25,14 @@ export class LoginComponent implements OnInit {
     private userService: UserService,
     private router: Router,
     private message: NzMessageService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private authService: AuthService
   ) {
     this.initForm();
   }
 
   ngOnInit(): void {
-    if (this.userService.isLoggedIn) {
+    if (this.authService.isLoggedIn()) {
       this.router.navigate(['/admin/room']);
     }
   }
@@ -84,7 +86,10 @@ export class LoginComponent implements OnInit {
           this.message.info(this.translate.instant('LOGIN.ENTER_TWO_FACTOR'));
         } else {
           this.message.success(this.translate.instant('COMMON.SUCCESS'));
-          window.location.href = '/admin/room';
+          if (response.token && response.user) {
+            this.authService.loginFromShiftHandover(response.token, response.user);
+          }
+          this.router.navigate(['/admin/room']);
         }
       },
       error: (error) => {

@@ -347,8 +347,8 @@ export class FinancialSummaryReportComponent implements OnInit {
 
     const url = `${environment.apiUrl}/financial-summary/export-excel?${queryParams.toString()}`;
     
-    // Lấy token từ localStorage
-    const token = localStorage.getItem('token');
+    // Lấy token từ AuthService (in-memory)
+    const token = this.authService.getToken();
     
     if (!token) {
       alert(this.translate.instant('FINANCIAL_REPORT.LOGIN_REQUIRED'));

@@ -108,6 +108,9 @@
           <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/settings">
             <span>{{ 'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate }}</span>
           </li>
+          <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/bot-setting">
+            <span>{{ 'ADMIN_SIDEBAR.BOT_SETTING' | translate }}</span>
+          </li>
           <li nz-menu-item *ngIf="canAccessEmailAdmin()" routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessFile()" routerLink="/admin/files">
             <span>{{ 'ADMIN_SIDEBAR.FILE' | translate }}</span>

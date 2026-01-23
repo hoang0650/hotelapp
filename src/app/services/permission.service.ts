@@ -37,6 +37,7 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/pricing-management': ['pricing_management'],
   '/admin/ota-management': ['ota_management'],
   '/admin/fanpage-messages': ['fanpage_messages'],
+  '/admin/bot-setting': ['settings_management'],
   '/admin/chart': ['revenue_chart'],
   '/admin/shift-handover': ['shift_handover'],
   '/admin/shift-handover-history': ['shift_handover'],
@@ -315,7 +316,9 @@ export class PermissionService {
    * Kiểm tra user có quyền truy cập route không
    */
   canAccessRoute(route: string): boolean {
-    const features = ROUTE_PERMISSIONS[route];
+    const base = route.split('?')[0].replace(/\/+$/, '');
+    const exact = ROUTE_PERMISSIONS[base];
+    const features = exact || Object.entries(ROUTE_PERMISSIONS).find(([key]) => base.startsWith(key))?.[1];
     if (!features || features.length === 0) {
       // Route không có permission requirement thì cho phép
       return true;

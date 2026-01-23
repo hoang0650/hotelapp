@@ -138,6 +138,8 @@ export class PricingManagementComponent implements OnInit {
       permissions: [['view'], [Validators.required]],
       maxUsers: [1, [Validators.required, Validators.min(0)]], // Cho phép nhập 0 (0 = không giới hạn ở backend)
       unlimitedUsers: [false], // Checkbox để chọn không giới hạn (0 = không giới hạn ở backend)
+      maxRooms: [0, [Validators.min(0)]],
+      unlimitedRooms: [true],
       qrPaymentFeature: [false], // Tính năng QR thanh toán
       otaManagementFeature: [false], // Tính năng quản lý OTA
       emailManagementFeature: [false], // Tính năng quản lý email
@@ -180,6 +182,33 @@ export class PricingManagementComponent implements OnInit {
       } else if (value > 0 && unlimitedUsersControl?.value) {
         // Nếu nhập giá trị > 0 và checkbox đang được check, bỏ check
         unlimitedUsersControl?.setValue(false, { emitEvent: false });
+      }
+    });
+
+    // Theo dõi thay đổi của unlimitedRooms
+    this.packageForm.get('unlimitedRooms')?.valueChanges.subscribe(unlimited => {
+      const maxRoomsControl = this.packageForm.get('maxRooms');
+      if (unlimited) {
+        maxRoomsControl?.setValue(0, { emitEvent: false });
+        maxRoomsControl?.clearValidators();
+        maxRoomsControl?.disable({ emitEvent: false });
+      } else {
+        maxRoomsControl?.enable({ emitEvent: false });
+        maxRoomsControl?.setValidators([Validators.min(0)]);
+        if (maxRoomsControl?.value === 0) {
+          maxRoomsControl?.setValue(20, { emitEvent: false });
+        }
+      }
+      maxRoomsControl?.updateValueAndValidity();
+    });
+
+    // Theo dõi thay đổi của maxRooms - nếu nhập 0 thì tự động check "không giới hạn"
+    this.packageForm.get('maxRooms')?.valueChanges.subscribe(value => {
+      const unlimitedRoomsControl = this.packageForm.get('unlimitedRooms');
+      if (value === 0 && !unlimitedRoomsControl?.disabled) {
+        unlimitedRoomsControl?.setValue(true, { emitEvent: false });
+      } else if (value > 0 && unlimitedRoomsControl?.value) {
+        unlimitedRoomsControl?.setValue(false, { emitEvent: false });
       }
     });
   }
@@ -257,6 +286,7 @@ export class PricingManagementComponent implements OnInit {
       if (pkg) {
         // Backend: 0 hoặc null = không giới hạn
         const isUnlimited = pkg.maxUsers === 0 || pkg.maxUsers === null || pkg.maxUsers === undefined;
+        const isUnlimitedRooms = pkg.maxRooms === 0 || pkg.maxRooms === null || pkg.maxRooms === undefined;
         this.packageForm.patchValue({
           name: pkg.name,
           description: pkg.description,
@@ -272,6 +302,8 @@ export class PricingManagementComponent implements OnInit {
           // Nếu có giới hạn thì hiển thị giá trị thực
           maxUsers: isUnlimited ? 0 : (pkg.maxUsers >= 1 ? pkg.maxUsers : 1),
           unlimitedUsers: isUnlimited,
+          maxRooms: isUnlimitedRooms ? 0 : (pkg.maxRooms >= 1 ? pkg.maxRooms : 20),
+          unlimitedRooms: isUnlimitedRooms,
           qrPaymentFeature: pkg.qrPaymentFeature || false,
           otaManagementFeature: pkg.otaManagementFeature || false,
           emailManagementFeature: pkg.emailManagementFeature || false,
@@ -298,6 +330,8 @@ export class PricingManagementComponent implements OnInit {
         permissions: ['view'],
         maxUsers: 1,
         unlimitedUsers: false,
+        maxRooms: 0,
+        unlimitedRooms: true,
         qrPaymentFeature: false,
         otaManagementFeature: false,
         emailManagementFeature: false,
@@ -329,6 +363,8 @@ export class PricingManagementComponent implements OnInit {
       permissions: ['view'],
       maxUsers: 1,
       unlimitedUsers: false,
+      maxRooms: 0,
+      unlimitedRooms: true,
       qrPaymentFeature: false,
       otaManagementFeature: false,
       emailManagementFeature: false,
@@ -352,10 +388,12 @@ export class PricingManagementComponent implements OnInit {
       // Nếu unlimitedUsers được chọn hoặc maxUsers = 0, gửi 0 lên backend (đại diện cho không giới hạn)
       // Nếu không, gửi giá trị thực (phải >= 1)
       const maxUsers = (formData.unlimitedUsers || formData.maxUsers === 0) ? 0 : (formData.maxUsers >= 1 ? formData.maxUsers : 1);
+      const maxRooms = (formData.unlimitedRooms || formData.maxRooms === 0) ? 0 : (formData.maxRooms >= 1 ? formData.maxRooms : 1);
 
       const payload: any = {
         ...formData,
         maxUsers: maxUsers,
+        maxRooms: maxRooms,
         features: formData.features || [],
         permissions: formData.permissions || ['view'],
         // Nếu là superadmin, gửi monthlyDuration và yearlyDuration
@@ -370,6 +408,7 @@ export class PricingManagementComponent implements OnInit {
       
       // Xóa unlimitedUsers khỏi payload vì không cần gửi lên backend
       delete payload.unlimitedUsers;
+      delete payload.unlimitedRooms;
 
       if (this.editingPackageId) {
         this.pricingService.updatePackage(this.editingPackageId, payload).subscribe({
@@ -544,80 +583,9 @@ export class PricingManagementComponent implements OnInit {
   }
 
   upgradeOrDowngradePackage(packageId: string, billingType: 'monthly' | 'yearly' = 'monthly'): void {
-    if (!this.currentUser?._id) {
-      this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.USER_NOT_FOUND'));
-      return;
-    }
-
-    if (!this.currentUserPackage) {
-      this.message.warning(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.NO_PACKAGE_SUBSCRIBED'));
-      return;
-    }
-
-    const selectedPackage = this.packages.find(p => (p._id === packageId || p.id === packageId));
-    if (!selectedPackage) {
-      this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.PACKAGE_NOT_FOUND'));
-      return;
-    }
-
-    const currentPackageId = this.currentUserPackage._id || this.currentUserPackage.id;
-    const isUpgrade = selectedPackage.monthlyPrice > (this.currentUserPackage.monthlyPrice || 0);
-    const isDowngrade = selectedPackage.monthlyPrice < (this.currentUserPackage.monthlyPrice || 0);
-    const isSamePackage = currentPackageId === packageId;
-    
-    let actionType: 'update' | 'upgrade' | 'downgrade' = 'update';
-    if (isSamePackage && this.currentUserPackage.billingType !== billingType) {
-      actionType = 'update';
-    } else if (isUpgrade) {
-      actionType = 'upgrade';
-    } else if (isDowngrade) {
-      actionType = 'downgrade';
-    }
-
-    const billingTypeText = billingType === 'yearly' 
-      ? this.translate.instant('PRICING_MANAGEMENT.MESSAGES.YEARLY')
-      : this.translate.instant('PRICING_MANAGEMENT.MESSAGES.MONTHLY');
-
-    let titleKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_UPDATE_TITLE';
-    let contentKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_UPDATE_CONTENT';
-    let okTextKey = 'PRICING_MANAGEMENT.MESSAGES.UPDATE';
-
-    if (actionType === 'upgrade') {
-      titleKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_UPGRADE_TITLE';
-      contentKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_UPGRADE_CONTENT';
-      okTextKey = 'PRICING_MANAGEMENT.MESSAGES.UPGRADE';
-    } else if (actionType === 'downgrade') {
-      titleKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_DOWNGRADE_TITLE';
-      contentKey = 'PRICING_MANAGEMENT.MESSAGES.CONFIRM_DOWNGRADE_CONTENT';
-      okTextKey = 'PRICING_MANAGEMENT.MESSAGES.DOWNGRADE';
-    }
-
-    this.modal.confirm({
-      nzTitle: this.translate.instant(titleKey),
-      nzContent: `${this.translate.instant(contentKey)} ${selectedPackage.name} ${billingTypeText}?`,
-      nzOkText: this.translate.instant(okTextKey),
-      nzCancelText: this.translate.instant('COMMON.CANCEL'),
-      nzOnOk: () => {
-        this.loading = true;
-        // Non-admin chỉ có thể subscribe cho chính mình (nâng cấp/hạ cấp cũng là subscribe)
-        this.pricingService.subscribe(this.currentUser._id, packageId, billingType).subscribe({
-          next: (response) => {
-            if (response.success) {
-              this.message.success(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.UPGRADE_DOWNGRADE_SUCCESS'));
-              this.loadPackages();
-              this.loadCurrentUserPackage();
-            } else {
-              this.message.error(response.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.UPGRADE_DOWNGRADE_ERROR'));
-            }
-            this.loading = false;
-          },
-          error: (error) => {
-            this.message.error(error.error?.message || this.translate.instant('PRICING_MANAGEMENT.MESSAGES.UPGRADE_DOWNGRADE_ERROR'));
-            this.loading = false;
-          }
-        });
-      }
-    });
+    // Chuyển hướng về trang /pricing với tham số để tiền xử lý
+    const target = `/pricing?upgradePackageId=${encodeURIComponent(packageId)}&billingType=${encodeURIComponent(billingType)}`;
+    window.location.href = target;
   }
 
   canEditPackage(): boolean {

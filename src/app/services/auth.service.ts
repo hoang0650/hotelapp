@@ -32,46 +32,28 @@ export interface PermissionRules {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = `${environment.apiUrl}/api`;
+  private apiUrl = `${environment.apiUrl}`;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   private tokenExpirationTimer: any;
+  private inMemoryToken: string | null = null;
 
   constructor(private http: HttpClient, private router: Router) {
-    this.loadUserFromLocalStorage();
+    this.refreshAccessToken().subscribe();
   }
 
-  private loadUserFromLocalStorage() {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken: any = jwtDecode(token);
-        
-        // Kiểm tra token hết hạn
-        if (decodedToken.exp && decodedToken.exp * 1000 < Date.now()) {
-          this.logout();
-          return;
+  refreshAccessToken(): Observable<boolean> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/users/refresh-token`, {}, { withCredentials: true }).pipe(
+      map(response => {
+        if (response && response.token) {
+          this.inMemoryToken = response.token;
+          this.currentUserSubject.next(response.user);
+          return true;
         }
-        
-        if (decodedToken && decodedToken.user) {
-          this.currentUserSubject.next(decodedToken.user);
-        } else if (decodedToken && decodedToken.userId) {
-          // Fallback nếu token có format khác
-          this.currentUserSubject.next({
-            _id: decodedToken.userId,
-            username: decodedToken.username,
-            email: decodedToken.email,
-            role: decodedToken.role,
-            status: decodedToken.status,
-            businessId: decodedToken.businessId,
-            hotelId: decodedToken.hotelId
-          } as User);
-        }
-      } catch (error) {
-        console.error('Error decoding token:', error);
-        this.logout();
-      }
-    }
+        return false;
+      }),
+      catchError(() => of(false))
+    );
   }
 
   login(emailOrUsername: string, password: string): Observable<boolean> {
@@ -85,11 +67,11 @@ export class AuthService {
       loginPayload.username = emailOrUsername;
     }
     
-    return this.http.post<AuthResponse>(`${this.apiUrl}/users/login`, loginPayload)
+    return this.http.post<AuthResponse>(`${this.apiUrl}/users/login`, loginPayload, { withCredentials: true })
       .pipe(
         map(response => {
           if (response && response.token) {
-            localStorage.setItem('token', response.token);
+            this.inMemoryToken = response.token;
             this.currentUserSubject.next(response.user);
             return true;
           }
@@ -106,12 +88,16 @@ export class AuthService {
    * Login từ giao ca - cập nhật token mới
    */
   loginFromShiftHandover(token: string, user: User): void {
-    localStorage.setItem('token', token);
+    this.inMemoryToken = token;
     this.currentUserSubject.next(user);
   }
 
   logout(): void {
-    localStorage.removeItem('token');
+    this.http.post(`${this.apiUrl}/users/logout`, {}, { withCredentials: true }).subscribe({
+      next: () => {},
+      error: () => {}
+    });
+    this.inMemoryToken = null;
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
     if (this.tokenExpirationTimer) {
@@ -124,7 +110,7 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return this.inMemoryToken;
   }
 
   getCurrentUser(): User | null {
