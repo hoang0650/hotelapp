@@ -25,6 +25,7 @@ import { TransactionService } from '../../services/transaction.service';
 import { take } from 'rxjs/operators';
 import { forkJoin } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
+import { CurrencyService } from '../../services/currency.service';
 import { User } from '../../interfaces/user';
 
 type TableScroll = 'unset' | 'scroll' | 'fixed';
@@ -190,6 +191,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   indeterminate = false;
   totalPayment = 0;
   today = new Date();
+  // Currency handling
+  baseCurrency: string = 'VND';
+  usdRate: number = 0;
   
   // Giao ca variables
   isShiftHandoverModalVisible = false;
@@ -312,7 +316,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     private hotelService: HotelService,
     private businessService: BusinessService,
     private transactionService: TransactionService,
-    public translate: TranslateService
+    public translate: TranslateService,
+    private currencyService: CurrencyService
   ) {}
 
   ngOnInit(): void {
@@ -348,6 +353,12 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           this.loadHistory(this.currentFilterType);
         }, 500);
       }
+    });
+    
+    // Tỷ giá VND -> USD cho hiển thị quy đổi
+    this.currencyService.getExchangeRate(this.baseCurrency, 'USD').subscribe({
+      next: (rate) => { this.usdRate = rate || 0; },
+      error: () => { this.usdRate = 0; }
     });
   }
   
@@ -2039,6 +2050,12 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   
   formatterVND = (value: number): string => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   parserVND = (value: string): string => value.replace(/\$\s?|(,*)/g, '');
+  
+  formatUSD(amount: number | undefined): string {
+    if (!this.usdRate) return '';
+    const value = Number(amount || 0) * this.usdRate;
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(this.currencyService.roundAmount(value, 'USD'));
+  }
 
   // ============ GIAO TIỀN QUẢN LÝ ============
   

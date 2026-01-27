@@ -320,23 +320,33 @@
                     </div>
                     <div class="detail-row">
                       <span class="detail-label">{{ 'ROOM.TOTAL_AMOUNT' | translate }}:</span>
-                      <span class="detail-value highlight">{{ displayInfo.totalAmount | number }} VNĐ</span>
+                      <span class="detail-value highlight">{{ displayInfo.totalAmount | number }} VNĐ
+                        <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(displayInfo.totalAmount) }})</span>
+                      </span>
                     </div>
                     <div class="detail-row" *ngIf="displayInfo.advancePayment > 0">
                       <span class="detail-label">{{ 'ROOM.ADVANCE_PAYMENT' | translate }}:</span>
-                      <span class="detail-value highlight">{{ displayInfo.advancePayment | number }} VNĐ</span>
+                      <span class="detail-value highlight">{{ displayInfo.advancePayment | number }} VNĐ
+                        <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(displayInfo.advancePayment) }})</span>
+                      </span>
                     </div>
                     <div class="detail-row" *ngIf="displayInfo?.additionalCharges && displayInfo.additionalCharges > 0">
                       <span class="detail-label">{{ 'ROOM.ADDITIONAL_CHARGES' | translate }}:</span>
-                      <span class="detail-value" style="color: #ff9800;">+ {{ displayInfo.additionalCharges | number }} VNĐ</span>
+                      <span class="detail-value" style="color: #ff9800;">+ {{ displayInfo.additionalCharges | number }} VNĐ
+                        <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(displayInfo.additionalCharges) }})</span>
+                      </span>
                     </div>
                     <div class="detail-row" *ngIf="displayInfo?.discount && displayInfo.discount > 0">
                       <span class="detail-label">{{ 'ROOM.DISCOUNT' | translate }}:</span>
-                      <span class="detail-value" style="color: #52c41a;">- {{ displayInfo.discount | number }} VNĐ</span>
+                      <span class="detail-value" style="color: #52c41a;">- {{ displayInfo.discount | number }} VNĐ
+                        <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(displayInfo.discount) }})</span>
+                      </span>
                     </div>
                     <div class="detail-row" *ngIf="displayInfo.remainingAmount !== 0">
                       <span class="detail-label">{{ 'ROOM.REMAINING_AMOUNT' | translate }}:</span>
-                      <span class="detail-value highlight" [style.color]="displayInfo.remainingAmount < 0 ? '#52c41a' : '#ffd700'">{{ displayInfo.remainingAmount | number }} VNĐ</span>
+                      <span class="detail-value highlight" [style.color]="displayInfo.remainingAmount < 0 ? '#52c41a' : '#ffd700'">{{ displayInfo.remainingAmount | number }} VNĐ
+                        <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(displayInfo.remainingAmount) }})</span>
+                      </span>
                     </div>
                   </div>
                 </ng-container>
@@ -580,7 +590,10 @@
                    expense.expenseCategory === 'marketing' ? ('ROOM.MARKETING' | translate) : ('ROOM.OTHER' | translate) }}
               </nz-tag>
             </td>
-            <td>{{ expense.amount | number:'1.0-0' }} đ</td>
+            <td>
+              {{ expense.amount | currency:'VND':'symbol-narrow':'1.0-0' }}
+              <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(expense.amount) }})</span>
+            </td>
             <td>
               {{ expense.method === 'cash' ? ('ROOM.CASH' | translate) :
                  expense.method === 'bank_transfer' ? ('ROOM.BANK_TRANSFER' | translate) :
@@ -707,7 +720,10 @@
                    income.incomeCategory === 'rental' ? ('ROOM.RENTAL' | translate) : ('ROOM.OTHER' | translate) }}
               </nz-tag>
             </td>
-            <td>{{ income.amount | number:'1.0-0' }} đ</td>
+            <td>
+              {{ income.amount | currency:'VND':'symbol-narrow':'1.0-0' }}
+              <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(income.amount) }})</span>
+            </td>
             <td>
               {{ income.method === 'cash' ? ('ROOM.CASH' | translate) :
                  income.method === 'bank_transfer' ? ('ROOM.BANK_TRANSFER' | translate) :

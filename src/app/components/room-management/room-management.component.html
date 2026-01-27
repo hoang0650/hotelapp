@@ -260,6 +260,9 @@
                                 [nzDisabled]="hasPriceConfig"
                                 [nzPlaceHolder]="'ROOM_MANAGEMENT.HOURLY_PRICE_PLACEHOLDER' | translate"></nz-input-number>
                             <div class="form-hint">{{ 'ROOM_MANAGEMENT.HOURLY_PRICE_HINT' | translate }}</div>
+                            <div class="form-hint" *ngIf="selectedCurrency !== 'USD'">
+                              ≈ {{ formatUSD(roomForm.get('pricing.hourly')?.value || 0) }}
+                            </div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -273,6 +276,9 @@
                                 [nzStep]="50000" 
                                 class="w-100"
                                 [nzDisabled]="hasPriceConfig"></nz-input-number>
+                            <div class="form-hint" *ngIf="selectedCurrency !== 'USD'">
+                              ≈ {{ formatUSD(roomForm.get('pricing.daily')?.value || 0) }}
+                            </div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -286,6 +292,9 @@
                                 [nzStep]="50000" 
                                 class="w-100"
                                 [nzDisabled]="hasPriceConfig"></nz-input-number>
+                            <div class="form-hint" *ngIf="selectedCurrency !== 'USD'">
+                              ≈ {{ formatUSD(roomForm.get('pricing.nightly')?.value || 0) }}
+                            </div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -294,6 +303,9 @@
                         <nz-form-label>{{ 'ROOM_MANAGEMENT.WEEKLY_PRICE' | translate }}</nz-form-label>
                         <nz-form-control>
                             <nz-input-number formControlName="weekly" [nzMin]="0" [nzStep]="100000" class="w-100"></nz-input-number>
+                            <div class="form-hint" *ngIf="selectedCurrency !== 'USD'">
+                              ≈ {{ formatUSD(roomForm.get('pricing.weekly')?.value || 0) }}
+                            </div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -302,6 +314,9 @@
                         <nz-form-label>{{ 'ROOM_MANAGEMENT.MONTHLY_PRICE' | translate }}</nz-form-label>
                         <nz-form-control>
                             <nz-input-number formControlName="monthly" [nzMin]="0" [nzStep]="500000" class="w-100"></nz-input-number>
+                            <div class="form-hint" *ngIf="selectedCurrency !== 'USD'">
+                              ≈ {{ formatUSD(roomForm.get('pricing.monthly')?.value || 0) }}
+                            </div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>
@@ -309,7 +324,12 @@
                     <nz-form-item>
                         <nz-form-label>{{ 'ROOM_MANAGEMENT.CURRENCY' | translate }}</nz-form-label>
                         <nz-form-control>
-                            <input nz-input formControlName="currency" [placeholder]="'ROOM_MANAGEMENT.CURRENCY_PLACEHOLDER' | translate" />
+                            <nz-select formControlName="currency" [nzPlaceHolder]="'ROOM_MANAGEMENT.CURRENCY_PLACEHOLDER' | translate" style="width: 100%;">
+                              <nz-option *ngFor="let c of availableCurrencies" [nzValue]="c.code" [nzLabel]="c.code + ' - ' + c.name"></nz-option>
+                            </nz-select>
+                            <div class="form-hint" *ngIf="selectedCurrency !== 'USD'">
+                              Tỷ giá: 1 {{ selectedCurrency }} ≈ {{ exchangeRateToUSD | number:'1.4-4' }} USD
+                            </div>
                         </nz-form-control>
                     </nz-form-item>
                 </div>

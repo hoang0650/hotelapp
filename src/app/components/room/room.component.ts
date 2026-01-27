@@ -20,6 +20,7 @@ import { CalendarComponent } from '../calendar/calendar.component';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
+import { CurrencyService } from '../../services/currency.service';
 
 @Component({
   selector: 'app-room',
@@ -55,6 +56,9 @@ export class RoomComponent implements OnInit, OnDestroy {
   chartPaymentData: number[] = [];
   chartExpenseData: number[] = []; // Dữ liệu chi cho biểu đồ
   selectedPeriod: 'day' | 'week' | 'month' = 'day'; // Khoảng thời gian cho biểu đồ
+  
+  // Currency handling
+  usdRate: number = 0;
   
   // Collapse panel states
   isRevenuePanelActive = true; // Mở mặc định
@@ -106,7 +110,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     public authService: AuthService, // Đổi thành public để sử dụng trong template
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private currencyService: CurrencyService
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
       // Reload rooms khi có thay đổi dữ liệu
@@ -195,6 +200,12 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       }
     }) as EventListener);
+    
+    // Tỷ giá VND -> USD cho hiển thị quy đổi
+    this.currencyService.getExchangeRate('VND', 'USD').subscribe({
+      next: (rate) => { this.usdRate = rate || 0; },
+      error: () => { this.usdRate = 0; }
+    });
   }
 
   // Collapse panel change handlers
@@ -221,6 +232,12 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.isRevenuePanelActive = false;
     this.isCalendarPanelActive = false;
     this.isHistoryPanelActive = false;
+  }
+  
+  formatUSD(amount: number | undefined): string {
+    if (!this.usdRate) return '';
+    const value = Number(amount || 0) * this.usdRate;
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(this.currencyService.roundAmount(value, 'USD'));
   }
 
   ngOnDestroy(): void {

@@ -149,7 +149,11 @@
   </ng-template>
   
   <ng-template #footerTemplate>
-    <strong *ngIf="settingValue.totalPayment">{{ 'TABLE.TOTAL_PAYMENT' | translate }}: {{ totalPayment | currency:'VND':'symbol-narrow':'1.0-0' }}</strong>
+    <strong *ngIf="settingValue.totalPayment">
+      {{ 'TABLE.TOTAL_PAYMENT' | translate }}: 
+      {{ totalPayment | currency:'VND':'symbol-narrow':'1.0-0' }}
+      <span *ngIf="usdRate" style="margin-left: 6px; color: #999;">(≈ {{ formatUSD(totalPayment) }})</span>
+    </strong>
   </ng-template>
 
   <thead>
@@ -244,18 +248,29 @@
           <div class="detail-info">
             <div class="room-total" *ngIf="data.roomTotal > 0">
               {{ 'TABLE.ROOM_LABEL' | translate }} {{ data.roomTotal | currency:'VND':'symbol-narrow':'1.0-0' }}
+              <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.roomTotal) }})</span>
             </div>
             <div class="service-total" *ngIf="data.servicesTotal > 0">
               {{ 'TABLE.SERVICE_LABEL' | translate }} {{ data.servicesTotal | currency:'VND':'symbol-narrow':'1.0-0' }}
+              <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.servicesTotal) }})</span>
             </div>
             <div class="additional" *ngIf="data.additionalCharges > 0">
-              <span style="color: #fa8c16">{{ 'TABLE.ADDITIONAL_CHARGES' | translate }} {{ data.additionalCharges | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+              <span style="color: #fa8c16">
+                {{ 'TABLE.ADDITIONAL_CHARGES' | translate }} {{ data.additionalCharges | currency:'VND':'symbol-narrow':'1.0-0' }}
+                <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.additionalCharges) }})</span>
+              </span>
             </div>
             <div class="discount" *ngIf="data.discount > 0">
-              <span style="color: #52c41a">{{ 'TABLE.DISCOUNT' | translate }} {{ data.discount | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+              <span style="color: #52c41a">
+                {{ 'TABLE.DISCOUNT' | translate }} {{ data.discount | currency:'VND':'symbol-narrow':'1.0-0' }}
+                <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.discount) }})</span>
+              </span>
             </div>
             <div class="advance" *ngIf="data.advancePayment > 0">
-              <span style="color: #1890ff">{{ 'TABLE.ADVANCE_PAYMENT' | translate }} {{ data.advancePayment | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+              <span style="color: #1890ff">
+                {{ 'TABLE.ADVANCE_PAYMENT' | translate }} {{ data.advancePayment | currency:'VND':'symbol-narrow':'1.0-0' }}
+                <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.advancePayment) }})</span>
+              </span>
             </div>
           </div>
         </td>
@@ -271,7 +286,10 @@
           </div>
         </td>
         <td>
-          <strong style="color: #722ed1">{{ (data.totalAmount || data.amount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</strong>
+          <strong style="color: #722ed1">
+            {{ (data.totalAmount || data.amount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+            <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.totalAmount || data.amount || 0) }})</span>
+          </strong>
         </td>
         <td>
           <div class="notes-cell" [nz-tooltip]="data.notes" *ngIf="data.notes">
@@ -360,22 +378,36 @@
                 <!-- Chi tiết thanh toán -->
                 <nz-descriptions-item nzTitle="Tiền phòng" [nzSpan]="1">
                   {{ (data.roomTotal || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                  <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.roomTotal || 0) }})</span>
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Tiền dịch vụ" [nzSpan]="1">
                   {{ (data.servicesTotal || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                  <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.servicesTotal || 0) }})</span>
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Phụ thu" [nzSpan]="1">
-                  <span style="color: #fa8c16">+{{ (data.additionalCharges || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+                  <span style="color: #fa8c16">
+                    +{{ (data.additionalCharges || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                    <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.additionalCharges || 0) }})</span>
+                  </span>
                 </nz-descriptions-item>
                 
                 <nz-descriptions-item nzTitle="Khuyến mãi" [nzSpan]="1">
-                  <span style="color: #52c41a">-{{ (data.discount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+                  <span style="color: #52c41a">
+                    -{{ (data.discount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                    <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.discount || 0) }})</span>
+                  </span>
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Đặt trước" [nzSpan]="1">
-                  <span style="color: #1890ff">{{ (data.advancePayment || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</span>
+                  <span style="color: #1890ff">
+                    {{ (data.advancePayment || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                    <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.advancePayment || 0) }})</span>
+                  </span>
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Tổng thanh toán" [nzSpan]="1">
-                  <strong style="color: #722ed1; font-size: 16px">{{ (data.totalAmount || data.amount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}</strong>
+                  <strong style="color: #722ed1; font-size: 16px">
+                    {{ (data.totalAmount || data.amount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                    <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.totalAmount || data.amount || 0) }})</span>
+                  </strong>
                 </nz-descriptions-item>
                 
                 <!-- Hình thức thanh toán -->
@@ -399,7 +431,8 @@
                   <div class="services-list">
                     <nz-tag *ngFor="let service of data.services" nzColor="cyan">
                       {{ service.serviceName || service.name }} x{{ service.quantity || 1 }} 
-                      ({{ (service.price || 0) | currency:'VND':'symbol-narrow':'1.0-0' }})
+                      ({{ (service.price || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                      <span *ngIf="usdRate" style="color: #999;">≈ {{ formatUSD(service.price || 0) }}</span>)
                     </nz-tag>
                   </div>
                 </nz-descriptions-item>

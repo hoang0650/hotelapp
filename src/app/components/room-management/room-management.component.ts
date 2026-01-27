@@ -11,6 +11,7 @@ import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
+import { CurrencyService } from '../../services/currency.service';
 
 @Component({
   selector: 'app-room-management',
@@ -40,6 +41,24 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   currentPackage: PricingPackage | null = null;
   
   private subscriptions = new Subscription();
+  
+  // Currency & exchange rate
+  selectedCurrency: string = 'VND';
+  exchangeRateToUSD: number = 1;
+  availableCurrencies: Array<{ code: string; name: string; symbol: string }> = [
+    { code: 'USD', name: 'US Dollar', symbol: '$' },
+    { code: 'EUR', name: 'Euro', symbol: '€' },
+    { code: 'GBP', name: 'British Pound', symbol: '£' },
+    { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+    { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
+    { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
+    { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr' },
+    { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
+    { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
+    { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$' },
+    { code: 'THB', name: 'Thai Baht', symbol: '฿' },
+    { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' }
+  ];
 
 
   private initStatusOptions(): void {
@@ -70,7 +89,8 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private permissionService: PermissionService,
     private message: NzMessageService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    public currencyService: CurrencyService
   ) {
     this.initStatusOptions();
     this.initTimezoneOptions();
@@ -127,6 +147,16 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       this.hasPriceConfig = !!priceConfigId && priceConfigId !== '';
       this.updatePriceFieldsDisabledState();
     });
+    
+    // Theo dõi currency để cập nhật tỷ giá và hiển thị quy đổi USD
+    const currencyControl = this.roomForm.get('pricing.currency');
+    currencyControl?.valueChanges.subscribe((cur: string) => {
+      this.selectedCurrency = (cur || 'VND').toUpperCase();
+      this.updateExchangeRateToUSD();
+    });
+    // Khởi tạo theo giá trị mặc định
+    this.selectedCurrency = String(currencyControl?.value || 'VND').toUpperCase();
+    this.updateExchangeRateToUSD();
 
     // Theo dõi gói hiện tại của người dùng (để lấy maxRooms)
     this.subscriptions.add(
@@ -147,6 +177,27 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
         this.initTimezoneOptions();
       })
     );
+  }
+  
+  private updateExchangeRateToUSD(): void {
+    if (!this.selectedCurrency || this.selectedCurrency === 'USD') {
+      this.exchangeRateToUSD = 1;
+      return;
+    }
+    this.currencyService.getExchangeRate(this.selectedCurrency, 'USD').subscribe({
+      next: (rate) => {
+        this.exchangeRateToUSD = rate || 1;
+      },
+      error: () => {
+        this.exchangeRateToUSD = 1;
+      }
+    });
+  }
+  
+  formatUSD(amount: number | null | undefined): string {
+    const value = Number(amount || 0) * (this.exchangeRateToUSD || 1);
+    const rounded = this.currencyService.roundAmount(value, 'USD');
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(rounded);
   }
 
   ngOnDestroy(): void {

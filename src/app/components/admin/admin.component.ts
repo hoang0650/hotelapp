@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, NavigationEnd, Params } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
+import { PermissionService } from '../../services/permission.service';
 import { NzMarks } from 'ng-zorro-antd/slider';
 import { RoomsService } from '../../services/rooms.service';
 
@@ -37,7 +38,8 @@ export class AdminComponent implements OnInit {
     private router: Router, 
     private activatedRoute: ActivatedRoute,
     private authService: AuthService,
-    private roomsService: RoomsService
+    private roomsService: RoomsService,
+    private permissionService: PermissionService
   ) { }
 
   ngOnInit(): void {
@@ -97,167 +99,98 @@ export class AdminComponent implements OnInit {
 
   // ============ KIỂM TRA QUYỀN HIỂN THỊ MENU ============
   
-  // Menu Hotel (Room, Shift Handover, Calendar, Bank Transfer History)
-  // Staff được phép truy cập menu này
   canAccessHotelMenu(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager() ||
-           this.authService.isStaff();
+    return this.permissionService.hasFeatureAccess('room_management') ||
+           this.permissionService.hasFeatureAccess('shift_handover') ||
+           this.permissionService.hasFeatureAccess('calendar') ||
+           this.permissionService.hasFeatureAccess('bank_transfer_history');
   }
 
-  // Business Management - superadmin, admin, và business (chỉ quản lý business của mình)
   canAccessBusinessManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness();
+    return this.permissionService.hasFeatureAccess('company_management');
   }
 
-  // Hotel Management - superadmin, admin, business, và hotel (chỉ quản lý hotel của mình)
   canAccessHotelManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() ||
-           this.authService.isHotelManager();
+    return this.permissionService.hasFeatureAccess('hotel_management');
   }
 
-  // Room Management - superadmin, admin, business, hotel
   canAccessRoomManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager();
+    return this.permissionService.hasFeatureAccess('room_management');
   }
 
-  // Staff Management - superadmin, admin, business, hotel
   canAccessStaffManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager();
+    return this.permissionService.hasFeatureAccess('staff_management');
   }
 
-  // User Management - superadmin, admin, và business (chỉ xem)
   canAccessUserManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness();
+    return this.permissionService.hasFeatureAccess('user_management');
   }
 
-  // Service Management - superadmin, admin, business, hotel
   canAccessServiceManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager();
+    return this.permissionService.hasFeatureAccess('service_management');
   }
 
-  // Guest Management - superadmin, admin, business, hotel, staff
   canAccessGuestManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager() ||
-           this.authService.isStaff();
+    return this.permissionService.hasFeatureAccess('room_management');
   }
 
-  // Debt Management - superadmin, admin, business, hotel
   canAccessDebtManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager();
+    return this.permissionService.hasFeatureAccess('room_management');
   }
 
-  // Contact Management - chỉ superadmin và admin
   canAccessContactManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin();
+    return this.permissionService.canAccessRoute('/admin/contact-management');
   }
 
-  // Blog Management - chỉ superadmin và admin
   canAccessBlogManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin();
+    return this.permissionService.canAccessRoute('/admin/blog-management');
   }
 
-  // OTA Management - superadmin, admin, business, hotel
   canAccessOTAManagement(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager();
+    return this.permissionService.hasFeatureAccess('ota_management');
   }
 
-  // Pricing Management - tất cả các role đều có thể truy cập
   canAccessPricingManagement(): boolean {
-    return true; // Cho phép tất cả role truy cập
+    return this.permissionService.canAccessRoute('/admin/pricing-management');
   }
 
-  // Electric Setting - superadmin, admin, business, hotel
   canAccessElectricSetting(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager();
+    return this.permissionService.hasFeatureAccess('electric_management');
   }
 
-  // Fanpage Messages - superadmin, admin, business, hotel
   canAccessFanpageMessages(): boolean {
-    return this.authService.isSuperAdmin() ||
-           this.authService.isAdmin() ||
-           this.authService.isBusiness() ||
-           this.authService.isHotelManager()||
-           this.authService.isStaff();
+    return this.permissionService.hasFeatureAccess('fanpage_messages');
   }
 
-  // Payment Menu (QR Payment, Visa Payment) - superadmin, admin, business, hotel
   canAccessPaymentMenu(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager();
+    return this.permissionService.hasFeatureAccess('qr_payment') ||
+           this.permissionService.hasFeatureAccess('visa_payment');
   }
 
-  // Email Admin - Chỉ superadmin và admin
   canAccessEmailAdmin(): boolean {
-    return this.authService.isSuperAdmin() || this.authService.isAdmin();
+    return this.permissionService.hasFeatureAccess('email_admin');
   }
 
-  // File - Tất cả role
   canAccessFile(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager() || 
-           this.authService.isStaff();
+    return this.permissionService.canAccessRoute('/admin/files');
   }
 
-  // Settings - Chỉ superadmin và admin
   canAccessSettings(): boolean {
-    return this.authService.isSuperAdmin() || this.authService.isAdmin();
+    return this.permissionService.hasFeatureAccess('settings_management');
   }
 
-  // Shift Handover History - superadmin, admin, business, hotel
   canAccessShiftHandoverHistory(): boolean {
-    const rules = this.authService.getPermissionRules();
-    return rules.canViewShiftHistory;
+    return this.permissionService.hasFeatureAccess('shift_handover');
   }
 
-  // Financial Summary Report - chỉ superadmin và business
   canAccessFinancialSummary(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isBusiness();
+    return this.permissionService.hasFeatureAccess('revenue_chart');
   }
 
-  // E-Invoice - superadmin, admin, business, hotel, staff
   canAccessEInvoice(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
-           this.authService.isHotelManager() ||
-           this.authService.isStaff();
+    return this.permissionService.canAccessRoute('/admin/e-invoice-registration') ||
+           this.permissionService.canAccessRoute('/admin/e-invoice-management') ||
+           this.permissionService.canAccessRoute('/admin/e-invoice-template');
   }
 
   // Mở trang Settings
