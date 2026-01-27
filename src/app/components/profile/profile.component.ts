@@ -8,6 +8,7 @@ import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-profile',
@@ -36,7 +37,8 @@ export class ProfileComponent implements OnInit {
     private authService: AuthService,
     private message: NzMessageService,
     private http: HttpClient,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private route: ActivatedRoute
   ) {
     // Form thông tin cơ bản
     this.profileForm = this.fb.group({
@@ -78,6 +80,13 @@ export class ProfileComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Hiển thị thông báo nếu vừa xác thực email xong (redirect từ backend)
+    const emailVerifiedParam = this.route.snapshot.queryParamMap.get('emailVerified');
+    if (emailVerifiedParam === '1') {
+      this.message.success(this.translate.instant('PROFILE.EMAIL_VERIFIED_SUCCESS') || 'Email đã được xác thực thành công');
+      // Xóa query param khỏi URL (nếu cần)
+      history.replaceState(null, '', window.location.pathname);
+    }
     this.loadProfile();
   }
 
@@ -96,6 +105,25 @@ export class ProfileComponent implements OnInit {
         console.error('Error loading profile:', error);
         this.message.error(this.translate.instant('PROFILE.LOAD_ERROR'));
         this.loading = false;
+      }
+    });
+  }
+
+  /**
+   * Gửi email xác thực
+   */
+  sendVerificationEmail(): void {
+    this.userService.sendVerificationEmail().subscribe({
+      next: (response) => {
+        if (response.success !== false) {
+          this.message.success(response.message || this.translate.instant('PROFILE.SEND_VERIFICATION_EMAIL_SUCCESS') || 'Đã gửi email xác thực. Vui lòng kiểm tra hộp thư của bạn.');
+        } else {
+          this.message.error(response.message || this.translate.instant('PROFILE.SEND_VERIFICATION_EMAIL_ERROR') || 'Gửi email xác thực thất bại');
+        }
+      },
+      error: (error) => {
+        console.error('Error sending verification email:', error);
+        this.message.error(error.error?.message || this.translate.instant('PROFILE.SEND_VERIFICATION_EMAIL_ERROR') || 'Gửi email xác thực thất bại');
       }
     });
   }

@@ -9,6 +9,7 @@ export interface User {
   fullName?: string;
   role: 'superadmin' | 'admin' | 'business' | 'hotel' | 'staff' | 'guest';
   status: 'active' | 'inactive' | 'suspended' | 'deleted';
+  emailVerified?: boolean;
   avatar?: string;
   lastLogin?: Date;
   lastLoginIp?: string; // Địa chỉ IP lúc đăng nhập cuối cùng

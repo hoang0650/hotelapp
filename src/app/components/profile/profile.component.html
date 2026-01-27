@@ -26,6 +26,25 @@
             <nz-form-control [nzSpan]="18">
               <input nz-input formControlName="email" readonly />
               <div style="font-size: 12px; color: #999; margin-top: 4px;">{{ 'PROFILE.EMAIL_CANNOT_CHANGE' | translate }}</div>
+              <div style="margin-top: 8px;">
+                <span *ngIf="currentUser?.emailVerified" style="color: #52c41a; font-weight: 600;">
+                  <i nz-icon nzType="check-circle" nzTheme="outline"></i>
+                  {{ 'PROFILE.EMAIL_VERIFIED' | translate }}
+                </span>
+                <span *ngIf="!currentUser?.emailVerified" style="color: #f5222d; font-weight: 600;">
+                  <i nz-icon nzType="close-circle" nzTheme="outline"></i>
+                  {{ 'PROFILE.EMAIL_NOT_VERIFIED' | translate }}
+                </span>
+                <button 
+                  *ngIf="!currentUser?.emailVerified"
+                  nz-button 
+                  nzType="default" 
+                  (click)="sendVerificationEmail()"
+                  style="margin-left: 8px;">
+                  <i nz-icon nzType="mail" nzTheme="outline"></i>
+                  {{ 'PROFILE.SEND_VERIFICATION_EMAIL' | translate }}
+                </button>
+              </div>
             </nz-form-control>
           </nz-form-item>
 

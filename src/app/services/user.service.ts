@@ -263,4 +263,13 @@ export class UserService {
       })
     );
   }
+
+  /**
+   * Gửi email xác thực cho current user
+   */
+  sendVerificationEmail(): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/email/send-verification`, {}, {
+      headers: this.getAuthHeaders()
+    });
+  }
 }

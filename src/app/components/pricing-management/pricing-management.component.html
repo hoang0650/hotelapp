@@ -314,7 +314,7 @@
               formControlName="maxUsers" 
               [nzMin]="0" 
               [nzStep]="1" 
-              [nzDisabled]="!isSuperAdmin || packageForm.get('unlimitedUsers')?.value"
+              [nzDisabled]="!isSuperAdmin"
               [nzPlaceHolder]="'PRICING_MANAGEMENT.FORM.MAX_USERS_PLACEHOLDER' | translate"
               style="width: 100%">
             </nz-input-number>
@@ -335,7 +335,7 @@
               formControlName="maxRooms" 
               [nzMin]="0" 
               [nzStep]="1" 
-              [nzDisabled]="!isSuperAdmin || packageForm.get('unlimitedRooms')?.value"
+              [nzDisabled]="!isAdmin"
               [nzPlaceHolder]="'Nhập số phòng tối đa (0 = không giới hạn)'" 
               style="width: 100%">
             </nz-input-number>

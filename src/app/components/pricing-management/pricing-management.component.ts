@@ -91,12 +91,26 @@ export class PricingManagementComponent implements OnInit {
       this.loadPackages();
       this.loadCurrentUserPackage();
     }
-    // Khóa các controls giới hạn khi không phải superadmin
+    // Khóa các controls theo quyền
+    // - maxUsers/unlimitedUsers: chỉ superadmin được chỉnh
     if (!this.isSuperAdmin) {
       this.packageForm.get('unlimitedUsers')?.disable({ emitEvent: false });
       this.packageForm.get('maxUsers')?.disable({ emitEvent: false });
+    }
+    // - maxRooms/unlimitedRooms: admin và superadmin được chỉnh
+    if (!this.isAdmin) {
       this.packageForm.get('unlimitedRooms')?.disable({ emitEvent: false });
       this.packageForm.get('maxRooms')?.disable({ emitEvent: false });
+    } else {
+      // Đảm bảo bật lại cho admin nếu trước đó bị disable
+      this.packageForm.get('unlimitedRooms')?.enable({ emitEvent: false });
+      // maxRooms enable/disable phụ thuộc vào trạng thái unlimitedRooms
+      const unlimitedRooms = this.packageForm.get('unlimitedRooms')?.value;
+      if (unlimitedRooms) {
+        this.packageForm.get('maxRooms')?.disable({ emitEvent: false });
+      } else {
+        this.packageForm.get('maxRooms')?.enable({ emitEvent: false });
+      }
     }
     
     this.pricingService.subscriptionChanged$.subscribe(() => {
@@ -196,14 +210,11 @@ export class PricingManagementComponent implements OnInit {
 
     // Theo dõi thay đổi của unlimitedRooms
     this.packageForm.get('unlimitedRooms')?.valueChanges.subscribe(unlimited => {
-      if (!this.isSuperAdmin) return;
       const maxRoomsControl = this.packageForm.get('maxRooms');
       if (unlimited) {
         maxRoomsControl?.setValue(0, { emitEvent: false });
         maxRoomsControl?.clearValidators();
-        maxRoomsControl?.disable({ emitEvent: false });
       } else {
-        maxRoomsControl?.enable({ emitEvent: false });
         maxRoomsControl?.setValidators([Validators.min(0)]);
         if (maxRoomsControl?.value === 0) {
           maxRoomsControl?.setValue(20, { emitEvent: false });
@@ -214,7 +225,7 @@ export class PricingManagementComponent implements OnInit {
 
     // Theo dõi thay đổi của maxRooms - nếu nhập 0 thì tự động check "không giới hạn"
     this.packageForm.get('maxRooms')?.valueChanges.subscribe(value => {
-      if (!this.isSuperAdmin) return;
+      if (!this.isAdmin) return;
       const unlimitedRoomsControl = this.packageForm.get('unlimitedRooms');
       if (value === 0 && !unlimitedRoomsControl?.disabled) {
         unlimitedRoomsControl?.setValue(true, { emitEvent: false });
@@ -326,6 +337,10 @@ export class PricingManagementComponent implements OnInit {
           aiChatboxFeature: pkg.aiChatboxFeature || false,
           isActive: pkg.isActive
         });
+        // Bật checkbox cho admin (để người dùng có thể chuyển trạng thái không giới hạn)
+        if (this.isAdmin) {
+          this.packageForm.get('unlimitedRooms')?.enable({ emitEvent: false });
+        }
       }
     } else {
       this.packageForm.reset({
@@ -355,6 +370,10 @@ export class PricingManagementComponent implements OnInit {
         hotelNotificationFeature: false,
         isActive: true
       });
+      // Bật checkbox cho admin
+      if (this.isAdmin) {
+        this.packageForm.get('unlimitedRooms')?.enable({ emitEvent: false });
+      }
     }
     this.isModalVisible = true;
   }
@@ -408,7 +427,7 @@ export class PricingManagementComponent implements OnInit {
         return (cur === 0 || cur === null || cur === undefined) ? 0 : (cur >= 1 ? cur : 1);
       };
       const computeMaxRooms = () => {
-        if (this.isSuperAdmin) {
+        if (this.isAdmin) {
           return (formData.unlimitedRooms || formData.maxRooms === 0) ? 0 : (formData.maxRooms >= 1 ? formData.maxRooms : 1);
         }
         const cur = editingPkg.maxRooms;
