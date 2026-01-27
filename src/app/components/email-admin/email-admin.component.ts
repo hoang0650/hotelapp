@@ -66,6 +66,10 @@ export class EmailAdminComponent implements OnInit {
       smtpPassword: [''],
       // Resend
       resendApiKey: [''],
+      resendTemplateResetId: [''],
+      resendTemplateResetAlias: [''],
+      resendTemplateSubscriptionId: [''],
+      resendTemplateSubscriptionAlias: [''],
       // SendGrid
       sendgridApiKey: [''],
       // Mailgun
@@ -225,6 +229,18 @@ export class EmailAdminComponent implements OnInit {
         // Chỉ gửi API key nếu có giá trị
         if (formValue.resendApiKey && formValue.resendApiKey.trim() !== '') {
           emailSettings.resendApiKey = formValue.resendApiKey;
+        }
+        if (formValue.resendTemplateResetId && formValue.resendTemplateResetId.trim() !== '') {
+          emailSettings.resendTemplateResetId = formValue.resendTemplateResetId;
+        }
+        if (formValue.resendTemplateResetAlias && formValue.resendTemplateResetAlias.trim() !== '') {
+          emailSettings.resendTemplateResetAlias = formValue.resendTemplateResetAlias;
+        }
+        if (formValue.resendTemplateSubscriptionId && formValue.resendTemplateSubscriptionId.trim() !== '') {
+          emailSettings.resendTemplateSubscriptionId = formValue.resendTemplateSubscriptionId;
+        }
+        if (formValue.resendTemplateSubscriptionAlias && formValue.resendTemplateSubscriptionAlias.trim() !== '') {
+          emailSettings.resendTemplateSubscriptionAlias = formValue.resendTemplateSubscriptionAlias;
         }
         break;
       case 'sendgrid':

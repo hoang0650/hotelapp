@@ -1,4 +1,4 @@
-import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -17,7 +17,7 @@ interface FbMessage {
   templateUrl: './fanpage-messages.component.html',
   styleUrls: ['./fanpage-messages.component.css']
 })
-export class FanpageMessagesComponent implements OnInit {
+export class FanpageMessagesComponent implements OnInit, OnDestroy {
   messages: FbMessage[] = [];
   pages: any[] = [];
   conversations: { sender_id: string; lastText: string; lastTime: number }[] = [];
@@ -31,6 +31,12 @@ export class FanpageMessagesComponent implements OnInit {
   showSidebar = true;
   @ViewChild('threadList') threadList?: ElementRef<HTMLDivElement>;
   private pollTimer?: any;
+  private onWindowFocus = async () => {
+    await this.refreshFacebookPages();
+    if (this.pages.length) {
+      clearInterval(this.pollTimer);
+    }
+  };
 
   constructor(private aiAssistant: AiAssistantService, private authService: AuthService) {}
 
@@ -47,11 +53,12 @@ export class FanpageMessagesComponent implements OnInit {
       const tenantId = this.getTenantId();
       this.pages = await this.aiAssistant.getFacebookPages(tenantId);
       this.selectedPageId = this.pages?.[0]?.id || '';
-      this.messages = await this.aiAssistant.getFacebookMessages(tenantId);
+      this.messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId || undefined);
       this.buildConversations();
       if (this.conversations.length) {
         this.selectConversation(this.conversations[0].sender_id);
       }
+      window.addEventListener('focus', this.onWindowFocus);
     } finally {
       this.loading = false;
     }
@@ -77,6 +84,8 @@ export class FanpageMessagesComponent implements OnInit {
 
   async changePage(pageId: string): Promise<void> {
     this.selectedPageId = pageId;
+    const tenantId = this.getTenantId();
+    this.messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId || undefined);
     this.buildConversations();
     if (this.conversations.length) {
       this.selectConversation(this.conversations[0].sender_id);
@@ -139,7 +148,7 @@ export class FanpageMessagesComponent implements OnInit {
     if (!this.selectedPageId && this.pages.length) {
       this.selectedPageId = this.pages[0].id;
     }
-    const messages = await this.aiAssistant.getFacebookMessages(tenantId);
+    const messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId || undefined);
     this.messages = messages || [];
     this.buildConversations();
     if (this.conversations.length) {
@@ -162,5 +171,10 @@ export class FanpageMessagesComponent implements OnInit {
         }
       }, 1000);
     }
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('focus', this.onWindowFocus);
+    clearInterval(this.pollTimer);
   }
 }

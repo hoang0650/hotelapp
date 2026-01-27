@@ -41,7 +41,8 @@ export class LoginComponent implements OnInit {
     this.loginForm = this.fb.group({
       emailOrUsername: ['', [Validators.required]],
       password: ['', [Validators.required]],
-      twoFactorCode: ['']
+      twoFactorCode: [''],
+      remember: [false]
     });
   }
 
@@ -77,6 +78,8 @@ export class LoginComponent implements OnInit {
     if (this.showTwoFactorInput) {
       loginData.twoFactorCode = this.loginForm.get('twoFactorCode')?.value;
     }
+    const remember = this.loginForm.get('remember')?.value === true;
+    (loginData as any).remember = remember;
 
     this.userService.login(loginData).subscribe({
       next: (response) => {

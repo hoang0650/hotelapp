@@ -7,8 +7,8 @@
       <div class="col-md-6 text-end">
         <a [routerLink]="['/privacy-policy']" class="footer-link me-3">{{ 'FOOTER.PRIVACY_POLICY' | translate }}</a>
         <a [routerLink]="['/terms-of-service']" class="footer-link me-3">{{ 'FOOTER.TERMS_OF_SERVICE' | translate }}</a>
-        <a href="/contact" class="footer-link me-3">{{ 'FOOTER.CONTACT_US' | translate }}</a>
-        <a href="/about-us" class="footer-link">{{ 'FOOTER.ABOUT' | translate }}</a>
+        <a [routerLink]="['/contact']" class="footer-link me-3">{{ 'FOOTER.CONTACT_US' | translate }}</a>
+        <a [routerLink]="['/about-us']" class="footer-link">{{ 'FOOTER.ABOUT' | translate }}</a>
       </div>
     </div>
   </div>

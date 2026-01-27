@@ -3267,7 +3267,29 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
             'mỹ đông', 'di an', 'dĩ an', 'bình dương', 'trần hưng đạo', 'lý nhân', 'hà nam', 
             'hà nội', 'tây hồ', 'phù thượng', 'sơn trung', 'hương sơn', 'hà tĩnh', 
             'thanh khê', 'đà nẵng', 'nhị đồng', 'ngô thì nhậm', 'binh duong', 'di an', 
-            'ly nhan', 'ha nam', 'nhi dong', 'ngo thi nham'
+            'ly nhan', 'ha nam', 'nhi dong', 'ngo thi nham',
+            'lào cai', 'lao cai',
+            'thái nguyên', 'thai nguyen',
+            'phú thọ', 'phu tho',
+            'bắc ninh', 'bac ninh',
+            'hưng yên', 'hung yen',
+            'hải phòng', 'hai phong',
+            'ninh bình', 'ninh binh',
+            'quảng trị', 'quang tri',
+            'thành phố đà nẵng', 'thanh pho da nang', 'da nang',
+            'quảng ngãi', 'quang ngai',
+            'gia lai',
+            'khánh hòa', 'khanh hoa',
+            'lâm đồng', 'lam dong',
+            'đắk lắk', 'dak lak', 'đăk lak', 'đắc lắc',
+            'thành phố hồ chí minh', 'thanh pho ho chi minh', 'ho chi minh', 'tp hcm', 'tp. hồ chí minh',
+            'đồng nai', 'dong nai',
+            'tây ninh', 'tay ninh',
+            'cần thơ', 'can tho', 'thành phố cần thơ', 'thanh pho can tho',
+            'vĩnh long', 'vinh long',
+            'đồng tháp', 'dong thap',
+            'cà mau', 'ca mau',
+            'an giang'
           ];
           const hasPlaceName = commonPlaceNames.some(placeName => 
             line.toLowerCase().includes(placeName.toLowerCase())
@@ -3306,6 +3328,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
                 const cleanAddrLine = cleanAddressLine(addrLine);
                 if (cleanAddrLine.length >= 5) {
                   addressLines.push(cleanAddrLine);
+                  const provinceEndPattern = /(tỉnh|thành\s*phố|tp\.?\s*hcm|hồ\s*chí\s*minh|hà\s*nội|đà\s*nẵng)/i;
+                  const isProvinceLine = provinceEndPattern.test(cleanAddrLine) || commonPlaceNames.some(p => cleanAddrLine.toLowerCase().includes(p.toLowerCase()));
+                  if (isProvinceLine) {
+                    break;
+                  }
                 }
               }
               
@@ -3362,6 +3389,10 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
                 const cleanLine = cleanAddressLine(nextLine);
                 if (cleanLine.length > 2 && !/\d{7,}\s+[A-Za-z]{1,3}\s+[^\s]{0,20}\s*\/\s*[A-Za-z]{1,3}/gi.test(cleanLine)) {
                   nextLines.push(cleanLine);
+                  const provinceEndPattern2 = /(tỉnh|thành\s*phố|tp\.?\s*hcm|hồ\s*chí\s*minh|hà\s*nội|đà\s*nẵng)/i;
+                  if (provinceEndPattern2.test(cleanLine)) {
+                    break;
+                  }
                 }
               }
             }

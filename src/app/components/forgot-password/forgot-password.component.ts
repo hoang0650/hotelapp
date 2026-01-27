@@ -23,15 +23,12 @@ export class ForgotPasswordComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (this.userService.isLoggedIn) {
-      this.router.navigate(['/admin/room']);
-    }
+    // Giữ nguyên trạng thái đăng nhập, không redirect khỏi trang công khai
   }
 
   private initForm(): void {
     this.forgotPasswordForm = this.fb.group({
-      emailOrUsername: ['', [Validators.required]],
-      emailFrom: ['', [Validators.email]] // Email gửi từ (optional)
+      emailOrUsername: ['', [Validators.required]]
     });
   }
 
@@ -48,7 +45,6 @@ export class ForgotPasswordComponent implements OnInit {
 
     this.isLoading = true;
     const emailOrUsername = this.forgotPasswordForm.get('emailOrUsername')?.value;
-    const emailFrom = this.forgotPasswordForm.get('emailFrom')?.value;
     
     // Kiểm tra xem input có phải là email không (chứa @)
     const isEmail = emailOrUsername.includes('@');
@@ -60,10 +56,7 @@ export class ForgotPasswordComponent implements OnInit {
       requestData.username = emailOrUsername;
     }
     
-    // Thêm emailFrom nếu có
-    if (emailFrom && emailFrom.trim()) {
-      requestData.emailFrom = emailFrom.trim();
-    }
+    // Không gửi emailFrom; hệ thống sẽ dùng email cấu hình sẵn
 
     this.userService.forgotPassword(requestData).subscribe({
       next: (response) => {

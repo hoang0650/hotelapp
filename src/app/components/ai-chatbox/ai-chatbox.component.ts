@@ -56,6 +56,12 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.msgSub = this.aiService.getMessages().subscribe(msgs => this.messages = msgs as ChatMessage[]);
     this.typingSub = this.aiService.getTypingStatus().subscribe(status => this.isTyping = status);
     this.checkAiChatboxPermission();
+    this.authService.currentUser$.pipe(take(1)).subscribe(() => {
+      this.checkAiChatboxPermission();
+    });
+    this.authService.currentUser$.subscribe(() => {
+      this.checkAiChatboxPermission();
+    });
   }
   
   /**

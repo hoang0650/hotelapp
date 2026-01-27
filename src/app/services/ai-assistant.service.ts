@@ -223,9 +223,9 @@ export class AiAssistantService {
     return resp?.pages || [];
   }
 
-  async getFacebookMessages(tenantId: string): Promise<any[]> {
+  async getFacebookMessages(tenantId: string, pageId?: string): Promise<any[]> {
     const resp = await firstValueFrom(
-      this.http.get<any>(`${this.aiUrl}/facebook/messages`, { params: { tenant_id: tenantId } })
+      this.http.get<any>(`${this.aiUrl}/facebook/messages`, { params: { tenant_id: tenantId, ...(pageId ? { page_id: pageId } : {}) } })
     );
     return resp?.messages || [];
   }

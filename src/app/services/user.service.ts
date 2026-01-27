@@ -34,6 +34,7 @@ export interface LoginRequest {
   username?: string;
   password: string;
   twoFactorCode?: string;
+  remember?: boolean;
 }
 
 export interface LoginResponse {

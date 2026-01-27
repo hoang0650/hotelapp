@@ -73,6 +73,22 @@
               <input nz-input type="password" formControlName="resendApiKey" placeholder="re_xxxxx" />
             </nz-form-control>
           </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>Template đặt lại mật khẩu (ID hoặc alias)</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="resendTemplateResetId" placeholder="ID template (nếu dùng ID)" style="margin-bottom:8px;" />
+              <input nz-input formControlName="resendTemplateResetAlias" placeholder="Alias template, ví dụ: password-reset-notification" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>Template xác nhận đăng ký gói (ID hoặc alias)</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="resendTemplateSubscriptionId" placeholder="ID template (nếu dùng ID)" style="margin-bottom:8px;" />
+              <input nz-input formControlName="resendTemplateSubscriptionAlias" placeholder="Alias template, ví dụ: package-signup-confirmation" />
+            </nz-form-control>
+          </nz-form-item>
         </nz-card>
 
         <!-- SendGrid Settings -->

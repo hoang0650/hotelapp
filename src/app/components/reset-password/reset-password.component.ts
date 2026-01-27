@@ -36,9 +36,7 @@ export class ResetPasswordComponent implements OnInit {
       return;
     }
 
-    if (this.userService.isLoggedIn) {
-      this.router.navigate(['/admin/room']);
-    }
+    // Giữ nguyên trạng thái đăng nhập, không redirect khỏi trang công khai
   }
 
   private initForm(): void {

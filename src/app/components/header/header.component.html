@@ -7,19 +7,19 @@
   <div class="collapse navbar-collapse" id="navbarNav">
     <ul class="navbar-nav mb-2 mb-lg-0 justify-content-start">
       <li class="nav-item">
-        <a class="nav-link" href="/home" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.HOME' | translate }}</a>
+        <a class="nav-link" [routerLink]="['/home']" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.HOME' | translate }}</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="/about-us" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.ABOUT_US' | translate }}</a>
+        <a class="nav-link" [routerLink]="['/about-us']" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.ABOUT_US' | translate }}</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="/pricing" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.PRICING' | translate }}</a>
+        <a class="nav-link" [routerLink]="['/pricing']" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.PRICING' | translate }}</a>
       </li>
       <li class="nav-item">
         <a class="nav-link" [routerLink]="['/blog']" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Blog</a>
       </li>
       <li class="nav-item" *ngIf="isLoggedIn">
-        <a class="nav-link" href="/admin/room" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.ADMIN' | translate }}</a>
+        <a class="nav-link" [routerLink]="['/admin/room']" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.ADMIN' | translate }}</a>
       </li>  
       <!-- <li class="nav-item">
           <a class="nav-link disabled" href="#" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">Disabled</a>
@@ -51,8 +51,8 @@
             </div>
           </li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item" routerLink="admin/profile"><i class="bi bi-person me-2"></i>{{ 'NAVBAR.PROFILE' | translate }}</a></li>
-          <li *ngIf="authService.isSuperAdmin() || authService.isAdmin()"><a class="dropdown-item" routerLink="admin/settings"><i class="bi bi-gear me-2"></i>{{ 'NAVBAR.SETTINGS' | translate }}</a></li>
+          <li><a class="dropdown-item" [routerLink]="['/admin/profile']"><i class="bi bi-person me-2"></i>{{ 'NAVBAR.PROFILE' | translate }}</a></li>
+          <li *ngIf="authService.isSuperAdmin() || authService.isAdmin()"><a class="dropdown-item" [routerLink]="['/admin/settings']"><i class="bi bi-gear me-2"></i>{{ 'NAVBAR.SETTINGS' | translate }}</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item text-danger" (click)="logout()" style="cursor: pointer;"><i class="bi bi-box-arrow-right me-2"></i>{{ 'NAVBAR.LOGOUT' | translate }}</a></li>
         </ul>

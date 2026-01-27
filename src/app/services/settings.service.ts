@@ -31,6 +31,10 @@ export interface EmailSettings {
   smtpPassword?: string;
   // Resend settings
   resendApiKey?: string;
+  resendTemplateResetId?: string;
+  resendTemplateResetAlias?: string;
+  resendTemplateSubscriptionId?: string;
+  resendTemplateSubscriptionAlias?: string;
   // SendGrid settings
   sendgridApiKey?: string;
   // Mailgun settings
