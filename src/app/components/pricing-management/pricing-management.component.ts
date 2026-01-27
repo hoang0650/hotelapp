@@ -91,6 +91,13 @@ export class PricingManagementComponent implements OnInit {
       this.loadPackages();
       this.loadCurrentUserPackage();
     }
+    // Khóa các controls giới hạn khi không phải superadmin
+    if (!this.isSuperAdmin) {
+      this.packageForm.get('unlimitedUsers')?.disable({ emitEvent: false });
+      this.packageForm.get('maxUsers')?.disable({ emitEvent: false });
+      this.packageForm.get('unlimitedRooms')?.disable({ emitEvent: false });
+      this.packageForm.get('maxRooms')?.disable({ emitEvent: false });
+    }
     
     this.pricingService.subscriptionChanged$.subscribe(() => {
       if (this.isAdmin) {
@@ -155,6 +162,7 @@ export class PricingManagementComponent implements OnInit {
     
     // Theo dõi thay đổi của unlimitedUsers
     this.packageForm.get('unlimitedUsers')?.valueChanges.subscribe(unlimited => {
+      if (!this.isSuperAdmin) return;
       const maxUsersControl = this.packageForm.get('maxUsers');
       if (unlimited) {
         // Khi chọn không giới hạn, set giá trị là 0 (sẽ gửi 0 lên backend)
@@ -175,6 +183,7 @@ export class PricingManagementComponent implements OnInit {
 
     // Theo dõi thay đổi của maxUsers - nếu nhập 0 thì tự động check "không giới hạn"
     this.packageForm.get('maxUsers')?.valueChanges.subscribe(value => {
+      if (!this.isSuperAdmin) return;
       const unlimitedUsersControl = this.packageForm.get('unlimitedUsers');
       if (value === 0 && !unlimitedUsersControl?.disabled) {
         // Nếu nhập 0 và checkbox chưa bị disable (tức là đang enable), tự động check
@@ -187,6 +196,7 @@ export class PricingManagementComponent implements OnInit {
 
     // Theo dõi thay đổi của unlimitedRooms
     this.packageForm.get('unlimitedRooms')?.valueChanges.subscribe(unlimited => {
+      if (!this.isSuperAdmin) return;
       const maxRoomsControl = this.packageForm.get('maxRooms');
       if (unlimited) {
         maxRoomsControl?.setValue(0, { emitEvent: false });
@@ -204,6 +214,7 @@ export class PricingManagementComponent implements OnInit {
 
     // Theo dõi thay đổi của maxRooms - nếu nhập 0 thì tự động check "không giới hạn"
     this.packageForm.get('maxRooms')?.valueChanges.subscribe(value => {
+      if (!this.isSuperAdmin) return;
       const unlimitedRoomsControl = this.packageForm.get('unlimitedRooms');
       if (value === 0 && !unlimitedRoomsControl?.disabled) {
         unlimitedRoomsControl?.setValue(true, { emitEvent: false });
@@ -385,10 +396,26 @@ export class PricingManagementComponent implements OnInit {
       this.loading = true;
       const formData = this.packageForm.value;
 
-      // Nếu unlimitedUsers được chọn hoặc maxUsers = 0, gửi 0 lên backend (đại diện cho không giới hạn)
-      // Nếu không, gửi giá trị thực (phải >= 1)
-      const maxUsers = (formData.unlimitedUsers || formData.maxUsers === 0) ? 0 : (formData.maxUsers >= 1 ? formData.maxUsers : 1);
-      const maxRooms = (formData.unlimitedRooms || formData.maxRooms === 0) ? 0 : (formData.maxRooms >= 1 ? formData.maxRooms : 1);
+      // Tính maxUsers/maxRooms:
+      // - Superadmin: lấy từ form (cho phép chỉnh sửa)
+      // - Khác: giữ nguyên giá trị gói đang sửa (nếu có), tránh bị set 1 mặc định khi controls bị disable
+      const editingPkg = this.editingPackageId ? (this.packages.find(p => p._id === this.editingPackageId || p.id === this.editingPackageId) || {}) : {};
+      const computeMaxUsers = () => {
+        if (this.isSuperAdmin) {
+          return (formData.unlimitedUsers || formData.maxUsers === 0) ? 0 : (formData.maxUsers >= 1 ? formData.maxUsers : 1);
+        }
+        const cur = editingPkg.maxUsers;
+        return (cur === 0 || cur === null || cur === undefined) ? 0 : (cur >= 1 ? cur : 1);
+      };
+      const computeMaxRooms = () => {
+        if (this.isSuperAdmin) {
+          return (formData.unlimitedRooms || formData.maxRooms === 0) ? 0 : (formData.maxRooms >= 1 ? formData.maxRooms : 1);
+        }
+        const cur = editingPkg.maxRooms;
+        return (cur === 0 || cur === null || cur === undefined) ? 0 : (cur >= 1 ? cur : 1);
+      };
+      const maxUsers = computeMaxUsers();
+      const maxRooms = computeMaxRooms();
 
       const payload: any = {
         ...formData,
