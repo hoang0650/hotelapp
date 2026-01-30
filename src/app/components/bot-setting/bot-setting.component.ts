@@ -3,6 +3,7 @@ import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
+import { RoomsService } from '../../services/rooms.service';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { take } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -34,7 +35,8 @@ export class BotSettingComponent implements OnInit {
     private hotelService: HotelService,
     private aiService: AiAssistantService,
     private translate: TranslateService,
-    private router: Router
+    private router: Router,
+    private roomsService: RoomsService
   ) {}
 
   ngOnInit(): void {
@@ -49,7 +51,7 @@ export class BotSettingComponent implements OnInit {
       checkout_time: ['12:00'],
       rooms: this.fb.array([])
     });
-    this.loadInitialHotel();
+    this.loadInitialHotelAndRooms();
   }
 
   get rooms(): FormArray {
@@ -101,7 +103,7 @@ export class BotSettingComponent implements OnInit {
     return this.rooms.at(i).get('amenities') as FormArray;
   }
 
-  private loadInitialHotel(): void {
+  private loadInitialHotelAndRooms(): void {
     const u = this.auth.getCurrentUser();
     const hotelId = u?.hotelId || null;
     if (!hotelId) {
@@ -115,9 +117,55 @@ export class BotSettingComponent implements OnInit {
         const street = addr.street || '';
         const city = addr.city || '';
         const country = addr.country || '';
+        const checkIn = hotel.settings?.checkInTime || this.form.get('checkin_time')?.value || '14:00';
+        const checkOut = hotel.settings?.checkOutTime || this.form.get('checkout_time')?.value || '12:00';
         this.form.patchValue({
           hotelName: name,
-          location: { street, city, country }
+          location: { street, city, country },
+          checkin_time: checkIn,
+          checkout_time: checkOut
+        });
+      },
+      error: () => {}
+    });
+    this.roomsService.getRooms({ hotelId }).pipe(take(1)).subscribe({
+      next: (rooms: any[]) => {
+        if (!rooms || rooms.length === 0) return;
+        const byType = new Map<string, any>();
+        rooms.forEach((room: any) => {
+          const t = room.type || '';
+          if (!t) return;
+          const curr = byType.get(t);
+          const images = Array.from(new Set([...(curr?.images || []), ...((room.images || []) as string[])]));
+          const amenities = Array.from(new Set([...(curr?.amenities || []), ...((room.amenities || []) as string[])]));
+          const priceNum = room.pricing?.daily ?? room.pricing?.nightly ?? room.pricing?.hourly ?? curr?.priceNum ?? null;
+          const currency = room.pricing?.currency ?? curr?.currency ?? '';
+          const priceStr = priceNum !== null && priceNum !== undefined ? `${priceNum}${currency ? ' ' + currency : ''}` : (curr?.price || '');
+          const desc = room.description || curr?.description || '';
+          byType.set(t, {
+            name: t,
+            price: priceStr,
+            priceNum,
+            currency,
+            description: desc,
+            use_case: '',
+            images,
+            amenities
+          });
+        });
+        const roomArray = this.form.get('rooms') as FormArray;
+        roomArray.clear();
+        Array.from(byType.values()).forEach((item: any) => {
+          roomArray.push(
+            this.fb.group({
+              name: [item.name || '', [Validators.required]],
+              price: [item.price || '', [Validators.required]],
+              description: [item.description || ''],
+              use_case: [item.use_case || ''],
+              images: this.fb.array(item.images || []),
+              amenities: this.fb.array(item.amenities || [])
+            })
+          );
         });
       },
       error: () => {}

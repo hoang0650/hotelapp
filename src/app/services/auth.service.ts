@@ -59,7 +59,7 @@ export class AuthService {
   login(emailOrUsername: string, password: string): Observable<boolean> {
     // Kiểm tra xem input có phải là email không (chứa @)
     const isEmail = emailOrUsername.includes('@');
-    const loginPayload: any = { password };
+    const loginPayload: any = { password, remember: true };
     
     if (isEmail) {
       loginPayload.email = emailOrUsername;

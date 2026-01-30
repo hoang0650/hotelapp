@@ -366,9 +366,6 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     
     this.isLoading = true;
     
-    // Kiểm tra số lượng người tối đa của phòng
-    const maxCapacity = this.room.capacity?.adults || 2; // Mặc định 2 người
-    
     // Lấy thông tin khách để cập nhật vào phòng
     this.guestsService.getGuestById(this.selectedGuestId).subscribe({
       next: (guest) => {
@@ -399,52 +396,40 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
           guestId: this.selectedGuestId,
           guestInfo: guestInfo
         });
-        
-        // Tự động cập nhật thông tin khách vào phòng (check-in luôn)
-        this.roomsService.checkInRoom(this.room._id, {
-          guestInfo: guestInfo,
-          checkInTime: new Date(),
-          rateType: 'hourly'
-        }).subscribe({
-          next: (response: any) => {
-            console.log('[GuestSaveModal] Check-in existing guest successful');
-            this.message.success(`Đã assign và check-in khách "${this.getGuestName(guest)}" vào phòng thành công`);
-            this.modalRef.close({ success: true, guestId: this.selectedGuestId });
-            this.isLoading = false;
-          },
-          error: (error: any) => {
-            console.error('[GuestSaveModal] Check-in existing guest error:', error);
-            const errorMessage = error.error?.message || error.error?.error || 'Lỗi assign khách vào phòng';
-            
-            // Kiểm tra lỗi về số lượng người tối đa
-            if (errorMessage.includes('tối đa') || errorMessage.includes('đạt số lượng')) {
-              this.message.error(errorMessage);
+        if (this.room.status === 'occupied') {
+          this.roomsService.updateRoomCheckinInfo(this.room._id, guestInfo, 0).subscribe({
+            next: () => {
+              console.log('[GuestSaveModal] Update room info for occupied room successful');
+              this.message.success(`Đã cập nhật thông tin khách "${this.getGuestName(guest)}" vào phòng`);
+              this.modalRef.close({ success: true, guestId: this.selectedGuestId });
               this.isLoading = false;
-              return;
-            }
-            
-            // Nếu phòng đã có khách, vẫn cập nhật thông tin (nhưng không thêm khách mới)
-            if (errorMessage.includes('đã có khách') || errorMessage.includes('occupied')) {
-              // Nếu phòng đã occupied, chỉ update thông tin khách hiện tại, không thêm khách mới
-              this.roomsService.updateRoomCheckinInfo(this.room._id, guestInfo, 0).subscribe({
-                next: () => {
-                  console.log('[GuestSaveModal] Update room check-in info for existing guest successful');
-                  this.message.success(`Đã cập nhật thông tin khách "${this.getGuestName(guest)}" vào phòng thành công`);
-                  this.modalRef.close({ success: true, guestId: this.selectedGuestId });
-                  this.isLoading = false;
-                },
-                error: (err: any) => {
-                  console.error('[GuestSaveModal] Update room check-in info error:', err);
-                  this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
-                  this.isLoading = false;
-                }
-              });
-            } else {
-              this.message.error(errorMessage);
+            },
+            error: (err: any) => {
+              console.error('[GuestSaveModal] Update room check-in info error:', err);
+              this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
               this.isLoading = false;
             }
-          }
-        });
+          });
+        } else {
+          const guestId = this.selectedGuestId!;
+          this.guestsService.assignGuestToRoom(guestId, {
+            guestId: guestId,
+            roomId: this.room._id,
+            guestInfo: guestInfo
+          }).subscribe({
+            next: () => {
+              console.log('[GuestSaveModal] Assign guest to vacant room successful');
+              this.message.success(`Đã assign khách "${this.getGuestName(guest)}" vào phòng`);
+              this.modalRef.close({ success: true, guestId: guestId });
+              this.isLoading = false;
+            },
+            error: (err: any) => {
+              console.error('[GuestSaveModal] Assign guest to room error:', err);
+              this.message.error(err.error?.message || 'Lỗi assign khách vào phòng');
+              this.isLoading = false;
+            }
+          });
+        }
       },
       error: (error: any) => {
         console.error('[GuestSaveModal] Get guest by ID error:', error);
@@ -515,7 +500,6 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         console.log('[GuestSaveModal] Guest created successfully:', response.guest._id);
         this.message.success('Lưu thông tin khách thành công');
         
-        // Tự động cập nhật thông tin khách vào phòng (check-in luôn)
         if (response.guest._id) {
           // Lấy địa chỉ đầy đủ từ form
           const addressParts: string[] = [];
@@ -543,43 +527,39 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
             roomId: this.room._id,
             guestInfo: guestInfo
           });
-          
-          this.roomsService.checkInRoom(this.room._id, {
-            guestInfo: guestInfo,
-            checkInTime: new Date(),
-            rateType: 'hourly'
-          }).subscribe({
-            next: (checkinResponse: any) => {
-              console.log('[GuestSaveModal] Check-in successful');
-              this.message.success('Đã lưu và check-in khách vào phòng thành công');
-              this.modalRef.close({ success: true, guestId: response.guest._id });
-              this.isLoading = false;
-            },
-            error: (checkinError: any) => {
-              console.error('[GuestSaveModal] Check-in error:', checkinError);
-              // Nếu phòng đã có khách, vẫn cập nhật thông tin
-              if (checkinError.error?.message?.includes('đã có khách') || 
-                  checkinError.error?.message?.includes('occupied') ||
-                  checkinError.error?.error?.includes('occupied')) {
-                this.roomsService.updateRoomCheckinInfo(this.room._id, guestInfo, 0).subscribe({
-                  next: () => {
-                    console.log('[GuestSaveModal] Update room check-in info successful');
-                    this.message.success('Đã lưu và cập nhật thông tin khách vào phòng thành công');
-                    this.modalRef.close({ success: true, guestId: response.guest._id });
-                    this.isLoading = false;
-                  },
-                  error: (err: any) => {
-                    console.error('[GuestSaveModal] Update room check-in info error:', err);
-                    this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
-                    this.isLoading = false;
-                  }
-                });
-              } else {
-                this.message.error(checkinError.error?.message || checkinError.error?.error || 'Lỗi check-in khách vào phòng');
+          if (this.room.status === 'occupied') {
+            this.roomsService.updateRoomCheckinInfo(this.room._id, guestInfo, 0).subscribe({
+              next: () => {
+                console.log('[GuestSaveModal] Update room info for occupied room successful');
+                this.message.success('Đã lưu và cập nhật thông tin khách vào phòng');
+                this.modalRef.close({ success: true, guestId: response.guest._id });
+                this.isLoading = false;
+              },
+              error: (err: any) => {
+                console.error('[GuestSaveModal] Update room check-in info error:', err);
+                this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
                 this.isLoading = false;
               }
-            }
-          });
+            });
+          } else {
+            this.guestsService.assignGuestToRoom(response.guest._id, {
+              guestId: response.guest._id,
+              roomId: this.room._id,
+              guestInfo: guestInfo
+            }).subscribe({
+              next: () => {
+                console.log('[GuestSaveModal] Assign new guest to vacant room successful');
+                this.message.success('Đã lưu và assign khách vào phòng');
+                this.modalRef.close({ success: true, guestId: response.guest._id });
+                this.isLoading = false;
+              },
+              error: (err: any) => {
+                console.error('[GuestSaveModal] Assign guest to room error:', err);
+                this.message.error(err.error?.message || 'Lỗi assign khách vào phòng');
+                this.isLoading = false;
+              }
+            });
+          }
         } else {
           this.modalRef.close({ success: true, guest: response.guest });
           this.isLoading = false;
