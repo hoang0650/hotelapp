@@ -35,6 +35,41 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     return this.contactInfoForm.get('address') as FormGroup;
   }
 
+  private isValidName(name: string): boolean {
+    const s = (name || '').trim();
+    if (!s) return false;
+    if (/\d|\/|\\|[,;|.]/.test(s)) return false;
+    const tokens = s.split(/\s+/).filter(Boolean);
+    if (tokens.length < 2 || tokens.length > 6) return false;
+    for (const t of tokens) {
+      if (!/^[A-Za-zÀ-Ỵà-ỵĐđ\-]+$/.test(t)) return false;
+    }
+    return true;
+  }
+
+  private buildAddressFromRaw(lines: string[]): string {
+    const norm = lines.map(l => (l || '').trim()).filter(l => l.length > 0);
+    const drop = /(họ\s*và\s*tên|ho\s*va\s*ten|full\s*name|giới\s*tính|gender|quốc\s*tịch|nationality|date\s*of|ngày|bộ\s*công\s*an|ministry|căn\s*cước|identity|^\d{9,12}$|<<)/iu;
+    const stop = /(TP\.?\s*Hồ\s*Chí\s*Minh|Hà\s*Nội|Đà\s*Nẵng|Cần\s*Thơ|TP\.?|Thành\s*phố|Tỉnh)/iu;
+    const hasKw = /(Thôn|Ấp|Xã|Phường|P\.?|Quận|Q\.?|Huyện|Đường|Số|Khu|KP|Khu\s*phố|Tổ|Block|Residence|Chung\s*cư|Apartment|Ward|District|Street|Road|City|Province|TP\.?|Thành\s*phố|Tỉnh)/iu;
+    const parts: string[] = [];
+    let started = false;
+    for (let i = 0; i < norm.length; i++) {
+      const l = norm[i];
+      if (drop.test(l)) continue;
+      if (!started && hasKw.test(l)) started = true;
+      if (!started) continue;
+      parts.push(l);
+      if (stop.test(l)) break;
+      if (/\bTP\.?\s*[A-ZÀÁẠẢÃÂĂÈÉẸẺẼÊÌÍỊỈĨÒÓỌỎÕÔƠÙÚỤỦŨƯỲÝỴỶỸ]/.test(l)) break;
+      if (/\bTỉnh\b/i.test(l)) break;
+    }
+    let s = parts.join(', ');
+    s = s.replace(/\s+/g, ' ').replace(/\s*,\s*/g, ', ').trim();
+    s = s.replace(/Th(ù|ủ)\s*Thi(e|ê)m.*?TP\.\s*H(ồ|o)\s*Ch(i|í)\s*Minh/giu, '').trim();
+    return s;
+  }
+
   private parseDate(input: any): Date | null {
     if (!input) return null;
     if (input instanceof Date && !isNaN(input.getTime())) return input;
@@ -75,23 +110,28 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         : [];
     const normLines = rawLines.map(l => (l || '').trim()).filter(l => l.length > 0);
     let parsedFullName = '';
-    const nameLabelIdx = normLines.findIndex(l => /(họ\s*và\s*tên|ho\s*va\s*ten|full\s*name)/i.test(l));
-    if (nameLabelIdx >= 0) {
-      const line = normLines[nameLabelIdx];
-      const afterColon = line.split(':').slice(1).join(':').trim();
-      if (afterColon && !/^\d{9,12}$/.test(afterColon)) {
-        parsedFullName = afterColon;
-      } else {
-        const next = normLines[nameLabelIdx + 1] || '';
-        if (next && !/^\d{9,12}$/.test(next)) {
-          parsedFullName = next;
+    const serverName = typeof ocrData.fullName === 'string' ? String(ocrData.fullName).trim() : '';
+    if (this.isValidName(serverName) && !/khách\s*lẻ/i.test(serverName)) {
+      parsedFullName = serverName;
+    } else {
+      const nameLabelIdx = normLines.findIndex(l => /(họ\s*và\s*tên|ho\s*va\s*ten|full\s*name)/i.test(l));
+      if (nameLabelIdx >= 0) {
+        const line = normLines[nameLabelIdx];
+        const afterColon = line.split(':').slice(1).join(':').trim();
+        if (afterColon && !/^\d{9,12}$/.test(afterColon) && this.isValidName(afterColon)) {
+          parsedFullName = afterColon;
+        } else {
+          const next = normLines[nameLabelIdx + 1] || '';
+          if (next && !/^\d{9,12}$/.test(next) && this.isValidName(next)) {
+            parsedFullName = next;
+          }
         }
       }
+      if (!parsedFullName && this.isValidName(serverName)) {
+        parsedFullName = serverName;
+      }
     }
-    if (!parsedFullName && typeof ocrData.fullName === 'string') {
-      parsedFullName = String(ocrData.fullName).trim();
-    }
-    if (parsedFullName && !/khách\s*lẻ/i.test(parsedFullName)) {
+    if (parsedFullName) {
       ocrData.fullName = parsedFullName;
     }
     
@@ -102,8 +142,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     const specificRemove = /Thù\s*Th(i|ị)êm,\s*TP\.\s*Th(ủ|ù)\s*Đ(ức|ửc),\s*TP\.\s*H(ồ|o)\s*Ch(i|í)\s*Minh/giu;
     cleanedAddress = cleanedAddress.replace(specificRemove, '');
     if (!cleanedAddress && normLines.length) {
-      const addrLines = normLines.filter(l => !placeBirthRegex.test(l) && !vnBirthRegex.test(l));
-      cleanedAddress = addrLines.join(' ');
+      cleanedAddress = this.buildAddressFromRaw(normLines);
     }
     cleanedAddress = cleanedAddress.replace(/\s+/g, ' ').trim();
     if (cleanedAddress) {
