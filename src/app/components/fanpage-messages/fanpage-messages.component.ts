@@ -93,13 +93,26 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
   }
 
   private buildConversations(): void {
-    const convMap = new Map<string, { sender_id: string; lastText: string; lastTime: number }>();
+  const convMap = new Map<string, { sender_id: string; lastText: string; lastTime: number }>();
     
-    // Sắp xếp tin nhắn theo thời gian giảm dần để lấy tin nhắn mới nhất cho mỗi hội thoại
+    // Sắp xếp tin nhắn mới nhất lên đầu
     const sorted = [...this.messages].sort((a, b) => b.timestamp - a.timestamp);
     
     sorted.forEach(m => {
-      const partnerId = m.direction === 'in' ? m.sender_id : m.recipient_id; // Cần recipient_id trong interface
+      // SỬA LỖI TẠI ĐÂY:
+      // Dùng toán tử || 'Unknown' để đảm bảo luôn trả về string, không bao giờ là undefined
+      let partnerId = '';
+
+      if (m.direction === 'in') {
+        partnerId = m.sender_id; 
+      } else {
+        // Nếu là tin nhắn đi (out), lấy recipient_id, nếu không có thì lấy 'Unknown'
+        partnerId = m.recipient_id || 'Unknown';
+      }
+
+      // Kiểm tra lần cuối: Nếu partnerId vẫn rỗng hoặc undefined (do dữ liệu lỗi), thì bỏ qua vòng lặp này
+      if (!partnerId) return; 
+
       if (!convMap.has(partnerId)) {
         convMap.set(partnerId, {
           sender_id: partnerId,
