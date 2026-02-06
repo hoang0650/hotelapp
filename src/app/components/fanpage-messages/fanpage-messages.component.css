@@ -1,35 +1,138 @@
-.container { padding: 16px; }
-.loading, .empty { padding: 8px 0; }
-.list { display: flex; flex-direction: column; gap: 8px; }
-.item { border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 12px; background: #fff; }
-.item.out { background: #f6ffed; border-color: #b7eb8f; }
-.meta { display: flex; gap: 12px; font-size: 12px; color: #888; }
-.text { white-space: pre-wrap; }
-.toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.layout { display: grid; grid-template-columns: 280px 1fr; gap: 12px; }
-.sidebar { border: 1px solid #eee; border-radius: 8px; padding: 8px; background: #fafafa; max-height: 60vh; overflow: auto; }
-.conv { padding: 8px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
-.conv.active { background: #e6f7ff; border-color: #91d5ff; }
-.conv-title { font-weight: 500; }
-.conv-last { font-size: 12px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.conv-time { font-size: 12px; color: #999; }
-.thread { display: flex; flex-direction: column; gap: 8px; }
-.reply { display: flex; gap: 8px; margin-top: 8px; }
-.reply input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
-.reply button { padding: 8px 12px; border: none; border-radius: 6px; background: #1677ff; color: #fff; }
-.sidebar-toggle { margin-left: auto; }
-.bubble { display: flex; margin: 4px 0; }
-.bubble.out { justify-content: flex-end; }
-.bubble .bubble-inner { max-width: 80%; border-radius: 12px; padding: 8px 10px; background: #fff; border: 1px solid #eee; }
-.bubble.out .bubble-inner { background: #f6ffed; border-color: #b7eb8f; }
-.bubble .meta { text-align: right; font-size: 11px; color: #999; margin-top: 4px; }
-.list { overflow: auto; max-height: 55vh; padding-right: 4px; }
+.container-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background-color: #f0f2f5;
+}
 
+.loading-state {
+  text-align: center;
+  padding: 50px;
+}
+
+/* --- Toolbar --- */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 10px 15px;
+  border-radius: 8px 8px 0 0;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.toolbar-left, .toolbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.mr-2 { margin-right: 8px; }
+
+/* --- Layout --- */
+.layout-chat {
+  display: flex;
+  height: calc(100vh - 180px); /* Điều chỉnh số này tùy header app của bạn */
+  background: white;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* --- Sidebar (List) --- */
+.sidebar {
+  width: 320px;
+  border-right: 1px solid #e8e8e8;
+  overflow-y: auto;
+  background: white;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.conv-item {
+  padding: 12px 15px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.conv-item:hover { background-color: #f6ffed; }
+.conv-item.active { background-color: #e6f7ff; border-right: 3px solid #1890ff; }
+
+.conv-avatar {
+  width: 40px; height: 40px;
+  background: #eee;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin-right: 12px;
+  font-size: 20px; color: #999;
+}
+
+.conv-info { flex: 1; min-width: 0; }
+.conv-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.conv-title { font-weight: 600; color: #333; font-size: 14px; }
+.conv-time { font-size: 11px; color: #999; }
+.conv-last { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- Thread (Chat Area) --- */
+.thread {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  position: relative;
+}
+
+.empty-state, .empty-state-thread {
+  display: flex; align-items: center; justify-content: center; height: 100%; color: #999;
+}
+
+.message-list {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: #fafafa;
+}
+
+.bubble-row {
+  display: flex;
+  margin-bottom: 15px;
+}
+
+.bubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  position: relative;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Tin nhắn khách (Trái) */
+.bubble-row { justify-content: flex-start; }
+.bubble-row .bubble { background: #fff; border: 1px solid #e8e8e8; color: #333; border-bottom-left-radius: 2px; }
+
+/* Tin nhắn mình (Phải) */
+.bubble-row.out { justify-content: flex-end; }
+.bubble-row.out .bubble { background: #1890ff; color: #fff; border: none; border-bottom-right-radius: 2px; }
+
+.meta {
+  font-size: 10px; margin-top: 4px; text-align: right; opacity: 0.7;
+}
+
+/* --- Reply Box --- */
+.reply-box {
+  padding: 15px;
+  border-top: 1px solid #e8e8e8;
+  background: white;
+}
+.input-wrapper { display: flex; gap: 10px; }
+
+/* --- Mobile Responsive --- */
 @media (max-width: 768px) {
-  .layout { display: flex; flex-direction: column; }
-  .sidebar { max-height: 40vh; }
+  .sidebar { width: 100%; }
   .sidebar.hidden { display: none; }
-  .list { max-height: 50vh; }
-  .reply { position: sticky; bottom: 0; background: #f7f7f7; padding: 8px; border-top: 1px solid #eee; }
-  .toolbar { gap: 12px; }
+  .thread.hidden { display: none; }
 }

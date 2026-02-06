@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
-import { AiAssistantService } from '../../services/ai-assistant.service';
+import { AiAssistantService } from '../../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 
 interface FbMessage {
@@ -25,16 +25,17 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
   selectedPageId: string = '';
   selectedSenderId: string = '';
   replyText: string = '';
-  loading = false;
-  sending = false;
+  loading: boolean = false;
+  sending: boolean = false;
   isMobile = false;
   showSidebar = true;
-  @ViewChild('threadList') threadList?: ElementRef<HTMLDivElement>;
-  private pollTimer?: any;
+  private pollTimer: any;
+
   private onWindowFocus = async () => {
     await this.refreshFacebookPages();
-    if (this.pages.length) {
-      clearInterval(this.pollTimer);
+    // Nếu đã chọn page, refresh tin nhắn
+    if (this.selectedPageId) {
+      await this.loadMessages();
     }
   };
 
@@ -50,131 +51,127 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
     try {
       this.isMobile = window.innerWidth <= 768;
       this.showSidebar = !this.isMobile;
-      const tenantId = this.getTenantId();
-      this.pages = await this.aiAssistant.getFacebookPages(tenantId);
-      this.selectedPageId = this.pages?.[0]?.id || '';
-      this.messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId || undefined);
-      this.buildConversations();
-      if (this.conversations.length) {
-        this.selectConversation(this.conversations[0].sender_id);
+      
+      await this.refreshFacebookPages();
+      
+      if (this.pages.length > 0) {
+        this.selectedPageId = this.pages[0].id;
+        await this.loadMessages();
       }
+
       window.addEventListener('focus', this.onWindowFocus);
+      
+      // Polling tin nhắn mới mỗi 10 giây
+      this.pollTimer = setInterval(() => {
+        if (this.selectedPageId) {
+          this.loadMessages();
+        }
+      }, 10000);
+
     } finally {
       this.loading = false;
     }
   }
 
-  private buildConversations(): void {
-    const filtered = this.messages.filter(m => !this.selectedPageId || m.page_id === this.selectedPageId);
-    const map: { [key: string]: FbMessage[] } = {};
-    for (const m of filtered) {
-      if (!map[m.sender_id]) map[m.sender_id] = [];
-      map[m.sender_id].push(m);
-    }
-    const convs: { sender_id: string; lastText: string; lastTime: number }[] = [];
-    Object.keys(map).forEach(sender => {
-      const sorted = map[sender].slice().sort((a, b) => a.timestamp - b.timestamp);
-      const last = sorted[sorted.length - 1];
-      convs.push({ sender_id: sender, lastText: last.text, lastTime: last.timestamp });
-    });
-    convs.sort((a, b) => b.lastTime - a.lastTime);
-    this.conversations = convs;
-    this.displayed = [];
+  ngOnDestroy(): void {
+    window.removeEventListener('focus', this.onWindowFocus);
+    if (this.pollTimer) clearInterval(this.pollTimer);
   }
 
-  async changePage(pageId: string): Promise<void> {
-    this.selectedPageId = pageId;
+  async refreshFacebookPages(): Promise<void> {
     const tenantId = this.getTenantId();
-    this.messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId || undefined);
+    this.pages = await this.aiAssistant.getFacebookPages(tenantId);
+  }
+
+  async loadMessages(): Promise<void> {
+    if (!this.selectedPageId) return;
+    const tenantId = this.getTenantId();
+    this.messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId);
     this.buildConversations();
-    if (this.conversations.length) {
-      this.selectConversation(this.conversations[0].sender_id);
-    } else {
-      this.selectedSenderId = '';
-      this.displayed = [];
+  }
+
+  private buildConversations(): void {
+    const convMap = new Map<string, { sender_id: string; lastText: string; lastTime: number }>();
+    
+    // Sắp xếp tin nhắn theo thời gian giảm dần để lấy tin nhắn mới nhất cho mỗi hội thoại
+    const sorted = [...this.messages].sort((a, b) => b.timestamp - a.timestamp);
+    
+    sorted.forEach(m => {
+      const partnerId = m.direction === 'in' ? m.sender_id : m.recipient_id; // Cần recipient_id trong interface
+      if (!convMap.has(partnerId)) {
+        convMap.set(partnerId, {
+          sender_id: partnerId,
+          lastText: m.text,
+          lastTime: m.timestamp
+        });
+      }
+    });
+    
+    this.conversations = Array.from(convMap.values());
+    
+    if (this.selectedSenderId) {
+      this.filterDisplayedMessages();
     }
   }
 
   selectConversation(senderId: string): void {
     this.selectedSenderId = senderId;
-    const thread = this.messages
-      .filter(m => (!this.selectedPageId || m.page_id === this.selectedPageId) && m.sender_id === senderId)
-      .sort((a, b) => a.timestamp - b.timestamp);
-    this.displayed = thread;
+    this.filterDisplayedMessages();
     if (this.isMobile) this.showSidebar = false;
-    setTimeout(() => {
-      const el = this.threadList?.nativeElement;
-      if (el) el.scrollTop = el.scrollHeight;
-    }, 0);
   }
 
-  async sendReply(): Promise<void> {
-    if (!this.replyText.trim() || !this.selectedSenderId || !this.selectedPageId) return;
-    const tenantId = this.getTenantId();
-    this.sending = true;
-    try {
-      await this.aiAssistant.sendFacebookMessage(tenantId, this.selectedPageId, this.selectedSenderId, this.replyText.trim());
-      const now = Date.now();
-      const outgoing: FbMessage = {
-        tenant_id: tenantId,
-        page_id: this.selectedPageId,
-        sender_id: this.selectedSenderId,
-        text: this.replyText.trim(),
-        direction: 'out',
-        timestamp: now,
-        reply_text: this.replyText.trim()
-      };
-      this.messages = [...this.messages, outgoing];
-      this.replyText = '';
-      this.selectConversation(this.selectedSenderId);
-      this.buildConversations();
-    } finally {
-      this.sending = false;
-    }
+  private filterDisplayedMessages(): void {
+    this.displayed = this.messages
+      .filter(m => (m.direction === 'in' && m.sender_id === this.selectedSenderId) || 
+                   (m.direction === 'out' && m.recipient_id === this.selectedSenderId))
+      .sort((a, b) => a.timestamp - b.timestamp);
   }
 
-  toggleSidebar(): void {
-    this.showSidebar = !this.showSidebar;
-  }
-
-  onEnterSend(): void {
-    if (!this.sending && this.replyText.trim()) this.sendReply();
-  }
-
-  async refreshFacebookPages(): Promise<void> {
-    const tenantId = this.getTenantId();
-    const pages = await this.aiAssistant.getFacebookPages(tenantId);
-    this.pages = pages || [];
-    if (!this.selectedPageId && this.pages.length) {
-      this.selectedPageId = this.pages[0].id;
-    }
-    const messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId || undefined);
-    this.messages = messages || [];
-    this.buildConversations();
-    if (this.conversations.length) {
-      this.selectConversation(this.conversations[0].sender_id);
-    }
+  async changePage(pageId: string): Promise<void> {
+    this.selectedPageId = pageId;
+    this.selectedSenderId = '';
+    this.displayed = [];
+    await this.loadMessages();
   }
 
   async connectFanpage(): Promise<void> {
     const tenantId = this.getTenantId();
     const url = await this.aiAssistant.getFacebookOAuthUrl(tenantId);
     if (url) {
-      window.open(url, '_blank');
-      let attempts = 0;
-      clearInterval(this.pollTimer);
-      this.pollTimer = setInterval(async () => {
-        attempts++;
-        await this.refreshFacebookPages();
-        if (this.pages.length || attempts >= 30) {
-          clearInterval(this.pollTimer);
-        }
-      }, 1000);
+      // Mở popup để login Facebook
+      const width = 600, height = 700;
+      const left = (window.innerWidth - width) / 2;
+      const top = (window.innerHeight - height) / 2;
+      window.open(url, 'FacebookLogin', `width=${width},height=${height},left=${left},top=${top}`);
     }
   }
 
-  ngOnDestroy(): void {
-    window.removeEventListener('focus', this.onWindowFocus);
-    clearInterval(this.pollTimer);
+  async sendReply(): Promise<void> {
+    if (!this.replyText.trim() || !this.selectedSenderId || !this.selectedPageId) return;
+    
+    this.sending = true;
+    try {
+      const tenantId = this.getTenantId();
+      await this.aiAssistant.sendFacebookMessage(
+        tenantId, 
+        this.selectedPageId, 
+        this.selectedSenderId, 
+        this.replyText
+      );
+      this.replyText = '';
+      await this.loadMessages(); // Reload để thấy tin nhắn mới
+    } catch (error) {
+      console.error('Lỗi gửi tin nhắn:', error);
+    } finally {
+      this.sending = false;
+    }
+  }
+
+  onEnterSend(event: any): void {
+    this.sendReply();
+  }
+
+  toggleSidebar(): void {
+    this.showSidebar = !this.showSidebar;
   }
 }
