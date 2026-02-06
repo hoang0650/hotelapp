@@ -1,11 +1,12 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
-import { AiAssistantService } from '../../../services/ai-assistant.service';
+import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 
 interface FbMessage {
   tenant_id: string;
   page_id: string;
   sender_id: string;
+  recipient_id?: string;
   text: string;
   direction: 'in' | 'out';
   timestamp: number;
@@ -17,6 +18,7 @@ interface FbMessage {
   templateUrl: './fanpage-messages.component.html',
   styleUrls: ['./fanpage-messages.component.css']
 })
+
 export class FanpageMessagesComponent implements OnInit, OnDestroy {
   messages: FbMessage[] = [];
   pages: any[] = [];
