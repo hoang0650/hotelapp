@@ -42,6 +42,8 @@ interface ChatHistoryResponse {
 export class AiAssistantService {
   private messages = new BehaviorSubject<ChatMessage[]>([]);
   private isTyping = new BehaviorSubject<boolean>(false);
+  private wsSubject = new BehaviorSubject<any>(null);
+  private socket: WebSocket | null = null;
 
   // URL tới Python Backend (FastAPI/Flask) - Nơi xử lý Facebook & AI
   private aiUrl = environment.aiUrl; 
@@ -53,6 +55,55 @@ export class AiAssistantService {
     // Load lịch sử chat nội bộ khi khởi tạo (nếu cần)
     this.loadChatHistory();
   }
+
+  // --- WEBSOCKET FOR REALTIME UPDATES ---
+  connectToWebSocket(tenantId: string): Observable<any> {
+    // Nếu socket đang mở hoặc đang kết nối, dùng lại
+    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+      return this.wsSubject.asObservable();
+    }
+
+    // Đóng socket cũ nếu có (ở trạng thái khác)
+    if (this.socket) {
+      try {
+        this.socket.close();
+      } catch (e) {
+        console.error('Error closing old socket:', e);
+      }
+    }
+
+    const wsUrl = this.aiUrl.replace('http', 'ws') + `/ws/${tenantId}`;
+    this.socket = new WebSocket(wsUrl);
+
+    this.socket.onopen = () => {
+      console.log('Connected to WebSocket:', wsUrl);
+    };
+
+    this.socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        this.wsSubject.next(data);
+      } catch (e) {
+        console.error('Error parsing WebSocket message:', e);
+      }
+    };
+
+    this.socket.onclose = () => {
+      console.log('WebSocket connection closed');
+      this.socket = null; // Reset socket để có thể reconnect sau này
+    };
+
+    this.socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    return this.wsSubject.asObservable();
+  }
+
+  getWebSocketMessages(): Observable<any> {
+    return this.wsSubject.asObservable();
+  }
+
 
   // --- 1. CÁC HÀM CHO CHATBOT NỘI BỘ (Angular Chat UI) ---
 
