@@ -21,6 +21,16 @@
       </div>
 
       <div class="toolbar-right">
+        <div class="d-flex align-items-center mr-3" *ngIf="selectedPageId">
+          <span class="mr-2" style="font-weight: 500;">AI Bot:</span>
+          <nz-switch 
+            [ngModel]="isBotActive" 
+            (ngModelChange)="toggleBot($event)"
+            nzCheckedChildren="Bật" 
+            nzUnCheckedChildren="Tắt">
+          </nz-switch>
+        </div>
+
         <button nz-button nzType="primary" nzGhost (click)="connectFanpage()" title="Kết nối Fanpage Mới" class="mr-2">
           <i nz-icon nzType="facebook" nzTheme="outline"></i>
           <span>Kết nối</span>
@@ -67,7 +77,21 @@
         <div class="message-list" #threadList *ngIf="selectedSenderId">
           <div *ngFor="let m of displayed" class="bubble-row" [class.out]="m.direction === 'out'">
             <div class="bubble">
-              <div class="text">{{ m.text }}</div>
+              <div class="text" *ngIf="m.text">{{ m.text }}</div>
+              
+              <div class="attachments" *ngIf="m.attachments && m.attachments.length > 0">
+                <div *ngFor="let att of m.attachments" class="attachment-item">
+                  <ng-container [ngSwitch]="att.type">
+                    <img *ngSwitchCase="'image'" [src]="att.payload.url" class="att-img" (click)="previewImage(att.payload.url)">
+                    <video *ngSwitchCase="'video'" [src]="att.payload.url" controls class="att-video"></video>
+                    <audio *ngSwitchCase="'audio'" [src]="att.payload.url" controls class="att-audio"></audio>
+                    <a *ngSwitchDefault [href]="att.payload.url" target="_blank" class="att-link">
+                      <i nz-icon nzType="file" nzTheme="outline"></i> File
+                    </a>
+                  </ng-container>
+                </div>
+              </div>
+
               <div class="meta">
                 <span class="time">{{ m.timestamp | date:'HH:mm dd/MM/yyyy' }}</span>
               </div>

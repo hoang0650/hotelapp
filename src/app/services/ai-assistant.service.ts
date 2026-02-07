@@ -296,4 +296,39 @@ export class AiAssistantService {
       })
     );
   }
+
+  /**
+   * Bật/Tắt Bot cho Fanpage
+   */
+  async toggleBot(tenantId: string, pageId: string, active: boolean): Promise<any> {
+    try {
+      return await firstValueFrom(
+        this.http.post<any>(`${this.aiUrl}/bot/toggle`, {
+          tenant_id: tenantId,
+          page_id: pageId,
+          active
+        })
+      );
+    } catch (error) {
+      console.error('Lỗi bật/tắt bot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy trạng thái Bot
+   */
+  async getBotStatus(tenantId: string, pageId: string): Promise<boolean> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.get<any>(`${this.aiUrl}/bot/status`, {
+          params: { tenant_id: tenantId, page_id: pageId }
+        })
+      );
+      return resp?.active || false;
+    } catch (error) {
+      console.error('Lỗi lấy trạng thái bot:', error);
+      return false;
+    }
+  }
 }

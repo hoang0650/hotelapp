@@ -47,7 +47,10 @@
     <div class="section">
       <div class="section-head">
         <h3>Hạng phòng, giá và tiện ích</h3>
-        <button nz-button nzType="dashed" (click)="addRoom()">Thêm hạng phòng</button>
+        <div>
+          <button nz-button nzType="default" (click)="resetRoomsFromService()" style="margin-right: 8px;">Làm mới từ DS phòng</button>
+          <button nz-button nzType="dashed" (click)="addRoom()">Thêm hạng phòng</button>
+        </div>
       </div>
       <div formArrayName="rooms">
         <div class="room-card" *ngFor="let r of rooms.controls; let i = index" [formGroupName]="i">
@@ -101,6 +104,29 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h3>Mẫu câu trả lời (Q&A)</h3>
+        <button nz-button nzType="dashed" (click)="addQuestion()">Thêm câu hỏi</button>
+      </div>
+      <div formArrayName="questions">
+        <div class="room-card" *ngFor="let q of questions.controls; let i = index" [formGroupName]="i">
+          <div class="room-head">
+            <strong>Câu hỏi #{{ i + 1 }}</strong>
+            <button nz-button nzType="text" nzDanger (click)="removeQuestion(i)">Xóa</button>
+          </div>
+          <label>
+            Câu hỏi
+            <input nz-input formControlName="question" placeholder="Ví dụ: Khách sạn có cho mang thú cưng không?" />
+          </label>
+          <label style="margin-top: 8px;">
+            Trả lời
+            <textarea nz-input formControlName="answer" rows="2" placeholder="Ví dụ: Dạ có, nhưng phụ thu 200k/bé ạ."></textarea>
+          </label>
         </div>
       </div>
     </div>

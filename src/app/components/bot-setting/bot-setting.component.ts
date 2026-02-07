@@ -49,13 +49,31 @@ export class BotSettingComponent implements OnInit {
       }),
       checkin_time: ['14:00'],
       checkout_time: ['12:00'],
-      rooms: this.fb.array([])
+      rooms: this.fb.array([]),
+      questions: this.fb.array([])
     });
     this.loadInitialHotelAndRooms();
   }
 
   get rooms(): FormArray {
     return this.form.get('rooms') as FormArray;
+  }
+
+  get questions(): FormArray {
+    return this.form.get('questions') as FormArray;
+  }
+
+  addQuestion(): void {
+    this.questions.push(
+      this.fb.group({
+        question: ['', [Validators.required]],
+        answer: ['', [Validators.required]]
+      })
+    );
+  }
+
+  removeQuestion(index: number): void {
+    this.questions.removeAt(index);
   }
 
   addRoom(): void {
@@ -103,6 +121,15 @@ export class BotSettingComponent implements OnInit {
     return this.rooms.at(i).get('amenities') as FormArray;
   }
 
+  resetRoomsFromService(): void {
+    const u = this.auth.getCurrentUser();
+    const hotelId = u?.hotelId || null;
+    if (hotelId) {
+      this.loadRoomsFromService(hotelId);
+      this.msg.success(this.translate.instant('Đã tải lại danh sách phòng từ hệ thống'));
+    }
+  }
+
   private loadInitialHotelAndRooms(): void {
     const u = this.auth.getCurrentUser();
     const hotelId = u?.hotelId || null;
@@ -125,9 +152,47 @@ export class BotSettingComponent implements OnInit {
           checkin_time: checkIn,
           checkout_time: checkOut
         });
+
+        const botContext = hotel.settings?.botContext || {};
+        
+        // Load questions
+        const questions = botContext.questions || [];
+        const questionArray = this.form.get('questions') as FormArray;
+        questionArray.clear();
+        questions.forEach((q: any) => {
+          questionArray.push(
+            this.fb.group({
+              question: [q.question || '', [Validators.required]],
+              answer: [q.answer || '', [Validators.required]]
+            })
+          );
+        });
+
+        // Load rooms from botContext if available, otherwise fetch from RoomsService
+        if (botContext.rooms && botContext.rooms.length > 0) {
+          const roomArray = this.form.get('rooms') as FormArray;
+          roomArray.clear();
+          botContext.rooms.forEach((r: any) => {
+            roomArray.push(
+              this.fb.group({
+                name: [r.name || '', [Validators.required]],
+                price: [r.price || '', [Validators.required]],
+                description: [r.description || ''],
+                use_case: [r.use_case || ''],
+                images: this.fb.array(r.images || []),
+                amenities: this.fb.array(r.amenities || [])
+              })
+            );
+          });
+        } else {
+          this.loadRoomsFromService(hotelId);
+        }
       },
       error: () => {}
     });
+  }
+
+  private loadRoomsFromService(hotelId: string): void {
     this.roomsService.getRooms({ hotelId }).pipe(take(1)).subscribe({
       next: (rooms: any[]) => {
         if (!rooms || rooms.length === 0) return;
@@ -198,6 +263,10 @@ export class BotSettingComponent implements OnInit {
           use_case: r.use_case,
           images: (r.images || []).filter((x: string) => !!x),
           amenities: (r.amenities || []).filter((x: string) => !!x)
+        })),
+        questions: (val.questions || []).map((q: any) => ({
+          question: q.question,
+          answer: q.answer
         }))
       };
       await this.hotelService.updateHotelSettings(hotelId, { enableAiChatbox: true, botContext }).pipe(take(1)).toPromise();
@@ -225,14 +294,28 @@ export class BotSettingComponent implements OnInit {
     const u = this.auth.getCurrentUser();
     const tenantId = (u?.hotelId || u?.businessId || 'default').toString();
     const val = this.form.value;
-    const products = this.toProducts(val).map(p => ({
+    const roomItems = this.toProducts(val).map(p => ({
+      type: 'room',
       name: p.name,
       price: p.price,
       description: [p.description, (p.amenities || []).join(', ')].filter(Boolean).join(' | '),
       use_case: p.use_case || ''
     }));
+
+    const qaItems = (val.questions || []).map((q: any) => ({
+      type: 'qa',
+      name: 'Q&A',
+      price: '',
+      description: `Câu hỏi: ${q.question}\nTrả lời: ${q.answer}`,
+      use_case: 'Thông tin chung',
+      question: q.question,
+      answer: q.answer
+    }));
+
+    const products = [...roomItems, ...qaItems];
+
     if (products.length === 0) {
-      this.msg.warning(this.translate.instant('Vui lòng thêm ít nhất một hạng phòng'));
+      this.msg.warning(this.translate.instant('Vui lòng thêm dữ liệu (phòng hoặc câu hỏi)'));
       return;
     }
     this.syncing = true;
@@ -249,6 +332,10 @@ export class BotSettingComponent implements OnInit {
           use_case: r.use_case,
           images: (r.images || []).filter((x: string) => !!x),
           amenities: (r.amenities || []).filter((x: string) => !!x)
+        })),
+        questions: (val.questions || []).map((q: any) => ({
+          question: q.question,
+          answer: q.answer
         }))
       };
       await this.aiService.uploadDatasetExternal(tenantId, products as any, botContext);

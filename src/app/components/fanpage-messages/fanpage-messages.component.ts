@@ -10,6 +10,7 @@ interface FbMessage {
   sender_name?: string;
   sender_avatar?: string;
   text: string;
+  attachments?: any[];
   direction: 'in' | 'out';
   timestamp: number;
   reply_text?: string;
@@ -31,6 +32,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
   replyText: string = '';
   loading: boolean = false;
   sending: boolean = false;
+  isBotActive: boolean = false;
   isMobile = false;
   showSidebar = true;
   private pollTimer: any;
@@ -40,6 +42,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
     // Nếu đã chọn page, refresh tin nhắn
     if (this.selectedPageId) {
       await this.loadMessages();
+      await this.loadBotStatus();
     }
   };
 
@@ -61,6 +64,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
       if (this.pages && this.pages.length > 0) {
         this.selectedPageId = this.pages[0].id;
         await this.loadMessages();
+        await this.loadBotStatus();
       } else {
         console.warn('Danh sách pages rỗng!');
       }
@@ -82,6 +86,28 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.pollTimer) clearInterval(this.pollTimer);
+  }
+
+  async loadBotStatus(): Promise<void> {
+    if (!this.selectedPageId) return;
+    const tenantId = this.getTenantId();
+    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedPageId);
+  }
+
+  async toggleBot(checked: boolean): Promise<void> {
+    if (!this.selectedPageId) return;
+    const tenantId = this.getTenantId();
+    
+    // Update UI immediately
+    this.isBotActive = checked;
+    
+    try {
+      await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, checked);
+    } catch (error) {
+      console.error('Lỗi toggle bot:', error);
+      // Revert nếu lỗi
+      this.isBotActive = !checked;
+    }
   }
 
   async refreshFacebookPages(): Promise<void> {
@@ -125,7 +151,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
           sender_id: partnerId,
           sender_name: m.sender_name || partnerId,
           sender_avatar: m.sender_avatar || '',
-          lastText: m.text,
+          lastText: m.text || (m.attachments && m.attachments.length ? '[Đính kèm]' : ''),
           lastTime: m.timestamp
         });
       } else {
@@ -158,6 +184,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
     this.selectedSenderId = '';
     this.displayed = [];
     await this.loadMessages();
+    await this.loadBotStatus();
   }
 
   async connectFanpage(): Promise<void> {
@@ -192,6 +219,10 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
       this.sending = false;
       this.cdr.detectChanges();
     }
+  }
+
+  previewImage(url: string) {
+    window.open(url, '_blank');
   }
 
   onEnterSend(event: any): void {
