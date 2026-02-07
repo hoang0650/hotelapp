@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -41,7 +41,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
     }
   };
 
-  constructor(private aiAssistant: AiAssistantService, private authService: AuthService) {}
+  constructor(private aiAssistant: AiAssistantService, private authService: AuthService, private cdr: ChangeDetectorRef) {}
 
   private getTenantId(): string {
     const u = this.authService.getCurrentUser();
@@ -56,12 +56,12 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
       
       await this.refreshFacebookPages();
       
-      if (this.pages.length > 0) {
+      if (this.pages && this.pages.length > 0) {
         this.selectedPageId = this.pages[0].id;
         await this.loadMessages();
+      }else {
+        console.warn('Danh sách pages rỗng!');
       }
-
-      window.addEventListener('focus', this.onWindowFocus);
       
       // Polling tin nhắn mới mỗi 10 giây
       this.pollTimer = setInterval(() => {
@@ -70,49 +70,54 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
         }
       }, 10000);
 
+    }catch (e) {
+      console.error('Lỗi khởi tạo:', e);
     } finally {
       this.loading = false;
+      this.cdr.detectChanges();
     }
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener('focus', this.onWindowFocus);
     if (this.pollTimer) clearInterval(this.pollTimer);
   }
 
   async refreshFacebookPages(): Promise<void> {
     const tenantId = this.getTenantId();
-    this.pages = await this.aiAssistant.getFacebookPages(tenantId);
+    try {
+      const result = await this.aiAssistant.getFacebookPages(tenantId);
+      // Log dữ liệu nhận được để debug
+      console.log('API Response Pages:', result);
+      
+      // Đảm bảo gán đúng mảng (phòng trường hợp service trả về object bọc)
+      this.pages = Array.isArray(result) ? result : [];
+      
+      // Kích hoạt change detection thủ công
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('Lỗi gọi API pages:', error);
+      this.pages = [];
+    }
   }
 
   async loadMessages(): Promise<void> {
     if (!this.selectedPageId) return;
     const tenantId = this.getTenantId();
-    this.messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId);
-    this.buildConversations();
+    try {
+      this.messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId);
+      this.buildConversations();
+      this.cdr.detectChanges(); // Cập nhật UI tin nhắn
+    } catch (error) {
+        console.error('Lỗi load tin nhắn:', error);
+    }
   }
 
   private buildConversations(): void {
-  const convMap = new Map<string, { sender_id: string; lastText: string; lastTime: number }>();
-    
-    // Sắp xếp tin nhắn mới nhất lên đầu
+  const convMap = new Map<string, any>();
     const sorted = [...this.messages].sort((a, b) => b.timestamp - a.timestamp);
-    
     sorted.forEach(m => {
-      // SỬA LỖI TẠI ĐÂY:
-      // Dùng toán tử || 'Unknown' để đảm bảo luôn trả về string, không bao giờ là undefined
-      let partnerId = '';
-
-      if (m.direction === 'in') {
-        partnerId = m.sender_id; 
-      } else {
-        // Nếu là tin nhắn đi (out), lấy recipient_id, nếu không có thì lấy 'Unknown'
-        partnerId = m.recipient_id || 'Unknown';
-      }
-
-      // Kiểm tra lần cuối: Nếu partnerId vẫn rỗng hoặc undefined (do dữ liệu lỗi), thì bỏ qua vòng lặp này
-      if (!partnerId) return; 
-
+      let partnerId = m.direction === 'in' ? m.sender_id : (m.recipient_id || 'Unknown');
+      if (!partnerId) return;
       if (!convMap.has(partnerId)) {
         convMap.set(partnerId, {
           sender_id: partnerId,
@@ -121,12 +126,8 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
         });
       }
     });
-    
     this.conversations = Array.from(convMap.values());
-    
-    if (this.selectedSenderId) {
-      this.filterDisplayedMessages();
-    }
+    if (this.selectedSenderId) this.filterDisplayedMessages();
   }
 
   selectConversation(senderId: string): void {
@@ -179,6 +180,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
       console.error('Lỗi gửi tin nhắn:', error);
     } finally {
       this.sending = false;
+      this.cdr.detectChanges();
     }
   }
 
