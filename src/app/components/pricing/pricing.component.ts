@@ -26,6 +26,7 @@ interface PricingPlan {
   selectText?: string;
   transactions?: string;
   note?: string;
+  maxRooms?: number;
 }
 
 @Component({

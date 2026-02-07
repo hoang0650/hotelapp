@@ -144,6 +144,22 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
     }
   }
 
+  async refreshData(): Promise<void> {
+    this.loading = true;
+    try {
+      await this.refreshFacebookPages();
+      if (this.selectedPageId) {
+        await this.loadMessages();
+        await this.loadBotStatus();
+      }
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      this.loading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
   async refreshFacebookPages(): Promise<void> {
     const tenantId = this.getTenantId();
     try {

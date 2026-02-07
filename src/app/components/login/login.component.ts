@@ -34,7 +34,15 @@ export class LoginComponent implements OnInit {
   ngOnInit(): void {
     if (this.authService.isLoggedIn()) {
       this.router.navigate(['/admin/room']);
+      return;
     }
+
+    // Lắng nghe trạng thái đăng nhập (để xử lý trường hợp refresh token chạy sau khi component load)
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.router.navigate(['/admin/room']);
+      }
+    });
   }
 
   private initForm(): void {

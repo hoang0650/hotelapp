@@ -103,12 +103,12 @@
       </li>
 
       <!-- Cài đặt hệ thống -->
-      <li nz-submenu *ngIf="canAccessSettings() || canAccessEmailAdmin() || canAccessFile()" [nzTitle]="'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate" nzIcon="setting">
+      <li nz-submenu *ngIf="canAccessSettings() || canAccessEmailAdmin() || canAccessFile() || canAccessBotSetting()" [nzTitle]="'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate" nzIcon="setting">
         <ul>
           <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/settings">
             <span>{{ 'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate }}</span>
           </li>
-          <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/bot-setting">
+          <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/bot-setting">
             <span>{{ 'ADMIN_SIDEBAR.BOT_SETTING' | translate }}</span>
           </li>
           <li nz-menu-item *ngIf="canAccessEmailAdmin()" routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN' | translate }}</li>

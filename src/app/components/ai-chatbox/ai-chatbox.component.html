@@ -39,7 +39,7 @@
         <div class="chat-message-bubble-group" [ngClass]="msg.role">
           <nz-avatar *ngIf="msg.role === 'assistant'" nzIcon="robot" nzShape="circle" nzSize="small" class="avatar"></nz-avatar>
           <div class="bubble" [ngClass]="msg.role">
-            <div class="msg-content">{{msg.content}}</div>
+            <div class="msg-content markdown-content" [innerHTML]="msg.content | markdown"></div>
             <ng-container *ngIf="msg.fileUrl">
               <img *ngIf="msg.fileType?.startsWith('image')" [src]="msg.fileUrl" class="chat-img-in-bubble" [alt]="'AI_CHATBOX.ATTACHED_IMAGE' | translate" />
               <a *ngIf="!msg.fileType?.startsWith('image')" [href]="msg.fileUrl" target="_blank" class="file-link"><i nz-icon nzType="file" nzTheme="outline"></i> {{msg.fileUrl.split('/').pop()}}</a>

@@ -87,7 +87,7 @@ export class BlogManagementComponent implements OnInit {
   ) {
     this.blogForm = this.fb.group({
       title: ['', [Validators.required, Validators.maxLength(200)]],
-      content: ['', [Validators.required]],
+      content: [''],
       excerpt: ['', [Validators.maxLength(500)]],
       status: ['draft', Validators.required],
       featuredImage: [''],

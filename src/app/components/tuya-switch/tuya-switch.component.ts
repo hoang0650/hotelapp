@@ -129,11 +129,19 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
    * Tải danh sách thiết bị
    */
   loadDevices(): void {
-    this.isLoading = true;
-    const roomId = this.deviceId ? undefined : (this.roomId ? this.roomId : undefined);
     const hotelId = this.hotelId || localStorage.getItem('selectedHotelId') || undefined;
     
-    this.tuyaService.getDevices(roomId, hotelId).subscribe({
+    // Nếu có hotelId, dùng logic tải theo khách sạn để tối ưu và có thông tin phòng
+    if (hotelId) {
+      this.hotelId = hotelId;
+      this.loadDevicesByHotel();
+      return;
+    }
+
+    this.isLoading = true;
+    const roomId = this.deviceId ? undefined : (this.roomId ? this.roomId : undefined);
+    
+    this.tuyaService.getDevices(roomId, undefined).subscribe({
       next: (response) => {
         this.devices = response.data || [];
         
@@ -162,30 +170,44 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
    */
   groupDevicesByRoom(): void {
     this.devicesByRoom = {};
-    this.rooms = [];
     
+    // Chỉ reset rooms nếu đang không có dữ liệu phòng (ví dụ tải đơn lẻ)
+    // Nếu đã tải qua loadDevicesByHotel thì this.rooms đã có dữ liệu đầy đủ
+    if (this.rooms.length === 0) {
+      this.rooms = [];
+    }
+    
+    const roomMap = new Map<string, any>();
+    this.rooms.forEach(r => roomMap.set(r.roomId || r._id, r));
+
     this.devices.forEach(device => {
       const roomId = device.roomId || 'no-room';
       if (!this.devicesByRoom[roomId]) {
         this.devicesByRoom[roomId] = [];
-        // Lấy thông tin phòng nếu có
-        if (device.roomId && device.roomNumber) {
-          this.rooms.push({
+        
+        // Nếu phòng chưa có trong danh sách hiển thị, thêm vào
+        if (!roomMap.has(roomId) && device.roomId && device.roomNumber) {
+           const newRoom = {
             roomId: device.roomId,
-            roomNumber: device.roomNumber
-          });
+            roomNumber: device.roomNumber,
+            _id: device.roomId
+          };
+          this.rooms.push(newRoom);
+          roomMap.set(roomId, newRoom);
         }
       }
       this.devicesByRoom[roomId].push(device);
     });
+    
+    // Sắp xếp phòng theo tên/số
+    this.rooms.sort((a, b) => (a.roomNumber || '').localeCompare(b.roomNumber || ''));
   }
 
   /**
-   * Tải thiết bị theo khách sạn
+   * Tải thiết bị theo khách sạn (Tối ưu hóa)
    */
   loadDevicesByHotel(): void {
     if (!this.hotelId) {
-      // Lấy từ localStorage nếu không có input
       this.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || undefined;
     }
     
@@ -196,50 +218,41 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
     
     this.isLoading = true;
     
-    // Lấy danh sách phòng của khách sạn
-    this.roomsService.getRooms({ hotelId: this.hotelId }).subscribe({
-      next: (rooms) => {
-        // Lấy công tắc cho tất cả phòng
-        const roomIds = rooms.map(r => r._id).filter(id => id);
+    // Gọi song song lấy phòng và lấy thiết bị
+    forkJoin({
+      rooms: this.roomsService.getRooms({ hotelId: this.hotelId }),
+      devicesResponse: this.tuyaService.getDevices(undefined, this.hotelId)
+    }).subscribe({
+      next: (result) => {
+        const rooms = result.rooms || [];
+        const devices = result.devicesResponse.data || [];
         
-        if (roomIds.length === 0) {
-          this.isLoading = false;
-          return;
+        // Map thông tin phòng vào thiết bị
+        this.devices = devices.map(device => {
+          if (device.roomId) {
+            const room = rooms.find(r => r._id === device.roomId);
+            if (room) {
+              device.roomNumber = room.roomNumber;
+            }
+          }
+          return device;
+        });
+
+        // Cập nhật danh sách phòng để hiển thị
+        this.rooms = rooms.map(r => ({
+          ...r,
+          roomId: r._id
+        }));
+
+        if (this.showByRoom) {
+          this.groupDevicesByRoom();
         }
         
-        // Lấy thiết bị cho từng phòng
-        const deviceRequests = roomIds.map(roomId => 
-          this.tuyaService.getDevices(roomId, this.hotelId)
-        );
-        
-        forkJoin(deviceRequests).subscribe({
-          next: (responses) => {
-            this.devices = [];
-            responses.forEach((response, index) => {
-              const roomDevices = response.data || [];
-              roomDevices.forEach(device => {
-                device.roomId = roomIds[index];
-                device.roomNumber = rooms.find(r => r._id === roomIds[index])?.roomNumber;
-              });
-              this.devices.push(...roomDevices);
-            });
-            
-            if (this.showByRoom) {
-              this.groupDevicesByRoom();
-            }
-            
-            this.isLoading = false;
-          },
-          error: (error) => {
-            console.error('Error loading devices by hotel:', error);
-            this.message.error('Không thể tải thiết bị: ' + (error.error?.message || error.message));
-            this.isLoading = false;
-          }
-        });
+        this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error loading rooms:', error);
-        this.message.error('Không thể tải danh sách phòng: ' + (error.error?.message || error.message));
+        console.error('Error loading data:', error);
+        this.message.error('Không thể tải dữ liệu: ' + (error.error?.message || error.message));
         this.isLoading = false;
       }
     });

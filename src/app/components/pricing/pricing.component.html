@@ -91,10 +91,10 @@
               <span *ngIf="package.maxUsers === 0 || package.maxUsers === null">Không giới hạn người dùng</span>
               <span *ngIf="package.maxUsers !== 0 && package.maxUsers !== null">Tối đa {{ package.maxUsers }} người dùng</span>
             </li>
-            <li *ngIf="package.maxRooms !== undefined && package.maxRooms !== null">
+            <li *ngIf="package.maxRooms !== undefined">
               <i nz-icon nzType="home" nzTheme="outline"></i>
               <span *ngIf="package.maxRooms === 0 || package.maxRooms === null">Không giới hạn số phòng</span>
-              <span *ngIf="package.maxRooms !== 0 && package.maxRooms !== null">Tối đa {{ package.maxRooms }} phòng</span>
+              <span *ngIf="package.maxRooms > 0">Tối đa {{ package.maxRooms }} phòng</span>
             </li>
             <li *ngIf="package.permissions && package.permissions.length > 0">
               <i nz-icon nzType="safety-certificate" nzTheme="outline"></i>
@@ -120,6 +120,9 @@
               </p>
               <p *ngIf="currentPackage?.expiryDate || currentPackage?.packageExpiryDate">
                 Hết hạn: {{ (currentPackage.expiryDate || currentPackage.packageExpiryDate) | date:'dd/MM/yyyy' }}
+              </p>
+              <p *ngIf="currentPackage?.maxRooms !== undefined">
+                Số phòng: {{ (currentPackage.maxRooms === 0 || currentPackage.maxRooms === null) ? 'Không giới hạn' : (currentPackage.maxRooms + ' phòng') }}
               </p>
             </ng-container>
             <ng-template #subscribeButton>

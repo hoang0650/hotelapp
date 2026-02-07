@@ -198,74 +198,98 @@
   display: inline-block;
   margin-left: 4px;
 }
-.dot {
-  display: inline-block;
+
+.ai-typing-text .dot {
   animation: blink 1.4s infinite both;
-  font-size: 20px;
-  line-height: 1;
 }
-.dot:nth-child(2) {
+
+.ai-typing-text .dot:nth-child(2) {
   animation-delay: 0.2s;
 }
-.dot:nth-child(3) {
+
+.ai-typing-text .dot:nth-child(3) {
   animation-delay: 0.4s;
 }
+
 @keyframes blink {
-  0%, 80%, 100% { opacity: 0; }
-  40% { opacity: 1; }
+  0% { opacity: 0.2; }
+  20% { opacity: 1; }
+  100% { opacity: 0.2; }
 }
-.nz-list-item.user .nz-list-item-meta-title {
-  color: #1890ff;
+
+/* Markdown Styles */
+::ng-deep .markdown-content code {
+  background-color: rgba(0, 0, 0, 0.06);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
 }
-.nz-list-item.assistant .nz-list-item-meta-title {
-  color: #52c41a;
+
+::ng-deep .bubble.user .markdown-content code {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
 }
-.selected-file-preview {
-  padding: 8px 8px 0 8px;
-  background: #f6faff;
-  border-radius: 8px;
-  margin-bottom: 4px;
-  border: 1px solid #e6f7ff;
-  max-width: 95%;
-}
-.file-preview-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.chat-img-thumb {
-  width: 48px;
-  height: 48px;
-  object-fit: cover;
+
+::ng-deep .markdown-content pre.code-block {
+  background-color: #e8e8e8;
   border-radius: 6px;
-  border: 1px solid #e6f7ff;
-  background: #fff;
+  padding: 0;
+  margin: 8px 0;
+  overflow: hidden;
+  border: 1px solid #d9d9d9;
 }
-.file-icon {
-  font-size: 32px;
+
+::ng-deep .bubble.user .markdown-content pre.code-block {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+::ng-deep .markdown-content .code-header {
+  background-color: #d9d9d9;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #555;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+::ng-deep .bubble.user .markdown-content .code-header {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #eee;
+}
+
+::ng-deep .markdown-content pre.code-block code {
+  display: block;
+  padding: 8px;
+  overflow-x: auto;
+  background: transparent;
+  color: inherit;
+  border-radius: 0;
+}
+
+::ng-deep .markdown-content p {
+  margin-bottom: 8px;
+}
+::ng-deep .markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+::ng-deep .markdown-content a {
+  text-decoration: underline;
   color: #1890ff;
 }
-.file-name {
-  font-size: 14px;
-  color: #333;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
+::ng-deep .bubble.user .markdown-content a {
+  color: white;
 }
-.remove-file-btn {
-  margin-left: auto;
-  color: #ff4d4f;
+
+::ng-deep .markdown-content ul, 
+::ng-deep .markdown-content ol {
+  margin-left: 20px;
+  margin-bottom: 8px;
 }
-@media (max-width: 480px) {
-  .ai-chatbox-container {
-    max-width: 98vw;
-    min-width: 0;
-    right: 2vw;
-    bottom: 2vw;
-  }
-  .bubble {
-    max-width: 80vw;
-    font-size: 14px;
-  }
+
+::ng-deep .markdown-content li {
+  margin-bottom: 4px;
 }

@@ -31,6 +31,10 @@
           </nz-switch>
         </div>
 
+        <button nz-button nzType="default" (click)="refreshData()" title="Làm mới dữ liệu" class="mr-2">
+          <i nz-icon nzType="reload" nzTheme="outline"></i>
+        </button>
+
         <button nz-button nzType="primary" nzGhost (click)="connectFanpage()" title="Kết nối Fanpage Mới" class="mr-2">
           <i nz-icon nzType="facebook" nzTheme="outline"></i>
           <span>Kết nối</span>
@@ -77,7 +81,7 @@
         <div class="message-list" #threadList *ngIf="selectedSenderId">
           <div *ngFor="let m of displayed" class="bubble-row" [class.out]="m.direction === 'out'">
             <div class="bubble">
-              <div class="text" *ngIf="m.text">{{ m.text }}</div>
+              <div class="text markdown-content" *ngIf="m.text" [innerHTML]="m.text | markdown"></div>
               
               <div class="attachments" *ngIf="m.attachments && m.attachments.length > 0">
                 <div *ngFor="let att of m.attachments" class="attachment-item">

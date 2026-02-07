@@ -118,6 +118,7 @@ import { UserManagementComponent } from './components/user-management/user-manag
 import { UserFormModalComponent } from './components/user-management/user-form-modal/user-form-modal.component';
 import { BankTransferHistoryComponent } from './components/bank-transfer-history/bank-transfer-history.component';
 import { NlToBrPipe } from './pipes/nl-to-br.pipe';
+import { MarkdownPipe } from './pipes/markdown.pipe';
 import { AiChatboxComponent } from './components/ai-chatbox/ai-chatbox.component';
 import { FanpageMessagesComponent } from './components/fanpage-messages/fanpage-messages.component';
 import { PricingComponent } from './components/pricing/pricing.component';
@@ -262,6 +263,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         BankTransferHistoryComponent,
         SepayOAuth2CallbackComponent,
         NlToBrPipe,
+        MarkdownPipe,
         AiChatboxComponent,
         FanpageMessagesComponent,
         PricingComponent,

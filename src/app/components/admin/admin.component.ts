@@ -179,6 +179,10 @@ export class AdminComponent implements OnInit {
     return this.permissionService.hasFeatureAccess('settings_management');
   }
 
+  canAccessBotSetting(): boolean {
+    return this.permissionService.canAccessRoute('/admin/bot-setting');
+  }
+
   canAccessShiftHandoverHistory(): boolean {
     return this.permissionService.hasFeatureAccess('shift_handover');
   }
@@ -188,9 +192,7 @@ export class AdminComponent implements OnInit {
   }
 
   canAccessEInvoice(): boolean {
-    return this.permissionService.canAccessRoute('/admin/e-invoice-registration') ||
-           this.permissionService.canAccessRoute('/admin/e-invoice-management') ||
-           this.permissionService.canAccessRoute('/admin/e-invoice-template');
+    return this.authService.isSuperAdmin();
   }
 
   // Mở trang Settings

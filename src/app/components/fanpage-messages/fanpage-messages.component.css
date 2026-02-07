@@ -172,3 +172,66 @@
   .sidebar.hidden { display: none; }
   .thread.hidden { display: none; }
 }
+
+/* Markdown Styles */
+::ng-deep .markdown-content code {
+  background-color: rgba(0, 0, 0, 0.06);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+::ng-deep .bubble-row.out .markdown-content code {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+::ng-deep .markdown-content pre.code-block {
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  padding: 0;
+  margin: 8px 0;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
+}
+
+::ng-deep .bubble-row.out .markdown-content pre.code-block {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+::ng-deep .markdown-content .code-header {
+  background-color: #e8e8e8;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #666;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+::ng-deep .bubble-row.out .markdown-content .code-header {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #eee;
+}
+
+::ng-deep .markdown-content pre.code-block code {
+  display: block;
+  padding: 8px;
+  overflow-x: auto;
+  background: transparent;
+  color: inherit;
+  border-radius: 0;
+}
+
+::ng-deep .markdown-content p {
+  margin-bottom: 8px;
+}
+
+::ng-deep .markdown-content a {
+  text-decoration: underline;
+}
+
+::ng-deep .bubble-row.out .markdown-content a {
+  color: white;
+}

@@ -37,7 +37,7 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/pricing-management': ['pricing_management'],
   '/admin/ota-management': ['ota_management'],
   '/admin/fanpage-messages': ['fanpage_messages'],
-  '/admin/bot-setting': ['settings_management'],
+  '/admin/bot-setting': [],
   '/admin/chart': ['revenue_chart'],
   '/admin/shift-handover': ['shift_handover'],
   '/admin/shift-handover-history': ['shift_handover'],
