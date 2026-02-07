@@ -7,6 +7,8 @@ interface FbMessage {
   page_id: string;
   sender_id: string;
   recipient_id?: string;
+  sender_name?: string;
+  sender_avatar?: string;
   text: string;
   direction: 'in' | 'out';
   timestamp: number;
@@ -22,7 +24,7 @@ interface FbMessage {
 export class FanpageMessagesComponent implements OnInit, OnDestroy {
   messages: FbMessage[] = [];
   pages: any[] = [];
-  conversations: { sender_id: string; lastText: string; lastTime: number }[] = [];
+  conversations: { sender_id: string; sender_name?: string; sender_avatar?: string; lastText: string; lastTime: number }[] = [];
   displayed: FbMessage[] = [];
   selectedPageId: string = '';
   selectedSenderId: string = '';
@@ -41,7 +43,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
     }
   };
 
-  constructor(private aiAssistant: AiAssistantService, private authService: AuthService, private cdr: ChangeDetectorRef) {}
+  constructor(private aiAssistant: AiAssistantService, private authService: AuthService, private cdr: ChangeDetectorRef) { }
 
   private getTenantId(): string {
     const u = this.authService.getCurrentUser();
@@ -53,16 +55,16 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
     try {
       this.isMobile = window.innerWidth <= 768;
       this.showSidebar = !this.isMobile;
-      
+
       await this.refreshFacebookPages();
-      
+
       if (this.pages && this.pages.length > 0) {
         this.selectedPageId = this.pages[0].id;
         await this.loadMessages();
-      }else {
+      } else {
         console.warn('Danh sách pages rỗng!');
       }
-      
+
       // Polling tin nhắn mới mỗi 10 giây
       this.pollTimer = setInterval(() => {
         if (this.selectedPageId) {
@@ -70,7 +72,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
         }
       }, 10000);
 
-    }catch (e) {
+    } catch (e) {
       console.error('Lỗi khởi tạo:', e);
     } finally {
       this.loading = false;
@@ -88,10 +90,10 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
       const result = await this.aiAssistant.getFacebookPages(tenantId);
       // Log dữ liệu nhận được để debug
       console.log('API Response Pages:', result);
-      
+
       // Đảm bảo gán đúng mảng (phòng trường hợp service trả về object bọc)
       this.pages = Array.isArray(result) ? result : [];
-      
+
       // Kích hoạt change detection thủ công
       this.cdr.detectChanges();
     } catch (error) {
@@ -108,12 +110,12 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
       this.buildConversations();
       this.cdr.detectChanges(); // Cập nhật UI tin nhắn
     } catch (error) {
-        console.error('Lỗi load tin nhắn:', error);
+      console.error('Lỗi load tin nhắn:', error);
     }
   }
 
   private buildConversations(): void {
-  const convMap = new Map<string, any>();
+    const convMap = new Map<string, any>();
     const sorted = [...this.messages].sort((a, b) => b.timestamp - a.timestamp);
     sorted.forEach(m => {
       let partnerId = m.direction === 'in' ? m.sender_id : (m.recipient_id || 'Unknown');
@@ -121,9 +123,17 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
       if (!convMap.has(partnerId)) {
         convMap.set(partnerId, {
           sender_id: partnerId,
+          sender_name: m.sender_name || partnerId,
+          sender_avatar: m.sender_avatar || '',
           lastText: m.text,
           lastTime: m.timestamp
         });
+      } else {
+        const existing = convMap.get(partnerId);
+        if ((!existing.sender_avatar || !existing.sender_name) && m.sender_name) {
+          existing.sender_name = m.sender_name;
+          existing.sender_avatar = m.sender_avatar;
+        }
       }
     });
     this.conversations = Array.from(convMap.values());
@@ -138,8 +148,8 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
 
   private filterDisplayedMessages(): void {
     this.displayed = this.messages
-      .filter(m => (m.direction === 'in' && m.sender_id === this.selectedSenderId) || 
-                   (m.direction === 'out' && m.recipient_id === this.selectedSenderId))
+      .filter(m => (m.direction === 'in' && m.sender_id === this.selectedSenderId) ||
+        (m.direction === 'out' && m.recipient_id === this.selectedSenderId))
       .sort((a, b) => a.timestamp - b.timestamp);
   }
 
@@ -164,14 +174,14 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
 
   async sendReply(): Promise<void> {
     if (!this.replyText.trim() || !this.selectedSenderId || !this.selectedPageId) return;
-    
+
     this.sending = true;
     try {
       const tenantId = this.getTenantId();
       await this.aiAssistant.sendFacebookMessage(
-        tenantId, 
-        this.selectedPageId, 
-        this.selectedSenderId, 
+        tenantId,
+        this.selectedPageId,
+        this.selectedSenderId,
         this.replyText
       );
       this.replyText = '';

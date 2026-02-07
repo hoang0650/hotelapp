@@ -45,11 +45,12 @@
              [class.active]="c.sender_id === selectedSenderId" 
              (click)="selectConversation(c.sender_id)">
           <div class="conv-avatar">
-            <i nz-icon nzType="user" nzTheme="outline"></i>
+            <img *ngIf="c.sender_avatar" [src]="c.sender_avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
+            <i *ngIf="!c.sender_avatar" nz-icon nzType="user" nzTheme="outline"></i>
           </div>
           <div class="conv-info">
             <div class="conv-top">
-              <span class="conv-title">{{ c.sender_id }}</span>
+              <span class="conv-title">{{ c.sender_name }}</span>
               <span class="conv-time">{{ c.lastTime | date:'HH:mm dd/MM' }}</span>
             </div>
             <div class="conv-last text-truncate">{{ c.lastText }}</div>
