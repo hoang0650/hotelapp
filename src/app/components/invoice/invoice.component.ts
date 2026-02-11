@@ -2172,7 +2172,21 @@ export class InvoiceComponent implements OnInit {
   
   checkPricingPackagePermissions(): void {
     const currentUser = this.authService.getCurrentUser();
-    if (!currentUser || !currentUser.businessId) {
+    if (!currentUser) {
+      this.canViewDraftInvoice = false;
+      this.canExportInvoice = false;
+      return;
+    }
+    
+    if (this.authService.isAdmin()) {
+      return;
+    }
+    
+    if (!this.authService.isBusiness()) {
+      return;
+    }
+    
+    if (!currentUser.businessId) {
       // Nếu không có businessId, mặc định tắt
       this.canViewDraftInvoice = false;
       this.canExportInvoice = false;

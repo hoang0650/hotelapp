@@ -165,6 +165,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   
   // Helper function để lọc các event check-in CHƯA CHECKOUT
   // Lưu ý: Nếu backend đã filter bằng excludeCheckedOut=true, hàm này vẫn hoạt động như một lớp bảo vệ bổ sung
+  private getEventCheckinTime(event: any): Date | null {
+    if (!event) return null;
+    const rawTime = event.checkinTime || event.checkInTime || event.checkInDate || event.checkinDate;
+    if (!rawTime) return null;
+    const parsed = new Date(rawTime);
+    if (isNaN(parsed.getTime())) return null;
+    return parsed;
+  }
+
   private getUncheckedOutCheckinEvents(events: any[]): any[] {
     if (!events || events.length === 0) return [];
     
@@ -178,8 +187,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           if (e.type !== 'checkout') return false;
           
           // So sánh checkinTime: chuyển về Date object và so sánh timestamp
-          const checkoutCheckinTime = e.checkinTime ? new Date(e.checkinTime).getTime() : null;
-          const eventCheckinTime = event.checkinTime ? new Date(event.checkinTime).getTime() : null;
+          const checkoutCheckinTime = this.getEventCheckinTime(e)?.getTime() || null;
+          const eventCheckinTime = this.getEventCheckinTime(event)?.getTime() || null;
           
           // Nếu có checkinTime và khớp chính xác (trong vòng 1 giây để tránh lỗi làm tròn)
           if (checkoutCheckinTime && eventCheckinTime) {
@@ -193,8 +202,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         return !hasCheckout;
       })
       .sort((a: any, b: any) => {
-        const timeA = a.checkinTime ? new Date(a.checkinTime).getTime() : 0;
-        const timeB = b.checkinTime ? new Date(b.checkinTime).getTime() : 0;
+        const timeA = this.getEventCheckinTime(a)?.getTime() || 0;
+        const timeB = this.getEventCheckinTime(b)?.getTime() || 0;
         return timeB - timeA; // Sắp xếp giảm dần (mới nhất trước)
       });
   }
@@ -556,7 +565,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       if (this.roomData.events && this.roomData.events.length > 0) {
         // Lọc các event check-in CHƯA CHECKOUT (chưa có event checkout tương ứng)
         const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
-        const lastCheckinEvent = checkinEvents.length > 0 ? checkinEvents[0] : null;
+          const lastCheckinEvent = checkinEvents.length > 0 ? checkinEvents[0] : null;
+          const lastCheckinTime = lastCheckinEvent ? this.getEventCheckinTime(lastCheckinEvent) : null;
         
         console.log('Filtered unchecked out checkin events in fetchCurrentRoom:', {
           totalEvents: this.roomData.events.length,
@@ -625,7 +635,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           
           // Cập nhật listData với guestInfo đã được xử lý
           this.listData = [{
-            checkinTime: lastCheckinEvent.checkinTime,
+            checkinTime: lastCheckinTime,
             rateType: lastCheckinEvent.rateType || 'hourly',
             advancePayment: eventAdvancePayment, // Đảm bảo là số
             advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
@@ -802,6 +812,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         if (data.businessId) {
           // Đảm bảo businessId là string
           const businessId = typeof data.businessId === 'string' ? data.businessId : (data.businessId._id || data.businessId.toString());
+          const canLoadBusiness = this.authService.isAdmin() || this.authService.isBusiness();
+          if (!canLoadBusiness) {
+            if (typeof data.businessId === 'object') {
+              this.businessInfo = data.businessId;
+            }
+            return;
+          }
           if (businessId) {
             this.businessService.getBusinessById(businessId).subscribe({
               next: (business: any) => {
@@ -1066,18 +1083,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     console.log('Calculating price based on check-in data:', lastCheckIn);
     
     // Kiểm tra và validate checkinTime
-    let checkInTime: Date;
-    if (lastCheckIn.checkinTime) {
-      checkInTime = new Date(lastCheckIn.checkinTime);
-      // Kiểm tra xem Date có hợp lệ không
-      if (isNaN(checkInTime.getTime())) {
-        console.warn('[calculateTotalPrice] Invalid checkinTime, using current time UTC+7:', lastCheckIn.checkinTime);
-        checkInTime = this.getUTCTimePlus7();
-      }
-    } else {
-      console.warn('[calculateTotalPrice] No checkinTime found, using current time UTC+7');
-      checkInTime = this.getUTCTimePlus7();
-    }
+    const parsedCheckinTime = this.getEventCheckinTime(lastCheckIn);
+    let checkInTime: Date = parsedCheckinTime || this.getUTCTimePlus7();
     
     const checkOutTime = this.getUTCTimePlus7();
     
@@ -1233,7 +1240,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const checkinEventData = {
         type: 'checkin',
         checkinTime: checkinTime, // Sử dụng thời gian đã tạo
+        checkInTime: checkinTime,
+        checkInDate: checkinTime,
         guestInfo: guestInfo,
+        guestName: guestInfo.name,
+        guestPhone: guestInfo.phone,
+        guestId: guestInfo.idNumber,
+        guestEmail: guestInfo.email,
+        guestAddress: guestInfo.address,
         paymentMethod: this.normalizePaymentMethod(this.checkInForm.get('paymentMethod')?.value || 'cash'),
         rateType: this.checkInForm.get('rateType')?.value || 'hourly',
         advancePayment: advancePayment, // Đảm bảo là số
@@ -1354,7 +1368,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       
       if (checkinEvents.length > 0) {
         lastCheckinEvent = checkinEvents[0];
-        checkInTime = new Date(lastCheckinEvent.checkinTime);
+        checkInTime = this.getEventCheckinTime(lastCheckinEvent) || this.getUTCTimePlus7();
       }
     }
     
@@ -1372,7 +1386,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                 // Cập nhật roomData với dữ liệu mới
                 this.roomData = reloadedRoom;
                 lastCheckinEvent = reloadedCheckinEvents[0];
-                checkInTime = new Date(lastCheckinEvent.checkinTime);
+                checkInTime = this.getEventCheckinTime(lastCheckinEvent) || this.getUTCTimePlus7();
                 // Tiếp tục xử lý checkout với event mới
                 this.processCheckOutWithEvent(lastCheckinEvent, checkInTime);
                 return;
@@ -1779,6 +1793,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       status: 'dirty',
       paymentStatus: createDebt ? 'pending' : ((paymentMethod === 'transfer') ? 'pending' : 'paid'),
       checkoutTime: currentTime,
+      checkOutTime: currentTime,
+      checkinTime: checkInTime,
+      checkInTime: checkInTime,
       roomTotal: validRoomTotal, // Gửi validRoomTotal đã được validate
       rateType: rateType, // Gửi rateType đã được tính toán từ backend
       totalAmount: grandTotal, // Tổng tiền (room + services + charges - discount)
@@ -1794,6 +1811,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       customerName: customerName,
       customerPhone: customerPhone && customerPhone !== 'N/A' ? customerPhone : undefined,
       customerEmail: customerEmail && customerEmail !== 'N/A' ? customerEmail : undefined,
+      guestName: customerName,
+      guestPhone: customerPhone && customerPhone !== 'N/A' ? customerPhone : '',
+      guestId: formGuestInfo.idNumber || '',
+      guestEmail: customerEmail && customerEmail !== 'N/A' ? customerEmail : '',
+      guestAddress: formGuestInfo.address || '',
       // Gửi guestInfo đầy đủ để backend lưu vào event
       guestInfo: {
         name: customerName,
@@ -1808,6 +1830,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         {
           type: 'checkout',
           checkoutTime: currentTime,
+          checkOutTime: currentTime,
+          checkinTime: checkInTime,
+          checkInTime: checkInTime,
           amount: grandTotal,
           rateType: rateType, // Thêm rateType đã được tính toán từ backend
           paymentMethod: paymentMethod,

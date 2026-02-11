@@ -9,6 +9,7 @@ import { BusinessService } from '../../services/business.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { TranslateService } from '@ngx-translate/core';
+import { AuthService } from '../../services/auth.service';
 
 declare global {
   interface Window {
@@ -49,7 +50,8 @@ export class BookingModalComponent implements OnInit {
     private hotelService: HotelService,
     private businessService: BusinessService,
     private http: HttpClient,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private authService: AuthService
   ) {
     this.selectedDate = data.selectedDate;
     this.hotelId = data.hotelId;
@@ -276,6 +278,14 @@ export class BookingModalComponent implements OnInit {
           const businessId = typeof hotel.businessId === 'object' && hotel.businessId !== null && '_id' in hotel.businessId
             ? hotel.businessId._id
             : hotel.businessId;
+          
+          const canLoadBusiness = this.authService.isAdmin() || this.authService.isBusiness();
+          if (!canLoadBusiness) {
+            if (!this.businessInfo && typeof hotel.businessId === 'object') {
+              this.businessInfo = hotel.businessId;
+            }
+            return;
+          }
           
           if (businessId && typeof businessId === 'string') {
             this.businessService.getBusinessById(businessId).subscribe(

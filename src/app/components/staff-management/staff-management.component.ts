@@ -134,7 +134,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       this.subscriptions.add(
         this.hotelService.getHotelById(hotelId).subscribe(
           (hotel: any) => {
-            if (hotel && hotel.businessId) {
+            const canLoadBusiness = this.authService.isAdmin() || this.authService.isBusiness();
+            if (hotel && hotel.businessId && canLoadBusiness) {
               this.subscriptions.add(
                 this.businessService.getBusinessById(hotel.businessId).subscribe(
                   (business: any) => {

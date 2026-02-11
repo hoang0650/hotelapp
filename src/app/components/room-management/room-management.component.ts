@@ -82,6 +82,20 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
     ];
   }
 
+  private normalizeCapacity(capacity: any): { adults: number; children: number } {
+    if (capacity && typeof capacity === 'object') {
+      return {
+        adults: Number(capacity.adults) || 2,
+        children: Number(capacity.children) || 0
+      };
+    }
+    if (typeof capacity === 'number') {
+      const adults = Number(capacity) || 2;
+      return { adults, children: 0 };
+    }
+    return { adults: 2, children: 0 };
+  }
+
   constructor(
     private fb: FormBuilder, 
     private roomService: RoomsService, 
@@ -435,16 +449,14 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       this.roomService.getRoomById(id, { limit: 1000 }).subscribe(
         (fullRoom: Room) => {
           this.selectedRoom = fullRoom;
+          const normalizedCapacity = this.normalizeCapacity(fullRoom.capacity);
           this.roomForm.patchValue({
             hotelId: fullRoom.hotelId,
             roomNumber: fullRoom.roomNumber,
             floor: Number(fullRoom.floor) || 1,
             type: fullRoom.type,
             status: fullRoom.status,
-            capacity: {
-              adults: fullRoom.capacity?.adults || 2,
-              children: fullRoom.capacity?.children || 0
-            },
+            capacity: normalizedCapacity,
             amenities: fullRoom.amenities || [],
             images: fullRoom.images || [],
             pricing: {
@@ -493,16 +505,14 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
         error => {
           console.error('Error loading room details:', error);
           // Fallback: sử dụng dữ liệu từ danh sách nếu không load được chi tiết
+          const normalizedCapacity = this.normalizeCapacity(roomToEdit.capacity);
           this.roomForm.patchValue({
             hotelId: roomToEdit.hotelId,
             roomNumber: roomToEdit.roomNumber,
             floor: Number(roomToEdit.floor) || 1,
             type: roomToEdit.type,
             status: roomToEdit.status,
-            capacity: {
-              adults: roomToEdit.capacity?.adults || 2,
-              children: roomToEdit.capacity?.children || 0
-            },
+            capacity: normalizedCapacity,
             amenities: roomToEdit.amenities || [],
             images: roomToEdit.images || [],
             pricing: {

@@ -122,6 +122,7 @@ export interface Event {
   checkoutTime?: Date;
   expectedCheckoutTime?: Date; // Thời gian checkout dự kiến cho booking 
   payment?: number; 
+  totalAmount?: number;
   userId?: string; 
   staffId?: string; 
   serviceOrderId?: string; 
@@ -130,8 +131,9 @@ export interface Event {
   paymentMethod?: 'cash' | 'card' | 'transfer'; 
   paymentStatus?: 'paid' | 'pending'; // Trạng thái thanh toán (từ RoomEvent model)
   paymentTransactionId?: string; // ID giao dịch thanh toán (nếu có)
-  rateType?: 'hourly' | 'daily' | 'nightly'; // Loại giá
+  rateType?: 'hourly' | 'daily' | 'nightly' | 'weekly' | 'monthly'; // Loại giá
   advancePayment?: number; 
+  advancePaymentMethod?: 'cash' | 'card' | 'transfer';
   additionalCharges?: number;
   discount?: number;
   notes?: string; 
