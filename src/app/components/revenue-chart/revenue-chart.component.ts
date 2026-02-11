@@ -29,6 +29,12 @@ export class RevenueChartComponent implements OnInit, OnChanges {
   public chartOptions: Highcharts.Options = {};
   
   public isLoading = false;
+  public roomRevenue: number = 0;
+  public serviceRevenue: number = 0;
+  public cashTotal: number = 0;
+  public bankTransferTotal: number = 0;
+  public cardTotal: number = 0;
+  public receiptExpenseTotal: number = 0;
 
   constructor(
     private hotelService: HotelService,
@@ -115,11 +121,13 @@ export class RevenueChartComponent implements OnInit, OnChanges {
     }
     
     // Gọi API backend trực tiếp để lấy doanh thu theo period (giống React Native)
+    const startStr = format(startDate, 'yyyy-MM-dd');
+    const endStr = format(endDate, 'yyyy-MM-dd');
     this.shiftHandoverService.getRevenueByPeriod({
       hotelId: this.hotelId,
       period: this.selectedPeriod,
-      startDate: format(startDate, 'yyyy-MM-dd'),
-      endDate: format(endDate, 'yyyy-MM-dd')
+      startDate: startStr,
+      endDate: endStr
     }).subscribe({
       next: (response) => {
         
@@ -132,7 +140,44 @@ export class RevenueChartComponent implements OnInit, OnChanges {
         this.totalExpense = response.totalExpense || 0;
         
         this.updateChart();
-        this.isLoading = false;
+        // Sau khi có dữ liệu period, lấy phân loại doanh thu theo range từ Financial Summary
+        this.financialSummaryService.getFinancialSummary({
+          hotelId: this.hotelId!,
+          startDate: startStr,
+          endDate: endStr
+        }).subscribe({
+          next: (sumRes) => {
+            const breakdown = sumRes?.data?.breakdown?.revenue || (sumRes as any)?.breakdown?.revenue || {};
+            this.roomRevenue = Number(breakdown?.roomRevenue) || 0;
+            this.serviceRevenue = Number(breakdown?.serviceRevenue) || 0;
+            this.isLoading = false;
+          },
+          error: () => {
+            this.roomRevenue = 0;
+            this.serviceRevenue = 0;
+            this.isLoading = false;
+          }
+        });
+        // Lấy breakdown thanh toán và tổng phiếu chi theo range
+        this.shiftHandoverService.calculateRevenue({
+          hotelId: this.hotelId!,
+          startDate: startStr,
+          endDate: endStr
+        }).subscribe({
+          next: (revRes) => {
+            const data = revRes?.data || (revRes as any)?.data || {};
+            this.cashTotal = Number(data?.cashTotal) || 0;
+            this.bankTransferTotal = Number(data?.bankTransferTotal) || 0;
+            this.cardTotal = Number(data?.cardTotal) || 0;
+            this.receiptExpenseTotal = Number(data?.expenseTotal) || 0;
+          },
+          error: () => {
+            this.cashTotal = 0;
+            this.bankTransferTotal = 0;
+            this.cardTotal = 0;
+            this.receiptExpenseTotal = 0;
+          }
+        });
       },
       error: (error) => {
         console.error('Error loading revenue from backend:', error);
@@ -424,11 +469,11 @@ export class RevenueChartComponent implements OnInit, OnChanges {
             formatter: function() {
               const value = Math.abs(this.y || 0);
               if (value >= 1000000) {
-                return (value / 1000000).toFixed(1) + 'M';
+                return (value / 1000000).toFixed(1) + 'M đ';
               } else if (value >= 1000) {
-                return (value / 1000).toFixed(1) + 'K';
+                return (value / 1000).toFixed(1) + 'K đ';
               }
-              return value.toString();
+              return Highcharts.numberFormat(value, 0, ',', '.') + ' đ';
             },
             y: -8 // Khoảng cách từ đỉnh cột
           },
