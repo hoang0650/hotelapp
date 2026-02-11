@@ -209,17 +209,25 @@
         <nz-form-item [formGroup]="servicesForm">
           <nz-form-label [nzSpan]="8" style="text-align: left;">{{ 'ROOM_CONTENT_MODAL.SERVICE' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="16" style="text-align: left;">
-            <div nz-row [nzGutter]="8" style="justify-content: flex-start;">
+            <div nz-row [nzGutter]="8" class="service-selection-row">
               <div nz-col [nzSpan]="14">
-                <nz-select formControlName="serviceId" style="width: 100%; text-align: left;">
+                <nz-select formControlName="serviceId" style="width: 100%; text-align: left;" class="service-select">
                   <nz-option *ngFor="let service of services" [nzValue]="service.id" [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'"></nz-option>
                 </nz-select>
               </div>
               <div nz-col [nzSpan]="6">
-                <nz-input-number formControlName="quantity" [nzMin]="1" [nzMax]="100" style="width: 100%; text-align: left;"></nz-input-number>
+                <div class="service-quantity-control">
+                  <button nz-button nzType="default" nzSize="small" type="button" (click)="changeServiceQuantity(-1)" [disabled]="servicesForm.get('quantity')?.value <= 1" class="service-qty-btn">
+                    <i nz-icon nzType="minus"></i>
+                  </button>
+                  <nz-input-number formControlName="quantity" [nzMin]="1" [nzMax]="100" style="width: 100%; text-align: left;" class="service-quantity"></nz-input-number>
+                  <button nz-button nzType="default" nzSize="small" type="button" (click)="changeServiceQuantity(1)" class="service-qty-btn">
+                    <i nz-icon nzType="plus"></i>
+                  </button>
+                </div>
               </div>
               <div nz-col [nzSpan]="4">
-                <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" [title]="'ROOM_CONTENT_MODAL.ADD' + ' ' + ('ROOM_CONTENT_MODAL.SERVICE' | translate)">
+                <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" [title]="'ROOM_CONTENT_MODAL.ADD' + ' ' + ('ROOM_CONTENT_MODAL.SERVICE' | translate)" class="service-add-button">
                   <i nz-icon nzType="plus"></i>
                 </button>
               </div>
@@ -442,7 +450,15 @@
               </nz-select>
             </div>
             <div nz-col [nzSpan]="6">
-              <nz-input-number formControlName="quantity" [nzMin]="1" [nzMax]="100" style="width: 100%"></nz-input-number>
+              <div class="service-quantity-control">
+                <button nz-button nzType="default" nzSize="small" type="button" (click)="changeServiceQuantity(-1)" [disabled]="servicesForm.get('quantity')?.value <= 1" class="service-qty-btn">
+                  <i nz-icon nzType="minus"></i>
+                </button>
+                <nz-input-number formControlName="quantity" [nzMin]="1" [nzMax]="100" style="width: 100%" class="service-quantity"></nz-input-number>
+                <button nz-button nzType="default" nzSize="small" type="button" (click)="changeServiceQuantity(1)" class="service-qty-btn">
+                  <i nz-icon nzType="plus"></i>
+                </button>
+              </div>
             </div>
             <div nz-col [nzSpan]="4">
               <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" title="Thêm dịch vụ">
@@ -484,43 +500,35 @@
     <nz-divider nzText="Thông tin thanh toán"></nz-divider>
     
     <form nz-form [formGroup]="checkOutForm" (ngSubmit)="submitForm()">
-      <div class="totals-summary mb-3" style="background: #f5f5f5; padding: 12px; border-radius: 4px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <strong style="font-size: 14px;">Tổng tiền phòng:</strong>
-          <span style="font-size: 14px; font-weight: 600;">{{ roomPriceTotal | number }} đ</span>
+      <div class="totals-summary mb-3 payment-summary">
+        <div class="payment-row payment-row--main">
+          <span class="payment-label">Tổng tiền phòng:</span>
+          <span class="payment-value">{{ roomPriceTotal | number }} đ</span>
         </div>
         
         <!-- Hiển thị chi tiết diễn giải tính tiền phòng -->
-        <div *ngIf="roomPriceDetails" style="margin-bottom: 8px; padding: 12px; background: #f0f9ff; border-radius: 8px; font-size: 12px; color: #666; border-left: 3px solid #1890ff;">
+        <div *ngIf="roomPriceDetails" class="payment-details">
           <!-- Chi tiết theo giờ (hourly) -->
           <div *ngIf="roomPriceDetails.rateType === 'hourly'">
             <!-- Giờ đầu tiên -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px;">
-              <span style="font-size: 12px; color: #666;">
-                Giờ đầu tiên:
-              </span>
-              <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
-                {{ (roomPriceDetails.firstHourPrice || 0) | number }} đ
-              </span>
+            <div class="payment-details-row">
+              <span class="payment-detail-label">Giờ đầu tiên:</span>
+              <span class="payment-detail-value">{{ (roomPriceDetails.firstHourPrice || 0) | number }} đ</span>
             </div>
             
             <!-- Các giờ tiếp theo -->
-            <div *ngIf="roomPriceDetails.additionalHoursCount > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px;">
-              <span style="font-size: 12px; color: #666;">
-                {{ roomPriceDetails.additionalHoursCount }} giờ tiếp theo ({{ ((roomPriceDetails.additionalHoursPrice || 0) / (roomPriceDetails.additionalHoursCount || 1)) | number }} đ/giờ):
-              </span>
-              <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
-                {{ (roomPriceDetails.additionalHoursPrice || 0) | number }} đ
-              </span>
+            <div *ngIf="roomPriceDetails.additionalHoursCount > 0" class="payment-details-row">
+              <span class="payment-detail-label">{{ roomPriceDetails.additionalHoursCount }} giờ tiếp theo ({{ ((roomPriceDetails.additionalHoursPrice || 0) / (roomPriceDetails.additionalHoursCount || 1)) | number }} đ/giờ):</span>
+              <span class="payment-detail-value">{{ (roomPriceDetails.additionalHoursPrice || 0) | number }} đ</span>
             </div>
             
             <!-- Thông tin thời gian -->
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
-              <div style="font-size: 11px; color: #999; margin-bottom: 4px;">
+            <div class="payment-details-note">
+              <div>
                 Tổng thời gian: {{ (roomPriceDetails.totalHours || roomPriceDetails.durationInHours || 0) | number:'1.1-1' }} giờ
                 <span *ngIf="roomPriceDetails.remainingMinutes > 0"> ({{ roomPriceDetails.remainingMinutes }} phút)</span>
               </div>
-              <div style="font-size: 11px; color: #999;">
+              <div>
                 Thời gian miễn phí: {{ roomPriceDetails.gracePeriodMinutes || 15 }} phút
               </div>
             </div>
@@ -528,90 +536,66 @@
           
           <!-- Chi tiết theo ngày (daily) -->
           <div *ngIf="roomPriceDetails.rateType === 'daily'">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px;">
-              <span style="font-size: 12px; color: #666;">
-                {{ roomPriceDetails.days }} ngày × {{ (roomPriceDetails.basePrice || 0) | number }} đ/ngày:
-              </span>
-              <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
-                {{ ((roomPriceDetails.days || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ
-              </span>
+            <div class="payment-details-row">
+              <span class="payment-detail-label">{{ roomPriceDetails.days }} ngày × {{ (roomPriceDetails.basePrice || 0) | number }} đ/ngày:</span>
+              <span class="payment-detail-value">{{ ((roomPriceDetails.days || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ</span>
             </div>
             
             <!-- Phụ thu check-in sớm -->
-            <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
-              <span style="font-size: 12px; color: #666;">
-                Phụ thu check-in sớm ({{ roomPriceDetails.earlyCheckinHours }} giờ):
-              </span>
-              <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
-                + {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ
-              </span>
+            <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">Phụ thu check-in sớm ({{ roomPriceDetails.earlyCheckinHours }} giờ):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ</span>
             </div>
             
             <!-- Phụ thu check-out trễ -->
-            <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
-              <span style="font-size: 12px; color: #666;">
-                Phụ thu check-out trễ ({{ roomPriceDetails.lateCheckoutHours }} giờ):
-              </span>
-              <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
-                + {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ
-              </span>
+            <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">Phụ thu check-out trễ ({{ roomPriceDetails.lateCheckoutHours }} giờ):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ</span>
             </div>
           </div>
           
           <!-- Chi tiết qua đêm (nightly) -->
           <div *ngIf="roomPriceDetails.rateType === 'nightly'">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 4px;">
-              <span style="font-size: 12px; color: #666;">
-                {{ roomPriceDetails.nights }} đêm × {{ (roomPriceDetails.basePrice || 0) | number }} đ/đêm:
-              </span>
-              <span style="font-size: 12px; font-weight: 600; color: #1890ff;">
-                {{ ((roomPriceDetails.nights || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ
-              </span>
+            <div class="payment-details-row">
+              <span class="payment-detail-label">{{ roomPriceDetails.nights }} đêm × {{ (roomPriceDetails.basePrice || 0) | number }} đ/đêm:</span>
+              <span class="payment-detail-value">{{ ((roomPriceDetails.nights || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ</span>
             </div>
             
             <!-- Phụ thu check-in sớm -->
-            <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
-              <span style="font-size: 12px; color: #666;">
-                Phụ thu check-in sớm ({{ roomPriceDetails.earlyCheckinHours }} giờ):
-              </span>
-              <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
-                + {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ
-              </span>
+            <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">Phụ thu check-in sớm ({{ roomPriceDetails.earlyCheckinHours }} giờ):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ</span>
             </div>
             
             <!-- Phụ thu check-out trễ -->
-            <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px; background: #fff9e6; border-radius: 4px; border-left: 3px solid #ff9800;">
-              <span style="font-size: 12px; color: #666;">
-                Phụ thu check-out trễ ({{ roomPriceDetails.lateCheckoutHours }} giờ):
-              </span>
-              <span style="font-size: 12px; font-weight: 600; color: #ff9800;">
-                + {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ
-              </span>
+            <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">Phụ thu check-out trễ ({{ roomPriceDetails.lateCheckoutHours }} giờ):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ</span>
             </div>
           </div>
         </div>
         
         <!-- Hiển thị phụ thu từ check-in event nếu có -->
-        <div *ngIf="initialCharges > 0" style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 6px; background: #fff3e0; border-radius: 4px; border-left: 3px solid #ff9800;">
-          <span style="color: #ff9800; font-size: 13px;">
-            <i nz-icon nzType="plus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+        <div *ngIf="initialCharges > 0" class="payment-row payment-row--surcharge">
+          <span class="payment-label">
+            <i nz-icon nzType="plus-circle" nzTheme="outline"></i>
             <strong>Phụ thu:</strong>
           </span>
-          <span style="color: #ff9800; font-size: 13px; font-weight: 600;">+ {{ initialCharges | number }} đ</span>
+          <span class="payment-value">+ {{ initialCharges | number }} đ</span>
         </div>
         
         <!-- Hiển thị khuyến mãi từ check-in event nếu có -->
-        <div *ngIf="initialDiscount > 0" style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 6px; background: #f6ffed; border-radius: 4px; border-left: 3px solid #52c41a;">
-          <span style="color: #52c41a; font-size: 13px;">
-            <i nz-icon nzType="minus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
+        <div *ngIf="initialDiscount > 0" class="payment-row payment-row--discount">
+          <span class="payment-label">
+            <i nz-icon nzType="minus-circle" nzTheme="outline"></i>
             <strong>Khuyến mãi:</strong>
           </span>
-          <span style="color: #52c41a; font-size: 13px; font-weight: 600;">- {{ initialDiscount | number }} đ</span>
+          <span class="payment-value">- {{ initialDiscount | number }} đ</span>
         </div>
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
-          <strong style="font-size: 14px;">Tổng tiền dịch vụ:</strong>
-          <span style="font-size: 14px; font-weight: 600;">{{ servicesPriceTotal | number }} đ</span>
+        <div class="payment-row payment-row--total">
+          <span class="payment-label">Tổng tiền dịch vụ:</span>
+          <span class="payment-value">{{ servicesPriceTotal | number }} đ</span>
         </div>
       </div>
       

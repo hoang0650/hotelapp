@@ -15,6 +15,160 @@
     margin-bottom: 3px;
     font-size: 0.95em;
   }
+
+.service-selection {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.service-selection-row {
+  align-items: center;
+}
+
+.service-select ::ng-deep .ant-select-selector {
+  border-radius: 8px;
+}
+
+.service-quantity ::ng-deep .ant-input-number {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.service-quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.service-quantity-control .service-quantity {
+  flex: 1;
+}
+
+.service-qty-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.service-add-button {
+  width: 100%;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.totals-summary {
+  background: #fff7f7;
+  border: 1px solid #ffd6d6;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.payment-summary {
+  background: #fff7f7;
+  border: 1px solid #ffd6d6;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.payment-row:last-child {
+  margin-bottom: 0;
+}
+
+.payment-label {
+  color: #555;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.payment-value {
+  color: #262626;
+  font-weight: 600;
+}
+
+.payment-row--main .payment-label {
+  font-weight: 600;
+}
+
+.payment-row--main .payment-value {
+  font-weight: 700;
+  color: #a8071a;
+}
+
+.payment-row--surcharge .payment-value {
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.payment-row--discount .payment-value {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+.payment-row--total {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+  font-weight: 600;
+}
+
+.payment-details {
+  margin-top: 8px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+
+.payment-details-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #666;
+}
+
+.payment-details-row:last-child {
+  margin-bottom: 0;
+}
+
+.payment-detail-label {
+  color: #666;
+}
+
+.payment-detail-value {
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.payment-details-row--surcharge .payment-detail-value {
+  color: #ff9800;
+}
+
+.payment-details-note {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e6e6e6;
+  font-size: 11px;
+  color: #8c8c8c;
+}
   
   /* Viền trắng cho tổng cộng và còn lại phải thanh toán */
   ::ng-deep .final-totals .ant-descriptions-item {

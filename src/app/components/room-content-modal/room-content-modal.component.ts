@@ -851,6 +851,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     );
   }
 
+  changeServiceQuantity(delta: number): void {
+    const quantityControl = this.servicesForm?.get('quantity');
+    if (!quantityControl) return;
+    const currentValue = Number(quantityControl.value) || 1;
+    const nextValue = Math.max(1, currentValue + delta);
+    quantityControl.setValue(nextValue);
+  }
+
   // Thêm dịch vụ
   addService(): void {
     // Kiểm tra form hợp lệ
