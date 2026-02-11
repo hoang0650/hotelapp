@@ -136,11 +136,15 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     }
     
     const addressValue = typeof ocrData.address === 'string' ? ocrData.address : '';
+    const serverAddress = addressValue;
     const placeBirthRegex = /\bplace\s*(?:of|ot|o[ft])\s*birth\b/iu;
     const vnBirthRegex = /(nơi\s*sinh|quê\s*quán|khai\s*sinh)/iu;
     let cleanedAddress = addressValue.replace(placeBirthRegex, '').replace(vnBirthRegex, '');
     const specificRemove = /Thù\s*Th(i|ị)êm,\s*TP\.\s*Th(ủ|ù)\s*Đ(ức|ửc),\s*TP\.\s*H(ồ|o)\s*Ch(i|í)\s*Minh/giu;
     cleanedAddress = cleanedAddress.replace(specificRemove, '');
+    if (!cleanedAddress && serverAddress) {
+      cleanedAddress = serverAddress;
+    }
     if (!cleanedAddress && normLines.length) {
       cleanedAddress = this.buildAddressFromRaw(normLines);
     }
@@ -165,9 +169,11 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         this.personalInfoForm.patchValue({ idExpiryDate: doe });
         console.log('[GuestSaveModal] Set idExpiryDate:', doe);
       }
-      if (ocrData.gender && (ocrData.gender === 'male' || ocrData.gender === 'female')) {
-        this.personalInfoForm.patchValue({ gender: ocrData.gender });
-        console.log('[GuestSaveModal] Set gender:', ocrData.gender);
+      const genderRaw = (ocrData.gender || '').toString().trim().toLowerCase();
+      const normalizedGender = genderRaw === 'nam' ? 'male' : genderRaw === 'nữ' ? 'female' : genderRaw === 'male' ? 'male' : genderRaw === 'female' ? 'female' : '';
+      if (normalizedGender) {
+        this.personalInfoForm.patchValue({ gender: normalizedGender });
+        console.log('[GuestSaveModal] Set gender:', normalizedGender);
       }
       const nationality = ocrData.nationality || 'Việt Nam';
       if (nationality) {

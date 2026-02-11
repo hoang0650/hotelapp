@@ -157,21 +157,25 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         dateOfBirth: dobVal,
         gender: ((): string => {
           const fromServer = (aiResult?.gender || '').toLowerCase();
-          if (fromServer === 'male' || fromServer === 'female') return fromServer;
+          if (fromServer === 'nam' || fromServer === 'nữ') return fromServer;
+          if (fromServer === 'male') return 'nam';
+          if (fromServer === 'female') return 'nữ';
           const gr = this.extractGenderFromLines(lines);
           return gr || '';
         })(),
         nationality: aiResult?.nationality || 'Việt Nam',
         address: ((): string => {
+          const serverAddr = aiResult?.address || '';
+          if (serverAddr) return serverAddr;
           const ad = this.extractAddressFromLines(lines);
-          return ad || (aiResult?.address || '');
+          return ad || '';
         })(),
         dateOfIssue: aiResult?.dateOfIssue || '',
         dateOfExpiry: aiResult?.dateOfExpiry || '',
         rawText: lines
       };
       if (this.useGemini) {
-        const prompt = `Hãy trích xuất JSON với các khóa: fullName, idNumber, dateOfBirth(dd/mm/yyyy), gender(male|female), nationality, address từ văn bản OCR sau:\n${joined}\nChỉ trả về JSON hợp lệ.`;
+        const prompt = `Hãy trích xuất JSON với các khóa: fullName, idNumber, dateOfBirth(dd/mm/yyyy), gender(nam|nữ), nationality, address từ văn bản OCR sau:\n${joined}\nChỉ trả về JSON hợp lệ.`;
         const geminiText = await this.fileService.geminiParse(prompt);
         let obj: any = null;
         try {
@@ -185,7 +189,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         if (obj && typeof obj === 'object') {
           parsedData.fullName = obj.fullName || parsedData.fullName;
           parsedData.idNumber = obj.idNumber || parsedData.idNumber;
-          parsedData.gender = obj.gender || parsedData.gender;
+          const g = (obj.gender || '').toString().trim().toLowerCase();
+          if (g === 'nam' || g === 'nữ') {
+            parsedData.gender = g;
+          } else if (g === 'male') {
+            parsedData.gender = 'nam';
+          } else if (g === 'female') {
+            parsedData.gender = 'nữ';
+          }
           parsedData.nationality = obj.nationality || parsedData.nationality;
           parsedData.address = obj.address || parsedData.address;
           const gDob: string | undefined = obj.dateOfBirth;
@@ -478,19 +489,23 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           dateOfBirth: dobVal,
           gender: ((): string => {
             const fromServer = (aiResult?.gender || '').toLowerCase();
-            if (fromServer === 'male' || fromServer === 'female') return fromServer;
+            if (fromServer === 'nam' || fromServer === 'nữ') return fromServer;
+            if (fromServer === 'male') return 'nam';
+            if (fromServer === 'female') return 'nữ';
             const gr = this.extractGenderFromLines(lines);
             return gr || '';
           })(),
           nationality: aiResult?.nationality || 'Việt Nam',
           address: ((): string => {
+            const serverAddr = aiResult?.address || '';
+            if (serverAddr) return serverAddr;
             const ad = this.extractAddressFromLines(lines);
             return ad || '';
           })(),
           rawText: lines
         };
         if (this.useGemini) {
-          const prompt = `Hãy trích xuất JSON với các khóa: fullName, idNumber, dateOfBirth(dd/mm/yyyy), gender(male|female), nationality, address từ văn bản OCR sau:\n${joined}\nChỉ trả về JSON hợp lệ.`;
+          const prompt = `Hãy trích xuất JSON với các khóa: fullName, idNumber, dateOfBirth(dd/mm/yyyy), gender(nam|nữ), nationality, address từ văn bản OCR sau:\n${joined}\nChỉ trả về JSON hợp lệ.`;
           const geminiText = await this.fileService.geminiParse(prompt);
           let obj: any = null;
           try {
@@ -504,7 +519,14 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           if (obj && typeof obj === 'object') {
             parsedData.fullName = obj.fullName || parsedData.fullName;
             parsedData.idNumber = obj.idNumber || parsedData.idNumber;
-            parsedData.gender = obj.gender || parsedData.gender;
+            const g = (obj.gender || '').toString().trim().toLowerCase();
+            if (g === 'nam' || g === 'nữ') {
+              parsedData.gender = g;
+            } else if (g === 'male') {
+              parsedData.gender = 'nam';
+            } else if (g === 'female') {
+              parsedData.gender = 'nữ';
+            }
             parsedData.nationality = obj.nationality || parsedData.nationality;
             parsedData.address = obj.address || parsedData.address;
             const gDob: string | undefined = obj.dateOfBirth;
@@ -1029,16 +1051,16 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         console.log(`[OCR] Merge: Set dateOfBirth from ${data.side} (fileIndex=${data.fileIndex}): ${data.dateOfBirth}`);
       }
       
-      // Giới tính: lấy từ bất kỳ mặt nào, không ưu tiên mặt trước hay mặt sau
-      // Chỉ lấy nếu hợp lệ (male hoặc female)
-      if (data.gender && (data.gender === 'male' || data.gender === 'female')) {
-        // Nếu chưa có giới tính, lấy giới tính mới
-        if (!merged.gender) {
-          merged.gender = data.gender;
-          merged.genderSide = data.side; // Lưu side của giới tính để biết giới tính đến từ đâu
-          console.log(`[OCR] Merge: Set gender from ${data.side} (fileIndex=${data.fileIndex}): ${data.gender}`);
+      if (data.gender) {
+        const g = data.gender.toLowerCase();
+        const normalized = g === 'male' ? 'nam' : g === 'female' ? 'nữ' : g;
+        if (normalized === 'nam' || normalized === 'nữ') {
+          if (!merged.gender) {
+            merged.gender = normalized;
+            merged.genderSide = data.side;
+            console.log(`[OCR] Merge: Set gender from ${data.side} (fileIndex=${data.fileIndex}): ${normalized}`);
+          }
         }
-        // Nếu đã có giới tính, giữ nguyên (không thay thế)
       }
       
       // Quốc tịch: lấy từ bất kỳ mặt nào, không ưu tiên mặt trước hay mặt sau
@@ -1136,16 +1158,16 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     const norm = lines.map(l => (l || '').trim());
     const hasLabel = (s: string) => /(giới\s*tính|gioi\s*tinh|sex)/iu.test(s);
     for (const s of norm) {
-      if (hasLabel(s) && (/\bNữ\b/iu.test(s) || /\bNu\b/iu.test(s))) return 'female';
+      if (hasLabel(s) && (/\bNữ\b/iu.test(s) || /\bNu\b/iu.test(s))) return 'nữ';
     }
     for (const s of norm) {
-      if (hasLabel(s) && /\bNam\b/iu.test(s) && !/\bVi[eẹ]t\s+Nam\b/iu.test(s)) return 'male';
+      if (hasLabel(s) && /\bNam\b/iu.test(s) && !/\bVi[eẹ]t\s+Nam\b/iu.test(s)) return 'nam';
     }
     for (const s of norm) {
-      if (/\bNữ\b/iu.test(s) || /\bNu\b/iu.test(s)) return 'female';
+      if (/\bNữ\b/iu.test(s) || /\bNu\b/iu.test(s)) return 'nữ';
     }
     for (const s of norm) {
-      if (/\bNam\b/iu.test(s) && !/\bVi[eẹ]t\s+Nam\b/iu.test(s)) return 'male';
+      if (/\bNam\b/iu.test(s) && !/\bVi[eẹ]t\s+Nam\b/iu.test(s)) return 'nam';
     }
     return '';
   }
@@ -2152,12 +2174,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       if (genderInLine && genderInLine[1]) {
         const genderValue = genderInLine[1].trim().toLowerCase();
         if (/^nam$|^male$|^m$/.test(genderValue)) {
-          parsedData.gender = 'male';
+          parsedData.gender = 'nam';
           genderFound = true;
           console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
         } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-          parsedData.gender = 'female';
+          parsedData.gender = 'nữ';
           genderFound = true;
           console.log('Found gender (Pattern 1a):', parsedData.gender, 'from line:', line);
           break;
@@ -2170,12 +2192,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         if (genderInLineWithSlash && genderInLineWithSlash[1]) {
           const genderValue = genderInLineWithSlash[1].trim().toLowerCase();
           if (/^nam$|^male$|^m$/.test(genderValue)) {
-            parsedData.gender = 'male';
+            parsedData.gender = 'nam';
             genderFound = true;
             console.log('Found gender (Pattern 1a-1):', parsedData.gender, 'from line:', line);
             break;
           } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-            parsedData.gender = 'female';
+            parsedData.gender = 'nữ';
             genderFound = true;
             console.log('Found gender (Pattern 1a-1):', parsedData.gender, 'from line:', line);
             break;
@@ -2189,12 +2211,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         if (genderInLine2 && genderInLine2[1]) {
           const genderValue = genderInLine2[1].trim().toLowerCase();
           if (/^nam$|^male$|^m$/.test(genderValue)) {
-            parsedData.gender = 'male';
+            parsedData.gender = 'nam';
             genderFound = true;
             console.log('Found gender (Pattern 1a-2):', parsedData.gender, 'from line:', line);
             break;
           } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-            parsedData.gender = 'female';
+            parsedData.gender = 'nữ';
             genderFound = true;
             console.log('Found gender (Pattern 1a-2):', parsedData.gender, 'from line:', line);
             break;
@@ -2211,12 +2233,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         let genderValue = nextLine.replace(/\s*\/\s*Sex.*/i, '').trim().toLowerCase();
         
         if (/^nam$|^male$|^m$/.test(genderValue)) {
-          parsedData.gender = 'male';
+          parsedData.gender = 'nam';
           genderFound = true;
           console.log('Found gender (Pattern 1b):', parsedData.gender, 'from line:', nextLine);
           break;
         } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-          parsedData.gender = 'female';
+          parsedData.gender = 'nữ';
           genderFound = true;
           console.log('Found gender (Pattern 1b):', parsedData.gender, 'from line:', nextLine);
           break;
@@ -2234,11 +2256,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         // Loại bỏ các từ không phải giới tính (như "Nam" trong tên "Nguyễn Văn Nam")
         if (!/^(?:Họ|Tên|Full|name|Ngày|Date|Quốc|Nationality|Địa|Address)/i.test(genderMatch[0])) {
           if (/^nam$|^male$|^m$/.test(genderValue)) {
-            parsedData.gender = 'male';
+            parsedData.gender = 'nam';
             genderFound = true;
             console.log('Found gender (Pattern 2):', parsedData.gender);
           } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-            parsedData.gender = 'female';
+            parsedData.gender = 'nữ';
             genderFound = true;
             console.log('Found gender (Pattern 2):', parsedData.gender);
           }
@@ -2257,12 +2279,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           if (genderInSameLine && genderInSameLine[1]) {
             const genderValue = genderInSameLine[1].trim().toLowerCase();
             if (/^nam$|^male$|^m$/.test(genderValue)) {
-              parsedData.gender = 'male';
+              parsedData.gender = 'nam';
               genderFound = true;
               console.log('Found gender (Pattern 2b - same line):', parsedData.gender, 'from line:', line);
               break;
             } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-              parsedData.gender = 'female';
+              parsedData.gender = 'nữ';
               genderFound = true;
               console.log('Found gender (Pattern 2b - same line):', parsedData.gender, 'from line:', line);
               break;
@@ -2276,12 +2298,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
               if (genderInNextLine && genderInNextLine[1]) {
                 const genderValue = genderInNextLine[1].trim().toLowerCase();
                 if (/^nam$|^male$|^m$/.test(genderValue)) {
-                  parsedData.gender = 'male';
+                  parsedData.gender = 'nam';
                   genderFound = true;
                   console.log('Found gender (Pattern 2b - next line):', parsedData.gender, 'from line:', nextLine);
                   break;
                 } else if (/^nữ$|^nữ$|^female$|^f$/.test(genderValue)) {
-                  parsedData.gender = 'female';
+                  parsedData.gender = 'nữ';
                   genderFound = true;
                   console.log('Found gender (Pattern 2b - next line):', parsedData.gender, 'from line:', nextLine);
                   break;
@@ -2306,12 +2328,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
             const prevLine = lines[lineIndex - 1].toLowerCase();
             if (/giới tính|gioi tinh|gender|sex/i.test(prevLine)) {
               if (/^nam$|^male$|^m$/.test(cleanLine)) {
-                parsedData.gender = 'male';
+                parsedData.gender = 'nam';
                 genderFound = true;
                 console.log('Found gender (Pattern 3):', parsedData.gender, 'from line:', line);
                 break;
               } else if (/^nữ$|^nữ$|^female$|^f$/.test(cleanLine)) {
-                parsedData.gender = 'female';
+                parsedData.gender = 'nữ';
                 genderFound = true;
                 console.log('Found gender (Pattern 3):', parsedData.gender, 'from line:', line);
                 break;
@@ -2338,11 +2360,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         const genderInMRZ = secondMRZLine.match(/(\d{7})([MF])(\d{6}[A-Z]{3})/);
         if (genderInMRZ && genderInMRZ[2]) {
           if (genderInMRZ[2] === 'M') {
-            parsedData.gender = 'male';
+            parsedData.gender = 'nam';
             genderFound = true;
             console.log('Found gender (Pattern 4 - MRZ):', parsedData.gender, 'from MRZ:', secondMRZLine);
           } else if (genderInMRZ[2] === 'F') {
-            parsedData.gender = 'female';
+            parsedData.gender = 'nữ';
             genderFound = true;
             console.log('Found gender (Pattern 4 - MRZ):', parsedData.gender, 'from MRZ:', secondMRZLine);
           }
@@ -2358,12 +2380,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
             const genderInMRZLine = line.match(/(\d{7})([MF])(\d{6}[A-Z]{3})/);
             if (genderInMRZLine && genderInMRZLine[2]) {
               if (genderInMRZLine[2] === 'M') {
-                parsedData.gender = 'male';
+                parsedData.gender = 'nam';
                 genderFound = true;
                 console.log('Found gender (Pattern 4 - MRZ line):', parsedData.gender, 'from line:', line);
                 break;
               } else if (genderInMRZLine[2] === 'F') {
-                parsedData.gender = 'female';
+                parsedData.gender = 'nữ';
                 genderFound = true;
                 console.log('Found gender (Pattern 4 - MRZ line):', parsedData.gender, 'from line:', line);
                 break;
@@ -2374,12 +2396,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
               const simpleGenderMatch = line.match(/(\d+)([MF])(\d+[A-Z]+)/);
               if (simpleGenderMatch && simpleGenderMatch[2]) {
                 if (simpleGenderMatch[2] === 'M') {
-                  parsedData.gender = 'male';
+                  parsedData.gender = 'nam';
                   genderFound = true;
                   console.log('Found gender (Pattern 4 - MRZ simple):', parsedData.gender, 'from line:', line);
                   break;
                 } else if (simpleGenderMatch[2] === 'F') {
-                  parsedData.gender = 'female';
+                  parsedData.gender = 'nữ';
                   genderFound = true;
                   console.log('Found gender (Pattern 4 - MRZ simple):', parsedData.gender, 'from line:', line);
                   break;
@@ -2398,7 +2420,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         if (/^[A-Z0-9<]{20,}$/.test(mrz) && mrz.includes('VNM')) {
           const nearNationality = mrz.match(/([MF])(?=\d{6}VNM)/);
           if (nearNationality && nearNationality[1]) {
-            parsedData.gender = nearNationality[1] === 'M' ? 'male' : 'female';
+            parsedData.gender = nearNationality[1] === 'M' ? 'nam' : 'nữ';
             genderFound = true;
             console.log('Found gender (MRZ VNM-near):', parsedData.gender, 'from line:', line);
             break;
@@ -3463,10 +3485,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       if (data.dateOfBirth) {
         this.personalInfoFormGroup.patchValue({ dateOfBirth: data.dateOfBirth });
       }
-      // Điền giới tính nếu có (male hoặc female)
-      if (data.gender && (data.gender === 'male' || data.gender === 'female')) {
-        this.personalInfoFormGroup.patchValue({ gender: data.gender });
-        console.log('[OCR] Fill form: Set gender =', data.gender);
+      const genderRaw = (data.gender || '').toString().trim().toLowerCase();
+      const normalizedGender = genderRaw === 'nam' ? 'male' : genderRaw === 'nữ' ? 'female' : genderRaw === 'male' ? 'male' : genderRaw === 'female' ? 'female' : '';
+      if (normalizedGender) {
+        this.personalInfoFormGroup.patchValue({ gender: normalizedGender });
+        console.log('[OCR] Fill form: Set gender =', normalizedGender);
       } else {
         console.log('[OCR] Fill form: Gender not set, value =', data.gender);
       }

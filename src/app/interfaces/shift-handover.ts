@@ -270,6 +270,7 @@ export interface ShiftHandoverStats {
 export interface ShiftHandoverHistoryResponse {
     message: string;
     data: ShiftHandover[];
+    totalExpense: number;
     pagination: {
         currentPage: number;
         totalPages: number;
