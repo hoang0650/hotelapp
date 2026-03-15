@@ -964,33 +964,99 @@ export class GuestManagementComponent implements OnInit {
     return isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  // Xử lý khi OCR scan hoàn thành
-  onOCRScanComplete(ocrData: any): void {
-    if (!ocrData) return;
+ onOCRScanComplete(response: any): void {
+    console.log('[GuestSaveModal] Raw OCR response:', response);
 
-    const fullName = this.getOcrValue(ocrData, ['Họ tên', 'Họ và tên', 'fullName', 'name']);
-    const idNumber = this.getOcrValue(ocrData, ['Số ID', 'Số CCCD', 'idNumber', 'cccd']).replace(/\s+/g, '');
-    const nationality = this.getOcrValue(ocrData, ['Quốc tịch', 'nationality']) || 'Việt Nam';
-    const gender = this.normalizeOcrGender(this.getOcrValue(ocrData, ['Giới tính', 'gender']));
-    const dateOfBirth = this.parseOcrDate(this.getOcrValue(ocrData, ['Ngày sinh', 'dateOfBirth', 'dob']));
-    const street = this.getOcrValue(ocrData, ['Địa chỉ thường trú', 'Địa chỉ', 'address', 'Quê quán']);
+    if (!response) {
+      console.error('[GuestSaveModal] Dữ liệu trả về rỗng');
+      return;
+    }
 
-    this.personalInfoForm.patchValue({
-      fullName: fullName || this.personalInfoForm.get('fullName')?.value || '',
-      idNumber: idNumber || this.personalInfoForm.get('idNumber')?.value || '',
-      nationality: nationality || this.personalInfoForm.get('nationality')?.value || '',
-      gender: gender || this.personalInfoForm.get('gender')?.value || '',
-      dateOfBirth: dateOfBirth || this.personalInfoForm.get('dateOfBirth')?.value || null
-    });
+    // 1. Trích xuất ocrData linh hoạt cho mọi trường hợp emit
+    let ocrData: any = null;
+    let cardType = '';
 
-    if (street) {
-      this.addressForm.patchValue({
-        street,
-        country: nationality || this.addressForm.get('country')?.value || 'Việt Nam'
+    if (response.result && response.result.data) {
+      // Dạng 1: Có wrapper { success: true, result: { type: '...', data: {...} } }
+      ocrData = response.result.data;
+      cardType = response.result.type || '';
+    } else if (response.data) {
+      // Dạng 2: Truyền thẳng { type: '...', data: {...} } (Như trong ảnh console của bạn)
+      ocrData = response.data;
+      cardType = response.type || '';
+    } else {
+      // Fallback
+      ocrData = response;
+    }
+
+    if (!ocrData || Object.keys(ocrData).length === 0) {
+      console.error('[GuestSaveModal] Invalid OCR response format:', response);
+      this.message.error('Không tìm thấy thông tin hợp lệ từ ảnh scan');
+      return;
+    }
+
+    console.log('[GuestSaveModal] Processing OCR data fields:', Object.keys(ocrData));
+
+    // 2. Map dữ liệu từ tiếng Việt sang format của Angular Form
+    const mappedData = {
+      fullName: ocrData['Họ tên'] || ocrData['Họ và tên'] || '',
+      idNumber: ocrData['Số ID'] || ocrData['Số CCCD'] || '',
+      dob: ocrData['Ngày sinh'] || '',
+      gender: ocrData['Giới tính'] || '',
+      address: ocrData['Địa chỉ thường trú'] || ocrData['Địa chỉ'] || ocrData['Quê quán'] || '',
+      nationality: ocrData['Quốc tịch'] || 'Việt Nam'
+    };
+
+    // 3. Patch data vào personalInfoForm
+    if (this.personalInfoForm) {
+      const pForm = this.personalInfoForm;
+
+      if (mappedData.fullName) {
+        pForm.patchValue({ fullName: mappedData.fullName.trim() });
+      }
+
+      if (mappedData.idNumber) {
+        pForm.patchValue({ idNumber: mappedData.idNumber.replace(/\s+/g, '') });
+      }
+
+      if (mappedData.dob) {
+        const parsedDob = this.parseOcrDate(mappedData.dob);
+        pForm.patchValue({ birthday: parsedDob });
+      }
+
+      if (mappedData.gender) {
+        const g = mappedData.gender.toLowerCase();
+        let genderValue = '';
+        if (g.includes('nam') || g === 'male') genderValue = 'male';
+        else if (g.includes('nữ') || g.includes('nu') || g === 'female') genderValue = 'female';
+        
+        if (genderValue) {
+          pForm.patchValue({ gender: genderValue });
+        }
+      }
+
+      pForm.patchValue({ nationality: mappedData.nationality });
+    }
+
+    // 4. Patch data vào addressForm
+    if (this.addressForm && mappedData.address) {
+      let cleanAddress = mappedData.address.replace(/\s+/g, ' ').trim();
+      
+      const labelsToRemove = [/địa\s*chỉ\s*thường\s*trú:?/iu, /quê\s*quán:?/iu, /nơi\s*thường\s*trú:?/iu];
+      labelsToRemove.forEach(regex => {
+        cleanAddress = cleanAddress.replace(regex, '');
+      });
+
+      // Loại bỏ dấu phẩy rác ở đầu chuỗi (nếu có)
+      cleanAddress = cleanAddress.replace(/^[,.\s]+/, '');
+
+      this.addressForm.patchValue({ 
+        street: cleanAddress,
+        country: mappedData.nationality
       });
     }
 
-    this.message.success(this.translate.instant('GUEST_MANAGEMENT.OCR_SUCCESS'));
+    this.message.success(`Đã tự động điền thông tin từ ${cardType || 'AI'}. Vui lòng kiểm tra lại.`);
   }
 
   // Disable dates trước hôm nay cho check-in
