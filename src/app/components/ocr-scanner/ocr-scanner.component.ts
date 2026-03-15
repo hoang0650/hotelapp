@@ -246,7 +246,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     // TRƯỜNG HỢP 1: Có 2 ảnh (Mặt trước + Mặt sau)
     if (this.selectedFiles.length === 2) {
       this.ocrProgress = 50;
-      finalResult = await this.fileService.ocrTwoSides(
+      finalResult = await this.fileService.ocrCard(
         this.selectedFiles[0], 
         this.selectedFiles[1]
       );
@@ -254,7 +254,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     // TRƯỜNG HỢP 2: Chỉ có 1 ảnh
     else {
       this.ocrProgress = 30;
-      finalResult = await this.fileService.ocrSingleSide(this.selectedFiles[0]);
+      finalResult = await this.fileService.ocrWithPaddle(this.selectedFiles[0]);
     }
 
     if (finalResult && finalResult.success) {

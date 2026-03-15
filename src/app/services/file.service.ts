@@ -36,9 +36,9 @@ export class FileService {
   /**
  * Quét 1 mặt (CCCD mặt trước hoặc Passport)
  */
-async ocrSingleSide(file: File): Promise<any> {
+async ocrWithPaddle(file: File): Promise<any> {
   const formData = new FormData();
-  formData.append('file', file); // Backend mới dùng key là 'file'
+  formData.append('file', file); // FastAPI nhận key là 'file'
 
   try {
     const response = await firstValueFrom(
@@ -46,7 +46,7 @@ async ocrSingleSide(file: File): Promise<any> {
     );
     return response;
   } catch (error: any) {
-    console.error('OCR Single Side Error:', error);
+    console.error('OCR Error:', error);
     throw error;
   }
 }
@@ -54,7 +54,7 @@ async ocrSingleSide(file: File): Promise<any> {
  /**
  * Quét 2 mặt (CCCD/GPLX Mặt trước + Mặt sau)
  */
-async ocrTwoSides(front: File, back: File): Promise<any> {
+async ocrCard(front: File, back: File): Promise<any> {
   const formData = new FormData();
   formData.append('front', front); // Key 'front' khớp với FastAPI
   formData.append('back', back);   // Key 'back' khớp với FastAPI
@@ -65,7 +65,7 @@ async ocrTwoSides(front: File, back: File): Promise<any> {
     );
     return response;
   } catch (error: any) {
-    console.error('OCR Two Sides Error:', error);
+    console.error('OCR Card Error:', error);
     throw error;
   }
 }
