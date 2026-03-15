@@ -3388,39 +3388,54 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     });
   }
   
+  private getOcrSourceData(ocrData: any): Record<string, any> {
+    if (ocrData?.result?.data && typeof ocrData.result.data === 'object') {
+      return ocrData.result.data;
+    }
+    if (ocrData?.data && typeof ocrData.data === 'object') {
+      return ocrData.data;
+    }
+    return ocrData || {};
+  }
+
+  private getOcrValue(ocrData: any, keys: string[]): string {
+    const source = this.getOcrSourceData(ocrData);
+    for (const key of keys) {
+      const value = source?.[key] ?? ocrData?.[key];
+      if (value !== undefined && value !== null && `${value}`.trim() !== '') {
+        return `${value}`.trim();
+      }
+    }
+    return '';
+  }
+
   // Xử lý khi OCR scan hoàn thành
   onOCRScanComplete(ocrData: any): void {
     if (!ocrData || !this.checkOutForm) return;
-    
+
     const guestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
     if (!guestInfoFormGroup) return;
-    
-    // Điền thông tin từ OCR vào form
-    if (ocrData.idNumber) {
-      guestInfoFormGroup.patchValue({ idNumber: ocrData.idNumber });
+
+    const source = this.getOcrSourceData(ocrData);
+    const idNumber = this.getOcrValue(ocrData, ['Số ID', 'Số CCCD', 'idNumber', 'cccd']).replace(/\s+/g, '');
+    const fullName = this.getOcrValue(ocrData, ['Họ tên', 'Họ và tên', 'fullName', 'name']);
+    const fullNameLegacy = `${source?.['lastName'] || ocrData?.lastName || ''} ${source?.['firstName'] || ocrData?.firstName || ''}`.trim();
+    const phone = this.getOcrValue(ocrData, ['Số điện thoại', 'phone']);
+    const address = this.getOcrValue(ocrData, ['Địa chỉ thường trú', 'Địa chỉ', 'address', 'Quê quán']);
+
+    if (idNumber) {
+      guestInfoFormGroup.patchValue({ idNumber });
     }
-    
-    // Điền fullName
-    if (ocrData.fullName) {
-      guestInfoFormGroup.patchValue({ name: ocrData.fullName });
+    if (fullName || fullNameLegacy) {
+      guestInfoFormGroup.patchValue({ name: fullName || fullNameLegacy });
     }
-    
-    // Fallback: nếu có firstName/lastName từ OCR cũ
-    if (!ocrData.fullName && (ocrData.firstName || ocrData.lastName)) {
-      const fullName = `${ocrData.lastName || ''} ${ocrData.firstName || ''}`.trim();
-      if (fullName) {
-        guestInfoFormGroup.patchValue({ name: fullName });
-      }
+    if (phone) {
+      guestInfoFormGroup.patchValue({ phone });
     }
-    
-    if (ocrData.phone) {
-      guestInfoFormGroup.patchValue({ phone: ocrData.phone });
+    if (address) {
+      guestInfoFormGroup.patchValue({ address });
     }
-    
-    if (ocrData.address) {
-      guestInfoFormGroup.patchValue({ address: ocrData.address });
-    }
-    
+
     this.message.success('Đã tự động điền thông tin từ OCR. Vui lòng kiểm tra và chỉnh sửa nếu cần.');
   }
 

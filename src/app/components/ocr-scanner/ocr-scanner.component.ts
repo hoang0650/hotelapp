@@ -140,9 +140,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       const backProcessed = await this.preprocessImage(back);
       this.ocrStatus = 'Đang gửi hai ảnh lên AI để OCR...';
       const aiResult = await this.fileService.ocrCard(frontProcessed, backProcessed);
+      const payload = this.toScanCompletePayload(aiResult);
+      const backendData = payload?.result?.data || {};
       const lines = Array.isArray(aiResult?.rawText) ? aiResult.rawText : [];
       const joined = lines.join('\n');
-      const dobStr: string | undefined = aiResult?.dateOfBirth;
+      const dobStr: string | undefined = backendData['Ngày sinh'] || aiResult?.dateOfBirth;
       let dobVal: Date | null = null;
       if (dobStr && typeof dobStr === 'string') {
         const norm = dobStr.replace(/[\.\-\s]/g, '/').trim();
@@ -162,21 +164,21 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       const parsedData: any = {
         fullName: ((): string => {
           const fn = this.extractFullNameFromLines(lines);
-          return fn || (aiResult?.fullName || '');
+          return fn || backendData['Họ tên'] || backendData['Họ và tên'] || (aiResult?.fullName || '');
         })(),
-        idNumber: aiResult?.idNumber || '',
+        idNumber: backendData['Số ID'] || backendData['Số CCCD'] || aiResult?.idNumber || '',
         dateOfBirth: dobVal,
         gender: ((): string => {
-          const fromServer = (aiResult?.gender || '').toLowerCase();
+          const fromServer = (backendData['Giới tính'] || aiResult?.gender || '').toLowerCase();
           if (fromServer === 'nam' || fromServer === 'nữ') return fromServer;
           if (fromServer === 'male') return 'nam';
           if (fromServer === 'female') return 'nữ';
           const gr = this.extractGenderFromLines(lines);
           return gr || '';
         })(),
-        nationality: aiResult?.nationality || 'Việt Nam',
+        nationality: backendData['Quốc tịch'] || aiResult?.nationality || 'Việt Nam',
         address: ((): string => {
-          const serverAddr = aiResult?.address || '';
+          const serverAddr = backendData['Địa chỉ thường trú'] || backendData['Địa chỉ'] || backendData['Quê quán'] || aiResult?.address || '';
           if (serverAddr) return serverAddr;
           const ad = this.extractAddressFromLines(lines);
           return ad || '';
@@ -229,7 +231,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         }
       }
       this.message.success('Đã nhận dạng hai ảnh với /ocr-card!');
-      this.emitScanComplete(parsedData);
+      this.emitScanComplete(aiResult);
       this.fillFormFromOCRData(parsedData);
     } catch (error: any) {
       this.message.error(error?.message || 'Lỗi OCR hai ảnh');
@@ -272,8 +274,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       this.ocrProgress = 100;
       this.ocrStatus = 'Hoàn tất!';
       
-      // Map dữ liệu trả về vào Form (Dựa trên cấu trúc YOLO mới)
-      this.fillFormWithData(finalResult.data); 
+      this.fillFormWithData(finalResult);
       this.emitScanComplete(finalResult);
     }
 
@@ -289,9 +290,9 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
 
 // Hàm phụ để điền data vào form
 fillFormWithData(res: any) {
-  if (!this.formGroup || !res.info) return;
-  
-  const data = res.info;
+  if (!this.formGroup) return;
+  const data = res?.result?.data || res?.data || res?.info;
+  if (!data) return;
   // Ví dụ điền vào formGroup
   this.formGroup.patchValue({
     fullName: data['Họ tên'],

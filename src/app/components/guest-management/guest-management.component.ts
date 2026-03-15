@@ -917,12 +917,79 @@ export class GuestManagementComponent implements OnInit {
     return contactInfo?.get('address') as FormGroup;
   }
 
+  private getOcrSourceData(ocrData: any): Record<string, any> {
+    if (ocrData?.result?.data && typeof ocrData.result.data === 'object') {
+      return ocrData.result.data;
+    }
+    if (ocrData?.data && typeof ocrData.data === 'object') {
+      return ocrData.data;
+    }
+    return ocrData || {};
+  }
+
+  private getOcrValue(ocrData: any, keys: string[]): string {
+    const source = this.getOcrSourceData(ocrData);
+    for (const key of keys) {
+      const value = source?.[key] ?? ocrData?.[key];
+      if (value !== undefined && value !== null && `${value}`.trim() !== '') {
+        return `${value}`.trim();
+      }
+    }
+    return '';
+  }
+
+  private normalizeOcrGender(value: string): string {
+    const raw = (value || '').toLowerCase();
+    if (raw === 'male' || raw.includes('nam')) return 'male';
+    if (raw === 'female' || raw.includes('nữ') || raw === 'nu') return 'female';
+    if (raw === 'other' || raw.includes('khác')) return 'other';
+    return '';
+  }
+
+  private parseOcrDate(value: string): Date | null {
+    if (!value) return null;
+    const normalized = value.replace(/[\.\-\s]/g, '/').trim();
+    const parts = normalized.split('/');
+    if (parts.length === 3) {
+      const isYearFirst = parts[0].length === 4;
+      const day = parseInt(isYearFirst ? parts[2] : parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(isYearFirst ? parts[0] : parts[2], 10);
+      if (year >= 1900 && year <= 2100 && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+        const dt = new Date(year, month, day);
+        if (!isNaN(dt.getTime())) return dt;
+      }
+    }
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   // Xử lý khi OCR scan hoàn thành
   onOCRScanComplete(ocrData: any): void {
     if (!ocrData) return;
-    
-    // OCR scanner component đã tự động điền vào form thông qua Input bindings
-    // Nhưng có thể cần xử lý thêm logic nếu cần
+
+    const fullName = this.getOcrValue(ocrData, ['Họ tên', 'Họ và tên', 'fullName', 'name']);
+    const idNumber = this.getOcrValue(ocrData, ['Số ID', 'Số CCCD', 'idNumber', 'cccd']).replace(/\s+/g, '');
+    const nationality = this.getOcrValue(ocrData, ['Quốc tịch', 'nationality']) || 'Việt Nam';
+    const gender = this.normalizeOcrGender(this.getOcrValue(ocrData, ['Giới tính', 'gender']));
+    const dateOfBirth = this.parseOcrDate(this.getOcrValue(ocrData, ['Ngày sinh', 'dateOfBirth', 'dob']));
+    const street = this.getOcrValue(ocrData, ['Địa chỉ thường trú', 'Địa chỉ', 'address', 'Quê quán']);
+
+    this.personalInfoForm.patchValue({
+      fullName: fullName || this.personalInfoForm.get('fullName')?.value || '',
+      idNumber: idNumber || this.personalInfoForm.get('idNumber')?.value || '',
+      nationality: nationality || this.personalInfoForm.get('nationality')?.value || '',
+      gender: gender || this.personalInfoForm.get('gender')?.value || '',
+      dateOfBirth: dateOfBirth || this.personalInfoForm.get('dateOfBirth')?.value || null
+    });
+
+    if (street) {
+      this.addressForm.patchValue({
+        street,
+        country: nationality || this.addressForm.get('country')?.value || 'Việt Nam'
+      });
+    }
+
     this.message.success(this.translate.instant('GUEST_MANAGEMENT.OCR_SUCCESS'));
   }
 
