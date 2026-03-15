@@ -4,6 +4,17 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { createWorker, Worker, PSM } from 'tesseract.js';
 import { FileService } from '../../services/file.service';
 
+interface OcrBackendResult {
+  type?: string;
+  data?: Record<string, any>;
+}
+
+interface OcrScanCompletePayload {
+  success: boolean;
+  result: OcrBackendResult;
+  parsedData?: any;
+}
+
 @Component({
   selector: 'app-ocr-scanner',
   templateUrl: './ocr-scanner.component.html',
@@ -20,7 +31,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
   @Input() useExternalAI = true; // Sử dụng PaddleOCR service thay cho Tesseract
   @Input() useGemini = true;
   
-  @Output() scanComplete = new EventEmitter<any>(); // Emit khi scan xong với dữ liệu đã parse
+  @Output() scanComplete = new EventEmitter<OcrScanCompletePayload>(); // Emit khi scan xong với dữ liệu đã parse
   @Output() imageSelected = new EventEmitter<File>(); // Emit khi chọn ảnh
 
   selectedFiles: File[] = [];
@@ -218,7 +229,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
         }
       }
       this.message.success('Đã nhận dạng hai ảnh với /ocr-card!');
-      this.scanComplete.emit(parsedData);
+      this.emitScanComplete(parsedData);
       this.fillFormFromOCRData(parsedData);
     } catch (error: any) {
       this.message.error(error?.message || 'Lỗi OCR hai ảnh');
@@ -263,7 +274,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       
       // Map dữ liệu trả về vào Form (Dựa trên cấu trúc YOLO mới)
       this.fillFormWithData(finalResult.data); 
-      this.scanComplete.emit(finalResult.data);
+      this.emitScanComplete(finalResult);
     }
 
   } catch (error) {
@@ -290,6 +301,68 @@ fillFormWithData(res: any) {
     address: data['Địa chỉ thường trú'] || data['Địa chỉ']
   });
 }
+
+  private formatDateForOcrPayload(value: any): string {
+    if (!value) return '';
+    if (value instanceof Date) {
+      const day = `${value.getDate()}`.padStart(2, '0');
+      const month = `${value.getMonth() + 1}`.padStart(2, '0');
+      const year = value.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    if (typeof value === 'string') return value.trim();
+    return '';
+  }
+
+  private normalizeGenderForOcrPayload(value: any): string {
+    const raw = (value || '').toString().trim().toLowerCase();
+    if (raw.includes('nữ') || raw === 'nu' || raw === 'female') return 'Nữ';
+    if (raw.includes('nam') || raw === 'male') return 'Nam';
+    return '';
+  }
+
+  private buildOcrPayloadFromParsedData(data: any): OcrScanCompletePayload {
+    const mappedData: Record<string, any> = {
+      'Họ tên': (data?.fullName || data?.name || '').toString().trim(),
+      'Số ID': (data?.idNumber || data?.cccd || '').toString().replace(/\s+/g, ''),
+      'Ngày sinh': this.formatDateForOcrPayload(data?.dateOfBirth || data?.dob || data?.['Ngày sinh']),
+      'Giới tính': this.normalizeGenderForOcrPayload(data?.gender || data?.['Giới tính']),
+      'Quốc tịch': (data?.nationality || data?.['Quốc tịch'] || 'Việt Nam').toString().trim(),
+      'Địa chỉ thường trú': (data?.address || data?.['Địa chỉ thường trú'] || data?.['Địa chỉ'] || '').toString().trim()
+    };
+
+    return {
+      success: true,
+      result: {
+        type: (data?.type || data?.cardType || 'OCR').toString(),
+        data: mappedData
+      },
+      parsedData: data
+    };
+  }
+
+  private toScanCompletePayload(data: any): OcrScanCompletePayload {
+    if (data?.success === true && data?.result?.data) {
+      return data as OcrScanCompletePayload;
+    }
+
+    if (data?.success === true && data?.data) {
+      return {
+        success: true,
+        result: {
+          type: (data?.result?.type || data?.type || 'OCR').toString(),
+          data: data.data
+        },
+        parsedData: data?.parsedData
+      };
+    }
+
+    return this.buildOcrPayloadFromParsedData(data);
+  }
+
+  private emitScanComplete(data: any): void {
+    this.scanComplete.emit(this.toScanCompletePayload(data));
+  }
 
   /**
    * Pre-process ảnh trước OCR sử dụng backend (sharp)
@@ -595,12 +668,12 @@ fillFormWithData(res: any) {
           });
           const mergedData = this.mergeScannedData(sortedData);
           this.message.success(`Đã nhận dạng thành công ${this.selectedFiles.length} ảnh!`);
-          this.scanComplete.emit(mergedData);
+          this.emitScanComplete(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else if (!this.allowMultiple || this.selectedFiles.length === 1) {
           const mergedData = this.mergeScannedData([parsedData]);
           this.message.success('Đã nhận dạng văn bản thành công!');
-          this.scanComplete.emit(mergedData);
+          this.emitScanComplete(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else {
           const scannedCount = this.scannedData.filter(data => data !== null).length;
@@ -725,7 +798,7 @@ fillFormWithData(res: any) {
           const mergedData = this.mergeScannedData(sortedData);
           
           this.message.success(`Đã nhận dạng thành công ${this.selectedFiles.length} ${this.selectedFiles.length > 1 ? 'ảnh' : 'ảnh'}!`);
-          this.scanComplete.emit(mergedData);
+          this.emitScanComplete(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else if (!this.allowMultiple || this.selectedFiles.length === 1) {
           // Chỉ có 1 ảnh - vẫn sử dụng mergeScannedData để đảm bảo logic nhất quán
@@ -733,7 +806,7 @@ fillFormWithData(res: any) {
           const singleDataArray = [parsedData];
           const mergedData = this.mergeScannedData(singleDataArray);
           this.message.success('Đã nhận dạng văn bản thành công!');
-          this.scanComplete.emit(mergedData);
+          this.emitScanComplete(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else {
           // Đang xử lý ảnh tiếp theo
@@ -759,7 +832,7 @@ fillFormWithData(res: any) {
           const validScannedData = this.scannedData.filter(data => data !== null);
           if (validScannedData.length > 0) {
             const mergedData = this.mergeScannedData(validScannedData);
-            this.scanComplete.emit(mergedData);
+            this.emitScanComplete(mergedData);
             this.fillFormFromOCRData(mergedData);
           }
         }
