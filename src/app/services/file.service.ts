@@ -34,39 +34,41 @@ export class FileService {
   }
 
   /**
-   * OCR ảnh bằng PaddleOCR (PHGroup-AI FastAPI)
-   */
-  async ocrWithPaddle(file: File): Promise<any> {
-    const formData = new FormData();
-    formData.append('image', file);
-    try {
-      const response = await firstValueFrom(
-        this.http.post<any>(
-          `${this.aiUrl}/ocr`,
-          formData
-        )
-      );
-      return response;
-    } catch (error: any) {
-      console.error('Error calling PaddleOCR service:', error);
-      throw error;
-    }
-  }
+ * Quét 1 mặt (CCCD mặt trước hoặc Passport)
+ */
+async ocrSingleSide(file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file); // Backend mới dùng key là 'file'
 
-  async ocrCard(front: File | null, back: File | null): Promise<any> {
-    const formData = new FormData();
-    if (front) formData.append('front', front);
-    if (back) formData.append('back', back);
-    try {
-      const response = await firstValueFrom(
-        this.http.post<any>(`${this.aiUrl}/ocr-card`, formData)
-      );
-      return response;
-    } catch (error: any) {
-      console.error('Error calling OCR card service:', error);
-      throw error;
-    }
+  try {
+    const response = await firstValueFrom(
+      this.http.post<any>(`${this.aiUrl}/ocr`, formData)
+    );
+    return response;
+  } catch (error: any) {
+    console.error('OCR Single Side Error:', error);
+    throw error;
   }
+}
+
+ /**
+ * Quét 2 mặt (CCCD/GPLX Mặt trước + Mặt sau)
+ */
+async ocrTwoSides(front: File, back: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('front', front); // Key 'front' khớp với FastAPI
+  formData.append('back', back);   // Key 'back' khớp với FastAPI
+
+  try {
+    const response = await firstValueFrom(
+      this.http.post<any>(`${this.aiUrl}/ocr-card`, formData)
+    );
+    return response;
+  } catch (error: any) {
+    console.error('OCR Two Sides Error:', error);
+    throw error;
+  }
+}
 
   async geminiParse(prompt: string, tenantId: string = 'default'): Promise<string> {
     try {

@@ -233,38 +233,63 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
    * Xử lý queue scan tuần tự để đảm bảo thứ tự và tránh conflict
    * Đảm bảo: ảnh đầu tiên (index 0) = mặt trước, ảnh thứ hai (index 1) = mặt sau
    */
-  private async processScanningQueue(): Promise<void> {
-    // Tránh xử lý trùng
-    if (this.isProcessingQueue) {
-      return;
+  private async processScanningQueue() {
+  if (this.isProcessingQueue || this.scanningQueue.length === 0) return;
+  
+  this.isProcessingQueue = true;
+  this.isScanning = true;
+  this.ocrStatus = 'Đang nhận diện dữ liệu bằng AI...';
+
+  try {
+    let finalResult;
+
+    // TRƯỜNG HỢP 1: Có 2 ảnh (Mặt trước + Mặt sau)
+    if (this.selectedFiles.length === 2) {
+      this.ocrProgress = 50;
+      finalResult = await this.fileService.ocrTwoSides(
+        this.selectedFiles[0], 
+        this.selectedFiles[1]
+      );
+    } 
+    // TRƯỜNG HỢP 2: Chỉ có 1 ảnh
+    else {
+      this.ocrProgress = 30;
+      finalResult = await this.fileService.ocrSingleSide(this.selectedFiles[0]);
     }
-    
-    this.isProcessingQueue = true;
-    
-    try {
-      // Xử lý từng file một cách tuần tự theo đúng thứ tự trong queue
-      // Queue được tạo theo thứ tự upload: file đầu tiên = index 0 = mặt trước
-      while (this.scanningQueue.length > 0) {
-        // Lấy file đầu tiên trong queue với index đã được gán sẵn
-        const queueItem = this.scanningQueue.shift();
-        if (!queueItem || !queueItem.file) break;
-        
-        const { file, index: fileIndex } = queueItem;
-        const isFrontSide = fileIndex === 0;
-        
-        console.log(`[OCR] Xử lý ảnh: fileIndex=${fileIndex}, fileName=${file.name}, ${isFrontSide ? 'MẶT TRƯỚC' : 'MẶT SAU'}`);
-        
-        if (this.selectedFiles.length > 1) {
-          this.ocrStatus = `Đang xử lý ${isFrontSide ? 'mặt trước' : 'mặt sau'} (${fileIndex + 1}/${this.selectedFiles.length})...`;
-        }
-        
-        // Scan OCR cho file này với index chính xác (đã được gán từ queue)
-        await this.scanOCR(file, fileIndex);
-      }
-    } finally {
-      this.isProcessingQueue = false;
+
+    if (finalResult && finalResult.success) {
+      this.ocrProgress = 100;
+      this.ocrStatus = 'Hoàn tất!';
+      
+      // Map dữ liệu trả về vào Form (Dựa trên cấu trúc YOLO mới)
+      this.fillFormWithData(finalResult.data); 
+      this.scanComplete.emit(finalResult.data);
     }
+
+  } catch (error) {
+    this.message.error('Lỗi khi gọi dịch vụ OCR Railway');
+    this.ocrStatus = 'Lỗi kết nối AI';
+  } finally {
+    this.isProcessingQueue = false;
+    this.isScanning = false;
+    this.scanningQueue = [];
   }
+}
+
+// Hàm phụ để điền data vào form
+fillFormWithData(res: any) {
+  if (!this.formGroup || !res.info) return;
+  
+  const data = res.info;
+  // Ví dụ điền vào formGroup
+  this.formGroup.patchValue({
+    fullName: data['Họ tên'],
+    idNumber: data['Số ID'],
+    dob: data['Ngày sinh'],
+    gender: data['Giới tính'],
+    address: data['Địa chỉ thường trú'] || data['Địa chỉ']
+  });
+}
 
   /**
    * Pre-process ảnh trước OCR sử dụng backend (sharp)
