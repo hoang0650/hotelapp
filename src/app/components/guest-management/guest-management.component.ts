@@ -70,7 +70,7 @@ export class GuestManagementComponent implements OnInit {
         idExpiryDate: [null]
       }),
       contactInfo: this.fb.group({
-        email: ['', [Validators.email]],
+        email: [''],
         phone: [''],
         alternativePhone: [''],
         address: this.fb.group({
