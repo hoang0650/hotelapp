@@ -70,135 +70,97 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     return s;
   }
 
-  private parseDate(input: any): Date | null {
-    if (!input) return null;
-    if (input instanceof Date && !isNaN(input.getTime())) return input;
-    if (typeof input === 'string') {
-      const s = input.replace(/[\.\-\s]/g, '/').trim();
-      const parts = s.split('/');
-      if (parts.length === 3) {
-        const d = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        const y = parseInt(parts[2], 10);
-        if (y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-          const dt = new Date(y, m - 1, d);
-          if (!isNaN(dt.getTime())) return dt;
-        }
-      }
-    }
-    return null;
+  private parseDate(dateStr: string): any {
+  if (!dateStr) return null;
+  
+  // Xử lý các định dạng phổ biến: 15/05/1995 hoặc 15-05-1995 hoặc 15.05.1995
+  const cleanStr = dateStr.replace(/[-.]/g, '/');
+  const parts = cleanStr.split('/');
+  
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    
+    const date = new Date(year, month, day);
+    // Kiểm tra xem date có hợp lệ không
+    return isNaN(date.getTime()) ? dateStr : date;
+  }
+  return dateStr;
+}
+
+  onOCRScanComplete(response: any): void {
+    // 1. Kiểm tra và trích xuất dữ liệu từ cấu trúc mới của Backend
+  // Cấu trúc response: { success: true, result: { type: '...', data: { 'Họ tên': '...', ... } } }
+  if (!response || !response.success || !response.result) {
+    console.error('[GuestSaveModal] Invalid OCR response:', response);
+    return;
   }
 
-  onOCRScanComplete(ocrData: any): void {
-    if (!ocrData) return;
-    
-    console.log('[GuestSaveModal] OCR data received:', {
-      fullName: ocrData.fullName,
-      gender: ocrData.gender,
-      nationality: ocrData.nationality,
-      idNumber: ocrData.idNumber,
-      dateOfBirth: ocrData.dateOfBirth,
-      dateOfIssue: ocrData.dateOfIssue,
-      dateOfExpiry: ocrData.dateOfExpiry,
-      address: ocrData.address ? ocrData.address.substring(0, 50) + '...' : null
-    });
-    
-    const rawLines: string[] = Array.isArray(ocrData.rawText)
-      ? ocrData.rawText
-      : typeof ocrData.rawText === 'string'
-        ? ocrData.rawText.split(/\r?\n/)
-        : [];
-    const normLines = rawLines.map(l => (l || '').trim()).filter(l => l.length > 0);
-    let parsedFullName = '';
-    const serverName = typeof ocrData.fullName === 'string' ? String(ocrData.fullName).trim() : '';
-    if (this.isValidName(serverName) && !/khách\s*lẻ/i.test(serverName)) {
-      parsedFullName = serverName;
-    } else {
-      const nameLabelIdx = normLines.findIndex(l => /(họ\s*và\s*tên|ho\s*va\s*ten|full\s*name)/i.test(l));
-      if (nameLabelIdx >= 0) {
-        const line = normLines[nameLabelIdx];
-        const afterColon = line.split(':').slice(1).join(':').trim();
-        if (afterColon && !/^\d{9,12}$/.test(afterColon) && this.isValidName(afterColon)) {
-          parsedFullName = afterColon;
-        } else {
-          const next = normLines[nameLabelIdx + 1] || '';
-          if (next && !/^\d{9,12}$/.test(next) && this.isValidName(next)) {
-            parsedFullName = next;
-          }
-        }
-      }
-      if (!parsedFullName && this.isValidName(serverName)) {
-        parsedFullName = serverName;
+  const ocrData = response.result.data;
+  console.log('[GuestSaveModal] Processing OCR data fields:', Object.keys(ocrData));
+
+  // 2. Map dữ liệu từ key tiếng Việt sang Form
+  const mappedData = {
+    fullName: ocrData['Họ tên'] || '',
+    idNumber: ocrData['Số ID'] || '',
+    dob: ocrData['Ngày sinh'] || '',
+    gender: ocrData['Giới tính'] || '',
+    address: ocrData['Địa chỉ thường trú'] || ocrData['Địa chỉ'] || ocrData['Quê quán'] || '',
+    nationality: ocrData['Quốc tịch'] || 'Việt Nam'
+  };
+
+  // 3. Điền vào personalInfoForm
+  if (this.personalInfoForm) {
+    const pForm = this.personalInfoForm;
+
+    if (mappedData.fullName) {
+      pForm.patchValue({ fullName: mappedData.fullName.trim() });
+    }
+
+    if (mappedData.idNumber) {
+      // Loại bỏ khoảng trắng trong số ID/CCCD
+      pForm.patchValue({ idNumber: mappedData.idNumber.replace(/\s+/g, '') });
+    }
+
+    if (mappedData.dob) {
+      const parsedDob = this.parseDate(mappedData.dob);
+      pForm.patchValue({ birthday: parsedDob }); // Lưu ý field name là birthday hay dateOfBirth
+    }
+
+    if (mappedData.gender) {
+      const g = mappedData.gender.toLowerCase();
+      let genderValue = '';
+      if (g.includes('nam') || g === 'male') genderValue = 'male';
+      else if (g.includes('nữ') || g.includes('nu') || g === 'female') genderValue = 'female';
+      
+      if (genderValue) {
+        pForm.patchValue({ gender: genderValue });
       }
     }
-    if (parsedFullName) {
-      ocrData.fullName = parsedFullName;
-    }
-    
-    const addressValue = typeof ocrData.address === 'string' ? ocrData.address : '';
-    const serverAddress = addressValue;
-    const placeBirthRegex = /\bplace\s*(?:of|ot|o[ft])\s*birth\b/iu;
-    const vnBirthRegex = /(nơi\s*sinh|quê\s*quán|khai\s*sinh)/iu;
-    let cleanedAddress = addressValue.replace(placeBirthRegex, '').replace(vnBirthRegex, '');
-    const specificRemove = /Thù\s*Th(i|ị)êm,\s*TP\.\s*Th(ủ|ù)\s*Đ(ức|ửc),\s*TP\.\s*H(ồ|o)\s*Ch(i|í)\s*Minh/giu;
-    cleanedAddress = cleanedAddress.replace(specificRemove, '');
-    if (!cleanedAddress && serverAddress) {
-      cleanedAddress = serverAddress;
-    }
-    if (!cleanedAddress && normLines.length) {
-      cleanedAddress = this.buildAddressFromRaw(normLines);
-    }
-    cleanedAddress = cleanedAddress.replace(/\s+/g, ' ').trim();
-    if (cleanedAddress) {
-      ocrData.address = cleanedAddress;
-    }
-    
-    // Điền vào personalInfo
-    if (this.personalInfoForm) {
-      if (ocrData.fullName) {
-        this.personalInfoForm.patchValue({ fullName: ocrData.fullName });
-        console.log('[GuestSaveModal] Set fullName:', ocrData.fullName);
-      }
-      if (ocrData.dateOfBirth) {
-        const dob = this.parseDate(ocrData.dateOfBirth);
-        this.personalInfoForm.patchValue({ dateOfBirth: dob });
-        console.log('[GuestSaveModal] Set dateOfBirth:', dob);
-      }
-      if (ocrData.dateOfExpiry) {
-        const doe = this.parseDate(ocrData.dateOfExpiry);
-        this.personalInfoForm.patchValue({ idExpiryDate: doe });
-        console.log('[GuestSaveModal] Set idExpiryDate:', doe);
-      }
-      const genderRaw = (ocrData.gender || '').toString().trim().toLowerCase();
-      const normalizedGender = genderRaw === 'nam' ? 'male' : genderRaw === 'nữ' ? 'female' : genderRaw === 'male' ? 'male' : genderRaw === 'female' ? 'female' : '';
-      if (normalizedGender) {
-        this.personalInfoForm.patchValue({ gender: normalizedGender });
-        console.log('[GuestSaveModal] Set gender:', normalizedGender);
-      }
-      const nationality = ocrData.nationality || 'Việt Nam';
-      if (nationality) {
-        this.personalInfoForm.patchValue({ nationality });
-        console.log('[GuestSaveModal] Set nationality:', ocrData.nationality);
-      }
-      if (ocrData.idNumber) {
-        const idNumber = String(ocrData.idNumber).replace(/\s+/g, '').trim();
-        this.personalInfoForm.patchValue({ idNumber });
-        console.log('[GuestSaveModal] Set idNumber:', ocrData.idNumber);
-      }
-    }
-    
-    // Điền vào contactInfo
-    if (this.contactInfoForm) {
-      const addr = ocrData.address;
-      if (addr && this.addressForm) {
-        const street = String(addr).replace(/\s+/g, ' ').trim();
-        this.addressForm.patchValue({ street });
-        console.log('[GuestSaveModal] Set address:', addr.substring(0, 50) + '...');
-      }
-    }
-    
-    this.message.success('Đã tự động điền thông tin từ OCR. Vui lòng kiểm tra và chỉnh sửa nếu cần.');
+
+    pForm.patchValue({ nationality: mappedData.nationality });
   }
+
+  // 4. Điền vào contactInfo -> addressForm
+  if (this.addressForm && mappedData.address) {
+    // Xử lý làm sạch địa chỉ
+    let cleanAddress = mappedData.address.replace(/\s+/g, ' ').trim();
+    
+    // Xóa các nhãn thừa nếu VietOCR quét dính vào
+    const labelsToRemove = [/địa\s*chỉ\s*thường\s*trú:?/iu, /quê\s*quán:?/iu, /nơi\s*thường\s*trú:?/iu];
+    labelsToRemove.forEach(regex => {
+      cleanAddress = cleanAddress.replace(regex, '');
+    });
+
+    this.addressForm.patchValue({ 
+      street: cleanAddress.trim(),
+      country: mappedData.nationality
+    });
+  }
+
+  this.message.success('Đã tự động điền thông tin từ AI. Vui lòng kiểm tra lại.');
+}
 
   constructor(
     @Inject(NZ_MODAL_DATA) public data: { room: Room; guestInfo?: any; openWithOCR?: boolean },
