@@ -80,8 +80,10 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     return s;
   }
 
-  private parseDate(dateStr: string): any {
+  private parseDate(dateStr: any): any {
     if (!dateStr) return null;
+    if (dateStr instanceof Date) return dateStr;
+    if (typeof dateStr !== 'string') return dateStr;
 
     // Xử lý các định dạng phổ biến: 15/05/1995 hoặc 15-05-1995 hoặc 15.05.1995
     const cleanStr = dateStr.replace(/[-.]/g, '/');

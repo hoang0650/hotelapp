@@ -250,32 +250,17 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
   if (this.isProcessingQueue || this.scanningQueue.length === 0) return;
   
   this.isProcessingQueue = true;
-  this.isScanning = true;
-  this.ocrStatus = 'Đang nhận diện dữ liệu...';
-  this.ocrProgress = 20;
 
   try {
-    let finalResult: any;
-
-    if (this.selectedFiles.length >= 1) {
-       // API 1 mặt
-      finalResult = await this.fileService.ocrWithPaddle(this.selectedFiles[0]);     
-    } else {
-     // API 2 mặt
-      finalResult = await this.fileService.ocrCard(this.selectedFiles[0], this.selectedFiles[1]);
-    }
-
-    // Quan trọng: Đóng gói lại đúng cấu trúc để Modal parse được
-    if (finalResult) {
-      this.ocrProgress = 100;
-      this.message.success('Nhận diện thông tin thành công!');
-      this.emitScanComplete(finalResult); // Sử dụng hàm helper để đảm bảo cấu trúc
+    while (this.scanningQueue.length > 0) {
+      const next = this.scanningQueue.shift();
+      if (!next) break;
+      await this.scanOCR(next.file, next.index);
     }
   } catch (error: any) {
     this.message.error('Lỗi OCR: ' + (error.message || 'Không thể quét ảnh'));
   } finally {
     this.isProcessingQueue = false;
-    this.isScanning = false;
   }
 }
 
@@ -551,9 +536,10 @@ fillFormWithData(res: any) {
         const processedFile = await this.preprocessImage(file);
         this.ocrStatus = sideLabel ? `Đang gửi ảnh lên AI để OCR...` : 'Đang gửi ảnh lên AI để OCR...';
         const aiResult = await this.fileService.ocrWithPaddle(processedFile);
+        const backendData = aiResult?.data || aiResult?.result?.data || {};
         const lines = Array.isArray(aiResult?.rawText) ? aiResult.rawText : [];
         const joined = lines.join('\n');
-        const dobStr: string | undefined = aiResult?.dateOfBirth;
+        const dobStr: string | undefined = backendData['Ngày sinh'] || aiResult?.dateOfBirth;
         let dobVal: Date | null = null;
         if (dobStr && typeof dobStr === 'string') {
           const norm = dobStr.replace(/[\.\-\s]/g, '/').trim();
@@ -573,21 +559,26 @@ fillFormWithData(res: any) {
         const parsedData: any = {
           fullName: ((): string => {
             const fn = this.extractFullNameFromLines(lines);
-            return fn || '';
+            return fn
+              || backendData['Họ tên']
+              || backendData['Họ và tên']
+              || aiResult?.fullName
+              || aiResult?.name
+              || '';
           })(),
-          idNumber: aiResult?.idNumber || '',
+          idNumber: backendData['Số ID'] || backendData['Số CCCD'] || aiResult?.idNumber || aiResult?.cccd || '',
           dateOfBirth: dobVal,
           gender: ((): string => {
-            const fromServer = (aiResult?.gender || '').toLowerCase();
+            const fromServer = (backendData['Giới tính'] || aiResult?.gender || '').toLowerCase();
             if (fromServer === 'nam' || fromServer === 'nữ') return fromServer;
             if (fromServer === 'male') return 'nam';
             if (fromServer === 'female') return 'nữ';
             const gr = this.extractGenderFromLines(lines);
             return gr || '';
           })(),
-          nationality: aiResult?.nationality || 'Việt Nam',
+          nationality: backendData['Quốc tịch'] || aiResult?.nationality || 'Việt Nam',
           address: ((): string => {
-            const serverAddr = aiResult?.address || '';
+            const serverAddr = backendData['Địa chỉ thường trú'] || backendData['Địa chỉ'] || backendData['Quê quán'] || aiResult?.address || '';
             if (serverAddr) return serverAddr;
             const ad = this.extractAddressFromLines(lines);
             return ad || '';
