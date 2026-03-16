@@ -248,58 +248,35 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
    */
   private async processScanningQueue() {
   if (this.isProcessingQueue || this.scanningQueue.length === 0) return;
-    
-    this.isProcessingQueue = true;
-    this.isScanning = true;
-    this.ocrStatus = 'Đang nhận diện dữ liệu bằng AI...';
-    this.ocrProgress = 20;
+  
+  this.isProcessingQueue = true;
+  this.isScanning = true;
+  this.ocrStatus = 'Đang nhận diện dữ liệu...';
+  this.ocrProgress = 20;
 
-    try {
-      let finalResult: any;
+  try {
+    let finalResult: any;
 
-      // =======================================================
-      // TRƯỜNG HỢP 1: CÓ 2 ẢNH (Mặt trước + Mặt sau)
-      // =======================================================
-      if (this.selectedFiles.length >= 2) {
-        this.ocrProgress = 50;
-        finalResult = await this.fileService.ocrCard(
-          this.selectedFiles[0], 
-          this.selectedFiles[1]
-        );
-      } 
-      // =======================================================
-      // TRƯỜNG HỢP 2: CHỈ CÓ 1 ẢNH 
-      // =======================================================
-      else {
-        this.ocrProgress = 50;
-        // Gọi API 1 mặt và lấy thẳng Raw Data, KHÔNG map thủ công ở đây nữa
-        finalResult = await this.fileService.ocrWithPaddle(this.selectedFiles[0]);
-      }
-
-      // =======================================================
-      // EMIT KẾT QUẢ CHUNG CHO CẢ 1 VÀ 2 ẢNH
-      // =======================================================
-      // Chấp nhận mọi dạng dữ liệu trả về thành công
-      if (finalResult && (finalResult.success || finalResult.result || finalResult.data)) {
-        this.ocrProgress = 100;
-        this.ocrStatus = 'Hoàn tất!';
-        
-        // Truyền thẳng kết quả nguyên bản sang GuestSaveModal để nó tự xử lý
-        this.scanComplete.emit(finalResult); 
-        this.message.success('Nhận diện thông tin thành công!');
-      } else {
-        throw new Error(finalResult?.error || 'Không nhận diện được thông tin hợp lệ');
-      }
-
-    } catch (error: any) {
-      console.error('OCR Process Error:', error);
-      this.message.error('Lỗi AI: ' + (error.message || 'Không thể kết nối server'));
-      this.ocrStatus = 'Lỗi nhận diện';
-    } finally {
-      this.isProcessingQueue = false;
-      this.isScanning = false;
-      this.scanningQueue = [];
+    if (this.selectedFiles.length >= 2) {
+      // API 2 mặt
+      finalResult = await this.fileService.ocrCard(this.selectedFiles[0], this.selectedFiles[1]);
+    } else {
+      // API 1 mặt
+      finalResult = await this.fileService.ocrWithPaddle(this.selectedFiles[0]);
     }
+
+    // Quan trọng: Đóng gói lại đúng cấu trúc để Modal parse được
+    if (finalResult) {
+      this.ocrProgress = 100;
+      this.message.success('Nhận diện thông tin thành công!');
+      this.emitScanComplete(finalResult); // Sử dụng hàm helper để đảm bảo cấu trúc
+    }
+  } catch (error: any) {
+    this.message.error('Lỗi OCR: ' + (error.message || 'Không thể quét ảnh'));
+  } finally {
+    this.isProcessingQueue = false;
+    this.isScanning = false;
+  }
 }
 
 // Hàm phụ để điền data vào form
