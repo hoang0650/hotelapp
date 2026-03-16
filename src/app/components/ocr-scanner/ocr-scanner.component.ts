@@ -257,12 +257,12 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
   try {
     let finalResult: any;
 
-    if (this.selectedFiles.length >= 2) {
-      // API 2 mặt
-      finalResult = await this.fileService.ocrCard(this.selectedFiles[0], this.selectedFiles[1]);
+    if (this.selectedFiles.length >= 1) {
+       // API 1 mặt
+      finalResult = await this.fileService.ocrWithPaddle(this.selectedFiles[0]);     
     } else {
-      // API 1 mặt
-      finalResult = await this.fileService.ocrWithPaddle(this.selectedFiles[0]);
+     // API 2 mặt
+      finalResult = await this.fileService.ocrCard(this.selectedFiles[0], this.selectedFiles[1]);
     }
 
     // Quan trọng: Đóng gói lại đúng cấu trúc để Modal parse được
