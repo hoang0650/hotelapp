@@ -133,21 +133,10 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
   onOCRScanComplete(response: OcrScanPayload | any): void {
     if (!response) return;
 
-    // 1. Gỡ bọc (Unwrap) dữ liệu linh hoạt cho cả 1 ảnh và 2 ảnh
-    let ocrData: any = null;
-    let cardType = '';
-
-    if (response.result && response.result.data) {
-      ocrData = response.result.data; // Cấu trúc chuẩn của server.py mới
-      cardType = response.result.type || '';
-    } else if (response.data && response.data.data) {
-      ocrData = response.data.data;
-    } else if (response.data) {
-      ocrData = response.data; // Cấu trúc nếu trả về trực tiếp
-      cardType = response.type || '';
-    } else {
-      ocrData = response;
-    }
+    const extracted = this.extractOcrData(response);
+    const ocrData: any = extracted?.ocrData || null;
+    const parsedData = extracted?.parsedData || null;
+    const cardType = response?.result?.type || response?.type || '';
 
     if (!ocrData || Object.keys(ocrData).length === 0) {
       this.message.error('Không tìm thấy dữ liệu văn bản trên ảnh.');
@@ -158,11 +147,15 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     const mappedData = {
       fullName: ocrData['Họ tên'] || ocrData['Họ và tên'] || ocrData.fullName || ocrData.name || '',
       idNumber: ocrData['Số ID'] || ocrData['Số CCCD'] || ocrData.idNumber || ocrData.id || '',
-      dob: ocrData['Ngày sinh'] || ocrData.dateOfBirth || ocrData.dob || '',
+      dob: ocrData['Ngày sinh'] || ocrData.dateOfBirth || ocrData.dob || parsedData?.dateOfBirth || '',
       gender: ocrData['Giới tính'] || ocrData.gender || ocrData.sex || '',
       address: ocrData['Địa chỉ thường trú'] || ocrData['Địa chỉ'] || ocrData['Quê quán'] || ocrData.address || '',
       nationality: ocrData['Quốc tịch'] || ocrData.nationality || 'Việt Nam'
     };
+
+    if (!mappedData.address && Array.isArray(parsedData?.rawText)) {
+      mappedData.address = this.buildAddressFromRaw(parsedData.rawText);
+    }
 
     // 3. Patch vào Form
     if (this.personalInfoForm) {
@@ -173,7 +166,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       if (mappedData.nationality) pForm.patchValue({ nationality: mappedData.nationality });
 
       if (mappedData.dob) {
-        pForm.patchValue({ birthday: this.parseDate(mappedData.dob) });
+        pForm.patchValue({ dateOfBirth: this.parseDate(mappedData.dob) });
       }
 
       if (mappedData.gender) {
