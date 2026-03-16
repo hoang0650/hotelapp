@@ -81,23 +81,23 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
   }
 
   private parseDate(dateStr: string): any {
-  if (!dateStr) return null;
-  
-  // Xử lý các định dạng phổ biến: 15/05/1995 hoặc 15-05-1995 hoặc 15.05.1995
-  const cleanStr = dateStr.replace(/[-.]/g, '/');
-  const parts = cleanStr.split('/');
-  
-  if (parts.length === 3) {
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
-    
-    const date = new Date(year, month, day);
-    // Kiểm tra xem date có hợp lệ không
-    return isNaN(date.getTime()) ? dateStr : date;
+    if (!dateStr) return null;
+
+    // Xử lý các định dạng phổ biến: 15/05/1995 hoặc 15-05-1995 hoặc 15.05.1995
+    const cleanStr = dateStr.replace(/[-.]/g, '/');
+    const parts = cleanStr.split('/');
+
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+
+      const date = new Date(year, month, day);
+      // Kiểm tra xem date có hợp lệ không
+      return isNaN(date.getTime()) ? dateStr : date;
+    }
+    return dateStr;
   }
-  return dateStr;
-}
 
   private extractOcrData(response: OcrScanPayload | any): { ocrData: Record<string, any>; parsedData: any } | null {
     if (response?.result?.data && typeof response.result.data === 'object') {
@@ -131,67 +131,78 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
   }
 
   onOCRScanComplete(response: OcrScanPayload | any): void {
-    const extracted = this.extractOcrData(response);
-    if (!extracted) {
-      console.warn('[GuestSaveModal] Invalid OCR response:', response);
+    if (!response) return;
+
+    // 1. Gỡ bọc (Unwrap) dữ liệu linh hoạt cho cả 1 ảnh và 2 ảnh
+    let ocrData: any = null;
+    let cardType = '';
+
+    if (response.result && response.result.data) {
+      ocrData = response.result.data; // Cấu trúc chuẩn của server.py mới
+      cardType = response.result.type || '';
+    } else if (response.data && response.data.data) {
+      ocrData = response.data.data;
+    } else if (response.data) {
+      ocrData = response.data; // Cấu trúc nếu trả về trực tiếp
+      cardType = response.type || '';
+    } else {
+      ocrData = response;
+    }
+
+    if (!ocrData || Object.keys(ocrData).length === 0) {
+      this.message.error('Không tìm thấy dữ liệu văn bản trên ảnh.');
       return;
     }
 
-    const { ocrData, parsedData } = extracted;
-    const fallbackAddress = Array.isArray(parsedData?.rawText) ? this.buildAddressFromRaw(parsedData.rawText) : '';
+    // 2. Map dữ liệu (Bao phủ cả Tiếng Việt và Tiếng Anh)
     const mappedData = {
-      fullName: (ocrData['Họ tên'] || ocrData['Họ và tên'] || ocrData['fullName'] || '').toString().trim(),
-      idNumber: (ocrData['Số ID'] || ocrData['Số CCCD'] || ocrData['idNumber'] || '').toString(),
-      dob: ocrData['Ngày sinh'] || ocrData['dateOfBirth'] || '',
-      gender: (ocrData['Giới tính'] || ocrData['gender'] || '').toString(),
-      address: (ocrData['Địa chỉ thường trú'] || ocrData['Địa chỉ'] || ocrData['Quê quán'] || fallbackAddress || '').toString(),
-      nationality: (ocrData['Quốc tịch'] || ocrData['nationality'] || 'Việt Nam').toString()
+      fullName: ocrData['Họ tên'] || ocrData['Họ và tên'] || ocrData.fullName || ocrData.name || '',
+      idNumber: ocrData['Số ID'] || ocrData['Số CCCD'] || ocrData.idNumber || ocrData.id || '',
+      dob: ocrData['Ngày sinh'] || ocrData.dateOfBirth || ocrData.dob || '',
+      gender: ocrData['Giới tính'] || ocrData.gender || ocrData.sex || '',
+      address: ocrData['Địa chỉ thường trú'] || ocrData['Địa chỉ'] || ocrData['Quê quán'] || ocrData.address || '',
+      nationality: ocrData['Quốc tịch'] || ocrData.nationality || 'Việt Nam'
     };
 
+    // 3. Patch vào Form
     if (this.personalInfoForm) {
       const pForm = this.personalInfoForm;
-      if (mappedData.fullName && this.isValidName(mappedData.fullName)) {
-        pForm.patchValue({ fullName: mappedData.fullName });
-      }
 
-      if (mappedData.idNumber) {
-        pForm.patchValue({ idNumber: mappedData.idNumber.replace(/\s+/g, '') });
-      }
+      if (mappedData.fullName) pForm.patchValue({ fullName: mappedData.fullName.trim() });
+      if (mappedData.idNumber) pForm.patchValue({ idNumber: mappedData.idNumber.replace(/\s+/g, '') });
+      if (mappedData.nationality) pForm.patchValue({ nationality: mappedData.nationality });
 
       if (mappedData.dob) {
-        const parsedDob = this.parseDate(mappedData.dob.toString());
-        pForm.patchValue({ dateOfBirth: parsedDob });
+        pForm.patchValue({ birthday: this.parseDate(mappedData.dob) });
       }
 
       if (mappedData.gender) {
         const g = mappedData.gender.toLowerCase();
         let genderValue = '';
-        if (g.includes('nam') || g === 'male') genderValue = 'nam';
-        else if (g.includes('nữ') || g.includes('nu') || g === 'female') genderValue = 'nữ';
-        if (genderValue) {
-          pForm.patchValue({ gender: genderValue });
-        }
+        if (g.includes('nam') || g === 'male') genderValue = 'male';
+        else if (g.includes('nữ') || g.includes('nu') || g === 'female') genderValue = 'female';
+        if (genderValue) pForm.patchValue({ gender: genderValue });
       }
-
-      pForm.patchValue({ nationality: mappedData.nationality || 'Việt Nam' });
     }
 
-    if (this.addressForm) {
+    // 4. Patch Địa chỉ
+    if (this.addressForm && mappedData.address) {
       let cleanAddress = mappedData.address.replace(/\s+/g, ' ').trim();
+
       const labelsToRemove = [/địa\s*chỉ\s*thường\s*trú:?/iu, /quê\s*quán:?/iu, /nơi\s*thường\s*trú:?/iu];
       labelsToRemove.forEach(regex => {
         cleanAddress = cleanAddress.replace(regex, '');
       });
 
-      if (cleanAddress) {
-        this.addressForm.patchValue({
-          street: cleanAddress.trim(),
-          country: mappedData.nationality || 'Việt Nam'
-        });
-      }
+      cleanAddress = cleanAddress.replace(/^[,.\s]+/, '');
+
+      this.addressForm.patchValue({
+        street: cleanAddress,
+        country: mappedData.nationality
+      });
     }
 
-    this.message.success('Đã tự động điền thông tin từ AI. Vui lòng kiểm tra lại.');
+    this.message.success(`Đã tự động điền thông tin ${cardType ? 'từ ' + cardType : ''}.`);
   }
 
   constructor(
@@ -211,7 +222,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.initForm();
     this.loadGuests();
-    
+
     // Nếu có guestInfo từ room, điền vào form
     if (this.data.guestInfo) {
       this.fillFormFromGuestInfo(this.data.guestInfo);
@@ -265,29 +276,29 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
 
   fillFormFromGuestInfo(guestInfo: any): void {
     if (!guestInfo) return;
-    
+
     const personalInfo = this.guestForm.get('personalInfo') as FormGroup;
     const contactInfo = this.guestForm.get('contactInfo') as FormGroup;
-    
+
     // Điền fullName từ guestInfo.name
     if (guestInfo.name) {
       personalInfo.patchValue({
         fullName: guestInfo.name
       });
     }
-    
+
     if (guestInfo.phone) {
       contactInfo.patchValue({ phone: guestInfo.phone });
     }
-    
+
     if (guestInfo.email) {
       contactInfo.patchValue({ email: guestInfo.email });
     }
-    
+
     if (guestInfo.idNumber) {
       personalInfo.patchValue({ idNumber: guestInfo.idNumber });
     }
-    
+
     if (guestInfo.address) {
       const addressGroup = contactInfo.get('address') as FormGroup;
       addressGroup.patchValue({
@@ -298,7 +309,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         postalCode: guestInfo.address.postalCode || ''
       });
     }
-    
+
     if (guestInfo.notes) {
       this.guestForm.patchValue({ notes: guestInfo.notes });
     }
@@ -306,7 +317,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
 
   loadGuests(): void {
     if (!this.room.hotelId) return;
-    
+
     this.isLoading = true;
     this.guestsService.getGuests({
       hotelId: this.room.hotelId,
@@ -332,17 +343,17 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
   selectGuest(guest: Guest): void {
     this.selectedGuestId = guest._id!;
     this.showGuestList = false;
-    
+
     // Điền form với thông tin khách đã chọn
     const personalInfo = this.guestForm.get('personalInfo') as FormGroup;
     const contactInfo = this.guestForm.get('contactInfo') as FormGroup;
-    
+
     if (guest.personalInfo) {
-      const fullName = guest.personalInfo.fullName || 
-                       (guest.personalInfo.firstName && guest.personalInfo.lastName 
-                         ? `${guest.personalInfo.firstName} ${guest.personalInfo.lastName}`.trim()
-                         : guest.personalInfo.firstName || guest.personalInfo.lastName || '');
-      
+      const fullName = guest.personalInfo.fullName ||
+        (guest.personalInfo.firstName && guest.personalInfo.lastName
+          ? `${guest.personalInfo.firstName} ${guest.personalInfo.lastName}`.trim()
+          : guest.personalInfo.firstName || guest.personalInfo.lastName || '');
+
       personalInfo.patchValue({
         fullName: fullName,
         dateOfBirth: guest.personalInfo.dateOfBirth ? new Date(guest.personalInfo.dateOfBirth) : null,
@@ -353,14 +364,14 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         idExpiryDate: guest.personalInfo.idExpiryDate ? new Date(guest.personalInfo.idExpiryDate) : null
       });
     }
-    
+
     if (guest.contactInfo) {
       contactInfo.patchValue({
         email: guest.contactInfo.email || '',
         phone: guest.contactInfo.phone || '',
         alternativePhone: guest.contactInfo.alternativePhone || ''
       });
-      
+
       if (guest.contactInfo.address) {
         const addressGroup = contactInfo.get('address') as FormGroup;
         addressGroup.patchValue({
@@ -372,11 +383,11 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
         });
       }
     }
-    
+
     if (guest.guestType) {
       this.guestForm.patchValue({ guestType: guest.guestType });
     }
-    
+
     if (guest.notes) {
       this.guestForm.patchValue({ notes: guest.notes });
     }
@@ -402,9 +413,9 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
 
   assignGuestToRoom(): void {
     if (!this.selectedGuestId) return;
-    
+
     this.isLoading = true;
-    
+
     // Lấy thông tin khách để cập nhật vào phòng
     this.guestsService.getGuestById(this.selectedGuestId).subscribe({
       next: (guest) => {
@@ -420,7 +431,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
           addressParts.push(guest.contactInfo.address.state);
         }
         const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '';
-        
+
         const guestInfo = {
           name: this.getGuestName(guest),
           phone: guest.contactInfo?.phone || '',
@@ -429,7 +440,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
           address: fullAddress,
           guestSource: 'walkin' // Sử dụng 'walkin' vì khách được quản lý từ hệ thống guest management, enum values: ['walkin', 'booking', 'agoda', 'traveloka', 'expedia', 'trip', 'g2j', 'other']
         };
-        
+
         console.log('[GuestSaveModal] Assigning existing guest to room:', {
           roomId: this.room._id,
           guestId: this.selectedGuestId,
@@ -477,7 +488,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       }
     });
   }
-  
+
   getGuestName(guest: Guest): string {
     if (guest.personalInfo?.fullName) {
       return guest.personalInfo.fullName;
@@ -495,10 +506,10 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
-    
+
     this.isLoading = true;
     const formValue = this.guestForm.value;
-    
+
     console.log('[GuestSaveModal] Saving guest with form data:', {
       fullName: formValue.personalInfo?.fullName,
       gender: formValue.personalInfo?.gender,
@@ -508,7 +519,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       phone: formValue.contactInfo?.phone,
       address: formValue.contactInfo?.address
     });
-    
+
     // Chuẩn bị dữ liệu gửi lên backend (giống như guest-management)
     const guestData: Partial<Guest> = {
       hotelId: formValue.hotelId,
@@ -531,14 +542,14 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       preferences: formValue.preferences || {},
       notes: formValue.notes || ''
     };
-    
+
     // Upload ảnh CCCD/GPLX nếu có (sẽ xử lý sau)
-    
+
     this.guestsService.createGuest(guestData).subscribe({
       next: (response) => {
         console.log('[GuestSaveModal] Guest created successfully:', response.guest._id);
         this.message.success('Lưu thông tin khách thành công');
-        
+
         if (response.guest._id) {
           // Lấy địa chỉ đầy đủ từ form
           const addressParts: string[] = [];
@@ -552,7 +563,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
             addressParts.push(formValue.contactInfo.address.state);
           }
           const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '';
-          
+
           const guestInfo = {
             name: formValue.personalInfo?.fullName || 'Khách lẻ',
             phone: formValue.contactInfo?.phone || '',
@@ -561,7 +572,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
             address: fullAddress,
             guestSource: 'walkin' // Sử dụng 'walkin' vì khách được quản lý từ hệ thống guest management, enum values: ['walkin', 'booking', 'agoda', 'traveloka', 'expedia', 'trip', 'g2j', 'other']
           };
-          
+
           console.log('[GuestSaveModal] Assigning guest to room:', {
             roomId: this.room._id,
             guestInfo: guestInfo
