@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 // Interface cho sản phẩm (Dataset)
 export interface Product {
@@ -51,7 +52,7 @@ export class AiAssistantService {
   // URL tới Backend nội bộ (NodeJS/Java...) - Nơi lưu lịch sử chat nội bộ
   private apiUrl = environment.apiUrl; 
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private authService: AuthService) {
     // Load lịch sử chat nội bộ khi khởi tạo (nếu cần)
     this.loadChatHistory();
   }
@@ -223,10 +224,20 @@ export class AiAssistantService {
     };
     this.addMessage(userMessage);
     this.isTyping.next(true);
+    const currentUser = this.authService.getCurrentUser();
+    const userRole = currentUser?.role || null;
+    const userId = currentUser?._id || null;
+    const userToken = this.authService.getToken();
 
     try {
       const response = await firstValueFrom(
-        this.http.post<any>(`${this.aiUrl}/chat`, { tenant_id: tenantId, question })
+        this.http.post<any>(`${this.aiUrl}/chat`, { 
+          tenant_id: tenantId, 
+          question,
+          user_role: userRole,
+          user_id: userId,
+          user_token: userToken
+        })
       );
       const answerText = response?.answer || 'Xin lỗi, tôi chưa có dữ liệu để tư vấn.';
       

@@ -32,6 +32,13 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   selectedFileType?: string;
   selectedFilePreview?: string;
   selectedFileName?: string;
+  revenueQuickActions = [
+    { label: 'Doanh thu hôm nay', query: 'Doanh thu hôm nay' },
+    { label: 'Doanh thu hôm qua', query: 'Doanh thu hôm qua' },
+    { label: 'Doanh thu tuần này', query: 'Doanh thu tuần này' },
+    { label: 'Doanh thu tháng này', query: 'Doanh thu tháng này' },
+    { label: 'Doanh thu năm nay', query: 'Doanh thu năm nay' }
+  ];
   
   // Kiểm tra tính năng AI Chatbox
   canUseAiChatbox: boolean = true; // Mặc định cho phép
@@ -202,6 +209,13 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       await this.aiService.sendMessageExternal(content, tenantId);
     }
     this.removeSelectedFile();
+  }
+
+  async sendQuickMessage(content: string) {
+    const message = content.trim();
+    if (!message || this.isTyping) return;
+    const tenantId = this.getTenantIdForAI();
+    await this.aiService.sendMessageExternal(message, tenantId);
   }
 
   toggleMinimize() {

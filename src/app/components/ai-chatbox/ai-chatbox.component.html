@@ -66,6 +66,19 @@
         </button>
       </div>
     </div>
+    <div class="ai-chatbox-quick-actions">
+      <button
+        nz-button
+        nzSize="small"
+        nzType="default"
+        class="quick-action-btn"
+        *ngFor="let action of revenueQuickActions"
+        (click)="sendQuickMessage(action.query)"
+        [disabled]="isTyping"
+      >
+        {{ action.label }}
+      </button>
+    </div>
     <div class="ai-chatbox-input">
       <nz-upload
         [nzShowUploadList]="false"
