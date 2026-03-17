@@ -21,6 +21,7 @@ import { AuthService } from '../../services/auth.service';
 import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { TransactionService } from '../../services/transaction.service';
+import { environment } from '../../../environments/environment';
 
 // Interface cho dữ liệu cập nhật phòng
 interface RoomUpdate {
@@ -2654,53 +2655,28 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     try {
       console.log('[playPaymentSuccessSound] Bắt đầu phát thông báo, số tiền:', amount);
       const roundedAmount = Math.round(amount);
-      const formattedAmount = roundedAmount.toString();
+      const formattedAmount = roundedAmount.toLocaleString('vi-VN');
       const message = `Thanh toán thành công số tiền ${formattedAmount} đồng`;
       console.log('[playPaymentSuccessSound] Nội dung thông báo:', message);
 
-      this.sepayService.generatePaymentSound({
-        message: message,
-        speed: -1,
-        voice: 'banmai',
-        format: 'mp3'
-      }).subscribe({
-        next: (response) => {
-          console.log('[playPaymentSuccessSound] FPT.AI TTS response:', response);
-          const asyncUrl = response && response.async;
-          if (!asyncUrl) {
-            console.warn('[playPaymentSuccessSound] Không tìm thấy async URL trong response');
-            return;
+      const ttsUrl = `${environment.aiUrl}/tts?text=${encodeURIComponent(message)}`;
+      this.http.get(ttsUrl, { responseType: 'blob' as 'json' }).subscribe({
+        next: (audioBlob: any) => {
+          const blob = audioBlob as Blob;
+          const audioUrl = URL.createObjectURL(blob);
+          const audio = new Audio();
+          audio.src = audioUrl;
+          audio.onended = () => URL.revokeObjectURL(audioUrl);
+          audio.onerror = () => URL.revokeObjectURL(audioUrl);
+          const playPromise = audio.play();
+          if (playPromise && typeof (playPromise as any).catch === 'function') {
+            (playPromise as Promise<void>).catch((err) => {
+              console.error('Audio play error:', err);
+            });
           }
-
-          let attempts = 0;
-          const maxAttempts = 12;
-          const checkAudioAvailability = setInterval(() => {
-            attempts += 1;
-            const src = `${asyncUrl}?t=${Date.now()}`;
-            const audio = new Audio();
-            audio.src = src;
-            audio.oncanplaythrough = () => {
-              clearInterval(checkAudioAvailability);
-              const playPromise = audio.play();
-              if (playPromise && typeof (playPromise as any).catch === 'function') {
-                (playPromise as Promise<void>).catch((err) => {
-                  console.error('Audio play error:', err);
-                });
-              }
-            };
-            audio.onerror = (e) => {
-              if (attempts >= maxAttempts) {
-                clearInterval(checkAudioAvailability);
-                console.error('[playPaymentSuccessSound] Không thể tải file âm thanh sau nhiều lần thử:', e);
-              } else {
-                console.warn('[playPaymentSuccessSound] File âm thanh chưa sẵn sàng, sẽ thử lại:', e);
-              }
-            };
-            audio.load();
-          }, 5000);
         },
         error: (error) => {
-          console.error('[playPaymentSuccessSound] Lỗi khi gọi FPT.AI TTS API:', error);
+          console.error('[playPaymentSuccessSound] Lỗi khi gọi TTS API:', error);
         }
       });
     } catch (error) {
