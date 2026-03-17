@@ -2660,25 +2660,36 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       console.log('[playPaymentSuccessSound] Nội dung thông báo:', message);
 
       const ttsUrl = `${environment.aiUrl}/tts?text=${encodeURIComponent(message)}`;
-      this.http.get(ttsUrl, { responseType: 'blob' as 'json' }).subscribe({
-        next: (audioBlob: any) => {
-          const blob = audioBlob as Blob;
-          const audioUrl = URL.createObjectURL(blob);
-          const audio = new Audio();
-          audio.src = audioUrl;
-          audio.onended = () => URL.revokeObjectURL(audioUrl);
-          audio.onerror = () => URL.revokeObjectURL(audioUrl);
-          const playPromise = audio.play();
-          if (playPromise && typeof (playPromise as any).catch === 'function') {
-            (playPromise as Promise<void>).catch((err) => {
-              console.error('Audio play error:', err);
-            });
+      let attempts = 0;
+      const maxAttempts = 5;
+      const retryDelayMs = 2000;
+      const requestAudio = () => {
+        this.http.get(ttsUrl, { responseType: 'blob' as 'json' }).subscribe({
+          next: (audioBlob: any) => {
+            const blob = audioBlob as Blob;
+            const audioUrl = URL.createObjectURL(blob);
+            const audio = new Audio();
+            audio.src = audioUrl;
+            audio.onended = () => URL.revokeObjectURL(audioUrl);
+            audio.onerror = () => URL.revokeObjectURL(audioUrl);
+            const playPromise = audio.play();
+            if (playPromise && typeof (playPromise as any).catch === 'function') {
+              (playPromise as Promise<void>).catch((err) => {
+                console.error('Audio play error:', err);
+              });
+            }
+          },
+          error: (error) => {
+            attempts += 1;
+            if (error?.status === 503 && attempts < maxAttempts) {
+              setTimeout(requestAudio, retryDelayMs);
+              return;
+            }
+            console.error('[playPaymentSuccessSound] Lỗi khi gọi TTS API:', error);
           }
-        },
-        error: (error) => {
-          console.error('[playPaymentSuccessSound] Lỗi khi gọi TTS API:', error);
-        }
-      });
+        });
+      };
+      requestAudio();
     } catch (error) {
       console.error('[playPaymentSuccessSound] Lỗi khi phát âm thanh:', error);
     }
