@@ -59,4 +59,52 @@ export class ApiService {
       headers: this.getAuthHeaders()
     });
   }
+
+  getRoomTotalPrice(hotelId: string, roomId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}sessions/room-total-price?hotelId=${hotelId}&roomId=${roomId}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  saveRoomTotalPrice(hotelId: string, roomId: string, totalPrice: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}sessions/room-total-price`, { hotelId, roomId, totalPrice }, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  getCheckinData(hotelId: string, roomId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}sessions/checkin-data?hotelId=${hotelId}&roomId=${roomId}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  saveCheckinData(hotelId: string, roomId: string, checkinData: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}sessions/checkin-data`, { hotelId, roomId, checkinData }, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  getRoomColumnsCount(userId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}sessions/room-columns-count?userId=${userId}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  saveRoomColumnsCount(userId: string, columnsCount: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}sessions/room-columns-count`, { userId, columnsCount }, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  getSelectedFloor(userId: string, hotelId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}sessions/selected-floor?userId=${userId}&hotelId=${hotelId}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  saveSelectedFloor(userId: string, hotelId: string, floor: string | null): Observable<any> {
+    return this.http.post(`${this.baseUrl}sessions/selected-floor`, { userId, hotelId, floor }, {
+      headers: this.getAuthHeaders()
+    });
+  }
 }

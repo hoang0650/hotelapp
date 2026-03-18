@@ -14,6 +14,7 @@ export interface RoomSession {
   rateType?: 'hourly' | 'daily' | 'nightly';
   advancePayment?: number;
   additionalCharges?: number;
+  totalPrice?: number;
   advancePaymentMethod?: 'cash' | 'bank' | 'credit_card' | string;
   discount?: number;
   notes?: string;

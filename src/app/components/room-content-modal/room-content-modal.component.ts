@@ -18,6 +18,7 @@ import { TuyaService } from '../../services/tuya.service';
 import { SePayService, SePayPaymentData } from '../../services/sepay.service';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
+import { ApiService } from '../../services/api.service';
 import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { TransactionService } from '../../services/transaction.service';
@@ -261,6 +262,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     private sepayService: SePayService,
     private userService: UserService,
     private authService: AuthService,
+    private apiService: ApiService,
     private cdr: ChangeDetectorRef,
     private translate: TranslateService,
     private http: HttpClient,
@@ -1170,6 +1172,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     if (this.roomData && this.roomData._id) {
       this.roomData.totalPrice = this.totalPrice;
       localStorage.setItem(`room_${this.roomData._id}_totalPrice`, this.totalPrice.toString());
+      const hotelId = this.roomData.hotelId || this.authService.getHotelId();
+      if (hotelId) {
+        this.apiService.saveRoomTotalPrice(hotelId, this.roomData._id, this.totalPrice).subscribe({
+          next: () => console.log('[Redis] Room total price saved'),
+          error: (err) => console.error('[Redis] Error saving room total price:', err)
+        });
+      }
     }
 
     this.remainingAmount = this.totalPrice - this.advancePayment - totalDiscount;
@@ -3579,7 +3588,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       advancePaymentMethod: advancePaymentMethod,
       rateType: rateType
     };
-    
+
     if (savedCheckinData) {
       try {
         const existingData = JSON.parse(savedCheckinData);
@@ -3594,9 +3603,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         console.error('Error parsing existing checkin data:', e);
       }
     }
-    
+
     // Lưu vào localStorage
     localStorage.setItem(`checkin_${this.roomData._id}`, JSON.stringify(checkinData));
+
+    // Lưu vào Redis
+    const hotelId = this.roomData.hotelId || this.authService.getHotelId();
+    if (hotelId) {
+      this.apiService.saveCheckinData(hotelId, this.roomData._id, checkinData).subscribe({
+        next: () => console.log('[Redis] Checkin data saved'),
+        error: (err) => console.error('[Redis] Error saving checkin data:', err)
+      });
+    }
     
     // Cập nhật vào room.events nếu có event checkin (chỉ lấy event chưa checkout)
     if (this.roomData.events && this.roomData.events.length > 0) {

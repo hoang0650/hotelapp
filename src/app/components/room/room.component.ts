@@ -21,6 +21,8 @@ import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { CurrencyService } from '../../services/currency.service';
+import { RoomSessionService } from '../../services/room-session.service';
+import { ApiService } from '../../services/api.service';
 
 @Component({
   selector: 'app-room',
@@ -107,11 +109,13 @@ export class RoomComponent implements OnInit, OnDestroy {
     private message: NzMessageService,
     private invoiceService: InvoiceService,
     private transactionService: TransactionService,
-    public authService: AuthService, // Đổi thành public để sử dụng trong template
+    public authService: AuthService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private translate: TranslateService,
-    private currencyService: CurrencyService
+    private currencyService: CurrencyService,
+    private roomSessionService: RoomSessionService,
+    private apiService: ApiService
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
       // Reload rooms khi có thay đổi dữ liệu
@@ -165,23 +169,65 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Đọc selectedHotelId từ localStorage trước khi loadHotels
-    const savedHotelId = localStorage.getItem('selectedHotelId');
-    if (savedHotelId) {
-      this.selectedHotelId = savedHotelId;
+    const currentUser = this.authService.getCurrentUser();
+    const userId = currentUser?._id;
+
+    if (userId) {
+      this.apiService.getSelectedHotel(userId).subscribe({
+        next: (res) => {
+          if (res?.selectedHotelId) {
+            this.selectedHotelId = res.selectedHotelId;
+            this.roomSessionService.setHotelId(res.selectedHotelId);
+          }
+        },
+        error: () => {
+          const savedHotelId = localStorage.getItem('selectedHotelId');
+          if (savedHotelId) {
+            this.selectedHotelId = savedHotelId;
+          }
+        }
+      });
+    } else {
+      const savedHotelId = localStorage.getItem('selectedHotelId');
+      if (savedHotelId) {
+        this.selectedHotelId = savedHotelId;
+      }
     }
-    
+
     this.loadHotels();
-    
-    // KHÔNG đọc selectedFloor từ localStorage ở đây
-    // selectedFloor sẽ được set sau khi load floors trong onHotelChange
-    // để đảm bảo tầng đó tồn tại trong hotel hiện tại
-    
-    const savedCount = localStorage.getItem('roomColumnsCount');
-    if (savedCount) {
-      const count = parseInt(savedCount, 10);
-      if (count >= 2 && count <= 12) {
-        this.count = count;
+
+    if (userId) {
+      this.apiService.getRoomColumnsCount(userId).subscribe({
+        next: (res) => {
+          if (res?.columnsCount && res.columnsCount >= 2 && res.columnsCount <= 12) {
+            this.count = res.columnsCount;
+          } else {
+            const savedCount = localStorage.getItem('roomColumnsCount');
+            if (savedCount) {
+              const count = parseInt(savedCount, 10);
+              if (count >= 2 && count <= 12) {
+                this.count = count;
+              }
+            }
+          }
+        },
+        error: () => {
+          const savedCount = localStorage.getItem('roomColumnsCount');
+          if (savedCount) {
+            const count = parseInt(savedCount, 10);
+            if (count >= 2 && count <= 12) {
+              this.count = count;
+            }
+          }
+        }
+      });
+    } else {
+      const savedCount = localStorage.getItem('roomColumnsCount');
+      if (savedCount) {
+        const count = parseInt(savedCount, 10);
+        if (count >= 2 && count <= 12) {
+          this.count = count;
+        }
       }
     }
     
@@ -804,9 +850,17 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     }
     this.selectedHotelId = hotelId;
-    // Lưu vào localStorage để admin component có thể đọc
     if (hotelId) {
+      this.roomSessionService.setHotelId(hotelId);
       localStorage.setItem('selectedHotelId', hotelId);
+      const currentUser = this.authService.getCurrentUser();
+      const userId = currentUser?._id; 
+      if (userId) {
+        this.apiService.saveSelectedHotel(userId, hotelId).subscribe({
+          next: () => console.log('[Redis] Selected hotel saved'),
+          error: (err) => console.error('[Redis] Error saving selected hotel:', err)
+        });
+      }
     } else {
       localStorage.removeItem('selectedHotelId');
     }
@@ -821,25 +875,49 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.roomsService.getHotelFloors(hotelId).subscribe(
         (data) => {
           this.floors = data.floors.map(f => String(f));
-          
-          // Kiểm tra selectedFloor từ localStorage sau khi đã load floors
-          const savedFloor = localStorage.getItem('selectedFloor');
-          if (savedFloor) {
-            // Normalize savedFloor để so sánh
-            const normalizedSavedFloor = String(savedFloor);
-            if (this.floors.includes(normalizedSavedFloor)) {
-              // Chỉ set selectedFloor nếu tầng đó tồn tại trong hotel hiện tại
-              this.selectedFloor = normalizedSavedFloor;
-            } else {
-              // Nếu tầng không tồn tại, xóa selectedFloor và localStorage
-              this.selectedFloor = null;
-              localStorage.removeItem('selectedFloor');
-            }
+
+          const currentUser = this.authService.getCurrentUser();
+          const userId = currentUser?._id;
+          if (userId) {
+            this.apiService.getSelectedFloor(userId, hotelId).subscribe({
+              next: (res) => {
+                if (res?.selectedFloor) {
+                  const normalizedSavedFloor = String(res.selectedFloor);
+                  if (this.floors.includes(normalizedSavedFloor)) {
+                    this.selectedFloor = normalizedSavedFloor;
+                  } else {
+                    this.selectedFloor = null;
+                  }
+                } else {
+                  this.selectedFloor = null;
+                }
+                this.loadRooms();
+              },
+              error: () => {
+                const savedFloor = localStorage.getItem('selectedFloor');
+                if (savedFloor) {
+                  const normalizedSavedFloor = String(savedFloor);
+                  if (this.floors.includes(normalizedSavedFloor)) {
+                    this.selectedFloor = normalizedSavedFloor;
+                  } else {
+                    this.selectedFloor = null;
+                  }
+                }
+                this.loadRooms();
+              }
+            });
           } else {
-            this.selectedFloor = null;
+            const savedFloor = localStorage.getItem('selectedFloor');
+            if (savedFloor) {
+              const normalizedSavedFloor = String(savedFloor);
+              if (this.floors.includes(normalizedSavedFloor)) {
+                this.selectedFloor = normalizedSavedFloor;
+              } else {
+                this.selectedFloor = null;
+              }
+            }
+            this.loadRooms();
           }
-          
-          this.loadRooms();
         },
         (error) => {
           this.message.error('Lỗi khi tải danh sách tầng: ' + (error.error?.message || error.message));
@@ -858,13 +936,20 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   onFloorChange(floor: string | null): void {
     this.selectedFloor = floor;
-    // Lưu vào localStorage
     if (floor) {
       localStorage.setItem('selectedFloor', floor);
+      const currentUser = this.authService.getCurrentUser();
+      const userId = currentUser?._id;
+      const hotelId = this.selectedHotelId;
+      if (userId && hotelId) {
+        this.apiService.saveSelectedFloor(userId, hotelId, floor).subscribe({
+          next: () => console.log('[Redis] Selected floor saved'),
+          error: (err) => console.error('[Redis] Error saving selected floor:', err)
+        });
+      }
     } else {
       localStorage.removeItem('selectedFloor');
     }
-    // Không cần reload rooms, chỉ cần filter ở frontend
   }
 
   // Xử lý thay đổi khoảng thời gian biểu đồ
@@ -1050,8 +1135,15 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   reGenerateArray(count: number): void {
     this.count = count;
-    // Lưu vào localStorage
     localStorage.setItem('roomColumnsCount', count.toString());
+    const currentUser = this.authService.getCurrentUser();
+    const userId = currentUser?._id;
+    if (userId) {
+      this.apiService.saveRoomColumnsCount(userId, count).subscribe({
+        next: () => console.log('[Redis] Room columns count saved'),
+        error: (err) => console.error('[Redis] Error saving room columns count:', err)
+      });
+    }
   }
 
   getRoomColSpan(): number {
