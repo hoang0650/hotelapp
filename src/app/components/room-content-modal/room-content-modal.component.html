@@ -445,13 +445,7 @@
             </div>
             <div nz-col [nzSpan]="6">
               <div class="service-quantity-control">
-                <button nz-button nzType="default" nzSize="small" type="button" (click)="changeServiceQuantity(-1)" [disabled]="servicesForm.get('quantity')?.value <= 1" class="service-qty-btn">
-                  <i nz-icon nzType="minus"></i>
-                </button>
                 <nz-input-number formControlName="quantity" [nzMin]="1" [nzMax]="100" style="width: 100%" class="service-quantity"></nz-input-number>
-                <button nz-button nzType="default" nzSize="small" type="button" (click)="changeServiceQuantity(1)" class="service-qty-btn">
-                  <i nz-icon nzType="plus"></i>
-                </button>
               </div>
             </div>
             <div nz-col [nzSpan]="4">
