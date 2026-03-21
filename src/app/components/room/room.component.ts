@@ -2488,5 +2488,3 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin/electric-setting']);
   }
 }
-
-
