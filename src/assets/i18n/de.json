@@ -50,6 +50,12 @@
     "EMAIL_MANAGEMENT": "E-Mail-Verwaltung",
     "QR_PAYMENT": "QR-Zahlung",
     "VISA_PAYMENT": "Visa-Zahlung",
+    "ROOM_OPERATIONS": "Zimmer & Betrieb",
+    "ROOM_CATEGORY": "Zimmerkategorien",
+    "FLOOR_PLAN": "Grundriss",
+    "FINANCE_REPORTS": "Finanzen & Berichte",
+    "PAYMENTS": "Zahlungen",
+    "SYSTEM_ADMIN": "Systemverwaltung",
     "TOGGLE_COLLAPSE": "Sidebar ein-/ausklappen"
   },
   "FOOTER": {
@@ -113,6 +119,8 @@
     "SYSTEM_SETTINGS": "Systemeinstellungen",
     "BOT_SETTING": "Bot-Einstellungen",
     "SHIFT_HANDOVER_HISTORY": "Schichtübergabe-Verlauf",
+    "ROOM_CATEGORY": "Zimmerkategorien",
+    "FLOOR_PLAN": "Grundriss",
     "FANPAGE_MESSAGES": "Fanpageverwaltung",
     "DEBT_MANAGEMENT": "Schuldenverwaltung",
     "CONTACT_MANAGEMENT": "Kontaktverwaltung",
@@ -680,6 +688,12 @@
     "LOAD_STAFF_ERROR": "Personaliste konnte nicht geladen werden",
     "SELECT_STAFF_ERROR": "Bitte Personal auswählen",
     "ENTER_PASSWORD_ERROR": "Bitte Passwort eingeben",
+    "MANAGER_HANDOVER_TITLE": "Geldübergabe an Manager",
+    "SELECT_MANAGER": "Manager auswählen",
+    "SELECT_MANAGER_ERROR": "Bitte Manager auswählen",
+    "CONFIRM_MANAGER_HANDOVER": "Übergabe bestätigen",
+    "MANAGER_HANDOVER_SUCCESS": "Geldübergabe an Manager erfolgreich",
+    "MANAGER_HANDOVER_ERROR": "Geldübergabe an Manager fehlgeschlagen",
     "HISTORY": {
       "TITLE": "Schichtübergabeverlauf",
       "FROM_DATE": "Von Datum",
@@ -907,6 +921,7 @@
   },
   "ROOM_MANAGEMENT": {
     "TITLE": "Zimmerverwaltung",
+    "ROOM_CATEGORY": "Zimmerkategorie",
     "HOTEL": "Hotel",
     "SELECT_HOTEL": "Hotel auswählen",
     "FLOOR": "Etage",

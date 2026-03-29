@@ -1,0 +1,136 @@
+.floor-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.floor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.floor-header h4 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.room-cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.room-card {
+  display: inline-block;
+  padding: 12px 16px;
+  margin: 4px;
+  border-radius: 8px;
+  background: #52c41a;
+  color: white;
+  cursor: pointer;
+  min-width: 80px;
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.room-card:hover {
+  transform: scale(1.05);
+}
+
+.room-card .room-number {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.room-card .room-category-name {
+  font-size: 11px;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.room-card.status-occupied {
+  background: #ff4d4f;
+}
+
+.room-card.status-cleaning {
+  background: #1890ff;
+}
+
+.room-card.status-dirty {
+  background: #fa8c16;
+}
+
+.room-card.status-maintenance {
+  background: #722ed1;
+}
+
+.room-card.status-booked {
+  background: #13c2c2;
+}
+
+.add-floor-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #fff;
+  border: 1px dashed #d9d9d9;
+  border-radius: 8px;
+}
+
+.add-room-inline {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e8e8e8;
+}
+
+.add-room-inline nz-form-item {
+  margin-bottom: 0;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.ml-2 {
+  margin-left: 8px;
+}
+
+.mt-3 {
+  margin-top: 12px;
+}
+
+.delete-room-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff4d4f;
+  color: white;
+  border: none;
+  font-size: 10px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+}
+
+.room-card-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.room-card-wrapper:hover .delete-room-btn {
+  display: flex;
+}

@@ -90,6 +90,10 @@ import { TransferRoomModalComponent } from './components/transfer-room-modal/tra
 import { CompanyManagementComponent } from './components/company-management/company-management.component';
 import { HotelManagementComponent } from './components/hotel-management/hotel-management.component';
 import { RoomManagementComponent } from './components/room-management/room-management.component';
+import { RoomCategoryComponent } from './components/room-category/room-category.component';
+import { RoomCategoryPageComponent } from './components/room-category/room-category-page.component';
+import { FloorPlanComponent } from './components/floor-plan/floor-plan.component';
+import { FloorPlanPageComponent } from './components/floor-plan/floor-plan-page.component';
 import { StaffManagementComponent } from './components/staff-management/staff-management.component';
 import { RevenueChartComponent } from './components/revenue-chart/revenue-chart.component';
 import { SortRoomsPipe } from './pipes/sort-rooms.pipe';
@@ -234,6 +238,10 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         CompanyManagementComponent,
         HotelManagementComponent,
         RoomManagementComponent,
+        RoomCategoryComponent,
+        RoomCategoryPageComponent,
+        FloorPlanComponent,
+        FloorPlanPageComponent,
         StaffManagementComponent,
         RevenueChartComponent,
         SortRoomsPipe,

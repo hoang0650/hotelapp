@@ -13,6 +13,9 @@
   text-align: center;
   margin-bottom: 40px;
   width: 100%;
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.04) 0%, rgba(102, 126, 234, 0.06) 50%, rgba(118, 75, 162, 0.04) 100%);
+  padding: 40px 24px 32px;
+  border-radius: 16px;
 }
 
 .pricing-header h1 {
@@ -20,6 +23,8 @@
   color: #1f1f1f;
   margin-bottom: 20px;
   line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .billing-toggle {
@@ -1229,4 +1234,544 @@
   .payment-amount .payment-info-value {
     font-size: 1rem;
   }
-} 
+}
+
+/* ===================================================================
+   NEW CSS CLASSES - Extracted from inline styles & UX improvements
+   =================================================================== */
+
+/* ===== Billing Toggle Subtitle ===== */
+.billing-toggle-subtitle {
+  margin-bottom: 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* ===== Billing Radio Group ===== */
+.billing-radio-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.billing-radio-option {
+  flex: 1;
+  min-width: 200px;
+  max-width: 280px;
+}
+
+/* ===== Billing Info Box ===== */
+.billing-info-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.billing-info-box.billing-info-yearly {
+  background: #e6f7ff;
+  border-left: 3px solid #1890ff;
+}
+
+.billing-info-box.billing-info-monthly {
+  background: #f6ffed;
+  border-left: 3px solid #52c41a;
+}
+
+.billing-info-box .info-icon {
+  margin-right: 8px;
+}
+
+.billing-info-yearly .info-icon,
+.billing-info-yearly .info-text {
+  color: #1890ff;
+}
+
+.billing-info-monthly .info-icon,
+.billing-info-monthly .info-text {
+  color: #52c41a;
+}
+
+.billing-info-box .info-text {
+  font-size: 13px;
+}
+
+/* ===== Selected Package Banner ===== */
+.selected-package-banner {
+  margin: 20px 0;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  color: white;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  animation: fadeIn 0.3s ease;
+}
+
+.selected-package-banner .banner-icon {
+  font-size: 24px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.selected-package-banner .banner-subtitle {
+  margin: 8px 0 0 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* ===== Nav Button Icon ===== */
+.nav-button i {
+  font-size: 20px;
+}
+
+/* ===== Savings Info ===== */
+.savings-amount {
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.original-price {
+  font-size: 12px;
+  color: #999;
+  text-decoration: line-through;
+  margin: 0;
+}
+
+.billing-monthly-note {
+  margin-top: 8px;
+}
+
+.billing-monthly-note p {
+  font-size: 12px;
+  color: #666;
+  margin: 0;
+}
+
+/* ===== Payment Actions ===== */
+.payment-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payment-buttons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ===== Payment Buttons with Hover States ===== */
+.payment-btn-paypal {
+  background: linear-gradient(135deg, #0070ba 0%, #003087 100%) !important;
+  border: none !important;
+  font-weight: 600;
+  transition: all 0.3s ease !important;
+}
+
+.payment-btn-paypal:hover:not(:disabled) {
+  background: linear-gradient(135deg, #003087 0%, #0070ba 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 112, 186, 0.4);
+}
+
+.payment-btn-sepay {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  font-weight: 600;
+  transition: all 0.3s ease !important;
+}
+
+.payment-btn-sepay:hover:not(:disabled) {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.payment-btn-crypto {
+  background: linear-gradient(135deg, #26a17b 0%, #1e7e56 100%) !important;
+  border: none !important;
+  font-weight: 600;
+  width: 100%;
+  transition: all 0.3s ease !important;
+}
+
+.payment-btn-crypto:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1e7e56 0%, #26a17b 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(38, 161, 123, 0.4);
+}
+
+.payment-btn-icon {
+  margin-right: 8px;
+}
+
+/* ===== Crypto Section ===== */
+.crypto-section {
+  margin-top: 8px;
+}
+
+.crypto-form-item {
+  margin-bottom: 8px;
+}
+
+.crypto-label {
+  font-size: 12px;
+  color: #666;
+}
+
+/* ===== Cancel / Small Buttons ===== */
+.cancel-selection-btn {
+  font-size: 12px;
+}
+
+.payment-total-text {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+}
+
+/* ===== Package Billing Hint ===== */
+.package-billing-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
+}
+
+/* ===== Popular Plan Badge (2nd plan = recommended) ===== */
+.pricing-plan:nth-child(2) {
+  border: 2px solid #667eea;
+  position: relative;
+  z-index: 1;
+}
+
+.pricing-plan:nth-child(2):not(.current-plan):not(.selected-plan) {
+  transform: scale(1.03);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+}
+
+.pricing-plan:nth-child(2)::before {
+  content: '⭐ Phổ biến nhất';
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 4px 18px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* ===== Additional Fees Section (extracted from inline) ===== */
+.additional-fees-section {
+  margin-top: 60px;
+  padding: 30px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.additional-fees-title {
+  text-align: center;
+  margin-bottom: 24px;
+  color: #1f1f1f;
+  font-size: 1.75rem;
+}
+
+.additional-fees-title i {
+  margin-right: 8px;
+  color: #1890ff;
+}
+
+.additional-fees-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.fee-card {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.fee-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.fee-card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.fee-card-icon {
+  font-size: 24px;
+  margin-right: 12px;
+}
+
+.fee-card-icon.green {
+  color: #52c41a;
+}
+
+.fee-card-icon.blue {
+  color: #1890ff;
+}
+
+.fee-card h3 {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: 1.25rem;
+}
+
+.fee-card-description {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.fee-card-description.no-margin {
+  margin: 0;
+}
+
+.fee-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+}
+
+.fee-list-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.fee-check-icon {
+  color: #52c41a;
+  margin-right: 8px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.fee-note {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.fee-note.green {
+  background: #f6ffed;
+  border-left: 3px solid #52c41a;
+}
+
+.fee-note.green p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #389e0d;
+}
+
+.fee-note.blue {
+  background: #e6f7ff;
+  border-left: 3px solid #1890ff;
+}
+
+.fee-note.blue p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #0958d9;
+}
+
+.contact-bar {
+  text-align: center;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.contact-bar p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.contact-bar .contact-icon {
+  margin-right: 8px;
+  color: #1890ff;
+}
+
+.contact-link {
+  color: #1890ff;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.contact-link:hover {
+  text-decoration: underline;
+  color: #096dd9;
+}
+
+/* ===== SePay Modal Enhancements ===== */
+.sepay-amount-text {
+  font-size: 18px;
+  color: #1890ff;
+}
+
+.sepay-qr-section {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.sepay-qr-title {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sepay-qr-wrapper {
+  display: inline-block;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sepay-qr-img {
+  max-width: 300px;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.sepay-bank-info {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.sepay-bank-info p {
+  margin: 4px 0;
+}
+
+.sepay-notice {
+  margin-top: 20px;
+  padding: 12px;
+  background: #f0f9ff;
+  border-radius: 4px;
+  border-left: 4px solid #1890ff;
+}
+
+.sepay-notice p {
+  margin: 0;
+  color: #1890ff;
+  font-size: 13px;
+}
+
+.sepay-notice .notice-icon {
+  margin-right: 6px;
+}
+
+/* ===== Mobile Responsive Additions ===== */
+@media (max-width: 768px) {
+  .billing-radio-group {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .billing-radio-option {
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  .payment-buttons-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .additional-fees-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .additional-fees-section {
+    padding: 20px 15px;
+    margin-top: 40px;
+  }
+
+  .additional-fees-title {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+  }
+
+  .selected-package-banner {
+    margin: 16px 0;
+    padding: 12px 16px;
+  }
+
+  .selected-package-banner strong {
+    font-size: 14px;
+  }
+
+  .selected-package-banner .banner-subtitle {
+    font-size: 12px;
+  }
+
+  .pricing-plan:nth-child(2):not(.current-plan):not(.selected-plan) {
+    transform: none;
+  }
+
+  .pricing-plan:nth-child(2)::before {
+    font-size: 0.75rem;
+    padding: 3px 12px;
+    top: -12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .additional-fees-section {
+    padding: 16px 12px;
+    margin-top: 32px;
+  }
+
+  .additional-fees-title {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+  }
+
+  .fee-card {
+    padding: 16px;
+  }
+
+  .fee-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .fee-list-item {
+    font-size: 0.85rem;
+  }
+
+  .contact-bar {
+    padding: 16px 12px;
+  }
+}

@@ -1312,16 +1312,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               const hotelId = this.authService.getHotelId();
               const payerName = guestInfo?.name || 'Khách lẻ';
               if (hotelId && advancePayment > 0) {
+                const normalizedMethod = this.normalizePaymentMethod(advancePaymentMethod);
+                const methodForTransaction = (normalizedMethod === 'transfer' ? 'bank_transfer' : normalizedMethod) as 'cash' | 'bank_transfer' | 'card';
                 this.transactionService.createIncome({
                   hotelId,
                   amount: advancePayment,
-                  method: 'other',
-                  incomeCategory: 'other',
+                  method: methodForTransaction,
+                  incomeCategory: 'deposit',
                   description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
-                  notes: `Đặt trước lúc nhận phòng ${this.roomData.roomNumber}`,
+                  notes: `Đặt trước lúc nhận phòng ${this.roomData.roomNumber} - ${payerName}`,
                   payer: payerName
                 }).subscribe({
-                  next: () => console.log('Đã tạo phiếu thu đặt trước cho phòng', this.roomData.roomNumber),
+                  next: () => console.log('Đã tạo phiếu thu đặt trước cho phòng', this.roomData.roomNumber, 'method:', methodForTransaction),
                   error: (err) => console.error('Lỗi tạo phiếu thu đặt trước:', err)
                 });
               }
@@ -3635,21 +3637,25 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             console.log('Update checkin info response:', response);
             this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
             
-            // Tạo phiếu thu cho tiền đặt trước nếu có
+            // Tạo phiếu thu cho tiền đặt trước nếu có (chỉ tạo cho phần chênh lệch so với trước đó)
             try {
               const hotelId = this.authService.getHotelId();
               const payerName = updatedGuestInfo?.name || 'Khách lẻ';
-              if (hotelId && advancePayment > 0) {
+              const previousAdvancePayment = (this.listData && this.listData.length > 0) ? (Number(this.listData[0].advancePayment) || 0) : 0;
+              const advanceDiff = advancePayment - previousAdvancePayment;
+              if (hotelId && advanceDiff > 0) {
+                const normalizedMethod = this.normalizePaymentMethod(advancePaymentMethod);
+                const methodForTransaction = (normalizedMethod === 'transfer' ? 'bank_transfer' : normalizedMethod) as 'cash' | 'bank_transfer' | 'card';
                 this.transactionService.createIncome({
                   hotelId,
-                  amount: advancePayment,
-                  method: 'other',
-                  incomeCategory: 'other',
+                  amount: advanceDiff,
+                  method: methodForTransaction,
+                  incomeCategory: 'deposit',
                   description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
-                  notes: `Đặt trước lúc lưu thông tin phòng ${this.roomData.roomNumber}`,
+                  notes: `Đặt trước phòng ${this.roomData.roomNumber} - ${payerName}`,
                   payer: payerName
                 }).subscribe({
-                  next: () => console.log('Đã tạo phiếu thu đặt trước (saveGuestInfo) phòng', this.roomData.roomNumber),
+                  next: () => console.log('Đã tạo phiếu thu đặt trước (saveGuestInfo) phòng', this.roomData.roomNumber, 'amount:', advanceDiff, 'method:', methodForTransaction),
                   error: (err) => console.error('Lỗi tạo phiếu thu đặt trước (saveGuestInfo):', err)
                 });
               }

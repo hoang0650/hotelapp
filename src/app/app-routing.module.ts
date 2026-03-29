@@ -14,6 +14,8 @@ import { RoomComponent } from './components/room/room.component';
 import { CompanyManagementComponent } from './components/company-management/company-management.component';
 import { HotelManagementComponent } from './components/hotel-management/hotel-management.component';
 import { RoomManagementComponent } from './components/room-management/room-management.component';
+import { RoomCategoryPageComponent } from './components/room-category/room-category-page.component';
+import { FloorPlanPageComponent } from './components/floor-plan/floor-plan-page.component';
 import { StaffManagementComponent } from './components/staff-management/staff-management.component';
 import { RevenueChartComponent } from './components/revenue-chart/revenue-chart.component';
 import { VisaPaymentComponent } from './components/visa-payment/visa-payment.component';
@@ -80,6 +82,8 @@ const routes: Routes = [
       { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
       { path: 'company', component: CompanyManagementComponent, canActivate: [PermissionGuard] },
       { path: 'room-management', component: RoomManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'room-category', component: RoomCategoryPageComponent, canActivate: [PermissionGuard] },
+      { path: 'floor-plan', component: FloorPlanPageComponent, canActivate: [PermissionGuard] },
       { path: 'service-management', component: ServiceManagementComponent, canActivate: [PermissionGuard] },
       { path: 'guest-management', component: GuestManagementComponent, canActivate: [PermissionGuard] },
       { path: 'debt-management', component: DebtManagementComponent, canActivate: [PermissionGuard] },

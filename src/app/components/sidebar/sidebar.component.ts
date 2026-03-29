@@ -73,8 +73,85 @@ export class SidebarComponent implements OnInit, OnDestroy {
           { title: this.translate.instant('SIDEBAR.SIGNUP'), route: '/signup' }
         ]
       },
+      // Nhóm: Phòng & Vận hành
       {
-        title: this.translate.instant('SIDEBAR.MANAGEMENT'),
+        title: this.translate.instant('SIDEBAR.ROOM_OPERATIONS'),
+        icon: 'appstore',
+        children: [
+          {
+            title: this.translate.instant('SIDEBAR.ROOM'),
+            route: '/admin/room',
+            feature: 'room_management'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.ROOM_CATEGORY'),
+            route: '/admin/room-category',
+            feature: 'room_management'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.FLOOR_PLAN'),
+            route: '/admin/floor-plan',
+            feature: 'room_management'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.ROOM_MANAGEMENT'),
+            route: '/admin/room-management',
+            feature: 'room_management'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.SERVICE_MANAGEMENT'),
+            route: '/service-management',
+            feature: 'service_management'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.CALENDAR'),
+            route: '/admin/calendar',
+            feature: 'calendar'
+          }
+        ]
+      },
+      // Nhóm: Tài chính & Báo cáo
+      {
+        title: this.translate.instant('SIDEBAR.FINANCE_REPORTS'),
+        icon: 'fund',
+        children: [
+          {
+            title: this.translate.instant('SIDEBAR.REVENUE_CHART'),
+            route: '/admin/chart',
+            feature: 'revenue_chart'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.SHIFT_HANDOVER'),
+            route: '/admin/shift-handover',
+            feature: 'shift_handover'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.BANK_TRANSFER_HISTORY'),
+            route: '/admin/bank-transfer-history',
+            feature: 'bank_transfer_history'
+          }
+        ]
+      },
+      // Nhóm: Thanh toán
+      {
+        title: this.translate.instant('SIDEBAR.PAYMENTS'),
+        icon: 'wallet',
+        children: [
+          {
+            title: this.translate.instant('SIDEBAR.QR_PAYMENT'),
+            route: '/admin/qr-payment',
+            feature: 'qr_payment'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.VISA_PAYMENT'),
+            route: '/admin/visa-payment',
+            feature: 'visa_payment'
+          }
+        ]
+      },
+      // Nhóm: Quản trị hệ thống
+      {
+        title: this.translate.instant('SIDEBAR.SYSTEM_ADMIN'),
         icon: 'setting',
         children: [
           {
@@ -86,16 +163,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
             title: this.translate.instant('SIDEBAR.HOTEL_MANAGEMENT'),
             route: '/admin/hotel',
             feature: 'hotel_management'
-          },
-          {
-            title: this.translate.instant('SIDEBAR.ROOM_MANAGEMENT'),
-            route: '/admin/room-management',
-            feature: 'room_management'
-          },
-          {
-            title: this.translate.instant('SIDEBAR.SERVICE_MANAGEMENT'),
-            route: '/service-management',
-            feature: 'service_management'
           },
           {
             title: this.translate.instant('SIDEBAR.STAFF_MANAGEMENT'),
@@ -116,57 +183,15 @@ export class SidebarComponent implements OnInit, OnDestroy {
             title: this.translate.instant('SIDEBAR.OTA_MANAGEMENT'),
             route: '/admin/ota-management',
             feature: 'ota_management'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.EMAIL_MANAGEMENT'),
+            route: '/admin/email-admin',
+            feature: 'email_admin'
           }
         ]
       },
-      {
-        title: this.translate.instant('SIDEBAR.ROOM'),
-        icon: 'home',
-        route: '/admin/room',
-        feature: 'room_management'
-      },
-      {
-        title: this.translate.instant('SIDEBAR.REVENUE_CHART'),
-        icon: 'bar-chart',
-        route: '/admin/chart',
-        feature: 'revenue_chart'
-      },
-      {
-        title: this.translate.instant('SIDEBAR.SHIFT_HANDOVER'),
-        icon: 'swap',
-        route: '/admin/shift-handover',
-        feature: 'shift_handover'
-      },
-      {
-        title: this.translate.instant('SIDEBAR.BANK_TRANSFER_HISTORY'),
-        icon: 'bank',
-        route: '/admin/bank-transfer-history',
-        feature: 'bank_transfer_history'
-      },
-      {
-        title: this.translate.instant('SIDEBAR.CALENDAR'),
-        icon: 'calendar',
-        route: '/admin/calendar',
-        feature: 'calendar'
-      },
-      {
-        title: this.translate.instant('SIDEBAR.EMAIL_MANAGEMENT'),
-        icon: 'mail',
-        route: '/admin/email-admin',
-        feature: 'email_admin'
-      },
-      {
-        title: this.translate.instant('SIDEBAR.QR_PAYMENT'),
-        icon: 'qrcode',
-        route: '/admin/qr-payment',
-        feature: 'qr_payment'
-      },
-      {
-        title: this.translate.instant('SIDEBAR.VISA_PAYMENT'),
-        icon: 'credit-card',
-        route: '/admin/visa-payment',
-        feature: 'visa_payment'
-      },
+      // Nhóm: Hóa đơn điện tử
       {
         title: this.translate.instant('SIDEBAR.E_INVOICE'),
         icon: 'file-text',

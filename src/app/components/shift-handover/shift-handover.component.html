@@ -6,6 +6,9 @@
       <button nz-button nzType="primary" (click)="openHandoverModal()">
         <i nz-icon nzType="swap"></i> {{ 'SHIFT_HANDOVER.SHIFT_HANDOVER_BUTTON' | translate }}
       </button>
+      <button nz-button nzType="default" nzDanger (click)="openManagerHandoverModal()">
+        <i nz-icon nzType="dollar"></i> {{ 'SHIFT_HANDOVER.MANAGER_HANDOVER_TITLE' | translate }}
+      </button>
       <button nz-button (click)="viewHistory()" *ngIf="canViewHistory">
         <i nz-icon nzType="history"></i> {{ 'SHIFT_HANDOVER.HISTORY' | translate }}
       </button>
@@ -256,6 +259,59 @@
       <button nz-button (click)="closeModal()">{{ 'SHIFT_HANDOVER.CANCEL' | translate }}</button>
       <button nz-button nzType="primary" (click)="submitHandover()" [nzLoading]="isLoading">
         <i nz-icon nzType="swap"></i> {{ 'SHIFT_HANDOVER.SUBMIT' | translate }}
+      </button>
+    </ng-template>
+  </nz-modal>
+
+  <!-- Manager Handover Modal -->
+  <nz-modal [(nzVisible)]="isManagerHandoverModalVisible"
+            [nzTitle]="'SHIFT_HANDOVER.MANAGER_HANDOVER_TITLE' | translate"
+            (nzOnCancel)="closeManagerHandoverModal()"
+            [nzWidth]="500"
+            [nzFooter]="managerHandoverFooter">
+    <ng-container *nzModalContent>
+      <form nz-form [formGroup]="managerHandoverForm" nzLayout="vertical">
+        <nz-form-item>
+          <nz-form-label nzRequired>{{ 'SHIFT_HANDOVER.SELECT_MANAGER' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'SHIFT_HANDOVER.SELECT_MANAGER_ERROR' | translate">
+            <nz-select formControlName="managerId" 
+                       [nzPlaceHolder]="'SHIFT_HANDOVER.SELECT_MANAGER' | translate" 
+                       nzShowSearch>
+              <nz-option *ngFor="let manager of managerList"
+                         [nzValue]="manager._id"
+                         [nzLabel]="manager.personalInfo?.firstName + ' ' + manager.personalInfo?.lastName">
+              </nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>{{ 'SHIFT_HANDOVER.MANAGER_HANDOVER_AMOUNT_LABEL' | translate }}</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng nhập số tiền lớn hơn 0">
+            <nz-input-number formControlName="amount"
+                             [nzMin]="1"
+                             [nzStep]="1000"
+                             [nzFormatter]="currencyFormatter"
+                             [nzParser]="currencyParser"
+                             style="width: 100%">
+            </nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>{{ 'SHIFT_HANDOVER.NOTES' | translate }}</nz-form-label>
+          <nz-form-control>
+            <textarea nz-input formControlName="notes" rows="3"
+                      [placeholder]="'SHIFT_HANDOVER.ENTER_NOTES' | translate"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </ng-container>
+
+    <ng-template #managerHandoverFooter>
+      <button nz-button (click)="closeManagerHandoverModal()">{{ 'SHIFT_HANDOVER.CANCEL' | translate }}</button>
+      <button nz-button nzType="primary" (click)="submitManagerHandover()" [nzLoading]="isLoading">
+        <i nz-icon nzType="dollar"></i> {{ 'SHIFT_HANDOVER.CONFIRM_MANAGER_HANDOVER' | translate }}
       </button>
     </ng-template>
   </nz-modal>

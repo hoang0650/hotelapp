@@ -1,7 +1,9 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { BankTransferService, BankTransfer, SepayTransaction } from '../../services/bank-transfer.service';
+import { BankHubService, BankHubStatus, BankHubBankAccount } from '../../services/bankhub.service';
 import { PayPalService } from '../../services/paypal.service';
 import { CryptoService } from '../../services/crypto.service';
 import { SePayService } from '../../services/sepay.service';
@@ -32,6 +34,14 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   userId: string = '';
   allPaymentsLoading = false;
   
+  // BankHub integration
+  bankHubStatus: BankHubStatus | null = null;
+  bankHubVerified = false;
+  bankHubLoading = false;
+  bankHubLinkUrl: SafeResourceUrl | null = null;
+  showBankHubIframe = false;
+  linkedBankAccounts: BankHubBankAccount[] = [];
+
   // Auto-refresh interval
   private refreshInterval: any = null;
   private readonly REFRESH_INTERVAL = 30000; // 30 giây
@@ -70,7 +80,9 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
+    private sanitizer: DomSanitizer,
     private bankTransferService: BankTransferService,
+    private bankHubService: BankHubService,
     private paypalService: PayPalService,
     private cryptoService: CryptoService,
     private sepayService: SePayService,
@@ -91,10 +103,10 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.checkBankHubStatus();
     this.loadTransfers();
     this.loadHotelSettings();
     
-    // Load payment history từ PayPal, Crypto và SePay nếu có userId
     if (this.userId) {
       this.loadPayPalPayments();
       this.loadCryptoPayments();
@@ -102,8 +114,10 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
       this.loadAllPayments();
     }
 
-    // Bắt đầu auto-refresh cho payment history
     this.startAutoRefresh();
+
+    // Listen for BankHub iframe postMessage events
+    window.addEventListener('message', this.handleBankHubMessage.bind(this));
   }
 
   /**
@@ -139,10 +153,88 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    // Dọn dẹp interval khi component bị destroy
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
+    }
+    window.removeEventListener('message', this.handleBankHubMessage.bind(this));
+  }
+
+  // ============ BankHub Methods ============
+
+  checkBankHubStatus(): void {
+    this.bankHubLoading = true;
+    this.bankHubService.getStatus().subscribe({
+      next: (status) => {
+        this.bankHubStatus = status;
+        this.bankHubVerified = !!(status.configured && status.authenticated);
+        if (this.bankHubVerified) {
+          this.loadLinkedBankAccounts();
+        }
+        this.bankHubLoading = false;
+      },
+      error: () => {
+        this.bankHubStatus = { configured: false };
+        this.bankHubVerified = false;
+        this.bankHubLoading = false;
+      }
+    });
+  }
+
+  loadLinkedBankAccounts(): void {
+    this.bankHubService.getBankAccounts().subscribe({
+      next: (res: any) => {
+        this.linkedBankAccounts = res.data || [];
+      },
+      error: () => {
+        this.linkedBankAccounts = [];
+      }
+    });
+  }
+
+  openBankHubLink(): void {
+    this.bankHubLoading = true;
+    this.bankHubService.createLinkToken().subscribe({
+      next: (res) => {
+        this.bankHubLinkUrl = this.sanitizer.bypassSecurityTrustResourceUrl(res.hosted_link_url);
+        this.showBankHubIframe = true;
+        this.bankHubLoading = false;
+      },
+      error: (err) => {
+        this.message.error(err.error?.message || 'Không thể tạo liên kết BankHub');
+        this.bankHubLoading = false;
+      }
+    });
+  }
+
+  closeBankHubIframe(): void {
+    this.showBankHubIframe = false;
+    this.bankHubLinkUrl = null;
+    this.checkBankHubStatus();
+  }
+
+  handleBankHubMessage(event: MessageEvent): void {
+    if (!event.data?.event) return;
+    const bankHubOrigins = ['https://bankhub.sepay.vn', 'https://bankhub-sandbox.sepay.vn'];
+    if (!bankHubOrigins.includes(event.origin)) return;
+
+    switch (event.data.event) {
+      case 'FINISHED_BANK_ACCOUNT_LINK':
+        this.message.success('Liên kết tài khoản ngân hàng thành công!');
+        this.closeBankHubIframe();
+        break;
+      case 'FINISHED_BANK_ACCOUNT_UNLINK':
+        this.message.info('Đã hủy liên kết tài khoản ngân hàng');
+        this.closeBankHubIframe();
+        break;
+      case 'BANKHUB_CLOSE_LINK':
+        this.closeBankHubIframe();
+        break;
+      case 'BANKHUB_TOKEN_EXPIRED':
+      case 'BANKHUB_SESSION_EXPIRED':
+        this.message.warning('Phiên làm việc đã hết hạn, vui lòng thử lại');
+        this.closeBankHubIframe();
+        break;
     }
   }
 

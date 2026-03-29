@@ -3,26 +3,26 @@
     <div class="pricing-header">
       <h1>Chọn gói dịch vụ phù hợp với bạn</h1>
       <div class="billing-toggle">
-        <p style="margin-bottom: 16px; color: #666; font-size: 14px;">
+        <p class="billing-toggle-subtitle">
           Chọn hình thức thanh toán cho gói đăng ký:
         </p>
-        <nz-radio-group [ngModel]="billingType" (ngModelChange)="onBillingTypeChange($event)" style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-          <label nz-radio-button [nzValue]="'monthly'" style="flex: 1; min-width: 200px; max-width: 280px;">
+        <nz-radio-group [ngModel]="billingType" (ngModelChange)="onBillingTypeChange($event)" class="billing-radio-group">
+          <label nz-radio-button [nzValue]="'monthly'" class="billing-radio-option">
             <span>Thanh toán theo tháng</span>
           </label>
-          <label nz-radio-button [nzValue]="'yearly'" style="flex: 1; min-width: 200px; max-width: 280px;">
+          <label nz-radio-button [nzValue]="'yearly'" class="billing-radio-option">
             <span>Thanh toán theo năm</span>
           </label>
         </nz-radio-group>
-        <div *ngIf="billingType === 'yearly'" style="margin-top: 12px; padding: 8px 12px; background: #e6f7ff; border-radius: 4px; border-left: 3px solid #1890ff;">
-          <i nz-icon nzType="info-circle" nzTheme="outline" style="color: #1890ff; margin-right: 8px;"></i>
-          <span style="font-size: 13px; color: #1890ff;">
+        <div *ngIf="billingType === 'yearly'" class="billing-info-box billing-info-yearly">
+          <i nz-icon nzType="info-circle" nzTheme="outline" class="info-icon"></i>
+          <span class="info-text">
             Bạn sẽ đăng ký gói theo năm với giá ưu đãi và thời hạn 12 tháng
           </span>
         </div>
-        <div *ngIf="billingType === 'monthly'" style="margin-top: 12px; padding: 8px 12px; background: #f6ffed; border-radius: 4px; border-left: 3px solid #52c41a;">
-          <i nz-icon nzType="info-circle" nzTheme="outline" style="color: #52c41a; margin-right: 8px;"></i>
-          <span style="font-size: 13px; color: #52c41a;">
+        <div *ngIf="billingType === 'monthly'" class="billing-info-box billing-info-monthly">
+          <i nz-icon nzType="info-circle" nzTheme="outline" class="info-icon"></i>
+          <span class="info-text">
             Bạn sẽ đăng ký gói theo tháng với thời hạn 1 tháng
           </span>
         </div>
@@ -30,10 +30,10 @@
     </div>
 
     <!-- Thông báo gói đã chọn -->
-    <div *ngIf="selectedPackage" class="selected-package-notification" style="margin: 20px 0; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; text-align: center;">
-      <i nz-icon nzType="check-circle" nzTheme="fill" style="font-size: 24px; margin-right: 8px;"></i>
+    <div *ngIf="selectedPackage" class="selected-package-notification selected-package-banner">
+      <i nz-icon nzType="check-circle" nzTheme="fill" class="banner-icon"></i>
       <strong>Đã chọn gói: {{ selectedPackage.name }} - {{ selectedPackage.billingType === 'yearly' ? 'Theo năm' : 'Theo tháng' }}</strong>
-      <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">
+      <p class="banner-subtitle">
         Tổng tiền: {{ formatPrice(getPackagePrice(selectedPackage)) }}
       </p>
     </div>
@@ -45,7 +45,7 @@
         (click)="scrollPlans('left')"
         [disabled]="!canScrollLeft"
         title="Xem các gói trước">
-        <i nz-icon nzType="left" nzTheme="outline" style="font-size: 20px;"></i>
+        <i nz-icon nzType="left" nzTheme="outline"></i>
       </button>
       <div class="pricing-plans" #pricingPlansContainer>
         <div *ngFor="let package of packages" class="pricing-plan" 
@@ -60,19 +60,19 @@
           
           <!-- Hiển thị giá gốc và tiết kiệm khi chọn năm -->
           <div *ngIf="billingType === 'yearly' && getSavingsPercentage(package) > 0" class="savings-info">
-            <p class="savings" style="color: #52c41a; font-weight: bold; margin: 8px 0;">
-              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 4px;"></i>
+            <p class="savings">
+              <i nz-icon nzType="check-circle" nzTheme="fill"></i>
               Tiết kiệm {{ getSavingsPercentage(package) }}% 
-              <span style="font-size: 14px; font-weight: normal;">({{ formatPrice(getSavingsAmount(package)) }})</span>
+              <span class="savings-amount">({{ formatPrice(getSavingsAmount(package)) }})</span>
             </p>
-            <p style="font-size: 12px; color: #999; text-decoration: line-through; margin: 0;">
+            <p class="original-price">
               Giá gốc: {{ formatPrice(getOriginalYearlyPrice(package)) }}/năm
             </p>
           </div>
           
           <!-- Hiển thị giá tháng khi chọn tháng -->
-          <div *ngIf="billingType === 'monthly'" style="margin-top: 8px;">
-            <p style="font-size: 12px; color: #666; margin: 0;">
+          <div *ngIf="billingType === 'monthly'" class="billing-monthly-note">
+            <p>
               Thanh toán hàng tháng
             </p>
           </div>
@@ -128,8 +128,8 @@
             <ng-template #subscribeButton>
               <!-- Hiển thị nút thanh toán nếu đã chọn gói này -->
               <ng-container *ngIf="selectedPackage && (selectedPackage.packageId === (package._id || package.id)); else selectPackageButton">
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div class="payment-actions">
+                  <div class="payment-buttons-grid">
                     <button
                       nz-button
                       nzType="primary"
@@ -137,8 +137,8 @@
                       [disabled]="loading || !canUsePayPal"
                       (click)="payWithPayPal()"
                       *ngIf="canUsePayPal"
-                      style="background: linear-gradient(135deg, #0070ba 0%, #003087 100%); border: none; font-weight: 600;">
-                      <i nz-icon nzType="pay-circle" nzTheme="fill" style="margin-right: 8px;"></i>
+                      class="payment-btn-paypal">
+                      <i nz-icon nzType="pay-circle" nzTheme="fill" class="payment-btn-icon"></i>
                       PayPal
                     </button>
                     <button
@@ -147,19 +147,18 @@
                       [nzSize]="'large'"
                       [disabled]="loading"
                       (click)="payWithSePay()"
-                      style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: 600;">
-                      <i nz-icon nzType="credit-card" nzTheme="outline" style="margin-right: 8px;"></i>
+                      class="payment-btn-sepay">
+                      <i nz-icon nzType="credit-card" nzTheme="outline" class="payment-btn-icon"></i>
                       SePay
                     </button>
                   </div>
-                  <div style="margin-top: 8px;" *ngIf="canUseCrypto">
-                    <nz-form-item style="margin-bottom: 8px;">
-                      <nz-form-label style="font-size: 12px; color: #666;">Chọn mạng Crypto:</nz-form-label>
+                  <div class="crypto-section" *ngIf="canUseCrypto">
+                    <nz-form-item class="crypto-form-item">
+                      <nz-form-label class="crypto-label">Chọn mạng Crypto:</nz-form-label>
                       <nz-form-control>
                         <nz-select 
                           [(ngModel)]="selectedCryptoNetwork" 
-                          [nzSize]="'default'"
-                          style="width: 100%;">
+                          [nzSize]="'default'">
                           <nz-option *ngFor="let network of cryptoNetworks" [nzValue]="network.value" [nzLabel]="network.label">
                             <span>{{ network.icon }} {{ network.label }}</span>
                           </nz-option>
@@ -172,8 +171,8 @@
                       [nzSize]="'large'"
                       [disabled]="loading"
                       (click)="payWithCrypto()"
-                      style="background: linear-gradient(135deg, #26a17b 0%, #1e7e56 100%); border: none; font-weight: 600; width: 100%;">
-                      <i nz-icon nzType="dollar-circle" nzTheme="fill" style="margin-right: 8px;"></i>
+                      class="payment-btn-crypto">
+                      <i nz-icon nzType="dollar-circle" nzTheme="fill" class="payment-btn-icon"></i>
                       Crypto USDT ({{ selectedCryptoNetwork }})
                     </button>
                   </div>
@@ -182,10 +181,10 @@
                     nzType="default"
                     [nzSize]="'small'"
                     (click)="cancelPackageSelection()"
-                    style="font-size: 12px;">
+                    class="cancel-selection-btn">
                     Hủy chọn
                   </button>
-                  <p style="margin-top: 4px; font-size: 11px; color: #999; text-align: center;">
+                  <p class="payment-total-text">
                     Tổng tiền: {{ formatPrice(getPackagePrice(selectedPackage)) }}
                   </p>
                 </div>
@@ -198,7 +197,7 @@
                   (click)="subscribeToPlan(package._id || package.id)">
                   {{ isCurrentPackage(package._id || package.id) ? 'Đã đăng ký' : (loading ? 'Đang xử lý...' : (package.isActive ? ('Chọn gói ' + (billingType === 'yearly' ? 'theo năm' : 'theo tháng')) : 'Không khả dụng')) }}
                 </button>
-                <p style="margin-top: 8px; font-size: 12px; color: #999;">
+                <p class="package-billing-hint">
                   Chọn gói {{ billingType === 'yearly' ? 'theo năm' : 'theo tháng' }}
                 </p>
               </ng-template>
@@ -206,7 +205,7 @@
           </ng-container>
           <ng-template #loginButton>
             <button nz-button nzType="primary" (click)="redirectToLogin()">Đăng nhập để đăng ký gói</button>
-            <p style="margin-top: 8px; font-size: 12px; color: #999;">Bạn có thể xem thông tin gói mà không cần đăng nhập</p>
+            <p class="package-billing-hint">Bạn có thể xem thông tin gói mà không cần đăng nhập</p>
           </ng-template>
         </div>
       </div>
@@ -217,75 +216,75 @@
         (click)="scrollPlans('right')"
         [disabled]="!canScrollRight"
         title="Xem các gói tiếp theo">
-        <i nz-icon nzType="right" nzTheme="outline" style="font-size: 20px;"></i>
+        <i nz-icon nzType="right" nzTheme="outline"></i>
       </button>
     </div>
 
     <!-- Phần tính phí riêng và phí khởi tạo -->
-    <div class="additional-fees-section" style="margin-top: 60px; padding: 30px; background: #f8f9fa; border-radius: 12px; max-width: 900px; margin-left: auto; margin-right: auto;">
-      <h2 style="text-align: center; margin-bottom: 24px; color: #1f1f1f; font-size: 1.75rem;">
-        <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 8px; color: #1890ff;"></i>
+    <div class="additional-fees-section">
+      <h2 class="additional-fees-title">
+        <i nz-icon nzType="info-circle" nzTheme="outline"></i>
         Thông tin phí bổ sung
       </h2>
       
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px;">
+      <div class="additional-fees-grid">
         <!-- Phí riêng -->
-        <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-          <div style="display: flex; align-items: center; margin-bottom: 16px;">
-            <i nz-icon nzType="dollar-circle" nzTheme="fill" style="font-size: 24px; color: #52c41a; margin-right: 12px;"></i>
-            <h3 style="margin: 0; color: #1f1f1f; font-size: 1.25rem;">Phí riêng</h3>
+        <div class="fee-card">
+          <div class="fee-card-header">
+            <i nz-icon nzType="dollar-circle" nzTheme="fill" class="fee-card-icon green"></i>
+            <h3>Phí riêng</h3>
           </div>
-          <p style="color: #666; line-height: 1.6; margin-bottom: 16px;">
+          <p class="fee-card-description">
             Dịch vụ phí riêng với các tính năng tùy chỉnh theo yêu cầu đặc biệt của khách sạn bạn:
           </p>
-          <ul style="list-style: none; padding: 0; margin: 0 0 16px 0;">
-            <li style="display: flex; align-items: flex-start; margin-bottom: 12px; color: #333;">
-              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 8px; margin-top: 2px; flex-shrink: 0;"></i>
+          <ul class="fee-list">
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
               <span><strong>Số lượng giao dịch chuyển khoản:</strong> Tùy chỉnh số lượng giao dịch theo nhu cầu thực tế của bạn</span>
             </li>
-            <li style="display: flex; align-items: flex-start; margin-bottom: 12px; color: #333;">
-              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 8px; margin-top: 2px; flex-shrink: 0;"></i>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
               <span><strong>Hóa đơn điện tử:</strong> Tích hợp hệ thống hóa đơn điện tử chuyên nghiệp</span>
             </li>
-            <li style="display: flex; align-items: flex-start; margin-bottom: 12px; color: #333;">
-              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 8px; margin-top: 2px; flex-shrink: 0;"></i>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
               <span><strong>Chữ ký số tập trung:</strong> Quản lý và sử dụng chữ ký số tập trung cho toàn bộ hệ thống</span>
             </li>
-            <li style="display: flex; align-items: flex-start; margin-bottom: 12px; color: #333;">
-              <i nz-icon nzType="check-circle" nzTheme="fill" style="color: #52c41a; margin-right: 8px; margin-top: 2px; flex-shrink: 0;"></i>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
               <span><strong>Các tính năng thiết kế theo yêu cầu riêng:</strong> Phát triển tính năng đặc biệt phù hợp với quy trình của bạn</span>
             </li>
           </ul>
-          <div style="margin-top: 16px; padding: 12px; background: #f6ffed; border-radius: 6px; border-left: 3px solid #52c41a;">
-            <p style="margin: 0; font-size: 0.9rem; color: #389e0d;">
+          <div class="fee-note green">
+            <p>
               <strong>Liên hệ:</strong> Để biết thêm chi tiết về phí riêng, vui lòng liên hệ với chúng tôi.
             </p>
           </div>
         </div>
 
         <!-- Phí khởi tạo -->
-        <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-          <div style="display: flex; align-items: center; margin-bottom: 16px;">
-            <i nz-icon nzType="rocket" nzTheme="fill" style="font-size: 24px; color: #1890ff; margin-right: 12px;"></i>
-            <h3 style="margin: 0; color: #1f1f1f; font-size: 1.25rem;">Phí khởi tạo</h3>
+        <div class="fee-card">
+          <div class="fee-card-header">
+            <i nz-icon nzType="rocket" nzTheme="fill" class="fee-card-icon blue"></i>
+            <h3>Phí khởi tạo</h3>
           </div>
-          <p style="color: #666; line-height: 1.6; margin: 0;">
+          <p class="fee-card-description no-margin">
             Phí khởi tạo một lần khi bạn đăng ký gói dịch vụ mới. 
             Phí này bao gồm việc thiết lập tài khoản, cấu hình hệ thống và hướng dẫn sử dụng.
           </p>
-          <div style="margin-top: 16px; padding: 12px; background: #e6f7ff; border-radius: 6px; border-left: 3px solid #1890ff;">
-            <p style="margin: 0; font-size: 0.9rem; color: #0958d9;">
+          <div class="fee-note blue">
+            <p>
               <strong>Lưu ý:</strong> Phí khởi tạo chỉ áp dụng cho lần đăng ký đầu tiên.
             </p>
           </div>
         </div>
       </div>
 
-      <div style="text-align: center; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <p style="margin: 0; color: #666; font-size: 0.95rem;">
-          <i nz-icon nzType="phone" nzTheme="outline" style="margin-right: 8px; color: #1890ff;"></i>
+      <div class="contact-bar">
+        <p>
+          <i nz-icon nzType="phone" nzTheme="outline" class="contact-icon"></i>
           Để biết thêm thông tin chi tiết về phí riêng và phí khởi tạo, vui lòng 
-          <a href="/contact" style="color: #1890ff; font-weight: 600; text-decoration: none;">liên hệ với chúng tôi</a> 
+          <a href="/contact" class="contact-link">liên hệ với chúng tôi</a> 
           hoặc gọi hotline hỗ trợ.
         </p>
       </div>
@@ -428,7 +427,7 @@
           <strong>{{ selectedPackage?.name || 'N/A' }}</strong>
         </nz-descriptions-item>
         <nz-descriptions-item nzTitle="Số tiền">
-          <strong style="font-size: 18px; color: #1890ff;">
+          <strong class="sepay-amount-text">
             {{ formatPrice(sepayAmount) }}
           </strong>
         </nz-descriptions-item>
@@ -439,37 +438,35 @@
       </nz-descriptions>
 
       <!-- QR Code -->
-      <div *ngIf="sepayQrUrl" style="text-align: center; margin: 20px 0;">
-        <div style="margin-bottom: 12px;">
-          <h3 style="margin: 0; font-size: 16px; font-weight: 600;">
-            <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
-            Quét QR để thanh toán
-          </h3>
-        </div>
-        <div style="display: inline-block; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <div *ngIf="sepayQrUrl" class="sepay-qr-section">
+        <h3 class="sepay-qr-title">
+          <i nz-icon nzType="qrcode" nzTheme="outline" class="payment-btn-icon"></i>
+          Quét QR để thanh toán
+        </h3>
+        <div class="sepay-qr-wrapper">
           <img 
             [src]="sepayQrUrl" 
             alt="QR Code thanh toán" 
-            style="max-width: 300px; width: 100%; height: auto; display: block;"
+            class="sepay-qr-img"
             onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
           />
         </div>
-        <div style="margin-top: 12px; font-size: 12px; color: #666;">
-          <p style="margin: 4px 0;" *ngIf="systemBeneficiaryName">
+        <div class="sepay-bank-info">
+          <p *ngIf="systemBeneficiaryName">
             <strong>Người thụ hưởng:</strong> {{ systemBeneficiaryName }}
           </p>
-          <p style="margin: 4px 0;" *ngIf="systemBankName">
+          <p *ngIf="systemBankName">
             <strong>Ngân hàng:</strong> {{ systemBankName }}
           </p>
-          <p style="margin: 4px 0;" *ngIf="systemAccountNumber">
+          <p *ngIf="systemAccountNumber">
             <strong>Số tài khoản:</strong> {{ systemAccountNumber }}
           </p>
         </div>
       </div>
 
-      <div style="margin-top: 20px; padding: 12px; background: #f0f9ff; border-radius: 4px; border-left: 4px solid #1890ff;">
-        <p style="margin: 0; color: #1890ff; font-size: 13px;">
-          <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 6px;"></i>
+      <div class="sepay-notice">
+        <p>
+          <i nz-icon nzType="info-circle" nzTheme="outline" class="notice-icon"></i>
           Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và đăng ký gói cho bạn trong vòng vài phút.
           <strong>Modal này sẽ tự động đóng khi thanh toán thành công.</strong>
         </p>

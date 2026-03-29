@@ -1,0 +1,156 @@
+<!-- Bảng danh sách hạng phòng -->
+<div class="table-container">
+  <nz-table #categoryTable nzBordered [nzData]="categories" [nzScroll]="{ x: '900px' }" nzSize="small">
+    <thead>
+      <tr>
+        <th nzWidth="180px">Tên hạng phòng</th>
+        <th nzWidth="120px">Giá theo giờ</th>
+        <th nzWidth="120px">Giá theo ngày</th>
+        <th nzWidth="120px">Giá qua đêm</th>
+        <th nzWidth="100px">Sức chứa</th>
+        <th nzWidth="150px">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let cat of categories">
+        <td>{{ cat.name }}</td>
+        <td>{{ (cat.pricing?.hourly || cat.firstHourRate || 0) | currency:'VND':'đ' }}</td>
+        <td>{{ (cat.pricing?.daily || 0) | currency:'VND':'đ' }}</td>
+        <td>{{ (cat.pricing?.nightly || 0) | currency:'VND':'đ' }}</td>
+        <td>{{ cat.capacity?.adults || 0 }}/{{ cat.capacity?.children || 0 }}</td>
+        <td>
+          <button nz-button nzType="primary" nzSize="small" (click)="startEdit(cat)">
+            <i nz-icon nzType="edit"></i>
+          </button>
+          <nz-divider nzType="vertical"></nz-divider>
+          <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa hạng phòng này?" (nzOnConfirm)="deleteCategory(cat._id!)">
+            <button nz-button nzType="primary" nzDanger nzSize="small">
+              <i nz-icon nzType="delete"></i>
+            </button>
+          </a>
+        </td>
+      </tr>
+    </tbody>
+  </nz-table>
+</div>
+
+<!-- Form thêm/sửa hạng phòng -->
+<div class="category-form-section">
+  <h4>{{ editingCategory ? 'Cập nhật hạng phòng' : 'Thêm hạng phòng mới' }}</h4>
+  <form nz-form [formGroup]="categoryForm" (ngSubmit)="submitForm()">
+    <div nz-row [nzGutter]="16">
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label nzRequired>Tên hạng phòng</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng nhập tên hạng phòng">
+            <input nz-input formControlName="name" placeholder="VD: Standard, Deluxe, VIP..." />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Mô tả</nz-form-label>
+          <nz-form-control>
+            <input nz-input formControlName="description" placeholder="Mô tả hạng phòng" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+
+    <div nz-row [nzGutter]="16" formGroupName="pricing">
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Giá theo giờ</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="hourly" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Giá theo ngày</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="daily" [nzMin]="0" [nzStep]="50000" class="w-100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Giá qua đêm</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="nightly" [nzMin]="0" [nzStep]="50000" class="w-100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Giá theo tuần</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="weekly" [nzMin]="0" [nzStep]="100000" class="w-100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Giá theo tháng</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="monthly" [nzMin]="0" [nzStep]="500000" class="w-100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+
+    <div nz-row [nzGutter]="16">
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Giá giờ đầu</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="firstHourRate" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Giá giờ tiếp theo</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="additionalHourRate" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+
+    <div nz-row [nzGutter]="16" formGroupName="capacity">
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Số người lớn</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="adults" [nzMin]="1" [nzStep]="1" class="w-100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+        <nz-form-item>
+          <nz-form-label>Số trẻ em</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="children" [nzMin]="0" [nzStep]="1" class="w-100"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+
+    <div nz-row>
+      <div nz-col [nzSpan]="24">
+        <nz-form-item>
+          <nz-form-control>
+            <button nz-button nzType="primary" type="submit" [disabled]="categoryForm.invalid">
+              {{ editingCategory ? 'Cập nhật' : 'Thêm mới' }}
+            </button>
+            <button nz-button nzType="default" class="ml-2" *ngIf="editingCategory" (click)="cancelEdit()">
+              Hủy
+            </button>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </div>
+  </form>
+</div>

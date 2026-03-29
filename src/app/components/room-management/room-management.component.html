@@ -1,24 +1,39 @@
 <nz-card>
   <h2 class="mb-4">{{ 'ROOM_MANAGEMENT.TITLE' | translate }}</h2>
 
-  <!-- Bộ lọc phòng theo khách sạn và tầng -->
+  <!-- Bộ lọc khách sạn -->
   <div class="mb-4 filter-section">
+    <nz-form-item>
+      <nz-form-label>{{ 'ROOM_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
+      <nz-form-control>
+        <nz-select 
+          [nzPlaceHolder]="'ROOM_MANAGEMENT.SELECT_HOTEL' | translate" 
+          [(ngModel)]="selectedHotelId" 
+          (ngModelChange)="onHotelChange($event)"
+          nzAllowClear
+          style="width: 300px;">
+          <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+  </div>
+
+  <nz-tabset *ngIf="selectedHotelId">
+    <!-- Tab 1: Hạng phòng -->
+    <nz-tab nzTitle="Hạng phòng">
+      <app-room-category [hotelId]="selectedHotelId"></app-room-category>
+    </nz-tab>
+
+    <!-- Tab 2: Sơ đồ tầng -->
+    <nz-tab nzTitle="Sơ đồ tầng">
+      <app-floor-plan [hotelId]="selectedHotelId"></app-floor-plan>
+    </nz-tab>
+
+    <!-- Tab 3: Danh sách phòng (existing content) -->
+    <nz-tab nzTitle="Danh sách phòng">
+  <!-- Bộ lọc phòng theo tầng -->
+  <div class="mb-4" style="margin-top: 16px;">
     <div nz-row [nzGutter]="16">
-      <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
-        <nz-form-item>
-          <nz-form-label>{{ 'ROOM_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
-          <nz-form-control>
-            <nz-select 
-              [nzPlaceHolder]="'ROOM_MANAGEMENT.SELECT_HOTEL' | translate" 
-              [(ngModel)]="selectedHotelId" 
-              (ngModelChange)="onHotelChange($event)"
-              nzAllowClear
-              class="w-100">
-              <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
-            </nz-select>
-          </nz-form-control>
-        </nz-form-item>
-      </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
           <nz-form-label>{{ 'ROOM_MANAGEMENT.FLOOR' | translate }}</nz-form-label>
@@ -158,6 +173,17 @@
               <span class="floor-hint" *ngIf="floors.length > 0">
                 {{ 'ROOM_MANAGEMENT.EXISTING_FLOORS' | translate }}: {{ floors.join(', ') }}
               </span>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Hạng phòng</nz-form-label>
+            <nz-form-control>
+              <nz-select formControlName="roomCategoryId" nzPlaceHolder="Chọn hạng phòng" nzAllowClear nzShowSearch>
+                <nz-option *ngFor="let cat of roomCategories" [nzValue]="cat._id" [nzLabel]="cat.name"></nz-option>
+              </nz-select>
             </nz-form-control>
           </nz-form-item>
         </div>
@@ -600,6 +626,8 @@
       </div>
     </form>
   </div>
+    </nz-tab>
+  </nz-tabset>
 </nz-card>
 
 <style>

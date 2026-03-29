@@ -1,3 +1,31 @@
+export interface RoomCategory {
+  _id?: string;
+  hotelId: string;
+  name: string;
+  description?: string;
+  pricing?: RoomPricing;
+  firstHourRate?: number;
+  additionalHourRate?: number;
+  capacity?: RoomCapacity;
+  amenities?: string[];
+  priceSettings?: {
+    nightlyStartTime?: string;
+    nightlyEndTime?: string;
+    dailyStartTime?: string;
+    dailyEndTime?: string;
+    autoNightlyHours?: number;
+    autoDailyHours?: number;
+    gracePeriodMinutes?: number;
+    timezone?: string;
+    dailyEarlyCheckinSurcharge?: number;
+    dailyLateCheckoutFee?: number;
+    nightlyEarlyCheckinSurcharge?: number;
+    nightlyLateCheckoutSurcharge?: number;
+  };
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export interface RoomCapacity {
   adults?: number;
   children?: number;
@@ -52,6 +80,7 @@ export interface Room {
   additionalHourRate?: number;
 
   priceConfigId?: string;
+  roomCategoryId?: string;
   priceSettings?: {
     nightlyStartTime?: string; // Giờ bắt đầu tính qua đêm (HH:mm)
     nightlyEndTime?: string; // Giờ kết thúc tính qua đêm (HH:mm)

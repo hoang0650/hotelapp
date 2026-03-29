@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
-import { Room, RoomCapacity, RoomPricing, SpecialPrice, RoomRevenue } from '../../interfaces/rooms';
+import { Room, RoomCategory, RoomCapacity, RoomPricing, SpecialPrice, RoomRevenue } from '../../interfaces/rooms';
 import { Hotel } from '../../interfaces/hotel';
 import { RoomsService } from '../../services/rooms.service';
 import { HotelService } from '../../services/hotel.service';
@@ -12,6 +12,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { CurrencyService } from '../../services/currency.service';
+import { RoomCategoryService } from '../../services/room-category.service';
 
 @Component({
   selector: 'app-room-management',
@@ -26,6 +27,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   selectedRoom: Room | null = null;
   floors: string[] = [];
   selectedHotelId: string | null = null;
+  roomCategories: RoomCategory[] = [];
 
   // Phân trang
   pageIndex: number = 1;
@@ -104,7 +106,8 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
     private permissionService: PermissionService,
     private message: NzMessageService,
     private translate: TranslateService,
-    public currencyService: CurrencyService
+    public currencyService: CurrencyService,
+    private roomCategoryService: RoomCategoryService
   ) {
     this.initStatusOptions();
     this.initTimezoneOptions();
@@ -113,6 +116,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       roomNumber: ['', Validators.required],
       floor: [1, [Validators.required, Validators.min(0)]],
       type: ['', Validators.required],
+      roomCategoryId: [null],
       status: ['vacant' as Room['status'], Validators.required],
       
       capacity: this.fb.group({
@@ -171,6 +175,44 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
     // Khởi tạo theo giá trị mặc định
     this.selectedCurrency = String(currencyControl?.value || 'VND').toUpperCase();
     this.updateExchangeRateToUSD();
+
+    // Theo dõi roomCategoryId để auto-fill pricing từ hạng phòng
+    this.roomForm.get('roomCategoryId')?.valueChanges.subscribe((categoryId: string) => {
+      if (categoryId) {
+        const category = this.roomCategories.find(c => (c as any)._id === categoryId || (c as any).id === categoryId);
+        if (category) {
+          // Auto-fill type from category name
+          this.roomForm.patchValue({
+            type: category.name,
+            pricing: {
+              hourly: category.pricing?.hourly || 0,
+              daily: category.pricing?.daily || 0,
+              nightly: category.pricing?.nightly || 0,
+              weekly: category.pricing?.weekly || 0,
+              monthly: category.pricing?.monthly || 0
+            },
+            firstHourRate: category.firstHourRate || category.pricing?.hourly || 0,
+            additionalHourRate: category.additionalHourRate || 0
+          }, { emitEvent: false });
+          
+          // Update priceSettings from category
+          if (category.priceSettings) {
+            this.roomForm.get('priceSettings')?.patchValue({
+              nightlyStartTime: category.priceSettings.nightlyStartTime || '22:00',
+              nightlyEndTime: category.priceSettings.nightlyEndTime || '12:00',
+              dailyStartTime: category.priceSettings.dailyStartTime || '06:00',
+              dailyEndTime: category.priceSettings.dailyEndTime || '22:00',
+              autoNightlyHours: category.priceSettings.autoNightlyHours || 8,
+              gracePeriodMinutes: category.priceSettings.gracePeriodMinutes || 15,
+              dailyEarlyCheckinSurcharge: category.priceSettings.dailyEarlyCheckinSurcharge || 0,
+              dailyLateCheckoutFee: category.priceSettings.dailyLateCheckoutFee || 0,
+              nightlyEarlyCheckinSurcharge: category.priceSettings.nightlyEarlyCheckinSurcharge || 0,
+              nightlyLateCheckoutSurcharge: category.priceSettings.nightlyLateCheckoutSurcharge || 0
+            }, { emitEvent: false });
+          }
+        }
+      }
+    });
 
     // Theo dõi gói hiện tại của người dùng (để lấy maxRooms)
     this.subscriptions.add(
@@ -420,6 +462,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
 
     if (hotelId) {
       this.loadRooms(hotelId);
+      this.loadRoomCategories();
       this.roomService.getHotelFloors(hotelId).subscribe(
         data => {
           this.floors = data.floors.map(f => String(f));
@@ -430,6 +473,18 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
         }
       );
     }
+  }
+
+  loadRoomCategories(): void {
+    if (!this.selectedHotelId) return;
+    this.roomCategoryService.getCategories(this.selectedHotelId).subscribe({
+      next: (res: any) => {
+        this.roomCategories = res.data || res || [];
+      },
+      error: (err: any) => {
+        console.error('Error loading room categories:', err);
+      }
+    });
   }
 
   startEdit(id: string): void {
@@ -455,6 +510,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
             roomNumber: fullRoom.roomNumber,
             floor: Number(fullRoom.floor) || 1,
             type: fullRoom.type,
+            roomCategoryId: (fullRoom as any).roomCategoryId || null,
             status: fullRoom.status,
             capacity: normalizedCapacity,
             amenities: fullRoom.amenities || [],
@@ -511,6 +567,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
             roomNumber: roomToEdit.roomNumber,
             floor: Number(roomToEdit.floor) || 1,
             type: roomToEdit.type,
+            roomCategoryId: (roomToEdit as any).roomCategoryId || null,
             status: roomToEdit.status,
             capacity: normalizedCapacity,
             amenities: roomToEdit.amenities || [],
@@ -570,6 +627,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       hotelId: this.selectedHotelId,
       status: 'vacant',
       floor: 1,
+      roomCategoryId: null,
       capacity: { adults: 2, children: 0 },
       amenities: [],
       images: [],
@@ -638,6 +696,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       roomNumber: String(formValue.roomNumber),
       floor: String(formValue.floor),
       type: formValue.type,
+      roomCategoryId: formValue.roomCategoryId || null,
       status: formValue.status,
       capacity: {
         adults: Number(formValue.capacity?.adults),
@@ -755,6 +814,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
             hotelId: this.selectedHotelId,
             status: 'vacant',
             floor: 1,
+            roomCategoryId: null,
             capacity: { adults: 2, children: 0 },
             amenities: [],
             images: [],

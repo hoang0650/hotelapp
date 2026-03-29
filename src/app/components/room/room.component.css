@@ -1,9 +1,350 @@
-.active-room {
-    background: red !important;
+/* ============ Layout ============ */
+.room-container {
+    padding: 16px;
+    background-color: #fff;
+    min-height: 100vh;
+}
+
+.page-header {
+    background-color: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+    margin-bottom: 16px;
+}
+
+.section-container {
+    background-color: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+}
+
+.section-header {
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.85);
+}
+
+/* ============ Utilities ============ */
+.w-100 { width: 100%; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 16px; }
+.mt-4 { margin-top: 24px; }
+.ml-2 { margin-left: 8px; }
+.mr-2 { margin-right: 8px; }
+.mb-2 { margin-bottom: 8px; }
+.text-right { text-align: right; }
+
+.helper-text {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+
+/* ============ Collapse Container ============ */
+.collapse-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+    overflow: hidden;
+    padding: 16px;
+}
+
+.collapse-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 12px;
+}
+
+.collapse-container ::ng-deep .ant-collapse { background-color: transparent; border: none; }
+.collapse-container ::ng-deep .ant-collapse-item { border-bottom: 1px solid #f0f0f0; }
+.collapse-container ::ng-deep .ant-collapse-item:last-child { border-bottom: none; }
+.collapse-container ::ng-deep .ant-collapse-header {
+    padding: 16px 20px; font-size: 16px; font-weight: 600;
+    color: rgba(0, 0, 0, 0.85); background-color: #fafafa; transition: all 0.3s;
+}
+.collapse-container ::ng-deep .ant-collapse-header:hover { background-color: #f5f5f5; }
+.collapse-container ::ng-deep .ant-collapse-item-active .ant-collapse-header { background-color: #f0f7ff; color: #1890ff; }
+.collapse-container ::ng-deep .ant-collapse-content { border-top: none; }
+.collapse-container ::ng-deep .ant-collapse-content-box { padding: 20px; }
+.collapse-content { padding: 0; }
+
+/* ============ Action Buttons ============ */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 0;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-text { font-weight: 500; }
+
+.action-btn.settings-btn { background: #f0f0f0; border-color: #d9d9d9; }
+.action-btn.settings-btn:hover { background: #e6f7ff; border-color: #1890ff; color: #1890ff; }
+
+::ng-deep .settings-dropdown-menu { min-width: 200px; }
+::ng-deep .settings-dropdown-menu li { display: flex; align-items: center; gap: 8px; }
+::ng-deep .settings-dropdown-menu i { font-size: 16px; }
+
+/* ============ Banner Stats (single-row) ============ */
+.banner-content-single-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.banner-title-section {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+/* ============ Advance Payment Banner ============ */
+.advance-payment-banner {
+    background: linear-gradient(135deg, #8b0000 0%, #a00000 100%);
+    padding: 16px 24px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(139, 0, 0, 0.4);
+}
+
+.banner-label { font-size: 18px; font-weight: 600; color: #fff; }
+.banner-amount { font-size: 20px; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
+
+/* ============ Floor Sections ============ */
+.rooms-by-floor-container { background-color: #fff; }
+.floor-section { margin-bottom: 32px; }
+.floor-header { margin-bottom: 16px; padding: 12px 0; }
+.floor-title { margin: 0; font-size: 24px; font-weight: 700; color: #333; }
+.floor-rooms { padding: 0; }
+.floor-icon { margin-right: 8px; color: #1890ff; }
+.floor-room-count { font-size: 16px; font-weight: 400; color: #999; margin-left: 8px; }
+
+/* ============ Room Header & Badges ============ */
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.room-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; width: 100%; }
+.room-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+.source-badge { font-size: 10px; }
+.guest-status-badge { display: flex; align-items: center; gap: 4px; }
+
+/* ============ Room Item ============ */
+.room-item {
+    min-height: 210px;
+    padding: 18px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.room-item::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+}
+
+.room-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.room-icon {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 32px;
+    opacity: 0.25;
+}
+
+.room-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.25);
+    padding: 4px 10px;
+    border-radius: 10px;
+    line-height: 1.1;
+}
+
+.room-type {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 6px;
+    opacity: 0.9;
+}
+
+.room-status-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    margin-bottom: 12px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+/* ============ Room Details ============ */
+.room-details {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.detail-row.center { justify-content: center; }
+.detail-label { color: rgba(255, 255, 255, 0.82); font-weight: 500; }
+.detail-value { color: #fff; font-weight: 600; text-align: right; }
+.detail-value.highlight { color: #ffe58f; font-weight: 700; font-size: 13px; }
+
+/* ============ Room Status Colors ============ */
+.occupied-room {
+    background: linear-gradient(135deg, #8b0000 0%, #a00000 100%);
+    color: white;
+}
+
+.occupied-guest-out-room {
+    background: linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%);
+    color: white;
+}
+
+.cleaning-room {
+    background: linear-gradient(135deg, #4a5568 0%, #5a6578 100%);
+    color: white;
+}
+
+.maintenance-room {
+    background: linear-gradient(135deg, #5a2d7a 0%, #6a3d8a 100%);
+    color: white;
+}
+
+.booked-room {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2e4a6f 100%);
+    color: white;
 }
 
 .inactive-room {
-    background: #28a745 !important;
+    background: linear-gradient(135deg, #2d5016 0%, #3d7016 100%);
+    color: white;
+}
+
+/* ============ Empty State ============ */
+.empty-state { padding: 32px 0; }
+
+.empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.empty-icon { font-size: 64px; color: #d9d9d9; margin-bottom: 16px; }
+.empty-text { font-size: 16px; color: #999; margin: 0; }
+
+/* ============ Responsive Collapse ============ */
+@media (max-width: 992px) {
+    .collapse-container { padding: 12px; }
+    .collapse-actions { flex-wrap: wrap; gap: 6px; }
+    .collapse-container ::ng-deep .ant-collapse-header { padding: 12px 16px; font-size: 15px; }
+    .collapse-container ::ng-deep .ant-collapse-content-box { padding: 16px; }
+}
+
+@media (max-width: 768px) {
+    .collapse-container { padding: 10px; border-radius: 6px; }
+    .collapse-actions { flex-direction: column; align-items: stretch; gap: 8px; }
+    .collapse-actions button { width: 100%; text-align: left; }
+    .collapse-container ::ng-deep .ant-collapse-header { padding: 10px 12px; font-size: 14px; flex-wrap: wrap; }
+    .collapse-container ::ng-deep .ant-collapse-extra { width: 100%; margin-top: 8px; }
+    .collapse-container ::ng-deep .ant-collapse-extra button { width: 100%; }
+    .collapse-container ::ng-deep .ant-collapse-content-box { padding: 12px; }
+    .floor-title { font-size: 20px; }
+    .action-buttons { margin-top: 16px; }
+}
+
+@media (max-width: 575px) {
+    .room-container { padding: 12px; }
+    .page-header { padding: 12px; }
+    .room-item { min-height: 180px; padding: 12px; margin-bottom: 12px; }
+    .room-number { font-size: 24px; }
+    .room-type { font-size: 14px; }
+    .detail-row { font-size: 11px; }
+    .room-badges { gap: 4px; }
+    .room-badge { font-size: 10px; padding: 2px 6px; }
+    .floor-title { font-size: 18px; }
+    .floor-room-count { font-size: 14px; }
+    .action-buttons { margin-top: 12px; }
+    .empty-icon { font-size: 48px; }
+    .empty-text { font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+    .collapse-container { padding: 8px; }
+    .collapse-container ::ng-deep .ant-collapse-header { padding: 8px 10px; font-size: 13px; }
+    .collapse-container ::ng-deep .ant-collapse-content-box { padding: 10px; }
+    .collapse-actions button { font-size: 12px; padding: 4px 8px; }
+}
+
+/* ============ Original Styles ============ */
+.active-room {
+    background: red !important;
 }
 
 .dirty-room {

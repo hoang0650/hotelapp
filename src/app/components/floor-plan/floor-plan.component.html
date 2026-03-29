@@ -1,0 +1,81 @@
+<!-- Khu vực thêm tầng mới -->
+<div class="add-floor-section">
+  <h4>Thêm tầng mới</h4>
+  <div nz-row [nzGutter]="16" style="align-items: flex-end;">
+    <div nz-col [nzXs]="12" [nzSm]="8" [nzMd]="6">
+      <nz-form-item>
+        <nz-form-label>Số tầng</nz-form-label>
+        <nz-form-control>
+          <nz-input-number 
+            [(ngModel)]="newFloorNumber" 
+            [nzMin]="0" 
+            [nzMax]="100" 
+            [nzStep]="1" 
+            class="w-100"
+            placeholder="VD: 1, 2, 3...">
+          </nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+    </div>
+    <div nz-col [nzXs]="12" [nzSm]="8" [nzMd]="6">
+      <button nz-button nzType="primary" (click)="addFloor()" [disabled]="newFloorNumber === null || newFloorNumber === undefined">
+        <i nz-icon nzType="plus"></i> Thêm tầng
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Danh sách tầng và phòng -->
+<div *ngFor="let floor of floors; trackBy: trackByFloor" class="floor-section">
+  <div class="floor-header">
+    <h4>Tầng {{ floor }}</h4>
+    <span>{{ getRoomsByFloor(floor).length }} phòng</span>
+  </div>
+
+  <!-- Danh sách phòng trong tầng -->
+  <div class="room-cards-container">
+    <div *ngFor="let room of getRoomsByFloor(floor)" class="room-card-wrapper">
+      <div class="room-card" [ngClass]="'status-' + room.status">
+        <div class="room-number">{{ room.roomNumber }}</div>
+        <div class="room-category-name">{{ getCategoryName(room.roomCategoryId || room.type) }}</div>
+        <nz-tag [nzColor]="getStatusColor(room.status)" style="margin-top: 4px; font-size: 10px;">
+          {{ getStatusLabel(room.status) }}
+        </nz-tag>
+      </div>
+      <a nz-popconfirm nzPopconfirmTitle="Xóa phòng này?" (nzOnConfirm)="deleteRoom(room._id)">
+        <button class="delete-room-btn">✕</button>
+      </a>
+    </div>
+
+    <div *ngIf="getRoomsByFloor(floor).length === 0" style="color: #999; padding: 8px;">
+      Chưa có phòng nào ở tầng này
+    </div>
+  </div>
+
+  <!-- Form thêm phòng inline -->
+  <div class="add-room-inline">
+    <nz-form-item>
+      <nz-form-label>Số phòng</nz-form-label>
+      <nz-form-control>
+        <input nz-input [(ngModel)]="newRoomData[floor].roomNumber" placeholder="VD: 101" style="width: 120px;" />
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item>
+      <nz-form-label>Hạng phòng</nz-form-label>
+      <nz-form-control>
+        <nz-select [(ngModel)]="newRoomData[floor].categoryId" placeholder="Chọn hạng phòng" style="width: 180px;" nzAllowClear>
+          <nz-option *ngFor="let cat of categories" [nzValue]="cat._id" [nzLabel]="cat.name"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+    <button nz-button nzType="dashed" (click)="addRoom(floor)"
+            [disabled]="!newRoomData[floor].roomNumber">
+      <i nz-icon nzType="plus"></i> Thêm phòng
+    </button>
+  </div>
+</div>
+
+<div *ngIf="floors.length === 0" style="text-align: center; padding: 40px; color: #999;">
+  <i nz-icon nzType="inbox" style="font-size: 48px;"></i>
+  <p>Chưa có tầng nào. Hãy thêm tầng mới để bắt đầu.</p>
+</div>

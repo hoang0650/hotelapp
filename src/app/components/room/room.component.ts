@@ -86,6 +86,14 @@ export class RoomComponent implements OnInit, OnDestroy {
   shiftHandoverForm: FormGroup;
   private roomDataUpdatedSubscription: Subscription;
   
+  // Cached room counts for template performance
+  cachedVacantCount = 0;
+  cachedOccupiedCount = 0;
+  cachedDirtyCount = 0;
+  cachedMaintenanceCount = 0;
+  cachedBookedCount = 0;
+  cachedGuestOutCount = 0;
+  
   // Cache để lưu roomPrice từ backend API cho mỗi room
   private roomPriceCache = new Map<string, number>();
   // Map để lưu roomPrice trực tiếp vào room object (để trigger change detection)
@@ -766,9 +774,10 @@ export class RoomComponent implements OnInit, OnDestroy {
           // Đảm bảo guestStatus được giữ nguyên từ backend
           this.rooms = data.map(room => ({
             ...room,
-            guestStatus: room.guestStatus || undefined // Đảm bảo guestStatus được set đúng
+            guestStatus: room.guestStatus || undefined
           }));
           this.updateFloorsFromRooms();
+          this.updateCachedRoomCounts();
           this.isReloading = false;
           
           // Fetch events cho các phòng đang occupied và booked
@@ -800,9 +809,10 @@ export class RoomComponent implements OnInit, OnDestroy {
         // Đảm bảo guestStatus được giữ nguyên từ backend
         this.rooms = results.rooms.map((room: Room) => ({
           ...room,
-          guestStatus: room.guestStatus || undefined // Đảm bảo guestStatus được set đúng
+          guestStatus: room.guestStatus || undefined
         }));
         this.updateFloorsFromRooms();
+        this.updateCachedRoomCounts();
         this.bookings = results.bookings.bookings || [];
         this.isLoading = false;
         this.isReloading = false;
@@ -1468,6 +1478,16 @@ export class RoomComponent implements OnInit, OnDestroy {
       return 'Trệt'; // Sẽ được translate trong template
     }
     return `Tầng ${floor}`; // Sẽ được translate trong template
+  }
+
+  // Cập nhật cached room counts cho template performance
+  private updateCachedRoomCounts(): void {
+    this.cachedVacantCount = this.rooms.filter(r => r.status === 'vacant').length;
+    this.cachedOccupiedCount = this.rooms.filter(r => r.status === 'occupied').length;
+    this.cachedDirtyCount = this.rooms.filter(r => r.status === 'dirty').length;
+    this.cachedMaintenanceCount = this.rooms.filter(r => r.status === 'maintenance').length;
+    this.cachedBookedCount = this.rooms.filter(r => r.status === 'booked').length;
+    this.cachedGuestOutCount = this.rooms.filter(r => r.status === 'occupied' && r.guestStatus === 'out').length;
   }
 
   // Cập nhật danh sách tầng từ phòng thực tế

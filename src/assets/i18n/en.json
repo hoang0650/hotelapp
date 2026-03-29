@@ -50,6 +50,12 @@
     "EMAIL_MANAGEMENT": "Email Management",
     "QR_PAYMENT": "QR Payment",
     "VISA_PAYMENT": "Visa Payment",
+    "ROOM_OPERATIONS": "Rooms & Operations",
+    "ROOM_CATEGORY": "Room Categories",
+    "FLOOR_PLAN": "Floor Plan",
+    "FINANCE_REPORTS": "Finance & Reports",
+    "PAYMENTS": "Payments",
+    "SYSTEM_ADMIN": "System Administration",
     "TOGGLE_COLLAPSE": "Collapse/Expand sidebar"
   },
   "FOOTER": {
@@ -113,6 +119,8 @@
     "SYSTEM_SETTINGS": "System Settings",
     "BOT_SETTING": "Bot Settings",
     "SHIFT_HANDOVER_HISTORY": "Shift Handover History",
+    "ROOM_CATEGORY": "Room Categories",
+    "FLOOR_PLAN": "Floor Plan",
     "FANPAGE_MESSAGES": "Fanpage Management",
     "DEBT_MANAGEMENT": "Debt Management",
     "CONTACT_MANAGEMENT": "Contact Management",
@@ -628,6 +636,12 @@
     "LOAD_STAFF_ERROR": "Unable to load staff list",
     "SELECT_STAFF_ERROR": "Please select staff",
     "ENTER_PASSWORD_ERROR": "Please enter password",
+    "MANAGER_HANDOVER_TITLE": "Manager Money Handover",
+    "SELECT_MANAGER": "Select Manager",
+    "SELECT_MANAGER_ERROR": "Please select a manager",
+    "CONFIRM_MANAGER_HANDOVER": "Confirm Handover",
+    "MANAGER_HANDOVER_SUCCESS": "Manager handover successful",
+    "MANAGER_HANDOVER_ERROR": "Manager handover failed",
     "HISTORY": {
       "TITLE": "Shift Handover History",
       "FROM_DATE": "From Date",
@@ -856,6 +870,7 @@
   },
   "ROOM_MANAGEMENT": {
     "TITLE": "Room Management",
+    "ROOM_CATEGORY": "Room Category",
     "HOTEL": "Hotel",
     "SELECT_HOTEL": "Select hotel",
     "FLOOR": "Floor",

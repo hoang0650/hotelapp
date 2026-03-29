@@ -108,8 +108,8 @@ export class TransactionService {
   createIncome(income: {
     hotelId: string;
     amount: number;
-    method: 'cash' | 'credit_card' | 'bank_transfer' | 'card' | 'virtual_card' | 'other';
-    incomeCategory?: 'service' | 'rental' | 'other';
+    method: 'cash' | 'credit_card' | 'bank_transfer' | 'card' | 'virtual_card' | 'other' | 'transfer';
+    incomeCategory?: 'service' | 'rental' | 'deposit' | 'other';
     description?: string;
     notes?: string;
     payer?: string;
