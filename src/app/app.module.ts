@@ -125,6 +125,8 @@ import { NlToBrPipe } from './pipes/nl-to-br.pipe';
 import { MarkdownPipe } from './pipes/markdown.pipe';
 import { AiChatboxComponent } from './components/ai-chatbox/ai-chatbox.component';
 import { FanpageMessagesComponent } from './components/fanpage-messages/fanpage-messages.component';
+import { ZaloMessagesComponent } from './components/zalo-messages/zalo-messages.component';
+import { TelegramMessagesComponent } from './components/telegram-messages/telegram-messages.component';
 import { PricingComponent } from './components/pricing/pricing.component';
 import { PricingManagementModule } from './components/pricing-management/pricing-management.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -274,6 +276,8 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         MarkdownPipe,
         AiChatboxComponent,
         FanpageMessagesComponent,
+        ZaloMessagesComponent,
+        TelegramMessagesComponent,
         PricingComponent,
         OtaManagementComponent, // Thêm OtaManagementComponent vào declarations
         ShiftHandoverHistoryComponent,

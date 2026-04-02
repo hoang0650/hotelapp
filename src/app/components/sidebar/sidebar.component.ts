@@ -191,6 +191,28 @@ export class SidebarComponent implements OnInit, OnDestroy {
           }
         ]
       },
+      // Nhóm: Tin nhắn & Chat
+      {
+        title: this.translate.instant('SIDEBAR.MESSAGING'),
+        icon: 'message',
+        children: [
+          {
+            title: this.translate.instant('SIDEBAR.FANPAGE_MESSAGES'),
+            route: '/admin/fanpage-messages',
+            feature: 'fanpage_messages'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.ZALO_MESSAGES'),
+            route: '/admin/zalo-messages',
+            feature: 'zalo_messages'
+          },
+          {
+            title: this.translate.instant('SIDEBAR.TELEGRAM_MESSAGES'),
+            route: '/admin/telegram-messages',
+            feature: 'telegram_messages'
+          }
+        ]
+      },
       // Nhóm: Hóa đơn điện tử
       {
         title: this.translate.instant('SIDEBAR.E_INVOICE'),

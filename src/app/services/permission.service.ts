@@ -23,6 +23,8 @@ export type PermissionFeature =
   | 'qr_payment'          // Thanh toán QR
   | 'visa_payment'        // Thanh toán Visa
   | 'electric_management' // Quản lý điện
+  | 'zalo_messages'       // Tin nhắn Zalo OA
+  | 'telegram_messages'   // Tin nhắn Telegram
   | 'settings_management'; // Quản lý cài đặt
 
 // Map routes với permissions
@@ -37,6 +39,8 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/pricing-management': ['pricing_management'],
   '/admin/ota-management': ['ota_management'],
   '/admin/fanpage-messages': ['fanpage_messages'],
+  '/admin/zalo-messages': ['zalo_messages'],
+  '/admin/telegram-messages': ['telegram_messages'],
   '/admin/bot-setting': [],
   '/admin/chart': ['revenue_chart'],
   '/admin/shift-handover': ['shift_handover'],
@@ -181,6 +185,8 @@ export class PermissionService {
         'service_management', // Quản lý dịch vụ
         'ota_management', // Quản lý OTA
         'fanpage_messages', // Tin nhắn Fanpage
+        'zalo_messages', // Tin nhắn Zalo OA
+        'telegram_messages', // Tin nhắn Telegram
         'revenue_chart', // Biểu đồ doanh thu
         'qr_payment', // Thanh toán QR
         'visa_payment', // Thanh toán Visa
@@ -295,6 +301,8 @@ export class PermissionService {
       'pricing_management': ['manage'],
       'ota_management': ['view', 'edit', 'manage'],
       'fanpage_messages': ['view', 'manage'],
+      'zalo_messages': ['view', 'manage'],
+      'telegram_messages': ['view', 'manage'],
       'revenue_chart': ['view', 'manage'],
       'shift_handover': ['view', 'edit', 'manage'],
       'bank_transfer_history': ['view', 'manage'],
@@ -342,6 +350,8 @@ export class PermissionService {
       'pricing_management',
       'ota_management',
       'fanpage_messages',
+      'zalo_messages',
+      'telegram_messages',
       'revenue_chart',
       'shift_handover',
       'bank_transfer_history',

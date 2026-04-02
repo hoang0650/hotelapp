@@ -89,6 +89,8 @@
           <li nz-menu-item *ngIf="canAccessOTAManagement()" routerLink="/admin/ota-management">{{ 'ADMIN_SIDEBAR.OTAS_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessPricingManagement()" routerLink="/admin/pricing-management">{{ 'ADMIN_SIDEBAR.PRICING_MANAGEMENT' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/fanpage-messages">{{ 'ADMIN_SIDEBAR.FANPAGE_MESSAGES' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/zalo-messages">{{ 'SIDEBAR.ZALO_MESSAGES' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/telegram-messages">{{ 'SIDEBAR.TELEGRAM_MESSAGES' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessElectricSetting()" routerLink="/admin/electric-setting">
             <span>{{ 'ADMIN_SIDEBAR.ELECTRIC_SETTING' | translate }}</span>
           </li>

@@ -60,7 +60,11 @@
     "E_INVOICE": "Hóa đơn điện tử",
     "E_INVOICE_REGISTRATION": "Đăng ký hóa đơn điện tử",
     "E_INVOICE_MANAGEMENT": "Quản lý hóa đơn",
-    "E_INVOICE_TEMPLATE": "Mẫu hóa đơn"
+    "E_INVOICE_TEMPLATE": "Mẫu hóa đơn",
+    "MESSAGING": "Tin nhắn & Chat",
+    "FANPAGE_MESSAGES": "Facebook Fanpage",
+    "ZALO_MESSAGES": "Zalo OA",
+    "TELEGRAM_MESSAGES": "Telegram"
   },
   "FOOTER": {
     "COPYRIGHT": "© 2025 Hệ thống Quản lý Khách sạn. Bảo lưu mọi quyền.",

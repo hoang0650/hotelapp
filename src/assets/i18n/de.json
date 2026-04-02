@@ -56,7 +56,11 @@
     "FINANCE_REPORTS": "Finanzen & Berichte",
     "PAYMENTS": "Zahlungen",
     "SYSTEM_ADMIN": "Systemverwaltung",
-    "TOGGLE_COLLAPSE": "Sidebar ein-/ausklappen"
+    "TOGGLE_COLLAPSE": "Sidebar ein-/ausklappen",
+    "MESSAGING": "Nachrichten & Chat",
+    "FANPAGE_MESSAGES": "Facebook Fanpage",
+    "ZALO_MESSAGES": "Zalo OA",
+    "TELEGRAM_MESSAGES": "Telegram"
   },
   "FOOTER": {
     "COPYRIGHT": "© 2025 Hotelverwaltungssystem. Alle Rechte vorbehalten.",

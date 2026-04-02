@@ -56,7 +56,11 @@
     "FINANCE_REPORTS": "Finance & Reports",
     "PAYMENTS": "Payments",
     "SYSTEM_ADMIN": "System Administration",
-    "TOGGLE_COLLAPSE": "Collapse/Expand sidebar"
+    "TOGGLE_COLLAPSE": "Collapse/Expand sidebar",
+    "MESSAGING": "Messaging & Chat",
+    "FANPAGE_MESSAGES": "Facebook Fanpage",
+    "ZALO_MESSAGES": "Zalo OA",
+    "TELEGRAM_MESSAGES": "Telegram"
   },
   "FOOTER": {
     "COPYRIGHT": "© 2025 Hotel Management System. All rights reserved.",

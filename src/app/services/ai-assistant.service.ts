@@ -393,4 +393,101 @@ export class AiAssistantService {
       return false;
     }
   }
+
+  // --- 4. ZALO OA INTEGRATION ---
+
+  async getZaloOAuthUrl(tenantId: string): Promise<string> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.get<any>(`${this.aiUrl}/zalo/oauth-url`, { params: { tenant_id: tenantId } })
+      );
+      return resp?.url || '';
+    } catch (error) {
+      console.error('Lỗi lấy Zalo OAuth URL:', error);
+      return '';
+    }
+  }
+
+  async getZaloOAs(tenantId: string): Promise<any[]> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.get<any>(`${this.aiUrl}/zalo/oas`, { params: { tenant_id: tenantId } })
+      );
+      return resp?.oas || [];
+    } catch (error) {
+      console.error('Lỗi lấy danh sách Zalo OA:', error);
+      return [];
+    }
+  }
+
+  async getZaloMessages(tenantId: string, oaId?: string): Promise<any[]> {
+    try {
+      const params: any = { tenant_id: tenantId };
+      if (oaId) params.oa_id = oaId;
+      const resp = await firstValueFrom(
+        this.http.get<any>(`${this.aiUrl}/zalo/messages`, { params })
+      );
+      return resp?.messages || [];
+    } catch (error) {
+      console.error('Lỗi lấy tin nhắn Zalo:', error);
+      return [];
+    }
+  }
+
+  async sendZaloMessage(tenantId: string, oaId: string, recipientId: string, text: string): Promise<any> {
+    return await firstValueFrom(
+      this.http.post<any>(`${this.aiUrl}/zalo/send`, {
+        tenant_id: tenantId, oa_id: oaId, recipient_id: recipientId, text
+      })
+    );
+  }
+
+  // --- 5. TELEGRAM INTEGRATION ---
+
+  async connectTelegramBot(tenantId: string, botToken?: string): Promise<any> {
+    try {
+      const body: any = { tenant_id: tenantId };
+      if (botToken) body.bot_token = botToken;
+      return await firstValueFrom(
+        this.http.post<any>(`${this.aiUrl}/telegram/connect`, body)
+      );
+    } catch (error) {
+      console.error('Lỗi kết nối Telegram bot:', error);
+      throw error;
+    }
+  }
+
+  async getTelegramBots(tenantId: string): Promise<any[]> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.get<any>(`${this.aiUrl}/telegram/bots`, { params: { tenant_id: tenantId } })
+      );
+      return resp?.bots || [];
+    } catch (error) {
+      console.error('Lỗi lấy danh sách Telegram bots:', error);
+      return [];
+    }
+  }
+
+  async getTelegramMessages(tenantId: string, botId?: string): Promise<any[]> {
+    try {
+      const params: any = { tenant_id: tenantId };
+      if (botId) params.bot_id = botId;
+      const resp = await firstValueFrom(
+        this.http.get<any>(`${this.aiUrl}/telegram/messages`, { params })
+      );
+      return resp?.messages || [];
+    } catch (error) {
+      console.error('Lỗi lấy tin nhắn Telegram:', error);
+      return [];
+    }
+  }
+
+  async sendTelegramMessage(tenantId: string, botId: string, chatId: string, text: string): Promise<any> {
+    return await firstValueFrom(
+      this.http.post<any>(`${this.aiUrl}/telegram/send`, {
+        tenant_id: tenantId, bot_id: botId, chat_id: chatId, text
+      })
+    );
+  }
 }
