@@ -6,7 +6,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class ApiService {
-  private baseUrl = 'https://nest-production-8106.up.railway.app/';
+  private baseUrl = 'https://api.phgrouptechs.com/';
 
   constructor(private http: HttpClient) { }
 

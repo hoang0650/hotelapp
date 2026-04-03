@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.phgrouptehcs.com',
-  aiUrl: 'https://ai.phgrouptehcs.com',
+  apiUrl: 'https://api.phgrouptechs.com',
+  aiUrl: 'https://ai.phgrouptechs.com',
   sepay: {
     sandbox: false
   }
