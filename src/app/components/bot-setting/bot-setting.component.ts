@@ -49,6 +49,8 @@ export class BotSettingComponent implements OnInit {
       }),
       checkin_time: ['14:00'],
       checkout_time: ['12:00'],
+      hotline: [''],
+      email_support: [''],
       rooms: this.fb.array([]),
       questions: this.fb.array([])
     });
@@ -146,11 +148,16 @@ export class BotSettingComponent implements OnInit {
         const country = addr.country || '';
         const checkIn = hotel.settings?.checkInTime || this.form.get('checkin_time')?.value || '14:00';
         const checkOut = hotel.settings?.checkOutTime || this.form.get('checkout_time')?.value || '12:00';
+        const contactInfo = hotel.contactInfo || {};
+        const hotline = hotel.settings?.botContext?.hotline || contactInfo.phone || '';
+        const emailSupport = hotel.settings?.botContext?.email_support || contactInfo.email || '';
         this.form.patchValue({
           hotelName: name,
           location: { street, city, country },
           checkin_time: checkIn,
-          checkout_time: checkOut
+          checkout_time: checkOut,
+          hotline,
+          email_support: emailSupport
         });
 
         const botContext = hotel.settings?.botContext || {};
@@ -254,8 +261,12 @@ export class BotSettingComponent implements OnInit {
       const botContext = {
         hotel_name: val.hotelName,
         location: [val.location?.street, val.location?.city, val.location?.country].filter(Boolean).join(', '),
+        street: val.location?.street || '',
+        city: val.location?.city || '',
         checkin_time: val.checkin_time,
         checkout_time: val.checkout_time,
+        hotline: val.hotline || '',
+        email_support: val.email_support || '',
         rooms: (val.rooms || []).map((r: any) => ({
           name: r.name,
           price: r.price,
@@ -323,8 +334,12 @@ export class BotSettingComponent implements OnInit {
       const botContext = {
         hotel_name: val.hotelName,
         location: [val.location?.street, val.location?.city, val.location?.country].filter(Boolean).join(', '),
+        street: val.location?.street || '',
+        city: val.location?.city || '',
         checkin_time: val.checkin_time,
         checkout_time: val.checkout_time,
+        hotline: val.hotline || '',
+        email_support: val.email_support || '',
         rooms: (val.rooms || []).map((r: any) => ({
           name: r.name,
           price: r.price,
