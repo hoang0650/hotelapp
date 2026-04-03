@@ -1,10 +1,10 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 
 interface TgMessage {
-  tenant_id: string;
-  platform: string;
+  tenant_id?: string;
+  platform?: string;
   page_id: string;
   sender_id: string;
   recipient_id?: string;
@@ -13,6 +13,7 @@ interface TgMessage {
   direction: 'in' | 'out';
   timestamp: number;
   mid?: string;
+  is_bot?: boolean;
 }
 
 @Component({
@@ -20,7 +21,9 @@ interface TgMessage {
   templateUrl: './telegram-messages.component.html',
   styleUrls: ['./telegram-messages.component.css']
 })
-export class TelegramMessagesComponent implements OnInit, OnDestroy {
+export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
+  @ViewChild('threadList') private threadList!: ElementRef;
+
   messages: TgMessage[] = [];
   bots: any[] = [];
   conversations: { sender_id: string; sender_name?: string; lastText: string; lastTime: number }[] = [];
@@ -37,6 +40,7 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy {
   showSidebar = true;
   showConnectModal = false;
   private wsSubscription: any;
+  private shouldScrollToBottom = false;
 
   constructor(
     private aiAssistant: AiAssistantService,
@@ -78,10 +82,25 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy {
     }
   }
 
+  ngAfterViewChecked(): void {
+    if (this.shouldScrollToBottom) {
+      this.scrollToBottom();
+      this.shouldScrollToBottom = false;
+    }
+  }
+
   ngOnDestroy(): void {
     if (this.wsSubscription) {
       this.wsSubscription.unsubscribe();
     }
+  }
+
+  private scrollToBottom(): void {
+    try {
+      if (this.threadList) {
+        this.threadList.nativeElement.scrollTop = this.threadList.nativeElement.scrollHeight;
+      }
+    } catch (_) {}
   }
 
   handleRealtimeMessage(msg: TgMessage) {
@@ -94,6 +113,7 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy {
     const partnerId = msg.direction === 'in' ? msg.sender_id : msg.recipient_id;
     if (partnerId === this.selectedSenderId) {
       this.filterDisplayedMessages();
+      this.shouldScrollToBottom = true;
     }
     this.cdr.detectChanges();
   }
@@ -149,30 +169,34 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy {
     try {
       this.messages = await this.aiAssistant.getTelegramMessages(tenantId, this.selectedBotId);
       this.buildConversations();
+      this.shouldScrollToBottom = true;
       this.cdr.detectChanges();
     } catch (error) {
-      console.error('Lỗi load tin nhắn Telegram:', error);
+      console.error('Loi load tin nhan Telegram:', error);
     }
   }
 
   private buildConversations(): void {
     const convMap = new Map<string, any>();
+    const nameMap = new Map<string, string>();
+
+    this.messages.forEach(m => {
+      if (m.direction === 'in' && m.sender_name) {
+        nameMap.set(m.sender_id, m.sender_name);
+      }
+    });
+
     const sorted = [...this.messages].sort((a, b) => b.timestamp - a.timestamp);
     sorted.forEach(m => {
-      const partnerId = m.direction === 'in' ? m.sender_id : (m.recipient_id || 'Unknown');
+      const partnerId = m.direction === 'in' ? m.sender_id : (m.recipient_id || '');
       if (!partnerId) return;
       if (!convMap.has(partnerId)) {
         convMap.set(partnerId, {
           sender_id: partnerId,
-          sender_name: m.sender_name || partnerId,
+          sender_name: nameMap.get(partnerId) || partnerId,
           lastText: m.text || '',
           lastTime: m.timestamp
         });
-      } else {
-        const existing = convMap.get(partnerId);
-        if (!existing.sender_name && m.sender_name) {
-          existing.sender_name = m.sender_name;
-        }
       }
     });
     this.conversations = Array.from(convMap.values());
@@ -182,6 +206,7 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy {
   selectConversation(senderId: string): void {
     this.selectedSenderId = senderId;
     this.filterDisplayedMessages();
+    this.shouldScrollToBottom = true;
     if (this.isMobile) this.showSidebar = false;
   }
 
@@ -236,6 +261,7 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy {
       const tenantId = this.getTenantId();
       await this.aiAssistant.sendTelegramMessage(tenantId, this.selectedBotId, this.selectedSenderId, this.replyText);
       this.replyText = '';
+      this.shouldScrollToBottom = true;
     } catch (error) {
       console.error('Lỗi gửi tin nhắn Telegram:', error);
     } finally {

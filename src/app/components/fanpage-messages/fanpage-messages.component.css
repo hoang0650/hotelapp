@@ -173,6 +173,21 @@
   .thread.hidden { display: none; }
 }
 
+/* Bot Reply Tag */
+.bot-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: #52c41a;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bubble-row.out.bot-reply .bubble {
+  background: #389e0d;
+}
+
 /* Markdown Styles */
 ::ng-deep .markdown-content code {
   background-color: rgba(0, 0, 0, 0.06);

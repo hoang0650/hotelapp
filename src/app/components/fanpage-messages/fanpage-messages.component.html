@@ -79,8 +79,11 @@
         </div>
 
         <div class="message-list" #threadList *ngIf="selectedSenderId">
-          <div *ngFor="let m of displayed" class="bubble-row" [class.out]="m.direction === 'out'">
+          <div *ngFor="let m of displayed" class="bubble-row" [class.out]="m.direction === 'out'" [class.bot-reply]="m.is_bot">
             <div class="bubble">
+              <div class="bot-tag" *ngIf="m.is_bot">
+                <i nz-icon nzType="robot" nzTheme="outline"></i> Bot
+              </div>
               <div class="text markdown-content" *ngIf="m.text" [innerHTML]="m.text | markdown"></div>
               
               <div class="attachments" *ngIf="m.attachments && m.attachments.length > 0">

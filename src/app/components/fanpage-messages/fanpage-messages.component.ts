@@ -1,20 +1,22 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 
 interface FbMessage {
-  tenant_id: string;
+  tenant_id?: string;
   page_id: string;
   sender_id: string;
   recipient_id?: string;
   sender_name?: string;
   sender_avatar?: string;
+  recipient_name?: string;
+  recipient_avatar?: string;
   text: string;
   attachments?: any[];
   direction: 'in' | 'out';
   timestamp: number;
-  reply_text?: string;
   mid?: string;
+  is_bot?: boolean;
 }
 
 @Component({
@@ -23,7 +25,9 @@ interface FbMessage {
   styleUrls: ['./fanpage-messages.component.css']
 })
 
-export class FanpageMessagesComponent implements OnInit, OnDestroy {
+export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
+  @ViewChild('threadList') private threadList!: ElementRef;
+
   messages: FbMessage[] = [];
   pages: any[] = [];
   conversations: { sender_id: string; sender_name?: string; sender_avatar?: string; lastText: string; lastTime: number }[] = [];
@@ -37,13 +41,24 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
   isMobile = false;
   showSidebar = true;
   private wsSubscription: any;
+  private shouldScrollToBottom = false;
 
   private onWindowFocus = async () => {
-    await this.refreshFacebookPages();
-    // Nếu đã chọn page, refresh tin nhắn (fallback)
     if (this.selectedPageId) {
       await this.loadMessages();
       await this.loadBotStatus();
+    }
+  };
+
+  private onPopupMessage = async (event: MessageEvent) => {
+    if (event.data === 'facebook_connected') {
+      await this.refreshFacebookPages();
+      if (this.pages && this.pages.length > 0 && !this.selectedPageId) {
+        this.selectedPageId = this.pages[0].id;
+        await this.loadMessages();
+        await this.loadBotStatus();
+      }
+      this.cdr.detectChanges();
     }
   };
 
@@ -60,9 +75,11 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
       this.isMobile = window.innerWidth <= 768;
       this.showSidebar = !this.isMobile;
 
+      window.addEventListener('focus', this.onWindowFocus);
+      window.addEventListener('message', this.onPopupMessage);
+
       const tenantId = this.getTenantId();
       
-      // KẾT NỐI WEBSOCKET REALTIME
       this.wsSubscription = this.aiAssistant.connectToWebSocket(tenantId).subscribe((msg: any) => {
         if (msg) {
           this.handleRealtimeMessage(msg);
@@ -75,15 +92,20 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
         this.selectedPageId = this.pages[0].id;
         await this.loadMessages();
         await this.loadBotStatus();
-      } else {
-        console.warn('Danh sách pages rỗng!');
       }
 
     } catch (e) {
-      console.error('Lỗi khởi tạo:', e);
+      console.error('Loi khoi tao:', e);
     } finally {
       this.loading = false;
       this.cdr.detectChanges();
+    }
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.shouldScrollToBottom) {
+      this.scrollToBottom();
+      this.shouldScrollToBottom = false;
     }
   }
 
@@ -91,31 +113,34 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
     if (this.wsSubscription) {
       this.wsSubscription.unsubscribe();
     }
+    window.removeEventListener('focus', this.onWindowFocus);
+    window.removeEventListener('message', this.onPopupMessage);
+  }
+
+  private scrollToBottom(): void {
+    try {
+      if (this.threadList) {
+        this.threadList.nativeElement.scrollTop = this.threadList.nativeElement.scrollHeight;
+      }
+    } catch (_) {}
   }
 
   handleRealtimeMessage(msg: FbMessage) {
-    // 1. Kiểm tra duplicate bằng mid
     if (msg.mid && this.messages.some(m => m.mid === msg.mid)) {
-      console.log('Duplicate message ignored:', msg.mid);
       return;
     }
 
-    // 2. Kiểm tra có thuộc page hiện tại không
     if (msg.page_id !== this.selectedPageId) {
       return;
     }
 
-    // 3. Thêm vào danh sách messages
     this.messages.push(msg);
-
-    // 4. Cập nhật conversations
     this.buildConversations();
 
-    // 5. Nếu đang chat với người này -> update displayed
     const partnerId = msg.direction === 'in' ? msg.sender_id : msg.recipient_id;
     if (partnerId === this.selectedSenderId) {
       this.filterDisplayedMessages();
-      // Scroll to bottom logic if needed (UI usually handles auto-scroll or user manually scrolls)
+      this.shouldScrollToBottom = true;
     }
 
     this.cdr.detectChanges();
@@ -184,32 +209,42 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
     try {
       this.messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId);
       this.buildConversations();
-      this.cdr.detectChanges(); // Cập nhật UI tin nhắn
+      this.shouldScrollToBottom = true;
+      this.cdr.detectChanges();
     } catch (error) {
-      console.error('Lỗi load tin nhắn:', error);
+      console.error('Loi load tin nhan:', error);
     }
   }
 
   private buildConversations(): void {
     const convMap = new Map<string, any>();
+    const nameMap = new Map<string, { name: string; avatar: string }>();
+
+    this.messages.forEach(m => {
+      if (m.direction === 'in' && m.sender_name && m.sender_name !== 'Khách hàng') {
+        nameMap.set(m.sender_id, { name: m.sender_name, avatar: m.sender_avatar || '' });
+      }
+      if (m.direction === 'out' && m.recipient_id && (m as any).recipient_name) {
+        const rName = (m as any).recipient_name;
+        if (rName) {
+          nameMap.set(m.recipient_id, { name: rName, avatar: (m as any).recipient_avatar || '' });
+        }
+      }
+    });
+
     const sorted = [...this.messages].sort((a, b) => b.timestamp - a.timestamp);
     sorted.forEach(m => {
-      let partnerId = m.direction === 'in' ? m.sender_id : (m.recipient_id || 'Unknown');
+      const partnerId = m.direction === 'in' ? m.sender_id : (m.recipient_id || '');
       if (!partnerId) return;
       if (!convMap.has(partnerId)) {
+        const resolved = nameMap.get(partnerId);
         convMap.set(partnerId, {
           sender_id: partnerId,
-          sender_name: m.sender_name || partnerId,
-          sender_avatar: m.sender_avatar || '',
-          lastText: m.text || (m.attachments && m.attachments.length ? '[Đính kèm]' : ''),
+          sender_name: resolved?.name || partnerId,
+          sender_avatar: resolved?.avatar || '',
+          lastText: m.text || (m.attachments && m.attachments.length ? '[Dinh kem]' : ''),
           lastTime: m.timestamp
         });
-      } else {
-        const existing = convMap.get(partnerId);
-        if ((!existing.sender_avatar || !existing.sender_name) && m.sender_name) {
-          existing.sender_name = m.sender_name;
-          existing.sender_avatar = m.sender_avatar;
-        }
       }
     });
     this.conversations = Array.from(convMap.values());
@@ -219,6 +254,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
   selectConversation(senderId: string): void {
     this.selectedSenderId = senderId;
     this.filterDisplayedMessages();
+    this.shouldScrollToBottom = true;
     if (this.isMobile) this.showSidebar = false;
   }
 
@@ -262,7 +298,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy {
         this.replyText
       );
       this.replyText = '';
-      // await this.loadMessages(); // Không cần reload, WebSocket sẽ trả về tin nhắn vừa gửi
+      this.shouldScrollToBottom = true;
     } catch (error) {
       console.error('Lỗi gửi tin nhắn:', error);
     } finally {

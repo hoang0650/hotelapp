@@ -135,6 +135,20 @@
   .thread.hidden { display: none; }
 }
 
+.bot-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: #52c41a;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bubble-row.out.bot-reply .bubble {
+  background: #389e0d;
+}
+
 ::ng-deep .markdown-content code {
   background-color: rgba(0, 0, 0, 0.06);
   padding: 2px 4px; border-radius: 4px; font-family: monospace;

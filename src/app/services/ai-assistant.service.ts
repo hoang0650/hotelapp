@@ -73,7 +73,7 @@ export class AiAssistantService {
       }
     }
 
-    const wsUrl = this.aiUrl.replace('http', 'ws') + `/ws/${tenantId}`;
+    const wsUrl = this.aiUrl.replace('http', 'ws') + `/ws/messages/${tenantId}`;
     this.socket = new WebSocket(wsUrl);
 
     this.socket.onopen = () => {
