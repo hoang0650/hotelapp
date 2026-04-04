@@ -45,6 +45,7 @@ export class AiAssistantService {
   private isTyping = new BehaviorSubject<boolean>(false);
   private wsSubject = new BehaviorSubject<any>(null);
   private socket: WebSocket | null = null;
+  private pingInterval: any; // Thêm biến lưu bộ đếm Heartbeat
 
   // URL tới Python Backend (FastAPI/Flask) - Nơi xử lý Facebook & AI
   private aiUrl = environment.aiUrl; 
@@ -64,23 +65,29 @@ export class AiAssistantService {
       return this.wsSubject.asObservable();
     }
 
-    // Đóng socket cũ nếu có (ở trạng thái khác)
-    if (this.socket) {
-      try {
-        this.socket.close();
-      } catch (e) {
-        console.error('Error closing old socket:', e);
-      }
-    }
+    // Đóng socket cũ và dọn dẹp bộ đếm nếu có
+    this.disconnectWebSocket();
 
     const wsUrl = this.aiUrl.replace('http', 'ws') + `/ws/messages/${tenantId}`;
     this.socket = new WebSocket(wsUrl);
 
     this.socket.onopen = () => {
       console.log('Connected to WebSocket:', wsUrl);
+      
+      // Khởi tạo Heartbeat: Gửi "ping" mỗi 30 giây để tránh lỗi 499 trên Railway
+      this.pingInterval = setInterval(() => {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+          this.socket.send('ping');
+        }
+      }, 30000);
     };
 
     this.socket.onmessage = (event) => {
+      // Bỏ qua tin nhắn "pong" trả về từ server, không đưa vào xử lý JSON
+      if (event.data === 'pong') {
+        return;
+      }
+      
       try {
         const data = JSON.parse(event.data);
         this.wsSubject.next(data);
@@ -91,11 +98,13 @@ export class AiAssistantService {
 
     this.socket.onclose = () => {
       console.log('WebSocket connection closed');
+      this.clearHeartbeat();
       this.socket = null; // Reset socket để có thể reconnect sau này
     };
 
     this.socket.onerror = (error) => {
       console.error('WebSocket error:', error);
+      this.clearHeartbeat();
     };
 
     return this.wsSubject.asObservable();
@@ -103,6 +112,26 @@ export class AiAssistantService {
 
   getWebSocketMessages(): Observable<any> {
     return this.wsSubject.asObservable();
+  }
+
+  // Hàm hỗ trợ ngắt kết nối chủ động
+  disconnectWebSocket(): void {
+    this.clearHeartbeat();
+    if (this.socket) {
+      try {
+        this.socket.close();
+      } catch (e) {
+        console.error('Error closing old socket:', e);
+      }
+      this.socket = null;
+    }
+  }
+
+  private clearHeartbeat(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
   }
 
 
