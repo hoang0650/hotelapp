@@ -1,7 +1,10 @@
 <nz-layout>
+  <!-- Mobile Overlay -->
+  <div class="mobile-overlay" [class.active]="isMobileMenuOpen" (click)="closeMobileMenu()"></div>
+
   <!-- <nz-sider nzCollapsible nzWidth="200px">
     <div class="logo"></div>
-    <ul nz-menu nzTheme="dark" nzMode="inline">
+    <ul nz-menu nzTheme="dark" nzMode="inline" (click)="closeMobileMenu($event)">
       <li nz-submenu nzTitle="Khách sạn" nzIcon="table">
         <ul>
           <li nz-menu-item routerLink="/admin/room">Phòng</li>
@@ -44,9 +47,9 @@
     </ul>
   </nz-sider> -->
 
-  <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null">
+  <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null" [class.mobile-open]="isMobileMenuOpen">
     <div class="logo"></div>
-    <ul nz-menu nzTheme="dark" nzMode="inline">
+    <ul nz-menu nzTheme="dark" nzMode="inline" (click)="closeMobileMenu($event)">
       <!-- Vận hành khách sạn -->
       <li nz-submenu *ngIf="canAccessHotelMenu()" [nzTitle]="'ADMIN_SIDEBAR.HOTEL_OPERATIONS' | translate" nzIcon="home">
         <ul>
@@ -125,12 +128,20 @@
   </nz-sider>
   <nz-layout>
     <nz-breadcrumb>
+      <!-- Desktop Trigger -->
       <span
-      class="trigger"
-      nz-icon
-      [nzType]="isCollapsed ? 'menu-unfold' : 'menu-fold'"
-      (click)="isCollapsed = !isCollapsed"
-    ></span>
+        class="trigger desktop-trigger"
+        nz-icon
+        [nzType]="isCollapsed ? 'menu-unfold' : 'menu-fold'"
+        (click)="isCollapsed = !isCollapsed"
+      ></span>
+      <!-- Mobile Trigger -->
+      <span
+        class="trigger mobile-trigger"
+        nz-icon
+        [nzType]="isMobileMenuOpen ? 'menu-fold' : 'menu-unfold'"
+        (click)="toggleMobileMenu()"
+      ></span>
       <nz-breadcrumb-item *ngFor="let breadcrumb of breadcrumbs">
         <a [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a>
       </nz-breadcrumb-item>

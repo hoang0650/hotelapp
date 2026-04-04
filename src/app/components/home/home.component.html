@@ -1,258 +1,191 @@
 <div class="home-container">
-  <!-- Hero Section 
-  <div class="hero-section">
-    <div class="hero-overlay"></div>
-    <div class="hero-particles"></div>
-    <div class="hero-content">
-      <div class="hero-badge">
-        <i nz-icon nzType="star" nzTheme="fill" class="badge-icon"></i>
-        <span>Giải pháp quản lý hàng đầu</span>
+  <!-- <section class="hero-section text-center">
+    <div class="container py-5">
+      <div class="hero-badge mb-3">
+        <nz-tag [nzColor]="'blue'">
+          <i nz-icon nzType="star" nzTheme="fill"></i> Giải pháp quản lý hàng đầu
+        </nz-tag>
       </div>
-      <h1 class="hero-title">
-        <span class="title-line">Hệ Thống</span>
-        <span class="title-line text-gradient">Quản Lý Khách Sạn</span>
-        <span class="title-line">Chuyên Nghiệp</span>
+      <h1 class="hero-title display-4 font-weight-bold mb-4">
+        Hệ Thống <span class="text-primary">Quản Lý Khách Sạn</span> Chuyên Nghiệp
       </h1>
-      <p class="hero-subtitle">
+      <p class="hero-subtitle lead text-muted mb-5 mx-auto" style="max-width: 700px;">
         Giải pháp quản lý khách sạn toàn diện, hiện đại và dễ sử dụng. 
         Tối ưu hóa quy trình, tăng hiệu quả và nâng cao trải nghiệm khách hàng.
       </p>
-      <div class="hero-features">
-        <div class="feature-badge">
-          <i nz-icon nzType="check-circle" nzTheme="fill"></i>
-          <span>Dễ sử dụng</span>
-        </div>
-        <div class="feature-badge">
-          <i nz-icon nzType="check-circle" nzTheme="fill"></i>
-          <span>Bảo mật cao</span>
-        </div>
-        <div class="feature-badge">
-          <i nz-icon nzType="check-circle" nzTheme="fill"></i>
-          <span>Hỗ trợ 24/7</span>
-        </div>
-      </div>
-      <div class="hero-actions">
-        <button nz-button nzType="primary" nzSize="large" class="hero-button-primary">
-          <i nz-icon nzType="rocket" nzTheme="outline"></i>
-          <span>Bắt Đầu Ngay</span>
+      
+      <div class="hero-actions mb-5">
+        <button nz-button nzType="primary" nzSize="large" nzShape="round" class="mr-3 px-4 shadow-sm">
+          <i nz-icon nzType="rocket" nzTheme="outline"></i> Bắt Đầu Ngay
         </button>
-        <button nz-button nzType="default" nzSize="large" class="hero-button-secondary">
-          <i nz-icon nzType="play-circle" nzTheme="outline"></i>
-          <span>Xem Demo</span>
+        <button nz-button nzType="default" nzSize="large" nzShape="round" class="px-4 shadow-sm">
+          <i nz-icon nzType="play-circle" nzTheme="outline"></i> Xem Demo
         </button>
       </div>
-      <div class="hero-stats">
-        <div class="stat-item">
-          <div class="stat-number">1000+</div>
-          <div class="stat-label">Khách sạn tin dùng</div>
+
+      <div nz-row nzJustify="center" [nzGutter]="32" class="hero-stats mt-4">
+        <div nz-col>
+          <h2 class="font-weight-bold text-primary mb-0">1000+</h2>
+          <span class="text-muted">Khách sạn tin dùng</span>
         </div>
-        <div class="stat-item">
-          <div class="stat-number">50K+</div>
-          <div class="stat-label">Giao dịch/ngày</div>
+        <div nz-col>
+          <h2 class="font-weight-bold text-primary mb-0">50K+</h2>
+          <span class="text-muted">Giao dịch/ngày</span>
         </div>
-        <div class="stat-item">
-          <div class="stat-number">99.9%</div>
-          <div class="stat-label">Uptime</div>
+        <div nz-col>
+          <h2 class="font-weight-bold text-primary mb-0">99.9%</h2>
+          <span class="text-muted">Uptime</span>
         </div>
       </div>
     </div>
-    <div class="hero-scroll-indicator">
-      <i nz-icon nzType="down" nzTheme="outline"></i>
-    </div>
-  </div>
-  -->
-  <!-- Giới thiệu phần mềm -->
-  <div class="introduction-section">
+  </section> -->
+
+  <section class="features-section py-5 bg-light">
     <div class="container">
-      <h2 class="section-title">{{ 'HOME.INTRODUCTION.TITLE' | translate }}</h2>
-      <div class="intro-content">
-        <div class="intro-text">
-          <h3>{{ 'HOME.INTRODUCTION.HEADING' | translate }}</h3>
-          <p>
-            {{ 'HOME.INTRODUCTION.DESCRIPTION' | translate }}
-          </p>
-          <div class="features-grid">
-            <div class="feature-item">
-              <i nz-icon nzType="home" nzTheme="outline" class="feature-icon"></i>
-              <h4>{{ 'HOME.INTRODUCTION.FEATURE_ROOM_TITLE' | translate }}</h4>
-              <p>{{ 'HOME.INTRODUCTION.FEATURE_ROOM_DESC' | translate }}</p>
+      <div class="text-center mb-5">
+        <h2 class="section-title font-weight-bold">{{ 'HOME.INTRODUCTION.TITLE' | translate }}</h2>
+        <p class="text-muted">{{ 'HOME.INTRODUCTION.HEADING' | translate }}</p>
+      </div>
+
+      <div nz-row [nzGutter]="[24, 24]">
+        <div nz-col [nzXs]="24" [nzMd]="12" [nzLg]="8">
+          <nz-card nzHoverable class="feature-card h-100 border-0 shadow-sm text-center">
+            <div class="icon-wrapper mb-3 text-primary">
+              <i nz-icon nzType="home" nzTheme="outline" style="font-size: 32px;"></i>
             </div>
-            <div class="feature-item">
-              <i nz-icon nzType="dollar" nzTheme="outline" class="feature-icon"></i>
-              <h4>{{ 'HOME.INTRODUCTION.FEATURE_PAYMENT_TITLE' | translate }}</h4>
-              <p>{{ 'HOME.INTRODUCTION.FEATURE_PAYMENT_DESC' | translate }}</p>
+            <h4>{{ 'HOME.INTRODUCTION.FEATURE_ROOM_TITLE' | translate }}</h4>
+            <p class="text-muted">{{ 'HOME.INTRODUCTION.FEATURE_ROOM_DESC' | translate }}</p>
+          </nz-card>
+        </div>
+        <div nz-col [nzXs]="24" [nzMd]="12" [nzLg]="8">
+          <nz-card nzHoverable class="feature-card h-100 border-0 shadow-sm text-center">
+            <div class="icon-wrapper mb-3 text-success">
+              <i nz-icon nzType="dollar" nzTheme="outline" style="font-size: 32px;"></i>
             </div>
-            <div class="feature-item">
-              <i nz-icon nzType="calendar" nzTheme="outline" class="feature-icon"></i>
-              <h4>{{ 'HOME.INTRODUCTION.FEATURE_BOOKING_TITLE' | translate }}</h4>
-              <p>{{ 'HOME.INTRODUCTION.FEATURE_BOOKING_DESC' | translate }}</p>
+            <h4>{{ 'HOME.INTRODUCTION.FEATURE_PAYMENT_TITLE' | translate }}</h4>
+            <p class="text-muted">{{ 'HOME.INTRODUCTION.FEATURE_PAYMENT_DESC' | translate }}</p>
+          </nz-card>
+        </div>
+        <div nz-col [nzXs]="24" [nzMd]="12" [nzLg]="8">
+          <nz-card nzHoverable class="feature-card h-100 border-0 shadow-sm text-center">
+            <div class="icon-wrapper mb-3 text-info">
+              <i nz-icon nzType="calendar" nzTheme="outline" style="font-size: 32px;"></i>
             </div>
-            <div class="feature-item">
-              <i nz-icon nzType="bar-chart" nzTheme="outline" class="feature-icon"></i>
-              <h4>{{ 'HOME.INTRODUCTION.FEATURE_REPORT_TITLE' | translate }}</h4>
-              <p>{{ 'HOME.INTRODUCTION.FEATURE_REPORT_DESC' | translate }}</p>
+            <h4>{{ 'HOME.INTRODUCTION.FEATURE_BOOKING_TITLE' | translate }}</h4>
+            <p class="text-muted">{{ 'HOME.INTRODUCTION.FEATURE_BOOKING_DESC' | translate }}</p>
+          </nz-card>
+        </div>
+        <div nz-col [nzXs]="24" [nzMd]="12" [nzLg]="8">
+          <nz-card nzHoverable class="feature-card h-100 border-0 shadow-sm text-center">
+            <div class="icon-wrapper mb-3 text-warning">
+              <i nz-icon nzType="bar-chart" nzTheme="outline" style="font-size: 32px;"></i>
             </div>
-            <div class="feature-item">
-              <i nz-icon nzType="team" nzTheme="outline" class="feature-icon"></i>
-              <h4>{{ 'HOME.INTRODUCTION.FEATURE_STAFF_TITLE' | translate }}</h4>
-              <p>{{ 'HOME.INTRODUCTION.FEATURE_STAFF_DESC' | translate }}</p>
+            <h4>{{ 'HOME.INTRODUCTION.FEATURE_REPORT_TITLE' | translate }}</h4>
+            <p class="text-muted">{{ 'HOME.INTRODUCTION.FEATURE_REPORT_DESC' | translate }}</p>
+          </nz-card>
+        </div>
+        <div nz-col [nzXs]="24" [nzMd]="12" [nzLg]="8">
+          <nz-card nzHoverable class="feature-card h-100 border-0 shadow-sm text-center">
+            <div class="icon-wrapper mb-3 text-danger">
+              <i nz-icon nzType="team" nzTheme="outline" style="font-size: 32px;"></i>
             </div>
-            <div class="feature-item">
-              <i nz-icon nzType="setting" nzTheme="outline" class="feature-icon"></i>
-              <h4>{{ 'HOME.INTRODUCTION.FEATURE_CUSTOMIZE_TITLE' | translate }}</h4>
-              <p>{{ 'HOME.INTRODUCTION.FEATURE_CUSTOMIZE_DESC' | translate }}</p>
+            <h4>{{ 'HOME.INTRODUCTION.FEATURE_STAFF_TITLE' | translate }}</h4>
+            <p class="text-muted">{{ 'HOME.INTRODUCTION.FEATURE_STAFF_DESC' | translate }}</p>
+          </nz-card>
+        </div>
+        <div nz-col [nzXs]="24" [nzMd]="12" [nzLg]="8">
+          <nz-card nzHoverable class="feature-card h-100 border-0 shadow-sm text-center">
+            <div class="icon-wrapper mb-3" style="color: #722ed1;">
+              <i nz-icon nzType="setting" nzTheme="outline" style="font-size: 32px;"></i>
             </div>
-          </div>
+            <h4>{{ 'HOME.INTRODUCTION.FEATURE_CUSTOMIZE_TITLE' | translate }}</h4>
+            <p class="text-muted">{{ 'HOME.INTRODUCTION.FEATURE_CUSTOMIZE_DESC' | translate }}</p>
+          </nz-card>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Video Demo Section -->
-  <div class="video-section">
+  <section class="video-section py-5">
+    <div class="container text-center">
+      <h2 class="section-title font-weight-bold mb-3">{{ 'HOME.VIDEO.TITLE' | translate }}</h2>
+      <p class="text-muted mb-5 mx-auto" style="max-width: 600px;">{{ 'HOME.VIDEO.DESCRIPTION' | translate }}</p>
+      
+      <div class="video-wrapper shadow-lg rounded overflow-hidden mx-auto" style="max-width: 800px; position: relative; padding-bottom: 56.25%; height: 0;">
+        <iframe 
+          [src]="safeVideoUrl" 
+          frameborder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+        </iframe>
+      </div>
+    </div>
+  </section>
+
+  <section class="app-section py-5 bg-primary text-white text-center">
     <div class="container">
-      <h2 class="section-title">{{ 'HOME.VIDEO.TITLE' | translate }}</h2>
-      <p class="section-subtitle">{{ 'HOME.VIDEO.SUBTITLE' | translate }}</p>
-      <div class="video-container">
-        <div class="video-wrapper">
-          <iframe 
-            [src]="safeVideoUrl" 
-            frameborder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowfullscreen
-            class="youtube-iframe">
-          </iframe>
-        </div>
-      </div>
-      <div class="video-description">
-        <p>
-          {{ 'HOME.VIDEO.DESCRIPTION' | translate }}
-        </p>
-      </div>
-      <div class="app-release">
-        <h2 class="section-title">{{ 'HOME.APP.TITLE' | translate }}</h2>
-        <p class="section-subtitle">{{ 'HOME.APP.SUBTITLE' | translate }}</p>
-        <div class="app-downloads">
-          <a class="store-badge android" href="https://example.com/demo/phhotel-android.apk" target="_blank" rel="noopener">
-             <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Download on Google Play" class="store-badge-image" />
-            <span>{{ 'HOME.APP.DOWNLOAD_ANDROID' | translate }}</span>
-          </a>
-          <a class="store-badge ios" href="https://example.com/demo/phhotel-ios" target="_blank" rel="noopener">
-            <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on App Store" class="store-badge-image" />
-            <span>{{ 'HOME.APP.DOWNLOAD_IOS' | translate }}</span>
-          </a>
-        </div>
+      <h2 class="font-weight-bold mb-3 text-white">{{ 'HOME.APP.TITLE' | translate }}</h2>
+      <p class="mb-4 lead text-light">{{ 'HOME.APP.SUBTITLE' | translate }}</p>
+      
+      <div class="d-flex justify-content-center align-items-center flex-wrap gap-3">
+        <a href="https://example.com/demo/phhotel-android.apk" target="_blank" class="mx-2 mb-2 d-inline-block transition-hover">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" height="50" />
+        </a>
+        <a href="https://example.com/demo/phhotel-ios" target="_blank" class="mx-2 mb-2 d-inline-block transition-hover">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store" height="50" />
+        </a>
       </div>
     </div>
-  </div>
+  </section>
 
-
-  <!-- Our Services 
-  <div class="our-services">
-    <h2 class="section-title">Our Services</h2>
-    <div class="services-list">
-      <div class="service-item">
-        <i class="service-icon fas fa-spa"></i>
-        <h3>Spa & Wellness</h3>
-        <p>Relax and rejuvenate with our luxurious spa treatments and wellness programs.</p>
-      </div>
-      <div class="service-item">
-        <i class="service-icon fas fa-dumbbell"></i>
-        <h3>Fitness Center</h3>
-        <p>Stay fit during your stay with our fully-equipped fitness center.</p>
-      </div>
-      <div class="service-item">
-        <i class="service-icon fas fa-utensils"></i>
-        <h3>Gourmet Dining</h3>
-        <p>Enjoy exquisite dining experiences with our diverse gourmet restaurants.</p>
-      </div>
-      <div class="service-item">
-        <i class="service-icon fas fa-concierge-bell"></i>
-        <h3>Concierge Service</h3>
-        <p>Our dedicated concierge team is here to assist with all your needs.</p>
-      </div>
-    </div>
-  </div>
-  -->
-
-  <!-- Testimonials Carousel -->
-  <div class="testimonials-section">
-    <div class="container">
-      <div class="section-header">
-        <h2 class="section-title">{{ 'HOME.TESTIMONIALS.TITLE' | translate }}</h2>
-        <p class="section-subtitle">{{ 'HOME.TESTIMONIALS.SUBTITLE' | translate }}</p>
+  <section class="testimonials-section py-5 bg-light">
+    <div class="container text-center">
+      <div class="mb-5">
+        <h2 class="section-title font-weight-bold">{{ 'HOME.TESTIMONIALS.TITLE' | translate }}</h2>
+        <p class="text-muted">{{ 'HOME.TESTIMONIALS.SUBTITLE' | translate }}</p>
       </div>
       
-      <div class="testimonials-carousel-wrapper">
-        <nz-carousel 
-          nzEffect="fade" 
-          [nzAutoPlay]="true"
-          nzDotPosition="bottom"
-          [nzDots]="true"
-          [nzAutoPlaySpeed]="5000">
-          <div nz-carousel-content *ngFor="let testimonial of testimonials">
-            <div class="testimonial-card">
-              <div class="testimonial-quote-icon">
-                <i nz-icon nzType="quote" nzTheme="outline"></i>
+      <div class="mx-auto" style="max-width: 800px;">
+        <nz-carousel nzEffect="fade" [nzAutoPlay]="true" nzDotPosition="bottom">
+          <div nz-carousel-content *ngFor="let testimonial of testimonials" class="py-4">
+            <div class="px-3">
+              <i nz-icon nzType="quote" nzTheme="outline" class="text-primary mb-3" style="font-size: 32px; opacity: 0.5;"></i>
+              <h5 class="font-italic text-muted mb-4" style="line-height: 1.6;">"{{ testimonial.quote }}"</h5>
+              <div class="mb-3 text-warning">
+                <i nz-icon nzType="star" nzTheme="fill" *ngFor="let star of [1,2,3,4,5]"></i>
               </div>
-              <div class="testimonial-content">
-                <p class="testimonial-quote">"{{ testimonial.quote }}"</p>
-                <div class="testimonial-rating">
-                  <i nz-icon nzType="star" nzTheme="fill" *ngFor="let star of [1,2,3,4,5]"></i>
-                </div>
-              </div>
-              <div class="testimonial-author">
-                <nz-avatar 
-                  [nzSrc]="testimonial.image" 
-                  nzShape="circle" 
-                  [nzSize]="80" 
-                  class="testimonial-avatar">
-                </nz-avatar>
-                <div class="author-info">
-                  <h4 class="testimonial-name">{{ testimonial.name }}</h4>
-                  <p class="testimonial-role" *ngIf="testimonial.role">{{ testimonial.role }}</p>
-                </div>
-              </div>
+              <nz-avatar [nzSrc]="testimonial.image" [nzSize]="64" class="mb-2 shadow-sm"></nz-avatar>
+              <h6 class="font-weight-bold mb-0">{{ testimonial.name }}</h6>
+              <small class="text-muted">{{ testimonial.role }}</small>
             </div>
           </div>
         </nz-carousel>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Call to Action Section -->
-  <!-- <div class="cta-section">
-    <h2 class="cta-title">Plan Your Perfect Stay</h2>
-    <p class="cta-text">Whether you are here for business or leisure, we offer a range of services to make your stay memorable.</p>
-    <nz-button nzType="default" [routerLink]="['/services']" class="cta-button">Explore Our Services</nz-button>
-  </div> -->
-
-  <!-- Footer -->
-  <footer class="footer bg-primary text-white pt-4">
+  <footer class="footer bg-primary text-light pt-5 pb-3">
     <div class="container">
-      <div class="row footer-content">
-        <!-- Column 1 -->
+      <div class="row">
         <div class="col-lg-4 col-md-6 mb-4">
-          <h5>{{ 'FOOTER.ABOUT_US' | translate }}</h5>
-          <p>{{ 'FOOTER.ABOUT_DESCRIPTION' | translate }}</p>
+          <h5 class="text-white mb-3">{{ 'FOOTER.ABOUT_US' | translate }}</h5>
+          <p class="text-white">{{ 'FOOTER.ABOUT_DESCRIPTION' | translate }}</p>
         </div>
-        <!-- Column 2 -->
         <div class="col-lg-4 col-md-6 mb-4">
-          <h5>{{ 'FOOTER.QUICK_LINKS' | translate }}</h5>
+          <h5 class="text-white mb-3">{{ 'FOOTER.QUICK_LINKS' | translate }}</h5>
           <ul class="list-unstyled">
-            <li><a href="/home" class="text-white">{{ 'NAVBAR.HOME' | translate }}</a></li>
-            <li><a href="/about-us" class="text-white">{{ 'NAVBAR.ABOUT_US' | translate }}</a></li>
-            <li><a href="/pricing" class="text-white">{{ 'NAVBAR.PRICING' | translate }}</a></li>
-            <li><a [routerLink]="['/blog']" class="text-white">{{ 'FOOTER.BLOG' | translate }}</a></li>
-            <li><a href="/admin/room" class="text-white">{{ 'NAVBAR.ADMIN' | translate }}</a></li>
+            <li class="mb-2"><a href="/home" class="text-white text-decoration-none hover-white">{{ 'NAVBAR.HOME' | translate }}</a></li>
+            <li class="mb-2"><a href="/about-us" class="text-white text-decoration-none hover-white">{{ 'NAVBAR.ABOUT_US' | translate }}</a></li>
+            <li class="mb-2"><a href="/pricing" class="text-white text-decoration-none hover-white">{{ 'NAVBAR.PRICING' | translate }}</a></li>
+            <li class="mb-2"><a [routerLink]="['/blog']" class="text-white text-decoration-none hover-white">{{ 'FOOTER.BLOG' | translate }}</a></li>
           </ul>
         </div>
-        <!-- Column 3 -->
         <div class="col-lg-4 col-md-12 mb-4">
-          <h5>{{ 'FOOTER.CONTACT_US' | translate }}</h5>
-          <p><i class="fas fa-map-marker-alt"></i> Lô A1-15 Đường Bình Hoà 24, khu dân cư Đồng An 4, Phường Bình Hòa, Thành phố Thuận An, Tỉnh Bình Dương, Việt Nam</p>
-          <p><i class="fas fa-phone"></i> +1 234 567 890</p>
-          <p><i class="fas fa-envelope"></i> info&#64;phhotel.vn</p>
+          <h5 class="text-white mb-3">{{ 'FOOTER.CONTACT_US' | translate }}</h5>
+          <p class="text-white mb-2"><i class="fas fa-map-marker-alt mr-2"></i> Lô A1-15, Thuận An, Bình Dương</p>
+          <p class="text-white mb-2"><i class="fas fa-phone mr-2"></i> +1 234 567 890</p>
+          <p class="text-white mb-2"><i class="fas fa-envelope mr-2"></i> info&#64;phhotel.vn</p>
         </div>
       </div>
     </div>

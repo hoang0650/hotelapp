@@ -63,7 +63,7 @@
     "TELEGRAM_MESSAGES": "Telegram"
   },
   "FOOTER": {
-    "COPYRIGHT": "© 2025 Hotel Management System. All rights reserved.",
+    "COPYRIGHT": "© 2026 Hotel Management System. All rights reserved.",
     "PRIVACY_POLICY": "Privacy Policy",
     "TERMS_OF_SERVICE": "Terms of Service",
     "CONTACT_US": "Contact Us",
@@ -2218,19 +2218,19 @@
     "INTRODUCTION": {
       "TITLE": "About the Software",
       "HEADING": "Professional hotel management system",
-      "DESCRIPTION": "Our hotel management software is a comprehensive solution that helps you manage all aspects of hotel operations efficiently and professionally. From room management, bookings, payments to revenue reports, everything is integrated into a single system.",
-      "FEATURE_ROOM_TITLE": "Room Management",
-      "FEATURE_ROOM_DESC": "Track room status, bookings, automatic check-in/check-out",
-      "FEATURE_PAYMENT_TITLE": "Payment Management",
-      "FEATURE_PAYMENT_DESC": "Process payments, invoices and detailed financial reports",
-      "FEATURE_BOOKING_TITLE": "Advance Booking",
-      "FEATURE_BOOKING_DESC": "Manage advance bookings, booking history and notifications",
-      "FEATURE_REPORT_TITLE": "Reports & Statistics",
-      "FEATURE_REPORT_DESC": "Revenue reports, statistics by day/week/month",
-      "FEATURE_STAFF_TITLE": "Staff Management",
-      "FEATURE_STAFF_DESC": "Manage shifts, shift handover and staff permissions",
-      "FEATURE_CUSTOMIZE_TITLE": "Flexible Customization",
-      "FEATURE_CUSTOMIZE_DESC": "Configure room prices, services and other options"
+      "DESCRIPTION": "A comprehensive solution to optimize all hotel operations. From room operations, data management, multi-channel payment integration to OTA synchronization and e-invoicing, everything is centrally and smartly managed.",
+      "FEATURE_ROOM_TITLE": "Room Operations & Management",
+      "FEATURE_ROOM_DESC": "Visually control room status with floor plans and strictly manage shift handover history",
+      "FEATURE_PAYMENT_TITLE": "Payment & Finance",
+      "FEATURE_PAYMENT_DESC": "Support multi-payment gateways (QR, Visa), track transfer history and detailed revenue reports",
+      "FEATURE_BOOKING_TITLE": "Multi-channel & OTA Integration",
+      "FEATURE_BOOKING_DESC": "Synchronize room rates via OTAs, connect Fanpage, Zalo, and Telegram messages centrally",
+      "FEATURE_REPORT_TITLE": "Comprehensive Data Management",
+      "FEATURE_REPORT_DESC": "Centrally manage guests, staff, services, debts, and hotel chains",
+      "FEATURE_STAFF_TITLE": "AI Management Integration",
+      "FEATURE_STAFF_DESC": "Apply artificial intelligence to automate management processes, analyze data, and optimize operational efficiency",
+      "FEATURE_CUSTOMIZE_TITLE": "Smart System Settings",
+      "FEATURE_CUSTOMIZE_DESC": "Automate electrical device configuration, customer care Bots, and smart email management"
     },
     "VIDEO": {
       "TITLE": "Introduction Video & Demo",

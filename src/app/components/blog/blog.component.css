@@ -175,6 +175,19 @@
   text-align: center;
 }
 
+.fb-page-wrapper {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.fb-page-iframe {
+  width: 100%;
+  min-height: 500px;
+  display: block;
+}
+
 .related-blogs {
   display: flex;
   flex-direction: column;
@@ -514,6 +527,10 @@
   .related-blog-image {
     width: 100%;
     height: 150px;
+  }
+
+  .fb-page-iframe {
+    min-height: 420px;
   }
 }
 

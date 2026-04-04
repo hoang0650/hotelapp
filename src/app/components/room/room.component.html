@@ -140,64 +140,68 @@
     </div>
     
     <nz-spin [nzSpinning]="isLoading" [nzTip]="'ROOM.LOADING_ROOMS' | translate">
-      <!-- Lặp qua từng tầng -->
-      <div class="floor-section" *ngFor="let floor of getSortedFloors(); trackBy: trackByFloor">
-        <div class="floor-header">
-          <h3 class="floor-title">
-            <i nz-icon nzType="bank" nzTheme="outline" class="floor-icon"></i>
-            {{ floor === '0' || floor === '' ? ('ROOM.GROUND_FLOOR' | translate) : (('ROOM.FLOOR_DISPLAY' | translate) + ' ' + floor) }}
-            <span class="floor-room-count">({{ (getRoomsByFloor()[floor] || []).length }} {{ 'ROOM.ROOM_COUNT' | translate }})</span>
-          </h3>
-        </div>
-        
-        <div class="floor-rooms">
-          <div nz-row [nzGutter]="getRoomGutter()">
-            <div 
-              nz-col 
-              [nzSpan]="getRoomColSpan()"
-              [nzXs]="getRoomColSpanXs()"
-              [nzSm]="getRoomColSpanSm()"
-              [nzMd]="getRoomColSpanMd()"
-              [nzLg]="getRoomColSpanLg()"
-              [nzXl]="getRoomColSpanXl()"
-              *ngFor="let room of getRoomsByFloor()[floor]; trackBy: trackByRoomId"
-              class="room-col"
-              [ngClass]="{'compact-mode': isCompactMode}">
+      <nz-collapse [nzBordered]="false">
+        <!-- Lặp qua từng tầng -->
+        <nz-collapse-panel 
+          *ngFor="let floor of getSortedFloors(); trackBy: trackByFloor" 
+          [nzHeader]="floorHeaderTemplate">
+          
+          <ng-template #floorHeaderTemplate>
+            <h3 class="floor-title">
+              <i nz-icon nzType="bank" nzTheme="outline" class="floor-icon"></i>
+              {{ floor === '0' || floor === '' ? ('ROOM.GROUND_FLOOR' | translate) : (('ROOM.FLOOR_DISPLAY' | translate) + ' ' + floor) }}
+              <span class="floor-room-count">({{ (getRoomsByFloor()[floor] || []).length }} {{ 'ROOM.ROOM_COUNT' | translate }})</span>
+            </h3>
+          </ng-template>
+
+          <div class="floor-rooms">
+            <div nz-row [nzGutter]="getRoomGutter()">
               <div 
-                class="room-item" 
-                [ngClass]="getRoomStatusClass(room.status, room.guestStatus)"
-                appModalControl 
-                [room]="room"
-                [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.status === 'occupied' ? ('ROOM.OCCUPIED' | translate) : getRoomStatusLabelAndColor(room.status).label)"
-                role="button"
-                tabindex="0">
-                
-                <!-- Icon phòng -->
-                <div class="room-icon" *ngIf="!isCompactMode">
-                  <i nz-icon [nzType]="getRoomIcon(room)" nzTheme="outline"></i>
-                </div>
-                
-                <!-- Công tắc điện compact -->
-                <div class="room-switch" *ngIf="selectedHotelId && !isCompactMode" (click)="$event.stopPropagation()">
-                  <app-tuya-switch-compact 
-                    [roomId]="room._id" 
-                    [roomNumber]="room.roomNumber"
-                    [autoLoad]="true">
-                  </app-tuya-switch-compact>
-                </div>
-                
-                <!-- Header phòng -->
-                <div class="room-header">
-                  <!-- Số phòng -->
-                  <div class="room-number">{{ room.roomNumber }}</div>
-                </div>
-                
-                <!-- Loại phòng -->
-                <div class="room-type">{{ room.type }}</div>
-                
-                <!-- Badges và labels -->
-                <div class="room-badges" *ngIf="!isCompactMode">
-                  <!-- Hình thức (chỉ hiển thị khi phòng đang có khách) -->
+                nz-col 
+                [nzSpan]="getRoomColSpan()"
+                [nzXs]="getRoomColSpanXs()"
+                [nzSm]="getRoomColSpanSm()"
+                [nzMd]="getRoomColSpanMd()"
+                [nzLg]="getRoomColSpanLg()"
+                [nzXl]="getRoomColSpanXl()"
+                *ngFor="let room of getRoomsByFloor()[floor]; trackBy: trackByRoomId"
+                class="room-col"
+                [ngClass]="{'compact-mode': isCompactMode}">
+                <div 
+                  class="room-item" 
+                  [ngClass]="getRoomStatusClass(room.status, room.guestStatus)"
+                  appModalControl 
+                  [room]="room"
+                  [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.status === 'occupied' ? ('ROOM.OCCUPIED' | translate) : getRoomStatusLabelAndColor(room.status).label)"
+                  role="button"
+                  tabindex="0">
+                  
+                  <!-- Icon phòng -->
+                  <div class="room-icon" *ngIf="!isCompactMode">
+                    <i nz-icon [nzType]="getRoomIcon(room)" nzTheme="outline"></i>
+                  </div>
+                  
+                  <!-- Công tắc điện compact -->
+                  <div class="room-switch" *ngIf="selectedHotelId && !isCompactMode" (click)="$event.stopPropagation()">
+                    <app-tuya-switch-compact 
+                      [roomId]="room._id" 
+                      [roomNumber]="room.roomNumber"
+                      [autoLoad]="true">
+                    </app-tuya-switch-compact>
+                  </div>
+                  
+                  <!-- Header phòng -->
+                  <div class="room-header">
+                    <!-- Số phòng -->
+                    <div class="room-number">{{ room.roomNumber }}</div>
+                  </div>
+                  
+                  <!-- Loại phòng -->
+                  <div class="room-type">{{ room.type }}</div>
+                  
+                  <!-- Badges và labels -->
+                  <div class="room-badges" *ngIf="!isCompactMode">
+                    <!-- Hình thức (chỉ hiển thị khi phòng đang có khách) -->
                   <ng-container *ngIf="room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
                     <nz-tag [nzColor]="'blue'" class="room-badge">{{ displayInfo.rateTypeLabel }}</nz-tag>
                   </ng-container>
@@ -385,7 +389,8 @@
             </div>
           </div>
         </div>
-      </div>
+        </nz-collapse-panel>
+      </nz-collapse>
       
       <!-- Hiển thị khi không có phòng -->
       <div class="empty-state" *ngIf="rooms.length === 0 && !isLoading">

@@ -60,6 +60,15 @@ export class BlogComponent implements OnInit {
       content: ['', [Validators.required, Validators.minLength(1)]]
     });
   }
+  ngAfterViewInit(): void {
+    // Thêm setTimeout để đảm bảo DOM đã render xong HTML5 của Facebook
+    setTimeout(() => {
+      if ((window as any).FB) {
+        // Hàm này quét DOM và biến thẻ <div class="fb-page"> thành khung Fanpage
+        (window as any).FB.XFBML.parse();
+      }
+    }, 150);
+  }
 
   ngOnInit(): void {
     // Kiểm tra xem có blogId trong route không (xem chi tiết)
@@ -93,7 +102,7 @@ export class BlogComponent implements OnInit {
       next: (response: any) => {
         this.blogs = response.blogs || response.data || [];
         this.total = response.total || 0;
-        
+
         // Lấy danh sách categories từ blogs
         const categorySet = new Set<string>();
         this.blogs.forEach(blog => {
@@ -102,7 +111,7 @@ export class BlogComponent implements OnInit {
           }
         });
         this.categories = Array.from(categorySet);
-        
+
         this.isLoading = false;
       },
       error: (error) => {

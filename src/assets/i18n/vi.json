@@ -67,7 +67,7 @@
     "TELEGRAM_MESSAGES": "Telegram"
   },
   "FOOTER": {
-    "COPYRIGHT": "© 2025 Hệ thống Quản lý Khách sạn. Bảo lưu mọi quyền.",
+    "COPYRIGHT": "© 2026 Hệ thống Quản lý Khách sạn. Bảo lưu mọi quyền.",
     "PRIVACY_POLICY": "Chính sách bảo mật",
     "TERMS_OF_SERVICE": "Điều khoản dịch vụ",
     "CONTACT_US": "Liên hệ",
@@ -2767,19 +2767,19 @@
     "INTRODUCTION": {
       "TITLE": "Giới Thiệu Về Phần Mềm",
       "HEADING": "Hệ thống quản lý khách sạn chuyên nghiệp",
-      "DESCRIPTION": "Phần mềm quản lý khách sạn của chúng tôi là giải pháp toàn diện giúp bạn quản lý mọi khía cạnh của hoạt động khách sạn một cách hiệu quả và chuyên nghiệp. Từ quản lý phòng, đặt phòng, thanh toán đến báo cáo doanh thu, tất cả đều được tích hợp trong một hệ thống duy nhất.",
-      "FEATURE_ROOM_TITLE": "Quản Lý Phòng",
-      "FEATURE_ROOM_DESC": "Theo dõi trạng thái phòng, đặt phòng, check-in/check-out tự động",
-      "FEATURE_PAYMENT_TITLE": "Quản Lý Thanh Toán",
-      "FEATURE_PAYMENT_DESC": "Xử lý thanh toán, hóa đơn và báo cáo tài chính chi tiết",
-      "FEATURE_BOOKING_TITLE": "Đặt Phòng Trước",
-      "FEATURE_BOOKING_DESC": "Quản lý đặt phòng trước, lịch sử đặt phòng và thông báo",
-      "FEATURE_REPORT_TITLE": "Báo Cáo & Thống Kê",
-      "FEATURE_REPORT_DESC": "Báo cáo doanh thu, thống kê theo ngày/tuần/tháng",
-      "FEATURE_STAFF_TITLE": "Quản Lý Nhân Viên",
-      "FEATURE_STAFF_DESC": "Quản lý ca làm việc, giao ca và phân quyền nhân viên",
-      "FEATURE_CUSTOMIZE_TITLE": "Tùy Chỉnh Linh Hoạt",
-      "FEATURE_CUSTOMIZE_DESC": "Cấu hình giá phòng, dịch vụ và các tùy chọn khác"
+      "DESCRIPTION": "Giải pháp toàn diện tối ưu hóa mọi hoạt động khách sạn. Từ vận hành phòng, quản lý dữ liệu, tích hợp thanh toán đa kênh đến đồng bộ OTA và xuất hóa đơn điện tử, tất cả được quản lý tập trung và thông minh.",
+      "FEATURE_ROOM_TITLE": "Vận Hành & Quản Lý Phòng",
+      "FEATURE_ROOM_DESC": "Kiểm soát trạng thái phòng trực quan bằng sơ đồ tầng và quản lý lịch sử giao ca chặt chẽ",
+      "FEATURE_PAYMENT_TITLE": "Thanh Toán & Tài Chính",
+      "FEATURE_PAYMENT_DESC": "Hỗ trợ đa cổng thanh toán (QR, Visa), theo dõi lịch sử chuyển khoản và báo cáo doanh thu",
+      "FEATURE_BOOKING_TITLE": "Tích Hợp Đa Kênh & OTA",
+      "FEATURE_BOOKING_DESC": "Đồng bộ giá phòng qua OTA, kết nối tin nhắn Fanpage, Zalo, Telegram tập trung",
+      "FEATURE_REPORT_TITLE": "Quản Trị Dữ Liệu Toàn Diện",
+      "FEATURE_REPORT_DESC": "Quản lý tập trung khách hàng, nhân viên, dịch vụ, công nợ và chuỗi doanh nghiệp",
+      "FEATURE_STAFF_TITLE": "Tích Hợp AI Quản Lý",
+      "FEATURE_STAFF_DESC": "Ứng dụng trí tuệ nhân tạo để tự động hóa quy trình quản lý, phân tích dữ liệu và tối ưu hóa hiệu suất hoạt động",
+      "FEATURE_CUSTOMIZE_TITLE": "Hệ Thống Thông Minh",
+      "FEATURE_CUSTOMIZE_DESC": "Cấu hình tự động hóa thiết bị điện, Bot chăm sóc khách hàng và quản lý email"
     },
     "VIDEO": {
       "TITLE": "Video Giới Thiệu & Demo",

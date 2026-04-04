@@ -63,7 +63,7 @@
     "TELEGRAM_MESSAGES": "Telegram"
   },
   "FOOTER": {
-    "COPYRIGHT": "© 2025 Hotelverwaltungssystem. Alle Rechte vorbehalten.",
+    "COPYRIGHT": "© 2026 Hotelverwaltungssystem. Alle Rechte vorbehalten.",
     "PRIVACY_POLICY": "Datenschutzrichtlinie",
     "TERMS_OF_SERVICE": "Nutzungsbedingungen",
     "CONTACT_US": "Kontakt",
@@ -2167,19 +2167,19 @@
     "INTRODUCTION": {
       "TITLE": "Über die Software",
       "HEADING": "Professionelles Hotelverwaltungssystem",
-      "DESCRIPTION": "Unsere Hotelverwaltungssoftware ist eine umfassende Lösung, die Ihnen hilft, alle Aspekte des Hotelbetriebs effizient und professionell zu verwalten. Von der Zimmerverwaltung, Buchungen, Zahlungen bis hin zu Umsatzberichten - alles ist in einem einzigen System integriert.",
-      "FEATURE_ROOM_TITLE": "Zimmerverwaltung",
-      "FEATURE_ROOM_DESC": "Zimmerstatus verfolgen, Buchungen, automatischer Check-in/Check-out",
-      "FEATURE_PAYMENT_TITLE": "Zahlungsverwaltung",
-      "FEATURE_PAYMENT_DESC": "Zahlungen verarbeiten, Rechnungen und detaillierte Finanzberichte",
-      "FEATURE_BOOKING_TITLE": "Vorausbuchung",
-      "FEATURE_BOOKING_DESC": "Vorausbuchungen verwalten, Buchungsverlauf und Benachrichtigungen",
-      "FEATURE_REPORT_TITLE": "Berichte & Statistiken",
-      "FEATURE_REPORT_DESC": "Umsatzberichte, Statistiken nach Tag/Woche/Monat",
-      "FEATURE_STAFF_TITLE": "Personalverwaltung",
-      "FEATURE_STAFF_DESC": "Schichten verwalten, Schichtübergabe und Mitarbeiterberechtigungen",
-      "FEATURE_CUSTOMIZE_TITLE": "Flexible Anpassung",
-      "FEATURE_CUSTOMIZE_DESC": "Zimmerpreise, Dienstleistungen und andere Optionen konfigurieren"
+      "DESCRIPTION": "Eine umfassende Lösung zur Optimierung aller Hotelabläufe. Von der Zimmerverwaltung über Datenmanagement, Multikanal-Zahlungsintegration bis hin zu OTA-Synchronisation und E-Rechnungen wird alles zentral und intelligent verwaltet.",
+      "FEATURE_ROOM_TITLE": "Zimmerverwaltung & Betrieb",
+      "FEATURE_ROOM_DESC": "Zimmerstatus visuell mit Grundrissen steuern und den Verlauf der Schichtübergaben streng verwalten",
+      "FEATURE_PAYMENT_TITLE": "Zahlung & Finanzen",
+      "FEATURE_PAYMENT_DESC": "Unterstützung mehrerer Zahlungs-Gateways (QR, Visa), Verfolgung des Überweisungsverlaufs und detaillierte Umsatzberichte",
+      "FEATURE_BOOKING_TITLE": "Multikanal- & OTA-Integration",
+      "FEATURE_BOOKING_DESC": "Zimmerpreise über OTAs synchronisieren, Fanpage-, Zalo- und Telegram-Nachrichten zentral verbinden",
+      "FEATURE_REPORT_TITLE": "Umfassendes Datenmanagement",
+      "FEATURE_REPORT_DESC": "Zentrale Verwaltung von Gästen, Personal, Dienstleistungen, Schulden und Hotelketten",
+      "FEATURE_STAFF_TITLE": "KI-Management-Integration",
+      "FEATURE_STAFF_DESC": "Nutzen Sie künstliche Intelligenz, um Managementprozesse zu automatisieren, Daten zu analysieren und die betriebliche Effizienz zu optimieren",
+      "FEATURE_CUSTOMIZE_TITLE": "Intelligente Systemeinstellungen",
+      "FEATURE_CUSTOMIZE_DESC": "Konfiguration elektrischer Geräte, Kundendienst-Bots und intelligentes E-Mail-Management automatisieren"
     },
     "VIDEO": {
       "TITLE": "Einführungsvideo & Demo",

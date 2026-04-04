@@ -15,6 +15,7 @@ export class AdminComponent implements OnInit {
   // breadcrumbs: string[] = []; dành cho 1 breadcrumb
   breadcrumbs: Array<{ label: string, url: string }> = []; //dành cho route kiểu admin/hotel
   isCollapsed = false;
+  isMobileMenuOpen = false;
   showModal: boolean = false;
   
   // Modal states cho lọc tầng và số cột
@@ -193,6 +194,23 @@ export class AdminComponent implements OnInit {
 
   canAccessEInvoice(): boolean {
     return this.authService.isSuperAdmin();
+  }
+
+  // ============ MOBILE MENU ============
+  toggleMobileMenu(): void {
+    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+  }
+
+  closeMobileMenu(event?: Event): void {
+    if (event) {
+      const target = event.target as HTMLElement;
+      // Chỉ đóng sidebar khi người dùng click vào một mục menu thực sự (menu item),
+      // bỏ qua việc đóng nếu click vào các tiêu đề menu con (để mở dropdown)
+      if (!target.closest('.ant-menu-item')) {
+        return;
+      }
+    }
+    this.isMobileMenuOpen = false;
   }
 
   // Mở trang Settings
