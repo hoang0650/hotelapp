@@ -394,7 +394,7 @@ export class AiAssistantService {
   async toggleBot(tenantId: string, pageId: string, active: boolean): Promise<any> {
     try {
       return await firstValueFrom(
-        this.http.post<any>(`${this.aiUrl}/facebook/bot/toggle`, {
+        this.http.post<any>(`${this.aiUrl}/bot/toggle`, {
           tenant_id: tenantId,
           page_id: pageId,
           active
@@ -412,7 +412,7 @@ export class AiAssistantService {
   async getBotStatus(tenantId: string, pageId: string): Promise<boolean> {
     try {
       const resp = await firstValueFrom(
-        this.http.get<any>(`${this.aiUrl}/facebook/bot/status`, {
+        this.http.get<any>(`${this.aiUrl}/bot/status`, {
           params: { tenant_id: tenantId, page_id: pageId }
         })
       );
