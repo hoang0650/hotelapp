@@ -66,6 +66,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   isRevenuePanelActive = true; // Mở mặc định
   isCalendarPanelActive = false;
   isHistoryPanelActive = false;
+  activeFloors: string[] = [];
+  isFirstLoadForHotel = true;
   
   // Compact mode for room display
   isCompactMode = false; // Chế độ rút gọn: chỉ hiển thị số phòng, thời gian lưu trú và loại phòng
@@ -860,6 +862,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     }
     this.selectedHotelId = hotelId;
+    this.isFirstLoadForHotel = true;
+    this.activeFloors = [];
     if (hotelId) {
       this.roomSessionService.setHotelId(hotelId);
       localStorage.setItem('selectedHotelId', hotelId);
@@ -1503,6 +1507,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       const numB = parseInt(b) || 0;
       return numA - numB;
     });
+
+    if (this.isFirstLoadForHotel && this.floors.length > 0) {
+      this.activeFloors = [...this.floors];
+      this.isFirstLoadForHotel = false;
+    }
     
     // Kiểm tra lại selectedFloor sau khi cập nhật floors từ rooms
     // Nếu selectedFloor không còn tồn tại trong floors, reset nó
@@ -2506,5 +2515,23 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Navigate đến Electric Setting
   navigateToElectric(): void {
     this.router.navigate(['/admin/electric-setting']);
+  }
+
+  expandAllFloors(): void {
+    this.activeFloors = [...this.floors];
+  }
+
+  collapseAllFloors(): void {
+    this.activeFloors = [];
+  }
+
+  onFloorPanelChange(floor: string, isActive: boolean): void {
+    if (isActive) {
+      if (!this.activeFloors.includes(floor)) {
+        this.activeFloors.push(floor);
+      }
+    } else {
+      this.activeFloors = this.activeFloors.filter(f => f !== floor);
+    }
   }
 }
