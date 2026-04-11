@@ -188,7 +188,7 @@ export class RevenueChartComponent implements OnInit, OnChanges {
               labels: data.labels?.length || 0,
               revenueData: data.revenueData?.length || 0,
               totalRevenue: data.totalRevenue,
-              totalExpense: data.totalExpense,
+              totalExpense: this.receiptExpenseTotal,
             });
             
             this.labels = data.labels || [];

@@ -73,10 +73,11 @@
           </div>
           <div class="info-stat-item">
             <span class="stat-label">{{ 'REVENUE_CHART.PROFIT' | translate }}</span>
-            <span class="stat-value" [ngClass]="{'profit-value': (totalRevenue - receiptExpenseTotal) >= 0, 'loss-value': (totalRevenue - totalExpense) < 0}">
-              {{ formatCurrency(totalRevenue - totalExpense) }}
+            <span class="stat-value" [ngClass]="{'profit-value': (totalRevenue - receiptExpenseTotal) >= 0, 'loss-value': (totalRevenue - receiptExpenseTotal) < 0}">
+              {{ formatCurrency(totalRevenue - receiptExpenseTotal) }}
             </span>
           </div>
+          
         </div>
         <!-- <div class="info-stats" style="margin-top: 8px;">
           <div class="info-stat-item">
