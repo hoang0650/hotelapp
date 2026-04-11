@@ -38,7 +38,7 @@
         </div>
         <div class="summary-content">
           <div class="summary-label">{{ 'REVENUE_CHART.TOTAL_EXPENSE' | translate }}</div>
-          <div class="summary-value">{{ formatCurrency(totalExpense) }}</div>
+          <div class="summary-value">{{ formatCurrency(receiptExpenseTotal) }}</div>
         </div>
       </div>
     </div>
@@ -69,20 +69,16 @@
           </div>
           <div class="info-stat-item">
             <span class="stat-label">{{ 'REVENUE_CHART.TOTAL_EXPENSE_LABEL' | translate }}</span>
-            <span class="stat-value expense-value">{{ formatCurrency(totalExpense) }}</span>
+            <span class="stat-value expense-value">{{ formatCurrency(receiptExpenseTotal) }}</span>
           </div>
           <div class="info-stat-item">
             <span class="stat-label">{{ 'REVENUE_CHART.PROFIT' | translate }}</span>
-            <span class="stat-value" [ngClass]="{'profit-value': (totalRevenue - totalExpense) >= 0, 'loss-value': (totalRevenue - totalExpense) < 0}">
+            <span class="stat-value" [ngClass]="{'profit-value': (totalRevenue - receiptExpenseTotal) >= 0, 'loss-value': (totalRevenue - totalExpense) < 0}">
               {{ formatCurrency(totalRevenue - totalExpense) }}
             </span>
           </div>
-          <div class="info-stat-item">
-            <span class="stat-label">Tổng phiếu chi</span>
-            <span class="stat-value expense-value">{{ formatCurrency(receiptExpenseTotal) }}</span>
-          </div>
         </div>
-        <div class="info-stats" style="margin-top: 8px;">
+        <!-- <div class="info-stats" style="margin-top: 8px;">
           <div class="info-stat-item">
             <span class="stat-label">Tiền mặt</span>
             <span class="stat-value">{{ formatCurrency(cashTotal) }}</span>
@@ -95,7 +91,7 @@
             <span class="stat-label">Thẻ</span>
             <span class="stat-value">{{ formatCurrency(cardTotal) }}</span>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
