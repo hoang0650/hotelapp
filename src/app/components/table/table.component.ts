@@ -1477,7 +1477,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
   
-  // Load thời điểm giao tiền quản lý cuối cùng
+  // Load thời điểm giao ca cuối cùng (bao gồm cả giao ca thường và giao tiền quản lý)
   loadLastManagerHandoverTime(callback?: () => void): void {
     if (!this.hotelId) {
       this.lastManagerHandoverTime = null;
@@ -1485,22 +1485,11 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     
-    // Lấy shift handover gần nhất có managerHandoverAmount > 0
-    this.shiftHandoverService.getShiftHandoverHistory({
-      hotelId: this.hotelId,
-      page: 1,
-      limit: 10 // Lấy 10 records gần nhất
-    }).subscribe({
+    // Lấy thời điểm giao ca cuối cùng từ getPreviousShiftAmount (giống PMS)
+    this.shiftHandoverService.getPreviousShiftAmount(this.hotelId).subscribe({
       next: (response) => {
-        const shiftHandovers = response.data || [];
-        
-        // Tìm record gần nhất có managerHandoverAmount > 0
-        const lastManagerHandover = shiftHandovers.find(record => 
-          record.managerHandoverAmount && record.managerHandoverAmount > 0
-        );
-        
-        if (lastManagerHandover && lastManagerHandover.handoverTime) {
-          this.lastManagerHandoverTime = new Date(lastManagerHandover.handoverTime);
+        if (response.data.lastShiftHandover?.handoverTime) {
+          this.lastManagerHandoverTime = new Date(response.data.lastShiftHandover.handoverTime);
         } else {
           this.lastManagerHandoverTime = null;
         }
@@ -2014,6 +2003,19 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         
         this.totalPayment = 0;
         this.calculateTotalPayment();
+        
+        // Reset expense/income form values sau khi giao ca
+        this.shiftHandoverForm.patchValue({
+          expenseAmount: 0,
+          incomeAmount: 0,
+          cashInShift: 0,
+          cashAmount: 0,
+          bankTransferAmount: 0,
+          cardPaymentAmount: 0,
+          managerHandoverAmount: 0
+        });
+        this.cashExpenseAmount = 0;
+        this.cashIncomeAmount = 0;
         
         this.loadDataAfterHandover();
         

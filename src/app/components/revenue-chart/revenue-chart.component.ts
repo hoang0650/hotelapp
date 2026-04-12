@@ -138,6 +138,7 @@ export class RevenueChartComponent implements OnInit, OnChanges {
         this.totalRevenue = response.totalRevenue || 0;
         this.totalPayment = response.totalPayment || 0;
         this.totalExpense = response.totalExpense || 0;
+        this.receiptExpenseTotal = response.totalExpense || 0;
         
         this.updateChart();
         // Sau khi có dữ liệu period, lấy phân loại doanh thu theo range từ Financial Summary
@@ -158,7 +159,7 @@ export class RevenueChartComponent implements OnInit, OnChanges {
             this.isLoading = false;
           }
         });
-        // Lấy breakdown thanh toán và tổng phiếu chi theo range
+        // Lấy breakdown thanh toán theo range
         this.shiftHandoverService.calculateRevenue({
           hotelId: this.hotelId!,
           startDate: startStr,
@@ -169,13 +170,11 @@ export class RevenueChartComponent implements OnInit, OnChanges {
             this.cashTotal = Number(data?.cashTotal) || 0;
             this.bankTransferTotal = Number(data?.bankTransferTotal) || 0;
             this.cardTotal = Number(data?.cardTotal) || 0;
-            this.receiptExpenseTotal = Number(data?.expenseTotal) || 0;
           },
           error: () => {
             this.cashTotal = 0;
             this.bankTransferTotal = 0;
             this.cardTotal = 0;
-            this.receiptExpenseTotal = 0;
           }
         });
       },

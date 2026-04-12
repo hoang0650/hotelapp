@@ -275,16 +275,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
 
   getTotalRevenue(record: ShiftHandover): number {
-    const adjustedRoomRevenue = (record.roomHistory || []).reduce((sum, room: any) => {
-      const roomTotal = room.roomTotal || 0;
-      const serviceAmount = room.serviceAmount || room.serviceTotal || 0;
-      const additionalCharges = room.additionalCharges || 0;
-      const discount = room.discount || 0;
-      const advancePayment = room.advancePayment || 0;
-      return sum + (roomTotal + serviceAmount + additionalCharges - discount - advancePayment);
-    }, 0);
-    const incomeAmount = record.incomeAmount || 0;
-    return adjustedRoomRevenue + incomeAmount;
+    return (record.cashAmount || 0) + (record.bankTransferAmount || 0) + (record.cardPaymentAmount || 0) + (record.incomeAmount || 0) - (record.expenseAmount || 0);
   }
 
   // Helper methods để lấy các giá trị từ room history
