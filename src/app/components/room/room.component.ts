@@ -57,7 +57,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   chartRevenueData: number[] = [];
   chartPaymentData: number[] = [];
   chartExpenseData: number[] = []; // Dữ liệu chi cho biểu đồ
-  selectedPeriod: 'day' | 'week' | 'month' = 'day'; // Khoảng thời gian cho biểu đồ
+  selectedPeriod: 'day' | 'week' | 'month'  = 'day'; // Khoảng thời gian cho biểu đồ
   
   // Currency handling
   usdRate: number = 0;

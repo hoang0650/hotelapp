@@ -141,7 +141,10 @@ export class PricingManagementComponent implements OnInit {
       { value: 'email_admin', label: this.translate.instant('USER_MANAGEMENT.FEATURES.EMAIL_ADMIN') },
       { value: 'qr_payment', label: this.translate.instant('USER_MANAGEMENT.FEATURES.QR_PAYMENT') },
       { value: 'visa_payment', label: this.translate.instant('USER_MANAGEMENT.FEATURES.VISA_PAYMENT') },
-      { value: 'electric_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ELECTRIC_MANAGEMENT') }
+      { value: 'electric_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ELECTRIC_MANAGEMENT') },
+      { value: 'fanpage_messages', label: this.translate.instant('USER_MANAGEMENT.FEATURES.FANPAGE_MESSAGES') },
+      { value: 'zalo_messages', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ZALO_MESSAGES') },
+      { value: 'telegram_messages', label: this.translate.instant('USER_MANAGEMENT.FEATURES.TELEGRAM_MESSAGES') }
     );
   }
 

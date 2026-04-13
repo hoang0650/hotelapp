@@ -43,7 +43,7 @@
     "OTA_MANAGEMENT": "Quản lý OTA",
     "ROOM": "Phòng",
     "REVENUE_CHART": "Biểu đồ doanh thu",
-    "ELECTRIC_SETTING": "Cài đặt điện",
+    "ELECTRIC_SETTING": "Quản lí điện",
     "SHIFT_HANDOVER": "Giao ca",
     "BANK_TRANSFER_HISTORY": "Lịch sử chuyển khoản",
     "CALENDAR": "Lịch",
@@ -62,9 +62,9 @@
     "E_INVOICE_MANAGEMENT": "Quản lý hóa đơn",
     "E_INVOICE_TEMPLATE": "Mẫu hóa đơn",
     "MESSAGING": "Tin nhắn & Chat",
-    "FANPAGE_MESSAGES": "Facebook Fanpage",
-    "ZALO_MESSAGES": "Zalo OA",
-    "TELEGRAM_MESSAGES": "Telegram"
+    "FANPAGE_MESSAGES": "Quản lí Fanpage",
+    "ZALO_MESSAGES": "Quản lí Zalo OA",
+    "TELEGRAM_MESSAGES": "Quản lí Telegram"
   },
   "FOOTER": {
     "COPYRIGHT": "© 2026 Hệ thống Quản lý Khách sạn. Bảo lưu mọi quyền.",

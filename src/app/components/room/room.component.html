@@ -396,6 +396,16 @@
                     </div>
                   </div>
                 </ng-container>
+
+                <!-- Thông tin cho phòng đang bảo trì (maintenance) -->
+                <ng-container *ngIf="!isCompactMode && room.status === 'maintenance'">
+                  <div class="room-details maintenance-details">
+                    <div class="detail-row center">
+                      <i nz-icon nzType="check-circle" nzTheme="outline" class="status-icon"></i>
+                      <span class="detail-value maintenance">{{ 'ROOM.MAINTENANCE' | translate }}</span>
+                    </div>
+                  </div>
+                </ng-container>
               </div>
             </div>
           </div>

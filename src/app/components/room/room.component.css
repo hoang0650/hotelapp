@@ -262,16 +262,31 @@
 .occupied-guest-out-room {
     background: linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%);
     color: white;
+    min-height: 100%;
 }
 
 .cleaning-room {
     background: linear-gradient(135deg, #4a5568 0%, #5a6578 100%);
     color: white;
+    min-height: 100%;
 }
 
 .maintenance-room {
     background: linear-gradient(135deg, #5a2d7a 0%, #6a3d8a 100%);
     color: white;
+    min-height: 100%;
+}
+
+/* Thêm mới style cho maintenance details */
+.maintenance-details {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px;
+    margin-top: 8px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .booked-room {

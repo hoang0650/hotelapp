@@ -58,9 +58,9 @@
     "SYSTEM_ADMIN": "System Administration",
     "TOGGLE_COLLAPSE": "Collapse/Expand sidebar",
     "MESSAGING": "Messaging & Chat",
-    "FANPAGE_MESSAGES": "Facebook Fanpage",
-    "ZALO_MESSAGES": "Zalo OA",
-    "TELEGRAM_MESSAGES": "Telegram"
+    "FANPAGE_MESSAGES": "Fanpage Management",
+    "ZALO_MESSAGES": "Zalo OA Management",
+    "TELEGRAM_MESSAGES": "Telegram Management"
   },
   "FOOTER": {
     "COPYRIGHT": "© 2026 Hotel Management System. All rights reserved.",
@@ -108,7 +108,7 @@
     "BANK_TRANSFER_HISTORY": "Bank Transfer History",
     "FINANCIAL_SUMMARY_REPORT": "Financial Summary Report",
     "PRICING_MANAGEMENT": "Pricing Management",
-    "ELECTRIC_SETTING": "Electric Setting",
+    "ELECTRIC_SETTING": "Electric Management",
     "REVENUE": "Revenue",
     "PAYMENT": "Payment",
     "QR_CODE": "QR Code",
