@@ -142,6 +142,13 @@
   color: #8c8c8c;
 }
 
+.preview-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #cf1322;
+  white-space: pre-wrap;
+}
+
 .preview-placeholder i {
   font-size: 32px;
   margin-bottom: 8px;

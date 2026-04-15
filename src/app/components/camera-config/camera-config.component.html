@@ -156,6 +156,9 @@
           <div class="preview-hint" *ngIf="isPrivateCameraIp()">
             IP camera là nội bộ (LAN). Nếu backend chạy trên cloud (Railway) thì thường không truy cập được RTSP.
           </div>
+          <div class="preview-error" *ngIf="previewError">
+            {{ previewError }}
+          </div>
           <button nz-button nzType="default" nzBlock (click)="testConnection()" [nzLoading]="isTestingConnection" style="margin-top: 16px;">
             <i nz-icon nzType="api" nzTheme="outline"></i> Test Kết Nối
           </button>

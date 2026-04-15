@@ -52,6 +52,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   previewImageUrl: string | null = null;
   isPreviewLoading = false;
   isPreviewRunning = false;
+  previewError: string | null = null;
   private previewSub: Subscription | null = null;
   private lastObjectUrl: string | null = null;
 
@@ -230,6 +231,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.selectedCameraId = cam?._id || null;
     this.selectedProvider = cam?.provider || null;
     this.revokePreviewUrl();
+    this.previewError = null;
     this.cameraForm.patchValue({
       name: cam?.name || 'Camera Quầy Lễ Tân',
       provider: cam?.provider || null,
@@ -287,6 +289,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     }
 
     this.isTestingConnection = true;
+    this.previewError = null;
     this.fetchSnapshotOnce(true).finally(() => {
       this.isTestingConnection = false;
     });
@@ -299,6 +302,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     }
     if (this.isPreviewRunning) return;
     this.isPreviewRunning = true;
+    this.previewError = null;
     this.fetchSnapshotOnce(false);
     this.previewSub = interval(2000).subscribe(() => this.fetchSnapshotOnce(false));
   }
@@ -329,12 +333,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       const url = URL.createObjectURL(blob);
       this.lastObjectUrl = url;
       this.previewImageUrl = url;
+      this.previewError = null;
       if (showToast) this.message.success('Đã lấy snapshot thành công (RTSP OK)');
     } catch (err: any) {
-      if (showToast) {
-        const msg = await this.extractHttpErrorMessage(err);
-        this.message.error(msg || 'Lấy snapshot thất bại (kiểm tra rtspPath/luồng RTSP/ffmpeg trên server)');
-      }
+      const msg = await this.extractHttpErrorMessage(err);
+      this.previewError = msg || 'Lấy snapshot thất bại (kiểm tra rtspPath/luồng RTSP/ffmpeg trên server)';
+      if (showToast) this.message.error(this.previewError);
     } finally {
       this.isPreviewLoading = false;
     }
