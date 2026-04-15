@@ -49,6 +49,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   isTestingPipeline = false;
   pipelineResult: any = null;
 
+  previewImageUrl: string | null = null;
+  isPreviewLoading = false;
+  isPreviewRunning = false;
+  private previewSub: Subscription | null = null;
+  private lastObjectUrl: string | null = null;
+
   providers: CameraProviderOption[] = [
     { id: 'hikvision', name: 'Hikvision', icon: 'video-camera', color: '#ff4d4f' },
     { id: 'kbvision', name: 'KBVision', icon: 'camera', color: '#1890ff' }
@@ -71,6 +77,8 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.statsSub?.unsubscribe();
     this.userSub?.unsubscribe();
+    this.stopPreview();
+    this.revokePreviewUrl();
   }
 
   private initForm(): void {
@@ -81,6 +89,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       port: [554, [Validators.required]], // Port RTSP mặc định thường là 554
       username: ['admin', [Validators.required]],
       password: ['', [Validators.required]],
+      rtspPath: ['/Streaming/Channels/101', [Validators.required]],
       status: ['active', [Validators.required]],
       aiConfig: this.fb.group({
         enableOcr: [true],
@@ -170,6 +179,22 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   selectProvider(providerId: CameraProviderId): void {
     this.selectedProvider = providerId;
     this.cameraForm.patchValue({ provider: providerId });
+    const currentPath = String(this.cameraForm.value.rtspPath || '').trim();
+    if (!currentPath) {
+      this.cameraForm.patchValue({ rtspPath: this.getDefaultRtspPath(providerId) });
+    }
+  }
+
+  private getDefaultRtspPath(providerId: CameraProviderId): string {
+    if (providerId === 'kbvision') {
+      return '/cam/realmonitor?channel=1&subtype=0';
+    }
+    return '/Streaming/Channels/101';
+  }
+
+  applyRtspTemplate(): void {
+    if (!this.selectedProvider) return;
+    this.cameraForm.patchValue({ rtspPath: this.getDefaultRtspPath(this.selectedProvider) });
   }
 
   onSelectCamera(cameraId: string): void {
@@ -204,6 +229,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   private applyCameraToForm(cam: any): void {
     this.selectedCameraId = cam?._id || null;
     this.selectedProvider = cam?.provider || null;
+    this.revokePreviewUrl();
     this.cameraForm.patchValue({
       name: cam?.name || 'Camera Quầy Lễ Tân',
       provider: cam?.provider || null,
@@ -211,6 +237,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       port: cam?.port || 554,
       username: cam?.username || 'admin',
       password: cam?.password || '',
+      rtspPath: cam?.rtspPath || this.getDefaultRtspPath((cam?.provider as CameraProviderId) || 'hikvision'),
       status: cam?.status || 'active'
     });
     this.aiConfigForm.patchValue({
@@ -250,23 +277,66 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
 
   // Nút test kết nối giả lập
   testConnection(): void {
-    this.isTestingConnection = true;
-    const hotelId = this.selectedHotelId;
-    if (!hotelId) {
-      this.isTestingConnection = false;
+    if (!this.selectedHotelId) {
       this.message.warning('Vui lòng chọn khách sạn trước khi kiểm tra');
       return;
     }
-    this.http.get<any>(`${environment.apiUrl}/cameras/active`, { params: { hotelId } }).subscribe({
-      next: () => {
-        this.isTestingConnection = false;
-        this.message.success('Kết nối backend camera thành công!');
-      },
-      error: () => {
-        this.isTestingConnection = false;
-        this.message.error('Không thể kết nối backend camera');
-      }
+    if (!this.selectedCameraId) {
+      this.message.warning('Vui lòng lưu cấu hình và chọn camera trước khi kiểm tra');
+      return;
+    }
+
+    this.isTestingConnection = true;
+    this.fetchSnapshotOnce(true).finally(() => {
+      this.isTestingConnection = false;
     });
+  }
+
+  startPreview(): void {
+    if (!this.selectedCameraId) {
+      this.message.warning('Vui lòng chọn camera trước khi xem');
+      return;
+    }
+    if (this.isPreviewRunning) return;
+    this.isPreviewRunning = true;
+    this.fetchSnapshotOnce(false);
+    this.previewSub = interval(2000).subscribe(() => this.fetchSnapshotOnce(false));
+  }
+
+  stopPreview(): void {
+    this.isPreviewRunning = false;
+    this.previewSub?.unsubscribe();
+    this.previewSub = null;
+  }
+
+  private revokePreviewUrl(): void {
+    if (this.lastObjectUrl) {
+      try {
+        URL.revokeObjectURL(this.lastObjectUrl);
+      } catch (_) {}
+      this.lastObjectUrl = null;
+    }
+  }
+
+  private async fetchSnapshotOnce(showToast: boolean): Promise<void> {
+    if (!this.selectedCameraId) return;
+    if (this.isPreviewLoading) return;
+    this.isPreviewLoading = true;
+    try {
+      const blob = await this.http.get(`${environment.apiUrl}/cameras/${this.selectedCameraId}/snapshot`, { responseType: 'blob' as const }).toPromise();
+      if (!blob) return;
+      this.revokePreviewUrl();
+      const url = URL.createObjectURL(blob);
+      this.lastObjectUrl = url;
+      this.previewImageUrl = url;
+      if (showToast) this.message.success('Đã lấy snapshot thành công (RTSP OK)');
+    } catch (err: any) {
+      if (showToast) {
+        this.message.error(err?.error?.message || 'Lấy snapshot thất bại (kiểm tra rtspPath/luồng RTSP/ffmpeg trên server)');
+      }
+    } finally {
+      this.isPreviewLoading = false;
+    }
   }
 
   onSelectTestImage(type: 'front' | 'back', event: Event): void {
@@ -350,6 +420,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       port: Number(this.cameraForm.value.port || 554),
       username: this.cameraForm.value.username,
       password: this.cameraForm.value.password,
+      rtspPath: this.cameraForm.value.rtspPath,
       status: this.cameraForm.value.status,
       aiConfig: this.aiConfigForm.value
     };

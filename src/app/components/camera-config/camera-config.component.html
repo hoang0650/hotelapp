@@ -126,6 +126,18 @@
             </ng-template>
           </nz-form-control>
         </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>RTSP Path</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng nhập RTSP Path">
+            <nz-input-group [nzSuffix]="rtspSuffixTemplate">
+              <input nz-input formControlName="rtspPath" placeholder="/Streaming/Channels/101" />
+            </nz-input-group>
+            <ng-template #rtspSuffixTemplate>
+              <a (click)="applyRtspTemplate()" style="cursor: pointer;">Mẫu</a>
+            </ng-template>
+          </nz-form-control>
+        </nz-form-item>
       </form>
     </div>
 
@@ -134,15 +146,25 @@
         <div nz-col [nzSpan]="12">
           <h3 class="step-title" style="text-align: left;">Kiểm tra luồng Video</h3>
           <div class="video-preview-box">
-            <div *ngIf="!isTestingConnection" class="preview-placeholder">
+            <div *ngIf="!previewImageUrl && !isTestingConnection" class="preview-placeholder">
               <i nz-icon nzType="video-camera" nzTheme="outline"></i>
               <p>Luồng RTSP sẽ hiển thị tại đây</p>
             </div>
             <nz-spin *ngIf="isTestingConnection" nzSimple nzTip="Đang kết nối camera..."></nz-spin>
+            <img *ngIf="previewImageUrl" class="snapshot-preview" [src]="previewImageUrl" alt="Camera snapshot" />
           </div>
           <button nz-button nzType="default" nzBlock (click)="testConnection()" [nzLoading]="isTestingConnection" style="margin-top: 16px;">
             <i nz-icon nzType="api" nzTheme="outline"></i> Test Kết Nối
           </button>
+
+          <div class="preview-actions">
+            <button nz-button nzType="default" (click)="startPreview()" [disabled]="isPreviewRunning || !selectedCameraId">
+              Xem Preview
+            </button>
+            <button nz-button nzType="default" (click)="stopPreview()" [disabled]="!isPreviewRunning">
+              Dừng
+            </button>
+          </div>
 
           <div class="pipeline-card">
             <div class="pipeline-header">
