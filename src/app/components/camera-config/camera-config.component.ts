@@ -1,0 +1,376 @@
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { Subscription, interval } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { AuthService } from '../../services/auth.service';
+
+type CameraProviderId = 'hikvision' | 'kbvision';
+
+interface CameraProviderOption {
+  id: CameraProviderId;
+  name: string;
+  icon: string;
+  color: string;
+}
+
+@Component({
+  selector: 'app-camera-config',
+  templateUrl: './camera-config.component.html',
+  styleUrl: './camera-config.component.css'
+})
+export class CameraConfigComponent implements OnInit, OnDestroy {
+  currentStep = 0;
+  selectedProvider: CameraProviderId | null = null;
+  selectedHotelId: string | null = null;
+  selectedCameraId: string | null = null;
+  cameras: any[] = [];
+  cameraForm!: FormGroup;
+  isTestingConnection = false;
+  isLoadingConfig = false;
+  isSavingConfig = false;
+  passwordVisible = false;
+
+  backendOnline: boolean | null = null;
+  aiOnline: boolean | null = null;
+
+  statsPeriod: 'day' | 'week' | 'month' = 'day';
+  stats: any = null;
+  isLoadingStats = false;
+  private statsSub: Subscription | null = null;
+  private userSub: Subscription | null = null;
+
+  testFrontImage: string | null = null;
+  testBackImage: string | null = null;
+  isTestingPipeline = false;
+  pipelineResult: any = null;
+
+  providers: CameraProviderOption[] = [
+    { id: 'hikvision', name: 'Hikvision', icon: 'video-camera', color: '#ff4d4f' },
+    { id: 'kbvision', name: 'KBVision', icon: 'camera', color: '#1890ff' }
+  ];
+
+  constructor(
+    private http: HttpClient,
+    private fb: FormBuilder,
+    private message: NzMessageService,
+    private authService: AuthService
+  ) { }
+
+  ngOnInit(): void {
+    this.initForm();
+    this.bindUserContext();
+    this.checkBackend();
+    this.checkAi();
+  }
+
+  ngOnDestroy(): void {
+    this.statsSub?.unsubscribe();
+    this.userSub?.unsubscribe();
+  }
+
+  private initForm(): void {
+    this.cameraForm = this.fb.group({
+      name: ['Camera Quầy Lễ Tân', [Validators.required]],
+      provider: [null, [Validators.required]],
+      ipAddress: ['', [Validators.required, Validators.pattern('^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$')]],
+      port: [554, [Validators.required]], // Port RTSP mặc định thường là 554
+      username: ['admin', [Validators.required]],
+      password: ['', [Validators.required]],
+      status: ['active', [Validators.required]],
+      aiConfig: this.fb.group({
+        enableOcr: [true],
+        enableFaceRecognition: [false],
+        autoCheckin: [false]
+      })
+    });
+  }
+
+  private bindUserContext(): void {
+    const current = this.authService.getCurrentUser();
+    if (current) {
+      this.resolveHotelId(current._id || null, current.hotelId || null);
+      return;
+    }
+    this.userSub = this.authService.currentUser$.subscribe(user => {
+      if (!user) return;
+      this.resolveHotelId((user as any)._id || null, (user as any).hotelId || null);
+    });
+  }
+
+  private resolveHotelId(userId: string | null, hotelId: any): void {
+    const directHotelId = typeof hotelId === 'string' ? hotelId : (hotelId?._id || null);
+    if (directHotelId) {
+      this.selectedHotelId = directHotelId;
+      this.loadCameras();
+      this.startStatsPolling();
+      return;
+    }
+
+    if (!userId) {
+      this.selectedHotelId = null;
+      return;
+    }
+
+    this.http.get<any>(`${environment.apiUrl}/sessions/selected-hotel`, { params: { userId } }).subscribe({
+      next: (res) => {
+        this.selectedHotelId = res?.selectedHotelId || null;
+        this.loadCameras();
+        this.startStatsPolling();
+      },
+      error: () => {
+        this.selectedHotelId = null;
+      }
+    });
+  }
+
+  get aiConfigForm(): FormGroup {
+    return this.cameraForm.get('aiConfig') as FormGroup;
+  }
+
+  // Chọn nhà cung cấp
+  selectProvider(providerId: CameraProviderId): void {
+    this.selectedProvider = providerId;
+    this.cameraForm.patchValue({ provider: providerId });
+  }
+
+  onSelectCamera(cameraId: string): void {
+    const cam = this.cameras.find(c => String(c._id) === String(cameraId));
+    if (!cam) return;
+    this.applyCameraToForm(cam);
+  }
+
+  private loadCameras(): void {
+    if (!this.selectedHotelId) return;
+    this.isLoadingConfig = true;
+    this.http.get<any>(`${environment.apiUrl}/cameras`, { params: { hotelId: this.selectedHotelId } }).subscribe({
+      next: (res) => {
+        this.cameras = res?.data || [];
+        const active = this.cameras.find(c => c.status === 'active') || this.cameras[0] || null;
+        if (active) {
+          this.applyCameraToForm(active);
+        } else {
+          this.selectedCameraId = null;
+          this.selectedProvider = null;
+          this.cameraForm.patchValue({ provider: null });
+        }
+        this.isLoadingConfig = false;
+      },
+      error: () => {
+        this.isLoadingConfig = false;
+        this.message.error('Không thể tải cấu hình camera từ backend');
+      }
+    });
+  }
+
+  private applyCameraToForm(cam: any): void {
+    this.selectedCameraId = cam?._id || null;
+    this.selectedProvider = cam?.provider || null;
+    this.cameraForm.patchValue({
+      name: cam?.name || 'Camera Quầy Lễ Tân',
+      provider: cam?.provider || null,
+      ipAddress: cam?.ipAddress || '',
+      port: cam?.port || 554,
+      username: cam?.username || 'admin',
+      password: cam?.password || '',
+      status: cam?.status || 'active'
+    });
+    this.aiConfigForm.patchValue({
+      enableOcr: !!cam?.aiConfig?.enableOcr,
+      enableFaceRecognition: !!cam?.aiConfig?.enableFaceRecognition,
+      autoCheckin: !!cam?.aiConfig?.autoCheckin
+    });
+  }
+
+  // Chuyển bước tiếp theo
+  next(): void {
+    if (this.currentStep === 0 && !this.selectedProvider) {
+      this.message.warning('Vui lòng chọn nhà cung cấp Camera!');
+      return;
+    }
+
+    if (this.currentStep === 1) {
+      if (this.cameraForm.invalid) {
+        Object.values(this.cameraForm.controls).forEach(control => {
+          if (control.invalid) {
+            control.markAsDirty();
+            control.updateValueAndValidity({ onlySelf: true });
+          }
+        });
+        this.message.warning('Vui lòng điền đầy đủ thông tin đăng nhập!');
+        return;
+      }
+    }
+
+    this.currentStep += 1;
+  }
+
+  // Quay lại bước trước
+  pre(): void {
+    this.currentStep -= 1;
+  }
+
+  // Nút test kết nối giả lập
+  testConnection(): void {
+    this.isTestingConnection = true;
+    const hotelId = this.selectedHotelId;
+    if (!hotelId) {
+      this.isTestingConnection = false;
+      this.message.warning('Chưa xác định khách sạn để kiểm tra');
+      return;
+    }
+    this.http.get<any>(`${environment.apiUrl}/cameras/active`, { params: { hotelId } }).subscribe({
+      next: () => {
+        this.isTestingConnection = false;
+        this.message.success('Kết nối backend camera thành công!');
+      },
+      error: () => {
+        this.isTestingConnection = false;
+        this.message.error('Không thể kết nối backend camera');
+      }
+    });
+  }
+
+  onSelectTestImage(type: 'front' | 'back', event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : null;
+      if (!dataUrl) return;
+      if (type === 'front') {
+        this.testFrontImage = dataUrl;
+      } else {
+        this.testBackImage = dataUrl;
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  clearTestImages(): void {
+    this.testFrontImage = null;
+    this.testBackImage = null;
+    this.pipelineResult = null;
+  }
+
+  testAiPipeline(): void {
+    if (!this.selectedHotelId) {
+      this.message.warning('Chưa xác định khách sạn để test');
+      return;
+    }
+    if (!this.selectedCameraId) {
+      this.message.warning('Vui lòng chọn camera để test');
+      return;
+    }
+    if (!this.testFrontImage) {
+      this.message.warning('Vui lòng chọn ảnh mặt trước (CCCD/Passport) để test');
+      return;
+    }
+
+    this.isTestingPipeline = true;
+    this.pipelineResult = null;
+    this.http.post<any>(`${environment.apiUrl}/cameras/process-frame`, {
+      cameraId: this.selectedCameraId,
+      imageFrontBase64: this.testFrontImage,
+      imageBackBase64: this.testBackImage
+    }).subscribe({
+      next: (res) => {
+        this.pipelineResult = res;
+        this.isTestingPipeline = false;
+        this.message.success('Test AI Pipeline thành công');
+        this.refreshStats();
+      },
+      error: (err) => {
+        this.isTestingPipeline = false;
+        this.message.error(err?.error?.message || 'Test AI Pipeline thất bại');
+      }
+    });
+  }
+
+  // Hoàn tất cấu hình
+  done(): void {
+    if (!this.selectedHotelId) {
+      this.message.warning('Chưa xác định khách sạn để lưu cấu hình');
+      return;
+    }
+    if (!this.selectedProvider) {
+      this.message.warning('Vui lòng chọn nhà cung cấp Camera!');
+      return;
+    }
+    if (this.cameraForm.invalid) {
+      this.message.warning('Vui lòng điền đầy đủ thông tin cấu hình');
+      return;
+    }
+
+    const payload = {
+      hotelId: this.selectedHotelId,
+      name: this.cameraForm.value.name,
+      provider: this.selectedProvider,
+      ipAddress: this.cameraForm.value.ipAddress,
+      port: Number(this.cameraForm.value.port || 554),
+      username: this.cameraForm.value.username,
+      password: this.cameraForm.value.password,
+      status: this.cameraForm.value.status,
+      aiConfig: this.aiConfigForm.value
+    };
+
+    this.isSavingConfig = true;
+    const req$ = this.selectedCameraId
+      ? this.http.put<any>(`${environment.apiUrl}/cameras/${this.selectedCameraId}`, payload)
+      : this.http.post<any>(`${environment.apiUrl}/cameras`, payload);
+
+    req$.subscribe({
+      next: (res) => {
+        this.isSavingConfig = false;
+        const saved = res?.data;
+        if (saved?._id) {
+          this.selectedCameraId = saved._id;
+        }
+        this.message.success('Đã đồng bộ cấu hình Camera với backend');
+        this.loadCameras();
+      },
+      error: () => {
+        this.isSavingConfig = false;
+        this.message.error('Lưu cấu hình camera thất bại');
+      }
+    });
+  }
+
+  private checkBackend(): void {
+    this.http.get<any>(`${environment.apiUrl}/users/info`).subscribe({
+      next: () => { this.backendOnline = true; },
+      error: () => { this.backendOnline = false; }
+    });
+  }
+
+  private checkAi(): void {
+    this.http.get<any>(`${environment.aiUrl}/openapi.json`).subscribe({
+      next: () => { this.aiOnline = true; },
+      error: () => { this.aiOnline = false; }
+    });
+  }
+
+  refreshStats(): void {
+    if (!this.selectedHotelId) return;
+    this.isLoadingStats = true;
+    this.http.get<any>(`${environment.apiUrl}/guests/camera-dashboard`, { params: { hotelId: this.selectedHotelId, period: this.statsPeriod } }).subscribe({
+      next: (res) => {
+        this.stats = res;
+        this.isLoadingStats = false;
+      },
+      error: () => {
+        this.isLoadingStats = false;
+      }
+    });
+  }
+
+  private startStatsPolling(): void {
+    this.statsSub?.unsubscribe();
+    if (!this.selectedHotelId) return;
+    this.refreshStats();
+    this.statsSub = interval(15000).subscribe(() => this.refreshStats());
+  }
+}

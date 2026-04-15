@@ -59,7 +59,7 @@ import { FanpageMessagesComponent } from './components/fanpage-messages/fanpage-
 import { ZaloMessagesComponent } from './components/zalo-messages/zalo-messages.component';
 import { TelegramMessagesComponent } from './components/telegram-messages/telegram-messages.component';
 import { BotSettingComponent } from './components/bot-setting/bot-setting.component';
-
+import { CameraConfigComponent } from './components/camera-config/camera-config.component';
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
@@ -91,6 +91,7 @@ const routes: Routes = [
       { path: 'debt-management', component: DebtManagementComponent, canActivate: [PermissionGuard] },
       { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
       { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
       {
         path: 'users-management',

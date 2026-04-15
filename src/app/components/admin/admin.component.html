@@ -117,6 +117,10 @@
           <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/bot-setting">
             <span>{{ 'ADMIN_SIDEBAR.BOT_SETTING' | translate }}</span>
           </li>
+          
+          <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/camera-config">
+            <span>{{ 'ADMIN_SIDEBAR.CAMERA_CONFIG' | translate }}</span>
+          </li>
           <li nz-menu-item *ngIf="canAccessEmailAdmin()" routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessFile()" routerLink="/admin/files">
             <span>{{ 'ADMIN_SIDEBAR.FILE' | translate }}</span>

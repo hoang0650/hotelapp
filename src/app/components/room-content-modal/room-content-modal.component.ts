@@ -1171,7 +1171,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
     if (this.roomData && this.roomData._id) {
       this.roomData.totalPrice = this.totalPrice;
-      localStorage.setItem(`room_${this.roomData._id}_totalPrice`, this.totalPrice.toString());
       const hotelId = this.roomData.hotelId || this.authService.getHotelId();
       if (hotelId) {
         this.apiService.saveRoomTotalPrice(hotelId, this.roomData._id, this.totalPrice).subscribe({
@@ -1856,7 +1855,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           amount: grandTotal,
           rateType: rateType, // Thêm rateType đã được tính toán từ backend
           paymentMethod: paymentMethod,
-          staffId: localStorage.getItem('staffId') || undefined,
+          staffId: this.currentUser?._id || this.currentUser?.id || undefined,
           guestInfo: {
             name: customerName,
             phone: customerPhone && customerPhone !== 'N/A' ? customerPhone : '',
@@ -1920,13 +1919,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       roomId: this.roomData._id,
       roomNumber: this.roomData.roomNumber,
       roomType: this.roomData.type,
-      hotelId: this.roomData.hotelId || 
-               localStorage.getItem('selectedHotelId') || 
-               localStorage.getItem('hotelId'),
+      hotelId: this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId,
       invoiceNumber: 'INV-' + Date.now(),
       date: new Date(),
-      staffName: localStorage.getItem('staffName') || 'Nhân viên',
-      staffId: localStorage.getItem('staffId') || undefined,
+      staffName: this.currentUser?.fullName || this.currentUser?.username || 'Nhân viên',
+      staffId: this.currentUser?._id || this.currentUser?.id || undefined,
       customerName: customerName, // Sử dụng tên khách đã lấy từ nhiều nguồn
       customerPhone: customerPhone !== 'N/A' ? customerPhone : '',
       customerEmail: customerEmail !== 'N/A' ? customerEmail : '',
@@ -2222,8 +2219,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
    * Xử lý thanh toán chuyển khoản với SePay
    */
   handleTransferPayment(amount: number, invoiceData: any, checkoutData: any): void {
-    // Lấy userId từ currentUser hoặc localStorage
-    const userId = this.currentUser?._id || this.currentUser?.id || localStorage.getItem('userId');
+    // Lấy userId từ currentUser
+    const userId = this.currentUser?._id || this.currentUser?.id;
     
     if (!userId) {
       this.message.error('Không tìm thấy thông tin người dùng');
@@ -3248,9 +3245,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   showInvoice(invoiceData: any): void {
     // Đảm bảo hotelId luôn có trong invoiceData
     if (!invoiceData.hotelId) {
-      invoiceData.hotelId = this.roomData?.hotelId || 
-                            localStorage.getItem('selectedHotelId') || 
-                            localStorage.getItem('hotelId');
+      invoiceData.hotelId = this.roomData?.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId;
     }
     
     // Đảm bảo dữ liệu dịch vụ được chuẩn bị đúng
@@ -3579,8 +3574,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     console.log('Updated guestInfo for save:', updatedGuestInfo);
     
-    // Lấy thông tin check-in hiện tại
-    const savedCheckinData = localStorage.getItem(`checkin_${this.roomData._id}`);
     let checkinData: any = {
       roomId: this.roomData._id,
       roomNumber: this.roomData.roomNumber,
@@ -3590,24 +3583,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       advancePaymentMethod: advancePaymentMethod,
       rateType: rateType
     };
-
-    if (savedCheckinData) {
-      try {
-        const existingData = JSON.parse(savedCheckinData);
-        checkinData = {
-          ...existingData,
-          guestInfo: updatedGuestInfo,
-          advancePayment: advancePayment,
-          advancePaymentMethod: advancePaymentMethod,
-          rateType: rateType
-        };
-      } catch (e) {
-        console.error('Error parsing existing checkin data:', e);
-      }
-    }
-
-    // Lưu vào localStorage
-    localStorage.setItem(`checkin_${this.roomData._id}`, JSON.stringify(checkinData));
 
     // Lưu vào Redis
     const hotelId = this.roomData.hotelId || this.authService.getHotelId();
@@ -3872,8 +3847,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           },
           error: (err) => {
             console.error('Error updating checkin info:', err);
-            // Vẫn báo thành công vì đã lưu vào localStorage
-            this.message.warning('Đã lưu vào bộ nhớ tạm. Lỗi khi cập nhật backend: ' + (err.error?.message || err.message));
+            this.message.warning('Lỗi khi cập nhật backend: ' + (err.error?.message || err.message));
             this.isSaving = false;
             
             // Không cập nhật session nữa, dữ liệu đã được lưu vào RoomEvent qua backend
@@ -3896,8 +3870,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Nếu không có event checkin, chỉ lưu vào localStorage
-    this.message.success('Đã lưu thông tin khách và tiền đặt trước vào bộ nhớ tạm.');
+    // Nếu không có event checkin, chỉ lưu qua Redis session API
+    this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
     this.isSaving = false;
     
     // Không cập nhật session nữa, dữ liệu sẽ được lưu vào RoomEvent khi có check-in event

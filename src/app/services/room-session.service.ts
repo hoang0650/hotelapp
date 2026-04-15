@@ -29,18 +29,15 @@ export class RoomSessionService {
   private hotelId: string = '';
 
   constructor(private apiService: ApiService) {
-    this.loadFromStorage();
-    window.addEventListener('beforeunload', () => {
-      this.saveToStorage();
-    });
   }
 
   setHotelId(hotelId: string): void {
     this.hotelId = hotelId;
+    this.loadFromRedis();
   }
 
   private getHotelId(): string {
-    return this.hotelId || localStorage.getItem('selectedHotelId') || '';
+    return this.hotelId || '';
   }
 
   startSession(roomId: string, sessionData: RoomSession): void {
@@ -49,7 +46,7 @@ export class RoomSessionService {
     }
     this.activeSessionsMap.get(roomId)?.next(sessionData);
     console.log(`Room session started for room ${roomId}:`, sessionData);
-    this.saveToStorage();
+    this.syncToRedis();
   }
 
   updateSession(roomId: string, sessionData: Partial<RoomSession>): void {
@@ -58,7 +55,7 @@ export class RoomSessionService {
       const updatedSession = {...currentSession, ...sessionData};
       this.activeSessionsMap.get(roomId)?.next(updatedSession);
       console.log(`Room session updated for room ${roomId}:`, updatedSession);
-      this.saveToStorage();
+      this.syncToRedis();
     } else {
       console.warn(`Attempted to update non-existent session for room ${roomId}`);
     }
@@ -111,13 +108,13 @@ export class RoomSessionService {
       const finalSession = {...session};
       this.activeSessionsMap.get(roomId)?.next(null);
       console.log(`Room session ended for room ${roomId}`);
-      this.saveToStorage();
+      this.syncToRedis();
       return finalSession;
     }
     return null;
   }
 
-  private saveToStorage(): void {
+  private syncToRedis(): void {
     const storageData: Record<string, RoomSession | null> = {};
     this.activeSessionsMap.forEach((subject, roomId) => {
       const session = subject.getValue();
@@ -133,29 +130,9 @@ export class RoomSessionService {
         error: (err) => console.error('[Redis] Error saving room sessions:', err)
       });
     }
-    localStorage.setItem('roomSessions', JSON.stringify(storageData));
   }
 
-  private loadFromStorage(): void {
-    const storageData = localStorage.getItem('roomSessions');
-    if (storageData) {
-      try {
-        const sessions: Record<string, RoomSession> = JSON.parse(storageData);
-        Object.entries(sessions).forEach(([roomId, session]) => {
-          if (session.checkinTime) {
-            session.checkinTime = new Date(session.checkinTime);
-          }
-          if (!this.activeSessionsMap.has(roomId)) {
-            this.activeSessionsMap.set(roomId, new BehaviorSubject<RoomSession | null>(null));
-          }
-          this.activeSessionsMap.get(roomId)?.next(session);
-        });
-        console.log('Room sessions loaded from storage:', sessions);
-      } catch (error) {
-        console.error('Error loading room sessions from storage:', error);
-      }
-    }
-
+  private loadFromRedis(): void {
     const hotelId = this.getHotelId();
     if (hotelId) {
       this.apiService.getRoomSessions(hotelId).subscribe({
@@ -193,7 +170,7 @@ export class RoomSessionService {
     this.activeSessionsMap.forEach((subject) => {
       subject.next(null);
     });
-    localStorage.removeItem('roomSessions');
     console.log('All room sessions cleared');
+    this.syncToRedis();
   }
 }
