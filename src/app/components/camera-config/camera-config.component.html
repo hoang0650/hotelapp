@@ -153,6 +153,9 @@
             <nz-spin *ngIf="isTestingConnection" nzSimple nzTip="Đang kết nối camera..."></nz-spin>
             <img *ngIf="previewImageUrl" class="snapshot-preview" [src]="previewImageUrl" alt="Camera snapshot" />
           </div>
+          <div class="preview-hint" *ngIf="isPrivateCameraIp()">
+            IP camera là nội bộ (LAN). Nếu backend chạy trên cloud (Railway) thì thường không truy cập được RTSP.
+          </div>
           <button nz-button nzType="default" nzBlock (click)="testConnection()" [nzLoading]="isTestingConnection" style="margin-top: 16px;">
             <i nz-icon nzType="api" nzTheme="outline"></i> Test Kết Nối
           </button>

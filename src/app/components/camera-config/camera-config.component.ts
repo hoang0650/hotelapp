@@ -332,11 +332,50 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       if (showToast) this.message.success('Đã lấy snapshot thành công (RTSP OK)');
     } catch (err: any) {
       if (showToast) {
-        this.message.error(err?.error?.message || 'Lấy snapshot thất bại (kiểm tra rtspPath/luồng RTSP/ffmpeg trên server)');
+        const msg = await this.extractHttpErrorMessage(err);
+        this.message.error(msg || 'Lấy snapshot thất bại (kiểm tra rtspPath/luồng RTSP/ffmpeg trên server)');
       }
     } finally {
       this.isPreviewLoading = false;
     }
+  }
+
+  private async extractHttpErrorMessage(err: any): Promise<string> {
+    const direct = err?.error?.message || err?.message;
+    if (typeof direct === 'string' && direct.trim()) return direct;
+
+    const errorPayload = err?.error;
+    if (errorPayload && typeof Blob !== 'undefined' && errorPayload instanceof Blob) {
+      try {
+        const text = await errorPayload.text();
+        try {
+          const json = JSON.parse(text);
+          const parts = [json?.message, json?.hint].filter(Boolean);
+          const details = json?.details ? String(json.details) : '';
+          const tail = details ? details.slice(-280) : '';
+          return [...parts, tail].filter(Boolean).join(' • ');
+        } catch (_) {
+          return text.slice(-280);
+        }
+      } catch (_) {
+        return '';
+      }
+    }
+    return '';
+  }
+
+  isPrivateCameraIp(): boolean {
+    const ip = String(this.cameraForm?.value?.ipAddress || '').trim();
+    const parts = ip.split('.');
+    if (parts.length !== 4) return false;
+    const nums = parts.map(p => Number(p));
+    if (nums.some(n => Number.isNaN(n) || n < 0 || n > 255)) return false;
+    const [a, b] = nums;
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    return false;
   }
 
   onSelectTestImage(type: 'front' | 'back', event: Event): void {
