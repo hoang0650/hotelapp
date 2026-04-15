@@ -112,6 +112,12 @@
               <input nz-input formControlName="agentToken" placeholder="(tuỳ chọn) token bảo vệ agent" />
             </nz-form-control>
           </nz-form-item>
+          <div class="agent-test-row">
+            <button nz-button nzType="default" (click)="testAgent()">Test Agent</button>
+            <nz-tag *ngIf="agentOnline === true" nzColor="green">Online</nz-tag>
+            <nz-tag *ngIf="agentOnline === false" nzColor="red">Offline</nz-tag>
+            <span *ngIf="agentError" class="agent-error">{{ agentError }}</span>
+          </div>
         </div>
 
         <div nz-row [nzGutter]="16">

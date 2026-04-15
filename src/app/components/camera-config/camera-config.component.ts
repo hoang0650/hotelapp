@@ -54,6 +54,8 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   isPreviewLoading = false;
   isPreviewRunning = false;
   previewError: string | null = null;
+  agentOnline: boolean | null = null;
+  agentError: string | null = null;
   private previewSub: Subscription | null = null;
   private lastObjectUrl: string | null = null;
 
@@ -200,6 +202,28 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   applyRtspTemplate(): void {
     if (!this.selectedProvider) return;
     this.cameraForm.patchValue({ rtspPath: this.getDefaultRtspPath(this.selectedProvider) });
+  }
+
+  testAgent(): void {
+    const baseUrl = String(this.cameraForm.value.agentBaseUrl || '').trim().replace(/\/+$/, '');
+    if (!baseUrl) {
+      this.message.warning('Vui lòng nhập Agent URL');
+      return;
+    }
+    this.agentOnline = null;
+    this.agentError = null;
+    this.http.get<any>(`${baseUrl}/health`).subscribe({
+      next: (res) => {
+        this.agentOnline = !!res?.ok;
+        if (!this.agentOnline) {
+          this.agentError = 'Agent không phản hồi ok';
+        }
+      },
+      error: (err) => {
+        this.agentOnline = false;
+        this.agentError = err?.message || 'Không thể kết nối agent';
+      }
+    });
   }
 
   onSelectCamera(cameraId: string): void {
