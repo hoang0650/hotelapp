@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 
 type CameraProviderId = 'hikvision' | 'kbvision';
+type CameraAccessMode = 'cloud' | 'agent';
 
 interface CameraProviderOption {
   id: CameraProviderId;
@@ -86,6 +87,9 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.cameraForm = this.fb.group({
       name: ['Camera Quầy Lễ Tân', [Validators.required]],
       provider: [null, [Validators.required]],
+      accessMode: ['cloud'],
+      agentBaseUrl: [''],
+      agentToken: [''],
       ipAddress: ['', [Validators.required, Validators.pattern('^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$')]],
       port: [554, [Validators.required]], // Port RTSP mặc định thường là 554
       username: ['admin', [Validators.required]],
@@ -235,6 +239,9 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.cameraForm.patchValue({
       name: cam?.name || 'Camera Quầy Lễ Tân',
       provider: cam?.provider || null,
+      accessMode: (cam?.accessMode as CameraAccessMode) || 'cloud',
+      agentBaseUrl: cam?.agentBaseUrl || '',
+      agentToken: cam?.agentToken || '',
       ipAddress: cam?.ipAddress || '',
       port: cam?.port || 554,
       username: cam?.username || 'admin',
@@ -355,6 +362,10 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         try {
           const json = JSON.parse(text);
           const parts = [json?.message, json?.hint].filter(Boolean);
+          if (json?.ipAddress) parts.push(`IP: ${json.ipAddress}`);
+          if (json?.port) parts.push(`Port: ${json.port}`);
+          if (json?.rtspPath) parts.push(`RTSP Path: ${json.rtspPath}`);
+          if (json?.rtsp) parts.push(`RTSP: ${json.rtsp}`);
           const details = json?.details ? String(json.details) : '';
           const tail = details ? details.slice(-280) : '';
           return [...parts, tail].filter(Boolean).join(' • ');
@@ -459,6 +470,9 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       hotelId: this.selectedHotelId,
       name: this.cameraForm.value.name,
       provider: this.selectedProvider,
+      accessMode: this.cameraForm.value.accessMode,
+      agentBaseUrl: this.cameraForm.value.agentBaseUrl,
+      agentToken: this.cameraForm.value.agentToken,
       ipAddress: this.cameraForm.value.ipAddress,
       port: Number(this.cameraForm.value.port || 554),
       username: this.cameraForm.value.username,

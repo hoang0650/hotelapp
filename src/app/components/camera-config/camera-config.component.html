@@ -89,6 +89,31 @@
     <div *ngSwitchCase="1" class="step-container">
       <h3 class="step-title">Thông tin kết nối Camera {{ selectedProvider === 'hikvision' ? 'Hikvision' : 'KBVision' }}</h3>
       <form nz-form [formGroup]="cameraForm" nzLayout="vertical" class="camera-form">
+        <nz-form-item>
+          <nz-form-label>Chế độ truy cập</nz-form-label>
+          <nz-form-control>
+            <nz-radio-group formControlName="accessMode" nzSize="small">
+              <label nz-radio-button nzValue="cloud">Cloud</label>
+              <label nz-radio-button nzValue="agent">Agent (On-Prem)</label>
+            </nz-radio-group>
+          </nz-form-control>
+        </nz-form-item>
+
+        <div *ngIf="cameraForm.value.accessMode === 'agent'">
+          <nz-form-item>
+            <nz-form-label nzRequired>Agent URL</nz-form-label>
+            <nz-form-control nzErrorTip="Vui lòng nhập Agent URL">
+              <input nz-input formControlName="agentBaseUrl" placeholder="VD: https://xxx.trycloudflare.com" />
+            </nz-form-control>
+          </nz-form-item>
+          <nz-form-item>
+            <nz-form-label>Agent Token</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="agentToken" placeholder="(tuỳ chọn) token bảo vệ agent" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
         <div nz-row [nzGutter]="16">
           <div nz-col nzSpan="16">
             <nz-form-item>
