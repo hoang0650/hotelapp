@@ -12,10 +12,27 @@
         {{ aiOnline === true ? 'Online' : aiOnline === false ? 'Offline' : '...' }}
       </nz-tag>
     </div>
-    <div class="sync-item" *ngIf="selectedHotelId">
+    <div class="sync-item" *ngIf="selectedHotelId; else hotelPicker">
       <span class="sync-label">Hotel</span>
       <nz-tag nzColor="blue">{{ selectedHotelId }}</nz-tag>
     </div>
+    <ng-template #hotelPicker>
+      <div class="sync-item">
+        <span class="sync-label">Hotel</span>
+        <nz-select
+          class="hotel-select"
+          [ngModel]="selectedHotelId"
+          (ngModelChange)="onSelectHotel($event)"
+          [nzLoading]="isLoadingHotels"
+          nzPlaceHolder="Chọn khách sạn">
+          <nz-option
+            *ngFor="let h of hotels"
+            [nzValue]="h._id || h.id"
+            [nzLabel]="h.name || h.hotelName || (h._id || h.id)">
+          </nz-option>
+        </nz-select>
+      </div>
+    </ng-template>
   </div>
   <nz-steps [nzCurrent]="currentStep" style="margin-bottom: 32px;">
     <nz-step nzTitle="Nhà cung cấp" nzDescription="Chọn hãng Camera"></nz-step>

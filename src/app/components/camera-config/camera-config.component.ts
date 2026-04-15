@@ -23,9 +23,12 @@ interface CameraProviderOption {
 export class CameraConfigComponent implements OnInit, OnDestroy {
   currentStep = 0;
   selectedProvider: CameraProviderId | null = null;
+  userId: string | null = null;
   selectedHotelId: string | null = null;
   selectedCameraId: string | null = null;
   cameras: any[] = [];
+  hotels: any[] = [];
+  isLoadingHotels = false;
   cameraForm!: FormGroup;
   isTestingConnection = false;
   isLoadingConfig = false;
@@ -90,12 +93,14 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   private bindUserContext(): void {
     const current = this.authService.getCurrentUser();
     if (current) {
-      this.resolveHotelId(current._id || null, current.hotelId || null);
+      this.userId = (current as any)?._id || null;
+      this.resolveHotelId(this.userId, (current as any)?.hotelId || null);
       return;
     }
     this.userSub = this.authService.currentUser$.subscribe(user => {
       if (!user) return;
-      this.resolveHotelId((user as any)._id || null, (user as any).hotelId || null);
+      this.userId = (user as any)?._id || null;
+      this.resolveHotelId(this.userId, (user as any).hotelId || null);
     });
   }
 
@@ -110,17 +115,49 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
 
     if (!userId) {
       this.selectedHotelId = null;
+      this.loadHotelsOptions();
       return;
     }
 
     this.http.get<any>(`${environment.apiUrl}/sessions/selected-hotel`, { params: { userId } }).subscribe({
       next: (res) => {
         this.selectedHotelId = res?.selectedHotelId || null;
-        this.loadCameras();
-        this.startStatsPolling();
+        if (this.selectedHotelId) {
+          this.loadCameras();
+          this.startStatsPolling();
+        } else {
+          this.loadHotelsOptions();
+        }
       },
       error: () => {
         this.selectedHotelId = null;
+        this.loadHotelsOptions();
+      }
+    });
+  }
+
+  onSelectHotel(hotelId: string): void {
+    this.selectedHotelId = hotelId || null;
+    if (this.userId && this.selectedHotelId) {
+      this.http.post(`${environment.apiUrl}/sessions/selected-hotel`, { userId: this.userId, hotelId: this.selectedHotelId }).subscribe({
+        next: () => {},
+        error: () => {}
+      });
+    }
+    this.loadCameras();
+    this.startStatsPolling();
+  }
+
+  private loadHotelsOptions(): void {
+    if (this.isLoadingHotels) return;
+    this.isLoadingHotels = true;
+    this.http.get<any>(`${environment.apiUrl}/hotels`).subscribe({
+      next: (res) => {
+        this.hotels = res?.hotels || res?.data || res || [];
+        this.isLoadingHotels = false;
+      },
+      error: () => {
+        this.isLoadingHotels = false;
       }
     });
   }
@@ -217,7 +254,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     const hotelId = this.selectedHotelId;
     if (!hotelId) {
       this.isTestingConnection = false;
-      this.message.warning('Chưa xác định khách sạn để kiểm tra');
+      this.message.warning('Vui lòng chọn khách sạn trước khi kiểm tra');
       return;
     }
     this.http.get<any>(`${environment.apiUrl}/cameras/active`, { params: { hotelId } }).subscribe({
