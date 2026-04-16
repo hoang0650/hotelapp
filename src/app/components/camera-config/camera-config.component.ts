@@ -234,12 +234,14 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     }
     this.agentOnline = null;
     this.agentError = null;
-    const healthUrl = this.getAgentHealthUrl(baseUrl);
-    this.http.get<any>(healthUrl).subscribe({
+    this.http.post<any>(`${environment.apiUrl}/cameras/agent-health`, {
+      agentBaseUrl: baseUrl,
+      agentToken: this.cameraForm.value.agentToken
+    }).subscribe({
       next: (res) => {
         this.agentOnline = !!res?.ok;
         if (!this.agentOnline) {
-          this.agentError = 'Agent không phản hồi ok';
+          this.agentError = res?.message || 'Agent không phản hồi ok';
         }
       },
       error: (err) => {
