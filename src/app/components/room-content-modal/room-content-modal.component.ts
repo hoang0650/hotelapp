@@ -790,46 +790,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Fallback: nếu không có event check-in để update, vẫn tạo phiếu thu đặt trước theo chênh lệch
-    if (!(this.roomData.events && this.roomData.events.length > 0)) {
-      try {
-        const hotelId = (this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId) as any;
-        const payerName = updatedGuestInfo?.name || 'Khách lẻ';
-        const previousAdvancePayment = (this.listData && this.listData.length > 0) ? (Number(this.listData[0].advancePayment) || 0) : 0;
-        const advanceDiff = advancePayment - previousAdvancePayment;
-        if (hotelId && advanceDiff > 0) {
-          const normalizedMethod = this.normalizePaymentMethod(advancePaymentMethod);
-          const methodForTransaction = (normalizedMethod === 'transfer' ? 'bank_transfer' : normalizedMethod) as 'cash' | 'bank_transfer' | 'card';
-          const bookingId = typeof this.roomData.currentBooking === 'string'
-            ? this.roomData.currentBooking
-            : (this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object' ? (this.roomData.currentBooking as any)._id : undefined);
-          this.transactionService.createIncome({
-            hotelId: typeof hotelId === 'string' ? hotelId : (hotelId?._id || hotelId),
-            amount: advanceDiff,
-            method: methodForTransaction,
-            incomeCategory: 'deposit',
-            description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
-            notes: `Đặt trước phòng ${this.roomData.roomNumber} - ${payerName}`,
-            payer: payerName,
-            bookingId: bookingId,
-            metadata: {
-              source: 'advance_payment',
-              roomId: String(this.roomData._id),
-              roomNumber: String(this.roomData.roomNumber || ''),
-              bookingId: bookingId || null,
-              payer: payerName
-            }
-          }).subscribe({
-            next: () => console.log('Đã tạo phiếu thu đặt trước (saveGuestInfo fallback) phòng', this.roomData.roomNumber, 'amount:', advanceDiff, 'method:', methodForTransaction),
-            error: (err) => console.error('Lỗi tạo phiếu thu đặt trước (saveGuestInfo fallback):', err)
-          });
-        }
-      } catch (e) {
-        console.error('Lỗi khi tạo phiếu thu đặt trước (saveGuestInfo fallback):', e);
-      }
-      this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
-      this.isSaving = false;
-    }
   }
 
   // Tải thông tin doanh nghiệp
@@ -3634,6 +3594,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       });
     }
     
+    const previousAdvancePayment = (this.listData && this.listData.length > 0) ? (Number(this.listData[0].advancePayment) || 0) : 0;
+
     // Cập nhật vào room.events nếu có event checkin (chỉ lấy event chưa checkout)
     if (this.roomData.events && this.roomData.events.length > 0) {
       const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
@@ -3653,42 +3615,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             console.log('Update checkin info response:', response);
             this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
             
-            // Tạo phiếu thu cho tiền đặt trước nếu có (chỉ tạo cho phần chênh lệch so với trước đó)
-            try {
-              const hotelId = (this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId) as any;
-              const payerName = updatedGuestInfo?.name || 'Khách lẻ';
-              const previousAdvancePayment = (this.listData && this.listData.length > 0) ? (Number(this.listData[0].advancePayment) || 0) : 0;
-              const advanceDiff = advancePayment - previousAdvancePayment;
-              if (hotelId && advanceDiff > 0) {
-                const normalizedMethod = this.normalizePaymentMethod(advancePaymentMethod);
-                const methodForTransaction = (normalizedMethod === 'transfer' ? 'bank_transfer' : normalizedMethod) as 'cash' | 'bank_transfer' | 'card';
-                const bookingId = typeof this.roomData.currentBooking === 'string'
-                  ? this.roomData.currentBooking
-                  : (this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object' ? (this.roomData.currentBooking as any)._id : undefined);
-                this.transactionService.createIncome({
-                  hotelId: typeof hotelId === 'string' ? hotelId : (hotelId?._id || hotelId),
-                  amount: advanceDiff,
-                  method: methodForTransaction,
-                  incomeCategory: 'deposit',
-                  description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
-                  notes: `Đặt trước phòng ${this.roomData.roomNumber} - ${payerName}`,
-                  payer: payerName,
-                  bookingId: bookingId,
-                  metadata: {
-                    source: 'advance_payment',
-                    roomId: String(this.roomData._id),
-                    roomNumber: String(this.roomData.roomNumber || ''),
-                    bookingId: bookingId || null,
-                    payer: payerName
-                  }
-                }).subscribe({
-                  next: () => console.log('Đã tạo phiếu thu đặt trước (saveGuestInfo) phòng', this.roomData.roomNumber, 'amount:', advanceDiff, 'method:', methodForTransaction),
-                  error: (err) => console.error('Lỗi tạo phiếu thu đặt trước (saveGuestInfo):', err)
-                });
-              }
-            } catch (e) {
-              console.error('Lỗi khi tạo phiếu thu đặt trước (saveGuestInfo):', e);
-            }
+            this.createAdvancePaymentIncomeIfNeeded(advancePayment, previousAdvancePayment, advancePaymentMethod, updatedGuestInfo);
             this.isSaving = false;
             
             // Đóng modal sau khi lưu thành công
@@ -3922,6 +3849,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
+    // Nếu không có event checkin, vẫn tạo phiếu thu trả trước theo phần chênh lệch
+    this.createAdvancePaymentIncomeIfNeeded(advancePayment, previousAdvancePayment, advancePaymentMethod, updatedGuestInfo);
+
     // Nếu không có event checkin, chỉ lưu qua Redis session API
     this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
     this.isSaving = false;
@@ -3940,6 +3870,48 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestInfo: updatedGuestInfo,
       advancePayment: advancePayment
     });
+  }
+
+  private createAdvancePaymentIncomeIfNeeded(
+    advancePayment: number,
+    previousAdvancePayment: number,
+    advancePaymentMethod: string,
+    updatedGuestInfo: { name?: string }
+  ): void {
+    try {
+      const hotelId = (this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId) as any;
+      const payerName = updatedGuestInfo?.name || 'Khách lẻ';
+      const advanceDiff = Number(advancePayment || 0) - Number(previousAdvancePayment || 0);
+      if (!hotelId || advanceDiff <= 0) return;
+
+      const normalizedMethod = this.normalizePaymentMethod(advancePaymentMethod);
+      const methodForTransaction = (normalizedMethod === 'transfer' ? 'bank_transfer' : normalizedMethod) as 'cash' | 'bank_transfer' | 'card';
+      const bookingId = typeof this.roomData.currentBooking === 'string'
+        ? this.roomData.currentBooking
+        : (this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object' ? (this.roomData.currentBooking as any)._id : undefined);
+      this.transactionService.createIncome({
+        hotelId: typeof hotelId === 'string' ? hotelId : (hotelId?._id || hotelId),
+        amount: advanceDiff,
+        method: methodForTransaction,
+        incomeCategory: 'deposit',
+        description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
+        notes: `Đặt trước phòng ${this.roomData.roomNumber} - ${payerName}`,
+        payer: payerName,
+        bookingId: bookingId,
+        metadata: {
+          source: 'advance_payment',
+          roomId: String(this.roomData._id),
+          roomNumber: String(this.roomData.roomNumber || ''),
+          bookingId: bookingId || null,
+          payer: payerName
+        }
+      }).subscribe({
+        next: () => console.log('Đã tạo phiếu thu đặt trước phòng', this.roomData.roomNumber, 'amount:', advanceDiff, 'method:', methodForTransaction),
+        error: (err) => console.error('Lỗi tạo phiếu thu đặt trước:', err)
+      });
+    } catch (e) {
+      console.error('Lỗi khi tạo phiếu thu đặt trước:', e);
+    }
   }
   
   // Getter để lấy phụ thu checkin sớm từ roomPriceDetails

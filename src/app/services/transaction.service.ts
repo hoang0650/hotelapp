@@ -113,6 +113,10 @@ export class TransactionService {
     description?: string;
     notes?: string;
     payer?: string;
+    bookingId?: string;
+    staffId?: string;
+    invoiceNumber?: string;
+    metadata?: { [key: string]: any };
   }): Observable<ExpenseResponse> {
     return this.http.post<ExpenseResponse>(`${this.apiUrl}/income`, income);
   }
