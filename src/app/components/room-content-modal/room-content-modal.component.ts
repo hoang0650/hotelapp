@@ -3586,7 +3586,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     };
 
     // Lưu vào Redis
-    const hotelId = this.roomData.hotelId || this.authService.getHotelId();
+    const hotelId = this.normalizeObjectId(this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
     if (hotelId) {
       this.apiService.saveCheckinData(hotelId, this.roomData._id, checkinData).subscribe({
         next: () => console.log('[Redis] Checkin data saved'),
@@ -3879,18 +3879,20 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     updatedGuestInfo: { name?: string }
   ): void {
     try {
-      const hotelId = (this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId) as any;
+      const hotelId = this.normalizeObjectId(this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
       const payerName = updatedGuestInfo?.name || 'Khách lẻ';
       const advanceDiff = Number(advancePayment || 0) - Number(previousAdvancePayment || 0);
       if (!hotelId || advanceDiff <= 0) return;
 
       const normalizedMethod = this.normalizePaymentMethod(advancePaymentMethod);
       const methodForTransaction = (normalizedMethod === 'transfer' ? 'bank_transfer' : normalizedMethod) as 'cash' | 'bank_transfer' | 'card';
-      const bookingId = typeof this.roomData.currentBooking === 'string'
-        ? this.roomData.currentBooking
-        : (this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object' ? (this.roomData.currentBooking as any)._id : undefined);
+      const bookingId = this.normalizeObjectId(
+        typeof this.roomData.currentBooking === 'string'
+          ? this.roomData.currentBooking
+          : (this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object' ? (this.roomData.currentBooking as any)._id : undefined)
+      ) || undefined;
       this.transactionService.createIncome({
-        hotelId: typeof hotelId === 'string' ? hotelId : (hotelId?._id || hotelId),
+        hotelId: hotelId,
         amount: advanceDiff,
         method: methodForTransaction,
         incomeCategory: 'deposit',
@@ -3907,11 +3909,21 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         }
       }).subscribe({
         next: () => console.log('Đã tạo phiếu thu đặt trước phòng', this.roomData.roomNumber, 'amount:', advanceDiff, 'method:', methodForTransaction),
-        error: (err) => console.error('Lỗi tạo phiếu thu đặt trước:', err)
+        error: (err) => {
+          console.error('Lỗi tạo phiếu thu đặt trước:', err);
+          this.message.error('Không tạo được phiếu thu đặt trước: ' + (err?.error?.message || err?.message || 'Lỗi không xác định'));
+        }
       });
     } catch (e) {
       console.error('Lỗi khi tạo phiếu thu đặt trước:', e);
     }
+  }
+
+  private normalizeObjectId(value: any): string | null {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && value._id) return String(value._id);
+    return String(value);
   }
   
   // Getter để lấy phụ thu checkin sớm từ roomPriceDetails
