@@ -217,6 +217,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   managerList: Staff[] = []; // Danh sách quản lý
   managerPasswordVisible = false;
   lastManagerHandoverTime: Date | null = null; // Thời điểm giao tiền quản lý cuối cùng
+  currentShiftStartTime: Date | null = null; // Thời điểm bắt đầu ca hiện tại (từ giao ca gần nhất)
   
   // Lịch sử giao ca
   isShiftHandoverHistoryVisible = false;
@@ -1407,18 +1408,31 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   }
   
   // Load số tiền ca trước
-  loadPreviousShiftAmount(): void {
+  loadPreviousShiftAmount(callback?: () => void): void {
     if (!this.hotelId) return;
     
     this.shiftHandoverService.getPreviousShiftAmount(this.hotelId).subscribe(
       (response) => {
         this.previousShiftAmount = response.data.previousShiftAmount;
         this.shiftHandoverForm.patchValue({ previousShiftAmount: this.previousShiftAmount });
+        const lastTime = response.data?.lastShiftHandover?.handoverTime ? new Date(response.data.lastShiftHandover.handoverTime) : null;
+        this.currentShiftStartTime = lastTime && !isNaN(lastTime.getTime()) ? lastTime : null;
+        if (callback) callback();
       },
       (error) => {
         console.error('Error loading previous shift amount:', error);
+        if (callback) callback();
       }
     );
+  }
+
+  private getShiftStartDateIso(): string {
+    if (this.currentShiftStartTime && !isNaN(this.currentShiftStartTime.getTime())) {
+      return this.currentShiftStartTime.toISOString();
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.toISOString();
   }
   
   // Helper để lấy tên nhân viên
@@ -1438,42 +1452,41 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     // Load staff list và previous shift amount
     this.loadStaffList();
-    this.loadPreviousShiftAmount();
-    
-    const paidItems = this.paidData.filter(item => this.isPaidTransaction(item));
-    
-    let totalCash = paidItems
-      .filter(item => item.paymentMethod === 'cash')
-      .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
-    let totalBankTransfer = paidItems
-      .filter(item => ['transfer', 'bank_transfer', 'banking'].includes(item.paymentMethod))
-      .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
-    let totalCard = paidItems
-      .filter(item => ['card', 'credit_card', 'visa'].includes(item.paymentMethod))
-      .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
-    
-    // Tính từ đặt trước (advancePayment) theo hình thức thanh toán
-    this.listOfData.forEach(item => {
-      const advancePayment = item?.advancePayment || 0;
-      if (advancePayment > 0) {
-        const eventType = (item.event || item.type || '').toLowerCase();
-        if (eventType === 'check-in' || eventType === 'checkin') {
-          const advancePaymentMethod = (item?.advancePaymentMethod || item.paymentMethod || 'cash') as string;
-          if (advancePaymentMethod === 'cash') {
-            totalCash += advancePayment;
-          } else if (['transfer', 'bank_transfer', 'banking'].includes(advancePaymentMethod)) {
-            totalBankTransfer += advancePayment;
-          } else if (['card', 'credit_card', 'visa'].includes(advancePaymentMethod)) {
-            totalCard += advancePayment;
+    this.loadPreviousShiftAmount(() => {
+      this.loadLastManagerHandoverTime(() => {
+        const paidItems = this.paidData.filter(item => this.isPaidTransaction(item));
+        
+        let totalCash = paidItems
+          .filter(item => item.paymentMethod === 'cash')
+          .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+        let totalBankTransfer = paidItems
+          .filter(item => ['transfer', 'bank_transfer', 'banking'].includes(item.paymentMethod))
+          .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+        let totalCard = paidItems
+          .filter(item => ['card', 'credit_card', 'visa'].includes(item.paymentMethod))
+          .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+        
+        // Tính từ đặt trước (advancePayment) theo hình thức thanh toán
+        this.listOfData.forEach(item => {
+          const advancePayment = item?.advancePayment || 0;
+          if (advancePayment > 0) {
+            const eventType = (item.event || item.type || '').toLowerCase();
+            if (eventType === 'check-in' || eventType === 'checkin') {
+              const advancePaymentMethod = (item?.advancePaymentMethod || item.paymentMethod || 'cash') as string;
+              if (advancePaymentMethod === 'cash') {
+                totalCash += advancePayment;
+              } else if (['transfer', 'bank_transfer', 'banking'].includes(advancePaymentMethod)) {
+                totalBankTransfer += advancePayment;
+              } else if (['card', 'credit_card', 'visa'].includes(advancePaymentMethod)) {
+                totalCard += advancePayment;
+              }
+            }
           }
-        }
-      }
-    });
-    
-    // Load thời điểm giao tiền quản lý cuối cùng, sau đó mới load expenses
-    this.loadLastManagerHandoverTime(() => {
-      // Lấy phiếu chi từ database và tính tiền mặt chi (sau khi đã có lastManagerHandoverTime)
-      this.loadExpensesAndUpdateCash(totalCash, totalBankTransfer, totalCard);
+        });
+        
+        // Lấy phiếu chi/thu từ database và tính tiền mặt chi (trong ca)
+        this.loadExpensesAndUpdateCash(totalCash, totalBankTransfer, totalCard);
+      });
     });
   }
   
@@ -1529,10 +1542,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     
-    // Lấy ngày bắt đầu ca (có thể là đầu ngày hôm nay)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = today.toISOString();
+    const startDate = this.getShiftStartDateIso();
     const endDate = new Date().toISOString();
     
     // Lấy tất cả phiếu chi và phiếu thu trong ca
@@ -1779,10 +1789,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     
-    // Lấy ngày bắt đầu ca (có thể là đầu ngày hôm nay)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = today.toISOString();
+    const startDate = this.getShiftStartDateIso();
     const endDate = new Date().toISOString();
     
     // Lấy tất cả phiếu chi và phiếu thu trong ca
@@ -2135,10 +2142,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     // Load thời điểm giao tiền quản lý cuối cùng trước, sau đó mới load expenses và incomes
     this.loadLastManagerHandoverTime(() => {
-      // Lấy ngày bắt đầu ca (có thể là đầu ngày hôm nay)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const startDate = today.toISOString();
+      const startDate = this.getShiftStartDateIso();
       const endDate = new Date().toISOString();
       
       // Lấy tất cả phiếu chi và phiếu thu trong ca
@@ -2477,10 +2481,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     
-    // Lấy ngày bắt đầu ca (có thể là đầu ngày hôm nay)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = today.toISOString();
+    const startDate = this.getShiftStartDateIso();
     const endDate = new Date().toISOString();
     
     // Lấy tất cả phiếu chi và phiếu thu trong ca
