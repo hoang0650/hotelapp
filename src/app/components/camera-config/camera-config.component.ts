@@ -241,7 +241,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.agentOnline = !!res?.ok;
         if (!this.agentOnline) {
-          this.agentError = res?.message || 'Agent không phản hồi ok';
+          const parts: string[] = [];
+          parts.push(res?.message || 'Agent không phản hồi ok');
+          if (res?.status) parts.push(`HTTP ${res.status}`);
+          if (res?.url) parts.push(String(res.url));
+          if (res?.data) parts.push(typeof res.data === 'string' ? res.data : JSON.stringify(res.data));
+          this.agentError = parts.filter(Boolean).join(' • ');
         }
       },
       error: (err) => {
