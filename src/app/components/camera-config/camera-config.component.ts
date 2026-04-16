@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 
@@ -358,7 +358,9 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (this.isPreviewLoading) return;
     this.isPreviewLoading = true;
     try {
-      const blob = await this.http.get(`${environment.apiUrl}/cameras/${this.selectedCameraId}/snapshot`, { responseType: 'blob' as const }).toPromise();
+      const blob = await firstValueFrom(
+        this.http.get(`${environment.apiUrl}/cameras/${this.selectedCameraId}/snapshot`, { responseType: 'blob' as const })
+      );
       if (!blob) return;
       this.revokePreviewUrl();
       const url = URL.createObjectURL(blob);
