@@ -257,11 +257,15 @@ export class AiAssistantService {
     const userRole = currentUser?.role || null;
     const userId = currentUser?._id || null;
     const userToken = this.authService.getToken();
+    const hotelId = await this.resolveHotelIdForAi();
+    const businessId = currentUser?.businessId || null;
 
     try {
       const response = await firstValueFrom(
         this.http.post<any>(`${this.aiUrl}/chat`, { 
           tenant_id: tenantId, 
+          hotel_id: hotelId,
+          business_id: businessId,
           question,
           user_role: userRole,
           user_id: userId,
@@ -315,6 +319,24 @@ export class AiAssistantService {
         role: 'assistant',
         timestamp: new Date()
       });
+    }
+  }
+
+  private async resolveHotelIdForAi(): Promise<string | null> {
+    const direct = this.authService.getHotelId();
+    if (direct) return direct;
+
+    const userId = this.authService.getUserId();
+    if (!userId) return null;
+    if (!this.apiUrl) return null;
+
+    try {
+      const resp = await firstValueFrom(
+        this.http.get<any>(`${this.apiUrl}/sessions/selected-hotel`, { params: { userId } })
+      );
+      return resp?.selectedHotelId || null;
+    } catch (_) {
+      return null;
     }
   }
 
