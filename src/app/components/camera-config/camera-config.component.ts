@@ -204,15 +204,38 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.cameraForm.patchValue({ rtspPath: this.getDefaultRtspPath(this.selectedProvider) });
   }
 
+  private normalizeAgentBaseUrl(input: string): string {
+    let value = String(input || '').trim();
+    if (!value) return '';
+    value = value.replace(/:+$/, '');
+    value = value.replace(/\/+$/, '');
+    if (!/^https?:\/\//i.test(value)) {
+      value = `https://${value}`;
+    }
+    return value;
+  }
+
+  private getAgentHealthUrl(baseUrlOrHealthUrl: string): string {
+    const normalized = this.normalizeAgentBaseUrl(baseUrlOrHealthUrl);
+    if (/\/health$/i.test(normalized)) return normalized;
+    return `${normalized}/health`;
+  }
+
   testAgent(): void {
-    const baseUrl = String(this.cameraForm.value.agentBaseUrl || '').trim().replace(/\/+$/, '');
+    const baseUrl = this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || '');
     if (!baseUrl) {
       this.message.warning('Vui lòng nhập Agent URL');
       return;
     }
+    if (/api\.phgrouptechs\.com$/i.test(baseUrl)) {
+      this.agentOnline = false;
+      this.agentError = 'Agent URL không được trỏ vào API production. Hãy dùng URL tunnel/agent riêng (VD: https://agent.phgrouptechs.com).';
+      return;
+    }
     this.agentOnline = null;
     this.agentError = null;
-    this.http.get<any>(`${baseUrl}/health`).subscribe({
+    const healthUrl = this.getAgentHealthUrl(baseUrl);
+    this.http.get<any>(healthUrl).subscribe({
       next: (res) => {
         this.agentOnline = !!res?.ok;
         if (!this.agentOnline) {
@@ -497,7 +520,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       name: this.cameraForm.value.name,
       provider: this.selectedProvider,
       accessMode: this.cameraForm.value.accessMode,
-      agentBaseUrl: this.cameraForm.value.agentBaseUrl,
+      agentBaseUrl: this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || ''),
       agentToken: this.cameraForm.value.agentToken,
       ipAddress: this.cameraForm.value.ipAddress,
       port: Number(this.cameraForm.value.port || 554),
