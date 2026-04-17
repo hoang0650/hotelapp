@@ -24,25 +24,25 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   testimonials: Testimonial[] = [
     {
-      name: 'Nguyễn Văn A',
+      name: 'Phan Huy Hoàng',
       quote: '',
-      image: 'https://randomuser.me/api/portraits/women/3.jpg',
+      image: 'assets/images/guest1.jpg',
       role: '',
       roleKey: 'ROLE_HOTEL_OWNER',
       quoteKey: 'QUOTE_1'
     },
     {
-      name: 'Trần Thị B',
+      name: 'Hà Thị Yến',
       quote: '',
-      image: 'https://randomuser.me/api/portraits/men/3.jpg',
+      image: 'assets/images/guest3.jpg',
       role: '',
       roleKey: 'ROLE_HOTEL_MANAGER',
       quoteKey: 'QUOTE_2'
     },
     {
-      name: 'Lê Văn C',
+      name: 'Phạm Minh Trưởng',
       quote: '',
-      image: 'https://randomuser.me/api/portraits/women/4.jpg',
+      image: 'assets/images/guest2.jpg',
       role: '',
       roleKey: 'ROLE_CEO',
       quoteKey: 'QUOTE_3'
