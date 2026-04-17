@@ -228,6 +228,7 @@
     "OCCUPIED": "Occupied",
     "DIRTY": "Dirty",
     "MAINTENANCE": "Maintenance",
+    "MAINTENANCES": "Rooms Under Maintenance",
     "BOOKED": "Booked",
     "GUEST_OUT": "Guest Out",
     "ROOM_COUNT": "rooms",

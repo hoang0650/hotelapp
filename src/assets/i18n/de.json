@@ -303,6 +303,7 @@
     "OCCUPIED": "Belegt",
     "DIRTY": "Schmutzig",
     "MAINTENANCE": "Wartung",
+    "MAINTENANCES": "Zimmer in Wartung",
     "BOOKED": "Gebucht",
     "GUEST_OUT": "Gast draußen",
     "ROOM_COUNT": "Zimmer",
