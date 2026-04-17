@@ -75,7 +75,7 @@ const routes: Routes = [
   { path: 'maintenance', component: MaintenanceComponent, data: { titleKey: 'SEO.MAINTENANCE.TITLE', robots: 'noindex,nofollow' } },
   { path: 'room/:id', component: ProductDetailComponent },
   {
-    path: 'admin', component: AdminComponent, data: { robots: 'noindex,nofollow' }, children: [
+    path: 'admin', component: AdminComponent, data: { robots: 'noindex,nofollow', titleKey: 'SEO.ADMIN.TITLE' }, children: [
       { path: 'room', component: RoomComponent, canActivate: [PermissionGuard] },
       { path: 'bill', component: InvoiceComponent },
       { path: 'calendar', component: CalendarComponent, canActivate: [PermissionGuard] },
@@ -129,7 +129,7 @@ const routes: Routes = [
   { path: 'email-list', component: EmailListComponent },
   { path: 'email-compose', component: EmailComposeComponent },
   { path: 'hotel-files', component: HotelFilesComponent },
-  { path: 'about-us', component: AboutUsComponent },
+  { path: 'about-us', component: AboutUsComponent, data: { titleKey: 'SEO.ABOUT_US.TITLE', descriptionKey: 'SEO.ABOUT_US.DESCRIPTION' } },
   { path: 'chat', component: ChatComponent },
   { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },

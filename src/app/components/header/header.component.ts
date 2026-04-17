@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { NotificationsService } from '../../services/notifications.service';
@@ -20,6 +21,7 @@ import { environment } from '../../../environments/environment';
 export class HeaderComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   private subscriptions = new Subscription();
+  private refreshIntervalId: any = null;
   
   // Notifications
   notifications: Announcement[] = [];
@@ -57,12 +59,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private hotelService: HotelService,
     public translate: TranslateService,
     public translationService: TranslationService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: any
   ) {
-    // Set default language
-    const savedLang = localStorage.getItem('language') || 'vi';
     translate.setDefaultLang('vi');
-    translate.use(savedLang);
+    translate.use(this.translationService.getCurrentLang());
   }
 
   ngOnInit(): void {
@@ -93,22 +94,25 @@ export class HeaderComponent implements OnInit, OnDestroy {
       })
     );
     
-    // Load notification settings và notifications
-    this.loadNotificationSettings();
-    this.notificationsService.loadAnnouncements();
-    
-    // Đăng ký lắng nghe notifications
-    this.subscriptions.add(
-      this.notificationsService.announcements$.subscribe(announcements => {
-        this.updateNotifications();
-      })
-    );
-    
-    // Load notifications mỗi 5 phút
-    setInterval(() => {
-      this.notificationsService.loadAnnouncements();
+    if (isPlatformBrowser(this.platformId)) {
       this.loadNotificationSettings();
-    }, 5 * 60 * 1000);
+      this.notificationsService.loadAnnouncements();
+    }
+    
+    if (isPlatformBrowser(this.platformId)) {
+      this.subscriptions.add(
+        this.notificationsService.announcements$.subscribe(() => {
+          this.updateNotifications();
+        })
+      );
+    }
+    
+    if (isPlatformBrowser(this.platformId)) {
+      this.refreshIntervalId = setInterval(() => {
+        this.notificationsService.loadAnnouncements();
+        this.loadNotificationSettings();
+      }, 5 * 60 * 1000);
+    }
   }
   
   /**
@@ -122,6 +126,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
   }
 
   get isLoggedIn(): boolean {
@@ -155,7 +163,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
       // Force change detection
       this.cdr.detectChanges();
       // Trigger custom event for other components
-      window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+      if (isPlatformBrowser(this.platformId)) {
+        window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+      }
       console.log(`Header: Language switch completed, current lang: ${this.translate.currentLang}`);
     }, 200);
   }

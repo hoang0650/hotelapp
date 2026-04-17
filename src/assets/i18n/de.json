@@ -2284,8 +2284,9 @@
     "EXPORT_ERROR": "Fehler beim Exportieren der Excel-Datei"
   },
   "SEO": {
+    "DEFAULT_DESCRIPTION": "PHHotel ist eine Hotelverwaltungssoftware für Zimmer, Buchungen, Rechnungen, Schichtübergaben, Umsatzberichte, Kamera-Integration und Messaging.",
     "HOME": {
-      "TITLE": "PHHotel - Hotelverwaltungssoftware",
+      "TITLE": "Startseite",
       "DESCRIPTION": "PHHotel ist eine Hotelverwaltungssoftware für Zimmer, Buchungen, Rechnungen, Schichtübergaben, Umsatzberichte, Kamera-Integration und Messaging."
     },
     "PRICING": {
@@ -2307,6 +2308,11 @@
     "FORGOT_PASSWORD": { "TITLE": "Passwort vergessen" },
     "RESET_PASSWORD": { "TITLE": "Passwort zurücksetzen" },
     "MAINTENANCE": { "TITLE": "Wartung" },
+    "ABOUT_US": {
+      "TITLE": "Über uns",
+      "DESCRIPTION": "Erfahren Sie mehr über PHHotel und das Team hinter dem Produkt."
+    },
+    "ADMIN": { "TITLE": "Admin" },
     "PRIVACY_POLICY": {
       "TITLE": "Datenschutzrichtlinie",
       "DESCRIPTION": "Datenschutzrichtlinie von PHHotel."

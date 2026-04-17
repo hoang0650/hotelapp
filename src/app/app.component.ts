@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { TranslateService } from '@ngx-translate/core';
 import { TranslationService } from './services/translation.service';
 import { Router, NavigationEnd } from '@angular/router';
@@ -17,8 +18,9 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'hotel';
   isMaintenanceMode = false;
   maintenanceMessage = 'Hệ thống đang bảo trì. Vui lòng quay lại sau.';
+  isBrowser = false;
   private maintenanceCheckInterval?: Subscription;
-  private maintenanceModeChangeSubscription?: any;
+  private maintenanceModeChangeListener?: any;
 
   constructor(
     private translate: TranslateService,
@@ -27,37 +29,44 @@ export class AppComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private settingsService: SettingsService,
     private notificationsService: NotificationsService,
-    private seoService: SeoService
-  ) {}
+    private seoService: SeoService,
+    @Inject(PLATFORM_ID) private platformId: any
+  ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
+  }
 
   ngOnInit(): void {
-    // Set default language from localStorage or use 'vi'
-    const savedLang = localStorage.getItem('language') || 'vi';
     this.translate.setDefaultLang('vi');
-    this.translate.use(savedLang);
+    this.translate.use(this.translationService.getCurrentLang());
     
-    // Kiểm tra maintenance mode từ localStorage
-    this.checkMaintenanceMode();
+    if (isPlatformBrowser(this.platformId)) {
+      this.checkMaintenanceMode();
+    }
     
     // Lắng nghe navigation để kiểm tra maintenance mode
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {
-      this.checkMaintenanceMode();
+      if (isPlatformBrowser(this.platformId)) {
+        this.checkMaintenanceMode();
+      }
     });
 
     this.seoService.init();
     
     // Lắng nghe sự kiện maintenance mode thay đổi
-    this.maintenanceModeChangeSubscription = window.addEventListener('maintenanceModeChanged', (event: any) => {
-      this.handleMaintenanceModeChange(event.detail);
-    });
+    if (isPlatformBrowser(this.platformId)) {
+      this.maintenanceModeChangeListener = (event: any) => {
+        this.handleMaintenanceModeChange(event.detail);
+      };
+      window.addEventListener('maintenanceModeChanged', this.maintenanceModeChangeListener);
+    }
     
     // Kiểm tra maintenance mode từ backend mỗi 30 giây (chỉ cho admin)
     const currentUser = this.authService.getCurrentUser();
     const isAdmin = this.authService.isSuperAdmin() || this.authService.isAdmin();
     
-    if (isAdmin) {
+    if (isAdmin && isPlatformBrowser(this.platformId)) {
       this.maintenanceCheckInterval = interval(30000).subscribe(() => {
         this.checkMaintenanceModeFromBackend();
       });
@@ -68,12 +77,14 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.maintenanceCheckInterval) {
       this.maintenanceCheckInterval.unsubscribe();
     }
-    if (this.maintenanceModeChangeSubscription) {
-      window.removeEventListener('maintenanceModeChanged', this.maintenanceModeChangeSubscription);
+    if (this.maintenanceModeChangeListener && isPlatformBrowser(this.platformId)) {
+      window.removeEventListener('maintenanceModeChanged', this.maintenanceModeChangeListener);
+      this.maintenanceModeChangeListener = null;
     }
   }
 
   private checkMaintenanceMode(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     const maintenanceMode = localStorage.getItem('maintenanceMode') === 'true';
     const maintenanceMsg = localStorage.getItem('maintenanceMessage');
     
@@ -103,6 +114,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private checkMaintenanceModeFromBackend(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     // Chỉ check nếu là admin
     const isAdmin = this.authService.isSuperAdmin() || this.authService.isAdmin();
     if (!isAdmin) return;
@@ -146,6 +158,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private handleMaintenanceModeChange(detail: any): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     if (detail.enabled === false) {
       // Maintenance mode đã được tắt
       this.isMaintenanceMode = false;

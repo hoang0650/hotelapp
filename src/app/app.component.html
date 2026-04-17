@@ -7,7 +7,7 @@
 </nz-layout>
 
 <!-- Modal hóa đơn toàn cục -->
-<app-invoice-modal></app-invoice-modal>
+<app-invoice-modal *ngIf="isBrowser"></app-invoice-modal>
   
-<app-ai-chatbox></app-ai-chatbox>
+<app-ai-chatbox *ngIf="isBrowser"></app-ai-chatbox>
   

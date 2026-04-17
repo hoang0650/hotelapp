@@ -2342,8 +2342,9 @@
     "EXPORT_ERROR": "Error exporting Excel file"
   },
   "SEO": {
+    "DEFAULT_DESCRIPTION": "PHHotel is hotel management software for rooms, bookings, invoices, shift handover, revenue reports, camera integration, and messaging.",
     "HOME": {
-      "TITLE": "PHHotel - Hotel Management Software",
+      "TITLE": "Home",
       "DESCRIPTION": "PHHotel is hotel management software for rooms, bookings, invoices, shift handover, revenue reports, camera integration, and messaging."
     },
     "PRICING": {
@@ -2365,6 +2366,11 @@
     "FORGOT_PASSWORD": { "TITLE": "Forgot Password" },
     "RESET_PASSWORD": { "TITLE": "Reset Password" },
     "MAINTENANCE": { "TITLE": "Maintenance" },
+    "ABOUT_US": {
+      "TITLE": "About Us",
+      "DESCRIPTION": "Learn more about PHHotel and the team behind the product."
+    },
+    "ADMIN": { "TITLE": "Admin" },
     "PRIVACY_POLICY": {
       "TITLE": "Privacy Policy",
       "DESCRIPTION": "PHHotel privacy policy."

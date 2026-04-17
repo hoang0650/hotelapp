@@ -1,4 +1,5 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, NgZone, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 
@@ -15,10 +16,11 @@ export class TranslationService {
 
   constructor(
     private translate: TranslateService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    @Inject(PLATFORM_ID) private platformId: any
   ) {
     // Khởi tạo ngôn ngữ mặc định
-    const savedLang = localStorage.getItem('language') || 'vi';
+    const savedLang = this.getStoredLanguage() || 'vi';
     this.translate.setDefaultLang('vi');
     this.translate.use(savedLang);
     this.currentLangSubject.next(savedLang);
@@ -64,11 +66,11 @@ export class TranslationService {
             console.warn(`⚠️ Language mismatch! Expected: ${lang}, Actual: ${this.translate.currentLang}`);
             // Try to use the language again if there's a mismatch
             this.translate.use(lang).subscribe(() => {
-              localStorage.setItem('language', lang);
+              this.setStoredLanguage(lang);
               this.currentLangSubject.next(lang);
             });
           } else {
-            localStorage.setItem('language', lang);
+            this.setStoredLanguage(lang);
             this.currentLangSubject.next(lang);
             
             // Force change detection by triggering a zone run
@@ -90,7 +92,7 @@ export class TranslationService {
           if (lang !== 'vi') {
             console.warn(`Falling back to Vietnamese`);
             this.translate.use('vi').subscribe(() => {
-              localStorage.setItem('language', 'vi');
+              this.setStoredLanguage('vi');
               this.currentLangSubject.next('vi');
             });
           }
@@ -118,6 +120,22 @@ export class TranslationService {
    */
   translateKeyAsync(key: string, params?: any): Observable<string> {
     return this.translate.get(key, params);
+  }
+
+  private getStoredLanguage(): string | null {
+    if (!isPlatformBrowser(this.platformId)) return null;
+    try {
+      return localStorage.getItem('language');
+    } catch {
+      return null;
+    }
+  }
+
+  private setStoredLanguage(lang: string): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      localStorage.setItem('language', lang);
+    } catch {}
   }
 }
 

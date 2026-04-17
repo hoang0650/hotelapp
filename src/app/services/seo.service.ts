@@ -16,7 +16,7 @@ type SeoData = {
 @Injectable({ providedIn: 'root' })
 export class SeoService {
   private readonly brand = 'PHHotel';
-  private readonly defaultDescription =
+  private readonly fallbackDefaultDescription =
     'PHHotel là phần mềm quản lý khách sạn: quản lý phòng, đặt phòng, hóa đơn, giao ca, báo cáo doanh thu, tích hợp camera và tin nhắn.';
 
   constructor(
@@ -66,7 +66,8 @@ export class SeoService {
     const translatedTitle = data.titleKey ? this.translate.instant(data.titleKey) : '';
     const translatedDescription = data.descriptionKey ? this.translate.instant(data.descriptionKey) : '';
     const title = this.buildTitle(translatedTitle || data.title);
-    const description = translatedDescription || data.description || this.defaultDescription;
+    const defaultDescription = this.translate.instant('SEO.DEFAULT_DESCRIPTION') || this.fallbackDefaultDescription;
+    const description = translatedDescription || data.description || defaultDescription;
     const robots = data.robots || 'index,follow';
     const ogType = data.ogType || 'website';
 
@@ -78,6 +79,7 @@ export class SeoService {
     this.setMetaTag('property', 'og:description', description);
     this.setMetaTag('property', 'og:type', ogType);
     this.setMetaTag('property', 'og:url', url);
+    this.setMetaTag('property', 'og:site_name', this.brand);
 
     this.setMetaTag('name', 'twitter:card', 'summary');
     this.setMetaTag('name', 'twitter:title', title);
@@ -88,9 +90,10 @@ export class SeoService {
 
   private buildTitle(pageTitle?: string): string {
     const t = String(pageTitle || '').trim();
-    if (!t) return `${this.brand} - Phần mềm quản lý khách sạn`;
-    if (t.toLowerCase().includes(this.brand.toLowerCase())) return t;
-    return `${t} | ${this.brand}`;
+    const homeTitle = this.translate.instant('SEO.HOME.TITLE') || 'Trang chủ';
+    const effective = t || homeTitle;
+    if (effective.toLowerCase().includes(this.brand.toLowerCase())) return effective;
+    return `${this.brand} | ${effective}`;
   }
 
   private getCanonicalUrl(): string {

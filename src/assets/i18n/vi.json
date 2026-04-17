@@ -2891,8 +2891,9 @@
     "EXPORT_ERROR": "Lỗi khi xuất file Excel"
   },
   "SEO": {
+    "DEFAULT_DESCRIPTION": "PHHotel là phần mềm quản lý khách sạn: quản lý phòng, đặt phòng, hóa đơn, giao ca, báo cáo doanh thu, tích hợp camera và tin nhắn.",
     "HOME": {
-      "TITLE": "PHHotel - Phần mềm quản lý khách sạn",
+      "TITLE": "Trang chủ",
       "DESCRIPTION": "PHHotel là phần mềm quản lý khách sạn: quản lý phòng, đặt phòng, hóa đơn, giao ca, báo cáo doanh thu, tích hợp camera và tin nhắn."
     },
     "PRICING": {
@@ -2914,6 +2915,11 @@
     "FORGOT_PASSWORD": { "TITLE": "Quên mật khẩu" },
     "RESET_PASSWORD": { "TITLE": "Đặt lại mật khẩu" },
     "MAINTENANCE": { "TITLE": "Bảo trì" },
+    "ABOUT_US": {
+      "TITLE": "Về chúng tôi",
+      "DESCRIPTION": "Tìm hiểu về PHHotel và đội ngũ phát triển sản phẩm."
+    },
+    "ADMIN": { "TITLE": "Quản trị" },
     "PRIVACY_POLICY": {
       "TITLE": "Chính sách bảo mật",
       "DESCRIPTION": "Chính sách bảo mật của PHHotel."

@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { BrowserModule, provideClientHydration } from '@angular/platform-browser';
+import { BrowserModule } from '@angular/platform-browser';
 import { NgxEchartsModule } from 'ngx-echarts'; // Import NgxEchartsModule
 import { HighchartsChartModule } from 'highcharts-angular';
 import { DatePipe, registerLocaleData } from '@angular/common'; // Import DatePipe
@@ -372,7 +372,6 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         })
     ],
     providers: [
-        provideClientHydration(),
         { provide: NZ_I18N, useValue: vi_VN },
         provideAnimationsAsync(),
         provideHttpClient(withInterceptorsFromDi()),
