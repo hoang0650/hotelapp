@@ -2889,5 +2889,38 @@
     "EXPORT_EXCEL_ERROR": "Có lỗi xảy ra khi xuất file Excel",
     "LOGIN_REQUIRED": "Vui lòng đăng nhập để xuất file Excel",
     "EXPORT_ERROR": "Lỗi khi xuất file Excel"
+  },
+  "SEO": {
+    "HOME": {
+      "TITLE": "PHHotel - Phần mềm quản lý khách sạn",
+      "DESCRIPTION": "PHHotel là phần mềm quản lý khách sạn: quản lý phòng, đặt phòng, hóa đơn, giao ca, báo cáo doanh thu, tích hợp camera và tin nhắn."
+    },
+    "PRICING": {
+      "TITLE": "Bảng giá",
+      "DESCRIPTION": "Xem bảng giá và gói dịch vụ phần mềm quản lý khách sạn PHHotel."
+    },
+    "BLOG": {
+      "TITLE": "Blog",
+      "DESCRIPTION": "Tin tức và kiến thức về vận hành khách sạn, quản lý và công nghệ."
+    },
+    "BLOG_DETAIL": { "TITLE": "Bài viết" },
+    "CONTACT": {
+      "TITLE": "Liên hệ",
+      "DESCRIPTION": "Liên hệ PHHotel để nhận tư vấn giải pháp quản lý khách sạn."
+    },
+    "LOGIN": { "TITLE": "Đăng nhập" },
+    "SIGNUP": { "TITLE": "Đăng ký" },
+    "BUSINESS_SIGNUP": { "TITLE": "Đăng ký doanh nghiệp" },
+    "FORGOT_PASSWORD": { "TITLE": "Quên mật khẩu" },
+    "RESET_PASSWORD": { "TITLE": "Đặt lại mật khẩu" },
+    "MAINTENANCE": { "TITLE": "Bảo trì" },
+    "PRIVACY_POLICY": {
+      "TITLE": "Chính sách bảo mật",
+      "DESCRIPTION": "Chính sách bảo mật của PHHotel."
+    },
+    "TERMS_OF_SERVICE": {
+      "TITLE": "Điều khoản sử dụng",
+      "DESCRIPTION": "Điều khoản sử dụng dịch vụ PHHotel."
+    }
   }
 }

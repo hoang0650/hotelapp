@@ -147,8 +147,18 @@
       <ng-container *nzDrawerContent>
         <form nz-form [formGroup]="staffForm" (ngSubmit)="submitForm()" nzLayout="vertical">
           
+          <nz-form-item *ngIf="!selectedStaff">
+            <nz-form-label nzRequired>Tài khoản nhân viên</nz-form-label>
+            <nz-form-control>
+              <nz-radio-group formControlName="accountMode" nzSize="small">
+                <label nz-radio-button nzValue="existing">Chọn tài khoản có sẵn</label>
+                <label nz-radio-button nzValue="new">Tạo tài khoản mới</label>
+              </nz-radio-group>
+            </nz-form-control>
+          </nz-form-item>
+
           <!-- User ID - Chọn từ danh sách users -->
-          <nz-form-item>
+          <nz-form-item *ngIf="accountMode === 'existing'">
             <nz-form-label nzRequired>{{ 'STAFF_MANAGEMENT.FORM.USER_ACCOUNT' | translate }}</nz-form-label>
             <nz-form-control [nzErrorTip]="'STAFF_MANAGEMENT.FORM.USER_ACCOUNT_REQUIRED' | translate">
               <nz-select 
@@ -176,6 +186,39 @@
               </small>
             </nz-form-control>
           </nz-form-item>
+
+          <div *ngIf="accountMode === 'new'" formGroupName="userAccount">
+            <nz-form-item>
+              <nz-form-label nzRequired>Username</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập username">
+                <input nz-input formControlName="username" placeholder="username" />
+              </nz-form-control>
+            </nz-form-item>
+            <nz-form-item>
+              <nz-form-label nzRequired>Email</nz-form-label>
+              <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
+                <input nz-input formControlName="email" placeholder="email@domain.com" />
+              </nz-form-control>
+            </nz-form-item>
+            <nz-form-item>
+              <nz-form-label nzRequired>Mật khẩu</nz-form-label>
+              <nz-form-control nzErrorTip="Mật khẩu tối thiểu 6 ký tự">
+                <input nz-input type="password" formControlName="password" placeholder="******" />
+              </nz-form-control>
+            </nz-form-item>
+            <nz-form-item>
+              <nz-form-label>Họ tên hiển thị</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="fullName" placeholder="(tuỳ chọn)" />
+              </nz-form-control>
+            </nz-form-item>
+            <nz-form-item>
+              <nz-form-label>Số điện thoại</nz-form-label>
+              <nz-form-control>
+                <input nz-input formControlName="phone" placeholder="(tuỳ chọn)" />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
 
           <nz-divider [nzText]="'STAFF_MANAGEMENT.FORM.PERSONAL_INFO' | translate"></nz-divider>
 

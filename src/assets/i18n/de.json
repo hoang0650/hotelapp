@@ -2282,6 +2282,39 @@
     "EXPORT_EXCEL_ERROR": "Fehler beim Exportieren der Excel-Datei",
     "LOGIN_REQUIRED": "Bitte melden Sie sich an, um die Excel-Datei zu exportieren",
     "EXPORT_ERROR": "Fehler beim Exportieren der Excel-Datei"
+  },
+  "SEO": {
+    "HOME": {
+      "TITLE": "PHHotel - Hotelverwaltungssoftware",
+      "DESCRIPTION": "PHHotel ist eine Hotelverwaltungssoftware für Zimmer, Buchungen, Rechnungen, Schichtübergaben, Umsatzberichte, Kamera-Integration und Messaging."
+    },
+    "PRICING": {
+      "TITLE": "Preise",
+      "DESCRIPTION": "Entdecken Sie die Preispläne der PHHotel Hotelverwaltungssoftware."
+    },
+    "BLOG": {
+      "TITLE": "Blog",
+      "DESCRIPTION": "Neuigkeiten und Einblicke zu Hotelbetrieb, Management und Technologie."
+    },
+    "BLOG_DETAIL": { "TITLE": "Artikel" },
+    "CONTACT": {
+      "TITLE": "Kontakt",
+      "DESCRIPTION": "Kontaktieren Sie PHHotel für Beratung zur Hotelverwaltungssoftware."
+    },
+    "LOGIN": { "TITLE": "Anmelden" },
+    "SIGNUP": { "TITLE": "Registrieren" },
+    "BUSINESS_SIGNUP": { "TITLE": "Geschäftsregistrierung" },
+    "FORGOT_PASSWORD": { "TITLE": "Passwort vergessen" },
+    "RESET_PASSWORD": { "TITLE": "Passwort zurücksetzen" },
+    "MAINTENANCE": { "TITLE": "Wartung" },
+    "PRIVACY_POLICY": {
+      "TITLE": "Datenschutzrichtlinie",
+      "DESCRIPTION": "Datenschutzrichtlinie von PHHotel."
+    },
+    "TERMS_OF_SERVICE": {
+      "TITLE": "Nutzungsbedingungen",
+      "DESCRIPTION": "Nutzungsbedingungen von PHHotel."
+    }
   }
 }
 

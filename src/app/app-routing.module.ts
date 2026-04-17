@@ -62,20 +62,20 @@ import { BotSettingComponent } from './components/bot-setting/bot-setting.compon
 import { CameraConfigComponent } from './components/camera-config/camera-config.component';
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
-  { path: 'home', component: HomeComponent },
-  { path: 'pricing', component: PricingComponent },
-  { path: 'blog', component: BlogComponent },
-  { path: 'blog/:id', component: BlogComponent },
-  { path: 'contact', component: ContactComponent },
-  { path: 'login', component: LoginComponent },
-  { path: 'signup', component: SignupComponent },
-  { path: 'business-signup', component: BusinessSignupComponent },
-  { path: 'forgot-password', component: ForgotPasswordComponent },
-  { path: 'reset-password/:token', component: ResetPasswordComponent },
-  { path: 'maintenance', component: MaintenanceComponent },
+  { path: 'home', component: HomeComponent, data: { titleKey: 'SEO.HOME.TITLE', descriptionKey: 'SEO.HOME.DESCRIPTION' } },
+  { path: 'pricing', component: PricingComponent, data: { titleKey: 'SEO.PRICING.TITLE', descriptionKey: 'SEO.PRICING.DESCRIPTION' } },
+  { path: 'blog', component: BlogComponent, data: { titleKey: 'SEO.BLOG.TITLE', descriptionKey: 'SEO.BLOG.DESCRIPTION' } },
+  { path: 'blog/:id', component: BlogComponent, data: { titleKey: 'SEO.BLOG_DETAIL.TITLE', robots: 'index,follow' } },
+  { path: 'contact', component: ContactComponent, data: { titleKey: 'SEO.CONTACT.TITLE', descriptionKey: 'SEO.CONTACT.DESCRIPTION' } },
+  { path: 'login', component: LoginComponent, data: { titleKey: 'SEO.LOGIN.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'signup', component: SignupComponent, data: { titleKey: 'SEO.SIGNUP.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'business-signup', component: BusinessSignupComponent, data: { titleKey: 'SEO.BUSINESS_SIGNUP.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'forgot-password', component: ForgotPasswordComponent, data: { titleKey: 'SEO.FORGOT_PASSWORD.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'reset-password/:token', component: ResetPasswordComponent, data: { titleKey: 'SEO.RESET_PASSWORD.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'maintenance', component: MaintenanceComponent, data: { titleKey: 'SEO.MAINTENANCE.TITLE', robots: 'noindex,nofollow' } },
   { path: 'room/:id', component: ProductDetailComponent },
   {
-    path: 'admin', component: AdminComponent, children: [
+    path: 'admin', component: AdminComponent, data: { robots: 'noindex,nofollow' }, children: [
       { path: 'room', component: RoomComponent, canActivate: [PermissionGuard] },
       { path: 'bill', component: InvoiceComponent },
       { path: 'calendar', component: CalendarComponent, canActivate: [PermissionGuard] },
@@ -134,8 +134,8 @@ const routes: Routes = [
   { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'sepay-oauth2-callback', component: SepayOAuth2CallbackComponent },
-  { path: 'privacy-policy', component: PrivacyPolicyComponent },
-  { path: 'terms-of-service', component: TermsOfServiceComponent },
+  { path: 'privacy-policy', component: PrivacyPolicyComponent, data: { titleKey: 'SEO.PRIVACY_POLICY.TITLE', descriptionKey: 'SEO.PRIVACY_POLICY.DESCRIPTION' } },
+  { path: 'terms-of-service', component: TermsOfServiceComponent, data: { titleKey: 'SEO.TERMS_OF_SERVICE.TITLE', descriptionKey: 'SEO.TERMS_OF_SERVICE.DESCRIPTION' } },
 
 ];
 

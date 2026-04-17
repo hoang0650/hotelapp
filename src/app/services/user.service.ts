@@ -272,4 +272,17 @@ export class UserService {
       headers: this.getAuthHeaders()
     });
   }
+
+  createStaffUser(payload: {
+    username: string;
+    email: string;
+    password: string;
+    fullName?: string;
+    phone?: string;
+    hotelId: string;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/staff/create`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
 }

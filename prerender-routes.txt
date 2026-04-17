@@ -1,0 +1,5 @@
+/
+/home
+/pricing
+/blog
+/contact

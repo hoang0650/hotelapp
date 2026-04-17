@@ -2340,6 +2340,39 @@
     "EXPORT_EXCEL_ERROR": "An error occurred while exporting Excel file",
     "LOGIN_REQUIRED": "Please login to export Excel file",
     "EXPORT_ERROR": "Error exporting Excel file"
+  },
+  "SEO": {
+    "HOME": {
+      "TITLE": "PHHotel - Hotel Management Software",
+      "DESCRIPTION": "PHHotel is hotel management software for rooms, bookings, invoices, shift handover, revenue reports, camera integration, and messaging."
+    },
+    "PRICING": {
+      "TITLE": "Pricing",
+      "DESCRIPTION": "Explore pricing plans for PHHotel hotel management software."
+    },
+    "BLOG": {
+      "TITLE": "Blog",
+      "DESCRIPTION": "News and insights about hotel operations, management, and technology."
+    },
+    "BLOG_DETAIL": { "TITLE": "Article" },
+    "CONTACT": {
+      "TITLE": "Contact",
+      "DESCRIPTION": "Contact PHHotel for hotel management software consultation."
+    },
+    "LOGIN": { "TITLE": "Login" },
+    "SIGNUP": { "TITLE": "Sign Up" },
+    "BUSINESS_SIGNUP": { "TITLE": "Business Sign Up" },
+    "FORGOT_PASSWORD": { "TITLE": "Forgot Password" },
+    "RESET_PASSWORD": { "TITLE": "Reset Password" },
+    "MAINTENANCE": { "TITLE": "Maintenance" },
+    "PRIVACY_POLICY": {
+      "TITLE": "Privacy Policy",
+      "DESCRIPTION": "PHHotel privacy policy."
+    },
+    "TERMS_OF_SERVICE": {
+      "TITLE": "Terms of Service",
+      "DESCRIPTION": "PHHotel terms of service."
+    }
   }
 }
 

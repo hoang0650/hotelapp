@@ -50,6 +50,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   isLoading = false;
   isFormVisible = false;
   selectedHotelId: string = '';
+  accountMode: 'existing' | 'new' = 'existing';
   
   // Business info for salary slip
   businessInfo: any = null;
@@ -194,8 +195,16 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   initForm(): void {
     this.staffForm = this.fb.group({
+      accountMode: ['existing'],
       userId: ['', Validators.required],
       hotelId: ['', Validators.required],
+      userAccount: this.fb.group({
+        username: [''],
+        email: [''],
+        password: [''],
+        fullName: [''],
+        phone: ['']
+      }),
       personalInfo: this.fb.group({
         firstName: ['', Validators.required],
         lastName: ['', Validators.required],
@@ -244,12 +253,20 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       permissions: [['view']],
       notes: ['']
     });
+
+    this.staffForm.get('accountMode')?.valueChanges.subscribe((mode) => {
+      this.accountMode = mode === 'new' ? 'new' : 'existing';
+      this.applyAccountModeValidators();
+    });
   }
 
   resetForm(): void {
+    const defaultMode = (this.authService.isAdmin() || this.authService.isSuperAdmin()) ? 'existing' : 'new';
     this.staffForm.reset({
+      accountMode: defaultMode,
       userId: '',
       hotelId: this.selectedHotelId,
+      userAccount: { username: '', email: '', password: '', fullName: '', phone: '' },
       personalInfo: {
         firstName: '',
         lastName: '',
@@ -283,6 +300,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       permissions: ['view'],
       notes: ''
     });
+    this.accountMode = defaultMode as any;
+    this.applyAccountModeValidators();
     
     // Clear schedule array
     while (this.scheduleArray.length > 0) {
@@ -431,39 +450,35 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     
     // Lấy danh sách user IDs đã được assign làm staff
     const assignedUserIds = this.staffs.map(s => s.userId);
-    
-    // Load tất cả users trước (để có users chưa được gán hotel)
-    this.subscriptions.add(
-      this.userService.getAllUsers().subscribe(
-        (allUsers) => {
-          // Lọc users:
-          // 1. Chưa được assign làm staff
-          // 2. Có role là 'staff' hoặc 'hotel' hoặc chưa có hotelId (có thể gán)
-          // 3. Hoặc có hotelId trùng với hotel đang chọn
-          this.users = allUsers.filter(u => {
-            const isNotAssigned = !assignedUserIds.includes(u._id || '');
-            const canBeAssigned = !u.hotelId || u.hotelId === this.selectedHotelId;
-            const isValidRole = ['staff', 'hotel', 'receptionist'].includes(u.role || '') || !u.role;
-            return isNotAssigned && (canBeAssigned || isValidRole);
-          });
-          
-          console.log('Loaded users:', this.users.length, 'users available');
+
+    const loadByHotel = () => {
+      this.userService.getUsersByHotel(this.selectedHotelId).subscribe(
+        (hotelUsers) => {
+          this.users = hotelUsers.filter(u => !assignedUserIds.includes(u._id || ''));
         },
-        (error) => {
-          console.error('Error loading all users:', error);
-          // Fallback: thử load theo hotel
-          this.userService.getUsersByHotel(this.selectedHotelId).subscribe(
-            (hotelUsers) => {
-              this.users = hotelUsers.filter(u => !assignedUserIds.includes(u._id || ''));
-            },
-            (err) => {
-              console.error('Error loading hotel users:', err);
-              this.users = [];
-            }
-          );
+        () => {
+          this.users = [];
         }
-      )
-    );
+      );
+    };
+
+    if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
+      this.subscriptions.add(
+        this.userService.getAllUsers().subscribe(
+          (allUsers) => {
+            this.users = allUsers.filter(u => {
+              const isNotAssigned = !assignedUserIds.includes(u._id || '');
+              const canBeAssigned = !u.hotelId || u.hotelId === this.selectedHotelId;
+              const isValidRole = ['staff', 'hotel', 'receptionist'].includes(u.role || '') || !u.role;
+              return isNotAssigned && (canBeAssigned || isValidRole);
+            });
+          },
+          () => loadByHotel()
+        )
+      );
+    } else {
+      loadByHotel();
+    }
   }
 
   // ============ CRUD OPERATIONS ============
@@ -501,6 +516,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     // Patch form values
     this.staffForm.patchValue({
+      accountMode: 'existing',
       userId: staff.userId,
       hotelId: staff.hotelId,
       personalInfo: staff.personalInfo || {},
@@ -515,18 +531,24 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       permissions: staff.permissions || ['view'],
       notes: staff.notes || ''
     });
+    this.accountMode = 'existing';
+    this.applyAccountModeValidators();
     
     // Thêm user hiện tại vào danh sách để hiển thị khi edit
     if (staff.userId) {
       const existingUser = this.users.find(u => u._id === staff.userId);
       if (!existingUser) {
-        // Tìm thông tin user từ userId
-        this.userService.getAllUsers().subscribe(allUsers => {
-          const user = allUsers.find(u => u._id === staff.userId);
+        const addUserIfFound = (list: any[]) => {
+          const user = list.find(u => u._id === staff.userId);
           if (user && !this.users.find(u => u._id === user._id)) {
             this.users = [user, ...this.users];
           }
-        });
+        };
+        if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
+          this.userService.getAllUsers().subscribe(allUsers => addUserIfFound(allUsers));
+        } else if (staff.hotelId) {
+          this.userService.getUsersByHotel(staff.hotelId).subscribe(hotelUsers => addUserIfFound(hotelUsers));
+        }
       }
     }
   }
@@ -539,6 +561,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   }
 
   createStaff(): void {
+    this.applyAccountModeValidators();
     if (this.staffForm.invalid) {
       this.markFormDirty();
       this.message.warning(this.translate.instant('STAFF_MANAGEMENT.FILL_REQUIRED_FIELDS'));
@@ -546,22 +569,94 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     }
 
     this.isLoading = true;
-    const newStaff: Staff = this.staffForm.value;
-    
-    this.subscriptions.add(
-      this.staffService.createStaff(newStaff).subscribe(
-        (data: Staff) => {
-          this.message.success(this.translate.instant('STAFF_MANAGEMENT.CREATE_SUCCESS'));
-          this.staffs.push(data);
-          this.stopEdit();
-          this.isLoading = false;
-        },
-        (error) => {
-          this.message.error(this.translate.instant('STAFF_MANAGEMENT.CREATE_ERROR') + ': ' + (error.error?.message || error.message));
-          this.isLoading = false;
-        }
-      )
-    );
+    const formValue = this.staffForm.value;
+
+    const createStaffRecord = (userId: string) => {
+      const payload: any = { ...formValue, userId };
+      delete payload.accountMode;
+      delete payload.userAccount;
+      this.subscriptions.add(
+        this.staffService.createStaff(payload).subscribe(
+          (data: Staff) => {
+            this.message.success(this.translate.instant('STAFF_MANAGEMENT.CREATE_SUCCESS'));
+            this.staffs.push(data);
+            this.stopEdit();
+            this.isLoading = false;
+          },
+          (error) => {
+            this.message.error(this.translate.instant('STAFF_MANAGEMENT.CREATE_ERROR') + ': ' + (error.error?.message || error.message));
+            this.isLoading = false;
+          }
+        )
+      );
+    };
+
+    if (this.accountMode === 'new') {
+      const ua = formValue.userAccount || {};
+      const fullNameFromForm = `${formValue.personalInfo?.firstName || ''} ${formValue.personalInfo?.lastName || ''}`.trim();
+      const hotelId = formValue.hotelId || this.selectedHotelId;
+      this.subscriptions.add(
+        this.userService.createStaffUser({
+          username: ua.username,
+          email: ua.email,
+          password: ua.password,
+          fullName: ua.fullName || fullNameFromForm,
+          phone: ua.phone || formValue.contactInfo?.phone || '',
+          hotelId: hotelId
+        }).subscribe(
+          (resp: any) => {
+            const userId = resp?.user?._id;
+            if (!userId) {
+              this.message.error('Không tạo được tài khoản nhân viên');
+              this.isLoading = false;
+              return;
+            }
+            createStaffRecord(userId);
+          },
+          (error) => {
+            this.message.error('Tạo tài khoản nhân viên thất bại: ' + (error.error?.message || error.message));
+            this.isLoading = false;
+          }
+        )
+      );
+    } else {
+      createStaffRecord(formValue.userId);
+    }
+  }
+
+  private applyAccountModeValidators(): void {
+    const userIdCtrl = this.staffForm.get('userId');
+    const uaGroup = this.staffForm.get('userAccount') as FormGroup;
+
+    if (this.selectedStaff) {
+      userIdCtrl?.setValidators([Validators.required]);
+      userIdCtrl?.updateValueAndValidity({ emitEvent: false });
+      Object.values(uaGroup.controls).forEach(c => {
+        c.clearValidators();
+        c.updateValueAndValidity({ emitEvent: false });
+      });
+      return;
+    }
+
+    if (this.accountMode === 'new') {
+      userIdCtrl?.clearValidators();
+      userIdCtrl?.setValue('', { emitEvent: false });
+      userIdCtrl?.updateValueAndValidity({ emitEvent: false });
+
+      uaGroup.get('username')?.setValidators([Validators.required]);
+      uaGroup.get('email')?.setValidators([Validators.required, Validators.email]);
+      uaGroup.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
+      uaGroup.get('fullName')?.clearValidators();
+      uaGroup.get('phone')?.clearValidators();
+      Object.values(uaGroup.controls).forEach(c => c.updateValueAndValidity({ emitEvent: false }));
+    } else {
+      userIdCtrl?.setValidators([Validators.required]);
+      userIdCtrl?.updateValueAndValidity({ emitEvent: false });
+      Object.values(uaGroup.controls).forEach(c => {
+        c.clearValidators();
+        c.updateValueAndValidity({ emitEvent: false });
+      });
+    }
   }
 
   updateStaff(): void {
@@ -572,9 +667,12 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     }
 
     this.isLoading = true;
+    const payload: any = { ...this.staffForm.value };
+    delete payload.accountMode;
+    delete payload.userAccount;
     
     this.subscriptions.add(
-      this.staffService.updateStaff(this.selectedStaff._id!, this.staffForm.value).subscribe(
+      this.staffService.updateStaff(this.selectedStaff._id!, payload).subscribe(
         () => {
           this.message.success(this.translate.instant('STAFF_MANAGEMENT.UPDATE_SUCCESS'));
           this.loadStaff();
@@ -619,12 +717,17 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   // ============ HELPERS ============
 
   private markFormDirty(): void {
-    Object.values(this.staffForm.controls).forEach(control => {
-      if (control.invalid) {
-        control.markAsDirty();
-        control.updateValueAndValidity();
+    const mark = (ctrl: any) => {
+      if (!ctrl) return;
+      if (ctrl.controls && typeof ctrl.controls === 'object') {
+        Object.values(ctrl.controls).forEach((c: any) => mark(c));
       }
-    });
+      if (ctrl.invalid) {
+        ctrl.markAsDirty();
+        ctrl.updateValueAndValidity();
+      }
+    };
+    mark(this.staffForm);
   }
 
   getFullName(staff: Staff): string {

@@ -5,6 +5,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { SettingsService } from './services/settings.service';
 import { NotificationsService } from './services/notifications.service';
+import { SeoService } from './services/seo.service';
 import { filter, interval, Subscription } from 'rxjs';
 
 @Component({
@@ -25,7 +26,8 @@ export class AppComponent implements OnInit, OnDestroy {
     private router: Router,
     private authService: AuthService,
     private settingsService: SettingsService,
-    private notificationsService: NotificationsService
+    private notificationsService: NotificationsService,
+    private seoService: SeoService
   ) {}
 
   ngOnInit(): void {
@@ -43,6 +45,8 @@ export class AppComponent implements OnInit, OnDestroy {
     ).subscribe(() => {
       this.checkMaintenanceMode();
     });
+
+    this.seoService.init();
     
     // Lắng nghe sự kiện maintenance mode thay đổi
     this.maintenanceModeChangeSubscription = window.addEventListener('maintenanceModeChanged', (event: any) => {
