@@ -275,6 +275,7 @@ export class RoomsService {
     rateType: 'hourly' | 'daily' | 'nightly';
     notes?: string;
     advancePayment?: number;
+    advancePaymentMethod?: 'cash' | 'card' | 'transfer';
   }): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/booking`, bookingData);
   }

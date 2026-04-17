@@ -66,6 +66,7 @@ export class BookingModalComponent implements OnInit {
       checkOutDate: [''],
       rateType: ['hourly', [Validators.required]],
       advancePayment: [0, [Validators.min(0)]],
+      advancePaymentMethod: ['cash'],
       notes: ['']
     });
   }
@@ -489,6 +490,7 @@ export class BookingModalComponent implements OnInit {
       checkOutDate: checkOutDate,
       rateType: formValue.rateType,
       advancePayment: parseFloat(formValue.advancePayment) || 0,
+      advancePaymentMethod: formValue.advancePaymentMethod || 'cash',
       notes: formValue.notes || ''
     };
     
