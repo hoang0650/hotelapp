@@ -170,6 +170,13 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || item.status || 'unpaid';
     return paymentStatus === 'completed' ? 'paid' : paymentStatus;
   }
+
+  getDisplayTotalAmount(item: any): number {
+    const hasTotal = item?.totalAmount !== undefined && item?.totalAmount !== null;
+    const value = hasTotal ? item.totalAmount : (item?.amount ?? item?.payment?.amount ?? 0);
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
   
   private isPaidTransaction(item: any): boolean {
     const normalizedStatus = this.getNormalizedPaymentStatus(item);
@@ -1117,8 +1124,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       if (normalizedStatus !== 'paid') {
         return sum;
       }
-      const amount = current?.totalAmount || current?.amount || current?.payment?.amount || 0;
-      return sum + (typeof amount === 'number' ? amount : 0);
+      return sum + this.getDisplayTotalAmount(current);
     }, 0);
     const incomeAmount = this.shiftHandoverForm?.get('incomeAmount')?.value || 0;
     const expenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
@@ -1179,7 +1185,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           [this.translate.instant('TABLE_EXPORT.ADDITIONAL_CHARGES')]: item.additionalCharges || 0,
           [this.translate.instant('TABLE_EXPORT.DISCOUNT')]: item.discount || 0,
           [this.translate.instant('TABLE_EXPORT.ADVANCE_PAYMENT')]: item.advancePayment || 0,
-          [this.translate.instant('TABLE_EXPORT.TOTAL_AMOUNT')]: item.totalAmount || item.amount || 0,
+          [this.translate.instant('TABLE_EXPORT.TOTAL_AMOUNT')]: this.getDisplayTotalAmount(item),
           [this.translate.instant('TABLE_EXPORT.PAYMENT_METHOD')]: paymentMethod,
           [this.translate.instant('TABLE_EXPORT.STATUS')]: this.translate.instant('TABLE_EXPORT.PAID'),
           [this.translate.instant('TABLE_EXPORT.NOTES')]: item.notes || ''
@@ -1458,13 +1464,13 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         
         let totalCash = paidItems
           .filter(item => item.paymentMethod === 'cash')
-          .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+          .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
         let totalBankTransfer = paidItems
           .filter(item => ['transfer', 'bank_transfer', 'banking'].includes(item.paymentMethod))
-          .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+          .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
         let totalCard = paidItems
           .filter(item => ['card', 'credit_card', 'visa'].includes(item.paymentMethod))
-          .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+          .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
         
         // Tính từ đặt trước (advancePayment) theo hình thức thanh toán
         this.listOfData.forEach(item => {
@@ -1710,7 +1716,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         action: 'check_out',
         guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
         guestSource: guestSource, // Lấy từ nhiều nguồn
-        amount: item.totalAmount || item.amount || 0,
+        amount: this.getDisplayTotalAmount(item),
         paymentMethod: item.paymentMethod || 'cash',
         timestamp: item.checkOutTime || item.checkoutTime || new Date(),
         notes: item.notes || '',
@@ -1772,7 +1778,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       roomId: item.roomId,
       roomNumber: item.roomNumber,
       guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
-      amount: item.totalAmount || item.amount || 0,
+      amount: this.getDisplayTotalAmount(item),
       paymentMethod: item.paymentMethod || 'cash',
       type: 'room',
       timestamp: item.checkOutTime || item.checkoutTime || new Date()
@@ -2272,7 +2278,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   getActualCashInShift(): number {
     const cashReceived = this.paidData
       .filter(item => this.isPaidTransaction(item) && item.paymentMethod === 'cash')
-      .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+      .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
     
     // Tiền mặt trong ca = Tiền mặt thu - Tiền mặt chi (từ phiếu chi) + Tiền mặt thu (từ phiếu thu)
     return Math.max(0, cashReceived - this.cashExpenseAmount + this.cashIncomeAmount);
@@ -2418,7 +2424,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         action: 'check_out',
         guestName: item.guestInfo?.name || item.customerName || 'Khách lẻ',
         guestSource: guestSource, // Lấy từ nhiều nguồn
-        amount: item.totalAmount || item.amount || 0,
+        amount: this.getDisplayTotalAmount(item),
         paymentMethod: item.paymentMethod || 'cash',
         timestamp: item.checkOutTime || item.checkoutTime || new Date(),
         notes: item.notes || '',
@@ -2448,14 +2454,14 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     const totalBankTransfer = paidItems.reduce((sum, item) => {
       if (item.paymentMethod === 'bank_transfer' || item.paymentMethod === 'transfer' || item.paymentMethod === 'banking') {
-        return sum + (item.totalAmount || item.amount || 0);
+        return sum + this.getDisplayTotalAmount(item);
       }
       return sum;
     }, 0);
     
     const totalCardPayment = paidItems.reduce((sum, item) => {
       if (item.paymentMethod === 'card' || item.paymentMethod === 'credit_card' || item.paymentMethod === 'visa') {
-        return sum + (item.totalAmount || item.amount || 0);
+        return sum + this.getDisplayTotalAmount(item);
       }
       return sum;
     }, 0);
@@ -2816,13 +2822,13 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         // Reload lại expenses để cập nhật expenseAmount trong form giao ca (chỉ tính expenses sau giao tiền quản lý)
         const totalCash = this.paidData
           .filter(item => item.paymentMethod === 'cash')
-          .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+          .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
         const totalBankTransfer = this.paidData
           .filter(item => ['transfer', 'bank_transfer', 'banking'].includes(item.paymentMethod))
-          .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+          .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
         const totalCard = this.paidData
           .filter(item => ['card', 'credit_card', 'visa'].includes(item.paymentMethod))
-          .reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0);
+          .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
         this.loadExpensesAndUpdateCash(totalCash, totalBankTransfer, totalCard);
         
         // Đóng modal
@@ -2848,7 +2854,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   getTotalAmount(): number {
     // Công thức cũ: tổng hóa đơn (đã thanh toán) + phiếu thu - phiếu chi
     const baseTotal = this.paidData.reduce((total, item) => {
-      const amount = item.totalAmount || item.amount || item.payment?.amount || 0;
+      const amount = this.getDisplayTotalAmount(item);
       return total + (typeof amount === 'number' ? amount : 0);
     }, 0);
     const incomeAmount = this.shiftHandoverForm?.get('incomeAmount')?.value || 0;

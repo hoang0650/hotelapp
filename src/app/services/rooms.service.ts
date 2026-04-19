@@ -323,13 +323,26 @@ export class RoomsService {
   }
 
   // Cập nhật thông tin khách và tiền đặt trước
-  updateRoomCheckinInfo(roomId: string, guestInfo: any, advancePayment: number, rateType?: string, additionalCharges?: number, discount?: number, selectedServices?: any[], advancePaymentMethod?: string): Observable<any> {
+  updateRoomCheckinInfo(
+    roomId: string,
+    guestInfo: any,
+    advancePayment: number,
+    rateType?: string,
+    additionalCharges?: number,
+    discount?: number,
+    selectedServices?: any[],
+    advancePaymentMethod?: string,
+    notes?: string
+  ): Observable<any> {
     const body: any = {
       guestInfo,
       advancePayment
     };
     if (advancePaymentMethod) {
       body.advancePaymentMethod = advancePaymentMethod;
+    }
+    if (notes !== undefined && notes !== null) {
+      body.notes = notes;
     }
     // Thêm rateType nếu có
     if (rateType) {

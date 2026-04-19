@@ -3535,6 +3535,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const rateType = this.checkOutForm?.get('rateType')?.value || 
                      (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) || 
                      'hourly';
+
+    const notes = this.checkOutForm?.get('notes')?.value || this.initialNotes || '';
     
     // Lấy guestSource từ form, nếu không có thì lấy từ events
     let guestSource = guestSourceValue || 'walkin';
@@ -3582,7 +3584,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestInfo: updatedGuestInfo,
       advancePayment: advancePayment,
       advancePaymentMethod: advancePaymentMethod,
-      rateType: rateType
+      rateType: rateType,
+      notes: notes
     };
 
     // Lưu vào Redis
@@ -3609,11 +3612,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           additionalCharges,
           discount,
           this.selectedServices,
-          advancePaymentMethod
+          advancePaymentMethod,
+          notes
         ).subscribe({
           next: (response) => {
             console.log('Update checkin info response:', response);
             this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
+
+            this.initialNotes = notes;
             
             this.createAdvancePaymentIncomeIfNeeded(advancePayment, previousAdvancePayment, advancePaymentMethod, updatedGuestInfo);
             this.isSaving = false;
@@ -3635,6 +3641,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               this.listData[0].rateType = rateType;
               this.listData[0].additionalCharges = additionalCharges;
               this.listData[0].discount = discount;
+              this.listData[0].notes = notes;
               this.advancePayment = advancePayment;
               console.log('Updated listData:', this.listData[0]);
             }

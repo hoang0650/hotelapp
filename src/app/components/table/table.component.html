@@ -287,8 +287,8 @@
         </td>
         <td>
           <strong style="color: #722ed1">
-            {{ (data.totalAmount || data.amount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
-            <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.totalAmount || data.amount || 0) }})</span>
+            {{ getDisplayTotalAmount(data) | currency:'VND':'symbol-narrow':'1.0-0' }}
+            <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(getDisplayTotalAmount(data)) }})</span>
           </strong>
         </td>
         <td>
@@ -405,8 +405,8 @@
                 </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="Tổng thanh toán" [nzSpan]="1">
                   <strong style="color: #722ed1; font-size: 16px">
-                    {{ (data.totalAmount || data.amount || 0) | currency:'VND':'symbol-narrow':'1.0-0' }}
-                    <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(data.totalAmount || data.amount || 0) }})</span>
+                    {{ getDisplayTotalAmount(data) | currency:'VND':'symbol-narrow':'1.0-0' }}
+                    <span *ngIf="usdRate" style="margin-left: 4px; color: #999;">(≈ {{ formatUSD(getDisplayTotalAmount(data)) }})</span>
                   </strong>
                 </nz-descriptions-item>
                 
