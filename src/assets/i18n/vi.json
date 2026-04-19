@@ -721,6 +721,8 @@
       "SERVICE_AMOUNT": "Tiền dịch vụ",
       "ADVANCE_PAYMENT": "Tiền đặt trước",
       "ADVANCE_PAYMENT_METHOD": "Hình thức TT tiền đặt trước",
+      "ADJUSTED_TOTAL": "Tổng tiền",
+      "REMAINING_AMOUNT": "Còn lại",
       "CHECK_IN": "Nhận phòng",
       "CHECK_OUT": "Trả phòng",
       "N_A": "N/A",

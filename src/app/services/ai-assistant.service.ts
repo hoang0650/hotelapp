@@ -58,6 +58,14 @@ export class AiAssistantService {
     this.loadChatHistory();
   }
 
+  private normalizeId(value: any): string | null {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && value._id) return String(value._id);
+    if (typeof value === 'object' && value.id) return String(value.id);
+    return String(value);
+  }
+
   // --- WEBSOCKET FOR REALTIME UPDATES ---
   connectToWebSocket(tenantId: string): Observable<any> {
     // Nếu socket đang mở hoặc đang kết nối, dùng lại
@@ -256,20 +264,30 @@ export class AiAssistantService {
     const currentUser = this.authService.getCurrentUser();
     const userRole = currentUser?.role || null;
     const userId = currentUser?._id || null;
-    const userToken = this.authService.getToken();
-    const hotelId = await this.resolveHotelIdForAi();
-    const businessId = currentUser?.businessId || null;
+    let userToken = this.authService.getToken();
+    if (!userToken) {
+      try {
+        await firstValueFrom(this.authService.refreshAccessToken());
+        userToken = this.authService.getToken();
+      } catch (_) {
+        userToken = this.authService.getToken();
+      }
+    }
+    const hotelId = this.normalizeId(await this.resolveHotelIdForAi());
+    const businessId = this.normalizeId(currentUser?.businessId || null);
+    const normalizedTenantId = this.normalizeId(tenantId) || tenantId;
 
     try {
       const response = await firstValueFrom(
         this.http.post<any>(`${this.aiUrl}/chat`, { 
-          tenant_id: tenantId, 
+          tenant_id: normalizedTenantId, 
           hotel_id: hotelId,
           business_id: businessId,
           question,
           user_role: userRole,
           user_id: userId,
-          user_token: userToken
+          user_token: userToken,
+          api_url: this.apiUrl
         })
       );
       const answerText = response?.answer || 'Xin lỗi, tôi chưa có dữ liệu để tư vấn.';

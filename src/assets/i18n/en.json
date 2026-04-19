@@ -710,6 +710,8 @@
       "SERVICE_AMOUNT": "Service Amount",
       "ADVANCE_PAYMENT": "Advance Payment",
       "ADVANCE_PAYMENT_METHOD": "Advance Payment Method",
+      "ADJUSTED_TOTAL": "Total",
+      "REMAINING_AMOUNT": "Remaining",
       "CHECK_IN": "Check-in",
       "CHECK_OUT": "Check-out",
       "N_A": "N/A",

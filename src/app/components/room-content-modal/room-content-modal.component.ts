@@ -54,6 +54,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   getPaymentMethodLabel(method: any): string {
     return this.translate.instant(method.label);
   }
+
+  private mapToTransactionMethod(method: any): 'cash' | 'bank_transfer' | 'card' | 'other' {
+    const raw = (method && typeof method === 'object' && 'value' in method) ? (method as any).value : method;
+    const m = String(raw || '').toLowerCase().trim();
+    if (m === 'bank_transfer' || m === 'banking' || m === 'transfer') return 'bank_transfer';
+    if (m === 'card' || m === 'credit_card' || m === 'visa' || m === 'mastercard' || m === 'virtual_card') return 'card';
+    if (m === 'cash') return 'cash';
+    return 'other';
+  }
+
   private normalizePaymentMethod(method: any): string {
     const m = String(method || '').toLowerCase().trim();
     if (m === 'bank_transfer' || m === 'banking' || m === 'transfer') return 'transfer';
@@ -1816,6 +1826,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       checkOutTime: currentTime,
       checkinTime: checkInTime,
       checkInTime: checkInTime,
+      skipAutoIncomeVoucher: true,
       roomTotal: validRoomTotal, // Gửi validRoomTotal đã được validate
       rateType: rateType, // Gửi rateType đã được tính toán từ backend
       totalAmount: grandTotal, // Tổng tiền (room + services + charges - discount)
@@ -3517,7 +3528,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const advancePayment = Number(this.checkOutForm.get('advancePayment')?.value) || 0;
     
     const advancePaymentMethodControl = this.checkOutForm.get('advancePaymentMethod');
-    const advancePaymentMethod = advancePaymentMethodControl ? (advancePaymentMethodControl.value || 'cash') : 'cash';
+    const advancePaymentMethod = advancePaymentMethodControl
+      ? ((advancePaymentMethodControl.disabled ? advancePaymentMethodControl.getRawValue() : advancePaymentMethodControl.value) || 'cash')
+      : 'cash';
     
     // Lấy giá trị phụ thu và khuyến mãi từ form checkout (chỉ giá trị người dùng nhập thêm)
     // Form checkout bắt đầu từ 0, không bao gồm giá trị từ check-in event
@@ -3891,8 +3904,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       const advanceDiff = Number(advancePayment || 0) - Number(previousAdvancePayment || 0);
       if (!hotelId || advanceDiff <= 0) return;
 
-      const normalizedMethod = this.normalizePaymentMethod(advancePaymentMethod);
-      const methodForTransaction = (normalizedMethod === 'transfer' ? 'bank_transfer' : normalizedMethod) as 'cash' | 'bank_transfer' | 'card';
+      const methodForTransaction = this.mapToTransactionMethod(advancePaymentMethod);
       const bookingId = this.normalizeObjectId(
         typeof this.roomData.currentBooking === 'string'
           ? this.roomData.currentBooking

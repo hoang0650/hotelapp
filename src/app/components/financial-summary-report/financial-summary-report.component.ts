@@ -229,11 +229,26 @@ export class FinancialSummaryReportComponent implements OnInit {
     }
 
     const promptMessage = this.translate.instant('FINANCIAL_REPORT.UPDATE_INVESTMENT') + ' (VND):';
-    const newInvestment = prompt(promptMessage, this.financialSummary.initialInvestment.toString());
-    if (newInvestment && !isNaN(Number(newInvestment))) {
+    const defaultValue = this.formatNumber(Number(this.financialSummary.initialInvestment || 0));
+    const newInvestment = prompt(promptMessage, defaultValue);
+    if (newInvestment === null) {
+      return;
+    }
+
+    const numericValue = this.parseVndInput(newInvestment);
+    if (!Number.isFinite(numericValue) || numericValue < 0) {
+      alert(this.translate.instant('FINANCIAL_REPORT.UPDATE_INVESTMENT_ERROR'));
+      return;
+    }
+
+    if (numericValue === Number(this.financialSummary.initialInvestment || 0)) {
+      return;
+    }
+
+    if (Number.isFinite(numericValue)) {
       this.financialSummaryService.updateInitialInvestment(
         this.selectedHotelId,
-        Number(newInvestment)
+        numericValue
       ).subscribe({
         next: (response) => {
           this.financialSummary!.initialInvestment = response.data.initialInvestment;
@@ -245,6 +260,14 @@ export class FinancialSummaryReportComponent implements OnInit {
         }
       });
     }
+  }
+
+  private parseVndInput(value: string): number {
+    const raw = String(value ?? '').trim();
+    if (!raw) return NaN;
+    const cleaned = raw.replace(/[^\d-]/g, '');
+    if (!cleaned || cleaned === '-') return NaN;
+    return Number(cleaned);
   }
 
   openConfigModal(): void {

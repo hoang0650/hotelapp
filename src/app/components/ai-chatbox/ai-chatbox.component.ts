@@ -42,6 +42,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   
   // Kiểm tra tính năng AI Chatbox
   canUseAiChatbox: boolean = true; // Mặc định cho phép
+  canAskRevenue: boolean = false;
 
   private msgSub?: Subscription;
   private typingSub?: Subscription;
@@ -63,12 +64,24 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.msgSub = this.aiService.getMessages().subscribe(msgs => this.messages = msgs as ChatMessage[]);
     this.typingSub = this.aiService.getTypingStatus().subscribe(status => this.isTyping = status);
     this.checkAiChatboxPermission();
+    this.refreshRoleCapabilities();
     this.authService.currentUser$.pipe(take(1)).subscribe(() => {
       this.checkAiChatboxPermission();
+      this.refreshRoleCapabilities();
     });
     this.authService.currentUser$.subscribe(() => {
       this.checkAiChatboxPermission();
+      this.refreshRoleCapabilities();
     });
+  }
+
+  private refreshRoleCapabilities(): void {
+    const rules = this.authService.getPermissionRules();
+    this.canAskRevenue =
+      this.authService.isSuperAdmin() ||
+      this.authService.isAdmin() ||
+      rules.canAskAIAboutHotel === true ||
+      rules.canViewShiftHistory === true;
   }
   
   /**
@@ -214,6 +227,11 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   async sendQuickMessage(content: string) {
     const message = content.trim();
     if (!message || this.isTyping) return;
+    const isRevenueQuery = message.toLowerCase().includes('doanh thu');
+    if (isRevenueQuery && !this.canAskRevenue) {
+      this.message.warning('Bạn không có quyền hỏi về doanh thu.');
+      return;
+    }
     const tenantId = this.getTenantIdForAI();
     await this.aiService.sendMessageExternal(message, tenantId);
   }

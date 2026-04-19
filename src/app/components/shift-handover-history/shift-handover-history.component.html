@@ -356,7 +356,7 @@
                 </td>
                 <td class="text-right"><strong>{{ formatCurrency(getAdjustedTotal(room)) }}</strong></td>
                 <td class="text-right">{{ formatCurrency(getRemainingAmount(room)) }}</td>
-                <td class="text-right"><strong>{{ formatCurrency(room.amount || 0) }}</strong></td>
+                <td class="text-right"><strong>{{ formatCurrency(getAmount(room)) }}</strong></td>
                 <td>{{ room.paymentMethod === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : room.paymentMethod === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : room.paymentMethod === 'card' ? ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate) : 'Khác' }}</td>
                 <td class="text-ellipsis">
                   <span [nz-tooltip]="getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : 'N/A'" nzTooltipPlacement="top">
@@ -430,7 +430,7 @@
                 </td>
                 <td class="text-right"><strong>{{ formatCurrency(getAdjustedTotal(room)) }}</strong></td>
                 <td class="text-right">{{ formatCurrency(getRemainingAmount(room)) }}</td>
-                <td class="text-right"><strong>{{ formatCurrency(room.amount || 0) }}</strong></td>
+                <td class="text-right"><strong>{{ formatCurrency(getAmount(room)) }}</strong></td>
                 <td>{{ room.paymentMethod === 'cash' ? ('SHIFT_HANDOVER.HISTORY.CASH' | translate) : room.paymentMethod === 'bank_transfer' ? ('SHIFT_HANDOVER.HISTORY.BANK_TRANSFER' | translate) : room.paymentMethod === 'card' ? ('SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate) : 'Khác' }}</td>
                 <td class="text-ellipsis">
                   <span [nz-tooltip]="getCheckinTime(room) ? formatDate(getCheckinTime(room)!) : 'N/A'" nzTooltipPlacement="top">

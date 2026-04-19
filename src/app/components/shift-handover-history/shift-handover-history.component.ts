@@ -176,7 +176,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
   
   getTotalAmount(list: any[]): number {
-    return (list || []).reduce((sum, i) => sum + (i.amount || 0), 0);
+    return (list || []).reduce((sum, i) => sum + this.getAmount(i), 0);
   }
   
   resetFilters(): void {
@@ -306,6 +306,16 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
 
   getAdvancePayment(room: any): number {
     return room.advancePayment || 0;
+  }
+
+  getAmount(room: any): number {
+    const roomTotal = this.getRoomTotal(room);
+    const additionalCharges = this.getAdditionalCharges(room);
+    const discount = this.getDiscount(room);
+    const serviceAmount = this.getServiceAmount(room);
+    const calculated = roomTotal + additionalCharges - discount + serviceAmount;
+    const fallback = Number(room?.amount || 0);
+    return calculated !== 0 ? calculated : fallback;
   }
 
   getAdjustedTotal(room: any): number {
@@ -627,7 +637,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
                         : advancePaymentMethod === 'card'
                           ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CARD')
                           : this.translate.instant('SHIFT_HANDOVER_EXPORT.OTHER'),
-                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.AMOUNT')]: room.amount || 0,
+                  [this.translate.instant('SHIFT_HANDOVER_EXPORT.AMOUNT')]: this.getAmount(room),
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.PAYMENT_METHOD')]: room.paymentMethod === 'cash' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CASH') : 
                   room.paymentMethod === 'bank_transfer' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.BANK_TRANSFER') : 
                   room.paymentMethod === 'card' ? this.translate.instant('SHIFT_HANDOVER_EXPORT.CARD') : this.translate.instant('SHIFT_HANDOVER_EXPORT.OTHER'),
@@ -892,7 +902,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
                   'Khuyến mãi': discount,
                   'Tiền dịch vụ': serviceAmount,
                   'Tiền đặt trước': advancePayment,
-                  'Số tiền': room.amount || 0,
+                  'Số tiền': this.getAmount(room),
                   'Hình thức thanh toán': room.paymentMethod === 'cash' ? 'Tiền mặt' : 
                   room.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : 
                   room.paymentMethod === 'card' ? 'Thẻ' : 'Khác',
@@ -1374,7 +1384,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
                   'Khuyến mãi': discount,
                   'Tiền dịch vụ': serviceAmount,
                   'Tiền đặt trước': advancePayment,
-                  'Số tiền': room.amount || 0,
+                  'Số tiền': this.getAmount(room),
                   'Hình thức thanh toán': room.paymentMethod === 'cash' ? 'Tiền mặt' : 
                   room.paymentMethod === 'bank_transfer' ? 'Chuyển khoản' : 
                   room.paymentMethod === 'card' ? 'Thẻ' : 'Khác',
