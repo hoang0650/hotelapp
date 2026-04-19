@@ -56,6 +56,10 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   previewError: string | null = null;
   agentOnline: boolean | null = null;
   agentError: string | null = null;
+  agentPort = 8787;
+  agentHostInput = 'localhost';
+  agentSuggestedUrls: string[] = [];
+  agentDetectError: string | null = null;
   private previewSub: Subscription | null = null;
   private lastObjectUrl: string | null = null;
 
@@ -76,6 +80,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.bindUserContext();
     this.checkBackend();
     this.checkAi();
+    this.detectLocalAgent();
   }
 
   ngOnDestroy(): void {
@@ -103,6 +108,19 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         enableFaceRecognition: [false],
         autoCheckin: [false]
       })
+    });
+
+    this.cameraForm.get('accessMode')?.valueChanges.subscribe((mode: CameraAccessMode) => {
+      const agentBaseUrlCtrl = this.cameraForm.get('agentBaseUrl');
+      if (!agentBaseUrlCtrl) return;
+      if (mode === 'agent') {
+        agentBaseUrlCtrl.setValidators([Validators.required]);
+      } else {
+        agentBaseUrlCtrl.clearValidators();
+      }
+      agentBaseUrlCtrl.updateValueAndValidity({ emitEvent: false });
+      this.agentOnline = null;
+      this.agentError = null;
     });
   }
 
@@ -221,8 +239,62 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     return `${normalized}/health`;
   }
 
+  private buildAgentBaseUrlFromHost(hostOrUrl: string): string {
+    const raw = String(hostOrUrl || '').trim();
+    if (!raw) return '';
+    if (/^https?:\/\//i.test(raw)) return raw.replace(/\/+$/, '');
+    const host = raw.replace(/\/+$/, '');
+    if (/:\d+$/.test(host)) return `http://${host}`;
+    return `http://${host}:${this.agentPort}`;
+  }
+
+  applyAgentHost(): void {
+    const baseUrl = this.buildAgentBaseUrlFromHost(this.agentHostInput);
+    if (!baseUrl) {
+      this.message.warning('Vui lòng nhập IP hoặc hostname máy chạy agent');
+      return;
+    }
+    this.cameraForm.patchValue({ agentBaseUrl: baseUrl });
+    this.cameraForm.get('agentBaseUrl')?.markAsDirty();
+    this.agentOnline = null;
+    this.agentError = null;
+  }
+
+  useLocalhostAgent(): void {
+    this.agentHostInput = 'localhost';
+    this.applyAgentHost();
+  }
+
+  openAgentHealth(): void {
+    const baseUrl = String(this.cameraForm.value.agentBaseUrl || '').trim();
+    const url = baseUrl ? this.getAgentHealthUrl(baseUrl) : this.getAgentHealthUrl(this.buildAgentBaseUrlFromHost('localhost'));
+    try {
+      window.open(url, '_blank');
+    } catch (_) {}
+  }
+
+  async detectLocalAgent(): Promise<void> {
+    this.agentDetectError = null;
+    this.agentSuggestedUrls = [];
+    try {
+      const resp = await fetch(`http://localhost:${this.agentPort}/info`, { method: 'GET' });
+      if (!resp.ok) {
+        this.agentDetectError = `Agent /info HTTP ${resp.status}`;
+        return;
+      }
+      const data: any = await resp.json();
+      const urls: string[] = Array.isArray(data?.urls) ? data.urls : [];
+      this.agentSuggestedUrls = urls.filter(Boolean);
+      if (!this.cameraForm.value.agentBaseUrl && this.agentSuggestedUrls.length > 0) {
+        this.cameraForm.patchValue({ agentBaseUrl: this.agentSuggestedUrls[0] });
+      }
+    } catch (e: any) {
+      this.agentDetectError = e?.message || 'Không thể kết nối agent local';
+    }
+  }
+
   testAgent(): void {
-    const baseUrl = this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || '');
+    const baseUrl = String(this.cameraForm.value.agentBaseUrl || '').trim();
     if (!baseUrl) {
       this.message.warning('Vui lòng nhập Agent URL');
       return;
@@ -234,26 +306,23 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     }
     this.agentOnline = null;
     this.agentError = null;
-    this.http.post<any>(`${environment.apiUrl}/cameras/agent-health`, {
-      agentBaseUrl: baseUrl,
-      agentToken: this.cameraForm.value.agentToken
-    }).subscribe({
-      next: (res) => {
-        this.agentOnline = !!res?.ok;
+    const url = this.getAgentHealthUrl(baseUrl);
+    const token = String(this.cameraForm.value.agentToken || '').trim();
+    const headers: Record<string, string> = {};
+    if (token) headers['x-agent-token'] = token;
+    fetch(url, { method: 'GET', headers })
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data: any = await r.json().catch(() => ({}));
+        this.agentOnline = !!data?.ok;
         if (!this.agentOnline) {
-          const parts: string[] = [];
-          parts.push(res?.message || 'Agent không phản hồi ok');
-          if (res?.status) parts.push(`HTTP ${res.status}`);
-          if (res?.url) parts.push(String(res.url));
-          if (res?.data) parts.push(typeof res.data === 'string' ? res.data : JSON.stringify(res.data));
-          this.agentError = parts.filter(Boolean).join(' • ');
+          this.agentError = 'Agent trả phản hồi không hợp lệ';
         }
-      },
-      error: (err) => {
+      })
+      .catch((err: any) => {
         this.agentOnline = false;
         this.agentError = err?.message || 'Không thể kết nối agent';
-      }
-    });
+      });
   }
 
   onSelectCamera(cameraId: string): void {
@@ -388,6 +457,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (this.isPreviewLoading) return;
     this.isPreviewLoading = true;
     try {
+      await this.ensureCameraConfigSyncedForSnapshot(showToast);
       const blob = await firstValueFrom(
         this.http.get(`${environment.apiUrl}/cameras/${this.selectedCameraId}/snapshot`, { responseType: 'blob' as const })
       );
@@ -404,6 +474,61 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       if (showToast) this.message.error(this.previewError);
     } finally {
       this.isPreviewLoading = false;
+    }
+  }
+
+  private buildCameraPayload(): any {
+    return {
+      hotelId: this.selectedHotelId,
+      name: this.cameraForm.value.name,
+      provider: this.selectedProvider,
+      accessMode: this.cameraForm.value.accessMode,
+      agentBaseUrl: this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || ''),
+      agentToken: this.cameraForm.value.agentToken,
+      ipAddress: this.cameraForm.value.ipAddress,
+      port: Number(this.cameraForm.value.port || 554),
+      username: this.cameraForm.value.username,
+      password: this.cameraForm.value.password,
+      rtspPath: this.cameraForm.value.rtspPath,
+      status: this.cameraForm.value.status,
+      aiConfig: this.aiConfigForm.value
+    };
+  }
+
+  private async ensureCameraConfigSyncedForSnapshot(showToast: boolean): Promise<void> {
+    if (!this.selectedCameraId || !this.selectedHotelId) return;
+
+    const accessMode: CameraAccessMode = this.cameraForm.value.accessMode;
+    if (accessMode === 'agent') {
+      const baseUrl = this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || '');
+      if (!baseUrl) {
+        this.previewError = 'Vui lòng nhập Agent URL trước khi xem snapshot.';
+        if (showToast) this.message.error(this.previewError);
+        throw new Error(this.previewError);
+      }
+    }
+
+    if (!this.cameraForm.dirty) return;
+    if (this.isSavingConfig) return;
+
+    if (this.cameraForm.invalid) {
+      Object.values(this.cameraForm.controls).forEach(control => {
+        control.markAsDirty();
+        control.updateValueAndValidity({ onlySelf: true });
+      });
+      const msg = 'Vui lòng điền đủ cấu hình camera trước khi test snapshot.';
+      this.previewError = msg;
+      if (showToast) this.message.error(msg);
+      throw new Error(msg);
+    }
+
+    this.isSavingConfig = true;
+    try {
+      const payload = this.buildCameraPayload();
+      await firstValueFrom(this.http.put<any>(`${environment.apiUrl}/cameras/${this.selectedCameraId}`, payload));
+      this.cameraForm.markAsPristine();
+    } finally {
+      this.isSavingConfig = false;
     }
   }
 
@@ -522,21 +647,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const payload = {
-      hotelId: this.selectedHotelId,
-      name: this.cameraForm.value.name,
-      provider: this.selectedProvider,
-      accessMode: this.cameraForm.value.accessMode,
-      agentBaseUrl: this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || ''),
-      agentToken: this.cameraForm.value.agentToken,
-      ipAddress: this.cameraForm.value.ipAddress,
-      port: Number(this.cameraForm.value.port || 554),
-      username: this.cameraForm.value.username,
-      password: this.cameraForm.value.password,
-      rtspPath: this.cameraForm.value.rtspPath,
-      status: this.cameraForm.value.status,
-      aiConfig: this.aiConfigForm.value
-    };
+    const payload = this.buildCameraPayload();
 
     this.isSavingConfig = true;
     const req$ = this.selectedCameraId
