@@ -533,9 +533,6 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   }
 
   private async extractHttpErrorMessage(err: any): Promise<string> {
-    const direct = err?.error?.message || err?.message;
-    if (typeof direct === 'string' && direct.trim()) return direct;
-
     const errorPayload = err?.error;
     if (errorPayload && typeof Blob !== 'undefined' && errorPayload instanceof Blob) {
       try {
@@ -543,21 +540,34 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         try {
           const json = JSON.parse(text);
           const parts = [json?.message, json?.hint].filter(Boolean);
+          if (json?.error) parts.push(String(json.error));
           if (json?.ipAddress) parts.push(`IP: ${json.ipAddress}`);
           if (json?.port) parts.push(`Port: ${json.port}`);
           if (json?.rtspPath) parts.push(`RTSP Path: ${json.rtspPath}`);
           if (json?.rtsp) parts.push(`RTSP: ${json.rtsp}`);
           const details = json?.details ? String(json.details) : '';
           const tail = details ? details.slice(-280) : '';
-          return [...parts, tail].filter(Boolean).join(' • ');
+          const status = err?.status ? `HTTP ${err.status}` : '';
+          return [status, ...parts, tail].filter(Boolean).join(' • ');
         } catch (_) {
-          return text.slice(-280);
+          const status = err?.status ? `HTTP ${err.status}` : '';
+          const tail = text ? text.slice(-280) : '';
+          return [status, tail].filter(Boolean).join(' • ');
         }
       } catch (_) {
-        return '';
+        const status = err?.status ? `HTTP ${err.status}` : '';
+        return status || '';
       }
     }
-    return '';
+
+    const direct = err?.error?.message || err?.message;
+    if (typeof direct === 'string' && direct.trim()) {
+      return direct.replace(/snapshot:/g, 'snapshot').trim();
+    }
+
+    const status = err?.status ? `HTTP ${err.status}` : '';
+    const url = err?.url ? String(err.url) : '';
+    return [status, url].filter(Boolean).join(' • ');
   }
 
   isPrivateCameraIp(): boolean {
