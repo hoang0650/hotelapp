@@ -100,6 +100,13 @@ export class FinancialSummaryReportComponent implements OnInit {
     });
   }
 
+  private getSelectedHotel(): any | null {
+    if (!this.selectedHotelId) {
+      return null;
+    }
+    return this.hotels.find((h: any) => h && h._id === this.selectedHotelId) || null;
+  }
+
   loadFinancialSummary(): void {
     if (!this.selectedHotelId) {
       return;
@@ -115,6 +122,17 @@ export class FinancialSummaryReportComponent implements OnInit {
     this.financialSummaryService.getFinancialSummary(query).subscribe({
       next: (response) => {
         this.financialSummary = response.data;
+        const selectedHotel = this.getSelectedHotel();
+        if (this.financialSummary) {
+          const hotelInitialInvestment = selectedHotel && Number.isFinite(Number(selectedHotel.initialInvestment))
+            ? Number(selectedHotel.initialInvestment)
+            : null;
+          if (hotelInitialInvestment !== null) {
+            this.financialSummary.initialInvestment = hotelInitialInvestment;
+          } else if (this.financialSummary.initialInvestment === undefined || this.financialSummary.initialInvestment === null) {
+            this.financialSummary.initialInvestment = 0;
+          }
+        }
         
         // Đảm bảo tất cả các field revenue luôn có giá trị
         if (this.financialSummary && this.financialSummary.breakdown && this.financialSummary.breakdown.revenue) {
@@ -229,7 +247,11 @@ export class FinancialSummaryReportComponent implements OnInit {
     }
 
     const promptMessage = this.translate.instant('FINANCIAL_REPORT.UPDATE_INVESTMENT') + ' (VND):';
-    const defaultValue = this.formatNumber(Number(this.financialSummary.initialInvestment || 0));
+    const selectedHotel = this.getSelectedHotel();
+    const selectedHotelInitialInvestment = selectedHotel && Number.isFinite(Number(selectedHotel.initialInvestment))
+      ? Number(selectedHotel.initialInvestment)
+      : null;
+    const defaultValue = this.formatNumber(Number(selectedHotelInitialInvestment ?? this.financialSummary.initialInvestment ?? 0));
     const newInvestment = prompt(promptMessage, defaultValue);
     if (newInvestment === null) {
       return;
@@ -252,6 +274,10 @@ export class FinancialSummaryReportComponent implements OnInit {
       ).subscribe({
         next: (response) => {
           this.financialSummary!.initialInvestment = response.data.initialInvestment;
+          const idx = this.hotels.findIndex((h: any) => h && h._id === this.selectedHotelId);
+          if (idx >= 0) {
+            this.hotels[idx] = { ...this.hotels[idx], initialInvestment: response.data.initialInvestment };
+          }
           this.loadFinancialSummary();
         },
         error: (error) => {

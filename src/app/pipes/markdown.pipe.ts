@@ -1,5 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { DomSanitizer, SecurityContext } from '@angular/platform-browser';
 
 @Pipe({
   name: 'markdown'
@@ -8,10 +8,10 @@ export class MarkdownPipe implements PipeTransform {
 
   constructor(private sanitizer: DomSanitizer) {}
 
-  transform(value: string): SafeHtml {
+  transform(value: string): string {
     if (!value) return '';
 
-    let html = value;
+    let html = this.escapeHtml(value);
 
     // 1. Extract Code Blocks (```lang ... ```)
     const codeBlocks: string[] = [];
@@ -20,23 +20,6 @@ export class MarkdownPipe implements PipeTransform {
       codeBlocks.push(`<pre class="code-block"><div class="code-header">${lang || 'code'}</div><code>${this.escapeHtml(code)}</code></pre>`);
       return placeholder;
     });
-
-    // 2. Escape HTML in the non-code parts to prevent XSS (if we assume input is markdown text, not HTML)
-    // However, user said "bot returns html or code".
-    // If we escape here, we break HTML returned by bot.
-    // If we don't escape, we are vulnerable if user input is malicious.
-    // Since this is for "bot returns", and bot is trusted (mostly), maybe we can skip escaping?
-    // OR we can try to detect if it looks like HTML?
-    // Let's assume mixed content is possible but primarily we want to render format.
-    // Safe approach: Escape by default unless we detect it's purely HTML?
-    // No, standard markdown parsers escape HTML.
-    // But the user specifically asked "support markdown ... when bot returns html or code".
-    // "Returns html" -> implies raw HTML.
-    // "Returns code" -> implies markdown code blocks.
-    
-    // I will NOT escape HTML generally, but I will sanitize the final result using DomSanitizer.
-    // Angular's bypassSecurityTrustHtml will allow the HTML to be rendered.
-    // If I want to support Markdown syntax like **bold**, I should apply it.
 
     // 3. Inline Code (`code`)
     html = html.replace(/`([^`]+)`/g, (match, code) => {
@@ -50,7 +33,10 @@ export class MarkdownPipe implements PipeTransform {
     html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
     // 6. Links ([text](url))
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, rawUrl) => {
+      const safeUrl = this.sanitizeUrl(rawUrl);
+      return safeUrl ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${label}</a>` : label;
+    });
 
     // 7. Lists
     // Unordered list
@@ -74,7 +60,7 @@ export class MarkdownPipe implements PipeTransform {
       return codeBlocks[parseInt(index, 10)];
     });
 
-    return this.sanitizer.bypassSecurityTrustHtml(html);
+    return this.sanitizer.sanitize(SecurityContext.HTML, html) || '';
   }
 
   private escapeHtml(text: string): string {
@@ -84,5 +70,18 @@ export class MarkdownPipe implements PipeTransform {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  private sanitizeUrl(url: string): string | null {
+    const trimmed = (url || '').trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (/^(https?:|mailto:)/i.test(trimmed)) {
+      return trimmed.replace(/"/g, '&quot;');
+    }
+
+    return null;
   }
 }
