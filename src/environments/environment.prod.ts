@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://phhotel-api.onrender.com',
+  apiUrl: 'https://api.phhotel.vn',
   aiUrl: 'https://ai.phgrouptechs.com',
   sepay: {
     sandbox: false
