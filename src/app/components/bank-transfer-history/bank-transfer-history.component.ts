@@ -196,7 +196,15 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     this.bankHubLoading = true;
     this.bankHubService.createLinkToken().subscribe({
       next: (res) => {
-        this.bankHubLinkUrl = this.sanitizer.bypassSecurityTrustResourceUrl(res.hosted_link_url);
+        const hostedUrl = String((res as any)?.hosted_link_url || '').trim();
+        const allowed = ['https://bankhub.sepay.vn', 'https://bankhub-sandbox.sepay.vn'];
+        const safe = this.toSafeResourceUrl(hostedUrl, allowed);
+        if (!safe) {
+          this.message.error('Liên kết BankHub không hợp lệ');
+          this.bankHubLoading = false;
+          return;
+        }
+        this.bankHubLinkUrl = safe;
         this.showBankHubIframe = true;
         this.bankHubLoading = false;
       },
@@ -235,6 +243,18 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
         this.message.warning('Phiên làm việc đã hết hạn, vui lòng thử lại');
         this.closeBankHubIframe();
         break;
+    }
+  }
+
+  private toSafeResourceUrl(url: string, allowedOrigins: string[]): any {
+    try {
+      const u = new URL(url);
+      if (u.protocol !== 'https:') return null;
+      const origin = u.origin;
+      if (!allowedOrigins.includes(origin)) return null;
+      return this.sanitizer.bypassSecurityTrustResourceUrl(u.toString());
+    } catch {
+      return null;
     }
   }
 

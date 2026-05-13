@@ -450,9 +450,8 @@ export class EInvoiceManagementComponent implements OnInit {
         console.error('[EInvoice Management] Error status:', error.status);
         console.error('[EInvoice Management] Error details:', error.error);
         
-        // Nếu proxy thất bại, thử dùng URL trực tiếp với object tag
-        this.message.warning('Không thể tải PDF qua proxy, đang thử cách khác...');
-        this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(pdfUrl + '#toolbar=0&navpanes=0');
+        this.message.error('Không thể tải PDF hóa đơn. Vui lòng thử lại.');
+        this.safePdfUrl = null;
         this.loadingPdf = false;
       }
     });
