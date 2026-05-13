@@ -63,10 +63,10 @@ export class SeoService {
 
   private apply(data: SeoData): void {
     const url = this.getCanonicalUrl();
-    const translatedTitle = data.titleKey ? this.translate.instant(data.titleKey) : '';
-    const translatedDescription = data.descriptionKey ? this.translate.instant(data.descriptionKey) : '';
+    const translatedTitle = this.getTranslatedValue(data.titleKey);
+    const translatedDescription = this.getTranslatedValue(data.descriptionKey);
     const title = this.buildTitle(translatedTitle || data.title);
-    const defaultDescription = this.translate.instant('SEO.DEFAULT_DESCRIPTION') || this.fallbackDefaultDescription;
+    const defaultDescription = this.getTranslatedValue('SEO.DEFAULT_DESCRIPTION') || this.fallbackDefaultDescription;
     const description = translatedDescription || data.description || defaultDescription;
     const robots = data.robots || 'index,follow';
     const ogType = data.ogType || 'website';
@@ -90,10 +90,18 @@ export class SeoService {
 
   private buildTitle(pageTitle?: string): string {
     const t = String(pageTitle || '').trim();
-    const homeTitle = this.translate.instant('SEO.HOME.TITLE') || 'Trang chủ';
+    const homeTitle = this.getTranslatedValue('SEO.HOME.TITLE') || 'Trang chủ';
     const effective = t || homeTitle;
     if (effective.toLowerCase().includes(this.brand.toLowerCase())) return effective;
     return `${this.brand} | ${effective}`;
+  }
+
+  private getTranslatedValue(key?: string): string {
+    const k = String(key || '').trim();
+    if (!k) return '';
+    const v = this.translate.instant(k);
+    if (!v || v === k) return '';
+    return String(v).trim();
   }
 
   private getCanonicalUrl(): string {

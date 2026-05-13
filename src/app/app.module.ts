@@ -166,7 +166,7 @@ export class CustomTranslateLoader implements TranslateLoader {
 
   getTranslation(lang: string): Observable<any> {
     console.log(`📥 CustomTranslateLoader: Loading translation for ${lang}`);
-    const url = `./assets/i18n/${lang}.json`;
+    const url = `/assets/i18n/${lang}.json`;
     console.log(`📥 Loading from URL: ${url}`);
     
     return this.http.get(url, { responseType: 'json' }).pipe(
@@ -189,7 +189,7 @@ export class CustomTranslateLoader implements TranslateLoader {
         if (error.status === 404 || error.status === 0) {
           console.warn(`⚠️ File not found or network error for ${lang}, falling back to Vietnamese`);
           if (lang !== 'vi') {
-            return this.http.get(`./assets/i18n/vi.json`, { responseType: 'json' }).pipe(
+            return this.http.get(`/assets/i18n/vi.json`, { responseType: 'json' }).pipe(
               catchError((fallbackError) => {
                 console.error('❌ Failed to load Vietnamese translation as fallback:', fallbackError);
                 return of({});

@@ -22,8 +22,26 @@ export class TranslationService {
     // Khởi tạo ngôn ngữ mặc định
     const savedLang = this.getStoredLanguage() || 'vi';
     this.translate.setDefaultLang('vi');
-    this.translate.use(savedLang);
-    this.currentLangSubject.next(savedLang);
+    this.translate.use(savedLang).subscribe({
+      next: () => {
+        const current = this.translate.currentLang || savedLang;
+        this.currentLangSubject.next(current);
+      },
+      error: () => {
+        if (savedLang !== 'vi') {
+          this.translate.use('vi').subscribe({
+            next: () => {
+              this.currentLangSubject.next('vi');
+            },
+            error: () => {
+              this.currentLangSubject.next(savedLang);
+            }
+          });
+        } else {
+          this.currentLangSubject.next(savedLang);
+        }
+      }
+    });
   }
 
   /**
@@ -56,7 +74,7 @@ export class TranslationService {
           const testTranslation = this.translate.instant('NAVBAR.HOME');
           console.log(`Test translation (NAVBAR.HOME): "${testTranslation}"`);
           
-          if (testTranslation === 'NAVBAR.HOME' || testTranslation === 'Trang chủ') {
+          if (testTranslation === 'NAVBAR.HOME') {
             console.error(`❌ Translation not working! Got: "${testTranslation}"`);
             console.error(`This means translations are not loaded or language is not set correctly`);
           }

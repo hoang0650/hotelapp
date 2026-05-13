@@ -119,9 +119,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
    * Update tab titles based on current language
    */
   private updateTabTitles(): void {
-    this.tabAllTitle = this.translate.instant('NOTIFICATIONS.ALL');
-    this.tabSystemTitle = this.translate.instant('NOTIFICATIONS.SYSTEM');
-    this.tabHotelTitle = this.translate.instant('NOTIFICATIONS.HOTEL');
+    this.tabAllTitle = this.getTranslatedOr('NOTIFICATIONS.ALL', 'Tất cả');
+    this.tabSystemTitle = this.getTranslatedOr('NOTIFICATIONS.SYSTEM', 'Hệ thống');
+    this.tabHotelTitle = this.getTranslatedOr('NOTIFICATIONS.HOTEL', 'Khách sạn');
   }
 
   ngOnDestroy(): void {
@@ -148,7 +148,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
     const role = this.currentUser.role || '';
     // Sử dụng translate cho role labels
     const roleKey = `ROLES.${role.toUpperCase()}`;
-    return this.translate.instant(roleKey) || role;
+    return this.getTranslatedOr(roleKey, role);
+  }
+
+  private getTranslatedOr(key: string, fallback: string): string {
+    const v = this.translate.instant(key);
+    if (!v || v === key) return fallback;
+    return v;
   }
 
   // Chuyển đổi ngôn ngữ - sử dụng TranslationService để đảm bảo tất cả component được cập nhật
