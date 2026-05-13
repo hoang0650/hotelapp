@@ -1,5 +1,5 @@
-import { Pipe, PipeTransform } from '@angular/core';
-import { DomSanitizer, SafeHtml, SecurityContext } from '@angular/platform-browser';
+import { Pipe, PipeTransform, SecurityContext } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Pipe({
   name: 'nlToBr'
@@ -7,8 +7,8 @@ import { DomSanitizer, SafeHtml, SecurityContext } from '@angular/platform-brows
 export class NlToBrPipe implements PipeTransform {
   constructor(private sanitizer: DomSanitizer) {}
 
-  transform(value: string): SafeHtml {
-    if (!value) return value;
+  transform(value: string): string {
+    if (!value) return '';
     
     const escapedText = value
       .replace(/&/g, '&amp;')
