@@ -141,6 +141,22 @@
     <div class="mt-4" formGroupName="priceConfig">
       <h4 class="mb-2">Cấu hình tính giá</h4>
 
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="24">
+          <nz-form-item>
+            <nz-form-label>Danh sách ngày lễ (YYYY-MM-DD hoặc MM-DD, mỗi dòng 1 ngày)</nz-form-label>
+            <nz-form-control>
+              <textarea
+                nz-input
+                formControlName="holidayDates"
+                rows="3"
+                placeholder="VD:\n2026-01-01\n04-30\n05-01\n09-02"
+              ></textarea>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+
       <div nz-row [nzGutter]="16" formGroupName="nightlyRates">
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>

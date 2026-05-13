@@ -41,6 +41,7 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
         children: [0, [Validators.min(0)]]
       }),
       priceConfig: this.fb.group({
+        holidayDates: [''],
         hourlyRates: this.fb.group({
           maxHoursBeforeDay: [6, [Validators.min(1)]],
           gracePeriodMinutes: [15, [Validators.min(0), Validators.max(60)]],
@@ -72,11 +73,15 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
     if (this.hotelId) {
       this.loadCategories();
     }
+    this.patchHolidayDatesToForm();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['hotelId'] && this.hotelId) {
       this.loadCategories();
+    }
+    if (changes['hotelId']) {
+      this.patchHolidayDatesToForm();
     }
   }
 
@@ -112,6 +117,7 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
         children: category.capacity?.children || 0
       }
     });
+    this.patchHolidayDatesToForm();
 
     if (this.hotelId && category._id) {
       this.categoryService.getPriceConfigByRoomCategory(this.hotelId, category._id).subscribe({
@@ -163,12 +169,41 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
       additionalHourRate: 0,
       capacity: { adults: 2, children: 0 },
       priceConfig: {
+        holidayDates: this.loadHolidayDates(),
         hourlyRates: { maxHoursBeforeDay: 6, gracePeriodMinutes: 15, autoNightlyHours: 8 },
         dailyRates: { checkInTime: '12:00', checkOutTime: '12:00', earlyCheckinSurcharge: 0, latecheckOutFee: 0, weekendSurcharge: 0, holidaySurcharge: 0 },
         nightlyRates: { startTime: '20:00', endTime: '12:00', earlyCheckinSurcharge: 0, lateCheckoutSurcharge: 0, autoDailyHours: 24, weekendSurcharge: 0, holidaySurcharge: 0 },
         updateRooms: true
       }
     });
+  }
+
+  private getHolidayStorageKey(): string {
+    const id = String(this.hotelId || 'default');
+    return `phhotel:holidayDates:${id}`;
+  }
+
+  private loadHolidayDates(): string {
+    try {
+      if (typeof window === 'undefined') return '';
+      return localStorage.getItem(this.getHolidayStorageKey()) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  private saveHolidayDates(value: any): void {
+    try {
+      if (typeof window === 'undefined') return;
+      const v = String(value || '').trim();
+      localStorage.setItem(this.getHolidayStorageKey(), v);
+    } catch {}
+  }
+
+  private patchHolidayDatesToForm(): void {
+    const priceConfigGroup = this.categoryForm.get('priceConfig');
+    if (!priceConfigGroup) return;
+    priceConfigGroup.patchValue({ holidayDates: this.loadHolidayDates() }, { emitEvent: false });
   }
 
   private buildPriceConfigPayload(roomCategoryId: string, roomTypeName: string, formValue: any): any {
@@ -223,6 +258,7 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
     }
 
     const formValue = this.categoryForm.value;
+    this.saveHolidayDates(formValue?.priceConfig?.holidayDates);
     const categoryData: Partial<RoomCategory> = {
       hotelId: this.hotelId,
       name: formValue.name,

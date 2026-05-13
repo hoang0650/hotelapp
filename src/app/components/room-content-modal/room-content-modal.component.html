@@ -528,6 +528,16 @@
               <span class="payment-detail-label">{{ roomPriceDetails.days }} ngày × {{ (roomPriceDetails.basePrice || 0) | number }} đ/ngày:</span>
               <span class="payment-detail-value">{{ ((roomPriceDetails.days || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ</span>
             </div>
+
+            <div *ngIf="(roomPriceDetails.holidaySurchargeAmount || 0) > 0" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">Phụ thu ngày lễ ({{ roomPriceDetails.holidaySurchargePercent || 0 }}%):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.holidaySurchargeAmount || 0) | number }} đ</span>
+            </div>
+
+            <div *ngIf="(roomPriceDetails.weekendSurchargeAmount || 0) > 0" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">Phụ thu cuối tuần ({{ roomPriceDetails.weekendSurchargePercent || 0 }}%):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.weekendSurchargeAmount || 0) | number }} đ</span>
+            </div>
             
             <!-- Phụ thu check-in sớm -->
             <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" class="payment-details-row payment-details-row--surcharge">
@@ -552,6 +562,16 @@
             <div *ngIf="(roomPriceDetails.days || 0) > 0" class="payment-details-row">
               <span class="payment-detail-label">{{ roomPriceDetails.days }} ngày × {{ (roomPriceDetails.dailyBasePrice || 0) | number }} đ/ngày:</span>
               <span class="payment-detail-value">{{ ((roomPriceDetails.days || 0) * (roomPriceDetails.dailyBasePrice || 0)) | number }} đ</span>
+            </div>
+
+            <div *ngIf="(roomPriceDetails.holidaySurchargeAmount || 0) > 0" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">Phụ thu ngày lễ ({{ roomPriceDetails.holidaySurchargePercent || 0 }}%):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.holidaySurchargeAmount || 0) | number }} đ</span>
+            </div>
+
+            <div *ngIf="(roomPriceDetails.weekendSurchargeAmount || 0) > 0" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">Phụ thu cuối tuần ({{ roomPriceDetails.weekendSurchargePercent || 0 }}%):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.weekendSurchargeAmount || 0) | number }} đ</span>
             </div>
             
             <!-- Phụ thu check-in sớm -->

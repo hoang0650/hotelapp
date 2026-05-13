@@ -2881,6 +2881,50 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                                       (this.roomData as any)?.priceSettings?.dailyEarlyCheckinSurcharge || 0;
     const dailyLateCheckoutFee = priceConfig?.dailyRates?.latecheckOutFee || 
                                 (this.roomData as any)?.priceSettings?.dailyLateCheckoutFee || 0;
+    const dailyWeekendSurchargePercent = Number(priceConfig?.dailyRates?.weekendSurcharge ?? 0) || 0;
+    const dailyHolidaySurchargePercent = Number(priceConfig?.dailyRates?.holidaySurcharge ?? 0) || 0;
+    const nightlyWeekendSurchargePercent = Number(priceConfig?.nightlyRates?.weekendSurcharge ?? 0) || 0;
+    const nightlyHolidaySurchargePercent = Number(priceConfig?.nightlyRates?.holidaySurcharge ?? 0) || 0;
+
+    const holidayKey = `phhotel:holidayDates:${String(this.roomData?.hotelId || this.authService.getHotelId() || 'default')}`;
+    const holidaySet = (() => {
+      const fallback = ['01-01', '04-30', '05-01', '09-02'];
+      try {
+        if (typeof window === 'undefined') return new Set(fallback);
+        const raw = localStorage.getItem(holidayKey) || '';
+        const values = raw
+          .split(/[\n,;]+/g)
+          .map((v) => String(v || '').trim())
+          .filter(Boolean);
+        return new Set([...fallback, ...values]);
+      } catch {
+        return new Set(fallback);
+      }
+    })();
+
+    const toYmd = (d: Date): string => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    const toMmdd = (d: Date): string => {
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${m}-${day}`;
+    };
+
+    const isWeekend = (d: Date): boolean => {
+      const dow = d.getDay();
+      return dow === 0 || dow === 6;
+    };
+
+    const isHoliday = (d: Date): boolean => {
+      const ymd = toYmd(d);
+      const mmdd = toMmdd(d);
+      return holidaySet.has(ymd) || holidaySet.has(mmdd);
+    };
     
     let total = 0;
     let priceDetails: any = {};
@@ -2940,6 +2984,27 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         priceDetails.basePrice = dailyRate;
         priceDetails.days = durationInDaysCalculated;
         priceDetails.rateType = 'daily';
+
+        let holidaySurchargeAmount = 0;
+        let weekendSurchargeAmount = 0;
+        for (let i = 0; i < durationInDaysCalculated; i++) {
+          const dayDate = new Date(checkInDateForDaily);
+          dayDate.setDate(dayDate.getDate() + i);
+          if (isHoliday(dayDate) && dailyHolidaySurchargePercent > 0) {
+            holidaySurchargeAmount += (dailyRate * dailyHolidaySurchargePercent) / 100;
+          } else if (isWeekend(dayDate) && dailyWeekendSurchargePercent > 0) {
+            weekendSurchargeAmount += (dailyRate * dailyWeekendSurchargePercent) / 100;
+          }
+        }
+        holidaySurchargeAmount = Math.round(holidaySurchargeAmount);
+        weekendSurchargeAmount = Math.round(weekendSurchargeAmount);
+        if (holidaySurchargeAmount > 0 || weekendSurchargeAmount > 0) {
+          total += holidaySurchargeAmount + weekendSurchargeAmount;
+          priceDetails.holidaySurchargeAmount = holidaySurchargeAmount;
+          priceDetails.weekendSurchargeAmount = weekendSurchargeAmount;
+          priceDetails.holidaySurchargePercent = dailyHolidaySurchargePercent;
+          priceDetails.weekendSurchargePercent = dailyWeekendSurchargePercent;
+        }
         
         // Tính phụ thu check-in sớm CHỈ NẾU check-in TRƯỚC thời gian daily (trước dailyStartTime - 12:00)
         // Nếu check-in trong thời gian daily (sau 12:00), KHÔNG tính early check-in surcharge
@@ -3035,12 +3100,74 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           priceDetails.autoConverted = true;
           priceDetails.originalRateType = 'nightly';
           priceDetails.reason = `Vượt quá ${autoDailyHours} giờ (${durationInHours} giờ)`;
+
+          const checkInMinutesForNight = checkInTime.getHours() * 60 + checkInTime.getMinutes();
+          const endTimeMinutesForNight = (endHourForNightly || 0) * 60 + (endMinuteForNightly || 0);
+          const nightlyStartDateForSurcharge = new Date(checkInTime);
+          nightlyStartDateForSurcharge.setHours(0, 0, 0, 0);
+          if (checkInMinutesForNight <= endTimeMinutesForNight) {
+            nightlyStartDateForSurcharge.setDate(nightlyStartDateForSurcharge.getDate() - 1);
+          }
+
+          let holidaySurchargeAmount = 0;
+          let weekendSurchargeAmount = 0;
+          if (isHoliday(nightlyStartDateForSurcharge) && nightlyHolidaySurchargePercent > 0) {
+            holidaySurchargeAmount += (nightlyRate * nightlyHolidaySurchargePercent) / 100;
+          } else if (isWeekend(nightlyStartDateForSurcharge) && nightlyWeekendSurchargePercent > 0) {
+            weekendSurchargeAmount += (nightlyRate * nightlyWeekendSurchargePercent) / 100;
+          }
+
+          for (let i = 0; i < dailyDays; i++) {
+            const d = new Date(nightlyEndDateTime);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() + i);
+            if (isHoliday(d) && dailyHolidaySurchargePercent > 0) {
+              holidaySurchargeAmount += (dailyRate * dailyHolidaySurchargePercent) / 100;
+            } else if (isWeekend(d) && dailyWeekendSurchargePercent > 0) {
+              weekendSurchargeAmount += (dailyRate * dailyWeekendSurchargePercent) / 100;
+            }
+          }
+
+          holidaySurchargeAmount = Math.round(holidaySurchargeAmount);
+          weekendSurchargeAmount = Math.round(weekendSurchargeAmount);
+          if (holidaySurchargeAmount > 0 || weekendSurchargeAmount > 0) {
+            total += holidaySurchargeAmount + weekendSurchargeAmount;
+            priceDetails.holidaySurchargeAmount = holidaySurchargeAmount;
+            priceDetails.weekendSurchargeAmount = weekendSurchargeAmount;
+            priceDetails.holidaySurchargePercent = Math.max(dailyHolidaySurchargePercent, nightlyHolidaySurchargePercent);
+            priceDetails.weekendSurchargePercent = Math.max(dailyWeekendSurchargePercent, nightlyWeekendSurchargePercent);
+          }
         } else {
           const durationInNights = 1;
           total = durationInNights * nightlyRate;
           priceDetails.basePrice = nightlyRate;
           priceDetails.rateType = 'nightly';
           priceDetails.nights = durationInNights;
+
+          const checkInMinutesForNight = checkInTime.getHours() * 60 + checkInTime.getMinutes();
+          const endTimeMinutesForNight = (endHourForNightly || 0) * 60 + (endMinuteForNightly || 0);
+          const nightlyStartDateForSurcharge = new Date(checkInTime);
+          nightlyStartDateForSurcharge.setHours(0, 0, 0, 0);
+          if (checkInMinutesForNight <= endTimeMinutesForNight) {
+            nightlyStartDateForSurcharge.setDate(nightlyStartDateForSurcharge.getDate() - 1);
+          }
+
+          let holidaySurchargeAmount = 0;
+          let weekendSurchargeAmount = 0;
+          if (isHoliday(nightlyStartDateForSurcharge) && nightlyHolidaySurchargePercent > 0) {
+            holidaySurchargeAmount += (nightlyRate * nightlyHolidaySurchargePercent) / 100;
+          } else if (isWeekend(nightlyStartDateForSurcharge) && nightlyWeekendSurchargePercent > 0) {
+            weekendSurchargeAmount += (nightlyRate * nightlyWeekendSurchargePercent) / 100;
+          }
+          holidaySurchargeAmount = Math.round(holidaySurchargeAmount);
+          weekendSurchargeAmount = Math.round(weekendSurchargeAmount);
+          if (holidaySurchargeAmount > 0 || weekendSurchargeAmount > 0) {
+            total += holidaySurchargeAmount + weekendSurchargeAmount;
+            priceDetails.holidaySurchargeAmount = holidaySurchargeAmount;
+            priceDetails.weekendSurchargeAmount = weekendSurchargeAmount;
+            priceDetails.holidaySurchargePercent = nightlyHolidaySurchargePercent;
+            priceDetails.weekendSurchargePercent = nightlyWeekendSurchargePercent;
+          }
         }
         
         // Tính phụ thu check-in sớm CHỈ NẾU check-in TRƯỚC thời gian nightly (trước nightlyStartTime)
