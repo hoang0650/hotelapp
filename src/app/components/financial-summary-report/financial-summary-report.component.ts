@@ -311,12 +311,12 @@ export class FinancialSummaryReportComponent implements OnInit {
     };
 
     this.configForm.patchValue({
-      depreciationRate: config.depreciationRate || 10,
-      loanPercentage: config.loanPercentage || 70,
-      interestRate: config.interestRate || 8,
-      taxRate: config.taxRate || 20,
-      wacc: config.wacc || 9,
-      projectionYears: config.projectionYears || 10
+      depreciationRate: config.depreciationRate ?? 10,
+      loanPercentage: config.loanPercentage ?? 70,
+      interestRate: config.interestRate ?? 8,
+      taxRate: config.taxRate ?? 20,
+      wacc: config.wacc ?? 9,
+      projectionYears: config.projectionYears ?? 10
     });
 
     this.configModalVisible = true;
@@ -367,6 +367,12 @@ export class FinancialSummaryReportComponent implements OnInit {
 
   parsePercent(value: string): string {
     return value.replace('%', '');
+  }
+
+  getWaccThreshold(): number {
+    const wacc = this.financialSummary?.financialConfig?.wacc;
+    const num = Number(wacc);
+    return Number.isFinite(num) ? num : 9;
   }
 
   canAccess(): boolean {

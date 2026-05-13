@@ -16,6 +16,7 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
   categories: RoomCategory[] = [];
   categoryForm!: FormGroup;
   editingCategory: RoomCategory | null = null;
+  priceConfigId: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -38,6 +39,31 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
       capacity: this.fb.group({
         adults: [2, [Validators.required, Validators.min(1)]],
         children: [0, [Validators.min(0)]]
+      }),
+      priceConfig: this.fb.group({
+        hourlyRates: this.fb.group({
+          maxHoursBeforeDay: [6, [Validators.min(1)]],
+          gracePeriodMinutes: [15, [Validators.min(0), Validators.max(60)]],
+          autoNightlyHours: [8, [Validators.min(1)]]
+        }),
+        dailyRates: this.fb.group({
+          checkInTime: ['12:00'],
+          checkOutTime: ['12:00'],
+          earlyCheckinSurcharge: [0, [Validators.min(0)]],
+          latecheckOutFee: [0, [Validators.min(0)]],
+          weekendSurcharge: [0, [Validators.min(0)]],
+          holidaySurcharge: [0, [Validators.min(0)]]
+        }),
+        nightlyRates: this.fb.group({
+          startTime: ['20:00'],
+          endTime: ['12:00'],
+          earlyCheckinSurcharge: [0, [Validators.min(0)]],
+          lateCheckoutSurcharge: [0, [Validators.min(0)]],
+          autoDailyHours: [24, [Validators.min(1)]],
+          weekendSurcharge: [0, [Validators.min(0)]],
+          holidaySurcharge: [0, [Validators.min(0)]]
+        }),
+        updateRooms: [true]
       })
     });
   }
@@ -68,6 +94,7 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
 
   startEdit(category: RoomCategory): void {
     this.editingCategory = category;
+    this.priceConfigId = null;
     this.categoryForm.patchValue({
       name: category.name,
       description: category.description || '',
@@ -85,18 +112,103 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
         children: category.capacity?.children || 0
       }
     });
+
+    if (this.hotelId && category._id) {
+      this.categoryService.getPriceConfigByRoomCategory(this.hotelId, category._id).subscribe({
+        next: (res: any) => {
+          const cfg = res?.data || res;
+          if (!cfg || !cfg._id) {
+            return;
+          }
+          this.priceConfigId = cfg._id;
+          this.categoryForm.get('priceConfig')?.patchValue({
+            hourlyRates: {
+              maxHoursBeforeDay: cfg.hourlyRates?.maxHoursBeforeDay ?? 6,
+              gracePeriodMinutes: cfg.hourlyRates?.gracePeriodMinutes ?? 15,
+              autoNightlyHours: cfg.hourlyRates?.autoNightlyHours ?? 8
+            },
+            dailyRates: {
+              checkInTime: cfg.dailyRates?.checkInTime ?? '12:00',
+              checkOutTime: cfg.dailyRates?.checkOutTime ?? '12:00',
+              earlyCheckinSurcharge: cfg.dailyRates?.earlyCheckinSurcharge ?? 0,
+              latecheckOutFee: cfg.dailyRates?.latecheckOutFee ?? 0,
+              weekendSurcharge: cfg.dailyRates?.weekendSurcharge ?? 0,
+              holidaySurcharge: cfg.dailyRates?.holidaySurcharge ?? 0
+            },
+            nightlyRates: {
+              startTime: cfg.nightlyRates?.startTime ?? '20:00',
+              endTime: cfg.nightlyRates?.endTime ?? '12:00',
+              earlyCheckinSurcharge: cfg.nightlyRates?.earlyCheckinSurcharge ?? 0,
+              lateCheckoutSurcharge: cfg.nightlyRates?.lateCheckoutSurcharge ?? 0,
+              autoDailyHours: cfg.nightlyRates?.autoDailyHours ?? 24,
+              weekendSurcharge: cfg.nightlyRates?.weekendSurcharge ?? 0,
+              holidaySurcharge: cfg.nightlyRates?.holidaySurcharge ?? 0
+            }
+          }, { emitEvent: false });
+        },
+        error: () => {
+        }
+      });
+    }
   }
 
   cancelEdit(): void {
     this.editingCategory = null;
+    this.priceConfigId = null;
     this.categoryForm.reset({
       name: '',
       description: '',
       pricing: { hourly: 0, daily: 0, nightly: 0, weekly: 0, monthly: 0 },
       firstHourRate: 0,
       additionalHourRate: 0,
-      capacity: { adults: 2, children: 0 }
+      capacity: { adults: 2, children: 0 },
+      priceConfig: {
+        hourlyRates: { maxHoursBeforeDay: 6, gracePeriodMinutes: 15, autoNightlyHours: 8 },
+        dailyRates: { checkInTime: '12:00', checkOutTime: '12:00', earlyCheckinSurcharge: 0, latecheckOutFee: 0, weekendSurcharge: 0, holidaySurcharge: 0 },
+        nightlyRates: { startTime: '20:00', endTime: '12:00', earlyCheckinSurcharge: 0, lateCheckoutSurcharge: 0, autoDailyHours: 24, weekendSurcharge: 0, holidaySurcharge: 0 },
+        updateRooms: true
+      }
     });
+  }
+
+  private buildPriceConfigPayload(roomCategoryId: string, roomTypeName: string, formValue: any): any {
+    const pricing = formValue.pricing || {};
+    const priceConfig = formValue.priceConfig || {};
+    const hourlyRates = priceConfig.hourlyRates || {};
+    const dailyRates = priceConfig.dailyRates || {};
+    const nightlyRates = priceConfig.nightlyRates || {};
+
+    return {
+      roomTypeId: roomTypeName,
+      roomCategoryId,
+      hourlyRates: {
+        firstHourPrice: Number(formValue.firstHourRate) || 0,
+        additionalHourPrice: Number(formValue.additionalHourRate) || 0,
+        maxHoursBeforeDay: Number(hourlyRates.maxHoursBeforeDay) || 6,
+        gracePeriodMinutes: Number(hourlyRates.gracePeriodMinutes) || 15,
+        autoNightlyHours: Number(hourlyRates.autoNightlyHours) || 8
+      },
+      dailyRates: {
+        standardPrice: Number(pricing.daily) || 0,
+        weekendSurcharge: Number(dailyRates.weekendSurcharge) || 0,
+        holidaySurcharge: Number(dailyRates.holidaySurcharge) || 0,
+        checkInTime: dailyRates.checkInTime || '12:00',
+        checkOutTime: dailyRates.checkOutTime || '12:00',
+        earlyCheckinSurcharge: Number(dailyRates.earlyCheckinSurcharge) || 0,
+        latecheckOutFee: Number(dailyRates.latecheckOutFee) || 0
+      },
+      nightlyRates: {
+        standardPrice: Number(pricing.nightly) || 0,
+        startTime: nightlyRates.startTime || '20:00',
+        endTime: nightlyRates.endTime || '12:00',
+        weekendSurcharge: Number(nightlyRates.weekendSurcharge) || 0,
+        holidaySurcharge: Number(nightlyRates.holidaySurcharge) || 0,
+        earlyCheckinSurcharge: Number(nightlyRates.earlyCheckinSurcharge) || 0,
+        lateCheckoutSurcharge: Number(nightlyRates.lateCheckoutSurcharge) || 0,
+        autoDailyHours: Number(nightlyRates.autoDailyHours) || 24
+      },
+      updateRooms: priceConfig.updateRooms === true
+    };
   }
 
   submitForm(): void {
@@ -139,8 +251,23 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
             this.categories[index] = updated;
             this.categories = [...this.categories];
           }
-          this.message.success('Cập nhật hạng phòng thành công');
-          this.cancelEdit();
+          const payload = this.buildPriceConfigPayload(this.editingCategory!._id!, updated.name || formValue.name, formValue);
+          const save$ = this.priceConfigId
+            ? this.categoryService.updatePriceConfig(this.priceConfigId, payload)
+            : this.categoryService.createPriceConfig(this.hotelId, payload);
+          save$.subscribe({
+            next: (pcRes: any) => {
+              const cfg = pcRes?.data || pcRes;
+              if (cfg?._id) {
+                this.priceConfigId = cfg._id;
+              }
+              this.message.success('Cập nhật hạng phòng thành công');
+              this.cancelEdit();
+            },
+            error: (error) => {
+              this.message.error(error.error?.message || 'Cập nhật cấu hình giá thất bại');
+            }
+          });
         },
         (error) => {
           console.error('Error updating category:', error);
@@ -153,8 +280,16 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
           const newCategory = res.data || res;
           this.categories.push(newCategory);
           this.categories = [...this.categories];
-          this.message.success('Thêm hạng phòng thành công');
-          this.cancelEdit();
+          const payload = this.buildPriceConfigPayload(newCategory._id, newCategory.name || formValue.name, formValue);
+          this.categoryService.createPriceConfig(this.hotelId, payload).subscribe({
+            next: () => {
+              this.message.success('Thêm hạng phòng thành công');
+              this.cancelEdit();
+            },
+            error: (error) => {
+              this.message.error(error.error?.message || 'Tạo cấu hình giá thất bại');
+            }
+          });
         },
         (error) => {
           console.error('Error creating category:', error);

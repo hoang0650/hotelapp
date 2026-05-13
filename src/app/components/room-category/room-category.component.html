@@ -138,6 +138,176 @@
       </div>
     </div>
 
+    <div class="mt-4" formGroupName="priceConfig">
+      <h4 class="mb-2">Cấu hình tính giá</h4>
+
+      <div nz-row [nzGutter]="16" formGroupName="nightlyRates">
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Giờ bắt đầu tính qua đêm</nz-form-label>
+            <nz-form-control>
+              <input nz-input type="time" formControlName="startTime" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Giờ kết thúc tính qua đêm</nz-form-label>
+            <nz-form-control>
+              <input nz-input type="time" formControlName="endTime" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Số giờ tự động chuyển từ nightly sang daily</nz-form-label>
+            <nz-form-control>
+              <nz-input-number formControlName="autoDailyHours" [nzMin]="1" [nzStep]="1" class="w-100"></nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+
+      <div nz-row [nzGutter]="16" formGroupName="dailyRates">
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Giờ bắt đầu tính theo ngày</nz-form-label>
+            <nz-form-control>
+              <input nz-input type="time" formControlName="checkInTime" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Giờ kết thúc tính theo ngày</nz-form-label>
+            <nz-form-control>
+              <input nz-input type="time" formControlName="checkOutTime" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+
+      <div nz-row [nzGutter]="16" formGroupName="hourlyRates">
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Thời gian miễn phí (phút)</nz-form-label>
+            <nz-form-control>
+              <nz-input-number formControlName="gracePeriodMinutes" [nzMin]="0" [nzMax]="60" [nzStep]="1" class="w-100"></nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Số giờ tối đa trước khi chuyển sang ngày</nz-form-label>
+            <nz-form-control>
+              <nz-input-number formControlName="maxHoursBeforeDay" [nzMin]="1" [nzStep]="1" class="w-100"></nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
+          <nz-form-item>
+            <nz-form-label>Số giờ tự động chuyển sang qua đêm</nz-form-label>
+            <nz-form-control>
+              <nz-input-number formControlName="autoNightlyHours" [nzMin]="1" [nzStep]="1" class="w-100"></nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+
+      <h4 class="mb-2 mt-3">Phụ thu check-in sớm và check-out trễ</h4>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" formGroupName="dailyRates">
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Daily: check-in sớm (đ/giờ)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="earlyCheckinSurcharge" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Daily: check-out trễ (đ/giờ)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="latecheckOutFee" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" formGroupName="nightlyRates">
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Nightly: check-in sớm (đ/giờ)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="earlyCheckinSurcharge" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Nightly: check-out trễ (đ/giờ)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="lateCheckoutSurcharge" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" formGroupName="dailyRates">
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Daily: phụ thu cuối tuần (%)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="weekendSurcharge" [nzMin]="0" [nzMax]="100" [nzStep]="1" class="w-100"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Daily: phụ thu ngày lễ (%)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="holidaySurcharge" [nzMin]="0" [nzMax]="100" [nzStep]="1" class="w-100"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+        </div>
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" formGroupName="nightlyRates">
+          <div nz-row [nzGutter]="16">
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Nightly: phụ thu cuối tuần (%)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="weekendSurcharge" [nzMin]="0" [nzMax]="100" [nzStep]="1" class="w-100"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col [nzSpan]="12">
+              <nz-form-item>
+                <nz-form-label>Nightly: phụ thu ngày lễ (%)</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="holidaySurcharge" [nzMin]="0" [nzMax]="100" [nzStep]="1" class="w-100"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div nz-row>
+        <div nz-col [nzSpan]="24">
+          <label nz-checkbox formControlName="updateRooms">Áp dụng giá/cấu hình cho các phòng thuộc hạng này</label>
+        </div>
+      </div>
+    </div>
+
     <div nz-row>
       <div nz-col [nzSpan]="24">
         <nz-form-item>

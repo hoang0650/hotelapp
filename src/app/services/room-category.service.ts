@@ -7,6 +7,7 @@ import { environment } from '../../environments/environment';
 @Injectable({ providedIn: 'root' })
 export class RoomCategoryService {
   private apiUrl = `${environment.apiUrl}/room-categories`;
+  private priceConfigUrl = `${environment.apiUrl}/priceConfig`;
 
   constructor(private http: HttpClient) {}
 
@@ -28,5 +29,21 @@ export class RoomCategoryService {
 
   deleteCategory(id: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`);
+  }
+
+  getPriceConfigByRoomCategory(hotelId: string, roomCategoryId: string): Observable<any> {
+    return this.http.get<any>(`${this.priceConfigUrl}/hotel/${hotelId}/roomType/${roomCategoryId}`);
+  }
+
+  createPriceConfig(hotelId: string, data: any): Observable<any> {
+    return this.http.post<any>(`${this.priceConfigUrl}/hotel/${hotelId}`, data);
+  }
+
+  updatePriceConfig(configId: string, data: any): Observable<any> {
+    return this.http.put<any>(`${this.priceConfigUrl}/${configId}`, data);
+  }
+
+  deactivatePriceConfig(configId: string): Observable<any> {
+    return this.http.patch<any>(`${this.priceConfigUrl}/${configId}/deactivate`, {});
   }
 }

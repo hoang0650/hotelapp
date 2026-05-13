@@ -232,14 +232,14 @@
               </div>
               <div class="evaluation-info">
                 <div class="evaluation-label">{{ 'FINANCIAL_REPORT.IRR' | translate }}</div>
-                <div class="evaluation-value" [class.positive]="financialSummary.irr > 9" [class.negative]="financialSummary.irr < 9">
+                <div class="evaluation-value" [class.positive]="financialSummary.irr > getWaccThreshold()" [class.negative]="financialSummary.irr < getWaccThreshold()">
                   {{ formatNumber(financialSummary.irr) }}%
                 </div>
-                <div class="evaluation-note" *ngIf="financialSummary.irr > 9">
+                <div class="evaluation-note" *ngIf="financialSummary.irr > getWaccThreshold()">
                   {{ 'FINANCIAL_REPORT.IRR_POSITIVE_NOTE' | translate }}
                 </div>
-                <div class="evaluation-note negative" *ngIf="financialSummary.irr < 9">
-                  {{ 'FINANCIAL_REPORT.IRR_NEGATIVE_NOTE' | translate }}
+                <div class="evaluation-note negative" *ngIf="financialSummary.irr < getWaccThreshold()">
+                  {{ 'FINANCIAL_REPORT.IRR_NEGATIVE_NOTE' | translate:{ wacc: getWaccThreshold() } }}
                 </div>
               </div>
             </div>
