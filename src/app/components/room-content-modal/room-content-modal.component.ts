@@ -2993,18 +2993,55 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         break;
         
       case 'nightly':
-        // Tính số đêm dựa trên đêm thực tế (qua đêm), không làm tròn từ giờ
-        // Theo logic backend trong rooms.js
-        const checkInDateForNightly = checkInTime ? new Date(checkInTime) : new Date();
-        checkInDateForNightly.setHours(0, 0, 0, 0);
-        const checkOutDateForNightly = checkOutTime ? new Date(checkOutTime) : new Date();
-        checkOutDateForNightly.setHours(0, 0, 0, 0);
-        const actualNightsForNightly = Math.max(1, Math.ceil((checkOutDateForNightly.getTime() - checkInDateForNightly.getTime()) / (1000 * 60 * 60 * 24)));
-        const durationInNights = actualNightsForNightly;
-        total = durationInNights * nightlyRate;
-        priceDetails.basePrice = nightlyRate;
-        priceDetails.rateType = 'nightly';
-        priceDetails.nights = durationInNights;
+        if (!checkInTime || !checkOutTime) {
+          total = Math.max(0, nightlyRate);
+          priceDetails.basePrice = nightlyRate;
+          priceDetails.rateType = 'nightly';
+          priceDetails.nights = 1;
+          break;
+        }
+
+        const dayMs = 1000 * 60 * 60 * 24;
+        const [endHourForNightly, endMinuteForNightly] = nightlyEndTime.split(':').map(Number);
+        const nightlyEndDateTime = new Date(checkInTime);
+        nightlyEndDateTime.setHours(endHourForNightly || 0, endMinuteForNightly || 0, 0, 0);
+        if (nightlyEndDateTime.getTime() <= checkInTime.getTime()) {
+          nightlyEndDateTime.setDate(nightlyEndDateTime.getDate() + 1);
+        }
+
+        const shouldSplitNightlyToDaily =
+          durationInHours > autoDailyHours &&
+          dailyRate > 0 &&
+          nightlyRate > 0;
+
+        if (shouldSplitNightlyToDaily) {
+          const nightlyNights = 1;
+          let dailyDays = 0;
+
+          if (checkOutTime.getTime() > nightlyEndDateTime.getTime()) {
+            const startDateOnly = new Date(nightlyEndDateTime);
+            startDateOnly.setHours(0, 0, 0, 0);
+            const endDateOnly = new Date(checkOutTime);
+            endDateOnly.setHours(0, 0, 0, 0);
+            dailyDays = Math.max(0, Math.ceil((endDateOnly.getTime() - startDateOnly.getTime()) / dayMs));
+          }
+
+          total = nightlyNights * nightlyRate + dailyDays * dailyRate;
+          priceDetails.basePrice = nightlyRate;
+          priceDetails.rateType = 'nightly';
+          priceDetails.nights = nightlyNights;
+          priceDetails.days = dailyDays;
+          priceDetails.dailyBasePrice = dailyRate;
+          priceDetails.autoConverted = true;
+          priceDetails.originalRateType = 'nightly';
+          priceDetails.reason = `Vượt quá ${autoDailyHours} giờ (${durationInHours} giờ)`;
+        } else {
+          const durationInNights = 1;
+          total = durationInNights * nightlyRate;
+          priceDetails.basePrice = nightlyRate;
+          priceDetails.rateType = 'nightly';
+          priceDetails.nights = durationInNights;
+        }
         
         // Tính phụ thu check-in sớm CHỈ NẾU check-in TRƯỚC thời gian nightly (trước nightlyStartTime)
         // Thời gian quy định qua đêm: 20:00 - 12:00 ngày hôm sau
@@ -3035,8 +3072,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
         }
         
-        // Tính phụ thu check-out trễ (nếu check-out sau 12:00 ngày hôm sau)
-        if (checkOutTime) {
+        if (priceDetails.days && Number(priceDetails.days) > 0) {
+          const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
+          const [dailyCoHour, dailyCoMinute] = dailyCheckOutTime.split(':').map(Number);
+          const dailyCheckOutMinutes = (dailyCoHour || 0) * 60 + (dailyCoMinute || 0);
+          if (checkOutMinutes > dailyCheckOutMinutes && dailyLateCheckoutFee > 0) {
+            const lateMinutes = checkOutMinutes - dailyCheckOutMinutes;
+            const lateCheckoutHoursDaily = Math.ceil(lateMinutes / 60);
+            const lateCheckoutFeeDaily = lateCheckoutHoursDaily * dailyLateCheckoutFee;
+            total += lateCheckoutFeeDaily;
+            priceDetails.lateCheckoutSurcharge = lateCheckoutFeeDaily;
+            priceDetails.lateCheckoutHours = lateCheckoutHoursDaily;
+          }
+        } else {
           const checkOutDateOnly = new Date(checkOutTime);
           checkOutDateOnly.setHours(0, 0, 0, 0);
           const checkInDateOnly = new Date(checkInTime || new Date());
@@ -3045,20 +3093,23 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           
           const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
           const [endHour, endMinute] = nightlyEndTime.split(':').map(Number);
-          const endTimeMinutes = endHour * 60 + endMinute;
+          const endTimeMinutes = (endHour || 0) * 60 + (endMinute || 0);
           
           if (isNextDay && checkOutMinutes > endTimeMinutes && nightlyLateCheckoutSurcharge > 0) {
             const lateMinutes = checkOutMinutes - endTimeMinutes;
-            const lateCheckoutHoursNightly = Math.ceil(lateMinutes / 60); // Làm tròn lên
+            const lateCheckoutHoursNightly = Math.ceil(lateMinutes / 60);
             const lateCheckoutSurchargeNightly = lateCheckoutHoursNightly * nightlyLateCheckoutSurcharge;
             total += lateCheckoutSurchargeNightly;
             priceDetails.lateCheckoutSurcharge = lateCheckoutSurchargeNightly;
             priceDetails.lateCheckoutHours = lateCheckoutHoursNightly;
-            console.log(`Nightly late check-out: ${lateCheckoutHoursNightly} hours, surcharge: ${lateCheckoutSurchargeNightly}`);
           }
         }
         
-        console.log(`Nightly rate calculation: ${durationInNights} nights * ${nightlyRate} = ${total}`);
+        console.log(
+          `Nightly rate calculation: ${Number(priceDetails?.nights || 0)} nights * ${nightlyRate}` +
+            (priceDetails?.days ? ` + ${Number(priceDetails.days)} days * ${Number(priceDetails.dailyBasePrice || 0)}` : '') +
+            ` = ${total}`
+        );
         break;
       
       case 'weekly':

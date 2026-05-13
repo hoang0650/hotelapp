@@ -548,6 +548,11 @@
               <span class="payment-detail-label">{{ roomPriceDetails.nights }} đêm × {{ (roomPriceDetails.basePrice || 0) | number }} đ/đêm:</span>
               <span class="payment-detail-value">{{ ((roomPriceDetails.nights || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ</span>
             </div>
+
+            <div *ngIf="(roomPriceDetails.days || 0) > 0" class="payment-details-row">
+              <span class="payment-detail-label">{{ roomPriceDetails.days }} ngày × {{ (roomPriceDetails.dailyBasePrice || 0) | number }} đ/ngày:</span>
+              <span class="payment-detail-value">{{ ((roomPriceDetails.days || 0) * (roomPriceDetails.dailyBasePrice || 0)) | number }} đ</span>
+            </div>
             
             <!-- Phụ thu check-in sớm -->
             <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" class="payment-details-row payment-details-row--surcharge">

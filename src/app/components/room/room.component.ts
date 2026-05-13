@@ -1791,8 +1791,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Nếu là weekly/monthly: không gọi API (backend chưa hỗ trợ), dùng luôn tính local
-    if (rawRateType === 'weekly' || rawRateType === 'monthly') {
+    // Nếu là weekly/monthly/nightly: dùng luôn tính local để đồng bộ cách hiển thị (nightly có rule qua đêm + gia hạn theo ngày)
+    if (rawRateType === 'weekly' || rawRateType === 'monthly' || rawRateType === 'nightly') {
       const fallbackPrice = this.calculateRoomPriceLocal(room, checkinTime, rawRateType);
       this.roomPriceCache.set(cacheKey, fallbackPrice);
       this.roomPriceMap.set(cacheKey, fallbackPrice);
@@ -1884,12 +1884,66 @@ export class RoomComponent implements OnInit, OnDestroy {
         roomPrice = dailyRate * actualDays;
         break;
       case 'nightly':
-        const checkInDateForNightly = new Date(checkinTime);
-        checkInDateForNightly.setHours(0, 0, 0, 0);
-        const checkOutDateForNightly = new Date();
-        checkOutDateForNightly.setHours(0, 0, 0, 0);
-        const actualNights = Math.max(1, Math.ceil((checkOutDateForNightly.getTime() - checkInDateForNightly.getTime()) / (1000 * 60 * 60 * 24)));
-        roomPrice = nightlyRate * actualNights;
+        const priceConfig: any = (room as any)?.priceConfig || (room as any)?.priceConfigId || null;
+        const nightlyRateEffective = nightlyRate || priceConfig?.nightlyRates?.standardPrice || 0;
+        const dailyRateEffective = dailyRate || priceConfig?.dailyRates?.standardPrice || 0;
+        const nightlyEndTime = priceConfig?.nightlyRates?.endTime || (room as any)?.priceSettings?.nightlyEndTime || '12:00';
+        const dailyCheckOutTime = priceConfig?.dailyRates?.checkOutTime || (room as any)?.priceSettings?.dailyEndTime || '12:00';
+        const autoDailyHours = priceConfig?.nightlyRates?.autoDailyHours || 24;
+        const dailyLateCheckoutFee = priceConfig?.dailyRates?.latecheckOutFee || (room as any)?.priceSettings?.dailyLateCheckoutFee || 0;
+        const nightlyLateCheckoutSurcharge = priceConfig?.nightlyRates?.lateCheckoutSurcharge || (room as any)?.priceSettings?.nightlyLateCheckoutSurcharge || 0;
+
+        const checkOutTime = now;
+        const [endHour, endMinute] = String(nightlyEndTime).split(':').map(Number);
+        const nightlyEndDateTime = new Date(checkinTime);
+        nightlyEndDateTime.setHours(endHour || 0, endMinute || 0, 0, 0);
+        if (nightlyEndDateTime.getTime() <= checkinTime.getTime()) {
+          nightlyEndDateTime.setDate(nightlyEndDateTime.getDate() + 1);
+        }
+
+        if (durationInHours > autoDailyHours && nightlyRateEffective > 0 && dailyRateEffective > 0) {
+          const dayMs = 1000 * 60 * 60 * 24;
+          const nightlyNights = 1;
+
+          let dailyDays = 0;
+          if (checkOutTime.getTime() > nightlyEndDateTime.getTime()) {
+            const startDateOnly = new Date(nightlyEndDateTime);
+            startDateOnly.setHours(0, 0, 0, 0);
+            const endDateOnly = new Date(checkOutTime);
+            endDateOnly.setHours(0, 0, 0, 0);
+            dailyDays = Math.max(0, Math.ceil((endDateOnly.getTime() - startDateOnly.getTime()) / dayMs));
+          }
+
+          roomPrice = nightlyNights * nightlyRateEffective + dailyDays * dailyRateEffective;
+
+          if (dailyDays > 0 && dailyLateCheckoutFee > 0) {
+            const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
+            const [coHour, coMinute] = String(dailyCheckOutTime).split(':').map(Number);
+            const dailyCheckOutMinutes = (coHour || 0) * 60 + (coMinute || 0);
+            if (checkOutMinutes > dailyCheckOutMinutes) {
+              const lateMinutes = checkOutMinutes - dailyCheckOutMinutes;
+              const lateHours = Math.ceil(lateMinutes / 60);
+              roomPrice += lateHours * dailyLateCheckoutFee;
+            }
+          }
+        } else {
+          roomPrice = nightlyRateEffective;
+
+          if (nightlyLateCheckoutSurcharge > 0) {
+            const checkOutDateOnly = new Date(checkOutTime);
+            checkOutDateOnly.setHours(0, 0, 0, 0);
+            const checkInDateOnly = new Date(checkinTime);
+            checkInDateOnly.setHours(0, 0, 0, 0);
+            const isNextDay = checkOutDateOnly.getTime() > checkInDateOnly.getTime();
+            const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
+            const endTimeMinutes = (endHour || 0) * 60 + (endMinute || 0);
+            if (isNextDay && checkOutMinutes > endTimeMinutes) {
+              const lateMinutes = checkOutMinutes - endTimeMinutes;
+              const lateHours = Math.ceil(lateMinutes / 60);
+              roomPrice += lateHours * nightlyLateCheckoutSurcharge;
+            }
+          }
+        }
         break;
       case 'weekly':
         if (weeklyRate > 0) {
