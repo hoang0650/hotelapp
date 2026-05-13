@@ -613,7 +613,7 @@
           </span>
           <span style="margin-left: 16px;">
             <strong>{{ 'TABLE.SHIFT_HANDOVER_MODAL.TOTAL_REVENUE_LABEL' | translate }}</strong> 
-            {{ formatterVND((shiftHandoverForm.get('managerHandoverAmount')?.value || 0) + (shiftHandoverForm.get('expenseAmount')?.value || 0) + (shiftHandoverForm.get('incomeAmount')?.value || 0)) }} đ
+            {{ formatterVND(getShiftTotalRevenue()) }} đ
           </span>
         </div>
       </ng-template>

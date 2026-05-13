@@ -1353,11 +1353,24 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       shiftId: [this.defaultShiftId]
     });
 
+    const toNumber = (v: any): number => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const calculateShiftTotalRevenue = (values: any): number => {
+      const cash = toNumber(values?.cashAmount);
+      const bankTransfer = toNumber(values?.bankTransferAmount);
+      const card = toNumber(values?.cardPaymentAmount);
+      const income = toNumber(values?.incomeAmount);
+      const expense = toNumber(values?.expenseAmount);
+      return cash + bankTransfer + card + income - expense;
+    };
+
     // Tính số tiền giao ca = Số tiền ca trước + Tiền mặt trong ca - Tiền giao quản lý
     this.shiftHandoverForm.valueChanges.subscribe(values => {
       const handoverAmount = (values.previousShiftAmount || 0) + (values.cashInShift || 0) - (values.managerHandoverAmount || 0);
-      // Tổng doanh thu = Tiền giao quản lý + Phiếu chi - Phiếu thu (vì phiếu thu đã được tính vào tiền mặt)
-      const totalRevenue = (values.managerHandoverAmount || 0) + (values.expenseAmount || 0) + (values.incomeAmount || 0);
+      const totalRevenue = calculateShiftTotalRevenue(values);
       
       if (handoverAmount >= 0) {
         this.handoverMessage = `${this.translate.instant('TABLE.SHIFT_HANDOVER_MODAL.HANDOVER_AMOUNT_LABEL')} ${this.formatterVND(handoverAmount)} đ | ${this.translate.instant('TABLE.SHIFT_HANDOVER_MODAL.TOTAL_REVENUE_LABEL')} ${this.formatterVND(totalRevenue)} đ`;
@@ -1367,6 +1380,21 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         this.handoverMessageType = 'warning';
       }
     });
+  }
+
+  getShiftTotalRevenue(): number {
+    const toNumber = (v: any): number => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const values = this.shiftHandoverForm?.value;
+    const cash = toNumber(values?.cashAmount);
+    const bankTransfer = toNumber(values?.bankTransferAmount);
+    const card = toNumber(values?.cardPaymentAmount);
+    const income = toNumber(values?.incomeAmount);
+    const expense = toNumber(values?.expenseAmount);
+    return cash + bankTransfer + card + income - expense;
   }
   
   // Load danh sách nhân viên cho giao ca
@@ -1641,7 +1669,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         // Cập nhật form với dữ liệu đã tính toán
         this.shiftHandoverForm.patchValue({
           shiftId: this.defaultShiftId,
-          cashAmount: actualCashInShift, // Tiền mặt còn lại sau khi trừ chi và cộng thu
+          cashAmount: totalCash, // Tiền mặt thu được trong ca (từ thanh toán/đặt cọc)
           bankTransferAmount: totalBankTransfer,
           cardPaymentAmount: totalCard,
           cashInShift: actualCashInShift, // Tiền mặt trong ca = tiền mặt thu - tiền mặt chi + tiền mặt thu từ phiếu thu
@@ -1688,8 +1716,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     // Tính số tiền giao ca
     const handoverAmount = (formData.previousShiftAmount || 0) + (formData.cashInShift || 0) - (formData.managerHandoverAmount || 0);
     
-    // Tính tổng doanh thu = Tiền giao quản lý + Phiếu chi
-    const totalRevenue = (formData.managerHandoverAmount || 0) + (formData.expenseAmount || 0);
+    const totalRevenue = this.getShiftTotalRevenue();
     
     const roomHistory = this.paidData
       .filter(item => this.isPaidTransaction(item))
@@ -2713,9 +2740,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         // Cập nhật shiftHandoverForm với giá trị mới
         // Đảm bảo cập nhật đúng thứ tự để trigger valueChanges
         this.shiftHandoverForm.patchValue({
-          managerHandoverAmount: managerAmount,
-          cashAmount: cashAfterHandover,
-          cashInShift: actualCash
+          managerHandoverAmount: managerAmount
         }, { emitEvent: true }); // emitEvent: true để trigger valueChanges subscription
         
         // Đảm bảo các control được mark as dirty để trigger validation và update
@@ -2726,8 +2751,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         // Trigger lại valueChanges để cập nhật alert ngay lập tức
         const currentValues = this.shiftHandoverForm.value;
         const handoverAmount = (currentValues.previousShiftAmount || 0) + (currentValues.cashInShift || 0) - (currentValues.managerHandoverAmount || 0);
-        // Tổng doanh thu = Tiền giao quản lý + Phiếu chi + Phiếu thu
-        const totalRevenue = (currentValues.managerHandoverAmount || 0) + (currentValues.expenseAmount || 0) + (currentValues.incomeAmount || 0);
+        const totalRevenue = this.getShiftTotalRevenue();
         
         if (handoverAmount >= 0) {
           this.handoverMessage = `Số tiền giao ca: ${this.formatterVND(handoverAmount)} đ | Tổng doanh thu: ${this.formatterVND(totalRevenue)} đ`;
