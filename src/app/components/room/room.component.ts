@@ -1637,8 +1637,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (totalAmount === 0) {
       totalAmount = checkinInfo.roomPrice + checkinInfo.additionalCharges + checkinInfo.serviceAmount;
     }
-    totalAmount = Math.max(0, totalAmount - checkinInfo.advancePayment - checkinInfo.discount);
-    const remainingAmount = totalAmount;
+    const remainingAmount = Math.max(0, totalAmount - checkinInfo.advancePayment - checkinInfo.discount);
     
     return {
       checkinTime: checkinTimeStr,
