@@ -185,7 +185,8 @@ export class BookingModalComponent implements OnInit {
               this.isLoading = false;
             },
             (error) => {
-              this.message.error('Lỗi khi tải danh sách phòng: ' + (error.error?.message || error.message));
+              const details = error?.error?.message || error?.message || '';
+              this.message.error(this.translate.instant('BOOKING_MODAL.LOAD_ROOMS_ERROR_DETAIL', { message: details }));
               this.isLoading = false;
             }
           );
@@ -212,7 +213,8 @@ export class BookingModalComponent implements OnInit {
           this.isLoading = false;
         },
         (error) => {
-          this.message.error('Lỗi khi tải danh sách phòng: ' + (error.error?.message || error.message));
+          const details = error?.error?.message || error?.message || '';
+          this.message.error(this.translate.instant('BOOKING_MODAL.LOAD_ROOMS_ERROR_DETAIL', { message: details }));
           this.isLoading = false;
         }
       );

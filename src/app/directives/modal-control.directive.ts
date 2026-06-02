@@ -11,6 +11,7 @@ import { RoomContextMenuComponent } from '../components/room-context-menu/room-c
 import { GuestSaveModalComponent } from '../components/guest-save-modal/guest-save-modal.component';
 import { TransferRoomModalComponent } from '../components/transfer-room-modal/transfer-room-modal.component';
 import { Room } from '../interfaces/rooms';
+import { TranslateService } from '@ngx-translate/core';
 
 @Directive({
   selector: '[appModalControl]',
@@ -27,7 +28,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   constructor(
     private modalService: NzModalService,
     private roomsService: RoomsService,
-    private invoiceService: InvoiceService
+    private invoiceService: InvoiceService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -733,7 +735,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     
     let bookingModalRef: NzModalRef | null = null;
     bookingModalRef = this.modalService.create({
-      nzTitle: `Đặt phòng ${this.room.roomNumber}`,
+      nzTitle: this.translate.instant('BOOKING_MODAL.TITLE_FOR_ROOM', { roomNumber: this.room.roomNumber }),
       nzContent: BookingModalComponent,
       nzData: {
         selectedDate: new Date(),
@@ -743,11 +745,11 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       },
       nzFooter: [
         {
-          label: 'Hủy',
+          label: this.translate.instant('COMMON.CANCEL'),
           onClick: () => bookingModalRef?.close()
         },
         {
-          label: 'Xuất PDF xác nhận',
+          label: this.translate.instant('BOOKING_MODAL.EXPORT_PDF_CONFIRMATION'),
           onClick: () => {
             const instance = bookingModalRef?.getContentComponent() as BookingModalComponent;
             if (instance) {
@@ -756,7 +758,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           }
         },
         {
-          label: 'Đặt phòng',
+          label: this.translate.instant('BOOKING_MODAL.SUBMIT_BOOKING'),
           type: 'primary',
           onClick: () => {
             const instance = bookingModalRef?.getContentComponent() as BookingModalComponent;

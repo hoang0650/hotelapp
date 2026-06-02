@@ -135,12 +135,12 @@
 
       <div nz-col [nzSpan]="12">
         <nz-form-item>
-          <nz-form-label>Hình thức trả trước</nz-form-label>
+          <nz-form-label>{{ 'BOOKING_MODAL.ADVANCE_PAYMENT_METHOD' | translate }}</nz-form-label>
           <nz-form-control>
-            <nz-select formControlName="advancePaymentMethod" nzPlaceHolder="Chọn hình thức">
-              <nz-option nzValue="cash" nzLabel="Tiền mặt"></nz-option>
-              <nz-option nzValue="transfer" nzLabel="Chuyển khoản"></nz-option>
-              <nz-option nzValue="card" nzLabel="Thẻ"></nz-option>
+            <nz-select formControlName="advancePaymentMethod" [nzPlaceHolder]="'BOOKING_MODAL.ADVANCE_PAYMENT_METHOD_PLACEHOLDER' | translate">
+              <nz-option nzValue="cash" [nzLabel]="'BOOKING_MODAL.PAYMENT_CASH' | translate"></nz-option>
+              <nz-option nzValue="transfer" [nzLabel]="'BOOKING_MODAL.PAYMENT_TRANSFER' | translate"></nz-option>
+              <nz-option nzValue="card" [nzLabel]="'BOOKING_MODAL.PAYMENT_CARD' | translate"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>

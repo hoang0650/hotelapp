@@ -2608,8 +2608,10 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   // Mở modal đặt phòng cho phòng cụ thể
   openBookingModalForDate(date: Date): void {
+    const lang = this.translate.currentLang || 'vi';
+    const locale = lang === 'de' ? 'de-DE' : lang === 'en' ? 'en-US' : 'vi-VN';
     const modalRef: NzModalRef = this.modalService.create({
-      nzTitle: `Đặt phòng cho ngày ${date.toLocaleDateString('vi-VN')}`,
+      nzTitle: this.translate.instant('BOOKING_MODAL.TITLE_FOR_DATE', { date: date.toLocaleDateString(locale) }),
       nzContent: BookingModalComponent,
       nzData: {
         selectedDate: date,
@@ -2618,11 +2620,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       },
       nzFooter: [
         {
-          label: 'Hủy',
+          label: this.translate.instant('COMMON.CANCEL'),
           onClick: () => modalRef.close()
         },
         {
-          label: 'Xuất PDF xác nhận',
+          label: this.translate.instant('BOOKING_MODAL.EXPORT_PDF_CONFIRMATION'),
           onClick: () => {
             const instance = modalRef.getContentComponent() as BookingModalComponent;
             if (instance) {
@@ -2631,7 +2633,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           }
         },
         {
-          label: 'Đặt phòng',
+          label: this.translate.instant('BOOKING_MODAL.SUBMIT_BOOKING'),
           type: 'primary',
           onClick: () => {
             const instance = modalRef.getContentComponent() as BookingModalComponent;
@@ -2660,7 +2662,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Mở modal đặt phòng
   openBookingModal(room: Room, selectedDate?: Date): void {
     const modalRef: NzModalRef = this.modalService.create({
-      nzTitle: `Đặt phòng ${room.roomNumber}`,
+      nzTitle: this.translate.instant('BOOKING_MODAL.TITLE_FOR_ROOM', { roomNumber: room.roomNumber }),
       nzContent: BookingModalComponent,
       nzData: {
         selectedDate: selectedDate,
@@ -2670,11 +2672,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       },
       nzFooter: [
         {
-          label: 'Hủy',
+          label: this.translate.instant('COMMON.CANCEL'),
           onClick: () => modalRef.close()
         },
         {
-          label: 'Xuất PDF xác nhận',
+          label: this.translate.instant('BOOKING_MODAL.EXPORT_PDF_CONFIRMATION'),
           onClick: () => {
             const instance = modalRef.getContentComponent() as BookingModalComponent;
             if (instance) {
@@ -2683,7 +2685,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           }
         },
         {
-          label: 'Đặt phòng',
+          label: this.translate.instant('BOOKING_MODAL.SUBMIT_BOOKING'),
           type: 'primary',
           onClick: () => {
             const instance = modalRef.getContentComponent() as BookingModalComponent;
