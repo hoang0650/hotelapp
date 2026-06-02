@@ -1247,7 +1247,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   // Xử lý check-in
   processCheckIn(): void {
     // Kiểm tra trạng thái phòng
-    if (this.roomData.status !== 'vacant') {
+    const allowPrebooked = this.isPrebookedAvailable();
+    if (this.roomData.status !== 'vacant' && !allowPrebooked) {
       this.message.error(`Phòng ${this.roomData.roomNumber} không sẵn sàng để nhận phòng (Trạng thái hiện tại: ${this.getStatusLabel(this.roomData.status)}).`);
       this.isLoading = false;
       return;
@@ -1442,6 +1443,32 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }, 100);
         }
       );
+  }
+
+  private isPrebookedAvailable(): boolean {
+    if (!this.roomData) return false;
+    if (this.roomData.status !== 'booked') return false;
+
+    const booking: any = this.roomData.currentBooking;
+    const rawCheckin = booking?.checkInDate;
+    if (rawCheckin) {
+      const d = new Date(rawCheckin);
+      if (!isNaN(d.getTime())) {
+        return d.getTime() > Date.now();
+      }
+    }
+
+    const events: any[] = Array.isArray(this.roomData?.events) ? this.roomData.events : [];
+    const bookingEvent = events.find(e => e && e.type === 'booking');
+    const raw = bookingEvent?.checkinTime || bookingEvent?.checkInTime || bookingEvent?.checkInDate || bookingEvent?.checkinDate;
+    if (raw) {
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) {
+        return d.getTime() > Date.now();
+      }
+    }
+
+    return false;
   }
 
   // Xử lý checkout

@@ -4,7 +4,7 @@ import { HotelService } from '../../services/hotel.service';
 import { ShiftHandoverService } from '../../services/shift-handover.service';
 import { TransactionService } from '../../services/transaction.service';
 import { FinancialSummaryService } from '../../services/financial-summary.service';
-import { format, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns';
+import { format, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, subDays, subWeeks, subMonths, addDays, addWeeks, addMonths } from 'date-fns';
 import { forkJoin } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -101,82 +101,82 @@ export class RevenueChartComponent implements OnInit, OnChanges {
     
     this.isLoading = true;
     
-    // Tính toán khoảng thời gian dựa trên period
     const now = new Date();
     let startDate: Date;
-    let endDate = now;
-    
+    let endDate: Date;
+
     switch (this.selectedPeriod) {
-      case 'day':
-        startDate = subDays(now, 6); // 7 ngày gần nhất
+      case 'day': {
+        startDate = startOfDay(subDays(now, 6));
+        endDate = endOfDay(now);
         break;
-      case 'week':
-        startDate = subWeeks(now, 3); // 4 tuần gần nhất
+      }
+      case 'week': {
+        startDate = startOfWeek(subWeeks(now, 3), { weekStartsOn: 1 });
+        endDate = endOfWeek(now, { weekStartsOn: 1 });
         break;
-      case 'month':
-        startDate = subMonths(now, 11); // 12 tháng gần nhất
+      }
+      case 'month': {
+        startDate = startOfMonth(subMonths(now, 11));
+        endDate = endOfMonth(now);
         break;
-      default:
-        startDate = subDays(now, 6);
+      }
+      default: {
+        startDate = startOfDay(subDays(now, 6));
+        endDate = endOfDay(now);
+      }
     }
     
     // Gọi API backend trực tiếp để lấy doanh thu theo period (giống React Native)
     const startStr = format(startDate, 'yyyy-MM-dd');
     const endStr = format(endDate, 'yyyy-MM-dd');
-    this.shiftHandoverService.getRevenueByPeriod({
-      hotelId: this.hotelId,
-      period: this.selectedPeriod,
-      startDate: startStr,
-      endDate: endStr
+
+    forkJoin({
+      period: this.shiftHandoverService.getRevenueByPeriod({
+        hotelId: this.hotelId,
+        period: this.selectedPeriod,
+        startDate: startStr,
+        endDate: endStr
+      }),
+      history: this.shiftHandoverService.getShiftHandoverHistory({
+        hotelId: this.hotelId,
+        startDate: startStr,
+        endDate: endStr,
+        page: 1,
+        limit: 5000
+      })
     }).subscribe({
-      next: (response) => {
-        
-        this.labels = response.labels || [];
-        this.revenueData = response.revenueData || [];
-        this.expenseData = response.expenseData || [];
-        this.paymentData = response.paymentData || [];
+      next: ({ period: response, history }) => {
+        const originalLabels = response.labels || [];
+        const originalRevenue = response.revenueData || [];
+        const originalExpense = response.expenseData || [];
+        const originalPayment = response.paymentData || [];
+
+        const normalized = this.normalizePeriodSeries({
+          period: this.selectedPeriod,
+          startDate,
+          endDate,
+          labels: originalLabels,
+          revenueData: originalRevenue,
+          expenseData: originalExpense,
+          paymentData: originalPayment
+        });
+
+        this.labels = normalized.labels;
+        this.revenueData = normalized.revenueData;
+        this.expenseData = normalized.expenseData;
+        this.paymentData = normalized.paymentData;
+
         this.totalRevenue = response.totalRevenue || 0;
         this.totalPayment = response.totalPayment || 0;
         this.totalExpense = response.totalExpense || 0;
         this.receiptExpenseTotal = response.totalExpense || 0;
-        
+
+        const shiftHandovers = (history as any)?.data || [];
+        this.applyShiftHandoverBreakdown(shiftHandovers);
+
         this.updateChart();
-        // Sau khi có dữ liệu period, lấy phân loại doanh thu theo range từ Financial Summary
-        this.financialSummaryService.getFinancialSummary({
-          hotelId: this.hotelId!,
-          startDate: startStr,
-          endDate: endStr
-        }).subscribe({
-          next: (sumRes) => {
-            const breakdown = sumRes?.data?.breakdown?.revenue || (sumRes as any)?.breakdown?.revenue || {};
-            this.roomRevenue = Number(breakdown?.roomRevenue) || 0;
-            this.serviceRevenue = Number(breakdown?.serviceRevenue) || 0;
-            this.isLoading = false;
-          },
-          error: () => {
-            this.roomRevenue = 0;
-            this.serviceRevenue = 0;
-            this.isLoading = false;
-          }
-        });
-        // Lấy breakdown thanh toán theo range
-        this.shiftHandoverService.calculateRevenue({
-          hotelId: this.hotelId!,
-          startDate: startStr,
-          endDate: endStr
-        }).subscribe({
-          next: (revRes) => {
-            const data = revRes?.data || (revRes as any)?.data || {};
-            this.cashTotal = Number(data?.cashTotal) || 0;
-            this.bankTransferTotal = Number(data?.bankTransferTotal) || 0;
-            this.cardTotal = Number(data?.cardTotal) || 0;
-          },
-          error: () => {
-            this.cashTotal = 0;
-            this.bankTransferTotal = 0;
-            this.cardTotal = 0;
-          }
-        });
+        this.isLoading = false;
       },
       error: (error) => {
         console.error('Error loading revenue from backend:', error);
@@ -198,6 +198,12 @@ export class RevenueChartComponent implements OnInit, OnChanges {
             this.totalRevenue = data.totalRevenue || 0;
             this.totalPayment = data.totalPayment || 0;
             this.totalExpense = data.totalExpense || 0;
+            this.receiptExpenseTotal = data.totalExpense || 0;
+            this.roomRevenue = 0;
+            this.serviceRevenue = 0;
+            this.cashTotal = 0;
+            this.bankTransferTotal = 0;
+            this.cardTotal = 0;
             
             this.updateChart();
             this.isLoading = false;
@@ -208,6 +214,12 @@ export class RevenueChartComponent implements OnInit, OnChanges {
             this.totalRevenue = 0;
             this.totalPayment = 0;
             this.totalExpense = 0;
+            this.receiptExpenseTotal = 0;
+            this.roomRevenue = 0;
+            this.serviceRevenue = 0;
+            this.cashTotal = 0;
+            this.bankTransferTotal = 0;
+            this.cardTotal = 0;
             this.labels = [];
             this.revenueData = [];
             this.expenseData = [];
@@ -218,6 +230,99 @@ export class RevenueChartComponent implements OnInit, OnChanges {
         });
       }
     });
+  }
+
+  private normalizePeriodSeries(input: {
+    period: 'day' | 'week' | 'month';
+    startDate: Date;
+    endDate: Date;
+    labels: string[];
+    revenueData: number[];
+    expenseData: number[];
+    paymentData: number[];
+  }): { labels: string[]; revenueData: number[]; expenseData: number[]; paymentData: number[] } {
+    const labelToIndex = new Map<string, number>();
+    (input.labels || []).forEach((l, idx) => labelToIndex.set(l, idx));
+
+    const labels: string[] = [];
+    const revenueData: number[] = [];
+    const expenseData: number[] = [];
+    const paymentData: number[] = [];
+
+    if (input.period === 'day') {
+      let cursor = startOfDay(input.startDate);
+      const end = startOfDay(input.endDate);
+      while (cursor.getTime() <= end.getTime()) {
+        const label = format(cursor, 'dd/MM');
+        const idx = labelToIndex.get(label);
+        labels.push(label);
+        revenueData.push(idx === undefined ? 0 : Number(input.revenueData[idx] || 0));
+        expenseData.push(idx === undefined ? 0 : Math.abs(Number(input.expenseData[idx] || 0)));
+        paymentData.push(idx === undefined ? 0 : Number(input.paymentData[idx] || 0));
+        cursor = addDays(cursor, 1);
+      }
+      return { labels, revenueData, expenseData, paymentData };
+    }
+
+    if (input.period === 'week') {
+      let cursor = startOfWeek(input.startDate, { weekStartsOn: 1 });
+      const end = startOfWeek(input.endDate, { weekStartsOn: 1 });
+      while (cursor.getTime() <= end.getTime()) {
+        const label = format(cursor, 'dd/MM');
+        const idx = labelToIndex.get(label);
+        labels.push(label);
+        revenueData.push(idx === undefined ? 0 : Number(input.revenueData[idx] || 0));
+        expenseData.push(idx === undefined ? 0 : Math.abs(Number(input.expenseData[idx] || 0)));
+        paymentData.push(idx === undefined ? 0 : Number(input.paymentData[idx] || 0));
+        cursor = addWeeks(cursor, 1);
+      }
+      return { labels, revenueData, expenseData, paymentData };
+    }
+
+    let cursor = startOfMonth(input.startDate);
+    const end = startOfMonth(input.endDate);
+    while (cursor.getTime() <= end.getTime()) {
+      const label = format(cursor, 'MM/yyyy');
+      const idx = labelToIndex.get(label);
+      labels.push(label);
+      revenueData.push(idx === undefined ? 0 : Number(input.revenueData[idx] || 0));
+      expenseData.push(idx === undefined ? 0 : Math.abs(Number(input.expenseData[idx] || 0)));
+      paymentData.push(idx === undefined ? 0 : Number(input.paymentData[idx] || 0));
+      cursor = addMonths(cursor, 1);
+    }
+    return { labels, revenueData, expenseData, paymentData };
+  }
+
+  private applyShiftHandoverBreakdown(shiftHandovers: any[]): void {
+    const safe = Array.isArray(shiftHandovers) ? shiftHandovers : [];
+
+    let roomRevenue = 0;
+    let serviceRevenue = 0;
+    let cashTotal = 0;
+    let bankTransferTotal = 0;
+    let cardTotal = 0;
+
+    safe.forEach((record: any) => {
+      cashTotal += Number(record?.cashAmount || 0);
+      bankTransferTotal += Number(record?.bankTransferAmount || 0);
+      cardTotal += Number(record?.cardPaymentAmount || 0);
+
+      const roomHistory = Array.isArray(record?.roomHistory) ? record.roomHistory : [];
+      roomHistory.forEach((room: any) => {
+        const roomTotal = Number(room?.roomTotal || 0);
+        const additionalCharges = Number(room?.additionalCharges || 0);
+        const discount = Number(room?.discount || 0);
+        const serviceAmount = Number(room?.serviceAmount || room?.serviceTotal || 0);
+        roomRevenue += roomTotal + additionalCharges - discount;
+        serviceRevenue += serviceAmount;
+      });
+    });
+
+    this.roomRevenue = roomRevenue;
+    this.serviceRevenue = serviceRevenue;
+    this.cashTotal = cashTotal;
+    this.bankTransferTotal = bankTransferTotal;
+    this.cardTotal = cardTotal;
   }
   
   // Nhóm dữ liệu shift handover theo period

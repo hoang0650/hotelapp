@@ -46,6 +46,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   currentYear!: number;
   daysOfWeek: string[] = [];
   datesInMonth: Date[] = [];
+  calendarCells: Array<Date | null> = [];
   selectedDate: Date | null = null;
   private modalRef: NzModalRef | null = null;
   isLoading = false;
@@ -181,9 +182,20 @@ export class CalendarComponent implements OnInit, OnDestroy {
     for (let i = 1; i <= lastDateOfMonth; i++) {
       this.datesInMonth.push(new Date(year, month, i));
     }
+
+    const cells: Array<Date | null> = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      cells.push(null);
+    }
+    this.datesInMonth.forEach(d => cells.push(d));
+    while (cells.length % 7 !== 0) {
+      cells.push(null);
+    }
+    this.calendarCells = cells;
   }
 
-  getBookingsForDate(date: Date): Booking[] {
+  getBookingsForDate(date: Date | null): Booking[] {
+    if (!date) return [];
     return this.bookings.filter(
       booking => {
         const bookingDate = booking.date || (booking.checkInDate ? new Date(booking.checkInDate) : null);
@@ -215,7 +227,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     );
   }
 
-  selectDate(date: Date) {
+  selectDate(date: Date | null) {
+    if (!date) return;
     this.selectedDate = date;
     // Emit event để room component có thể xử lý đặt phòng
     this.bookingSelected.emit({ date, roomId: this.roomId || undefined });

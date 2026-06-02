@@ -1373,6 +1373,9 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   // Xác định loại modal dựa trên trạng thái phòng
   getModalType(): string {
     const status = this.room.status;
+    if (status === 'booked' && this.isPrebookedAvailable()) {
+      return 'checkin';
+    }
     
     switch (status) {
       case 'vacant':
@@ -1387,6 +1390,30 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         console.warn(`Trạng thái phòng không xác định: ${status}. Mở modal thông tin mặc định.`);
         return 'info';
     }
+  }
+
+  private getBookingCheckInTime(): Date | null {
+    const booking: any = (this.room as any)?.currentBooking;
+    if (booking?.checkInDate) {
+      const d = new Date(booking.checkInDate);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    const events: any[] = Array.isArray((this.room as any)?.events) ? (this.room as any).events : [];
+    const bookingEvent = events.find(e => e && e.type === 'booking');
+    if (bookingEvent?.checkinTime || bookingEvent?.checkInTime || bookingEvent?.checkInDate || bookingEvent?.checkinDate) {
+      const d = new Date(bookingEvent.checkinTime || bookingEvent.checkInTime || bookingEvent.checkInDate || bookingEvent.checkinDate);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    return null;
+  }
+
+  private isPrebookedAvailable(): boolean {
+    if (!this.room || this.room.status === 'occupied') return false;
+    const checkinTime = this.getBookingCheckInTime();
+    if (!checkinTime) return false;
+    return checkinTime.getTime() > Date.now();
   }
 
   // Xác định tiêu đề modal dựa trên trạng thái phòng

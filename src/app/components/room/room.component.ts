@@ -1521,7 +1521,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     checkOutDate: string;
     rateTypeLabel: string;
   } | null {
-    if (room.status !== 'booked') {
+    if (room.status !== 'booked' && !this.isPrebookedAvailable(room)) {
       return null;
     }
     
@@ -1605,6 +1605,34 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
     
     return null;
+  }
+
+  private getRoomBookingCheckInTime(room: Room): Date | null {
+    if (room.currentBooking?.checkInDate) {
+      const d = new Date(room.currentBooking.checkInDate);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    if (room.events && room.events.length > 0) {
+      const bookingEvent = room.events.find(e => e.type === 'booking');
+      if (bookingEvent) {
+        return this.getEventCheckinTime(bookingEvent);
+      }
+    }
+
+    return null;
+  }
+
+  isPrebookedAvailable(room: Room): boolean {
+    if (!room || room.status === 'occupied') return false;
+    const checkinTime = this.getRoomBookingCheckInTime(room);
+    if (!checkinTime) return false;
+    return checkinTime.getTime() > Date.now();
+  }
+
+  getRoomDisplayStatus(room: Room): RoomStatus {
+    if (this.isPrebookedAvailable(room)) return 'vacant';
+    return room.status || 'vacant';
   }
 
   // Lấy thông tin chi tiết của phòng để hiển thị (giống hình)

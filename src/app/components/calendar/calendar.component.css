@@ -154,6 +154,12 @@
   position: relative;
 }
 
+.calendar-day.empty {
+  cursor: default;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
 .calendar-day.today {
   background-color: #f0f0f0;
 }

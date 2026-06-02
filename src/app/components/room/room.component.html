@@ -180,10 +180,10 @@
                 [ngClass]="{'compact-mode': isCompactMode}">
                 <div 
                   class="room-item" 
-                  [ngClass]="getRoomStatusClass(room.status, room.guestStatus)"
+                  [ngClass]="[getRoomStatusClass(getRoomDisplayStatus(room), room.guestStatus), isPrebookedAvailable(room) ? 'prebooked-available' : '']"
                   appModalControl 
                   [room]="room"
-                  [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.status === 'occupied' ? ('ROOM.OCCUPIED' | translate) : getRoomStatusLabelAndColor(room.status).label)"
+                  [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.status === 'occupied' ? ('ROOM.OCCUPIED' | translate) : getRoomStatusLabelAndColor(getRoomDisplayStatus(room)).label)"
                   role="button"
                   tabindex="0">
                   
@@ -219,8 +219,8 @@
                   
                   <!-- Trạng thái phòng (hiển thị khi không phải occupied) -->
                   <ng-container *ngIf="room.status !== 'occupied'">
-                    <nz-tag [nzColor]="getRoomStatusLabelAndColor(room.status).color" class="room-badge">
-                      {{ getRoomStatusLabelAndColor(room.status).label }}
+                    <nz-tag [nzColor]="getRoomStatusLabelAndColor(getRoomDisplayStatus(room)).color" class="room-badge">
+                      {{ getRoomStatusLabelAndColor(getRoomDisplayStatus(room)).label }}
                     </nz-tag>
                   </ng-container>
                   
@@ -263,8 +263,8 @@
                   </nz-tag>
                 </div>
                 
-                <!-- Thông tin booking cho phòng đã đặt -->
-                <ng-container *ngIf="!isCompactMode && room.status === 'booked' && getRoomBookingInfo(room) as bookingInfo">
+                <!-- Thông tin booking cho phòng đã đặt / đặt trước -->
+                <ng-container *ngIf="!isCompactMode && room.status !== 'occupied' && getRoomBookingInfo(room) as bookingInfo">
                   <div class="room-details">
                     <!-- Hiển thị thông tin chuyển phòng nếu có -->
                     <div class="detail-row" *ngIf="getBookingTransferInfo(room)">
