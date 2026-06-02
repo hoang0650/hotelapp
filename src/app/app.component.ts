@@ -39,6 +39,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.translate.setDefaultLang('vi');
     this.translate.use(this.translationService.getCurrentLang());
     
+    // Kiểm tra subdomain và chuyển hướng dựa trên role
+    this.authService.checkSubdomainAndRedirect();
+    
     if (isPlatformBrowser(this.platformId)) {
       this.checkMaintenanceMode();
     }

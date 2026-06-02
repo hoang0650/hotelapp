@@ -33,6 +33,7 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.authService.isLoggedIn()) {
+      this.authService.checkSubdomainAndRedirect();
       this.router.navigate(['/admin/room']);
       return;
     }
@@ -40,6 +41,7 @@ export class LoginComponent implements OnInit {
     // Lắng nghe trạng thái đăng nhập (để xử lý trường hợp refresh token chạy sau khi component load)
     this.authService.currentUser$.subscribe(user => {
       if (user) {
+        this.authService.checkSubdomainAndRedirect();
         this.router.navigate(['/admin/room']);
       }
     });
@@ -100,6 +102,7 @@ export class LoginComponent implements OnInit {
           if (response.token && response.user) {
             this.authService.loginFromShiftHandover(response.token, response.user);
           }
+          this.authService.checkSubdomainAndRedirect();
           this.router.navigate(['/admin/room']);
         }
       },

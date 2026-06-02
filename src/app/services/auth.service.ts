@@ -99,7 +99,17 @@ export class AuthService {
     });
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
-    this.router.navigate(['/login']);
+    
+    // Nếu đang ở admin subdomain, chuyển về domain chính sau khi logout
+    if (typeof window !== 'undefined' && window.location.hostname.startsWith('admin.')) {
+      const protocol = window.location.protocol;
+      const port = window.location.port ? `:${window.location.port}` : '';
+      const mainDomain = 'phhotel.vn';
+      window.location.href = `${protocol}//${mainDomain}${port}/login`;
+    } else {
+      this.router.navigate(['/login']);
+    }
+    
     if (this.tokenExpirationTimer) {
       clearTimeout(this.tokenExpirationTimer);
     }
@@ -147,6 +157,41 @@ export class AuthService {
   isGuest(): boolean {
     const user = this.getCurrentUser();
     return !!user && user.role === 'guest';
+  }
+
+  /**
+   * Kiểm tra subdomain và chuyển hướng nếu cần thiết
+   * Đã đăng nhập (tất cả các role) -> admin.phhotel.vn
+   * Chưa đăng nhập -> phhotel.vn
+   */
+  checkSubdomainAndRedirect(): void {
+    if (typeof window === 'undefined') return;
+
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const user = this.getCurrentUser();
+
+    // Không chuyển hướng nếu đang ở localhost
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return;
+    }
+
+    const isAdminSubdomain = hostname.startsWith('admin.');
+    const mainDomain = 'phhotel.vn';
+    const adminSubdomain = 'admin.phhotel.vn';
+
+    if (user) {
+      // Đã đăng nhập nhưng đang ở domain chính -> chuyển sang admin subdomain
+      if (!isAdminSubdomain) {
+        window.location.href = `${protocol}//${adminSubdomain}${port}/room`;
+      }
+    } else {
+      // Chưa đăng nhập nhưng lại đang ở admin subdomain -> chuyển về domain chính
+      if (isAdminSubdomain) {
+        window.location.href = `${protocol}//${mainDomain}${port}/login`;
+      }
+    }
   }
 
   // ============ LẤY THÔNG TIN ID ============
