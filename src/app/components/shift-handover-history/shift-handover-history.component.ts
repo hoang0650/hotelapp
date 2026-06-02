@@ -7,7 +7,7 @@ import {
   ShiftHandover, 
   ShiftHandoverHistoryResponse
 } from '../../interfaces/shift-handover';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -152,7 +152,35 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
   
   viewDetail(record: ShiftHandover): void {
-    this.selectedRecord = record;
+    const handoverDate = new Date(record.handoverTime);
+    
+    // Tạo bản sao và lọc các danh sách theo đúng ngày giao ca để bắt đúng doanh thu của từng ngày
+    // Tránh việc dồn tích dữ liệu từ các ngày trước
+    const filteredRecord = {
+      ...record,
+      roomHistory: (record.roomHistory || []).filter(room => {
+        const timestamp = room.timestamp ? new Date(room.timestamp) : null;
+        return timestamp && isSameDay(timestamp, handoverDate);
+      }),
+      expenses: (record.expenses || []).filter(expense => {
+        const timestamp = expense.timestamp ? new Date(expense.timestamp) : null;
+        return timestamp && isSameDay(timestamp, handoverDate);
+      }),
+      incomes: (record.incomes || []).filter(income => {
+        const timestamp = income.timestamp ? new Date(income.timestamp) : null;
+        return timestamp && isSameDay(timestamp, handoverDate);
+      }),
+      invoices: (record.invoices || []).filter(invoice => {
+        const timestamp = invoice.timestamp ? new Date(invoice.timestamp) : null;
+        return timestamp && isSameDay(timestamp, handoverDate);
+      }),
+      serviceOrders: (record.serviceOrders || []).filter(order => {
+        const timestamp = order.timestamp ? new Date(order.timestamp) : null;
+        return timestamp && isSameDay(timestamp, handoverDate);
+      })
+    };
+
+    this.selectedRecord = filteredRecord;
     this.isDetailModalVisible = true;
   }
   
@@ -162,16 +190,37 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
   
   getCustomerPayments(record: any): any[] {
+    const handoverDate = record.handoverTime ? new Date(record.handoverTime) : null;
     const list = Array.isArray(record?.roomHistory) ? record.roomHistory : [];
-    return list.filter((r: any) => String(r.action || '').toLowerCase() === 'check_out');
+    
+    return list.filter((r: any) => {
+      const isCheckout = String(r.action || '').toLowerCase() === 'check_out';
+      if (!isCheckout) return false;
+      
+      // Lọc theo ngày giao ca để bắt đúng doanh thu của từng ngày
+      if (handoverDate) {
+        const timestamp = r.timestamp ? new Date(r.timestamp) : null;
+        return timestamp && isSameDay(timestamp, handoverDate);
+      }
+      return true;
+    });
   }
   
   getAdvancePayments(record: any): any[] {
+    const handoverDate = record.handoverTime ? new Date(record.handoverTime) : null;
     const list = Array.isArray(record?.roomHistory) ? record.roomHistory : [];
+    
     return list.filter((r: any) => {
       const isDepositAction = String(r.action || '').toLowerCase() === 'check_in';
       const hasAdvance = (r.advancePayment || 0) > 0 || (r.amount || 0) > 0;
-      return isDepositAction && hasAdvance;
+      if (!(isDepositAction && hasAdvance)) return false;
+      
+      // Lọc theo ngày giao ca để bắt đúng doanh thu của từng ngày
+      if (handoverDate) {
+        const timestamp = r.timestamp ? new Date(r.timestamp) : null;
+        return timestamp && isSameDay(timestamp, handoverDate);
+      }
+      return true;
     });
   }
   
@@ -275,7 +324,16 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
 
   getTotalRevenue(record: ShiftHandover): number {
-    const adjustedRoomRevenue = (record.roomHistory || []).reduce((sum, room: any) => {
+    const handoverDate = new Date(record.handoverTime);
+    
+    // Lọc roomHistory theo đúng ngày giao ca để bắt đúng doanh thu của từng ngày
+    // Tránh việc dồn tích doanh thu từ các ngày trước nếu không giao ca
+    const filteredRoomHistory = (record.roomHistory || []).filter(room => {
+      const timestamp = room.timestamp ? new Date(room.timestamp) : null;
+      return timestamp && isSameDay(timestamp, handoverDate);
+    });
+
+    const adjustedRoomRevenue = filteredRoomHistory.reduce((sum, room: any) => {
       const roomTotal = room.roomTotal || 0;
       const serviceAmount = room.serviceAmount || room.serviceTotal || 0;
       const additionalCharges = room.additionalCharges || 0;
@@ -283,7 +341,15 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
       const advancePayment = room.advancePayment || 0;
       return sum + (roomTotal + serviceAmount + additionalCharges - discount - advancePayment);
     }, 0);
-    const incomeAmount = record.incomeAmount || 0;
+
+    // Lọc incomes theo đúng ngày giao ca
+    const filteredIncomes = (record.incomes || []).filter(income => {
+      const timestamp = income.timestamp ? new Date(income.timestamp) : null;
+      return timestamp && isSameDay(timestamp, handoverDate);
+    });
+
+    const incomeAmount = filteredIncomes.reduce((sum, income: any) => sum + (income.amount || 0), 0);
+    
     return adjustedRoomRevenue + incomeAmount;
   }
 
@@ -607,9 +673,14 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const allIncomes: any[] = [];
 
           allRecords.forEach(record => {
-            // Thêm lịch sử phòng
+            const handoverDate = new Date(record.handoverTime);
+
+            // Thêm lịch sử phòng (Lọc theo ngày giao ca)
             if (record.roomHistory && Array.isArray(record.roomHistory)) {
               record.roomHistory.forEach(room => {
+                const timestamp = (room as any).timestamp ? new Date((room as any).timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 const roomTotal = (room as any).roomTotal || 0;
                 const additionalCharges = (room as any).additionalCharges || 0;
                 const discount = (room as any).discount || 0;
@@ -648,9 +719,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
               });
             }
 
-            // Thêm phiếu chi
+            // Thêm phiếu chi (Lọc theo ngày giao ca)
             if (record.expenses && Array.isArray(record.expenses)) {
               record.expenses.forEach(expense => {
+                const timestamp = expense.timestamp ? new Date(expense.timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 allExpenses.push({
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.HANDOVER_TIME')]: format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.DESCRIPTION')]: expense.description || this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPENSE_VOUCHER'),
@@ -666,9 +740,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
               });
             }
 
-            // Thêm phiếu thu
+            // Thêm phiếu thu (Lọc theo ngày giao ca)
             if (record.incomes && Array.isArray(record.incomes)) {
               record.incomes.forEach(income => {
+                const timestamp = income.timestamp ? new Date(income.timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 allIncomes.push({
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.HANDOVER_TIME')]: format(new Date(record.handoverTime), 'dd/MM/yyyy HH:mm'),
                   [this.translate.instant('SHIFT_HANDOVER_EXPORT.DESCRIPTION')]: income.description || this.translate.instant('SHIFT_HANDOVER_EXPORT.INCOME_VOUCHER'),
@@ -863,10 +940,13 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const incomeByPeriod: { [key: string]: any[] } = {};
 
           allRecords.forEach(record => {
-            // Xử lý lịch sử phòng
+            // Xử lý lịch sử phòng (Lọc theo ngày giao ca)
             if (record.roomHistory && Array.isArray(record.roomHistory)) {
               record.roomHistory.forEach(room => {
                 const handoverDate = new Date(record.handoverTime);
+                const timestamp = (room as any).timestamp ? new Date((room as any).timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 let periodKey = '';
 
                 if (period === 'month') {
@@ -913,10 +993,13 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
               });
             }
 
-            // Xử lý phiếu thu
+            // Xử lý phiếu thu (Lọc theo ngày giao ca)
             if (record.incomes && Array.isArray(record.incomes)) {
               record.incomes.forEach(income => {
                 const handoverDate = new Date(record.handoverTime);
+                const timestamp = income.timestamp ? new Date(income.timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 let periodKey = '';
 
                 if (period === 'month') {
@@ -1077,8 +1160,13 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const expenseByPeriod: { [key: string]: any[] } = {};
 
           allRecords.forEach(record => {
+            const handoverDate = new Date(record.handoverTime);
+
             if (record.expenses && Array.isArray(record.expenses)) {
               record.expenses.forEach(expense => {
+                const timestamp = expense.timestamp ? new Date(expense.timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 const expenseDate = new Date(expense.timestamp);
                 let periodKey = '';
 
@@ -1210,8 +1298,13 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const incomeByPeriod: { [key: string]: any[] } = {};
 
           allRecords.forEach(record => {
+            const handoverDate = new Date(record.handoverTime);
+
             if (record.incomes && Array.isArray(record.incomes)) {
               record.incomes.forEach(income => {
+                const timestamp = income.timestamp ? new Date(income.timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 const incomeDate = new Date(income.timestamp);
                 let periodKey = '';
 
@@ -1345,10 +1438,14 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
           const incomeByPeriod: { [key: string]: any[] } = {};
 
           allRecords.forEach(record => {
-            // Xử lý lịch sử phòng
+            const handoverDate = new Date(record.handoverTime);
+
+            // Xử lý lịch sử phòng (Lọc theo ngày giao ca)
             if (record.roomHistory && Array.isArray(record.roomHistory)) {
               record.roomHistory.forEach(room => {
-                const handoverDate = new Date(record.handoverTime);
+                const timestamp = (room as any).timestamp ? new Date((room as any).timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 let periodKey = '';
 
                 if (period === 'month') {
@@ -1395,9 +1492,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
               });
             }
 
-            // Xử lý phiếu chi
+            // Xử lý phiếu chi (Lọc theo ngày giao ca)
             if (record.expenses && Array.isArray(record.expenses)) {
               record.expenses.forEach(expense => {
+                const timestamp = expense.timestamp ? new Date(expense.timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 const expenseDate = new Date(expense.timestamp);
                 let periodKey = '';
 
@@ -1432,9 +1532,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
               });
             }
 
-            // Xử lý phiếu thu
+            // Xử lý phiếu thu (Lọc theo ngày giao ca)
             if (record.incomes && Array.isArray(record.incomes)) {
               record.incomes.forEach(income => {
+                const timestamp = income.timestamp ? new Date(income.timestamp) : null;
+                if (!timestamp || !isSameDay(timestamp, handoverDate)) return;
+
                 const incomeDate = new Date(income.timestamp);
                 let periodKey = '';
 

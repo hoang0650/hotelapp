@@ -1131,9 +1131,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const remainingMinutes = durationInMinutes % 60;
     const durationInDays = Math.ceil(durationInHours / 24);
     
-    // Đảm bảo duration không âm và có giá trị tối thiểu
-    // Nếu duration quá nhỏ (dưới 1 giờ), vẫn tính ít nhất 1 giờ để tránh lỗi tính toán
-    const validDurationInHours = Math.max(1, durationInHours); // Tối thiểu 1 giờ
+    // Đảm bảo duration không âm
+    // Không ép lên 1 giờ ở đây vì calculateRoomTotalByRateType đã xử lý giá tối thiểu là 1 giờ
+    // Nếu ép lên 1 giờ, khi khách ở dưới 1 giờ (vd 45p) và có gracePeriod (vd 15p), 
+    // logic sẽ tính thành 1 giờ đầu + 1 giờ thêm = 2 giờ (sai)
+    const validDurationInHours = Math.max(0, durationInHours); 
     const validDurationInDays = Math.max(1, durationInDays);
     
     // Xác định loại giá và tính tiền phòng

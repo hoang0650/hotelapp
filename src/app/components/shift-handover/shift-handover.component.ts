@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { Subscription } from 'rxjs';
+import { format } from 'date-fns';
 import { ShiftHandoverService } from '../../services/shift-handover.service';
 import { StaffService } from '../../services/staff.service';
 import { AuthService } from '../../services/auth.service';
@@ -183,8 +184,18 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     const hotelId = this.authService.getHotelId();
     if (!hotelId) return;
 
+    // Lấy ngày hiện tại để lọc doanh thu đúng trong ngày
+    // Tránh việc dồn tích doanh thu từ các ngày trước nếu chưa giao ca
+    const today = new Date();
+    const startDate = format(today, 'yyyy-MM-dd');
+    const endDate = format(today, 'yyyy-MM-dd');
+
     this.subscriptions.add(
-      this.shiftHandoverService.calculateRevenue({ hotelId }).subscribe(
+      this.shiftHandoverService.calculateRevenue({ 
+        hotelId,
+        startDate,
+        endDate
+      }).subscribe(
         (response: RevenueResponse) => {
           this.revenueData = response.data;
           // Auto-populate form with revenue data from API
