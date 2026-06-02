@@ -12,9 +12,24 @@ class ServerTranslateLoader implements TranslateLoader {
     const safeLang = String(lang || 'vi').replace(/[^a-zA-Z_-]/g, '');
     return from(
       Promise.all([import('node:fs/promises'), import('node:path')]).then(async ([fs, path]) => {
-        const filePath = path.join(process.cwd(), 'src', 'assets', 'i18n', `${safeLang}.json`);
-        const content = await fs.readFile(filePath, 'utf-8');
-        return JSON.parse(content);
+        const baseDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+        const candidates = [
+          path.join(baseDir, '..', 'browser', 'assets', 'i18n', `${safeLang}.json`),
+          path.join(process.cwd(), '..', 'browser', 'assets', 'i18n', `${safeLang}.json`),
+          path.join(process.cwd(), 'browser', 'assets', 'i18n', `${safeLang}.json`),
+          path.join(process.cwd(), 'src', 'assets', 'i18n', `${safeLang}.json`),
+          path.join(process.cwd(), 'assets', 'i18n', `${safeLang}.json`),
+        ];
+
+        for (const filePath of candidates) {
+          try {
+            const content = await fs.readFile(filePath, 'utf-8');
+            return JSON.parse(content);
+          } catch {
+          }
+        }
+
+        return {};
       })
     ).pipe(
       catchError(() => of({})),

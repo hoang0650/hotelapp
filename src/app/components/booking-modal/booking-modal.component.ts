@@ -409,9 +409,11 @@ export class BookingModalComponent implements OnInit {
   }
 
   getRoomStatusLabel(room: Room): string {
-    if (room.status === 'vacant') return this.translate.instant('ROOM.STATUS.VACANT');
-    if (room.status === 'occupied') return this.translate.instant('ROOM.STATUS.OCCUPIED');
-    return room.status;
+    const status = String(room?.status || '').toLowerCase().trim();
+    const key = `ROOM.${status.toUpperCase()}`;
+    const translated = this.translate.instant(key);
+    if (translated && translated !== key) return translated;
+    return status || this.translate.instant('COMMON.NO_DATA');
   }
 
   onSubmit(): boolean {

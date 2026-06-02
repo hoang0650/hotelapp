@@ -3,6 +3,7 @@ import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { TranslateService } from '@ngx-translate/core';
 import { filter } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 type SeoData = {
   title?: string;
@@ -86,6 +87,7 @@ export class SeoService {
     this.setMetaTag('name', 'twitter:description', description);
 
     this.setCanonicalLink(url);
+    this.setPageJsonLd(url, title, description);
   }
 
   private buildTitle(pageTitle?: string): string {
@@ -105,9 +107,14 @@ export class SeoService {
   }
 
   private getCanonicalUrl(): string {
-    const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : '';
-    const path = this.router.url || '/';
-    return `${origin}${path}`.replace(/\/+$/, '') || '/';
+    const origin = (typeof window !== 'undefined' && window.location?.origin)
+      ? window.location.origin
+      : String((environment as any)?.siteUrl || '').replace(/\/+$/, '');
+
+    const rawPath = String(this.router.url || '/');
+    const pathOnly = rawPath.split('#')[0].split('?')[0] || '/';
+    const full = `${origin}${pathOnly}`.replace(/\/+$/, '') || origin || '/';
+    return full;
   }
 
   private setCanonicalLink(url: string): void {
@@ -123,6 +130,60 @@ export class SeoService {
 
   private setMetaTag(attrName: 'name' | 'property', attrValue: string, content: string): void {
     this.meta.updateTag({ [attrName]: attrValue, content });
+  }
+
+  private setPageJsonLd(url: string, title: string, description: string): void {
+    if (typeof document === 'undefined') return;
+
+    const pathOnly = String(this.router.url || '/').split('#')[0].split('?')[0] || '/';
+    const isHome = pathOnly === '/' || pathOnly === '/home';
+
+    const homeName = this.getTranslatedValue('SEO.HOME.TITLE') || 'Trang chủ';
+    const baseUrl = String((environment as any)?.siteUrl || '').replace(/\/+$/, '') || (typeof window !== 'undefined' ? window.location.origin : '');
+
+    const toUrl = (p: string) => {
+      const normalized = String(p || '/').startsWith('/') ? String(p || '/') : `/${p}`;
+      return `${baseUrl}${normalized}`.replace(/\/+$/, '');
+    };
+
+    const crumbList = isHome
+      ? [{ name: homeName, url: toUrl('/home') }]
+      : [{ name: homeName, url: toUrl('/home') }, { name: title, url }];
+
+    const schema = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'WebPage',
+          '@id': `${url}#webpage`,
+          url,
+          name: title,
+          description,
+          inLanguage: this.translate.currentLang || 'vi',
+          isPartOf: { '@id': `${baseUrl}#website` }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${url}#breadcrumb`,
+          itemListElement: crumbList.map((c, idx) => ({
+            '@type': 'ListItem',
+            position: idx + 1,
+            name: c.name,
+            item: c.url
+          }))
+        }
+      ]
+    };
+
+    const id = 'phhotel-jsonld-page';
+    let el = document.querySelector<HTMLScriptElement>(`script#${id}[type="application/ld+json"]`);
+    if (!el) {
+      el = document.createElement('script');
+      el.type = 'application/ld+json';
+      el.id = id;
+      document.head.appendChild(el);
+    }
+    el.text = JSON.stringify(schema);
   }
 
   // Phương thức public để cập nhật SEO data từ component
