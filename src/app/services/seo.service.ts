@@ -124,4 +124,9 @@ export class SeoService {
   private setMetaTag(attrName: 'name' | 'property', attrValue: string, content: string): void {
     this.meta.updateTag({ [attrName]: attrValue, content });
   }
+
+  // Phương thức public để cập nhật SEO data từ component
+  updateSeoData(data: SeoData): void {
+    this.apply(data);
+  }
 }
