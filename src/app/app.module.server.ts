@@ -17,6 +17,8 @@ class ServerTranslateLoader implements TranslateLoader {
           path.join(baseDir, '..', 'browser', 'assets', 'i18n', `${safeLang}.json`),
           path.join(process.cwd(), '..', 'browser', 'assets', 'i18n', `${safeLang}.json`),
           path.join(process.cwd(), 'browser', 'assets', 'i18n', `${safeLang}.json`),
+          path.join(process.cwd(), 'dist', 'hotel', 'browser', 'assets', 'i18n', `${safeLang}.json`),
+          path.join(process.cwd(), 'dist', 'browser', 'assets', 'i18n', `${safeLang}.json`),
           path.join(process.cwd(), 'src', 'assets', 'i18n', `${safeLang}.json`),
           path.join(process.cwd(), 'assets', 'i18n', `${safeLang}.json`),
         ];
