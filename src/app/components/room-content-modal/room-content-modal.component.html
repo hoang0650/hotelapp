@@ -756,7 +756,7 @@
           class="mr-2" 
           [nzLoading]="isSaving"
           [disabled]="isSaving || isLoading"
-          [nzTooltipTitle]="'ROOM_CONTENT_MODAL.SAVE_GUEST_INFO_TOOLTIP' | translate">
+          [title]="'ROOM_CONTENT_MODAL.SAVE_GUEST_INFO_TOOLTIP' | translate">
           <i nz-icon nzType="save" nzTheme="outline"></i> {{ 'ROOM_CONTENT_MODAL.SAVE_GUEST_INFO_BUTTON' | translate }}
         </button>
         <button nz-button nzType="primary" type="submit" [nzLoading]="isLoading" [disabled]="isSaving">
