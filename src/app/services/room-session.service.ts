@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { GuestInfo, OrderedService } from '../interfaces/rooms';
 import { ApiService } from './api.service';
 
@@ -27,11 +27,22 @@ export interface RoomSession {
 export class RoomSessionService {
   private activeSessionsMap: Map<string, BehaviorSubject<RoomSession | null>> = new Map();
   private hotelId: string = '';
+  private loadSubscription?: Subscription;
+  private pendingSyncTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private pendingSyncData = new Map<string, RoomSession | null>();
+  private syncDebounceMs = 300;
 
   constructor(private apiService: ApiService) {
   }
 
   setHotelId(hotelId: string): void {
+    if (!hotelId) return;
+    if (this.hotelId === hotelId) return;
+    this.loadSubscription?.unsubscribe();
+    this.pendingSyncTimers.forEach((t) => clearTimeout(t));
+    this.pendingSyncTimers.clear();
+    this.pendingSyncData.clear();
+    this.activeSessionsMap.clear();
     this.hotelId = hotelId;
     this.loadFromRedis();
   }
@@ -46,7 +57,7 @@ export class RoomSessionService {
     }
     this.activeSessionsMap.get(roomId)?.next(sessionData);
     console.log(`Room session started for room ${roomId}:`, sessionData);
-    this.syncToRedis();
+    this.scheduleRoomSync(roomId, sessionData);
   }
 
   updateSession(roomId: string, sessionData: Partial<RoomSession>): void {
@@ -55,7 +66,7 @@ export class RoomSessionService {
       const updatedSession = {...currentSession, ...sessionData};
       this.activeSessionsMap.get(roomId)?.next(updatedSession);
       console.log(`Room session updated for room ${roomId}:`, updatedSession);
-      this.syncToRedis();
+      this.scheduleRoomSync(roomId, updatedSession);
     } else {
       console.warn(`Attempted to update non-existent session for room ${roomId}`);
     }
@@ -108,37 +119,58 @@ export class RoomSessionService {
       const finalSession = {...session};
       this.activeSessionsMap.get(roomId)?.next(null);
       console.log(`Room session ended for room ${roomId}`);
-      this.syncToRedis();
+      this.scheduleRoomSync(roomId, null);
       return finalSession;
     }
     return null;
   }
 
-  private syncToRedis(): void {
-    const storageData: Record<string, RoomSession | null> = {};
-    this.activeSessionsMap.forEach((subject, roomId) => {
-      const session = subject.getValue();
-      if (session) {
-        storageData[roomId] = session;
-      }
-    });
-
+  private scheduleRoomSync(roomId: string, sessionData: RoomSession | null): void {
     const hotelId = this.getHotelId();
-    if (hotelId) {
-      this.apiService.saveRoomSessions(hotelId, storageData).subscribe({
-        next: () => console.log('[Redis] Room sessions saved'),
-        error: (err) => console.error('[Redis] Error saving room sessions:', err)
-      });
+    if (!hotelId) return;
+
+    const existingTimer = this.pendingSyncTimers.get(roomId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      this.pendingSyncTimers.delete(roomId);
     }
+
+    this.pendingSyncData.set(roomId, sessionData);
+
+    if (sessionData === null) {
+      this.pendingSyncData.delete(roomId);
+      this.apiService.updateRoomSession(hotelId, roomId, null).subscribe({
+        next: () => console.log('[Redis] Room session updated'),
+        error: (err) => console.error('[Redis] Error updating room session:', err)
+      });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      this.pendingSyncTimers.delete(roomId);
+      const data = this.pendingSyncData.get(roomId);
+      this.pendingSyncData.delete(roomId);
+
+      if (data === undefined) return;
+      this.apiService.updateRoomSession(hotelId, roomId, data).subscribe({
+        next: () => console.log('[Redis] Room session updated'),
+        error: (err) => console.error('[Redis] Error updating room session:', err)
+      });
+    }, this.syncDebounceMs);
+
+    this.pendingSyncTimers.set(roomId, timer);
   }
 
   private loadFromRedis(): void {
     const hotelId = this.getHotelId();
     if (hotelId) {
-      this.apiService.getRoomSessions(hotelId).subscribe({
+      this.loadSubscription?.unsubscribe();
+      this.loadSubscription = this.apiService.getRoomSessions(hotelId).subscribe({
         next: (sessions) => {
+          const roomsFromRedis = new Set<string>();
           if (sessions && Object.keys(sessions).length > 0) {
             Object.entries(sessions).forEach(([roomId, session]: [string, any]) => {
+              roomsFromRedis.add(roomId);
               if (session.checkinTime) {
                 session.checkinTime = new Date(session.checkinTime);
               }
@@ -149,6 +181,12 @@ export class RoomSessionService {
             });
             console.log('[Redis] Room sessions loaded from Redis:', sessions);
           }
+
+          this.activeSessionsMap.forEach((subject, roomId) => {
+            if (!roomsFromRedis.has(roomId)) {
+              subject.next(null);
+            }
+          });
         },
         error: (err) => console.error('[Redis] Error loading room sessions:', err)
       });
@@ -171,6 +209,12 @@ export class RoomSessionService {
       subject.next(null);
     });
     console.log('All room sessions cleared');
-    this.syncToRedis();
+    const hotelId = this.getHotelId();
+    if (hotelId) {
+      this.apiService.saveRoomSessions(hotelId, {}).subscribe({
+        next: () => console.log('[Redis] Room sessions cleared'),
+        error: (err) => console.error('[Redis] Error clearing room sessions:', err)
+      });
+    }
   }
 }

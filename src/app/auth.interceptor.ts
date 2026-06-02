@@ -28,6 +28,7 @@ export class AuthInterceptor implements HttpInterceptor {
       const isApiRequest = request.url.startsWith(apiUrl) || 
                           request.url.includes('/pricing-packages') ||
                           request.url.includes('/users') ||
+                          request.url.includes('/sessions') ||
                           request.url.includes('/rooms') ||
                           request.url.includes('/hotels') ||
                           request.url.includes('/bookings') ||

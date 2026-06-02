@@ -82,6 +82,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   skipValidation = false;
   modalType: string = 'info'; // Loại modal: checkin, checkout, cleaning
   private sessionSubscription?: Subscription;
+  private saveTotalPriceTimer?: ReturnType<typeof setTimeout>;
   
   // SePay payment
   showSePayModal = false;
@@ -447,6 +448,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // Hủy subscription khi component bị hủy
     if (this.sessionSubscription) {
       this.sessionSubscription.unsubscribe();
+    }
+
+    if (this.saveTotalPriceTimer) {
+      clearTimeout(this.saveTotalPriceTimer);
     }
     
     // Dừng polling khi component bị hủy
@@ -1186,10 +1191,50 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.roomData.totalPrice = this.totalPrice;
       const hotelId = this.roomData.hotelId || this.authService.getHotelId();
       if (hotelId) {
-        this.apiService.saveRoomTotalPrice(hotelId, this.roomData._id, this.totalPrice).subscribe({
-          next: () => console.log('[Redis] Room total price saved'),
-          error: (err) => console.error('[Redis] Error saving room total price:', err)
-        });
+        if (this.saveTotalPriceTimer) {
+          clearTimeout(this.saveTotalPriceTimer);
+        }
+        this.saveTotalPriceTimer = setTimeout(() => {
+          this.apiService.saveRoomTotalPrice(hotelId, this.roomData._id, this.totalPrice).subscribe({
+            next: () => console.log('[Redis] Room total price saved'),
+            error: (err) => console.error('[Redis] Error saving room total price:', err)
+          });
+        }, 300);
+      }
+
+      const hotelIdForSession = this.normalizeObjectId(hotelId || this.currentUser?.hotelId);
+      if (hotelIdForSession) {
+        const roomId = this.roomData._id;
+        const existingSession = this.roomSessionService.getSession(roomId);
+        if (existingSession) {
+          this.roomSessionService.updateSession(roomId, {
+            totalPrice: this.totalPrice,
+            additionalCharges: totalAdditionalCharges,
+            discount: totalDiscount,
+            advancePayment: this.advancePayment,
+            rateType: (this.checkOutForm?.get('rateType')?.value || lastCheckInEvent?.rateType || existingSession.rateType || 'hourly'),
+            selectedServices: this.selectedServices || []
+          });
+        } else {
+          const sessionData: RoomSession = {
+            roomId: roomId,
+            roomNumber: this.roomData.roomNumber,
+            roomType: String((this.roomData.roomType as any)?.name || this.roomData.roomType || ''),
+            hotelId: hotelIdForSession,
+            checkinTime: lastCheckInEvent?.checkinTime ? new Date(lastCheckInEvent.checkinTime) : new Date(),
+            guestInfo: lastCheckInEvent?.guestInfo,
+            paymentMethod: lastCheckInEvent?.paymentMethod,
+            rateType: (this.checkOutForm?.get('rateType')?.value || lastCheckInEvent?.rateType || 'hourly'),
+            advancePayment: this.advancePayment,
+            advancePaymentMethod: lastCheckInEvent?.advancePaymentMethod,
+            additionalCharges: totalAdditionalCharges,
+            discount: totalDiscount,
+            notes: lastCheckInEvent?.notes,
+            totalPrice: this.totalPrice,
+            selectedServices: this.selectedServices || []
+          };
+          this.roomSessionService.startSession(roomId, sessionData);
+        }
       }
     }
 
@@ -1351,6 +1396,27 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               additionalCharges: additionalCharges,
               discount: discount
             });
+
+            const hotelIdForSession = this.normalizeObjectId(this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
+            if (hotelIdForSession) {
+              const sessionData: RoomSession = {
+                roomId: this.roomData._id,
+                roomNumber: this.roomData.roomNumber,
+                roomType: String((this.roomData.roomType as any)?.name || this.roomData.roomType || ''),
+                hotelId: hotelIdForSession,
+                checkinTime: checkinTime,
+                guestInfo: checkinEventData.guestInfo,
+                paymentMethod: checkinEventData.paymentMethod,
+                rateType: checkinEventData.rateType,
+                advancePayment: advancePayment,
+                advancePaymentMethod: advancePaymentMethod,
+                additionalCharges: additionalCharges,
+                discount: discount,
+                notes: checkinEventData.notes,
+                selectedServices: this.selectedServices || []
+              };
+              this.roomSessionService.startSession(this.roomData._id, sessionData);
+            }
             
             // Tự động bật công tắc điện khi check-in
             this.tuyaService.autoTurnOnOnCheckIn(this.roomData._id).subscribe({
@@ -1999,11 +2065,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             setTimeout(() => {
               // Hiển thị thông báo thành công (màu xanh)
               this.message.success('Check-out thành công');
+
+              if (this.roomData && this.roomData._id) {
+                this.roomSessionService.endSession(this.roomData._id);
+              }
               
               // Tự động reload danh sách phòng ngay lập tức
               this.roomsService.notifyRoomDataUpdated();
-              
-              // Dữ liệu đã được lưu vào RoomEvent qua backend, không cần xóa session nữa
               
               // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
               this.tuyaService.autoTurnOffOnCheckOut(this.roomData._id).subscribe({
