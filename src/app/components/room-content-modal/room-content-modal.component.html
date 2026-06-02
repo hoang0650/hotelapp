@@ -24,27 +24,27 @@
         <div nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Tên khách hàng</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.GUEST_NAME' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
-                <input nz-input formControlName="name" placeholder="Nhập tên khách hàng" />
+                <input nz-input formControlName="name" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_GUEST_NAME' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Số CMND/CCCD</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.ID_NUMBER' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
-                <input nz-input formControlName="idNumber" placeholder="Nhập số CMND/CCCD" />
+                <input nz-input formControlName="idNumber" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_ID_NUMBER' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Mã số thuế</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.TAX_CODE' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
-                <input nz-input formControlName="tax_code" placeholder="Nhập mã số thuế (cho công ty)" />
+                <input nz-input formControlName="tax_code" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_TAX_CODE' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
@@ -53,18 +53,18 @@
         <div nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Số điện thoại</nz-form-label>
-              <nz-form-control [nzSpan]="16" nzErrorTip="Số điện thoại không hợp lệ">
-                <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.PHONE' | translate }}</nz-form-label>
+              <nz-form-control [nzSpan]="16" [nzErrorTip]="'ROOM_CONTENT_MODAL.INVALID_PHONE' | translate">
+                <input nz-input formControlName="phone" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_PHONE' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Email</nz-form-label>
-              <nz-form-control [nzSpan]="16" nzErrorTip="Email không hợp lệ">
-                <input nz-input formControlName="email" placeholder="Nhập email" />
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.EMAIL' | translate }}</nz-form-label>
+              <nz-form-control [nzSpan]="16" [nzErrorTip]="'ROOM_CONTENT_MODAL.INVALID_EMAIL' | translate">
+                <input nz-input formControlName="email" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_EMAIL' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
@@ -73,30 +73,30 @@
         <div nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Địa chỉ</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.ADDRESS' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
-                <input nz-input formControlName="address" placeholder="Nhập địa chỉ" />
+                <input nz-input formControlName="address" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_ADDRESS' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Nguồn khách</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.GUEST_SOURCE' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
                 <nz-select 
                   formControlName="guestSource" 
-                  nzPlaceHolder="Chọn nguồn khách" 
+                  [nzPlaceHolder]="'ROOM_CONTENT_MODAL.SELECT_GUEST_SOURCE' | translate" 
                   style="width: 100%"
                   nzAllowClear="false">
-                  <nz-option nzValue="walkin" nzLabel="Walk-in"></nz-option>
-                  <nz-option nzValue="booking" nzLabel="Booking"></nz-option>
-                  <nz-option nzValue="agoda" nzLabel="Agoda"></nz-option>
-                  <nz-option nzValue="traveloka" nzLabel="Traveloka"></nz-option>
-                  <nz-option nzValue="expedia" nzLabel="Expedia"></nz-option>
-                  <nz-option nzValue="trip" nzLabel="Trip.com"></nz-option>
-                  <nz-option nzValue="g2j" nzLabel="G2J"></nz-option>
-                  <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+                  <nz-option nzValue="walkin" [nzLabel]="'ROOM_CONTENT_MODAL.WALKIN' | translate"></nz-option>
+                  <nz-option nzValue="booking" [nzLabel]="'ROOM_CONTENT_MODAL.BOOKING' | translate"></nz-option>
+                  <nz-option nzValue="agoda" [nzLabel]="'ROOM_CONTENT_MODAL.AGODA' | translate"></nz-option>
+                  <nz-option nzValue="traveloka" [nzLabel]="'ROOM_CONTENT_MODAL.TRAVELOKA' | translate"></nz-option>
+                  <nz-option nzValue="expedia" [nzLabel]="'ROOM_CONTENT_MODAL.EXPEDIA' | translate"></nz-option>
+                  <nz-option nzValue="trip" [nzLabel]="'ROOM_CONTENT_MODAL.TRIP' | translate"></nz-option>
+                  <nz-option nzValue="g2j" [nzLabel]="'ROOM_CONTENT_MODAL.G2J' | translate"></nz-option>
+                  <nz-option nzValue="other" [nzLabel]="'ROOM_CONTENT_MODAL.OTHER' | translate"></nz-option>
                 </nz-select>
               </nz-form-control>
             </nz-form-item>
@@ -109,11 +109,11 @@
       <nz-form-item>
         <nz-form-control>
           <nz-radio-group formControlName="rateType" style="display: flex; justify-content: center;">
-            <label nz-radio-button nzValue="hourly">Theo giờ</label>
-            <label nz-radio-button nzValue="daily">Theo ngày</label>
-            <label nz-radio-button nzValue="nightly">Qua đêm</label>
-            <label nz-radio-button nzValue="weekly">Theo tuần</label>
-            <label nz-radio-button nzValue="monthly">Theo tháng</label>
+            <label nz-radio-button nzValue="hourly">{{ 'ROOM_CONTENT_MODAL.HOURLY' | translate }}</label>
+            <label nz-radio-button nzValue="daily">{{ 'ROOM_CONTENT_MODAL.DAILY' | translate }}</label>
+            <label nz-radio-button nzValue="nightly">{{ 'ROOM_CONTENT_MODAL.NIGHTLY' | translate }}</label>
+            <label nz-radio-button nzValue="weekly">{{ 'ROOM_CONTENT_MODAL.WEEKLY' | translate }}</label>
+            <label nz-radio-button nzValue="monthly">{{ 'ROOM_CONTENT_MODAL.MONTHLY' | translate }}</label>
           </nz-radio-group>
         </nz-form-control>
       </nz-form-item>
@@ -167,9 +167,9 @@
       <div nz-row [nzGutter]="16">
         <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
           <nz-form-item>
-            <nz-form-label [nzSpan]="8">Thanh toán</nz-form-label>
+            <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.PAYMENT_METHOD' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-select formControlName="paymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+              <nz-select formControlName="paymentMethod" [nzPlaceHolder]="'ROOM_CONTENT_MODAL.SELECT_PAYMENT_METHOD' | translate">
                 <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label | translate"></nz-option>
               </nz-select>
             </nz-form-control>
@@ -221,7 +221,7 @@
                 </div>
               </div>
               <div nz-col [nzSpan]="4">
-                <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" [title]="'ROOM_CONTENT_MODAL.ADD' + ' ' + ('ROOM_CONTENT_MODAL.SERVICE' | translate)" class="service-add-button">
+                <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" [title]="'ROOM_CONTENT_MODAL.ADD_SERVICE' | translate" class="service-add-button">
                   <i nz-icon nzType="plus"></i>
                 </button>
               </div>
@@ -248,7 +248,7 @@
               <td>{{ service.price | number }} đ</td>
               <td>{{ service.totalPrice | number }} đ</td>
               <td>
-                <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa dịch vụ này?" (nzOnConfirm)="removeService(i)">
+                <a nz-popconfirm [nzPopconfirmTitle]="'ROOM_CONTENT_MODAL.CONFIRM_DELETE_SERVICE' | translate" (nzOnConfirm)="removeService(i)">
                   <i nz-icon nzType="delete" nzTheme="outline" style="color: #ff4d4f;"></i>
                 </a>
               </td>
@@ -258,14 +258,14 @@
       </div>
       
       <div *ngIf="selectedServices.length > 0 || checkInForm.get('advancePayment')?.value > 0" class="totals-summary mb-3">
-        <p *ngIf="servicesPriceTotal > 0"><strong>Tổng tiền dịch vụ:</strong> {{ servicesPriceTotal | number }} đ</p>
-        <p *ngIf="checkInForm.get('advancePayment')?.value > 0"><strong>Đã trả trước:</strong> {{ checkInForm.get('advancePayment')?.value | number }} đ</p>
+        <p *ngIf="servicesPriceTotal > 0"><strong>{{ 'ROOM_CONTENT_MODAL.TOTAL_SERVICE_PRICE' | translate }}:</strong> {{ servicesPriceTotal | number }} đ</p>
+        <p *ngIf="checkInForm.get('advancePayment')?.value > 0"><strong>{{ 'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT_LABEL' | translate }}:</strong> {{ checkInForm.get('advancePayment')?.value | number }} đ</p>
       </div>
       
       <nz-form-item>
-        <nz-form-label [nzSpan]="8" style="text-align: left;">Ghi chú</nz-form-label>
+        <nz-form-label [nzSpan]="8" style="text-align: left;">{{ 'ROOM_CONTENT_MODAL.NOTES' | translate }}</nz-form-label>
         <nz-form-control [nzSpan]="16" style="text-align: left;">
-          <textarea nz-input formControlName="notes" rows="2" placeholder="Nhập ghi chú" style="text-align: left;"></textarea>
+          <textarea nz-input formControlName="notes" rows="2" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_NOTES' | translate" style="text-align: left;"></textarea>
         </nz-form-control>
       </nz-form-item>
       
@@ -281,13 +281,12 @@
   </ng-container>
   <ng-template #checkinError>
     <nz-alert nzType="error" [nzMessage]="errorTitleCheckin" [nzDescription]="errorDescCheckin" nzShowIcon></nz-alert>
-    <ng-template #errorTitleCheckin>Không thể nhận phòng</ng-template>
+    <ng-template #errorTitleCheckin>{{ 'ROOM_CONTENT_MODAL.CANNOT_CHECKIN' | translate }}</ng-template>
     <ng-template #errorDescCheckin>
-      Phòng <strong>{{ roomData?.roomNumber }}</strong> hiện đang ở trạng thái 
-      <strong>'{{ getStatusLabel(roomData?.status) }}'</strong> và không sẵn sàng để nhận phòng.
+      <span [innerHTML]="'ROOM_CONTENT_MODAL.ROOM_NOT_READY' | translate:{roomNumber: roomData?.roomNumber, status: getStatusLabel(roomData?.status)}"></span>
     </ng-template>
     <div class="footer-actions text-right mt-3">
-      <button nz-button (click)="closeModal()">Đóng</button>
+      <button nz-button (click)="closeModal()">{{ 'ROOM_CONTENT_MODAL.CLOSE' | translate }}</button>
     </div>
   </ng-template>
 </div>
@@ -301,18 +300,18 @@
       <nz-alert 
         nzType="info" 
         nzShowIcon
-        [nzMessage]="'Thông tin chuyển phòng'"
+        [nzMessage]="'ROOM_CONTENT_MODAL.TRANSFER_ROOM_INFO' | translate"
         [nzDescription]="getTransferInfoDescription()">
       </nz-alert>
     </div>
     
-    <nz-divider nzText="Thông tin khách hàng"></nz-divider>
+    <nz-divider [nzText]="'ROOM_CONTENT_MODAL.CUSTOMER_INFO' | translate"></nz-divider>
     
     <!-- OCR Scanner -->
-    <nz-card nzTitle="Quét CCCD/GPLX (OCR)" [nzBordered]="false" class="mb-3">
+    <nz-card [nzTitle]="'ROOM_CONTENT_MODAL.SCAN_OCR_TITLE' | translate" [nzBordered]="false" class="mb-3">
       <app-ocr-scanner
         [showPreview]="true"
-        buttonText="Chọn ảnh CCCD/GPLX để quét"
+        [buttonText]="'ROOM_CONTENT_MODAL.SELECT_IMAGE' | translate"
         (scanComplete)="onOCRScanComplete($event)">
       </app-ocr-scanner>
     </nz-card>
@@ -322,27 +321,27 @@
         <div nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Tên khách hàng</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.GUEST_NAME' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
-                <input nz-input formControlName="name" placeholder="Nhập tên khách hàng" />
+                <input nz-input formControlName="name" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_GUEST_NAME' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Số CMND/CCCD</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.ID_NUMBER' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
-                <input nz-input formControlName="idNumber" placeholder="Nhập số CMND/CCCD" />
+                <input nz-input formControlName="idNumber" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_ID_NUMBER' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Mã số thuế</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.TAX_CODE' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
-                <input nz-input formControlName="tax_code" placeholder="Nhập mã số thuế (cho công ty)" />
+                <input nz-input formControlName="tax_code" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_TAX_CODE' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
@@ -351,18 +350,18 @@
         <div nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Số điện thoại</nz-form-label>
-              <nz-form-control [nzSpan]="16" nzErrorTip="Số điện thoại không hợp lệ">
-                <input nz-input formControlName="phone" placeholder="Nhập số điện thoại" />
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.PHONE' | translate }}</nz-form-label>
+              <nz-form-control [nzSpan]="16" [nzErrorTip]="'ROOM_CONTENT_MODAL.INVALID_PHONE' | translate">
+                <input nz-input formControlName="phone" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_PHONE' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Email</nz-form-label>
-              <nz-form-control [nzSpan]="16" nzErrorTip="Email không hợp lệ">
-                <input nz-input formControlName="email" placeholder="Nhập email" />
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.EMAIL' | translate }}</nz-form-label>
+              <nz-form-control [nzSpan]="16" [nzErrorTip]="'ROOM_CONTENT_MODAL.INVALID_EMAIL' | translate">
+                <input nz-input formControlName="email" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_EMAIL' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
@@ -371,30 +370,30 @@
         <div nz-row [nzGutter]="16">
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Địa chỉ</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.ADDRESS' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
-                <input nz-input formControlName="address" placeholder="Nhập địa chỉ" />
+                <input nz-input formControlName="address" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_ADDRESS' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           
           <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
             <nz-form-item>
-              <nz-form-label [nzSpan]="8">Nguồn khách</nz-form-label>
+              <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.GUEST_SOURCE' | translate }}</nz-form-label>
               <nz-form-control [nzSpan]="16">
                 <nz-select 
                   formControlName="guestSource" 
-                  nzPlaceHolder="Chọn nguồn khách" 
+                  [nzPlaceHolder]="'ROOM_CONTENT_MODAL.SELECT_GUEST_SOURCE' | translate" 
                   style="width: 100%"
                   nzAllowClear="false">
-                  <nz-option nzValue="walkin" nzLabel="Walk-in"></nz-option>
-                  <nz-option nzValue="booking" nzLabel="Booking"></nz-option>
-                  <nz-option nzValue="agoda" nzLabel="Agoda"></nz-option>
-                  <nz-option nzValue="traveloka" nzLabel="Traveloka"></nz-option>
-                  <nz-option nzValue="expedia" nzLabel="Expedia"></nz-option>
-                  <nz-option nzValue="trip" nzLabel="Trip.com"></nz-option>
-                  <nz-option nzValue="g2j" nzLabel="G2J"></nz-option>
-                  <nz-option nzValue="other" nzLabel="Khác"></nz-option>
+                  <nz-option nzValue="walkin" [nzLabel]="'ROOM_CONTENT_MODAL.WALKIN' | translate"></nz-option>
+                  <nz-option nzValue="booking" [nzLabel]="'ROOM_CONTENT_MODAL.BOOKING' | translate"></nz-option>
+                  <nz-option nzValue="agoda" [nzLabel]="'ROOM_CONTENT_MODAL.AGODA' | translate"></nz-option>
+                  <nz-option nzValue="traveloka" [nzLabel]="'ROOM_CONTENT_MODAL.TRAVELOKA' | translate"></nz-option>
+                  <nz-option nzValue="expedia" [nzLabel]="'ROOM_CONTENT_MODAL.EXPEDIA' | translate"></nz-option>
+                  <nz-option nzValue="trip" [nzLabel]="'ROOM_CONTENT_MODAL.TRIP' | translate"></nz-option>
+                  <nz-option nzValue="g2j" [nzLabel]="'ROOM_CONTENT_MODAL.G2J' | translate"></nz-option>
+                  <nz-option nzValue="other" [nzLabel]="'ROOM_CONTENT_MODAL.OTHER' | translate"></nz-option>
                 </nz-select>
               </nz-form-control>
             </nz-form-item>
@@ -403,39 +402,39 @@
       </div>
     </form>
     
-    <nz-divider nzText="Cách tính tiền phòng"></nz-divider>
+    <nz-divider [nzText]="'ROOM_CONTENT_MODAL.ROOM_PRICE_CALCULATION' | translate"></nz-divider>
     
     <form nz-form [formGroup]="checkOutForm">
       <nz-form-item>
         <nz-form-control>
           <nz-radio-group formControlName="rateType" style="display: flex; justify-content: center;">
-            <label nz-radio-button nzValue="hourly">Theo giờ</label>
-            <label nz-radio-button nzValue="daily">Theo ngày</label>
-            <label nz-radio-button nzValue="nightly">Qua đêm</label>
-            <label nz-radio-button nzValue="weekly">Theo tuần</label>
-            <label nz-radio-button nzValue="monthly">Theo tháng</label>
+            <label nz-radio-button nzValue="hourly">{{ 'ROOM_CONTENT_MODAL.HOURLY' | translate }}</label>
+            <label nz-radio-button nzValue="daily">{{ 'ROOM_CONTENT_MODAL.DAILY' | translate }}</label>
+            <label nz-radio-button nzValue="nightly">{{ 'ROOM_CONTENT_MODAL.NIGHTLY' | translate }}</label>
+            <label nz-radio-button nzValue="weekly">{{ 'ROOM_CONTENT_MODAL.WEEKLY' | translate }}</label>
+            <label nz-radio-button nzValue="monthly">{{ 'ROOM_CONTENT_MODAL.MONTHLY' | translate }}</label>
           </nz-radio-group>
         </nz-form-control>
       </nz-form-item>
     </form>
     
     <div class="mb-3">
-      <nz-descriptions nzTitle="Thông tin phòng" nzBordered [nzColumn]="1">
-        <nz-descriptions-item nzTitle="Loại phòng">{{ roomData.type }}</nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Thời gian nhận phòng">
+      <nz-descriptions [nzTitle]="'ROOM_CONTENT_MODAL.ROOM_INFO' | translate" nzBordered [nzColumn]="1">
+        <nz-descriptions-item [nzTitle]="'ROOM_CONTENT_MODAL.ROOM_TYPE' | translate">{{ roomData.type }}</nz-descriptions-item>
+        <nz-descriptions-item [nzTitle]="'ROOM_CONTENT_MODAL.CHECKIN_TIME_LABEL' | translate">
           {{ listData[0]?.checkinTime | date: 'dd/MM/yyyy HH:mm:ss' }}
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Thời gian hiện tại">
+        <nz-descriptions-item [nzTitle]="'ROOM_CONTENT_MODAL.CURRENT_TIME_LABEL' | translate">
           {{ getCurrentTime() | date: 'dd/MM/yyyy HH:mm:ss' }}
         </nz-descriptions-item>
       </nz-descriptions>
     </div>
     
-    <nz-divider nzText="Dịch vụ sử dụng"></nz-divider>
+    <nz-divider [nzText]="'ROOM_CONTENT_MODAL.USED_SERVICES' | translate"></nz-divider>
     
     <div class="service-selection mb-3">
       <nz-form-item [formGroup]="servicesForm">
-        <nz-form-label [nzSpan]="8">Thêm dịch vụ</nz-form-label>
+        <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.ADD_SERVICE' | translate }}</nz-form-label>
         <nz-form-control [nzSpan]="16">
           <div nz-row [nzGutter]="8">
             <div nz-col [nzSpan]="14">
@@ -449,7 +448,7 @@
               </div>
             </div>
             <div nz-col [nzSpan]="4">
-              <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" title="Thêm dịch vụ">
+              <button nz-button nzType="primary" (click)="addService()" [disabled]="servicesForm.invalid" [title]="'ROOM_CONTENT_MODAL.ADD_SERVICE' | translate">
                 <i nz-icon nzType="plus"></i>
               </button>
             </div>
@@ -462,10 +461,10 @@
       <nz-table #servicesTable [nzData]="selectedServices" nzSize="small" [nzShowPagination]="false">
         <thead>
           <tr>
-            <th>Dịch vụ</th>
-            <th>Số lượng</th>
-            <th>Đơn giá</th>
-            <th>Thành tiền</th>
+            <th>{{ 'ROOM_CONTENT_MODAL.SERVICE' | translate }}</th>
+            <th>{{ 'ROOM_CONTENT_MODAL.QUANTITY' | translate }}</th>
+            <th>{{ 'ROOM_CONTENT_MODAL.SERVICE_PRICE' | translate }}</th>
+            <th>{{ 'ROOM_CONTENT_MODAL.TOTAL' | translate }}</th>
             <th></th>
           </tr>
         </thead>
@@ -476,7 +475,7 @@
             <td>{{ service.price | number }} đ</td>
             <td>{{ service.totalPrice | number }} đ</td>
             <td>
-              <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa dịch vụ này?" (nzOnConfirm)="removeService(i)">
+              <a nz-popconfirm [nzPopconfirmTitle]="'ROOM_CONTENT_MODAL.CONFIRM_DELETE_SERVICE' | translate" (nzOnConfirm)="removeService(i)">
                 <i nz-icon nzType="delete" nzTheme="outline" style="color: #ff4d4f;"></i>
               </a>
             </td>
@@ -485,12 +484,12 @@
       </nz-table>
     </div>
     
-    <nz-divider nzText="Thông tin thanh toán"></nz-divider>
+    <nz-divider [nzText]="'ROOM_CONTENT_MODAL.PAYMENT_INFO' | translate"></nz-divider>
     
     <form nz-form [formGroup]="checkOutForm" (ngSubmit)="submitForm()">
       <div class="totals-summary mb-3 payment-summary">
         <div class="payment-row payment-row--main">
-          <span class="payment-label">Tổng tiền phòng:</span>
+          <span class="payment-label">{{ 'ROOM_CONTENT_MODAL.TOTAL_ROOM_PRICE' | translate }}:</span>
           <span class="payment-value">{{ roomPriceTotal | number }} đ</span>
         </div>
         
@@ -500,24 +499,27 @@
           <div *ngIf="roomPriceDetails.rateType === 'hourly'">
             <!-- Giờ đầu tiên -->
             <div class="payment-details-row">
-              <span class="payment-detail-label">Giờ đầu tiên:</span>
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.FIRST_HOUR_LABEL' | translate }}:</span>
               <span class="payment-detail-value">{{ (roomPriceDetails.firstHourPrice || 0) | number }} đ</span>
             </div>
             
             <!-- Các giờ tiếp theo -->
             <div *ngIf="roomPriceDetails.additionalHoursCount > 0" class="payment-details-row">
-              <span class="payment-detail-label">{{ roomPriceDetails.additionalHoursCount }} giờ tiếp theo ({{ ((roomPriceDetails.additionalHoursPrice || 0) / (roomPriceDetails.additionalHoursCount || 1)) | number }} đ/giờ):</span>
+              <span class="payment-detail-label">
+                {{ roomPriceDetails.additionalHoursCount }} {{ 'ROOM_CONTENT_MODAL.ADDITIONAL_HOURS' | translate }}
+                ({{ ((roomPriceDetails.additionalHoursPrice || 0) / (roomPriceDetails.additionalHoursCount || 1)) | number }} {{ 'ROOM_CONTENT_MODAL.PER_HOUR' | translate }}):
+              </span>
               <span class="payment-detail-value">{{ (roomPriceDetails.additionalHoursPrice || 0) | number }} đ</span>
             </div>
             
             <!-- Thông tin thời gian -->
             <div class="payment-details-note">
               <div>
-                Tổng thời gian: {{ (roomPriceDetails.totalHours || roomPriceDetails.durationInHours || 0) | number:'1.1-1' }} giờ
-                <span *ngIf="roomPriceDetails.remainingMinutes > 0"> ({{ roomPriceDetails.remainingMinutes }} phút)</span>
+                {{ 'ROOM_CONTENT_MODAL.TOTAL_TIME_LABEL' | translate }}: {{ (roomPriceDetails.totalHours || roomPriceDetails.durationInHours || 0) | number:'1.1-1' }} {{ 'ROOM_CONTENT_MODAL.HOURS' | translate }}
+                <span *ngIf="roomPriceDetails.remainingMinutes > 0"> ({{ roomPriceDetails.remainingMinutes }} {{ 'ROOM_CONTENT_MODAL.MINUTES' | translate }})</span>
               </div>
               <div>
-                Thời gian miễn phí: {{ roomPriceDetails.gracePeriodMinutes || 15 }} phút
+                {{ 'ROOM_CONTENT_MODAL.FREE_TIME_LABEL' | translate }}: {{ roomPriceDetails.gracePeriodMinutes || 15 }} {{ 'ROOM_CONTENT_MODAL.MINUTES' | translate }}
               </div>
             </div>
           </div>
@@ -525,29 +527,29 @@
           <!-- Chi tiết theo ngày (daily) -->
           <div *ngIf="roomPriceDetails.rateType === 'daily'">
             <div class="payment-details-row">
-              <span class="payment-detail-label">{{ roomPriceDetails.days }} ngày × {{ (roomPriceDetails.basePrice || 0) | number }} đ/ngày:</span>
+              <span class="payment-detail-label">{{ roomPriceDetails.days }} {{ 'ROOM_CONTENT_MODAL.DAYS' | translate }} × {{ (roomPriceDetails.basePrice || 0) | number }} {{ 'ROOM_CONTENT_MODAL.PER_DAY' | translate }}:</span>
               <span class="payment-detail-value">{{ ((roomPriceDetails.days || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ</span>
             </div>
 
             <div *ngIf="(roomPriceDetails.holidaySurchargeAmount || 0) > 0" class="payment-details-row payment-details-row--surcharge">
-              <span class="payment-detail-label">Phụ thu ngày lễ ({{ roomPriceDetails.holidaySurchargePercent || 0 }}%):</span>
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.HOLIDAY_SURCHARGE' | translate }} ({{ roomPriceDetails.holidaySurchargePercent || 0 }}%):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.holidaySurchargeAmount || 0) | number }} đ</span>
             </div>
 
             <div *ngIf="(roomPriceDetails.weekendSurchargeAmount || 0) > 0" class="payment-details-row payment-details-row--surcharge">
-              <span class="payment-detail-label">Phụ thu cuối tuần ({{ roomPriceDetails.weekendSurchargePercent || 0 }}%):</span>
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.WEEKEND_SURCHARGE' | translate }} ({{ roomPriceDetails.weekendSurchargePercent || 0 }}%):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.weekendSurchargeAmount || 0) | number }} đ</span>
             </div>
             
             <!-- Phụ thu check-in sớm -->
             <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" class="payment-details-row payment-details-row--surcharge">
-              <span class="payment-detail-label">Phụ thu check-in sớm ({{ roomPriceDetails.earlyCheckinHours }} giờ):</span>
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.EARLY_CHECKIN_SURCHARGE' | translate }} ({{ roomPriceDetails.earlyCheckinHours }} {{ 'ROOM_CONTENT_MODAL.HOURS' | translate }}):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ</span>
             </div>
             
             <!-- Phụ thu check-out trễ -->
             <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" class="payment-details-row payment-details-row--surcharge">
-              <span class="payment-detail-label">Phụ thu check-out trễ ({{ roomPriceDetails.lateCheckoutHours }} giờ):</span>
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.LATE_CHECKOUT_SURCHARGE' | translate }} ({{ roomPriceDetails.lateCheckoutHours }} {{ 'ROOM_CONTENT_MODAL.HOURS' | translate }}):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ</span>
             </div>
           </div>
@@ -555,34 +557,34 @@
           <!-- Chi tiết qua đêm (nightly) -->
           <div *ngIf="roomPriceDetails.rateType === 'nightly'">
             <div class="payment-details-row">
-              <span class="payment-detail-label">{{ roomPriceDetails.nights }} đêm × {{ (roomPriceDetails.basePrice || 0) | number }} đ/đêm:</span>
+              <span class="payment-detail-label">{{ roomPriceDetails.nights }} {{ 'ROOM_CONTENT_MODAL.NIGHTS' | translate }} × {{ (roomPriceDetails.basePrice || 0) | number }} {{ 'ROOM_CONTENT_MODAL.PER_NIGHT' | translate }}:</span>
               <span class="payment-detail-value">{{ ((roomPriceDetails.nights || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ</span>
             </div>
 
             <div *ngIf="(roomPriceDetails.days || 0) > 0" class="payment-details-row">
-              <span class="payment-detail-label">{{ roomPriceDetails.days }} ngày × {{ (roomPriceDetails.dailyBasePrice || 0) | number }} đ/ngày:</span>
+              <span class="payment-detail-label">{{ roomPriceDetails.days }} {{ 'ROOM_CONTENT_MODAL.DAYS' | translate }} × {{ (roomPriceDetails.dailyBasePrice || 0) | number }} {{ 'ROOM_CONTENT_MODAL.PER_DAY' | translate }}:</span>
               <span class="payment-detail-value">{{ ((roomPriceDetails.days || 0) * (roomPriceDetails.dailyBasePrice || 0)) | number }} đ</span>
             </div>
 
             <div *ngIf="(roomPriceDetails.holidaySurchargeAmount || 0) > 0" class="payment-details-row payment-details-row--surcharge">
-              <span class="payment-detail-label">Phụ thu ngày lễ ({{ roomPriceDetails.holidaySurchargePercent || 0 }}%):</span>
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.HOLIDAY_SURCHARGE' | translate }} ({{ roomPriceDetails.holidaySurchargePercent || 0 }}%):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.holidaySurchargeAmount || 0) | number }} đ</span>
             </div>
 
             <div *ngIf="(roomPriceDetails.weekendSurchargeAmount || 0) > 0" class="payment-details-row payment-details-row--surcharge">
-              <span class="payment-detail-label">Phụ thu cuối tuần ({{ roomPriceDetails.weekendSurchargePercent || 0 }}%):</span>
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.WEEKEND_SURCHARGE' | translate }} ({{ roomPriceDetails.weekendSurchargePercent || 0 }}%):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.weekendSurchargeAmount || 0) | number }} đ</span>
             </div>
             
             <!-- Phụ thu check-in sớm -->
             <div *ngIf="roomPriceDetails.earlyCheckinHours > 0" class="payment-details-row payment-details-row--surcharge">
-              <span class="payment-detail-label">Phụ thu check-in sớm ({{ roomPriceDetails.earlyCheckinHours }} giờ):</span>
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.EARLY_CHECKIN_SURCHARGE' | translate }} ({{ roomPriceDetails.earlyCheckinHours }} {{ 'ROOM_CONTENT_MODAL.HOURS' | translate }}):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ</span>
             </div>
             
             <!-- Phụ thu check-out trễ -->
             <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" class="payment-details-row payment-details-row--surcharge">
-              <span class="payment-detail-label">Phụ thu check-out trễ ({{ roomPriceDetails.lateCheckoutHours }} giờ):</span>
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.LATE_CHECKOUT_SURCHARGE' | translate }} ({{ roomPriceDetails.lateCheckoutHours }} {{ 'ROOM_CONTENT_MODAL.HOURS' | translate }}):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ</span>
             </div>
           </div>
@@ -592,7 +594,7 @@
         <div *ngIf="initialCharges > 0" class="payment-row payment-row--surcharge">
           <span class="payment-label">
             <i nz-icon nzType="plus-circle" nzTheme="outline"></i>
-            <strong>Phụ thu:</strong>
+            <strong>{{ 'ROOM_CONTENT_MODAL.SURCHARGE_LABEL' | translate }}:</strong>
           </span>
           <span class="payment-value">+ {{ initialCharges | number }} đ</span>
         </div>
@@ -601,13 +603,13 @@
         <div *ngIf="initialDiscount > 0" class="payment-row payment-row--discount">
           <span class="payment-label">
             <i nz-icon nzType="minus-circle" nzTheme="outline"></i>
-            <strong>Khuyến mãi:</strong>
+            <strong>{{ 'ROOM_CONTENT_MODAL.DISCOUNT' | translate }}:</strong>
           </span>
           <span class="payment-value">- {{ initialDiscount | number }} đ</span>
         </div>
         
         <div class="payment-row payment-row--total">
-          <span class="payment-label">Tổng tiền dịch vụ:</span>
+          <span class="payment-label">{{ 'ROOM_CONTENT_MODAL.TOTAL_SERVICE_PRICE' | translate }}:</span>
           <span class="payment-value">{{ servicesPriceTotal | number }} đ</span>
         </div>
       </div>
@@ -618,7 +620,7 @@
             <nz-form-label [nzSpan]="8">
               <span style="color: #ff9800;">
                 <i nz-icon nzType="plus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
-                Phụ thu:
+                {{ 'ROOM_CONTENT_MODAL.ADDITIONAL_CHARGES' | translate }}:
               </span>
             </nz-form-label>
             <nz-form-control [nzSpan]="16">
@@ -628,11 +630,11 @@
                 [nzStep]="10000"
                 [nzFormatter]="formatterVND"
                 [nzParser]="parserVND"
-                nzPlaceHolder="Nhập phụ thu thêm (nếu có)"
+                [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_ADDITIONAL_CHARGES' | translate"
                 style="width: 100%">
               </nz-input-number>
               <div *ngIf="initialCharges > 0" style="font-size: 12px; color: #999; margin-top: 4px;">
-                Đã có phụ thu từ check-in: {{ initialCharges | number }} đ
+                {{ 'ROOM_CONTENT_MODAL.EXISTING_CHARGES_FROM_CHECKIN' | translate }}: {{ initialCharges | number }} đ
               </div>
             </nz-form-control>
           </nz-form-item>
@@ -643,7 +645,7 @@
             <nz-form-label [nzSpan]="8">
               <span style="color: #52c41a;">
                 <i nz-icon nzType="minus-circle" nzTheme="outline" style="margin-right: 4px;"></i>
-                Khuyến mãi:
+                {{ 'ROOM_CONTENT_MODAL.DISCOUNT' | translate }}:
               </span>
             </nz-form-label>
             <nz-form-control [nzSpan]="16">
@@ -653,11 +655,11 @@
                 [nzStep]="10000"
                 [nzFormatter]="formatterVND"
                 [nzParser]="parserVND"
-                nzPlaceHolder="Nhập khuyến mãi thêm (nếu có)"
+                [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_DISCOUNT' | translate"
                 style="width: 100%">
               </nz-input-number>
               <div *ngIf="initialDiscount > 0" style="font-size: 12px; color: #999; margin-top: 4px;">
-                Đã có khuyến mãi từ check-in: {{ initialDiscount | number }} đ
+                {{ 'ROOM_CONTENT_MODAL.EXISTING_DISCOUNT_FROM_CHECKIN' | translate }}: {{ initialDiscount | number }} đ
               </div>
             </nz-form-control>
           </nz-form-item>
@@ -667,9 +669,9 @@
       <div nz-row [nzGutter]="16">
         <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
           <nz-form-item>
-            <nz-form-label [nzSpan]="8">Thanh toán</nz-form-label>
+            <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.PAYMENT_METHOD' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-select formControlName="paymentMethod" nzPlaceHolder="Chọn phương thức thanh toán">
+              <nz-select formControlName="paymentMethod" [nzPlaceHolder]="'ROOM_CONTENT_MODAL.SELECT_PAYMENT_METHOD' | translate">
                 <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label | translate"></nz-option>
               </nz-select>
             </nz-form-control>
@@ -678,7 +680,7 @@
         
         <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
           <nz-form-item>
-            <nz-form-label [nzSpan]="8">Tiền đặt trước</nz-form-label>
+            <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="16">
               <nz-input-number 
                 formControlName="advancePayment" 
@@ -693,9 +695,9 @@
         </div>
         <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
           <nz-form-item>
-            <nz-form-label [nzSpan]="8">Hình thức trả trước</nz-form-label>
+            <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT_METHOD' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-select formControlName="advancePaymentMethod" nzPlaceHolder="Chọn hình thức trả trước">
+              <nz-select formControlName="advancePaymentMethod" [nzPlaceHolder]="'ROOM_CONTENT_MODAL.SELECT_ADVANCE_PAYMENT_METHOD' | translate">
                 <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label | translate"></nz-option>
               </nz-select>
             </nz-form-control>
@@ -706,9 +708,9 @@
       <div nz-row [nzGutter]="16">
         <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="12" [nzLg]="12" [nzXl]="12">
           <nz-form-item>
-            <nz-form-label [nzSpan]="8">Ghi chú</nz-form-label>
+            <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.NOTES' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <textarea nz-input formControlName="notes" rows="2" placeholder="Nhập ghi chú"></textarea>
+              <textarea nz-input formControlName="notes" rows="2" [placeholder]="'ROOM_CONTENT_MODAL.ENTER_NOTES' | translate"></textarea>
             </nz-form-control>
           </nz-form-item>
         </div>
@@ -718,10 +720,10 @@
             <nz-form-label [nzSpan]="8"></nz-form-label>
             <nz-form-control [nzSpan]="16">
               <label nz-checkbox formControlName="createDebt">
-                <span>Đưa vào công nợ (thanh toán sau)</span>
+                <span>{{ 'ROOM_CONTENT_MODAL.CREATE_DEBT_LABEL' | translate }}</span>
               </label>
               <div class="text-muted" style="font-size: 12px; margin-top: 4px;">
-                Khi chọn tùy chọn này, hóa đơn sẽ được đưa vào công nợ và khách hàng có thể thanh toán sau.
+                {{ 'ROOM_CONTENT_MODAL.CREATE_DEBT_HINT' | translate }}
               </div>
             </nz-form-control>
           </nz-form-item>
@@ -731,15 +733,15 @@
       <div class="final-totals mt-3" style="padding: 16px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
          <div style="background: white; border-radius: 4px; padding: 12px;">
            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-             <strong style="font-size: 18px;">Tổng cộng:</strong>
+             <strong style="font-size: 18px;">{{ 'ROOM_CONTENT_MODAL.GRAND_TOTAL' | translate }}:</strong>
              <strong style="font-size: 18px; color: #1890ff; text-align: right;">{{ totalPrice | number }} đ</strong>
            </div>
            <div *ngIf="advancePayment > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-             <span style="font-size: 16px;">Đã trả trước:</span>
+             <span style="font-size: 16px;">{{ 'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT_LABEL' | translate }}:</span>
              <span style="font-size: 16px; color: #52c41a; text-align: right;">- {{ advancePayment | number }} đ</span>
            </div>
            <div style="display: flex; justify-content: space-between; align-items: center;">
-             <strong style="font-size: 20px;">Còn lại phải thanh toán:</strong>
+             <strong style="font-size: 20px;">{{ 'ROOM_CONTENT_MODAL.REMAINING_TO_PAY' | translate }}:</strong>
              <strong [style.color]="remainingAmount < 0 ? '#52c41a' : '#ff4d4f'" style="font-size: 20px; text-align: right;">{{ remainingAmount | number }} đ</strong>
            </div>
          </div>
@@ -754,77 +756,74 @@
           class="mr-2" 
           [nzLoading]="isSaving"
           [disabled]="isSaving || isLoading"
-          nzTooltipTitle="Lưu thông tin khách hàng và tiền đặt trước">
-          <i nz-icon nzType="save" nzTheme="outline"></i> Lưu thông tin khách
+          [nzTooltipTitle]="'ROOM_CONTENT_MODAL.SAVE_GUEST_INFO_TOOLTIP' | translate">
+          <i nz-icon nzType="save" nzTheme="outline"></i> {{ 'ROOM_CONTENT_MODAL.SAVE_GUEST_INFO_BUTTON' | translate }}
         </button>
         <button nz-button nzType="primary" type="submit" [nzLoading]="isLoading" [disabled]="isSaving">
-          <i nz-icon nzType="dollar" nzTheme="outline"></i> Thanh toán và trả phòng
+          <i nz-icon nzType="dollar" nzTheme="outline"></i> {{ 'ROOM_CONTENT_MODAL.CHECKOUT_AND_PAY_BUTTON' | translate }}
         </button>
       </div>
     </form>
   </ng-container>
   <ng-template #checkoutError>
     <nz-alert nzType="error" [nzMessage]="errorTitleCheckout" [nzDescription]="errorDescCheckout" nzShowIcon></nz-alert>
-    <ng-template #errorTitleCheckout>Không thể trả phòng</ng-template>
+    <ng-template #errorTitleCheckout>{{ 'ROOM_CONTENT_MODAL.CANNOT_CHECKOUT' | translate }}</ng-template>
     <ng-template #errorDescCheckout>
-      Phòng <strong>{{ roomData?.roomNumber }}</strong> hiện không có khách (Trạng thái: 
-      <strong>'{{ getStatusLabel(roomData?.status) }}'</strong>).
+      <span [innerHTML]="'ROOM_CONTENT_MODAL.ROOM_NOT_OCCUPIED' | translate:{roomNumber: roomData?.roomNumber, status: getStatusLabel(roomData?.status)}"></span>
     </ng-template>
     <div class="footer-actions text-right mt-3">
-      <button nz-button (click)="closeModal()">Đóng</button>
+      <button nz-button (click)="closeModal()">{{ 'ROOM_CONTENT_MODAL.CLOSE' | translate }}</button>
     </div>
   </ng-template>
 </div>
 
 <div *ngIf="modalType === 'cleaning'" class="cleaning-form">
   <ng-container *ngIf="roomData?.status === 'dirty' || roomData?.status === 'maintenance' || roomData?.status === 'cleaning'; else cleaningError">
-    <h3>Xác nhận cập nhật trạng thái phòng {{ roomData?.roomNumber }}</h3>
+    <h3>{{ 'ROOM_CONTENT_MODAL.CLEANING_CONFIRM_TITLE' | translate:{roomNumber: roomData?.roomNumber} }}</h3>
     <p>
-      Bạn có chắc chắn muốn cập nhật trạng thái phòng từ 
-      <strong>'{{ getStatusLabel(roomData?.status) }}'</strong> thành <strong>'Trống'</strong> (Sẵn sàng) không?
+      <span [innerHTML]="'ROOM_CONTENT_MODAL.CLEANING_CONFIRM_DESC' | translate:{fromStatus: getStatusLabel(roomData?.status), toStatus: ('ROOM.VACANT' | translate)}"></span>
     </p>
     <div class="footer-actions text-right mt-3">
       <button nz-button (click)="closeModal()" type="button" class="mr-2">
-        <i nz-icon nzType="close"></i> Hủy
+        <i nz-icon nzType="close"></i> {{ 'COMMON.CANCEL' | translate }}
       </button>
       <button nz-button nzType="primary" (click)="submitForm()" [nzLoading]="isLoading">
-        <i nz-icon nzType="check"></i> Xác nhận
+        <i nz-icon nzType="check"></i> {{ 'COMMON.CONFIRM' | translate }}
       </button>
     </div>
   </ng-container>
   <ng-template #cleaningError>
     <nz-alert nzType="warning" [nzMessage]="errorTitleCleaning" [nzDescription]="errorDescCleaning" nzShowIcon></nz-alert>
-    <ng-template #errorTitleCleaning>Không thể thực hiện thao tác</ng-template>
+    <ng-template #errorTitleCleaning>{{ 'ROOM_CONTENT_MODAL.CANNOT_PERFORM_ACTION' | translate }}</ng-template>
     <ng-template #errorDescCleaning>
-      Phòng <strong>{{ roomData?.roomNumber }}</strong> hiện không cần dọn dẹp hoặc đang ở trạng thái 
-      <strong>'{{ getStatusLabel(roomData?.status) }}'</strong>.
+      <span [innerHTML]="'ROOM_CONTENT_MODAL.ROOM_NOT_NEED_CLEANING' | translate:{roomNumber: roomData?.roomNumber, status: getStatusLabel(roomData?.status)}"></span>
     </ng-template>
     <div class="footer-actions text-right mt-3">
-      <button nz-button (click)="closeModal()">Đóng</button>
+      <button nz-button (click)="closeModal()">{{ 'ROOM_CONTENT_MODAL.CLOSE' | translate }}</button>
     </div>
   </ng-template>
 </div>
 
 <div *ngIf="modalType !== 'checkin' && modalType !== 'checkout' && modalType !== 'cleaning'" class="default-form">
-  <h3>Thông tin phòng {{ roomData?.roomNumber }}</h3>
-  <p>Trạng thái hiện tại: <strong>{{ getStatusLabel(roomData?.status) }}</strong></p>
-  <p>Loại phòng: <strong>{{ roomData?.type }}</strong></p>
-  <p>Tầng: <strong>{{ roomData?.floor }}</strong></p>
+  <h3>{{ 'ROOM_CONTENT_MODAL.ROOM_INFO_TITLE' | translate:{roomNumber: roomData?.roomNumber} }}</h3>
+  <p>{{ 'ROOM_CONTENT_MODAL.CURRENT_STATUS' | translate }}: <strong>{{ getStatusLabel(roomData?.status) }}</strong></p>
+  <p>{{ 'ROOM_CONTENT_MODAL.ROOM_TYPE' | translate }}: <strong>{{ roomData?.type }}</strong></p>
+  <p>{{ 'ROOM.FLOOR' | translate }}: <strong>{{ roomData?.floor }}</strong></p>
   
   <div class="mb-3 room-rates">
-    <strong>Giá phòng:</strong>
-    <p>Theo giờ: {{ roomData?.pricing?.hourly | number }} đ</p>
-    <p>Theo ngày: {{ roomData?.pricing?.daily | number }} đ</p>
-    <p>Qua đêm: {{ roomData?.pricing?.nightly | number }} đ</p>
+    <strong>{{ 'ROOM_CONTENT_MODAL.ROOM_RATES' | translate }}:</strong>
+    <p>{{ 'ROOM_CONTENT_MODAL.HOURLY' | translate }}: {{ roomData?.pricing?.hourly | number }} đ</p>
+    <p>{{ 'ROOM_CONTENT_MODAL.DAILY' | translate }}: {{ roomData?.pricing?.daily | number }} đ</p>
+    <p>{{ 'ROOM_CONTENT_MODAL.NIGHTLY' | translate }}: {{ roomData?.pricing?.nightly | number }} đ</p>
   </div>
   
   <div class="footer-actions text-right mt-3">
-    <button nz-button (click)="closeModal()">Đóng</button>
+    <button nz-button (click)="closeModal()">{{ 'ROOM_CONTENT_MODAL.CLOSE' | translate }}</button>
   </div>
 </div>
 
 <div class="text-center" *ngIf="isLoading">
-  <nz-spin nzTip="Đang xử lý..."></nz-spin>
+  <nz-spin [nzTip]="'ROOM_CONTENT_MODAL.PROCESSING' | translate"></nz-spin>
 </div>
 
 <style>
@@ -850,7 +849,7 @@
 <!-- Modal SePay Payment (Chuyển khoản) -->
 <nz-modal
   [(nzVisible)]="showSePayModal"
-  nzTitle="Thông tin thanh toán chuyển khoản"
+  [nzTitle]="'ROOM_CONTENT_MODAL.SEPAY_TITLE' | translate"
   [nzWidth]="600"
   [nzFooter]="null"
   [nzMaskClosable]="false">
@@ -858,20 +857,20 @@
     <div style="padding: 20px;">
       <nz-alert
         nzType="info"
-        nzMessage="Vui lòng chuyển khoản đúng số tiền"
-        [nzDescription]="'Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và cập nhật trạng thái thanh toán. Modal này sẽ tự động đóng khi thanh toán thành công.'"
+        [nzMessage]="'ROOM_CONTENT_MODAL.SEPAY_INFO_TITLE' | translate"
+        [nzDescription]="'ROOM_CONTENT_MODAL.SEPAY_INFO_DESC' | translate"
         [nzShowIcon]="true"
         style="margin-bottom: 20px;">
       </nz-alert>
 
       <nz-descriptions nzBordered [nzColumn]="1" style="margin-bottom: 20px;">
-        <nz-descriptions-item nzTitle="Số tiền cần thanh toán">
+        <nz-descriptions-item [nzTitle]="'ROOM_CONTENT_MODAL.SEPAY_AMOUNT_LABEL' | translate">
           <strong style="font-size: 18px; color: #ff4d4f;">
             {{ sepayAmount | number:'1.0-0' }} VNĐ
           </strong>
         </nz-descriptions-item>
         <!-- Bỏ hiển thị mã thanh toán - webhook sẽ tự động nhận diện -->
-        <nz-descriptions-item *ngIf="sepayBeneficiaryName" nzTitle="Tên người thụ hưởng">
+        <nz-descriptions-item *ngIf="sepayBeneficiaryName" [nzTitle]="'ROOM_CONTENT_MODAL.SEPAY_BENEFICIARY_LABEL' | translate">
           <strong>{{ sepayBeneficiaryName }}</strong>
         </nz-descriptions-item>
       </nz-descriptions>
@@ -881,23 +880,22 @@
         <div style="margin-bottom: 12px;">
           <h3 style="margin: 0; font-size: 16px; font-weight: 600;">
             <i nz-icon nzType="qrcode" nzTheme="outline" style="margin-right: 8px;"></i>
-            Quét QR để thanh toán
+            {{ 'ROOM_CONTENT_MODAL.SEPAY_SCAN_QR' | translate }}
           </h3>
         </div>
         <div style="display: inline-block; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
           <img 
             [src]="sepayQrUrl" 
-            alt="QR Code thanh toán" 
+            [alt]="'ROOM_CONTENT_MODAL.SEPAY_QR_ALT' | translate"
             style="max-width: 300px; width: 100%; height: auto; display: block;"
-            onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
           />
         </div>
         <div style="margin-top: 12px; font-size: 12px; color: #666;">
           <p style="margin: 4px 0;">
-            <strong>Ngân hàng:</strong> {{ sepayBankName || currentUser?.bankAccount?.bankName || hotelBankAccount?.bankName || 'N/A' }}
+            <strong>{{ 'ROOM_CONTENT_MODAL.SEPAY_BANK_LABEL' | translate }}:</strong> {{ sepayBankName || currentUser?.bankAccount?.bankName || hotelBankAccount?.bankName || ('COMMON.N_A' | translate) }}
           </p>
           <p style="margin: 4px 0;">
-            <strong>Số tài khoản:</strong> {{ sepayAccountNumber || currentUser?.bankAccount?.accountNumber || hotelBankAccount?.accountNumber || 'N/A' }}
+            <strong>{{ 'ROOM_CONTENT_MODAL.SEPAY_ACCOUNT_LABEL' | translate }}:</strong> {{ sepayAccountNumber || currentUser?.bankAccount?.accountNumber || hotelBankAccount?.accountNumber || ('COMMON.N_A' | translate) }}
           </p>
         </div>
       </div>
@@ -905,8 +903,7 @@
       <div style="margin-top: 20px; padding: 12px; background: #f0f9ff; border-radius: 4px; border-left: 4px solid #1890ff;">
         <p style="margin: 0; color: #1890ff; font-size: 13px;">
           <i nz-icon nzType="info-circle" nzTheme="outline" style="margin-right: 6px;"></i>
-          Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và cập nhật trạng thái thanh toán trong vòng vài phút.
-          <strong>Modal này sẽ tự động đóng khi thanh toán thành công và hiển thị hóa đơn.</strong>
+          {{ 'ROOM_CONTENT_MODAL.SEPAY_NOTE' | translate }}
         </p>
       </div>
     </div>

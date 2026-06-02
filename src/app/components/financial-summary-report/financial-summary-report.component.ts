@@ -4,7 +4,7 @@ import { FinancialSummaryService, FinancialSummary, FinancialSummaryQuery, Finan
 import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
 import { TranslateService } from '@ngx-translate/core';
-import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, differenceInCalendarDays } from 'date-fns';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -219,6 +219,10 @@ export class FinancialSummaryReportComponent implements OnInit {
           });
           console.log('=== END FRONTEND DEBUG ===');
         }
+
+        if (this.financialSummary) {
+          this.recalculateFinancialMetrics(this.financialSummary);
+        }
         
         this.loading = false;
       },
@@ -227,6 +231,109 @@ export class FinancialSummaryReportComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  private recalculateFinancialMetrics(summary: FinancialSummary): void {
+    const config: FinancialConfig = summary.financialConfig || {};
+    const depreciationRate = Number(config.depreciationRate ?? 10) / 100;
+    const loanPercentage = Number(config.loanPercentage ?? 70) / 100;
+    const interestRate = Number(config.interestRate ?? 8) / 100;
+    const taxRate = Number(config.taxRate ?? 20) / 100;
+    const wacc = Number(config.wacc ?? 9) / 100;
+    const projectionYears = Math.max(1, Number(config.projectionYears ?? 10));
+
+    const initialInvestment = Math.max(0, Number(summary.initialInvestment || 0));
+    const loanAmount = initialInvestment * Math.min(Math.max(loanPercentage, 0), 1);
+
+    const start = this.startDate;
+    const end = this.endDate;
+    const days = Math.max(1, differenceInCalendarDays(end, start) + 1);
+    const monthsEquivalent = Math.max(1 / 31, days / 30.4375);
+
+    const periodOperatingProfit = Number(summary.profit || 0);
+    const annualizedOperatingProfit = (periodOperatingProfit / monthsEquivalent) * 12;
+
+    const depreciationAnnual = initialInvestment * Math.min(Math.max(depreciationRate, 0), 1);
+    const interestAnnual = loanAmount * Math.min(Math.max(interestRate, 0), 10);
+
+    const profitBeforeTaxAnnual = annualizedOperatingProfit - depreciationAnnual - interestAnnual;
+    const taxAnnual = profitBeforeTaxAnnual > 0 ? profitBeforeTaxAnnual * Math.min(Math.max(taxRate, 0), 1) : 0;
+    const profitAfterTaxAnnual = profitBeforeTaxAnnual - taxAnnual;
+    const freeCashFlowAnnual = profitAfterTaxAnnual + depreciationAnnual;
+
+    summary.depreciation = depreciationAnnual;
+    summary.interest = interestAnnual;
+    summary.profitBeforeTax = profitBeforeTaxAnnual;
+    summary.tax = taxAnnual;
+    summary.profitAfterTax = profitAfterTaxAnnual;
+    summary.monthlyProfit = profitAfterTaxAnnual / 12;
+
+    if (initialInvestment > 0 && freeCashFlowAnnual > 0) {
+      const paybackYears = initialInvestment / freeCashFlowAnnual;
+      summary.paybackPeriod = paybackYears * 12;
+      summary.paybackPeriodDays = paybackYears * 365;
+    } else {
+      summary.paybackPeriod = 0;
+      summary.paybackPeriodDays = 0;
+    }
+
+    if (initialInvestment > 0 && Number.isFinite(wacc) && wacc > -0.99 && projectionYears > 0) {
+      const cashFlows: number[] = [-initialInvestment];
+      for (let i = 1; i <= projectionYears; i++) {
+        cashFlows.push(freeCashFlowAnnual);
+      }
+      const npvValue = this.calculateNpv(wacc, cashFlows);
+      summary.npv = Number.isFinite(npvValue) ? npvValue / 1_000_000 : undefined;
+
+      const irr = this.calculateIrr(cashFlows);
+      summary.irr = Number.isFinite(irr) ? irr * 100 : undefined;
+    } else {
+      summary.npv = undefined;
+      summary.irr = undefined;
+    }
+  }
+
+  private calculateNpv(discountRate: number, cashFlows: number[]): number {
+    let total = 0;
+    for (let t = 0; t < cashFlows.length; t++) {
+      total += cashFlows[t] / Math.pow(1 + discountRate, t);
+    }
+    return total;
+  }
+
+  private calculateIrr(cashFlows: number[]): number {
+    const hasPositive = cashFlows.some(v => v > 0);
+    const hasNegative = cashFlows.some(v => v < 0);
+    if (!hasPositive || !hasNegative) return NaN;
+
+    const npvAt = (rate: number) => this.calculateNpv(rate, cashFlows);
+
+    let low = -0.9999;
+    let high = 10;
+    let npvLow = npvAt(low);
+    let npvHigh = npvAt(high);
+
+    let expand = 0;
+    while (npvLow * npvHigh > 0 && expand < 20) {
+      high *= 2;
+      npvHigh = npvAt(high);
+      expand++;
+    }
+    if (npvLow * npvHigh > 0) return NaN;
+
+    for (let i = 0; i < 120; i++) {
+      const mid = (low + high) / 2;
+      const npvMid = npvAt(mid);
+      if (Math.abs(npvMid) < 1e-7) return mid;
+      if (npvLow * npvMid <= 0) {
+        high = mid;
+        npvHigh = npvMid;
+      } else {
+        low = mid;
+        npvLow = npvMid;
+      }
+    }
+    return (low + high) / 2;
   }
 
   onHotelChange(): void {

@@ -133,8 +133,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         toRoomNumber = lastTransfer.toRoomNumber || this.roomData.roomNumber || 'N/A';
       } else {
         // Fallback: lấy từ roomData nếu có
-        fromRoomNumber = booking.transferredFrom ? 'Phòng ' + booking.transferredFrom : 'N/A';
-        toRoomNumber = this.roomData.roomNumber || 'N/A';
+        fromRoomNumber = booking.transferredFrom ? String(booking.transferredFrom) : this.translate.instant('COMMON.N_A');
+        toRoomNumber = this.roomData.roomNumber || this.translate.instant('COMMON.N_A');
       }
       
       return {
@@ -155,25 +155,45 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   getTransferInfoDescription(): string {
     const transferInfo = this.getBookingTransferInfo();
     if (!transferInfo) return '';
-    
-    let description = `Phòng ban đầu: ${transferInfo.fromRoomNumber || 'N/A'}`;
+
+    const na = this.translate.instant('COMMON.N_A');
+    const lines: string[] = [];
+
+    lines.push(
+      this.translate.instant('ROOM_CONTENT_MODAL.TRANSFER_ORIGINAL_ROOM', {
+        roomNumber: transferInfo.fromRoomNumber || na
+      })
+    );
+
     if (transferInfo.transferredAt) {
-      description += `\nThời gian chuyển: ${this.datePipe.transform(transferInfo.transferredAt, 'dd/MM/yyyy HH:mm') || 'N/A'}`;
+      const time = this.datePipe.transform(transferInfo.transferredAt, 'dd/MM/yyyy HH:mm') || na;
+      lines.push(this.translate.instant('ROOM_CONTENT_MODAL.TRANSFER_TIME', { time }));
     }
-    
-    // Hiển thị lịch sử chuyển phòng nếu có nhiều lần
+
     if (transferInfo.transferHistory && transferInfo.transferHistory.length > 1) {
-      description += `\n\nLịch sử chuyển phòng (${transferInfo.transferHistory.length} lần):`;
+      lines.push('');
+      lines.push(
+        this.translate.instant('ROOM_CONTENT_MODAL.TRANSFER_HISTORY_TITLE', {
+          count: transferInfo.transferHistory.length
+        })
+      );
+
       transferInfo.transferHistory.forEach((transfer, index) => {
-        const transferDate = transfer.transferredAt ? this.datePipe.transform(new Date(transfer.transferredAt), 'dd/MM/yyyy HH:mm') : 'N/A';
-        description += `\n${index + 1}. ${transfer.fromRoomNumber} → ${transfer.toRoomNumber} (${transferDate})`;
-        if (transfer.notes) {
-          description += ` - ${transfer.notes}`;
-        }
+        const transferDate = transfer.transferredAt
+          ? (this.datePipe.transform(new Date(transfer.transferredAt), 'dd/MM/yyyy HH:mm') || na)
+          : na;
+        let item = this.translate.instant('ROOM_CONTENT_MODAL.TRANSFER_HISTORY_ITEM', {
+          index: index + 1,
+          from: transfer.fromRoomNumber || na,
+          to: transfer.toRoomNumber || na,
+          time: transferDate
+        });
+        if (transfer.notes) item += ` - ${transfer.notes}`;
+        lines.push(item);
       });
     }
-    
-    return description;
+
+    return lines.join('\n');
   }
   
   // Helper function để lọc các event check-in CHƯA CHECKOUT
