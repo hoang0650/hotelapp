@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { map, catchError, tap } from 'rxjs/operators';
+import { map, catchError, tap, take } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { User } from '../interfaces/user';
 import { jwtDecode } from 'jwt-decode';
@@ -170,7 +170,6 @@ export class AuthService {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     const port = window.location.port ? `:${window.location.port}` : '';
-    const user = this.getCurrentUser();
 
     // Không chuyển hướng nếu đang ở localhost
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -181,17 +180,35 @@ export class AuthService {
     const mainDomain = 'phhotel.vn';
     const adminSubdomain = 'admin.phhotel.vn';
 
+    const redirectToAdmin = () => {
+      window.location.href = `${protocol}//${adminSubdomain}${port}/room`;
+    };
+    const redirectToMainLogin = () => {
+      window.location.href = `${protocol}//${mainDomain}${port}/login`;
+    };
+
+    const user = this.getCurrentUser();
     if (user) {
-      // Đã đăng nhập nhưng đang ở domain chính -> chuyển sang admin subdomain
       if (!isAdminSubdomain) {
-        window.location.href = `${protocol}//${adminSubdomain}${port}/room`;
+        redirectToAdmin();
       }
-    } else {
-      // Chưa đăng nhập nhưng lại đang ở admin subdomain -> chuyển về domain chính
-      if (isAdminSubdomain) {
-        window.location.href = `${protocol}//${mainDomain}${port}/login`;
-      }
+      return;
     }
+
+    this.refreshAccessToken().pipe(take(1)).subscribe(success => {
+      const refreshedUser = this.getCurrentUser();
+
+      if (success && refreshedUser) {
+        if (!isAdminSubdomain) {
+          redirectToAdmin();
+        }
+        return;
+      }
+
+      if (isAdminSubdomain) {
+        redirectToMainLogin();
+      }
+    });
   }
 
   // ============ LẤY THÔNG TIN ID ============

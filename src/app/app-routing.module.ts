@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { RouterModule, Routes, UrlMatchResult, UrlSegment } from '@angular/router';
 import { LoginComponent } from './components/login/login.component';
 import { HomeComponent } from './components/home/home.component';
 import { SignupComponent } from './components/signup/signup.component';
@@ -60,6 +60,54 @@ import { ZaloMessagesComponent } from './components/zalo-messages/zalo-messages.
 import { TelegramMessagesComponent } from './components/telegram-messages/telegram-messages.component';
 import { BotSettingComponent } from './components/bot-setting/bot-setting.component';
 import { CameraConfigComponent } from './components/camera-config/camera-config.component';
+
+const adminSubdomainPaths = new Set([
+  'room',
+  'bill',
+  'calendar',
+  'email-admin',
+  'qr-payment',
+  'visa-payment',
+  'company',
+  'room-management',
+  'room-category',
+  'floor-plan',
+  'service-management',
+  'guest-management',
+  'debt-management',
+  'blog-management',
+  'pricing-management',
+  'camera-config',
+  'files',
+  'users-management',
+  'hotel',
+  'staff',
+  'chart',
+  'unauthorized',
+  'notfound',
+  'shift-handover',
+  'shift-handover-history',
+  'bank-transfer-history',
+  'financial-summary-report',
+  'ota-management',
+  'fanpage-messages',
+  'zalo-messages',
+  'telegram-messages',
+  'bot-setting',
+  'electric-setting',
+  'profile',
+  'settings',
+  'contact-management',
+  'e-invoice-management',
+  'e-invoice-template',
+  'e-invoice-registration'
+]);
+
+const adminSubdomainMatcher = (segments: UrlSegment[]): UrlMatchResult | null => {
+  if (segments.length === 0) return null;
+  if (!adminSubdomainPaths.has(segments[0].path)) return null;
+  return { consumed: [] };
+};
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: 'home', component: HomeComponent, data: { titleKey: 'SEO.HOME.TITLE', descriptionKey: 'SEO.HOME.DESCRIPTION' } },
@@ -122,9 +170,12 @@ const routes: Routes = [
       // Thêm các route con khác nếu cần
     ]
   },
-  // Subdomain routes (same components but without 'admin' prefix)
   {
-    path: '', component: AdminComponent, data: { robots: 'noindex,nofollow', titleKey: 'SEO.ADMIN.TITLE' }, children: [
+    matcher: adminSubdomainMatcher,
+    component: AdminComponent,
+    data: { robots: 'noindex,nofollow', titleKey: 'SEO.ADMIN.TITLE' },
+    children: [
+      { path: '', redirectTo: 'room', pathMatch: 'full' },
       { path: 'room', component: RoomComponent, canActivate: [PermissionGuard] },
       { path: 'bill', component: InvoiceComponent },
       { path: 'calendar', component: CalendarComponent, canActivate: [PermissionGuard] },
@@ -142,14 +193,12 @@ const routes: Routes = [
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
       { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
       { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
-      {
-        path: 'users-management',
-        component: UserManagementComponent,
-        canActivate: [PermissionGuard]
-      },
+      { path: 'users-management', component: UserManagementComponent, canActivate: [PermissionGuard] },
       { path: 'hotel', component: HotelManagementComponent, canActivate: [PermissionGuard] },
       { path: 'staff', component: StaffManagementComponent, canActivate: [PermissionGuard] },
       { path: 'chart', component: RevenueChartComponent, canActivate: [PermissionGuard] },
+      { path: 'unauthorized', component: UnauthorizedComponent },
+      { path: 'notfound', component: NotfoundComponent },
       { path: 'shift-handover', component: RoomHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'shift-handover-history', component: ShiftHandoverHistoryComponent, canActivate: [PermissionGuard] },
       { path: 'bank-transfer-history', component: BankTransferHistoryComponent, canActivate: [PermissionGuard] },
@@ -165,7 +214,7 @@ const routes: Routes = [
       { path: 'contact-management', component: ContactManagementComponent, canActivate: [PermissionGuard] },
       { path: 'e-invoice-management', component: EInvoiceManagementComponent, canActivate: [PermissionGuard] },
       { path: 'e-invoice-template', component: EInvoiceTemplateComponent, canActivate: [PermissionGuard] },
-      { path: 'e-invoice-registration', component: EInvoiceRegistrationComponent, canActivate: [PermissionGuard] },
+      { path: 'e-invoice-registration', component: EInvoiceRegistrationComponent, canActivate: [PermissionGuard] }
     ]
   },
   { path: 'modal', component: ModalComponent },

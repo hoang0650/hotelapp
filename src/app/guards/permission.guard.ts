@@ -24,7 +24,19 @@ export class PermissionGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean> | Promise<boolean> | boolean {
-    const url = this.normalize(state.url);
+    const rawUrl = this.normalize(state.url);
+    const url = rawUrl.startsWith('/admin/') ? rawUrl : `/admin${rawUrl}`;
+    const isAdminSubdomain = typeof window !== 'undefined' && window.location.hostname.startsWith('admin.');
+    const unauthorizedUrl = isAdminSubdomain ? '/unauthorized' : '/admin/unauthorized';
+    const redirectToLogin = () => {
+      if (isAdminSubdomain) {
+        const protocol = window.location.protocol;
+        const port = window.location.port ? `:${window.location.port}` : '';
+        window.location.href = `${protocol}//phhotel.vn${port}/login`;
+      } else {
+        this.router.navigate(['/login']);
+      }
+    };
     const user = this.authService.getCurrentUser();
     
     // Nếu chưa đăng nhập, chuyển đến trang login
@@ -32,12 +44,12 @@ export class PermissionGuard implements CanActivate {
       return this.authService.refreshAccessToken().pipe(
         switchMap(success => {
           if (!success) {
-            this.router.navigate(['/login']);
+            redirectToLogin();
             return of(false);
           }
           const refreshedUser = this.authService.getCurrentUser();
           if (!refreshedUser) {
-            this.router.navigate(['/login']);
+            redirectToLogin();
             return of(false);
           }
           if (refreshedUser.role === 'superadmin' || refreshedUser.role === 'admin') {
@@ -73,7 +85,7 @@ export class PermissionGuard implements CanActivate {
               '/admin/blog-management'
             ];
             if (blockedRoutes.includes(url)) {
-              this.router.navigate(['/admin/unauthorized']);
+              this.router.navigate([unauthorizedUrl]);
               return of(false);
             }
             if (allowedRoutes.includes(url) || allowedRoutes.some(r => url.startsWith(r))) {
@@ -108,20 +120,20 @@ export class PermissionGuard implements CanActivate {
               '/admin/contact-management'
             ];
             if (blockedRoutes.includes(url)) {
-              this.router.navigate(['/admin/unauthorized']);
+              this.router.navigate([unauthorizedUrl]);
               return of(false);
             }
             if (allowedRoutes.includes(url) || allowedRoutes.some(r => url.startsWith(r))) {
               return of(true);
             }
-            this.router.navigate(['/admin/unauthorized']);
+            this.router.navigate([unauthorizedUrl]);
             return of(false);
           }
           if (refreshedUser.role === 'guest') {
             if (url === '/admin/pricing-management') {
               return of(true);
             }
-            this.router.navigate(['/admin/unauthorized']);
+            this.router.navigate([unauthorizedUrl]);
             return of(false);
           }
           return this.permissionService.permissions$.pipe(
@@ -129,7 +141,7 @@ export class PermissionGuard implements CanActivate {
             map(() => {
               const hasAccess = this.permissionService.canAccessRoute(url);
               if (!hasAccess) {
-                this.router.navigate(['/admin/unauthorized']);
+                this.router.navigate([unauthorizedUrl]);
                 return false;
               }
               return true;
@@ -159,7 +171,7 @@ export class PermissionGuard implements CanActivate {
       
       // Hotel Manager không được phép truy cập company
       if (user.role === 'hotel' && url === '/admin/company') {
-        this.router.navigate(['/admin/unauthorized']);
+        this.router.navigate([unauthorizedUrl]);
         return false;
       }
       
@@ -206,7 +218,7 @@ export class PermissionGuard implements CanActivate {
       ];
       
       if (blockedRoutes.includes(url)) {
-        this.router.navigate(['/admin/unauthorized']);
+        this.router.navigate([unauthorizedUrl]);
         return false;
       }
       
@@ -253,7 +265,7 @@ export class PermissionGuard implements CanActivate {
       ];
       
       if (blockedRoutes.includes(url)) {
-        this.router.navigate(['/admin/unauthorized']);
+        this.router.navigate([unauthorizedUrl]);
         return false;
       }
       
@@ -265,7 +277,7 @@ export class PermissionGuard implements CanActivate {
       // Nếu route không nằm trong allowedRoutes và không bị block, 
       // mặc định không cho phép (staff chỉ được truy cập routes được liệt kê rõ ràng)
       // Chuyển đến trang unauthorized
-      this.router.navigate(['/admin/unauthorized']);
+      this.router.navigate([unauthorizedUrl]);
       return false;
     }
 
@@ -275,7 +287,7 @@ export class PermissionGuard implements CanActivate {
         return true;
       }
       // Guest chỉ được truy cập pricing-management, các route khác bị chặn
-      this.router.navigate(['/admin/unauthorized']);
+      this.router.navigate([unauthorizedUrl]);
       return false;
     }
 
@@ -289,7 +301,7 @@ export class PermissionGuard implements CanActivate {
 
         if (!hasAccess) {
           // Chuyển đến trang unauthorized
-          this.router.navigate(['/admin/unauthorized']);
+          this.router.navigate([unauthorizedUrl]);
           return false;
         }
 
