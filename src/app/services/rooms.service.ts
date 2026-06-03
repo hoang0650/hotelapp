@@ -17,7 +17,7 @@ export class RoomsService {
 
   constructor(private http: HttpClient) { }
 
-  getRooms(params?: { hotelId?: string, floor?: number }): Observable<Room[]> {
+  getRooms(params?: { hotelId?: string, floor?: number, lite?: boolean }): Observable<Room[]> {
     let httpParams = new HttpParams();
     
     if (params) {
@@ -26,6 +26,9 @@ export class RoomsService {
       }
       if (params.floor !== undefined) {
         httpParams = httpParams.set('floor', params.floor.toString());
+      }
+      if (params.lite) {
+        httpParams = httpParams.set('lite', '1');
       }
     }
     

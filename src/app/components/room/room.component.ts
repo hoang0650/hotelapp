@@ -767,7 +767,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.roomPriceCache.clear();
       this.roomPriceMap.clear();
       this.updateCachedRoomCounts();
-      const params: any = { hotelId: this.selectedHotelId };
+      const params: any = { hotelId: this.selectedHotelId, lite: true };
       
       this.roomsService.getRooms(params).subscribe(
         (data) => {
@@ -803,7 +803,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.roomPriceCache.clear();
     this.roomPriceMap.clear();
     this.updateCachedRoomCounts();
-    const params: any = { hotelId: this.selectedHotelId };
+    const params: any = { hotelId: this.selectedHotelId, lite: true };
 
     this.roomsService.getRooms(params).subscribe({
       next: (data) => {
