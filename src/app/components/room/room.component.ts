@@ -45,6 +45,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   floors: string[] = [];
   selectedFloor: string | null = null;
   isLoading = false;
+  isRoomsLoading = false;
   private isModalOpen = false; // Flag để tránh mở nhiều modal cùng lúc
   private isReloading = false; // Flag để tránh mở modal khi đang reload
   bookings: any[] = []; // Danh sách bookings để hiển thị trên calendar
@@ -761,46 +762,43 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
     
     // Full reload: reload tất cả
-    this.isLoading = true;
+    this.isRoomsLoading = true;
     this.isReloading = true;
+    this.rooms = [];
+    this.roomPriceCache.clear();
+    this.roomPriceMap.clear();
+    this.updateCachedRoomCounts();
     const params: any = { hotelId: this.selectedHotelId };
-    
-    // Chạy các API calls song song để tăng tốc
-    const roomsRequest = this.roomsService.getRooms(params);
-    const bookingsRequest = this.roomsService.getBookings({ hotelId: this.selectedHotelId });
-    
-    // Sử dụng forkJoin để chạy song song
-    forkJoin({
-      rooms: roomsRequest,
-      bookings: bookingsRequest
-    }).subscribe({
-      next: (results: any) => {
-        // Đảm bảo guestStatus được giữ nguyên từ backend
-        const normalizedRooms = results.rooms.map((room: Room) => ({
+
+    this.roomsService.getRooms(params).subscribe({
+      next: (data) => {
+        const normalizedRooms = data.map((room: Room) => ({
           ...room,
           guestStatus: room.guestStatus || undefined
         }));
         this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(normalizedRooms);
         this.updateFloorsFromRooms();
         this.updateCachedRoomCounts();
-        this.bookings = results.bookings.bookings || [];
-        this.isLoading = false;
+        this.isRoomsLoading = false;
         this.isReloading = false;
-        
-        // Prefetch giá phòng cho phòng đang có khách để hiển thị tổng tiền/còn thu chính xác
-        this.prefetchRoomPricesForOccupiedRooms();
 
-        // Fetch events cho các phòng đang occupied và booked để hiển thị thông tin
+        this.prefetchRoomPricesForOccupiedRooms();
         this.loadEventsForOccupiedRooms();
-        
-        // Load history và chart sau (không block UI)
+
         setTimeout(() => {
           this.showRoomHistory();
         }, 0);
+
+        this.roomsService.getBookings({ hotelId: this.selectedHotelId as string }).subscribe({
+          next: (bookingsRes: any) => {
+            this.bookings = bookingsRes?.bookings || [];
+          },
+          error: () => {}
+        });
       },
       error: (error: any) => {
         this.message.error('Lỗi khi tải danh sách phòng: ' + (error.error?.message || error.message));
-        this.isLoading = false;
+        this.isRoomsLoading = false;
         this.isReloading = false;
       }
     });
@@ -835,6 +833,10 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.selectedHotelId = hotelId;
     this.isFirstLoadForHotel = true;
     this.activeFloors = [];
+    this.isRoomsLoading = !!hotelId;
+    if (hotelId) {
+      this.rooms = [];
+    }
     if (hotelId) {
       this.roomSessionService.setHotelId(hotelId);
       const currentUser = this.authService.getCurrentUser();
@@ -896,6 +898,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.roomTableData = [];
       // Xóa selectedFloor khi không có hotel
       this.selectedFloor = null;
+      this.isRoomsLoading = false;
     }
   }
 

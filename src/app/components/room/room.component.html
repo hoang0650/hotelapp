@@ -83,7 +83,7 @@
   </div>
     
   <!-- Banner Thống kê phòng -->
-  <div class="room-stats-banner" *ngIf="selectedHotelId && rooms.length > 0">
+  <div class="room-stats-banner" *ngIf="selectedHotelId && rooms.length > 0 && !isRoomsLoading">
     <div class="banner-content-single-row">
       <div class="banner-title-section">
         <h3 class="banner-title">
@@ -149,43 +149,44 @@
       </button>
     </div>
     
-    <nz-spin [nzSpinning]="isLoading" [nzTip]="'ROOM.LOADING_ROOMS' | translate">
-      <nz-collapse [nzBordered]="false">
-        <nz-collapse-panel 
-          *ngFor="let floor of getSortedFloors(); trackBy: trackByFloor" 
-          [nzHeader]="floorHeaderTemplate"
-          [nzActive]="activeFloors.includes(floor)"
-          (nzActiveChange)="onFloorPanelChange(floor, $event)">
-          
-          <ng-template #floorHeaderTemplate>
-            <h3 class="floor-title">
-              <i nz-icon nzType="bank" nzTheme="outline" class="floor-icon"></i>
-              {{ floor === '0' || floor === '' ? ('ROOM.GROUND_FLOOR' | translate) : (('ROOM.FLOOR_DISPLAY' | translate) + ' ' + floor) }}
-              <span class="floor-room-count">({{ (getRoomsByFloor()[floor] || []).length }} {{ 'ROOM.ROOM_COUNT' | translate }})</span>
-            </h3>
-          </ng-template>
+    <nz-spin [nzSpinning]="isRoomsLoading" [nzTip]="'ROOM.LOADING_ROOMS' | translate">
+      <ng-container *ngIf="!isRoomsLoading">
+        <nz-collapse [nzBordered]="false">
+          <nz-collapse-panel 
+            *ngFor="let floor of getSortedFloors(); trackBy: trackByFloor" 
+            [nzHeader]="floorHeaderTemplate"
+            [nzActive]="activeFloors.includes(floor)"
+            (nzActiveChange)="onFloorPanelChange(floor, $event)">
+            
+            <ng-template #floorHeaderTemplate>
+              <h3 class="floor-title">
+                <i nz-icon nzType="bank" nzTheme="outline" class="floor-icon"></i>
+                {{ floor === '0' || floor === '' ? ('ROOM.GROUND_FLOOR' | translate) : (('ROOM.FLOOR_DISPLAY' | translate) + ' ' + floor) }}
+                <span class="floor-room-count">({{ (getRoomsByFloor()[floor] || []).length }} {{ 'ROOM.ROOM_COUNT' | translate }})</span>
+              </h3>
+            </ng-template>
 
-          <div class="floor-rooms">
-            <div nz-row [nzGutter]="getRoomGutter()">
-              <div 
-                nz-col 
-                [nzSpan]="getRoomColSpan()"
-                [nzXs]="getRoomColSpanXs()"
-                [nzSm]="getRoomColSpanSm()"
-                [nzMd]="getRoomColSpanMd()"
-                [nzLg]="getRoomColSpanLg()"
-                [nzXl]="getRoomColSpanXl()"
-                *ngFor="let room of getRoomsByFloor()[floor]; trackBy: trackByRoomId"
-                class="room-col"
-                [ngClass]="{'compact-mode': isCompactMode}">
+            <div class="floor-rooms">
+              <div nz-row [nzGutter]="getRoomGutter()">
                 <div 
-                  class="room-item" 
-                  [ngClass]="[getRoomStatusClass(getRoomDisplayStatus(room), room.guestStatus), isPrebookedAvailable(room) ? 'prebooked-available' : '']"
-                  appModalControl 
-                  [room]="room"
-                  [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.status === 'occupied' ? ('ROOM.OCCUPIED' | translate) : getRoomStatusLabelAndColor(getRoomDisplayStatus(room)).label)"
-                  role="button"
-                  tabindex="0">
+                  nz-col 
+                  [nzSpan]="getRoomColSpan()"
+                  [nzXs]="getRoomColSpanXs()"
+                  [nzSm]="getRoomColSpanSm()"
+                  [nzMd]="getRoomColSpanMd()"
+                  [nzLg]="getRoomColSpanLg()"
+                  [nzXl]="getRoomColSpanXl()"
+                  *ngFor="let room of getRoomsByFloor()[floor]; trackBy: trackByRoomId"
+                  class="room-col"
+                  [ngClass]="{'compact-mode': isCompactMode}">
+                  <div 
+                    class="room-item" 
+                    [ngClass]="[getRoomStatusClass(getRoomDisplayStatus(room), room.guestStatus), isPrebookedAvailable(room) ? 'prebooked-available' : '']"
+                    appModalControl 
+                    [room]="room"
+                    [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.status === 'occupied' ? ('ROOM.OCCUPIED' | translate) : getRoomStatusLabelAndColor(getRoomDisplayStatus(room)).label)"
+                    role="button"
+                    tabindex="0">
                   
                   <!-- Icon phòng -->
                   <div class="room-icon" *ngIf="!isCompactMode">
@@ -406,15 +407,16 @@
                     </div>
                   </div>
                 </ng-container>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        </nz-collapse-panel>
-      </nz-collapse>
+          </nz-collapse-panel>
+        </nz-collapse>
+      </ng-container>
       
       <!-- Hiển thị khi không có phòng -->
-      <div class="empty-state" *ngIf="rooms.length === 0 && !isLoading">
+      <div class="empty-state" *ngIf="rooms.length === 0 && !isRoomsLoading">
         <nz-empty 
           [nzNotFoundContent]="selectedHotelId ? ('ROOM.NO_ROOMS_FOUND' | translate) : ('ROOM.SELECT_HOTEL' | translate)"
           [nzNotFoundImage]="'simple'">
