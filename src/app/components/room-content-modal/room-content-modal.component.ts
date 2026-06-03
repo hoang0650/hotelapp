@@ -3880,7 +3880,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       phone: guestInfo.phone || '',
       email: guestInfo.email || '',
       address: guestInfo.address || '',
-      guestSource: guestSourceValue || 'walkin' // Sử dụng giá trị từ form control
+      guestSource: guestSource
     };
     
     console.log('Updated guestInfo for save:', updatedGuestInfo);
@@ -3888,12 +3888,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     let checkinData: any = {
       roomId: this.roomData._id,
       roomNumber: this.roomData.roomNumber,
-      checkinTime: new Date(),
+      checkinTime: (this.listData && this.listData.length > 0 && this.listData[0]?.checkinTime)
+        ? this.listData[0].checkinTime
+        : new Date(),
       guestInfo: updatedGuestInfo,
       advancePayment: advancePayment,
       advancePaymentMethod: advancePaymentMethod,
       rateType: rateType,
-      notes: notes
+      notes: notes,
+      additionalCharges: additionalCharges,
+      discount: discount,
+      selectedServices: this.selectedServices || []
     };
 
     // Lưu vào Redis
@@ -3907,283 +3912,94 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     const previousAdvancePayment = (this.listData && this.listData.length > 0) ? (Number(this.listData[0].advancePayment) || 0) : 0;
 
-    // Cập nhật vào room.events nếu có event checkin (chỉ lấy event chưa checkout)
-    if (this.roomData.events && this.roomData.events.length > 0) {
-      const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
-      if (checkinEvents.length > 0) {
-        // Cập nhật event checkin với thông tin mới qua API (bao gồm rateType, additionalCharges, discount, selectedServices)
-        this.roomsService.updateRoomCheckinInfo(
-          this.roomData._id,
-          updatedGuestInfo,
-          advancePayment,
-          rateType,
-          additionalCharges,
-          discount,
-          this.selectedServices,
-          advancePaymentMethod,
-          notes
-        ).subscribe({
-          next: (response) => {
-            console.log('Update checkin info response:', response);
-            this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
+    this.roomsService.updateRoomCheckinInfo(
+      this.roomData._id,
+      updatedGuestInfo,
+      advancePayment,
+      rateType,
+      additionalCharges,
+      discount,
+      this.selectedServices,
+      advancePaymentMethod,
+      notes
+    ).subscribe({
+      next: (response) => {
+        console.log('Update checkin info response:', response);
+        this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
 
-            this.initialNotes = notes;
-            
-            this.createAdvancePaymentIncomeIfNeeded(advancePayment, previousAdvancePayment, advancePaymentMethod, updatedGuestInfo);
-            this.isSaving = false;
-            
-            // Đóng modal sau khi lưu thành công
-            if (this.modalRef) {
-              setTimeout(() => {
-                this.modalRef.close();
-              }, 500); // Đợi 500ms để user thấy thông báo thành công
-            }
-            
-            // Dữ liệu đã được lưu vào RoomEvent qua backend, không cần cập nhật session nữa
-            
-            // Cập nhật listData ngay lập tức để hiển thị (bao gồm rateType, additionalCharges, discount)
-            if (this.listData && this.listData.length > 0) {
-              this.listData[0].guestInfo = updatedGuestInfo;
-              this.listData[0].advancePayment = advancePayment;
-              this.listData[0].advancePaymentMethod = advancePaymentMethod;
-              this.listData[0].rateType = rateType;
-              this.listData[0].additionalCharges = additionalCharges;
-              this.listData[0].discount = discount;
-              this.listData[0].notes = notes;
-              this.advancePayment = advancePayment;
-              console.log('Updated listData:', this.listData[0]);
-            }
-            
-            // Cập nhật lại initialCharges và initialDiscount để khi mở lại modal sẽ load đúng giá trị mới (đã bao gồm cả lần nhập trước)
-            this.initialCharges = additionalCharges;
-            this.initialDiscount = discount;
-            
-            // Cập nhật form với dữ liệu mới (bao gồm guestSource và rateType)
-            const updatedGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
-            if (updatedGuestInfoFormGroup) {
-              // Enable form group trước khi patchValue
-              if (updatedGuestInfoFormGroup.disabled) {
-                updatedGuestInfoFormGroup.enable();
-              }
-              
-              // Patch từng field riêng
-              updatedGuestInfoFormGroup.patchValue({
-                name: updatedGuestInfo.name,
-                idNumber: updatedGuestInfo.idNumber,
-                tax_code: updatedGuestInfo.tax_code || '',
-                phone: updatedGuestInfo.phone,
-                email: updatedGuestInfo.email,
-                address: updatedGuestInfo.address
-              }, { emitEvent: false });
-              
-              // Set guestSource riêng
-              const guestSourceControl = updatedGuestInfoFormGroup.get('guestSource');
-              if (guestSourceControl) {
-                guestSourceControl.setValue(updatedGuestInfo.guestSource, { emitEvent: true });
-                console.log('Updated form guestSource set to:', updatedGuestInfo.guestSource);
-              }
-            }
-            
-            // Cập nhật rateType trong form
-            this.checkOutForm.patchValue({
-              advancePayment: advancePayment,
-              rateType: rateType // Cập nhật rateType trong form
-            }, { emitEvent: false }); // Không emit event để tránh trigger calculateTotalPrice nhiều lần
-            
-            console.log('Updated form values:', this.checkOutForm.value);
-            console.log('Updated guestSource:', updatedGuestInfo.guestSource);
-            console.log('Updated rateType:', rateType);
-            
-            // Tính lại tiền sau khi lưu (vì rateType có thể đã thay đổi)
-            setTimeout(() => {
-              this.calculateTotalPrice();
-            }, 100);
-            
-            // Reload lại room từ API để đảm bảo dữ liệu đồng bộ
-            // excludeCheckedOut = true: chỉ lấy check-in events chưa checkout
-            setTimeout(() => {
-              this.roomsService.getRoomById(this.roomData._id, { 
-                limit: 1000,
-                excludeCheckedOut: true // Chỉ lấy check-in events chưa checkout
-              }).subscribe({
-                next: (updatedRoom) => {
-                  this.roomData = updatedRoom;
-                  
-                  // Thông báo cho room.component để reload
-                  this.roomsService.notifyRoomDataUpdated();
-                  
-                  // Reload lại dữ liệu từ room mới
-                  if (this.roomData.events && this.roomData.events.length > 0) {
-                    // Sắp xếp events theo thời gian để lấy event checkin mới nhất
-                    // Lọc các event check-in CHƯA CHECKOUT (chưa có event checkout tương ứng)
-                    const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
-                    
-                    if (checkinEvents.length > 0) {
-                      const lastCheckin = checkinEvents[0];
-                      
-                      console.log('Reloading unchecked out checkin event:', {
-                        checkinTime: lastCheckin.checkinTime,
-                        guestInfo: lastCheckin.guestInfo
-                      });
-                      
-                      // Log để debug
-                      console.log('Reloading from backend - lastCheckin:', {
-                        lastCheckin: lastCheckin,
-                        guestInfo: lastCheckin.guestInfo,
-                        guestSource: lastCheckin.guestInfo?.guestSource,
-                        fullEvent: JSON.stringify(lastCheckin, null, 2)
-                      });
-                      
-                      // Cập nhật listData với dữ liệu từ backend (bao gồm rateType, selectedServices, expectedCheckoutTime)
-                      this.listData = [{
-                        checkinTime: lastCheckin.checkinTime,
-                        rateType: lastCheckin.rateType || rateType || 'hourly', // Ưu tiên từ backend, nếu không có thì dùng rateType đã lưu
-                        advancePayment: lastCheckin.advancePayment || 0,
-                        advancePaymentMethod: lastCheckin.advancePaymentMethod || 'cash',
-                        guestInfo: lastCheckin.guestInfo || { name: 'Khách lẻ' },
-                        additionalCharges: lastCheckin.additionalCharges || this.initialCharges || 0,
-                        discount: lastCheckin.discount || this.initialDiscount || 0,
-                        selectedServices: lastCheckin.selectedServices || [],
-                        expectedCheckoutTime: lastCheckin.expectedCheckoutTime,
-                        transferredFrom: lastCheckin.transferredFrom,
-                        transferredAt: lastCheckin.transferredAt,
-                        notes: lastCheckin.notes || this.initialNotes || ''
-                      }];
-                      
-                      // Cập nhật form với dữ liệu từ backend (bao gồm guestSource)
-                      const reloadedGuestInfo = lastCheckin.guestInfo || { name: 'Khách lẻ' };
-                      
-                      // Patch trực tiếp vào nested form group để đảm bảo guestSource được patch đúng
-                      const reloadedGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
-                      if (reloadedGuestInfoFormGroup) {
-                        // Enable form group trước khi patchValue
-                        if (reloadedGuestInfoFormGroup.disabled) {
-                          reloadedGuestInfoFormGroup.enable();
-                        }
-                        
-                        // Patch từng field riêng (KHÔNG dùng || 'walkin' để không override giá trị đúng)
-                        reloadedGuestInfoFormGroup.patchValue({
-                          name: reloadedGuestInfo.name || 'Khách lẻ',
-                          idNumber: reloadedGuestInfo.idNumber || '',
-                          tax_code: reloadedGuestInfo.tax_code || '',
-                          phone: reloadedGuestInfo.phone || '',
-                          email: reloadedGuestInfo.email || '',
-                          address: reloadedGuestInfo.address || ''
-                        }, { emitEvent: false });
-                        
-                        // Set guestSource riêng - ưu tiên giá trị từ backend, nếu không có thì giữ giá trị hiện tại
-                        const guestSourceControl = reloadedGuestInfoFormGroup.get('guestSource');
-                        if (guestSourceControl) {
-                          // Lấy giá trị hiện tại trước khi patch
-                          const currentGuestSource = guestSourceControl.value;
-                          const backendGuestSource = reloadedGuestInfo.guestSource;
-                          
-                          // Logic: Nếu backend có guestSource và khác rỗng, dùng nó
-                          // Nếu không, giữ giá trị hiện tại (không reset về 'walkin')
-                          let finalGuestSource = currentGuestSource || 'walkin';
-                          if (backendGuestSource && backendGuestSource.trim() !== '') {
-                            finalGuestSource = backendGuestSource;
-                          }
-                          
-                          guestSourceControl.setValue(finalGuestSource, { emitEvent: true });
-                          console.log('Reloaded form guestSource:', {
-                            backendGuestSource: backendGuestSource,
-                            currentGuestSource: currentGuestSource,
-                            finalGuestSource: finalGuestSource,
-                            reloadedGuestInfoFull: reloadedGuestInfo
-                          });
-                        }
-                        
-                        console.log('Reloaded form guestInfo after patchValue:', reloadedGuestInfoFormGroup.value);
-                      }
-                      
-                      // Cập nhật rateType trong form nếu có
-                      const reloadedRateType = lastCheckin.rateType || rateType || 'hourly';
-                      this.checkOutForm.patchValue({
-                        advancePayment: lastCheckin.advancePayment || 0,
-                        advancePaymentMethod: lastCheckin.advancePaymentMethod || 'cash',
-                        rateType: reloadedRateType, // Cập nhật rateType trong form
-                        additionalCharges: lastCheckin.additionalCharges || 0,
-                        discount: lastCheckin.discount || 0,
-                        notes: lastCheckin.notes || ''
-                      }, { emitEvent: false }); // Không emit event để tránh trigger calculateTotalPrice nhiều lần
-                      console.log('Reloaded form with guestSource from backend:', reloadedGuestInfo.guestSource);
-                      console.log('Reloaded form with rateType from backend:', reloadedRateType);
-                      console.log('Reloaded form with selectedServices from backend:', lastCheckin.selectedServices);
-                      console.log('Reloaded form with expectedCheckoutTime from backend:', lastCheckin.expectedCheckoutTime);
-                      
-                      this.advancePayment = lastCheckin.advancePayment || 0;
-                      
-                      // Cập nhật selectedServices nếu có
-                      if (lastCheckin.selectedServices && Array.isArray(lastCheckin.selectedServices) && lastCheckin.selectedServices.length > 0) {
-                        // Có thể cần cập nhật selectedServices trong component nếu có property này
-                        console.log('Reloaded selectedServices:', lastCheckin.selectedServices);
-                      }
-                      
-                      // Tính lại tiền sau khi reload (vì rateType có thể đã thay đổi)
-                      setTimeout(() => {
-                        this.calculateTotalPrice();
-                      }, 100);
-                      
-                      // Trigger change detection
-                      this.checkOutForm.markAsDirty();
-                    }
-                  }
-                  
-                  this.roomsService.notifyRoomDataUpdated();
-                },
-                error: (err) => {
-                  console.error('Error reloading room:', err);
-                  this.roomsService.notifyRoomDataUpdated();
-                }
-              });
-            }, 500); // Đợi 500ms để đảm bảo backend đã lưu xong
-          },
-          error: (err) => {
-            console.error('Error updating checkin info:', err);
-            this.message.warning('Lỗi khi cập nhật backend: ' + (err.error?.message || err.message));
-            this.isSaving = false;
-            
-            // Không cập nhật session nữa, dữ liệu đã được lưu vào RoomEvent qua backend
-            
-            // Cập nhật listData để hiển thị thông tin mới
-            if (this.listData && this.listData.length > 0) {
-              this.listData[0].guestInfo = updatedGuestInfo;
-              this.listData[0].advancePayment = advancePayment;
-              this.advancePayment = advancePayment;
-            }
-            
-            // Cập nhật form
-            this.checkOutForm.patchValue({
-              guestInfo: updatedGuestInfo,
-              advancePayment: advancePayment
-            });
+        this.initialNotes = notes;
+        this.createAdvancePaymentIncomeIfNeeded(advancePayment, previousAdvancePayment, advancePaymentMethod, updatedGuestInfo);
+        this.isSaving = false;
+
+        if (this.modalRef) {
+          setTimeout(() => {
+            this.modalRef.close();
+          }, 500);
+        }
+
+        if (this.listData && this.listData.length > 0) {
+          this.listData[0].guestInfo = updatedGuestInfo;
+          this.listData[0].advancePayment = advancePayment;
+          this.listData[0].advancePaymentMethod = advancePaymentMethod;
+          this.listData[0].rateType = rateType;
+          this.listData[0].additionalCharges = additionalCharges;
+          this.listData[0].discount = discount;
+          this.listData[0].notes = notes;
+          this.advancePayment = advancePayment;
+        }
+
+        this.initialCharges = additionalCharges;
+        this.initialDiscount = discount;
+
+        const updatedGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
+        if (updatedGuestInfoFormGroup) {
+          if (updatedGuestInfoFormGroup.disabled) {
+            updatedGuestInfoFormGroup.enable();
           }
-        });
-        return;
-      }
-    }
-    
-    // Nếu không có event checkin, vẫn tạo phiếu thu trả trước theo phần chênh lệch
-    this.createAdvancePaymentIncomeIfNeeded(advancePayment, previousAdvancePayment, advancePaymentMethod, updatedGuestInfo);
+          updatedGuestInfoFormGroup.patchValue({
+            name: updatedGuestInfo.name,
+            idNumber: updatedGuestInfo.idNumber,
+            tax_code: updatedGuestInfo.tax_code || '',
+            phone: updatedGuestInfo.phone,
+            email: updatedGuestInfo.email,
+            address: updatedGuestInfo.address
+          }, { emitEvent: false });
+          const updatedGuestSourceControl = updatedGuestInfoFormGroup.get('guestSource');
+          if (updatedGuestSourceControl) {
+            updatedGuestSourceControl.setValue(updatedGuestInfo.guestSource, { emitEvent: true });
+          }
+        }
 
-    // Nếu không có event checkin, chỉ lưu qua Redis session API
-    this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
-    this.isSaving = false;
-    
-    // Không cập nhật session nữa, dữ liệu sẽ được lưu vào RoomEvent khi có check-in event
-    
-    // Cập nhật listData để hiển thị thông tin mới
-    if (this.listData && this.listData.length > 0) {
-      this.listData[0].guestInfo = updatedGuestInfo;
-      this.listData[0].advancePayment = advancePayment;
-      this.advancePayment = advancePayment;
-    }
-    
-    // Cập nhật form
-    this.checkOutForm.patchValue({
-      guestInfo: updatedGuestInfo,
-      advancePayment: advancePayment
+        this.checkOutForm.patchValue({
+          advancePayment: advancePayment,
+          rateType: rateType
+        }, { emitEvent: false });
+
+        setTimeout(() => {
+          this.calculateTotalPrice();
+        }, 100);
+
+        setTimeout(() => {
+          this.roomsService.getRoomById(this.roomData._id, {
+            limit: 1000,
+            excludeCheckedOut: true
+          }).subscribe({
+            next: (updatedRoom) => {
+              this.roomData = updatedRoom;
+              this.roomsService.notifyRoomDataUpdated();
+            },
+            error: (err) => {
+              console.error('Error reloading room:', err);
+              this.roomsService.notifyRoomDataUpdated();
+            }
+          });
+        }, 300);
+      },
+      error: (err) => {
+        console.error('Error updating checkin info:', err);
+        this.message.warning('Lỗi khi cập nhật backend: ' + (err.error?.message || err.message));
+        this.isSaving = false;
+      }
     });
   }
 

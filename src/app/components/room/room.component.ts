@@ -746,6 +746,9 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.updateCachedRoomCounts();
           this.isReloading = false;
           
+          // Prefetch giá phòng cho phòng đang có khách để hiển thị tổng tiền/còn thu chính xác
+          this.prefetchRoomPricesForOccupiedRooms();
+
           // Fetch events cho các phòng đang occupied và booked
           this.loadEventsForOccupiedRooms();
         },
@@ -784,6 +787,9 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.isReloading = false;
         
+        // Prefetch giá phòng cho phòng đang có khách để hiển thị tổng tiền/còn thu chính xác
+        this.prefetchRoomPricesForOccupiedRooms();
+
         // Fetch events cho các phòng đang occupied và booked để hiển thị thông tin
         this.loadEventsForOccupiedRooms();
         
@@ -1662,7 +1668,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (totalAmount === 0) {
       totalAmount = checkinInfo.roomPrice + checkinInfo.additionalCharges + checkinInfo.serviceAmount;
     }
-    const remainingAmount = Math.max(0, totalAmount - checkinInfo.advancePayment - checkinInfo.discount);
+    const remainingAmount = totalAmount - checkinInfo.advancePayment - checkinInfo.discount;
     
     return {
       checkinTime: checkinTimeStr,
@@ -1688,6 +1694,46 @@ export class RoomComponent implements OnInit, OnDestroy {
     return parsed;
   }
 
+  private prefetchRoomPricesForOccupiedRooms(): void {
+    const occupiedRooms = this.rooms.filter(r => r && r._id && r.status === 'occupied');
+    if (occupiedRooms.length === 0) return;
+
+    occupiedRooms.forEach(room => {
+      const events = (room as any).events;
+      if (!events || !Array.isArray(events) || events.length === 0) return;
+      const checkinEvent = events.find((e: any) => e && e.type === 'checkin');
+      if (!checkinEvent) return;
+      const checkinTime = this.getEventCheckinTime(checkinEvent);
+      if (!checkinTime) return;
+      this.loadRoomPriceFromAPI(room, checkinEvent);
+    });
+  }
+
+  private normalizeMoneyValue(value: any): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    if (Array.isArray(value)) {
+      return value.reduce((sum, item) => {
+        if (!item) return sum;
+        const amountCandidate =
+          (item.amount !== undefined ? item.amount : undefined) ??
+          (item.totalPrice !== undefined ? item.totalPrice : undefined) ??
+          (item.price !== undefined && item.quantity !== undefined ? (Number(item.price) || 0) * (Number(item.quantity) || 0) : undefined);
+        return sum + (Number(amountCandidate) || 0);
+      }, 0);
+    }
+    if (typeof value === 'object') {
+      if (value.amount !== undefined) return Number(value.amount) || 0;
+      if (value.totalPrice !== undefined) return Number(value.totalPrice) || 0;
+      return 0;
+    }
+    return 0;
+  }
+
   private hydrateSyntheticEventsFromCurrentBooking(rooms: Room[]): Room[] {
     return rooms.map((room: any) => {
       if (!room || !room._id) return room;
@@ -1706,6 +1752,8 @@ export class RoomComponent implements OnInit, OnDestroy {
           currentBooking.checkInDate ||
           null;
         const selectedServices = currentBooking.selectedServices || currentBooking.services || [];
+        const additionalCharges = this.normalizeMoneyValue(currentBooking.additionalCharges);
+        const discount = this.normalizeMoneyValue(currentBooking.discount ?? currentBooking.discounts);
 
         return {
           ...room,
@@ -1719,8 +1767,8 @@ export class RoomComponent implements OnInit, OnDestroy {
               rateType: currentBooking.rateType || 'hourly',
               advancePayment: currentBooking.advancePayment || 0,
               advancePaymentMethod: currentBooking.advancePaymentMethod,
-              additionalCharges: currentBooking.additionalCharges || 0,
-              discount: currentBooking.discount || 0,
+              additionalCharges: additionalCharges,
+              discount: discount,
               selectedServices: selectedServices,
               paymentMethod: currentBooking.paymentMethod,
               notes: currentBooking.notes,
@@ -2105,8 +2153,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       roomPrice += this.calculateEarlyLateSurcharge(checkinTime, rateType, room);
 
       const advancePayment = Number(session.advancePayment || 0) || 0;
-      const additionalCharges = Number(session.additionalCharges || 0) || 0;
-      const discount = Number(session.discount || 0) || 0;
+      const additionalCharges = this.normalizeMoneyValue(session.additionalCharges);
+      const discount = this.normalizeMoneyValue(session.discount);
 
       const guestName = (session.guestInfo?.name && session.guestInfo.name !== 'Khách lẻ')
         ? session.guestInfo.name
@@ -2120,8 +2168,8 @@ export class RoomComponent implements OnInit, OnDestroy {
         return sum + v;
       }, 0);
 
-      const totalAmount = Math.max(0, roomPrice + additionalCharges + serviceAmount - discount - advancePayment);
-      const remainingAmount = totalAmount;
+      const totalAmount = Math.max(0, roomPrice + additionalCharges + serviceAmount);
+      const remainingAmount = totalAmount - advancePayment - discount;
 
       return {
         guestName: guestName,
@@ -2284,29 +2332,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     
     // Lấy phụ thu từ event (đồng bộ với room-content-modal)
     // Lấy từ RoomEvent collection (không phải từ room.events trong rooms.js)
-    let additionalCharges = 0;
-    if (lastCheckin.additionalCharges !== undefined && lastCheckin.additionalCharges !== null) {
-      additionalCharges = typeof lastCheckin.additionalCharges === 'number' 
-        ? lastCheckin.additionalCharges 
-        : Number(lastCheckin.additionalCharges) || 0;
-    }
+    const additionalCharges = this.normalizeMoneyValue(lastCheckin.additionalCharges);
     
     // Lấy chiết khấu nếu có, mặc định = 0 (đồng bộ với room-content-modal)
     // Lấy từ RoomEvent collection (không phải từ room.events trong rooms.js)
-    const discount = lastCheckin.discount !== undefined && lastCheckin.discount !== null
-      ? (typeof lastCheckin.discount === 'number'
-        ? lastCheckin.discount
-        : Number(lastCheckin.discount) || 0)
-      : 0;
+    const discount = this.normalizeMoneyValue(lastCheckin.discount);
     
-    // Công thức mới:
-    // Tổng tiền = tiền phòng + phụ thu + tiền dịch vụ (KHÔNG trừ khuyến mãi và đặt trước)
-    // ĐỒNG BỘ: Công thức này phải khớp với room-content-modal.component.ts:
-    // totalPrice = roomPrice + totalAdditionalCharges + serviceTotal
-    // Trong đó: totalAdditionalCharges = initialCharges + checkoutCharges
-    // Khi chưa checkout: checkoutCharges = 0, nên totalAdditionalCharges = initialCharges = additionalCharges
-    const totalAmount = Math.max(0, roomPrice + additionalCharges + serviceAmount - discount - advancePayment);
-    const remainingAmount = totalAmount;
+    const totalAmount = Math.max(0, roomPrice + additionalCharges + serviceAmount);
+    const remainingAmount = totalAmount - advancePayment - discount;
     // Lấy thông tin chuyển phòng từ nhiều nguồn
     let transferredFrom: string | undefined = undefined;
     let transferredAt: Date | undefined = undefined;
