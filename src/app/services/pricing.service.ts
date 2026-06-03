@@ -14,6 +14,11 @@ export interface PricingPackage {
   permissions: string[];
   maxUsers: number;
   maxRooms?: number;
+  isContactOnly?: boolean;
+  contactLabel?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactUrl?: string;
   isActive: boolean;
 }
 

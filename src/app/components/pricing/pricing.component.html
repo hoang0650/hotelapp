@@ -54,12 +54,17 @@
         <div class="plan-header">
           <h2 nz-tooltip [nzTooltipTitle]="package.name" class="package-name">{{ package.name }}</h2>
           <div class="price">
-            <span class="amount">{{ formatPrice(getPackagePrice(package)) }}</span>
-            <span class="period">/{{ billingType === 'yearly' ? 'năm' : 'tháng' }}</span>
+            <ng-container *ngIf="!package.isContactOnly; else contactOnlyPrice">
+              <span class="amount">{{ formatPrice(getPackagePrice(package)) }}</span>
+              <span class="period">/{{ billingType === 'yearly' ? 'năm' : 'tháng' }}</span>
+            </ng-container>
+            <ng-template #contactOnlyPrice>
+              <span class="amount">{{ package.contactLabel || 'Liên hệ' }}</span>
+            </ng-template>
           </div>
           
           <!-- Hiển thị giá gốc và tiết kiệm khi chọn năm -->
-          <div *ngIf="billingType === 'yearly' && getSavingsPercentage(package) > 0" class="savings-info">
+          <div *ngIf="!package.isContactOnly && billingType === 'yearly' && getSavingsPercentage(package) > 0" class="savings-info">
             <p class="savings">
               <i nz-icon nzType="check-circle" nzTheme="fill"></i>
               Tiết kiệm {{ getSavingsPercentage(package) }}% 
@@ -71,7 +76,7 @@
           </div>
           
           <!-- Hiển thị giá tháng khi chọn tháng -->
-          <div *ngIf="billingType === 'monthly'" class="billing-monthly-note">
+          <div *ngIf="!package.isContactOnly && billingType === 'monthly'" class="billing-monthly-note">
             <p>
               Thanh toán hàng tháng
             </p>
@@ -104,8 +109,15 @@
         </div>
 
         <div class="plan-footer">
-          <ng-container *ngIf="userId; else loginButton">
-            <ng-container *ngIf="isCurrentPackage(package._id || package.id); else subscribeButton">
+          <ng-container *ngIf="package.isContactOnly; else normalPlanActions">
+            <button nz-button nzType="primary" (click)="contactPackage(package)" [disabled]="loading">
+              Liên hệ
+            </button>
+          </ng-container>
+
+          <ng-template #normalPlanActions>
+            <ng-container *ngIf="userId; else loginButton">
+              <ng-container *ngIf="isCurrentPackage(package._id || package.id); else subscribeButton">
               <button
                 nz-button
                 nzType="primary"
@@ -124,7 +136,7 @@
               <p *ngIf="currentPackage?.maxRooms !== undefined">
                 Số phòng: {{ (currentPackage.maxRooms === 0 || currentPackage.maxRooms === null) ? 'Không giới hạn' : (currentPackage.maxRooms + ' phòng') }}
               </p>
-            </ng-container>
+              </ng-container>
             <ng-template #subscribeButton>
               <!-- Hiển thị nút thanh toán nếu đã chọn gói này -->
               <ng-container *ngIf="selectedPackage && (selectedPackage.packageId === (package._id || package.id)); else selectPackageButton">
@@ -202,10 +214,11 @@
                 </p>
               </ng-template>
             </ng-template>
-          </ng-container>
-          <ng-template #loginButton>
-            <button nz-button nzType="primary" (click)="redirectToLogin()">Đăng nhập để đăng ký gói</button>
-            <p class="package-billing-hint">Bạn có thể xem thông tin gói mà không cần đăng nhập</p>
+            </ng-container>
+            <ng-template #loginButton>
+              <button nz-button nzType="primary" (click)="redirectToLogin()">Đăng nhập để đăng ký gói</button>
+              <p class="package-billing-hint">Bạn có thể xem thông tin gói mà không cần đăng nhập</p>
+            </ng-template>
           </ng-template>
         </div>
       </div>

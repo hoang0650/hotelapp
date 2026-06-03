@@ -968,6 +968,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   isFreePackage(pkg: any): boolean {
+    if (pkg?.isContactOnly) return false;
     return pkg?.name?.toUpperCase() === 'FREE' || pkg?.id === 'free' || pkg?._id === 'free';
   }
 
@@ -1008,7 +1009,10 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     { value: 'email_admin', label: 'Quản lý email' },
     { value: 'qr_payment', label: 'Thanh toán QR' },
     { value: 'visa_payment', label: 'Thanh toán Visa' },
-    { value: 'electric_management', label: 'Quản lý điện' }
+    { value: 'electric_management', label: 'Quản lý điện' },
+    { value: 'fanpage_messages', label: 'Tin nhắn Fanpage' },
+    { value: 'zalo_messages', label: 'Tin nhắn Zalo' },
+    { value: 'telegram_messages', label: 'Tin nhắn Telegram' }
   ];
 
   getFeatureText(feature: any): string {
@@ -1039,6 +1043,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getPackagePrice(pkg: any): number {
+    if (pkg?.isContactOnly) return 0;
     if (this.billingType === 'yearly') {
       // Khi chọn năm, hiển thị giá năm (đã áp dụng discount)
       const yearlyPrice = pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0);
@@ -1048,6 +1053,32 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       // Khi chọn tháng, hiển thị giá tháng
       return pkg.monthlyPrice || pkg.price || 0;
     }
+  }
+
+  contactPackage(pkg: any): void {
+    const phone = (pkg?.contactPhone || '').toString().trim();
+    const email = (pkg?.contactEmail || '').toString().trim();
+    const url = (pkg?.contactUrl || '').toString().trim();
+
+    if (url) {
+      window.open(url, '_blank');
+      return;
+    }
+    if (phone) {
+      window.open(`tel:${phone}`, '_self');
+      return;
+    }
+    if (email) {
+      window.open(`mailto:${email}`, '_self');
+      return;
+    }
+
+    this.modal.info({
+      nzTitle: pkg?.contactLabel || 'Liên hệ',
+      nzContent: 'Vui lòng liên hệ để được tư vấn gói này.',
+      nzOkText: 'Đóng',
+      nzMaskClosable: true
+    });
   }
 
   /**

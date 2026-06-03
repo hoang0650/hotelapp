@@ -18,6 +18,11 @@ interface PricingPackage {
   duration: number;
   features: string[];
   maxUsers: number | null; // 0 hoặc null = không giới hạn
+  isContactOnly?: boolean;
+  contactLabel?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactUrl?: string;
   qrPaymentFeature?: boolean; // Tính năng QR thanh toán
   otaManagementFeature?: boolean; // Tính năng quản lý OTA
   emailManagementFeature?: boolean; // Tính năng quản lý email
@@ -155,6 +160,11 @@ export class PricingManagementComponent implements OnInit {
       monthlyPrice: [0, [Validators.required, Validators.min(0)]],
       yearlyPrice: [0, [Validators.required, Validators.min(0)]],
       yearlyDiscount: [0, [Validators.min(0), Validators.max(100)]],
+      isContactOnly: [false],
+      contactLabel: [''],
+      contactPhone: [''],
+      contactEmail: [''],
+      contactUrl: [''],
       duration: [1, [Validators.required, Validators.min(1)]], // Giữ lại để tương thích
       monthlyDuration: [1, [Validators.required, Validators.min(1)]], // Thời hạn gói tháng (tháng)
       yearlyDuration: [12, [Validators.required, Validators.min(1)]], // Thời hạn gói năm (tháng)
@@ -175,6 +185,38 @@ export class PricingManagementComponent implements OnInit {
       aiChatboxFeature: [false], // Tính năng AI Chatbox
       hotelNotificationFeature: [false], // Tính năng thông báo khách sạn
       isActive: [true]
+    });
+
+    this.packageForm.get('isContactOnly')?.valueChanges.subscribe((isContactOnly) => {
+      const monthlyPriceCtrl = this.packageForm.get('monthlyPrice');
+      const yearlyPriceCtrl = this.packageForm.get('yearlyPrice');
+      const yearlyDiscountCtrl = this.packageForm.get('yearlyDiscount');
+
+      if (isContactOnly) {
+        monthlyPriceCtrl?.setValue(0, { emitEvent: false });
+        yearlyPriceCtrl?.setValue(0, { emitEvent: false });
+        yearlyDiscountCtrl?.setValue(0, { emitEvent: false });
+
+        monthlyPriceCtrl?.clearValidators();
+        yearlyPriceCtrl?.clearValidators();
+        yearlyDiscountCtrl?.clearValidators();
+
+        monthlyPriceCtrl?.disable({ emitEvent: false });
+        yearlyPriceCtrl?.disable({ emitEvent: false });
+        yearlyDiscountCtrl?.disable({ emitEvent: false });
+      } else {
+        monthlyPriceCtrl?.enable({ emitEvent: false });
+        yearlyPriceCtrl?.enable({ emitEvent: false });
+        yearlyDiscountCtrl?.enable({ emitEvent: false });
+
+        monthlyPriceCtrl?.setValidators([Validators.required, Validators.min(0)]);
+        yearlyPriceCtrl?.setValidators([Validators.required, Validators.min(0)]);
+        yearlyDiscountCtrl?.setValidators([Validators.min(0), Validators.max(100)]);
+      }
+
+      monthlyPriceCtrl?.updateValueAndValidity({ emitEvent: false });
+      yearlyPriceCtrl?.updateValueAndValidity({ emitEvent: false });
+      yearlyDiscountCtrl?.updateValueAndValidity({ emitEvent: false });
     });
     
     // Theo dõi thay đổi của unlimitedUsers
@@ -251,8 +293,10 @@ export class PricingManagementComponent implements OnInit {
         // Đánh dấu gói free (giá = 0) bằng cách thêm flag isFree
         this.packages = this.packages.map((pkg: any) => ({
           ...pkg,
-          isFree: (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) || 
-                  (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
+          isFree: !pkg.isContactOnly && (
+            (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) ||
+            (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
+          )
         }));
         
         this.loading = false;
@@ -322,6 +366,11 @@ export class PricingManagementComponent implements OnInit {
           monthlyPrice: pkg.monthlyPrice || pkg.price || 0,
           yearlyPrice: pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0),
           yearlyDiscount: pkg.yearlyDiscount || 0,
+          isContactOnly: !!pkg.isContactOnly,
+          contactLabel: pkg.contactLabel || '',
+          contactPhone: pkg.contactPhone || '',
+          contactEmail: pkg.contactEmail || '',
+          contactUrl: pkg.contactUrl || '',
           duration: pkg.duration || 1, // Giữ lại để tương thích
           monthlyDuration: pkg.monthlyDuration || pkg.duration || 1, // Thời hạn gói tháng
           yearlyDuration: pkg.yearlyDuration || pkg.duration || 12, // Thời hạn gói năm
@@ -342,6 +391,7 @@ export class PricingManagementComponent implements OnInit {
           draftInvoiceFeature: pkg.draftInvoiceFeature || false,
           exportInvoiceFeature: pkg.exportInvoiceFeature || false,
           aiChatboxFeature: pkg.aiChatboxFeature || false,
+          hotelNotificationFeature: pkg.hotelNotificationFeature || false,
           isActive: pkg.isActive
         });
         // Bật checkbox cho admin (để người dùng có thể chuyển trạng thái không giới hạn)
@@ -356,6 +406,11 @@ export class PricingManagementComponent implements OnInit {
         monthlyPrice: 0,
         yearlyPrice: 0,
         yearlyDiscount: 0,
+        isContactOnly: false,
+        contactLabel: '',
+        contactPhone: '',
+        contactEmail: '',
+        contactUrl: '',
         duration: 1, // Giữ lại để tương thích
         monthlyDuration: 1, // Thời hạn gói tháng
         yearlyDuration: 12, // Thời hạn gói năm
@@ -394,6 +449,11 @@ export class PricingManagementComponent implements OnInit {
       monthlyPrice: 0,
       yearlyPrice: 0,
       yearlyDiscount: 0,
+      isContactOnly: false,
+      contactLabel: '',
+      contactPhone: '',
+      contactEmail: '',
+      contactUrl: '',
       duration: 1, // Giữ lại để tương thích
       monthlyDuration: 1, // Thời hạn gói tháng
       yearlyDuration: 12, // Thời hạn gói năm
@@ -467,6 +527,9 @@ export class PricingManagementComponent implements OnInit {
 
       const payload: any = {
         ...formData,
+        monthlyPrice: formData.isContactOnly ? 0 : formData.monthlyPrice,
+        yearlyPrice: formData.isContactOnly ? 0 : formData.yearlyPrice,
+        yearlyDiscount: formData.isContactOnly ? 0 : formData.yearlyDiscount,
         maxUsers: maxUsers,
         maxRooms: maxRooms,
         features: formData.features || [],
@@ -604,6 +667,29 @@ export class PricingManagementComponent implements OnInit {
       style: 'currency',
       currency: 'VND'
     }).format(value);
+  }
+
+  contactPackage(pkg: any): void {
+    const label = (pkg?.contactLabel || 'Liên hệ').toString().trim();
+    const phone = (pkg?.contactPhone || '').toString().trim();
+    const email = (pkg?.contactEmail || '').toString().trim();
+    const url = (pkg?.contactUrl || '').toString().trim();
+
+    if (url) {
+      window.open(url, '_blank');
+      return;
+    }
+
+    const lines: string[] = [];
+    if (phone) lines.push(`SĐT: ${phone}`);
+    if (email) lines.push(`Email: ${email}`);
+
+    this.modal.info({
+      nzTitle: label,
+      nzContent: lines.length > 0 ? lines.join('<br/>') : 'Vui lòng liên hệ để được tư vấn gói này.',
+      nzOkText: 'Đóng',
+      nzMaskClosable: true
+    });
   }
 
   onAdminSubscribe(packageId: string) {
