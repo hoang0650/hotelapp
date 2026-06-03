@@ -126,15 +126,17 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
   }
 
   get canCreateBusiness(): boolean {
-    // Chỉ admin mới có thể tạo business mới
-    // Business KHÔNG thể tạo doanh nghiệp
-    return this.isAdmin;
+    if (this.isAdmin) return true;
+    if (this.isBusiness) {
+      return !this.currentUser?.businessId;
+    }
+    return false;
   }
 
   get canEditBusiness(): boolean {
-    // Chỉ admin mới có thể sửa business
-    // Business KHÔNG thể cập nhật doanh nghiệp, chỉ xem
-    return this.isAdmin;
+    if (this.isAdmin) return true;
+    if (this.isBusiness) return true;
+    return false;
   }
 
   /**

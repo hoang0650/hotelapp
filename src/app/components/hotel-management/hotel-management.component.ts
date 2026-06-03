@@ -161,14 +161,11 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
   }
 
   get canCreateHotel(): boolean {
-    // Chỉ admin mới có thể tạo hotel mới
-    // Business KHÔNG thể tạo khách sạn, chỉ xem
-    return this.isAdmin;
+    return this.isAdmin || this.isBusiness;
   }
 
   /**
    * Kiểm tra có thể quản lý hotel cụ thể không
-   * Business KHÔNG thể cập nhật hotel, chỉ xem
    */
   canManage(hotelId?: string): boolean {
     if (!hotelId) return false;
@@ -177,9 +174,10 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
     // Admin có quyền quản lý tất cả
     if (this.isAdmin) return true;
     
-    // Business KHÔNG thể cập nhật hotel, chỉ xem
     if (this.isBusiness) {
-      return false;
+      const hotel = this.hotels?.find(h => h._id === hotelId);
+      const hotelBusinessId = hotel ? this.extractBusinessId(hotel) : null;
+      return !!this.currentUser?.businessId && !!hotelBusinessId && this.currentUser.businessId === hotelBusinessId;
     }
     
     // Hotel manager chỉ quản lý được hotel của mình

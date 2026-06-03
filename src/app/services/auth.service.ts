@@ -181,10 +181,10 @@ export class AuthService {
     const adminSubdomain = 'admin.phhotel.vn';
 
     const redirectToAdmin = () => {
-      window.location.href = `${protocol}//${adminSubdomain}${port}/room`;
+      window.location.href = `${protocol}//${adminSubdomain}${port}/admin/room`;
     };
     const redirectToMainLogin = () => {
-      window.location.href = `${protocol}//${mainDomain}${port}/login`;
+      window.location.href = `${protocol}//${adminSubdomain}${port}/login`;
     };
 
     const user = this.getCurrentUser();

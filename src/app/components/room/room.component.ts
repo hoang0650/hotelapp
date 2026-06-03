@@ -131,24 +131,16 @@ export class RoomComponent implements OnInit, OnDestroy {
       // Reload rooms khi có thay đổi dữ liệu
       if (this.selectedHotelId) {
         // Quick reload: chỉ reload rooms, không reload bookings và history
-        // Delay một chút để đảm bảo backend đã cập nhật xong (đặc biệt là guestStatus và room status sau khi chuyển phòng)
+        // Delay nhẹ để tránh spam reload khi có nhiều thao tác liên tiếp
         setTimeout(() => {
           this.loadRooms(true);
-          // Reload events cho tất cả phòng occupied và dirty để cập nhật thông tin mới nhất
-          // QUAN TRỌNG: Sau khi chuyển phòng, phòng nguồn chuyển sang dirty, phòng đích chuyển sang occupied
-          // Cần reload events cho cả hai loại phòng này
-          setTimeout(() => {
-            this.loadEventsForOccupiedRooms(true); // Force reload events cho phòng occupied
-            // Cũng reload events cho phòng dirty (phòng nguồn sau khi chuyển) nếu cần
-            // Nhưng thường phòng dirty không cần hiển thị events, nên chỉ reload occupied là đủ
-          }, 500); // Tăng delay lên 500ms để đảm bảo backend đã lưu xong events mới (đặc biệt sau khi checkout)
           // Reload lịch sử thanh toán sau khi có thay đổi (ví dụ: checkout)
           if (!this.isModalOpen) {
             setTimeout(() => {
               this.showRoomHistory();
-            }, 400); // Đợi một chút để đảm bảo backend đã cập nhật xong
+            }, 150);
           }
-        }, 300); // Tăng delay ban đầu lên 300ms để đảm bảo backend đã lưu xong room status và events (đặc biệt sau khi checkout)
+        }, 80);
       }
     });
     
@@ -745,10 +737,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.roomsService.getRooms(params).subscribe(
         (data) => {
           // Đảm bảo guestStatus được giữ nguyên từ backend
-          this.rooms = data.map(room => ({
+          const normalizedRooms = data.map(room => ({
             ...room,
             guestStatus: room.guestStatus || undefined
           }));
+          this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(normalizedRooms);
           this.updateFloorsFromRooms();
           this.updateCachedRoomCounts();
           this.isReloading = false;
@@ -780,10 +773,11 @@ export class RoomComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: (results: any) => {
         // Đảm bảo guestStatus được giữ nguyên từ backend
-        this.rooms = results.rooms.map((room: Room) => ({
+        const normalizedRooms = results.rooms.map((room: Room) => ({
           ...room,
           guestStatus: room.guestStatus || undefined
         }));
+        this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(normalizedRooms);
         this.updateFloorsFromRooms();
         this.updateCachedRoomCounts();
         this.bookings = results.bookings.bookings || [];
@@ -1692,6 +1686,75 @@ export class RoomComponent implements OnInit, OnDestroy {
     const parsed = new Date(rawTime);
     if (isNaN(parsed.getTime())) return null;
     return parsed;
+  }
+
+  private hydrateSyntheticEventsFromCurrentBooking(rooms: Room[]): Room[] {
+    return rooms.map((room: any) => {
+      if (!room || !room._id) return room;
+      if (room.events && Array.isArray(room.events) && room.events.length > 0) return room;
+
+      const currentBooking = room.currentBooking && typeof room.currentBooking === 'object'
+        ? room.currentBooking
+        : null;
+      if (!currentBooking) return room;
+
+      if (room.status === 'occupied') {
+        const checkinTime =
+          currentBooking.checkinTime ||
+          currentBooking.checkInTime ||
+          currentBooking.actualCheckInDate ||
+          currentBooking.checkInDate ||
+          null;
+        const selectedServices = currentBooking.selectedServices || currentBooking.services || [];
+
+        return {
+          ...room,
+          events: [
+            {
+              type: 'checkin',
+              roomId: room._id,
+              checkinTime: checkinTime,
+              checkInTime: checkinTime,
+              guestInfo: currentBooking.guestInfo,
+              rateType: currentBooking.rateType || 'hourly',
+              advancePayment: currentBooking.advancePayment || 0,
+              advancePaymentMethod: currentBooking.advancePaymentMethod,
+              additionalCharges: currentBooking.additionalCharges || 0,
+              discount: currentBooking.discount || 0,
+              selectedServices: selectedServices,
+              paymentMethod: currentBooking.paymentMethod,
+              notes: currentBooking.notes,
+              transferredFrom: currentBooking.transferredFrom,
+              transferredTo: currentBooking.transferredTo,
+              transferredAt: currentBooking.transferredAt
+            }
+          ]
+        };
+      }
+
+      if (room.status === 'booked') {
+        const checkinTime = currentBooking.checkInDate || currentBooking.checkinDate || null;
+        const expectedCheckoutTime = currentBooking.checkOutDate || currentBooking.checkoutDate || null;
+        return {
+          ...room,
+          events: [
+            {
+              type: 'booking',
+              roomId: room._id,
+              checkinTime: checkinTime,
+              expectedCheckoutTime: expectedCheckoutTime,
+              guestInfo: currentBooking.guestInfo,
+              rateType: currentBooking.rateType || currentBooking.bookingType || 'hourly',
+              advancePayment: currentBooking.advancePayment || 0,
+              advancePaymentMethod: currentBooking.advancePaymentMethod,
+              notes: currentBooking.notes
+            }
+          ]
+        };
+      }
+
+      return room;
+    });
   }
 
   // Load events cho các phòng đang occupied và booked
