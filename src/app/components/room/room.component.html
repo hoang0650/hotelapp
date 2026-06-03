@@ -152,8 +152,8 @@
     <nz-spin [nzSpinning]="isRoomsLoading" [nzTip]="'ROOM.LOADING_ROOMS' | translate">
       <ng-container *ngIf="!isRoomsLoading">
         <nz-collapse [nzBordered]="false">
-          <nz-collapse-panel 
-            *ngFor="let floor of getSortedFloors(); trackBy: trackByFloor" 
+        <nz-collapse-panel 
+          *ngFor="let floor of displayFloors; trackBy: trackByFloor" 
             [nzHeader]="floorHeaderTemplate"
             [nzActive]="activeFloors.includes(floor)"
             (nzActiveChange)="onFloorPanelChange(floor, $event)">
@@ -162,7 +162,7 @@
               <h3 class="floor-title">
                 <i nz-icon nzType="bank" nzTheme="outline" class="floor-icon"></i>
                 {{ floor === '0' || floor === '' ? ('ROOM.GROUND_FLOOR' | translate) : (('ROOM.FLOOR_DISPLAY' | translate) + ' ' + floor) }}
-                <span class="floor-room-count">({{ (getRoomsByFloor()[floor] || []).length }} {{ 'ROOM.ROOM_COUNT' | translate }})</span>
+                <span class="floor-room-count">({{ (displayRoomsByFloor[floor] || []).length }} {{ 'ROOM.ROOM_COUNT' | translate }})</span>
               </h3>
             </ng-template>
 
@@ -176,7 +176,7 @@
                   [nzMd]="getRoomColSpanMd()"
                   [nzLg]="getRoomColSpanLg()"
                   [nzXl]="getRoomColSpanXl()"
-                  *ngFor="let room of getRoomsByFloor()[floor]; trackBy: trackByRoomId"
+                *ngFor="let room of displayRoomsByFloor[floor]; trackBy: trackByRoomId"
                   class="room-col"
                   [ngClass]="{'compact-mode': isCompactMode}">
                   <div 

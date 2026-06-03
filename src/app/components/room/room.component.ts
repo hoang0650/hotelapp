@@ -38,6 +38,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   private tableTotalPaymentSubscription: Subscription | null = null;
   
   rooms: Room[] = [];
+  displayRoomsByFloor: { [floor: string]: Room[] } = {};
+  displayFloors: string[] = [];
   roomTableData: BookingHistory[] = [];
   selectedRoomId: string | null = null;
   hotels: Hotel[] = [];
@@ -101,6 +103,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   private roomPriceCache = new Map<string, number>();
   // Map để lưu roomPrice trực tiếp vào room object (để trigger change detection)
   private roomPriceMap = new Map<string, number>();
+  private lastLoadedHotelId: string | null = null;
 
   roomStatusDisplayOptions: { value: RoomStatus, label: string, color: string }[] = [
     { value: 'vacant', label: '', color: 'green' }, // Label sẽ được translate trong getRoomStatusLabelAndColor
@@ -205,21 +208,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       });
     }
     
-    // Lắng nghe events từ admin component
-    window.addEventListener('floorFilterChanged', ((event: CustomEvent) => {
-      // Gọi onFloorChange để đảm bảo logic đầy đủ được thực thi
-      this.onFloorChange(event.detail);
-      this.cdr.detectChanges();
-    }) as EventListener);
-    
-    window.addEventListener('columnsCountChanged', ((event: CustomEvent) => {
-      const newCount = event.detail;
-      if (newCount >= 2 && newCount <= 12) {
-        // Gọi reGenerateArray để đảm bảo logic đầy đủ được thực thi
-        this.reGenerateArray(newCount);
-        this.cdr.detectChanges();
-      }
-    }) as EventListener);
+    window.addEventListener('floorFilterChanged', this.__onFloorFilterChanged as EventListener);
+    window.addEventListener('columnsCountChanged', this.__onColumnsCountChanged as EventListener);
     
     // Tỷ giá VND -> USD cho hiển thị quy đổi
     this.currencyService.getExchangeRate('VND', 'USD').subscribe({
@@ -288,7 +278,23 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.roomDataUpdatedSubscription) {
       this.roomDataUpdatedSubscription.unsubscribe();
     }
+    window.removeEventListener('floorFilterChanged', this.__onFloorFilterChanged as EventListener);
+    window.removeEventListener('columnsCountChanged', this.__onColumnsCountChanged as EventListener);
   }
+
+  private __onFloorFilterChanged = (event: Event): void => {
+    const detail = (event as CustomEvent)?.detail ?? null;
+    this.onFloorChange(detail);
+    this.cdr.detectChanges();
+  };
+
+  private __onColumnsCountChanged = (event: Event): void => {
+    const newCount = Number((event as CustomEvent)?.detail);
+    if (newCount >= 2 && newCount <= 12) {
+      this.reGenerateArray(newCount);
+      this.cdr.detectChanges();
+    }
+  };
 
   openShiftHandoverModal(contentTemplate: any): void {
     this.modalService.create({
@@ -746,6 +752,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   loadRooms(quickReload: boolean = false): void {
     if (!this.selectedHotelId) {
       this.rooms = [];
+      this.displayRoomsByFloor = {};
+      this.displayFloors = [];
       return;
     }
     
@@ -754,6 +762,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.isRoomsLoading = true;
       this.isReloading = true;
       this.rooms = [];
+      this.displayRoomsByFloor = {};
+      this.displayFloors = [];
       this.roomPriceCache.clear();
       this.roomPriceMap.clear();
       this.updateCachedRoomCounts();
@@ -767,6 +777,7 @@ export class RoomComponent implements OnInit, OnDestroy {
             guestStatus: room.guestStatus || undefined
           }));
           this.rooms = normalizedRooms;
+          this.lastLoadedHotelId = this.selectedHotelId;
           this.updateFloorsFromRooms();
           this.updateCachedRoomCounts();
           this.isRoomsLoading = false;
@@ -801,6 +812,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           guestStatus: room.guestStatus || undefined
         }));
         this.rooms = normalizedRooms;
+        this.lastLoadedHotelId = this.selectedHotelId;
         this.updateFloorsFromRooms();
         this.updateCachedRoomCounts();
         this.isRoomsLoading = false;
@@ -852,6 +864,9 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   onHotelChange(hotelId: string | null): void {
+    if (hotelId && this.lastLoadedHotelId === hotelId && this.rooms.length > 0 && !this.isRoomsLoading) {
+      return;
+    }
     // Staff không được phép thay đổi hotel
     if (this.authService.isStaff()) {
       const currentUser = this.authService.getCurrentUser();
@@ -867,6 +882,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.isFirstLoadForHotel = true;
     this.activeFloors = [];
     this.rooms = [];
+    this.displayRoomsByFloor = {};
+    this.displayFloors = [];
     this.bookings = [];
     this.roomTableData = [];
     this.selectedFloor = null;
@@ -878,6 +895,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.totalPayment = 0;
     this.totalRevenue = 0;
     this.totalExpense = 0;
+    this.lastLoadedHotelId = null;
 
     if (!hotelId) {
       this.isRoomsLoading = false;
@@ -928,6 +946,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   onFloorChange(floor: string | null): void {
     this.selectedFloor = floor;
+    this.rebuildDisplayRooms();
     if (floor) {
       const currentUser = this.authService.getCurrentUser();
       const userId = currentUser?._id;
@@ -1603,6 +1622,29 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.selectedFloor && !this.floors.includes(this.selectedFloor)) {
       this.selectedFloor = null;
     }
+    this.rebuildDisplayRooms();
+  }
+
+  private rebuildDisplayRooms(): void {
+    const grouped: { [floor: string]: Room[] } = {};
+    const normalizedSelectedFloor = this.selectedFloor ? String(this.selectedFloor) : null;
+    const sourceRooms = normalizedSelectedFloor
+      ? this.rooms.filter(room => (room.floor ? String(room.floor) : '0') === normalizedSelectedFloor)
+      : this.rooms;
+
+    for (const room of sourceRooms) {
+      const floor = room.floor ? String(room.floor) : '0';
+      if (!grouped[floor]) grouped[floor] = [];
+      grouped[floor].push(room);
+    }
+
+    const floors = Object.keys(grouped).sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+    const sortedGrouped: { [floor: string]: Room[] } = {};
+    for (const f of floors) {
+      sortedGrouped[f] = grouped[f];
+    }
+    this.displayRoomsByFloor = sortedGrouped;
+    this.displayFloors = floors;
   }
 
   // Lấy thông tin chuyển phòng từ Booking
