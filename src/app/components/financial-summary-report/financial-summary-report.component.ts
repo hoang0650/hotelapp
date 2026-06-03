@@ -248,10 +248,11 @@ export class FinancialSummaryReportComponent implements OnInit {
     const start = this.startDate;
     const end = this.endDate;
     const days = Math.max(1, differenceInCalendarDays(end, start) + 1);
-    const monthsEquivalent = Math.max(1 / 31, days / 30.4375);
+    const daysPerYear = 365.2425;
+    const yearFraction = Math.max(1 / daysPerYear, days / daysPerYear);
 
     const periodOperatingProfit = Number(summary.profit || 0);
-    const annualizedOperatingProfit = (periodOperatingProfit / monthsEquivalent) * 12;
+    const annualizedOperatingProfit = periodOperatingProfit / yearFraction;
 
     const depreciationAnnual = initialInvestment * Math.min(Math.max(depreciationRate, 0), 1);
     const interestAnnual = loanAmount * Math.min(Math.max(interestRate, 0), 10);
@@ -271,7 +272,7 @@ export class FinancialSummaryReportComponent implements OnInit {
     if (initialInvestment > 0 && freeCashFlowAnnual > 0) {
       const paybackYears = initialInvestment / freeCashFlowAnnual;
       summary.paybackPeriod = paybackYears * 12;
-      summary.paybackPeriodDays = paybackYears * 365;
+      summary.paybackPeriodDays = paybackYears * daysPerYear;
     } else {
       summary.paybackPeriod = 0;
       summary.paybackPeriodDays = 0;

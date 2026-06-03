@@ -1731,6 +1731,29 @@
       "NOTES_PLACEHOLDER": "Notizen..."
     }
   },
+  "USER_MANAGEMENT": {
+    "FEATURES": {
+      "ROOM_MANAGEMENT": "Zimmerverwaltung",
+      "HOTEL_MANAGEMENT": "Hotelverwaltung",
+      "COMPANY_MANAGEMENT": "Unternehmensverwaltung",
+      "STAFF_MANAGEMENT": "Personalverwaltung",
+      "SERVICE_MANAGEMENT": "Serviceverwaltung",
+      "USER_MANAGEMENT": "Benutzerverwaltung",
+      "PRICING_MANAGEMENT": "Preisverwaltung",
+      "OTA_MANAGEMENT": "OTA-Verwaltung",
+      "REVENUE_CHART": "Umsatzdiagramm",
+      "SHIFT_HANDOVER": "Schichtübergabe",
+      "BANK_TRANSFER_HISTORY": "Überweisungsverlauf",
+      "CALENDAR": "Kalender",
+      "EMAIL_ADMIN": "E-Mail-Verwaltung",
+      "QR_PAYMENT": "QR-Zahlung",
+      "VISA_PAYMENT": "Visa-Zahlung",
+      "ELECTRIC_MANAGEMENT": "Stromverwaltung",
+      "FANPAGE_MESSAGES": "Fanpage-Nachrichten",
+      "ZALO_MESSAGES": "Zalo-Nachrichten",
+      "TELEGRAM_MESSAGES": "Telegram-Nachrichten"
+    }
+  },
   "PRICING_MANAGEMENT": {
     "TABLE_HEADERS": {
       "MAX_ROOMS": "Maximale Zimmeranzahl"

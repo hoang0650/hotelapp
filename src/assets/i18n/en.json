@@ -1679,6 +1679,29 @@
       "NOTES_PLACEHOLDER": "Notes..."
     }
   },
+  "USER_MANAGEMENT": {
+    "FEATURES": {
+      "ROOM_MANAGEMENT": "Room Management",
+      "HOTEL_MANAGEMENT": "Hotel Management",
+      "COMPANY_MANAGEMENT": "Company Management",
+      "STAFF_MANAGEMENT": "Staff Management",
+      "SERVICE_MANAGEMENT": "Service Management",
+      "USER_MANAGEMENT": "User Management",
+      "PRICING_MANAGEMENT": "Pricing Management",
+      "OTA_MANAGEMENT": "OTA Management",
+      "REVENUE_CHART": "Revenue Chart",
+      "SHIFT_HANDOVER": "Shift Handover",
+      "BANK_TRANSFER_HISTORY": "Bank Transfer History",
+      "CALENDAR": "Calendar",
+      "EMAIL_ADMIN": "Email Management",
+      "QR_PAYMENT": "QR Payment",
+      "VISA_PAYMENT": "Visa Payment",
+      "ELECTRIC_MANAGEMENT": "Electric Management",
+      "FANPAGE_MESSAGES": "Fanpage Messages",
+      "ZALO_MESSAGES": "Zalo Messages",
+      "TELEGRAM_MESSAGES": "Telegram Messages"
+    }
+  },
   "PRICING_MANAGEMENT": {
     "TABLE_HEADERS": {
       "MAX_ROOMS": "Max Rooms"

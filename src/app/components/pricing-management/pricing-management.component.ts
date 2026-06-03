@@ -162,8 +162,8 @@ export class PricingManagementComponent implements OnInit {
       permissions: [['view'], [Validators.required]],
       maxUsers: [1, [Validators.required, Validators.min(0)]], // Cho phép nhập 0 (0 = không giới hạn ở backend)
       unlimitedUsers: [false], // Checkbox để chọn không giới hạn (0 = không giới hạn ở backend)
-      maxRooms: [0, [Validators.min(0)]],
-      unlimitedRooms: [true],
+      maxRooms: [20, [Validators.min(0)]],
+      unlimitedRooms: [false],
       qrPaymentFeature: [false], // Tính năng QR thanh toán
       otaManagementFeature: [false], // Tính năng quản lý OTA
       emailManagementFeature: [false], // Tính năng quản lý email
@@ -214,10 +214,14 @@ export class PricingManagementComponent implements OnInit {
     // Theo dõi thay đổi của unlimitedRooms
     this.packageForm.get('unlimitedRooms')?.valueChanges.subscribe(unlimited => {
       const maxRoomsControl = this.packageForm.get('maxRooms');
+      if (!this.isAdmin) return;
+
       if (unlimited) {
         maxRoomsControl?.setValue(0, { emitEvent: false });
         maxRoomsControl?.clearValidators();
+        maxRoomsControl?.disable({ emitEvent: false });
       } else {
+        maxRoomsControl?.enable({ emitEvent: false });
         maxRoomsControl?.setValidators([Validators.min(0)]);
         if (maxRoomsControl?.value === 0) {
           maxRoomsControl?.setValue(20, { emitEvent: false });
@@ -359,8 +363,8 @@ export class PricingManagementComponent implements OnInit {
         permissions: ['view'],
         maxUsers: 1,
         unlimitedUsers: false,
-        maxRooms: 0,
-        unlimitedRooms: true,
+        maxRooms: 20,
+        unlimitedRooms: false,
         qrPaymentFeature: false,
         otaManagementFeature: false,
         emailManagementFeature: false,
@@ -378,6 +382,7 @@ export class PricingManagementComponent implements OnInit {
         this.packageForm.get('unlimitedRooms')?.enable({ emitEvent: false });
       }
     }
+    this.syncMaxRoomsControls();
     this.isModalVisible = true;
   }
 
@@ -396,8 +401,8 @@ export class PricingManagementComponent implements OnInit {
       permissions: ['view'],
       maxUsers: 1,
       unlimitedUsers: false,
-      maxRooms: 0,
-      unlimitedRooms: true,
+      maxRooms: 20,
+      unlimitedRooms: false,
       qrPaymentFeature: false,
       otaManagementFeature: false,
       emailManagementFeature: false,
@@ -410,7 +415,28 @@ export class PricingManagementComponent implements OnInit {
       hotelNotificationFeature: false,
       isActive: true
     });
+    this.syncMaxRoomsControls();
     this.editingPackageId = null;
+  }
+
+  private syncMaxRoomsControls(): void {
+    const unlimitedRoomsControl = this.packageForm.get('unlimitedRooms');
+    const maxRoomsControl = this.packageForm.get('maxRooms');
+    if (!unlimitedRoomsControl || !maxRoomsControl) return;
+
+    if (!this.isAdmin) {
+      unlimitedRoomsControl.disable({ emitEvent: false });
+      maxRoomsControl.disable({ emitEvent: false });
+      return;
+    }
+
+    unlimitedRoomsControl.enable({ emitEvent: false });
+    const unlimited = !!unlimitedRoomsControl.value;
+    if (unlimited) {
+      maxRoomsControl.disable({ emitEvent: false });
+    } else {
+      maxRoomsControl.enable({ emitEvent: false });
+    }
   }
 
   handleOk(): void {

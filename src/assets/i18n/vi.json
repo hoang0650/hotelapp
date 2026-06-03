@@ -2351,7 +2351,10 @@
       "EMAIL_ADMIN": "Quản lý email",
       "QR_PAYMENT": "Thanh toán QR",
       "VISA_PAYMENT": "Thanh toán Visa",
-      "ELECTRIC_MANAGEMENT": "Quản lý điện"
+      "ELECTRIC_MANAGEMENT": "Quản lý điện",
+      "FANPAGE_MESSAGES": "Tin nhắn Fanpage",
+      "ZALO_MESSAGES": "Tin nhắn Zalo",
+      "TELEGRAM_MESSAGES": "Tin nhắn Telegram"
     },
     "FEATURE_FLAGS": {
       "QR_PAYMENT": "QR thanh toán",
