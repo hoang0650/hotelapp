@@ -47,7 +47,7 @@
     </ul>
   </nz-sider> -->
 
-  <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null" [class.mobile-open]="isMobileMenuOpen">
+  <nz-sider *ngIf="permissionsReady; else loadingSider" nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null" [class.mobile-open]="isMobileMenuOpen">
     <div class="logo"></div>
     <ul nz-menu nzTheme="dark" nzMode="inline" (click)="closeMobileMenu($event)">
       <!-- Vận hành khách sạn -->
@@ -129,6 +129,14 @@
       </li>
     </ul>
   </nz-sider>
+  <ng-template #loadingSider>
+    <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null" [class.mobile-open]="isMobileMenuOpen">
+      <div class="logo"></div>
+      <div style="padding: 12px; color: rgba(255,255,255,0.85);">
+        Đang tải quyền truy cập...
+      </div>
+    </nz-sider>
+  </ng-template>
   <nz-layout>
     <nz-breadcrumb>
       <!-- Desktop Trigger -->

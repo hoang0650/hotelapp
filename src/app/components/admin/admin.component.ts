@@ -26,6 +26,7 @@ export class AdminComponent implements OnInit {
   availableFloors: string[] = [];
   selectedHotelIdForFilter: string | null = null;
   isLoadingFloors = false;
+  permissionsReady = true;
   columnMarks: NzMarks = {
     2: '2',
     3: '3',
@@ -44,6 +45,10 @@ export class AdminComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.permissionService.ready$.subscribe(ready => {
+      this.permissionsReady = ready;
+    });
+
     // this.router.events
     //   .pipe(
     //     filter(event => event instanceof NavigationEnd),

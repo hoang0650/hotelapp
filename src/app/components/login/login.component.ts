@@ -34,7 +34,12 @@ export class LoginComponent implements OnInit {
   ngOnInit(): void {
     if (this.authService.isLoggedIn()) {
       this.authService.checkSubdomainAndRedirect();
-      this.router.navigate(['/admin/room']);
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
+          this.router.navigate(['/admin/room']);
+        }
+      }
       return;
     }
 
@@ -42,7 +47,12 @@ export class LoginComponent implements OnInit {
     this.authService.currentUser$.subscribe(user => {
       if (user) {
         this.authService.checkSubdomainAndRedirect();
-        this.router.navigate(['/admin/room']);
+        if (typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
+            this.router.navigate(['/admin/room']);
+          }
+        }
       }
     });
   }
@@ -103,7 +113,12 @@ export class LoginComponent implements OnInit {
             this.authService.loginFromShiftHandover(response.token, response.user);
           }
           this.authService.checkSubdomainAndRedirect();
-          this.router.navigate(['/admin/room']);
+          if (typeof window !== 'undefined') {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
+              this.router.navigate(['/admin/room']);
+            }
+          }
         }
       },
       error: (error) => {

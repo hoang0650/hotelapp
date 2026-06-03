@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { map, take, first, switchMap } from 'rxjs/operators';
+import { map, take, switchMap, filter } from 'rxjs/operators';
 import { PermissionService } from '../services/permission.service';
 import { AuthService } from '../services/auth.service';
 
@@ -38,6 +38,40 @@ export class PermissionGuard implements CanActivate {
       }
     };
     const user = this.authService.getCurrentUser();
+
+    const evaluateAccess = (): boolean => {
+      const u = this.authService.getCurrentUser();
+
+      if (!u) {
+        redirectToLogin();
+        return false;
+      }
+
+      if (u.role === 'superadmin' || u.role === 'admin') {
+        return true;
+      }
+
+      if (u.role === 'guest') {
+        if (url === '/admin/pricing-management') return true;
+        this.router.navigate([unauthorizedUrl]);
+        return false;
+      }
+
+      const hasAccess = this.permissionService.canAccessRoute(url);
+      if (!hasAccess) {
+        this.router.navigate([unauthorizedUrl]);
+        return false;
+      }
+      return true;
+    };
+    
+    const waitPermissionsReady = (): Observable<boolean> => {
+      return this.permissionService.ready$.pipe(
+        filter(ready => ready),
+        take(1),
+        map(() => evaluateAccess())
+      );
+    };
     
     // Nếu chưa đăng nhập, chuyển đến trang login
     if (!user) {
@@ -47,71 +81,12 @@ export class PermissionGuard implements CanActivate {
             redirectToLogin();
             return of(false);
           }
-          const refreshedUser = this.authService.getCurrentUser();
-          if (!refreshedUser) {
-            redirectToLogin();
-            return of(false);
-          }
-          if (refreshedUser.role === 'superadmin' || refreshedUser.role === 'admin') {
-            return of(true);
-          }
-
-          if (refreshedUser.role === 'guest') {
-            if (url === '/admin/pricing-management') return of(true);
-            this.router.navigate([unauthorizedUrl]);
-            return of(false);
-          }
-
-          return this.permissionService.permissions$.pipe(
-            take(1),
-            map(() => {
-              const hasAccess = this.permissionService.canAccessRoute(url);
-              if (!hasAccess) {
-                this.router.navigate([unauthorizedUrl]);
-                return false;
-              }
-              return true;
-            })
-          );
+          return waitPermissionsReady();
         })
       );
     }
 
-    // Superadmin có toàn quyền
-    if (user.role === 'superadmin') {
-      return true;
-    }
-
-    // Admin có toàn quyền (không cần kiểm tra permission)
-    if (user.role === 'admin') {
-      return true;
-    }
-
-    // Guest được phép truy cập pricing-management
-    if (user.role === 'guest') {
-      if (url === '/admin/pricing-management') {
-        return true;
-      }
-      // Guest chỉ được truy cập pricing-management, các route khác bị chặn
-      this.router.navigate([unauthorizedUrl]);
-      return false;
-    }
-
-    return this.permissionService.permissions$.pipe(
-      take(1),
-      map(permissions => {
-        const routePath = url;
-        const hasAccess = this.permissionService.canAccessRoute(routePath);
-
-        if (!hasAccess) {
-          // Chuyển đến trang unauthorized
-          this.router.navigate([unauthorizedUrl]);
-          return false;
-        }
-
-        return true;
-      })
-    );
+    return waitPermissionsReady();
   }
 }
 

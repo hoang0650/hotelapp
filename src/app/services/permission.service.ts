@@ -65,6 +65,8 @@ export class PermissionService {
   public currentPackage$ = this.currentPackageSubject.asObservable();
   private permissionsSubject = new BehaviorSubject<string[]>([]);
   public permissions$ = this.permissionsSubject.asObservable();
+  private readySubject = new BehaviorSubject<boolean>(true);
+  public ready$ = this.readySubject.asObservable();
   private subscriptions = new Subscription();
   private currentUser: any = null;
 
@@ -107,11 +109,13 @@ export class PermissionService {
           } else {
             this.permissionsSubject.next(pkg.permissions);
           }
+          this.readySubject.next(true);
           return;
         }
 
         this.currentPackageSubject.next(pkg || null);
         this.setDefaultPermissionsByRole(role);
+        this.readySubject.next(true);
       },
       error: (error) => {
         if (error.status !== 404 && error.status !== 400) {
@@ -119,6 +123,7 @@ export class PermissionService {
         }
         this.currentPackageSubject.next(null);
         this.setDefaultPermissionsByRole(role);
+        this.readySubject.next(true);
       }
     });
   }
@@ -373,15 +378,18 @@ export class PermissionService {
     if (!user) {
       this.permissionsSubject.next([]);
       this.currentPackageSubject.next(null);
+      this.readySubject.next(true);
       return;
     }
 
     if (user.role === 'superadmin' || user.role === 'admin') {
       this.permissionsSubject.next(['view', 'edit', 'delete', 'manage']);
       this.currentPackageSubject.next(null);
+      this.readySubject.next(true);
       return;
     }
 
+    this.readySubject.next(false);
     this.loadUserPermissions(user._id, user.role);
   }
 }

@@ -96,6 +96,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   currentUser: any = null;
   hotelBankAccount: any = null; // Thông tin ngân hàng của hotel
   private paymentStatusCheckInterval: any = null; // Interval để kiểm tra trạng thái thanh toán
+  private pendingCheckoutCloseResult: any = null;
   
   // Định dạng hiển thị tiền Việt Nam
   formatterVND = (value: number): string => `${value} đ`;
@@ -1869,6 +1870,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           guestSource,
           formGuestInfoValue,
           advancePayment,
+          advancePaymentMethod,
           servicesTotal,
           additionalCharges,
           discount,
@@ -1893,6 +1895,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           guestSource,
           formGuestInfoValue,
           advancePayment,
+          advancePaymentMethod,
           servicesTotal,
           additionalCharges,
           discount,
@@ -1920,6 +1923,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     guestSource: string,
     formGuestInfo: any,
     advancePayment: number,
+    advancePaymentMethod: string,
     servicesTotal: number,
     additionalCharges: number,
     discount: number,
@@ -1942,6 +1946,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       checkinTime: checkInTime,
       checkInTime: checkInTime,
       skipAutoIncomeVoucher: true,
+      advancePayment: advancePayment,
+      advancePaymentMethod: advancePaymentMethod,
       roomTotal: validRoomTotal, // Gửi validRoomTotal đã được validate
       rateType: rateType, // Gửi rateType đã được tính toán từ backend
       totalAmount: grandTotal, // Tổng tiền (room + services + charges - discount)
@@ -1994,6 +2000,32 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         }
       ]
     };
+
+    const closeResult = {
+      success: true,
+      action: 'checkout',
+      checkoutInfo: {
+        roomId: this.roomData?._id,
+        roomNumber: this.roomData?.roomNumber,
+        checkInTime: checkInTime,
+        checkOutTime: currentTime,
+        customerName: customerName,
+        guestSource: guestSource,
+        paymentMethod: paymentMethod,
+        paymentStatus: checkoutData.paymentStatus,
+        rateType: rateType,
+        roomTotal: validRoomTotal,
+        servicesTotal: servicesTotal,
+        additionalCharges: additionalCharges,
+        discount: discount,
+        advancePayment: advancePayment,
+        advancePaymentMethod: advancePaymentMethod,
+        totalAmount: grandTotal,
+        remainingAmount: remainingAmount,
+        notes: checkoutData.notes
+      }
+    };
+    this.pendingCheckoutCloseResult = closeResult;
     
     // Log để debug
     console.log('Checkout data being sent to backend:', {
@@ -2102,8 +2134,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     } else {
       // Đóng modal ngay lập tức và thực hiện checkout
       if (this.modalRef) {
-        this.modalRef.close();
+        this.modalRef.close(closeResult);
       }
+      this.pendingCheckoutCloseResult = null;
       
       // Thực hiện checkout trong background
       this.roomsService.checkOutRoom(this.roomData._id, checkoutData)
@@ -2273,7 +2306,34 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
    */
   private proceedWithCheckoutDirectly(checkoutData: any, invoiceData: any): void {
     if (this.modalRef) {
-      this.modalRef.close();
+      const closeResult = this.pendingCheckoutCloseResult || {
+        success: true,
+        action: 'checkout',
+        checkoutInfo: {
+          roomId: this.roomData?._id,
+          roomNumber: this.roomData?.roomNumber,
+          checkInTime: checkoutData?.checkInTime || checkoutData?.checkinTime,
+          checkOutTime: checkoutData?.checkOutTime || checkoutData?.checkoutTime,
+          customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'Khách lẻ',
+          guestSource: checkoutData?.guestInfo?.guestSource || invoiceData?.guestSource || 'walkin',
+          paymentMethod: checkoutData?.paymentMethod || 'transfer',
+          paymentStatus: checkoutData?.paymentStatus || 'paid',
+          rateType: checkoutData?.rateType || 'hourly',
+          roomTotal: Number(checkoutData?.roomTotal) || 0,
+          servicesTotal: Array.isArray(checkoutData?.services)
+            ? checkoutData.services.reduce((sum: number, s: any) => sum + (Number(s?.totalPrice) || (Number(s?.price) || 0) * (Number(s?.quantity) || 1)), 0)
+            : 0,
+          additionalCharges: Number(checkoutData?.additionalCharges) || 0,
+          discount: Number(checkoutData?.discount) || 0,
+          advancePayment: Number(checkoutData?.advancePayment) || 0,
+          advancePaymentMethod: checkoutData?.advancePaymentMethod || 'cash',
+          totalAmount: Number(checkoutData?.totalAmount) || 0,
+          remainingAmount: Number(checkoutData?.remainingAmount) || 0,
+          notes: checkoutData?.notes || ''
+        }
+      };
+      this.pendingCheckoutCloseResult = null;
+      this.modalRef.close(closeResult);
     }
     
     // Kiểm tra paymentStatus - chỉ hiển thị hóa đơn nếu đã thanh toán
@@ -2459,7 +2519,34 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   proceedWithCheckout(checkoutData: any, invoiceData: any): void {
     // Đóng modal
     if (this.modalRef) {
-      this.modalRef.close();
+      const closeResult = this.pendingCheckoutCloseResult || {
+        success: true,
+        action: 'checkout',
+        checkoutInfo: {
+          roomId: this.roomData?._id,
+          roomNumber: this.roomData?.roomNumber,
+          checkInTime: checkoutData?.checkInTime || checkoutData?.checkinTime,
+          checkOutTime: checkoutData?.checkOutTime || checkoutData?.checkoutTime,
+          customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'Khách lẻ',
+          guestSource: checkoutData?.guestInfo?.guestSource || invoiceData?.guestSource || 'walkin',
+          paymentMethod: checkoutData?.paymentMethod || 'transfer',
+          paymentStatus: checkoutData?.paymentStatus || 'paid',
+          rateType: checkoutData?.rateType || 'hourly',
+          roomTotal: Number(checkoutData?.roomTotal) || 0,
+          servicesTotal: Array.isArray(checkoutData?.services)
+            ? checkoutData.services.reduce((sum: number, s: any) => sum + (Number(s?.totalPrice) || (Number(s?.price) || 0) * (Number(s?.quantity) || 1)), 0)
+            : 0,
+          additionalCharges: Number(checkoutData?.additionalCharges) || 0,
+          discount: Number(checkoutData?.discount) || 0,
+          advancePayment: Number(checkoutData?.advancePayment) || 0,
+          advancePaymentMethod: checkoutData?.advancePaymentMethod || 'cash',
+          totalAmount: Number(checkoutData?.totalAmount) || 0,
+          remainingAmount: Number(checkoutData?.remainingAmount) || 0,
+          notes: checkoutData?.notes || ''
+        }
+      };
+      this.pendingCheckoutCloseResult = null;
+      this.modalRef.close(closeResult);
     }
     
     // Kiểm tra paymentStatus - chỉ hiển thị hóa đơn nếu đã thanh toán
@@ -2664,7 +2751,34 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       setTimeout(() => {
         // Đóng modal checkout
         if (this.modalRef) {
-          this.modalRef.close();
+          const closeResult = this.pendingCheckoutCloseResult || {
+            success: true,
+            action: 'checkout',
+            checkoutInfo: {
+              roomId: this.roomData?._id,
+              roomNumber: this.roomData?.roomNumber,
+              checkInTime: checkoutData?.checkInTime || checkoutData?.checkinTime,
+              checkOutTime: checkoutData?.checkOutTime || checkoutData?.checkoutTime,
+              customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'Khách lẻ',
+              guestSource: checkoutData?.guestInfo?.guestSource || invoiceData?.guestSource || 'walkin',
+              paymentMethod: checkoutData?.paymentMethod || 'transfer',
+              paymentStatus: checkoutData?.paymentStatus || 'paid',
+              rateType: checkoutData?.rateType || 'hourly',
+              roomTotal: Number(checkoutData?.roomTotal) || 0,
+              servicesTotal: Array.isArray(checkoutData?.services)
+                ? checkoutData.services.reduce((sum: number, s: any) => sum + (Number(s?.totalPrice) || (Number(s?.price) || 0) * (Number(s?.quantity) || 1)), 0)
+                : 0,
+              additionalCharges: Number(checkoutData?.additionalCharges) || 0,
+              discount: Number(checkoutData?.discount) || 0,
+              advancePayment: Number(checkoutData?.advancePayment) || 0,
+              advancePaymentMethod: checkoutData?.advancePaymentMethod || 'cash',
+              totalAmount: Number(checkoutData?.totalAmount) || 0,
+              remainingAmount: Number(checkoutData?.remainingAmount) || 0,
+              notes: checkoutData?.notes || ''
+            }
+          };
+          this.pendingCheckoutCloseResult = null;
+          this.modalRef.close(closeResult);
         }
         
         // Cập nhật checkout với paymentStatus = 'paid' trong background
@@ -2854,7 +2968,34 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       
       // Đóng modal checkout
       if (this.modalRef) {
-        this.modalRef.close();
+        const closeResult = this.pendingCheckoutCloseResult || {
+          success: true,
+          action: 'checkout',
+          checkoutInfo: {
+            roomId: this.roomData?._id,
+            roomNumber: this.roomData?.roomNumber,
+            checkInTime: checkoutData?.checkInTime || checkoutData?.checkinTime,
+            checkOutTime: checkoutData?.checkOutTime || checkoutData?.checkoutTime,
+            customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'Khách lẻ',
+            guestSource: checkoutData?.guestInfo?.guestSource || invoiceData?.guestSource || 'walkin',
+            paymentMethod: checkoutData?.paymentMethod || 'transfer',
+            paymentStatus: checkoutData?.paymentStatus || 'paid',
+            rateType: checkoutData?.rateType || 'hourly',
+            roomTotal: Number(checkoutData?.roomTotal) || 0,
+            servicesTotal: Array.isArray(checkoutData?.services)
+              ? checkoutData.services.reduce((sum: number, s: any) => sum + (Number(s?.totalPrice) || (Number(s?.price) || 0) * (Number(s?.quantity) || 1)), 0)
+              : 0,
+            additionalCharges: Number(checkoutData?.additionalCharges) || 0,
+            discount: Number(checkoutData?.discount) || 0,
+            advancePayment: Number(checkoutData?.advancePayment) || 0,
+            advancePaymentMethod: checkoutData?.advancePaymentMethod || 'cash',
+            totalAmount: Number(checkoutData?.totalAmount) || 0,
+            remainingAmount: Number(checkoutData?.remainingAmount) || 0,
+            notes: checkoutData?.notes || ''
+          }
+        };
+        this.pendingCheckoutCloseResult = null;
+        this.modalRef.close(closeResult);
       }
       
       // Thực hiện checkout với paymentStatus = 'pending' (webhook sẽ cập nhật sau)

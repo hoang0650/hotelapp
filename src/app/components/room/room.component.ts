@@ -1251,10 +1251,27 @@ export class RoomComponent implements OnInit, OnDestroy {
       modalRef.afterClose.subscribe((result) => {
         // Reset flag trước
         this.isModalOpen = false;
-        
-        // Delay notify để tránh trigger mở modal lại
+
+        if (modalType === 'checkout' && result?.action === 'checkout' && result?.checkoutInfo) {
+          this.applyCheckoutCloseResult(result.checkoutInfo);
+          setTimeout(() => {
+            if (!this.isModalOpen) {
+              this.loadRooms(true);
+            }
+          }, 250);
+          setTimeout(() => {
+            if (!this.isModalOpen) {
+              this.showRoomHistory();
+            }
+          }, 900);
+          return;
+        }
+
+        if (modalType === 'checkin' && result?.success && result?.checkinInfo) {
+          this.applyCheckinCloseResult(room._id || '', result.checkinInfo);
+        }
+
         setTimeout(() => {
-          // Chỉ notify nếu không có modal mới được mở
           if (!this.isModalOpen) {
             this.roomsService.notifyRoomDataUpdated();
           }
@@ -1265,6 +1282,92 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.isModalOpen = false;
       this.message.error(this.translate.instant('COMMON.ERROR_OCCURRED'));
     }
+  }
+
+  private applyCheckoutCloseResult(checkoutInfo: any): void {
+    const roomId = checkoutInfo?.roomId;
+    if (!roomId) return;
+
+    const roomIndex = this.rooms.findIndex(r => r && r._id === roomId);
+    if (roomIndex !== -1) {
+      const existing = this.rooms[roomIndex] as any;
+      this.rooms[roomIndex] = {
+        ...existing,
+        status: 'dirty',
+        guestStatus: undefined,
+        currentBooking: null
+      };
+      this.updateCachedRoomCounts();
+    }
+
+    const checkOutTime = checkoutInfo.checkOutTime ? new Date(checkoutInfo.checkOutTime) : new Date();
+    const checkInTime = checkoutInfo.checkInTime ? new Date(checkoutInfo.checkInTime) : undefined;
+
+    const syntheticHistory: any = {
+      event: 'check-out',
+      date: checkOutTime,
+      checkInTime: checkInTime,
+      checkOutTime: checkOutTime,
+      roomId: roomId,
+      roomNumber: checkoutInfo.roomNumber,
+      customerName: checkoutInfo.customerName,
+      guestSource: checkoutInfo.guestSource,
+      paymentMethod: checkoutInfo.paymentMethod,
+      paymentStatus: checkoutInfo.paymentStatus,
+      rateType: checkoutInfo.rateType,
+      amount: Number(checkoutInfo.roomTotal) || 0,
+      roomTotal: Number(checkoutInfo.roomTotal) || 0,
+      servicesTotal: Number(checkoutInfo.servicesTotal) || 0,
+      additionalCharges: Number(checkoutInfo.additionalCharges) || 0,
+      discount: Number(checkoutInfo.discount) || 0,
+      advancePayment: Number(checkoutInfo.advancePayment) || 0,
+      advancePaymentMethod: checkoutInfo.advancePaymentMethod,
+      totalAmount: Number(checkoutInfo.totalAmount) || 0,
+      notes: checkoutInfo.notes || ''
+    };
+
+    const exists = (this.roomTableData || []).some((h: any) => {
+      if (!h) return false;
+      if (h.event !== 'check-out' && h.event !== 'checkout') return false;
+      if (h.roomId !== roomId) return false;
+      const t = h.checkOutTime || h.checkoutTime || h.date;
+      if (!t) return false;
+      const dt = new Date(t);
+      return Math.abs(dt.getTime() - checkOutTime.getTime()) < 3000;
+    });
+
+    if (!exists) {
+      this.roomTableData = [syntheticHistory, ...(this.roomTableData || [])];
+      setTimeout(() => this.updateRevenueFromTable(), 0);
+    }
+  }
+
+  private applyCheckinCloseResult(roomId: string, checkinInfo: any): void {
+    if (!roomId) return;
+    const roomIndex = this.rooms.findIndex(r => r && r._id === roomId);
+    if (roomIndex === -1) return;
+
+    const existing = this.rooms[roomIndex] as any;
+    const checkinTime = checkinInfo?.checkinTime || checkinInfo?.checkInTime || null;
+    this.rooms[roomIndex] = {
+      ...existing,
+      status: 'occupied',
+      events: [
+        {
+          type: 'checkin',
+          roomId: roomId,
+          checkinTime: checkinTime,
+          checkInTime: checkinTime,
+          guestInfo: checkinInfo?.guestInfo,
+          rateType: checkinInfo?.rateType || 'hourly',
+          advancePayment: Number(checkinInfo?.advancePayment) || 0,
+          paymentMethod: checkinInfo?.paymentMethod,
+          notes: checkinInfo?.notes,
+          selectedServices: checkinInfo?.selectedServices || []
+        }
+      ]
+    };
+    this.updateCachedRoomCounts();
   }
 
   // Tính tổng tiền đặt trước từ tất cả các phòng đang có khách
