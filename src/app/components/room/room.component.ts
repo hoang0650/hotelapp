@@ -1863,6 +1863,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           events: [
             {
               type: 'checkin',
+              __synthetic: true,
               roomId: room._id,
               checkinTime: checkinTime,
               checkInTime: checkinTime,
@@ -1891,6 +1892,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           events: [
             {
               type: 'booking',
+              __synthetic: true,
               roomId: room._id,
               checkinTime: checkinTime,
               expectedCheckoutTime: expectedCheckoutTime,
@@ -1918,7 +1920,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       if (!room._id) return false;
       if (room.status !== 'occupied' && room.status !== 'booked') return false;
       if (forceReload) return true; // Reload tất cả nếu forceReload (quan trọng sau khi chuyển phòng)
-      return !room.events || room.events.length === 0; // Chỉ load nếu chưa có events
+      if (!room.events || room.events.length === 0) return true;
+      // Nếu events là synthetic từ currentBooking thì vẫn phải fetch RoomEvent thật để có đủ advancePayment/charges/discount...
+      return (room.events as any[]).some((e: any) => e && e.__synthetic === true);
     });
     
     if (occupiedRooms.length === 0) return;
@@ -1990,7 +1994,11 @@ export class RoomComponent implements OnInit, OnDestroy {
                   : 0,
                 discount: event.discount !== undefined && event.discount !== null
                   ? (typeof event.discount === 'number' ? event.discount : Number(event.discount) || 0)
-                  : 0
+                  : 0,
+                advancePayment: event.advancePayment !== undefined && event.advancePayment !== null
+                  ? (typeof event.advancePayment === 'number' ? event.advancePayment : Number(event.advancePayment) || 0)
+                  : 0,
+                advancePaymentMethod: (event as any).advancePaymentMethod || undefined
               };
               
               return mappedEvent;
