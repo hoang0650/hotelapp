@@ -184,7 +184,7 @@ export class AuthService {
       window.location.href = `${protocol}//${adminSubdomain}${port}/admin/room`;
     };
     const redirectToMainLogin = () => {
-      window.location.href = `${protocol}//${adminSubdomain}${port}/login`;
+      window.location.href = `${protocol}//${mainDomain}${port}/login`;
     };
 
     const user = this.getCurrentUser();
