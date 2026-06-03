@@ -227,11 +227,13 @@
                   
                   <!-- Nguồn khách (chỉ hiển thị khi phòng đang có khách) -->
                   <ng-container *ngIf="room.status === 'occupied'">
-                    <nz-tag 
-                      [nzColor]="getGuestSourceLabelAndColor(getRoomGuestSource(room)).color" 
-                      class="room-badge source-badge">
-                      {{ getGuestSourceLabelAndColor(getRoomGuestSource(room)).label }}
-                    </nz-tag>
+                    <ng-container *ngIf="getRoomGuestSource(room) as guestSource">
+                      <nz-tag 
+                        [nzColor]="getGuestSourceLabelAndColor(guestSource).color" 
+                        class="room-badge source-badge">
+                        {{ getGuestSourceLabelAndColor(guestSource).label }}
+                      </nz-tag>
+                    </ng-container>
                     
                     <!-- Thời gian lưu trú (hiển thị ở cả chế độ bình thường và compact) -->
                     <nz-tag 
@@ -453,6 +455,7 @@
         (nzActiveChange)="onRevenuePanelChange($event)">
         <div class="collapse-content">
           <app-revenue-chart
+            *ngIf="isRevenuePanelActive && !isRoomsLoading"
             [hotelId]="selectedHotelId"
             [labels]="chartLabels"
             [revenueData]="chartRevenueData"
@@ -475,6 +478,7 @@
         (nzActiveChange)="onCalendarPanelChange($event)">
         <div class="collapse-content">
           <app-calendar 
+            *ngIf="isCalendarPanelActive && !isRoomsLoading"
             #calendarComponent
             [hotelId]="selectedHotelId"
             (bookingSelected)="onCalendarDateSelected($event)">
@@ -490,6 +494,7 @@
         (nzActiveChange)="onHistoryPanelChange($event)">
         <div class="collapse-content">
           <app-table 
+            *ngIf="isHistoryPanelActive && !isRoomsLoading"
             [listOfData]="roomTableData" 
             [hotelId]="selectedHotelId"
             [totalExpense]="totalExpense"
