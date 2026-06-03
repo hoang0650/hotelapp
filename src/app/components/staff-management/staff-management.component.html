@@ -220,6 +220,40 @@
             </nz-form-item>
           </div>
 
+          <ng-container *ngIf="!selectedStaff">
+            <nz-divider nzText="Phân quyền theo gói"></nz-divider>
+
+            <nz-form-item>
+              <nz-form-label>Quyền theo gói (package permissions)</nz-form-label>
+              <nz-form-control>
+                <nz-select
+                  formControlName="delegatedPackagePermissions"
+                  nzMode="multiple"
+                  nzShowSearch
+                  nzAllowClear
+                  nzPlaceHolder="Chọn quyền theo gói">
+                  <nz-option *ngFor="let opt of packagePermissionOptions" [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+                </nz-select>
+                <small class="text-muted">Nếu để trống, tài khoản sẽ dùng toàn bộ quyền theo gói của chủ quản.</small>
+              </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+              <nz-form-label>Tính năng được phép</nz-form-label>
+              <nz-form-control>
+                <nz-select
+                  formControlName="delegatedFeatures"
+                  nzMode="multiple"
+                  nzShowSearch
+                  nzAllowClear
+                  nzPlaceHolder="Chọn tính năng được phép">
+                  <nz-option *ngFor="let f of delegatedFeatureOptions" [nzValue]="f.value" [nzLabel]="f.label"></nz-option>
+                </nz-select>
+                <small class="text-muted">Nếu để trống, tài khoản sẽ dùng toàn bộ tính năng theo gói của chủ quản.</small>
+              </nz-form-control>
+            </nz-form-item>
+          </ng-container>
+
           <nz-divider [nzText]="'STAFF_MANAGEMENT.FORM.PERSONAL_INFO' | translate"></nz-divider>
 
           <div formGroupName="personalInfo">

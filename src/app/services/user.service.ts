@@ -280,8 +280,16 @@ export class UserService {
     fullName?: string;
     phone?: string;
     hotelId: string;
+    features?: string[];
+    packagePermissions?: Array<'view' | 'edit' | 'delete' | 'manage'>;
   }): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/staff/create`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  updateDelegation(userId: string, payload: { features?: string[]; packagePermissions?: Array<'view' | 'edit' | 'delete' | 'manage'>; }): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${userId}/delegation`, payload, {
       headers: this.getAuthHeaders()
     });
   }

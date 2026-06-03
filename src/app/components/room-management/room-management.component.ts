@@ -277,18 +277,24 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   get canCreateRoom(): boolean {
     // Chỉ admin và hotel manager có thể tạo phòng
     // Business KHÔNG thể tạo phòng, chỉ xem
+    if (!this.permissionService.hasFeatureAccess('room_management')) return false;
+    if (!this.permissionService.hasPermission('edit') && !this.permissionService.hasPermission('manage')) return false;
     return this.isAdmin || this.isHotelManager;
   }
 
   get canEditRoom(): boolean {
     // Chỉ admin và hotel manager có thể cập nhật phòng
     // Business KHÔNG thể cập nhật phòng, chỉ xem
+    if (!this.permissionService.hasFeatureAccess('room_management')) return false;
+    if (!this.permissionService.hasPermission('edit') && !this.permissionService.hasPermission('manage')) return false;
     return this.isAdmin || this.isHotelManager;
   }
 
   canManage(roomId?: string): boolean {
     if (!roomId) return false;
     if (!this.currentUser) return false;
+    if (!this.permissionService.hasFeatureAccess('room_management')) return false;
+    if (!this.permissionService.hasPermission('edit') && !this.permissionService.hasPermission('manage')) return false;
     
     // Admin có quyền quản lý tất cả
     if (this.isAdmin) return true;
@@ -840,7 +846,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   }
 
   deleteRoom(id: string): void {
-    if (!this.canManage(id)) {
+    if (!this.permissionService.hasFeatureAccess('room_management') || (!this.permissionService.hasPermission('delete') && !this.permissionService.hasPermission('manage')) || !this.canManage(id)) {
       this.message.warning(this.translate.instant('ROOM_MANAGEMENT.NO_DELETE_PERMISSION'));
       return;
     }

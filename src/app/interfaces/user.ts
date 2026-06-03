@@ -30,6 +30,7 @@ export interface User {
   permissions?: Array<'view' | 'create' | 'edit' | 'delete' | 'manage_revenue'>;
   // Tính năng (features) - tương tự pricing-management
   features?: string[];
+  packagePermissions?: Array<'view' | 'edit' | 'delete' | 'manage'>;
   // Feature flags - tương tự pricing-management
   qrPaymentFeature?: boolean;
   otaManagementFeature?: boolean;

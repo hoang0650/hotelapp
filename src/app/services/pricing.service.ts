@@ -80,7 +80,9 @@ export class PricingService {
   }
 
   cancelSubscription(userId: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/cancel`, { userId });
+    return this.http.post(`${this.apiUrl}/cancel`, { userId }).pipe(
+      tap(() => this.subscriptionChanged$.next())
+    );
   }
 
   getCurrentUserPackage(userId: string): Observable<PricingPackage> {

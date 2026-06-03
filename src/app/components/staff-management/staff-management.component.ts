@@ -14,6 +14,9 @@ import * as XLSX from 'xlsx';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { TranslateService } from '@ngx-translate/core';
+import { PermissionService } from '../../services/permission.service';
+import { PricingPackage } from '../../services/pricing.service';
+import { PermissionFeature } from '../../services/permission.service';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
 declare global {
@@ -55,6 +58,10 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   // Business info for salary slip
   businessInfo: any = null;
   businessLogo: string = '';
+  currentPackage: PricingPackage | null = null;
+  currentHotelUserCount = 0;
+  delegatedFeatureOptions: { value: PermissionFeature; label: string }[] = [];
+  packagePermissionOptions: { value: 'view' | 'edit' | 'delete' | 'manage'; label: string }[] = [];
 
   constructor(
     private fb: FormBuilder, 
@@ -66,7 +73,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     private message: NzMessageService,
     private modal: NzModalService,
     private http: HttpClient,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private permissionService: PermissionService
   ) {
     this.initForm();
     this.initSalaryForm();
@@ -76,18 +84,27 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     this.initTranslationArrays();
     this.loadHotels();
     this.loadBusinessInfo();
+
+    this.subscriptions.add(
+      this.permissionService.currentPackage$.subscribe(pkg => {
+        this.currentPackage = pkg;
+      })
+    );
     
     // Auto-select hotel nếu user là hotel manager
     const hotelId = this.authService.getHotelId();
     if (hotelId) {
       this.selectedHotelId = hotelId;
       this.loadStaff(); // loadUsers sẽ được gọi sau khi loadStaff xong
+      this.refreshHotelUserCount();
     }
 
     // Subscribe to language changes
-    this.translate.onLangChange.subscribe(() => {
-      this.initTranslationArrays();
-    });
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.initTranslationArrays();
+      })
+    );
   }
 
   private initTranslationArrays(): void {
@@ -126,6 +143,18 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       { value: 'manage_rooms', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.MANAGE_ROOMS') },
       { value: 'manage_bookings', label: this.translate.instant('STAFF_MANAGEMENT.PERMISSIONS.MANAGE_BOOKINGS') }
     ];
+
+    this.packagePermissionOptions = [
+      { value: 'view', label: 'View' },
+      { value: 'edit', label: 'Edit' },
+      { value: 'delete', label: 'Delete' },
+      { value: 'manage', label: 'Manage' }
+    ];
+
+    this.delegatedFeatureOptions = this.permissionService.getAccessibleFeatures().map(feature => ({
+      value: feature,
+      label: this.translate.instant(`USER_MANAGEMENT.FEATURES.${feature.toUpperCase()}`)
+    }));
   }
 
   loadBusinessInfo(): void {
@@ -198,6 +227,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       accountMode: ['existing'],
       userId: ['', Validators.required],
       hotelId: ['', Validators.required],
+      delegatedFeatures: [[]],
+      delegatedPackagePermissions: [['view']],
       userAccount: this.fb.group({
         username: [''],
         email: [''],
@@ -261,11 +292,20 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   }
 
   resetForm(): void {
-    const defaultMode = (this.authService.isAdmin() || this.authService.isSuperAdmin()) ? 'existing' : 'new';
+    const maxUsers = Number((this.currentPackage as any)?.maxUsers ?? 0);
+    const userLimitReached = maxUsers > 0 && this.currentHotelUserCount >= maxUsers;
+    const defaultMode = userLimitReached ? 'existing' : ((this.authService.isAdmin() || this.authService.isSuperAdmin()) ? 'existing' : 'new');
+    const pkgPermissions = Array.isArray((this.currentPackage as any)?.permissions) ? (this.currentPackage as any).permissions : ['view'];
+    const delegatable = this.permissionService.getAccessibleFeatures();
+    const pkgFeatures = Array.isArray((this.currentPackage as any)?.features) ? (this.currentPackage as any).features : [];
+    const defaultDelegatedFeatures = pkgFeatures.length > 0 ? delegatable.filter(f => pkgFeatures.includes(f)) : delegatable;
+
     this.staffForm.reset({
       accountMode: defaultMode,
       userId: '',
       hotelId: this.selectedHotelId,
+      delegatedFeatures: defaultDelegatedFeatures,
+      delegatedPackagePermissions: pkgPermissions,
       userAccount: { username: '', email: '', password: '', fullName: '', phone: '' },
       personalInfo: {
         firstName: '',
@@ -426,6 +466,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
           this.staffs = data;
           this.isLoading = false;
           this.loadUsers(); // Reload users sau khi có danh sách staff
+          this.refreshHotelUserCount();
         },
         (error) => {
           this.message.error(this.translate.instant('STAFF_MANAGEMENT.LOAD_STAFF_ERROR') + ': ' + (error.error?.message || error.message));
@@ -440,6 +481,47 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     this.staffForm.patchValue({ hotelId: hotelId });
     this.loadStaff();
     this.loadUsers();
+    this.refreshHotelUserCount();
+  }
+
+  private refreshHotelUserCount(): void {
+    if (!this.selectedHotelId) {
+      this.currentHotelUserCount = 0;
+      return;
+    }
+
+    this.subscriptions.add(
+      this.userService.getUsersByHotel(this.selectedHotelId).subscribe(
+        (hotelUsers) => {
+          this.currentHotelUserCount = Array.isArray(hotelUsers) ? hotelUsers.length : 0;
+        },
+        () => {
+          this.currentHotelUserCount = 0;
+        }
+      )
+    );
+  }
+
+  private getProjectedHotelUserCount(formValue: any): number {
+    let projected = this.currentHotelUserCount;
+    if (this.selectedStaff) return projected;
+
+    const selectedHotelId = formValue?.hotelId || this.selectedHotelId;
+
+    if ((formValue?.accountMode || this.accountMode) === 'new') {
+      return projected + 1;
+    }
+
+    const selectedUserId = formValue?.userId;
+    if (!selectedUserId) return projected + 1;
+
+    const selectedUser = this.users.find(u => (u as any)._id === selectedUserId);
+    const userHotelId = (selectedUser as any)?.hotelId;
+    if (!userHotelId || userHotelId !== selectedHotelId) {
+      projected += 1;
+    }
+
+    return projected;
   }
 
   loadUsers(): void {
@@ -484,6 +566,17 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   // ============ CRUD OPERATIONS ============
 
   showAddForm(): void {
+    if (!this.permissionService.hasFeatureAccess('staff_management') || (!this.permissionService.hasPermission('edit') && !this.permissionService.hasPermission('manage'))) {
+      this.message.warning('Bạn không có quyền truy cập Quản lý nhân viên.');
+      return;
+    }
+
+    const maxUsers = Number((this.currentPackage as any)?.maxUsers ?? 0);
+    if (maxUsers > 0 && this.currentHotelUserCount >= maxUsers && this.users.length === 0) {
+      this.message.warning(`Gói hiện tại chỉ cho phép tạo tối đa ${maxUsers} người dùng. Vui lòng nâng cấp gói để tạo thêm.`);
+      return;
+    }
+
     this.selectedStaff = null;
     this.editId = null;
     this.resetForm();
@@ -561,6 +654,11 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   }
 
   createStaff(): void {
+    if (!this.permissionService.hasFeatureAccess('staff_management') || (!this.permissionService.hasPermission('edit') && !this.permissionService.hasPermission('manage'))) {
+      this.message.warning('Bạn không có quyền tạo nhân viên.');
+      return;
+    }
+
     this.applyAccountModeValidators();
     if (this.staffForm.invalid) {
       this.markFormDirty();
@@ -570,11 +668,22 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
     this.isLoading = true;
     const formValue = this.staffForm.value;
+    const maxUsers = Number((this.currentPackage as any)?.maxUsers ?? 0);
+    if (maxUsers > 0) {
+      const projected = this.getProjectedHotelUserCount(formValue);
+      if (projected > maxUsers) {
+        this.message.warning(`Gói hiện tại chỉ cho phép tạo tối đa ${maxUsers} người dùng. Vui lòng nâng cấp gói để tạo thêm.`);
+        this.isLoading = false;
+        return;
+      }
+    }
 
     const createStaffRecord = (userId: string) => {
       const payload: any = { ...formValue, userId };
       delete payload.accountMode;
       delete payload.userAccount;
+      delete payload.delegatedFeatures;
+      delete payload.delegatedPackagePermissions;
       this.subscriptions.add(
         this.staffService.createStaff(payload).subscribe(
           (data: Staff) => {
@@ -595,6 +704,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       const ua = formValue.userAccount || {};
       const fullNameFromForm = `${formValue.personalInfo?.firstName || ''} ${formValue.personalInfo?.lastName || ''}`.trim();
       const hotelId = formValue.hotelId || this.selectedHotelId;
+      const delegatedFeatures = Array.isArray(formValue.delegatedFeatures) ? formValue.delegatedFeatures : [];
+      const delegatedPackagePermissions = Array.isArray(formValue.delegatedPackagePermissions) ? formValue.delegatedPackagePermissions : ['view'];
       this.subscriptions.add(
         this.userService.createStaffUser({
           username: ua.username,
@@ -602,7 +713,9 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
           password: ua.password,
           fullName: ua.fullName || fullNameFromForm,
           phone: ua.phone || formValue.contactInfo?.phone || '',
-          hotelId: hotelId
+          hotelId: hotelId,
+          features: delegatedFeatures,
+          packagePermissions: delegatedPackagePermissions
         }).subscribe(
           (resp: any) => {
             const userId = resp?.user?._id;
@@ -620,7 +733,17 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
         )
       );
     } else {
-      createStaffRecord(formValue.userId);
+      const delegatedFeatures = Array.isArray(formValue.delegatedFeatures) ? formValue.delegatedFeatures : [];
+      const delegatedPackagePermissions = Array.isArray(formValue.delegatedPackagePermissions) ? formValue.delegatedPackagePermissions : [];
+      this.subscriptions.add(
+        this.userService.updateDelegation(formValue.userId, {
+          features: delegatedFeatures,
+          packagePermissions: delegatedPackagePermissions
+        }).subscribe({
+          next: () => createStaffRecord(formValue.userId),
+          error: () => createStaffRecord(formValue.userId)
+        })
+      );
     }
   }
 
@@ -660,6 +783,11 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   }
 
   updateStaff(): void {
+    if (!this.permissionService.hasFeatureAccess('staff_management') || (!this.permissionService.hasPermission('edit') && !this.permissionService.hasPermission('manage'))) {
+      this.message.warning('Bạn không có quyền cập nhật nhân viên.');
+      return;
+    }
+
     if (!this.selectedStaff || this.staffForm.invalid) {
       this.markFormDirty();
       this.message.warning(this.translate.instant('STAFF_MANAGEMENT.FILL_REQUIRED_FIELDS'));
@@ -688,6 +816,11 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   }
 
   deleteStaff(staff: Staff): void {
+    if (!this.permissionService.hasFeatureAccess('staff_management') || (!this.permissionService.hasPermission('delete') && !this.permissionService.hasPermission('manage'))) {
+      this.message.warning('Bạn không có quyền xóa nhân viên.');
+      return;
+    }
+
     this.modal.confirm({
       nzTitle: this.translate.instant('STAFF_MANAGEMENT.CONFIRM_DELETE_TITLE'),
       nzContent: this.translate.instant('STAFF_MANAGEMENT.CONFIRM_DELETE_MESSAGE', { name: this.getFullName(staff) }),

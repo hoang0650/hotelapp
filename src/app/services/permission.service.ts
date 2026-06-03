@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject, of } from 'rxjs';
-import { map, catchError, tap } from 'rxjs/operators';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { AuthService, UserRole } from './auth.service';
 import { PricingService, PricingPackage } from './pricing.service';
 
@@ -66,58 +65,61 @@ export class PermissionService {
   public currentPackage$ = this.currentPackageSubject.asObservable();
   private permissionsSubject = new BehaviorSubject<string[]>([]);
   public permissions$ = this.permissionsSubject.asObservable();
+  private subscriptions = new Subscription();
+  private currentUser: any = null;
 
   constructor(
     private authService: AuthService,
     private pricingService: PricingService
   ) {
-    this.loadUserPermissions();
+    this.subscriptions.add(
+      this.authService.currentUser$.subscribe(user => {
+        this.currentUser = user;
+        this.refreshPermissions();
+      })
+    );
+
+    this.subscriptions.add(
+      this.pricingService.subscriptionChanged$.subscribe(() => {
+        this.refreshPermissions();
+      })
+    );
   }
 
   /**
    * Load permissions từ pricing package của user
    */
-  private loadUserPermissions(): void {
-    this.authService.currentUser$.subscribe(user => {
-      if (!user) {
-        this.permissionsSubject.next([]);
-        this.currentPackageSubject.next(null);
-        return;
-      }
-
-      // Superadmin có toàn quyền
-      if (user.role === 'superadmin') {
-        this.permissionsSubject.next(['view', 'edit', 'delete', 'manage']);
-        this.currentPackageSubject.next(null);
-        return;
-      }
-
-      // Load package của user
-      this.pricingService.getCurrentUserPackage(user._id).subscribe({
-        next: (response: any) => {
-          // Xử lý response có thể là { success: true, data: {...} } hoặc trực tiếp là package object
-          let pkg = null;
-          if (response && response.success !== false) {
-            pkg = response.data || response;
-          }
-          
-          if (pkg && pkg.permissions && Array.isArray(pkg.permissions) && pkg.permissions.length > 0) {
-            this.currentPackageSubject.next(pkg);
-            this.permissionsSubject.next(pkg.permissions);
-          } else {
-            // Nếu không có package, dùng permissions mặc định từ role
-            this.setDefaultPermissionsByRole(user.role);
-          }
-        },
-        error: (error) => {
-          // Không log error nếu là 404 (user chưa có package)
-          if (error.status !== 404 && error.status !== 400) {
-            console.error('Error loading user package:', error);
-          }
-          // Nếu không có package, dùng permissions mặc định từ role
-          this.setDefaultPermissionsByRole(user.role);
+  private loadUserPermissions(userId: string, role: UserRole): void {
+    this.pricingService.getCurrentUserPackage(userId).subscribe({
+      next: (response: any) => {
+        let pkg: any = null;
+        if (response && response.success !== false) {
+          pkg = response.data || response;
         }
-      });
+
+        if (pkg && pkg.permissions && Array.isArray(pkg.permissions) && pkg.permissions.length > 0) {
+          this.currentPackageSubject.next(pkg);
+          const user = this.currentUser || this.authService.getCurrentUser();
+          const delegatedPackagePermissions = (user as any)?.packagePermissions;
+          if (Array.isArray(delegatedPackagePermissions) && delegatedPackagePermissions.length > 0) {
+            const effective = pkg.permissions.filter((p: string) => delegatedPackagePermissions.includes(p));
+            this.permissionsSubject.next(effective.length > 0 ? effective : ['view']);
+          } else {
+            this.permissionsSubject.next(pkg.permissions);
+          }
+          return;
+        }
+
+        this.currentPackageSubject.next(pkg || null);
+        this.setDefaultPermissionsByRole(role);
+      },
+      error: (error) => {
+        if (error.status !== 404 && error.status !== 400) {
+          console.error('Error loading user package:', error);
+        }
+        this.currentPackageSubject.next(null);
+        this.setDefaultPermissionsByRole(role);
+      }
     });
   }
 
@@ -172,114 +174,112 @@ export class PermissionService {
     if (user?.role === 'superadmin') {
       return true;
     }
-
-    // Business và Hotel Manager được phép truy cập các tính năng quản lý của họ
-    if (user?.role === 'business' || user?.role === 'hotel') {
-      // Business và Hotel Manager được phép truy cập các features sau:
-      const allowedFeatures: PermissionFeature[] = [
-        'room_management', // Quản lý phòng
-        'shift_handover', // Giao ca và lịch sử giao ca
-        'calendar', // Lịch
-        'bank_transfer_history', // Lịch sử chuyển khoản
-        'staff_management', // Quản lý nhân viên
-        'service_management', // Quản lý dịch vụ
-        'ota_management', // Quản lý OTA
-        'fanpage_messages', // Tin nhắn Fanpage
-        'zalo_messages', // Tin nhắn Zalo OA
-        'telegram_messages', // Tin nhắn Telegram
-        'revenue_chart', // Biểu đồ doanh thu
-        'qr_payment', // Thanh toán QR
-        'visa_payment', // Thanh toán Visa
-        'electric_management', // Quản lý điện
-        'pricing_management' // Cho phép tất cả role truy cập
-      ];
-      
-      // Business KHÔNG được phép quản lý company (chỉ xem)
-      if (user?.role === 'business' && feature === 'company_management') {
-        return false; // Business chỉ xem, không thể tạo/cập nhật
-      }
-      
-      // Hotel Manager không được phép quản lý company
-      if (user?.role === 'hotel' && feature === 'company_management') {
-        return false;
-      }
-      
-      // Hotel Manager được phép quản lý hotel của mình (chỉ xem, không tạo/cập nhật)
-      if (user?.role === 'hotel' && feature === 'hotel_management') {
-        return true; // Hotel Manager được xem hotel của mình (backend sẽ filter)
-      }
-      
-      // Business KHÔNG được phép quản lý hotels (chỉ xem)
-      if (user?.role === 'business' && feature === 'hotel_management') {
-        return false; // Business chỉ xem, không thể tạo/cập nhật
-      }
-      
-      // Business KHÔNG được phép quản lý rooms (chỉ xem)
-      if (user?.role === 'business' && feature === 'room_management') {
-        return false; // Business chỉ xem, không thể tạo/cập nhật
-      }
-      
-      // Business được phép quản lý hotels thuộc business của mình (chỉ xem)
-      if (user?.role === 'business' && feature === 'hotel_management') {
-        return true; // Business được quản lý hotels thuộc business của mình (backend sẽ filter)
-      }
-      
-      // Chặn các features quản lý cấp cao
-      const blockedFeatures: PermissionFeature[] = [
-        'user_management', // Quản lý người dùng - chỉ superadmin, admin, business (xem)
-        'email_admin', // Quản lý email - chỉ superadmin và admin
-        'settings_management' // Quản lý cài đặt - chỉ superadmin và admin
-      ];
-      
-      if (blockedFeatures.includes(feature)) {
-        return false;
-      }
-      
-      // Nếu feature nằm trong allowedFeatures, cho phép
-      if (allowedFeatures.includes(feature)) {
-        return true;
-      }
-    }
-
-    // Staff được phép truy cập một số tính năng cơ bản
-    if (user?.role === 'staff') {
-      // Staff được phép truy cập các features sau:
-      const allowedFeatures: PermissionFeature[] = [
-        'room_management', // Được xem và thao tác với phòng
-        'shift_handover', // Được giao ca và xem lịch sử giao ca
-        'calendar', // Được xem lịch
-        'bank_transfer_history', // Được xem lịch sử chuyển khoản (giao tiền)
-        'pricing_management' // Cho phép tất cả role truy cập
-      ];
-      
-      // Chặn các features quản lý cấp cao
-      const blockedFeatures: PermissionFeature[] = [
-        'hotel_management',
-        'company_management',
-        'staff_management',
-        'service_management',
-        'user_management',
-        'ota_management',
-        'revenue_chart',
-        'email_admin',
-        'qr_payment',
-        'visa_payment',
-        'electric_management'
-      ];
-      
-      if (blockedFeatures.includes(feature)) {
-        return false;
-      }
-      
-      // Nếu feature nằm trong allowedFeatures, cho phép
-      if (allowedFeatures.includes(feature)) {
-        return true;
-      }
+    
+    // Admin có toàn quyền
+    if (user?.role === 'admin') {
+      return true;
     }
 
     // Guest được phép truy cập pricing_management
     if (user?.role === 'guest' && feature === 'pricing_management') {
       return true;
+    }
+
+    if (user?.role === 'guest') {
+      return false;
+    }
+
+    const roleAllowedFeaturesByRole: Partial<Record<UserRole, PermissionFeature[]>> = {
+      business: [
+        'room_management',
+        'hotel_management',
+        'company_management',
+        'shift_handover',
+        'calendar',
+        'bank_transfer_history',
+        'staff_management',
+        'service_management',
+        'ota_management',
+        'fanpage_messages',
+        'zalo_messages',
+        'telegram_messages',
+        'revenue_chart',
+        'qr_payment',
+        'visa_payment',
+        'electric_management',
+        'pricing_management'
+      ],
+      hotel: [
+        'room_management',
+        'hotel_management',
+        'shift_handover',
+        'calendar',
+        'bank_transfer_history',
+        'staff_management',
+        'service_management',
+        'ota_management',
+        'fanpage_messages',
+        'zalo_messages',
+        'telegram_messages',
+        'revenue_chart',
+        'qr_payment',
+        'visa_payment',
+        'electric_management',
+        'pricing_management'
+      ],
+      staff: [
+        'room_management',
+        'shift_handover',
+        'calendar',
+        'bank_transfer_history',
+        'service_management',
+        'ota_management',
+        'fanpage_messages',
+        'zalo_messages',
+        'telegram_messages',
+        'revenue_chart',
+        'qr_payment',
+        'visa_payment',
+        'electric_management',
+        'pricing_management'
+      ]
+    };
+
+    const roleBlockedFeaturesByRole: Partial<Record<UserRole, PermissionFeature[]>> = {
+      business: ['user_management', 'email_admin', 'settings_management'],
+      hotel: ['user_management', 'email_admin', 'settings_management', 'company_management'],
+      staff: [
+        'company_management',
+        'staff_management',
+        'user_management',
+        'email_admin',
+        'settings_management'
+      ]
+    };
+
+    const role = (user?.role as UserRole) || 'guest';
+    const blockedForRole = roleBlockedFeaturesByRole[role] || [];
+    if (blockedForRole.includes(feature)) {
+      return false;
+    }
+
+    const allowedForRole = roleAllowedFeaturesByRole[role] || [];
+    if (!allowedForRole.includes(feature)) {
+      return false;
+    }
+
+    const pkg = this.currentPackageSubject.value as any;
+    if (feature !== 'pricing_management' && pkg?.features && Array.isArray(pkg.features) && pkg.features.length > 0) {
+      if (!pkg.features.includes(feature)) {
+        return false;
+      }
+    }
+
+    const delegatedFeatures = (user as any)?.features;
+    if (feature !== 'pricing_management' && Array.isArray(delegatedFeatures) && delegatedFeatures.length > 0) {
+      if (!delegatedFeatures.includes(feature)) {
+        return false;
+      }
     }
 
     // Kiểm tra permissions từ package
@@ -369,7 +369,20 @@ export class PermissionService {
    * Refresh permissions (gọi khi user đăng ký/hủy package)
    */
   refreshPermissions(): void {
-    this.loadUserPermissions();
+    const user = this.currentUser || this.authService.getCurrentUser();
+    if (!user) {
+      this.permissionsSubject.next([]);
+      this.currentPackageSubject.next(null);
+      return;
+    }
+
+    if (user.role === 'superadmin' || user.role === 'admin') {
+      this.permissionsSubject.next(['view', 'edit', 'delete', 'manage']);
+      this.currentPackageSubject.next(null);
+      return;
+    }
+
+    this.loadUserPermissions(user._id, user.role);
   }
 }
 
