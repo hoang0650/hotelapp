@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -21,7 +21,9 @@ interface ZaloMessage {
   templateUrl: './zalo-messages.component.html',
   styleUrls: ['./zalo-messages.component.css']
 })
-export class ZaloMessagesComponent implements OnInit, OnDestroy {
+export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecked {
+  @ViewChild('threadList') private threadList!: ElementRef;
+
   messages: ZaloMessage[] = [];
   oas: any[] = [];
   conversations: { sender_id: string; sender_name?: string; lastText: string; lastTime: number }[] = [];
@@ -35,6 +37,29 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy {
   isMobile = false;
   showSidebar = true;
   private wsSubscription: any;
+  private shouldScrollToBottom = false;
+
+  private onWindowFocus = async () => {
+    if (this.selectedOaId) {
+      await this.loadMessages();
+      await this.loadBotStatus();
+      this.cdr.detectChanges();
+    }
+  };
+
+  private onPopupMessage = async (event: MessageEvent) => {
+    if (event.data === 'zalo_connected') {
+      await this.refreshOAs();
+      if (this.oas && this.oas.length > 0 && !this.selectedOaId) {
+        this.selectedOaId = this.oas[0].id;
+      }
+      if (this.selectedOaId) {
+        await this.loadMessages();
+        await this.loadBotStatus();
+      }
+      this.cdr.detectChanges();
+    }
+  };
 
   constructor(
     private aiAssistant: AiAssistantService,
@@ -54,6 +79,9 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy {
       this.showSidebar = !this.isMobile;
 
       const tenantId = this.getTenantId();
+
+      window.addEventListener('focus', this.onWindowFocus);
+      window.addEventListener('message', this.onPopupMessage);
 
       this.wsSubscription = this.aiAssistant.connectToWebSocket(tenantId).subscribe((msg: any) => {
         if (msg && msg.platform === 'zalo') {
@@ -80,6 +108,8 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy {
     if (this.wsSubscription) {
       this.wsSubscription.unsubscribe();
     }
+    window.removeEventListener('focus', this.onWindowFocus);
+    window.removeEventListener('message', this.onPopupMessage);
   }
 
   handleRealtimeMessage(msg: ZaloMessage) {
@@ -92,6 +122,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy {
     const partnerId = msg.direction === 'in' ? msg.sender_id : msg.recipient_id;
     if (partnerId === this.selectedSenderId) {
       this.filterDisplayedMessages();
+      this.shouldScrollToBottom = true;
     }
     this.cdr.detectChanges();
   }
@@ -147,6 +178,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy {
     try {
       this.messages = await this.aiAssistant.getZaloMessages(tenantId, this.selectedOaId);
       this.buildConversations();
+      this.shouldScrollToBottom = true;
       this.cdr.detectChanges();
     } catch (error) {
       console.error('Lỗi load tin nhắn Zalo:', error);
@@ -175,6 +207,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy {
   selectConversation(senderId: string): void {
     this.selectedSenderId = senderId;
     this.filterDisplayedMessages();
+    this.shouldScrollToBottom = true;
     if (this.isMobile) this.showSidebar = false;
   }
 
@@ -231,5 +264,20 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy {
 
   toggleSidebar(): void {
     this.showSidebar = !this.showSidebar;
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.shouldScrollToBottom) {
+      this.scrollToBottom();
+      this.shouldScrollToBottom = false;
+    }
+  }
+
+  private scrollToBottom(): void {
+    try {
+      if (this.threadList) {
+        this.threadList.nativeElement.scrollTop = this.threadList.nativeElement.scrollHeight;
+      }
+    } catch (_) {}
   }
 }
