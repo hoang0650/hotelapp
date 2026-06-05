@@ -2253,7 +2253,9 @@
       "BUTTON_DEMO": "Demo ansehen",
       "STAT_HOTELS": "Vertrauenswürdige Hotels",
       "STAT_TRANSACTIONS": "Transaktionen/Tag",
-      "STAT_UPTIME": "Betriebszeit"
+      "STAT_UPTIME": "Betriebszeit",
+      "CTA_TRIAL": "Kostenlos testen (7 Tage)",
+      "META": "Keine Installation nötig. Läuft auf Web, Tablet und Smartphone. KI unterstützt Beratung & Direktbuchung über mehrere Kanäle."
     },
     "INTRODUCTION": {
       "TITLE": "Über die Software",
@@ -2272,10 +2274,49 @@
       "FEATURE_CUSTOMIZE_TITLE": "Intelligente Systemeinstellungen",
       "FEATURE_CUSTOMIZE_DESC": "Konfiguration elektrischer Geräte, Kundendienst-Bots und intelligentes E-Mail-Management automatisieren"
     },
+    "FEATURES": {
+      "TITLE": "Hauptfunktionen",
+      "SUBTITLE": "Für den echten Betrieb gebaut: schnell, klar und umsatzorientiert."
+    },
+    "ARTICLE": {
+      "TITLE": "Einführung",
+      "DESCRIPTION": "PHHotel ist eine Hotelverwaltungssoftware, die für schnelle Einführung und einfache Bedienung entwickelt wurde. Einfach anmelden und sofort loslegen: Zimmer, Reservierungen, Check-in/Check-out, Rechnungen & Zahlungen, Zusatzleistungen, Umsatzberichte und Aktivitätsverlauf.",
+      "BULLET_1": "Visuelle Zimmerverwaltung nach Etagen mit klaren Status (frei/belegt/Reinigung/Wartung/vorab gebucht).",
+      "BULLET_2": "Reservierungen erstellen und Verfügbarkeit nach Datum prüfen, um Überschneidungen zu vermeiden.",
+      "BULLET_3": "Flexible Preise pro Stunde/Tag/Übernachtung mit Zuschlägen und Rabatten.",
+      "BULLET_4": "Schnelle Rechnungsstellung, Anzahlungen sowie Einnahmen/Ausgaben-Abgleich.",
+      "BULLET_5": "Übersichts- und Detailberichte über Zeiträume für schnellere Entscheidungen.",
+      "IMAGE_CAPTION": "Ein intuitives Dashboard für schnelle Front-Desk-Aktionen"
+    },
+    "SCREENSHOTS": {
+      "TITLE": "Screenshots",
+      "SUBTITLE": "Einige typische Ansichten, um den Arbeitsablauf zu verstehen.",
+      "ITEM_1_ALT": "Visuelle Zimmerverwaltung",
+      "ITEM_1_CAPTION": "Etagenansicht mit klaren Zimmerstatus",
+      "ITEM_2_ALT": "Gäste- und Reservierungsverwaltung",
+      "ITEM_2_CAPTION": "Reservierungen, Gäste im Haus und Historie verfolgen",
+      "ITEM_3_ALT": "Preise und Zahlungen",
+      "ITEM_3_CAPTION": "Kosten berechnen, Rechnungen erstellen und mehrere Zahlungsarten nutzen",
+      "ITEM_4_ALT": "Umsatzberichte",
+      "ITEM_4_CAPTION": "Umsatzberichte mit Diagrammen und zeitbasierten Zusammenfassungen",
+      "ITEM_5_ALT": "Analyse-Dashboard",
+      "ITEM_5_CAPTION": "Betriebskennzahlen und schnelle Umsatztrends",
+      "ITEM_6_ALT": "Dienstleistungsverwaltung",
+      "ITEM_6_CAPTION": "Dienstleistungen und Upsells verwalten, um den Umsatz zu steigern",
+      "ITEM_7_ALT": "Buchungskalender",
+      "ITEM_7_CAPTION": "Verfügbarkeitsansicht für schnellere Planung"
+    },
     "VIDEO": {
       "TITLE": "Einführungsvideo & Demo",
       "SUBTITLE": "Sehen Sie sich das Video an, um besser zu verstehen, wie Sie die Software verwenden",
       "DESCRIPTION": "Dieses Video führt Sie durch die Hauptfunktionen der Hotelverwaltungssoftware, einschließlich Zimmerverwaltung, Buchungen, Zahlungen und Anzeigen von Berichten."
+    },
+    "APP": {
+      "TITLE": "Mobile App kommt bald",
+      "SUBTITLE": "Testen Sie auf Android und iOS",
+      "DESCRIPTION": "Hotelverwaltung jederzeit und überall.",
+      "DOWNLOAD_ANDROID": "Android-Demo herunterladen",
+      "DOWNLOAD_IOS": "iOS-Demo ansehen"
     },
     "TESTIMONIALS": {
       "TITLE": "Was unsere Kunden über uns sagen",

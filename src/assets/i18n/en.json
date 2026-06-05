@@ -2303,7 +2303,9 @@
       "BUTTON_DEMO": "Watch Demo",
       "STAT_HOTELS": "Trusted hotels",
       "STAT_TRANSACTIONS": "Transactions/day",
-      "STAT_UPTIME": "Uptime"
+      "STAT_UPTIME": "Uptime",
+      "CTA_TRIAL": "Start free trial (7 days)",
+      "META": "No installation needed. Runs on web, tablet and phone. AI supports consultation & direct booking across channels."
     },
     "INTRODUCTION": {
       "TITLE": "About the Software",
@@ -2322,13 +2324,45 @@
       "FEATURE_CUSTOMIZE_TITLE": "Smart System Settings",
       "FEATURE_CUSTOMIZE_DESC": "Automate electrical device configuration, customer care Bots, and smart email management"
     },
+    "FEATURES": {
+      "TITLE": "Key features",
+      "SUBTITLE": "Built for real operations: fast, clear and revenue-focused."
+    },
+    "ARTICLE": {
+      "TITLE": "Introduction",
+      "DESCRIPTION": "PHHotel is a hotel management software designed for quick rollout and ease of use. Just sign in and operate immediately: rooms, bookings, check-in/check-out, invoices & payments, upsell services, revenue reports and activity history.",
+      "BULLET_1": "Visual room management by floors with clear statuses (vacant/occupied/cleaning/maintenance/pre-booked).",
+      "BULLET_2": "Create reservations and check availability by date to avoid overlaps.",
+      "BULLET_3": "Flexible pricing by hour/day/overnight with surcharges and discounts.",
+      "BULLET_4": "Fast invoicing, deposit tracking and income/expense reconciliation.",
+      "BULLET_5": "Summary and detailed reports over time for faster decisions.",
+      "IMAGE_CAPTION": "An intuitive operations dashboard for quick front-desk actions"
+    },
+    "SCREENSHOTS": {
+      "TITLE": "Screenshots",
+      "SUBTITLE": "A few representative screens to visualize the operating flow.",
+      "ITEM_1_ALT": "Visual room management",
+      "ITEM_1_CAPTION": "Floor-based room view with clear statuses",
+      "ITEM_2_ALT": "Guest & booking management",
+      "ITEM_2_CAPTION": "Track reservations, in-house guests and history",
+      "ITEM_3_ALT": "Pricing & payments",
+      "ITEM_3_CAPTION": "Calculate charges, issue invoices and accept multiple payment methods",
+      "ITEM_4_ALT": "Revenue reports",
+      "ITEM_4_CAPTION": "Revenue reports with charts and time-based summaries",
+      "ITEM_5_ALT": "Analytics dashboard",
+      "ITEM_5_CAPTION": "Operational insights and quick revenue trends",
+      "ITEM_6_ALT": "Service management",
+      "ITEM_6_CAPTION": "Manage services and upsells to grow revenue",
+      "ITEM_7_ALT": "Booking calendar",
+      "ITEM_7_CAPTION": "Availability view for faster planning"
+    },
     "VIDEO": {
       "TITLE": "Introduction Video & Demo",
       "SUBTITLE": "Watch the video to better understand how to use the software",
       "DESCRIPTION": "This video will guide you on how to use the main features of the hotel management software, including room management, bookings, payments and viewing reports."
     },
     "APP": {
-      "TITLE": "Mobile apps are available",
+      "TITLE": "Mobile apps are available soon!",
       "SUBTITLE": "Try our Android and iOS",
       "DESCRIPTION": "Experience hotel management anytime, anywhere.",
       "DOWNLOAD_ANDROID": "Download Android",

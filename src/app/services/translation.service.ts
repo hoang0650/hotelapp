@@ -2,6 +2,7 @@ import { Injectable, NgZone, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
 /**
  * Service để quản lý translation toàn hệ thống
@@ -22,14 +23,14 @@ export class TranslationService {
     // Khởi tạo ngôn ngữ mặc định
     const savedLang = this.getStoredLanguage() || 'vi';
     this.translate.setDefaultLang('vi');
-    this.translate.use(savedLang).subscribe({
+    this.translate.reloadLang(savedLang).pipe(switchMap(() => this.translate.use(savedLang))).subscribe({
       next: () => {
         const current = this.translate.currentLang || savedLang;
         this.currentLangSubject.next(current);
       },
       error: () => {
         if (savedLang !== 'vi') {
-          this.translate.use('vi').subscribe({
+          this.translate.reloadLang('vi').pipe(switchMap(() => this.translate.use('vi'))).subscribe({
             next: () => {
               this.currentLangSubject.next('vi');
             },
@@ -56,7 +57,7 @@ export class TranslationService {
     
     // Use NgZone to ensure change detection runs
     this.ngZone.run(() => {
-      this.translate.use(lang).subscribe({
+      this.translate.reloadLang(lang).pipe(switchMap(() => this.translate.use(lang))).subscribe({
         next: (translations) => {
           console.log(`✅ Language switched successfully to: ${lang}`);
           console.log(`Current language after switch: ${this.translate.currentLang}`);

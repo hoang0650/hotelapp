@@ -163,10 +163,11 @@ registerLocaleData(vi);
 // Custom loader để load translation files
 export class CustomTranslateLoader implements TranslateLoader {
   constructor(private http: HttpClient) {}
+  private readonly cacheBuster = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
   getTranslation(lang: string): Observable<any> {
     console.log(`📥 CustomTranslateLoader: Loading translation for ${lang}`);
-    const url = `/assets/i18n/${lang}.json`;
+    const url = `/assets/i18n/${lang}.json?v=${this.cacheBuster}`;
     console.log(`📥 Loading from URL: ${url}`);
     
     return this.http.get(url, { responseType: 'json' }).pipe(

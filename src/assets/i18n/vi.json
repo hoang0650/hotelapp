@@ -2842,7 +2842,9 @@
       "BUTTON_DEMO": "Xem Demo",
       "STAT_HOTELS": "Khách sạn tin dùng",
       "STAT_TRANSACTIONS": "Giao dịch/ngày",
-      "STAT_UPTIME": "Uptime"
+      "STAT_UPTIME": "Uptime",
+      "CTA_TRIAL": "Đăng ký dùng miễn phí 7 ngày",
+      "META": "Không cần cài đặt. Chạy trên web, máy tính bảng, điện thoại. Hỗ trợ AI tư vấn & chốt phòng đa kênh."
     },
     "INTRODUCTION": {
       "TITLE": "Giới Thiệu Về Phần Mềm",
@@ -2861,13 +2863,45 @@
       "FEATURE_CUSTOMIZE_TITLE": "Hệ Thống Thông Minh",
       "FEATURE_CUSTOMIZE_DESC": "Cấu hình tự động hóa thiết bị điện, Bot chăm sóc khách hàng và quản lý email"
     },
+    "FEATURES": {
+      "TITLE": "Tính năng nổi bật",
+      "SUBTITLE": "Tập trung vào vận hành thực tế: nhanh, rõ ràng, tối ưu doanh thu."
+    },
+    "ARTICLE": {
+      "TITLE": "Giới thiệu",
+      "DESCRIPTION": "PHHotel là phần mềm quản lý khách sạn được thiết kế để dễ dùng và triển khai nhanh. Chỉ cần đăng nhập là có thể vận hành ngay: quản lý phòng, đặt phòng, check-in/check-out, hóa đơn – thanh toán, dịch vụ bán kèm, báo cáo doanh thu và lịch sử hoạt động.",
+      "BULLET_1": "Quản lý phòng trực quan theo tầng, trạng thái rõ ràng (trống/đang ở/dọn phòng/bảo trì/đặt trước).",
+      "BULLET_2": "Đặt phòng trước, kiểm tra phòng trống theo ngày, hạn chế trùng booking.",
+      "BULLET_3": "Tính tiền linh hoạt theo giờ/ngày/qua đêm; hỗ trợ phụ thu và giảm giá.",
+      "BULLET_4": "Xuất hóa đơn nhanh, ghi nhận cọc/thu chi; đối soát doanh thu rõ ràng.",
+      "BULLET_5": "Báo cáo tổng hợp và chi tiết theo thời gian để ra quyết định nhanh.",
+      "IMAGE_CAPTION": "Giao diện quản lý vận hành trực quan, thao tác nhanh"
+    },
+    "SCREENSHOTS": {
+      "TITLE": "Hình ảnh thực tế",
+      "SUBTITLE": "Một vài màn hình tiêu biểu giúp bạn hình dung quy trình vận hành.",
+      "ITEM_1_ALT": "Giao diện quản lý phòng trực quan",
+      "ITEM_1_CAPTION": "Quản lý phòng trực quan theo tầng – trạng thái rõ ràng",
+      "ITEM_2_ALT": "Quản lý khách hàng và đặt phòng",
+      "ITEM_2_CAPTION": "Theo dõi đặt phòng, khách lưu trú và lịch sử giao dịch",
+      "ITEM_3_ALT": "Tính tiền và thanh toán",
+      "ITEM_3_CAPTION": "Tính tiền, xuất hóa đơn, đa phương thức thanh toán",
+      "ITEM_4_ALT": "Báo cáo doanh thu",
+      "ITEM_4_CAPTION": "Báo cáo doanh thu – biểu đồ – tổng hợp theo thời gian",
+      "ITEM_5_ALT": "Thống kê và báo cáo",
+      "ITEM_5_CAPTION": "Thống kê vận hành – xem nhanh xu hướng doanh thu",
+      "ITEM_6_ALT": "Quản lý dịch vụ",
+      "ITEM_6_CAPTION": "Quản lý dịch vụ – bán kèm – tăng doanh thu",
+      "ITEM_7_ALT": "Lịch đặt phòng",
+      "ITEM_7_CAPTION": "Lịch đặt phòng – kiểm tra phòng trống nhanh"
+    },
     "VIDEO": {
       "TITLE": "Video Giới Thiệu & Demo",
       "SUBTITLE": "Xem video để hiểu rõ hơn về cách sử dụng phần mềm",
       "DESCRIPTION": "Video này sẽ hướng dẫn bạn cách sử dụng các tính năng chính của phần mềm quản lý khách sạn, bao gồm quản lý phòng, đặt phòng, thanh toán và xem báo cáo."
     },
     "APP": {
-      "TITLE": "Ứng dụng di động đã ra mắt",
+      "TITLE": "Ứng dụng di động sắp ra mắt",
       "SUBTITLE": "Dùng thử trên Android và iOS",
       "DESCRIPTION": "Trải nghiệm quản lý khách sạn mọi lúc mọi nơi.",
       "DOWNLOAD_ANDROID": "Tải bản demo Android",

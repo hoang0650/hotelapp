@@ -1,4 +1,55 @@
 <div class="home-container">
+  <section class="hero-sky">
+    <div class="container">
+      <div nz-row [nzGutter]="[24, 24]" nzAlign="middle">
+        <div nz-col [nzXs]="24" [nzMd]="12">
+          <h1 class="hero-sky__title">
+            {{ 'HOME.HERO.TITLE_LINE_1' | translate }}
+            {{ 'HOME.HERO.TITLE_LINE_2' | translate }}
+            {{ 'HOME.HERO.TITLE_LINE_3' | translate }}
+          </h1>
+          <div class="hero-sky__subtitle">
+            {{ 'HOME.HERO.SUBTITLE' | translate }}
+          </div>
+          <div class="hero-sky__actions">
+            <button nz-button nzType="primary" nzSize="large" class="hero-sky__btn">{{ 'HOME.HERO.CTA_TRIAL' | translate }}</button>
+            <button nz-button nzType="default" nzSize="large" class="hero-sky__btn hero-sky__btn--ghost">{{ 'HOME.HERO.BUTTON_DEMO' | translate }}</button>
+          </div>
+          <div class="hero-sky__meta">
+            {{ 'HOME.HERO.META' | translate }}
+          </div>
+        </div>
+        <div nz-col [nzXs]="24" [nzMd]="12">
+          <div class="hero-sky__mock">
+            <img [src]="introduceImages[0].src" [attr.alt]="(introduceImages[0].altKey || '') | translate" class="hero-sky__img" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="intro-article">
+    <div class="container">
+      <div class="intro-article__card">
+        <h2 class="intro-article__title">{{ 'HOME.ARTICLE.TITLE' | translate }}</h2>
+        <div class="intro-article__desc">
+          {{ 'HOME.ARTICLE.DESCRIPTION' | translate }}
+        </div>
+        <ul class="intro-article__bullets">
+          <li>{{ 'HOME.ARTICLE.BULLET_1' | translate }}</li>
+          <li>{{ 'HOME.ARTICLE.BULLET_2' | translate }}</li>
+          <li>{{ 'HOME.ARTICLE.BULLET_3' | translate }}</li>
+          <li>{{ 'HOME.ARTICLE.BULLET_4' | translate }}</li>
+          <li>{{ 'HOME.ARTICLE.BULLET_5' | translate }}</li>
+        </ul>
+
+        <div class="intro-article__image">
+          <img [src]="introduceImages[1].src" [attr.alt]="(introduceImages[1].altKey || '') | translate" loading="lazy" />
+          <div class="intro-article__caption">{{ 'HOME.ARTICLE.IMAGE_CAPTION' | translate }}</div>
+        </div>
+      </div>
+    </div>
+  </section>
   <!-- <section class="hero-section text-center">
     <div class="container py-5">
       <div class="hero-badge mb-3">
@@ -43,8 +94,8 @@
   <section class="features-section py-5 bg-light">
     <div class="container">
       <div class="text-center mb-5">
-        <h2 class="section-title font-weight-bold">{{ 'HOME.INTRODUCTION.TITLE' | translate }}</h2>
-        <p class="text-muted">{{ 'HOME.INTRODUCTION.HEADING' | translate }}</p>
+        <h2 class="section-title font-weight-bold">{{ 'HOME.FEATURES.TITLE' | translate }}</h2>
+        <p class="text-muted">{{ 'HOME.FEATURES.SUBTITLE' | translate }}</p>
       </div>
 
       <div nz-row [nzGutter]="[24, 24]">
@@ -106,7 +157,42 @@
     </div>
   </section>
 
-  <section class="video-section py-5">
+  <section class="screenshots">
+    <div class="container">
+      <div class="text-center mb-4">
+        <h2 class="section-title font-weight-bold">{{ 'HOME.SCREENSHOTS.TITLE' | translate }}</h2>
+        <p class="text-muted">{{ 'HOME.SCREENSHOTS.SUBTITLE' | translate }}</p>
+      </div>
+
+      <nz-carousel [nzAutoPlay]="true" nzDotPosition="bottom" class="screenshots-carousel">
+        <div nz-carousel-content *ngFor="let img of introduceImages" class="screenshots__content">
+          <div class="screenshots__slide">
+            <img
+              [src]="img.src"
+              [attr.alt]="(img.altKey || '') | translate"
+              class="screenshots__img"
+              loading="lazy"
+              (click)="openScreenshotPreview(img)"
+            />
+            <div class="screenshots__caption">{{ img.captionKey | translate }}</div>
+          </div>
+        </div>
+      </nz-carousel>
+
+      <ng-template #screenshotPreviewTpl>
+        <div class="screenshots-preview">
+          <img
+            [src]="previewImage?.src"
+            [attr.alt]="(previewImage?.altKey || '') | translate"
+            class="screenshots-preview__img"
+          />
+          <div class="screenshots-preview__caption">{{ (previewImage?.captionKey || '') | translate }}</div>
+        </div>
+      </ng-template>
+    </div>
+  </section>
+
+  <!-- <section class="video-section py-5">
     <div class="container text-center">
       <h2 class="section-title font-weight-bold mb-3">{{ 'HOME.VIDEO.TITLE' | translate }}</h2>
       <p class="text-muted mb-5 mx-auto" style="max-width: 600px;">{{ 'HOME.VIDEO.DESCRIPTION' | translate }}</p>
@@ -121,7 +207,7 @@
         </iframe>
       </div>
     </div>
-  </section>
+  </section> -->
 
   <section class="app-section py-5 bg-primary text-white text-center">
     <div class="container">

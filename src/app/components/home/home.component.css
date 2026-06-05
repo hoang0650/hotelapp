@@ -4,6 +4,187 @@
   background: linear-gradient(135deg, #f0f2f5 0%, #ffffff 100%);
 }
 
+.hero-sky {
+  background: linear-gradient(180deg, #2f6f98 0%, #2a6288 100%);
+  color: #fff;
+  padding: 44px 0;
+}
+
+.hero-sky__title {
+  font-size: 34px;
+  line-height: 1.25;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.hero-sky__subtitle {
+  font-size: 16px;
+  line-height: 1.6;
+  opacity: 0.95;
+  margin-bottom: 18px;
+}
+
+.hero-sky__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0 12px;
+}
+
+.hero-sky__btn {
+  height: 42px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.hero-sky__btn--ghost {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+.hero-sky__meta {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.hero-sky__mock {
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.hero-sky__img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+
+.intro-article {
+  padding: 36px 0;
+  background: #f6f7f9;
+}
+
+.intro-article__card {
+  background: #fff;
+  border: 1px solid #eceff3;
+  border-radius: 10px;
+  padding: 22px;
+}
+
+.intro-article__title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.intro-article__desc {
+  color: rgba(0, 0, 0, 0.75);
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.intro-article__bullets {
+  margin: 0 0 18px;
+  padding-left: 18px;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.intro-article__bullets li {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.intro-article__image img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid #eef1f5;
+  display: block;
+}
+
+.intro-article__caption {
+  margin-top: 8px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+
+.screenshots {
+  padding: 10px 0;
+  background: #fff;
+}
+
+.screenshots__content {
+  height: clamp(180px, 24vw, 260px);
+  width: 100%;
+}
+
+
+
+.screenshots__slide {
+  padding: 8px 0 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+}
+
+.screenshots__img {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  max-height: calc(100% - 28px);
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid #eef1f5;
+  background: #fff;
+  display: block;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+
+.screenshots__caption {
+  margin-top: 10px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.screenshots-preview {
+  text-align: center;
+}
+
+.screenshots-preview__img {
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #eef1f5;
+  background: #fff;
+}
+
+.screenshots-preview__caption {
+  margin-top: 10px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+::ng-deep .screenshots-carousel .slick-list,
+::ng-deep .screenshots-carousel .slick-track,
+::ng-deep .screenshots-carousel .slick-slide,
+::ng-deep .screenshots-carousel .slick-slide > div {
+  height: 100%;
+}
+
+::ng-deep .screenshots-carousel .slick-slide {
+  width: 100%;
+}
+
 .feature-card {
   border-radius: 12px;
   transition: all 0.3s ease;
