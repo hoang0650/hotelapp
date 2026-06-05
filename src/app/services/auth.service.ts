@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { User } from '../interfaces/user';
 import { jwtDecode } from 'jwt-decode';
 import { environment } from '../../environments/environment';
+import { UserService } from './user.service';
 
 interface AuthResponse {
   token: string;
@@ -37,8 +38,9 @@ export class AuthService {
   public currentUser$ = this.currentUserSubject.asObservable();
   private tokenExpirationTimer: any;
   private inMemoryToken: string | null = null;
+  private isLoggingOut = false;
 
-  constructor(private http: HttpClient, private router: Router) {
+  constructor(private http: HttpClient, private router: Router, private userService: UserService) {
     this.refreshAccessToken().subscribe();
   }
 
@@ -93,12 +95,18 @@ export class AuthService {
   }
 
   logout(): void {
+    if (this.isLoggingOut) {
+      return;
+    }
+    this.isLoggingOut = true;
+
     this.http.post(`${this.apiUrl}/users/logout`, {}, { withCredentials: true }).subscribe({
       next: () => {},
       error: () => {}
     });
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
+    this.userService.clearCurrentUser();
     
     // Nếu đang ở admin subdomain, chuyển về domain chính sau khi logout
     if (typeof window !== 'undefined' && window.location.hostname.startsWith('admin.')) {
@@ -107,7 +115,9 @@ export class AuthService {
       const mainDomain = 'phhotel.vn';
       window.location.href = `${protocol}//${mainDomain}${port}/login`;
     } else {
-      this.router.navigate(['/login']);
+      if (this.router.url !== '/login') {
+        this.router.navigate(['/login']);
+      }
     }
     
     if (this.tokenExpirationTimer) {

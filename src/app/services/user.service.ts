@@ -131,6 +131,10 @@ export class UserService {
     this.currentUserSubject.next(null);
   }
 
+  clearCurrentUser(): void {
+    this.currentUserSubject.next(null);
+  }
+
   getUsersByRole(role: string): Observable<User[]> {
     return this.http.get<User[]>(`${this.apiUrl}/role/${role}`, {
       headers: this.getAuthHeaders()

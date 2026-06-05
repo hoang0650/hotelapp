@@ -15,6 +15,7 @@ export type PermissionFeature =
   | 'ota_management'       // Quản lý OTA
   | 'fanpage_messages'     // Tin nhắn Fanpage
   | 'revenue_chart'        // Biểu đồ doanh thu
+  | 'financial_summary_report' // Báo cáo tổng hợp tài chính
   | 'shift_handover'       // Giao ca
   | 'bank_transfer_history' // Lịch sử chuyển khoản
   | 'calendar'             // Lịch
@@ -50,7 +51,7 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/qr-payment': ['qr_payment'],
   '/admin/visa-payment': ['visa_payment'],
   '/admin/electric-setting': ['electric_management'],
-  '/admin/financial-summary-report': ['revenue_chart'],
+  '/admin/financial-summary-report': ['financial_summary_report', 'revenue_chart'],
   '/admin/profile': [], // Profile không cần permission đặc biệt, chỉ cần đăng nhập
   '/admin/settings': ['settings_management'],
   '/admin/guest-management': ['room_management'], // Guest management liên quan đến room management
@@ -209,6 +210,7 @@ export class PermissionService {
         'zalo_messages',
         'telegram_messages',
         'revenue_chart',
+        'financial_summary_report',
         'qr_payment',
         'visa_payment',
         'electric_management',
@@ -227,6 +229,7 @@ export class PermissionService {
         'zalo_messages',
         'telegram_messages',
         'revenue_chart',
+        'financial_summary_report',
         'qr_payment',
         'visa_payment',
         'electric_management',
@@ -243,6 +246,7 @@ export class PermissionService {
         'zalo_messages',
         'telegram_messages',
         'revenue_chart',
+        'financial_summary_report',
         'qr_payment',
         'visa_payment',
         'electric_management',
@@ -309,6 +313,7 @@ export class PermissionService {
       'zalo_messages': ['view', 'manage'],
       'telegram_messages': ['view', 'manage'],
       'revenue_chart': ['view', 'manage'],
+      'financial_summary_report': ['view', 'manage'],
       'shift_handover': ['view', 'edit', 'manage'],
       'bank_transfer_history': ['view', 'manage'],
       'calendar': ['view', 'edit', 'manage'],
@@ -358,6 +363,7 @@ export class PermissionService {
       'zalo_messages',
       'telegram_messages',
       'revenue_chart',
+      'financial_summary_report',
       'shift_handover',
       'bank_transfer_history',
       'calendar',
