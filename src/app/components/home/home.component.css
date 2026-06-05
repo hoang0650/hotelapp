@@ -118,7 +118,7 @@
 }
 
 .screenshots__content {
-  height: clamp(180px, 24vw, 260px);
+  height: clamp(200px, 50vw, 450px);
   width: 100%;
 }
 
