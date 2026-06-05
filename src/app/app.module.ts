@@ -11,7 +11,7 @@ import { catchError } from 'rxjs/operators';
 import { EditorModule } from '@tinymce/tinymce-angular';
 
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HeaderComponent } from './components/header/header.component';
@@ -375,7 +375,6 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
     providers: [
         { provide: NZ_I18N, useValue: vi_VN },
         provideAnimationsAsync(),
-        provideHttpClient(withInterceptorsFromDi()),
         { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         DatePipe
     ]

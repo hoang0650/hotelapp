@@ -6,7 +6,6 @@ import { Router } from '@angular/router';
 import { User } from '../interfaces/user';
 import { jwtDecode } from 'jwt-decode';
 import { environment } from '../../environments/environment';
-import { UserService } from './user.service';
 
 interface AuthResponse {
   token: string;
@@ -40,7 +39,7 @@ export class AuthService {
   private inMemoryToken: string | null = null;
   private isLoggingOut = false;
 
-  constructor(private http: HttpClient, private router: Router, private userService: UserService) {
+  constructor(private http: HttpClient, private router: Router) {
     this.refreshAccessToken().subscribe();
   }
 
@@ -106,7 +105,6 @@ export class AuthService {
     });
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
-    this.userService.clearCurrentUser();
     
     // Nếu đang ở admin subdomain, chuyển về domain chính sau khi logout
     if (typeof window !== 'undefined' && window.location.hostname.startsWith('admin.')) {

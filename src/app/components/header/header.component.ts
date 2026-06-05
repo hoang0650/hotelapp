@@ -177,6 +177,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
+    this.userService.clearCurrentUser();
     this.authService.logout();
   }
 
