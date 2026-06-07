@@ -117,7 +117,12 @@
     [nzTitle]="'TABLE.UNPAID' | translate" 
     [nzValueStyle]="{ color: '#faad14' }">
   </nz-statistic>
-  <nz-statistic [nzValue]="totalPayment" [nzTitle]="'TABLE.TOTAL_PAYMENT' | translate" [nzSuffix]="'đ'" [nzValueStyle]="{ color: '#722ed1' }"></nz-statistic>
+  <div class="status-summary__total">
+    <nz-statistic [nzValue]="totalPayment" [nzTitle]="'TABLE.TOTAL_PAYMENT' | translate" [nzSuffix]="'đ'" [nzValueStyle]="{ color: '#722ed1' }"></nz-statistic>
+    <button nz-button nzType="text" nzShape="circle" class="status-summary__refresh" (click)="calculateTotalPayment()">
+      <i nz-icon nzType="reload"></i>
+    </button>
+  </div>
 </div>
 
 <nz-table

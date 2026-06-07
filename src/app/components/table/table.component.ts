@@ -97,7 +97,14 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         'service', 'transfer', 'booking', 'checked_in', 'cancel_booking'
       ];
       
-      const eventType = (item.event || item.type || '').toLowerCase();
+      let eventType = (item.event || item.type || '').toLowerCase();
+      if (!eventType && item?.events && Array.isArray(item.events)) {
+        const hasCheckout = item.events.some((e: any) => {
+          const t = (e?.type || e?.event || '').toString().toLowerCase();
+          return t === 'checkout' || t === 'check-out' || t === 'check_out';
+        });
+        eventType = hasCheckout ? 'checkout' : ((item.events[0]?.type || item.events[0]?.event || '').toString().toLowerCase());
+      }
       
       // Nếu là event bị loại trừ thì không hiển thị
       if (excludedEvents.includes(eventType)) return false;
@@ -109,7 +116,11 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       }
       
       // Loại trừ nếu không có checkOutTime (chưa checkout)
-      if (!item.checkOutTime && !item.checkoutTime) return false;
+      const hasCheckoutTime =
+        !!item.checkOutTime ||
+        !!item.checkoutTime ||
+        (Array.isArray(item?.events) && item.events.some((e: any) => !!(e?.checkOutTime || e?.checkoutTime || e?.date)));
+      if (!hasCheckoutTime) return false;
       
       // Kiểm tra event checkout
       const isCheckout = eventType === 'check-out' || eventType === 'checkout';
@@ -173,9 +184,78 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
 
   getDisplayTotalAmount(item: any): number {
     const hasTotal = item?.totalAmount !== undefined && item?.totalAmount !== null;
-    const value = hasTotal ? item.totalAmount : (item?.amount ?? item?.payment?.amount ?? 0);
+    if (hasTotal) {
+      return this.parseMoneyValue(item.totalAmount);
+    }
+
+    const value = item?.amount ?? item?.payment?.amount;
+    const direct = this.parseMoneyValue(value);
+    if (direct > 0) {
+      return direct;
+    }
+
+    const e = this.getCheckoutEvent(item);
+    if (e) {
+      const eTotal = this.parseMoneyValue(e?.totalAmount ?? e?.amount);
+      if (eTotal > 0) {
+        return eTotal;
+      }
+      const roomAmount = this.parseMoneyValue(e?.roomAmount ?? e?.roomTotal ?? item?.roomAmount ?? item?.roomTotal ?? 0);
+      const serviceAmount = this.parseMoneyValue(e?.serviceAmount ?? e?.servicesTotal ?? item?.serviceAmount ?? item?.servicesTotal ?? 0);
+      const additionalCharges = this.parseMoneyValue(e?.additionalCharges ?? item?.additionalCharges ?? 0);
+      const discount = this.parseMoneyValue(e?.discount ?? item?.discount ?? 0);
+      const advancePayment = this.parseMoneyValue(e?.advancePayment ?? item?.advancePayment ?? 0);
+      const calc = roomAmount + serviceAmount + additionalCharges - discount - advancePayment;
+      return Number.isFinite(calc) ? Math.max(0, calc) : 0;
+    }
+
+    const roomAmount = this.parseMoneyValue(item?.roomAmount ?? item?.roomTotal ?? 0);
+    const serviceAmount = this.parseMoneyValue(item?.serviceAmount ?? item?.servicesTotal ?? 0);
+    const additionalCharges = this.parseMoneyValue(item?.additionalCharges ?? 0);
+    const discount = this.parseMoneyValue(item?.discount ?? 0);
+    const advancePayment = this.parseMoneyValue(item?.advancePayment ?? 0);
+    const calc = roomAmount + serviceAmount + additionalCharges - discount - advancePayment;
+    return Number.isFinite(calc) ? Math.max(0, calc) : 0;
+  }
+
+  private parseMoneyValue(value: any): number {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (typeof value === 'string') {
+      const firstPart = value.split('(')[0] || '';
+      const cleaned = firstPart.replace(/[^\d\-]/g, '');
+      if (!cleaned || cleaned === '-' || cleaned === '--') {
+        return 0;
+      }
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : 0;
+    }
     const n = Number(value);
     return Number.isFinite(n) ? n : 0;
+  }
+
+  private getCheckoutEvent(item: any): any | null {
+    if (!item?.events || !Array.isArray(item.events) || item.events.length === 0) {
+      return null;
+    }
+    const events = item.events as any[];
+    const checkoutEvents = events.filter(e => {
+      const t = (e?.type || e?.event || '').toString().toLowerCase();
+      return t === 'checkout' || t === 'check-out' || t === 'check_out';
+    });
+    if (checkoutEvents.length === 0) {
+      return null;
+    }
+    const sorted = checkoutEvents.slice().sort((a, b) => {
+      const ta = new Date(a?.checkOutTime || a?.checkoutTime || a?.date || 0).getTime();
+      const tb = new Date(b?.checkOutTime || b?.checkoutTime || b?.date || 0).getTime();
+      return tb - ta;
+    });
+    return sorted[0] || null;
   }
   
   private isPaidTransaction(item: any): boolean {
@@ -1118,17 +1198,18 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   }
   
   calculateTotalPayment(): void {
-    const invoiceTotal = this.paidData.reduce((sum, current) => {
-      const paymentStatus = current.paymentStatus || current.payment?.status || current.payment?.paymentStatus || current.status || 'pending';
-      const normalizedStatus = (paymentStatus === 'completed') ? 'paid' : paymentStatus;
-      if (normalizedStatus !== 'paid') {
-        return sum;
+    const search = (this.searchText || '').toString().trim().toLowerCase();
+    const filtered = this.paidData.filter(item => {
+      if (!search) {
+        return true;
       }
-      return sum + this.getDisplayTotalAmount(current);
-    }, 0);
-    const incomeAmount = this.shiftHandoverForm?.get('incomeAmount')?.value || 0;
-    const expenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
-    this.totalPayment = Math.max(0, invoiceTotal + incomeAmount - expenseAmount);
+      const roomNumber = (item?.roomNumber ?? '').toString().toLowerCase();
+      const customerName = (item?.customerName ?? '').toString().toLowerCase();
+      return roomNumber.includes(search) || customerName.includes(search);
+    });
+
+    const sum = filtered.reduce((acc, cur) => acc + this.getDisplayTotalAmount(cur), 0);
+    this.totalPayment = Math.max(0, sum);
   }
   
   exportToExcel(): void {
@@ -2911,6 +2992,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       const filteredItems = this.paidData.length;
       this.totalItems = filteredItems;
       this.totalPages = Math.ceil(filteredItems / this.pageSize);
+      this.calculateTotalPayment();
     }, 0);
   }
 
