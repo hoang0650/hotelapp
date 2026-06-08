@@ -72,6 +72,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   sepayQrUrl = '';
   sepayBeneficiaryName = '';
   sepayPaymentHistoryId = ''; // Lưu paymentHistoryId để kiểm tra trạng thái
+  sepayPaymentCode = ''; // Nội dung chuyển khoản (PHGxxxxxx)
   currentUser: any = null;
   systemQRCode: string = ''; // QR code từ superadmin hoặc settings
   systemBeneficiaryName: string = ''; // Tên người thụ hưởng từ superadmin hoặc settings
@@ -877,6 +878,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
           this.sepayQrUrl = finalQrUrl;
           this.sepayBeneficiaryName = finalBeneficiaryName;
           this.sepayPaymentHistoryId = response.paymentHistoryId || ''; // Lưu paymentHistoryId để kiểm tra trạng thái
+          this.sepayPaymentCode = response.paymentCode || response.data?.paymentCode || '';
           
           // Cập nhật systemQRCode để lần sau không cần load lại
           this.systemQRCode = finalQrUrl;
@@ -912,6 +914,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   closeSePayModal(): void {
     this.showSePayModal = false;
     // Bỏ copy mã thanh toán - không cần mã thanh toán nữa
+    this.sepayPaymentCode = '';
     this.selectedPackage = null;
     this.loadCurrentPackage();
     this.loadPaymentHistory();

@@ -444,7 +444,9 @@
             {{ formatPrice(sepayAmount) }}
           </strong>
         </nz-descriptions-item>
-        <!-- Bỏ hiển thị mã thanh toán - webhook sẽ tự động nhận diện -->
+        <nz-descriptions-item *ngIf="sepayPaymentCode" nzTitle="Nội dung chuyển khoản">
+          <strong>{{ sepayPaymentCode }}</strong>
+        </nz-descriptions-item>
         <nz-descriptions-item *ngIf="sepayBeneficiaryName" nzTitle="Tên người thụ hưởng">
           <strong>{{ sepayBeneficiaryName }}</strong>
         </nz-descriptions-item>

@@ -23,6 +23,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { CurrencyService } from '../../services/currency.service';
 import { RoomSessionService } from '../../services/room-session.service';
 import { ApiService } from '../../services/api.service';
+import { io, Socket } from 'socket.io-client';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-room',
@@ -104,6 +106,13 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Map để lưu roomPrice trực tiếp vào room object (để trigger change detection)
   private roomPriceMap = new Map<string, number>();
   private lastLoadedHotelId: string | null = null;
+  private realtimeRoomsTimer: ReturnType<typeof setInterval> | null = null;
+  private realtimePricesTimer: ReturnType<typeof setInterval> | null = null;
+  private realtimeLastSnapshotKey: string | null = null;
+  private realtimeRefreshing = false;
+  private roomsSocket: Socket | null = null;
+  private roomsSocketConnected = false;
+  private roomsSocketHotelId: string | null = null;
 
   roomStatusDisplayOptions: { value: RoomStatus, label: string, color: string }[] = [
     { value: 'vacant', label: '', color: 'green' }, // Label sẽ được translate trong getRoomStatusLabelAndColor
@@ -278,6 +287,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.roomDataUpdatedSubscription) {
       this.roomDataUpdatedSubscription.unsubscribe();
     }
+    this.stopRealtimeSync();
     window.removeEventListener('floorFilterChanged', this.__onFloorFilterChanged as EventListener);
     window.removeEventListener('columnsCountChanged', this.__onColumnsCountChanged as EventListener);
   }
@@ -927,6 +937,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
 
     this.loadRooms();
+    this.startRealtimeSync();
 
     this.isLoading = true;
     this.roomsService.getHotelFloors(hotelId).subscribe(
@@ -942,6 +953,176 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     );
+  }
+
+  private startRealtimeSync(): void {
+    this.stopRealtimeSync();
+    if (!this.selectedHotelId) return;
+    this.startRoomsSocketRealtime();
+    this.startRealtimePolling();
+  }
+
+  private stopRealtimeSync(): void {
+    this.stopRoomsSocketRealtime();
+    this.stopRealtimePolling();
+    this.realtimeRefreshing = false;
+    this.realtimeLastSnapshotKey = null;
+  }
+
+  private startRealtimePolling(): void {
+    if (!this.selectedHotelId) return;
+    if (this.realtimeRoomsTimer || this.realtimePricesTimer) return;
+    this.realtimeRoomsTimer = setInterval(() => {
+      this.refreshRoomsLiteRealtime();
+    }, 5000);
+    this.realtimePricesTimer = setInterval(() => {
+      this.refreshOccupiedRoomPricesRealtime();
+    }, 30000);
+  }
+
+  private stopRealtimePolling(): void {
+    if (this.realtimeRoomsTimer) {
+      clearInterval(this.realtimeRoomsTimer);
+      this.realtimeRoomsTimer = null;
+    }
+    if (this.realtimePricesTimer) {
+      clearInterval(this.realtimePricesTimer);
+      this.realtimePricesTimer = null;
+    }
+  }
+
+  private startRoomsSocketRealtime(): void {
+    if (!this.selectedHotelId) return;
+    if (this.roomsSocket) return;
+    const socketUrl = String(environment.apiUrl || '').replace(/\/$/, '');
+    if (!socketUrl) return;
+    
+    this.roomsSocket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      autoConnect: true
+    });
+    
+    this.roomsSocket.on('connect', () => {
+      this.roomsSocketConnected = true;
+      this.roomsSocketHotelId = this.selectedHotelId;
+      this.roomsSocket?.emit('join_hotel', this.selectedHotelId);
+      this.stopRealtimePolling();
+    });
+    
+    this.roomsSocket.on('disconnect', () => {
+      this.roomsSocketConnected = false;
+      this.roomsSocketHotelId = null;
+      this.startRealtimePolling();
+    });
+    
+    this.roomsSocket.on('rooms_updated', (payload: any) => {
+      const hotelId = String(payload?.hotelId || '').trim();
+      if (!hotelId || !this.selectedHotelId) return;
+      if (hotelId !== String(this.selectedHotelId)) return;
+      this.refreshRoomsLiteRealtime();
+    });
+  }
+
+  private stopRoomsSocketRealtime(): void {
+    if (this.roomsSocket) {
+      try {
+        this.roomsSocket.off('connect');
+        this.roomsSocket.off('disconnect');
+        this.roomsSocket.off('rooms_updated');
+        this.roomsSocket.disconnect();
+      } catch (_e) {}
+    }
+    this.roomsSocket = null;
+    this.roomsSocketConnected = false;
+    this.roomsSocketHotelId = null;
+  }
+
+  private buildRoomsSnapshotKey(rooms: Room[]): string {
+    const parts = rooms
+      .map((r) => {
+        const id = this.extractId((r as any)?._id);
+        const status = (r as any)?.status || '';
+        const guestStatus = (r as any)?.guestStatus || '';
+        const currentBookingId = this.extractId((r as any)?.currentBooking?._id || (r as any)?.currentBooking);
+        return `${id}:${status}:${guestStatus}:${currentBookingId}`;
+      })
+      .sort();
+    return parts.join('|');
+  }
+
+  private refreshRoomsLiteRealtime(): void {
+    if (!this.selectedHotelId) return;
+    if (this.isRoomsLoading || this.isReloading || this.isModalOpen) return;
+    if (this.realtimeRefreshing) return;
+    
+    this.realtimeRefreshing = true;
+    const params: any = { hotelId: this.selectedHotelId, lite: true };
+    this.roomsService.getRooms(params).subscribe({
+      next: (data) => {
+        const incomingRooms: Room[] = (data || []).map((room: any) => ({
+          ...room,
+          guestStatus: room.guestStatus || undefined
+        }));
+        
+        const existingById = new Map<string, Room>();
+        (this.rooms || []).forEach((r) => {
+          const id = this.extractId((r as any)?._id);
+          if (id) existingById.set(id, r);
+        });
+        
+        const merged: Room[] = incomingRooms.map((r) => {
+          const id = this.extractId((r as any)?._id);
+          const existing = id ? existingById.get(id) : undefined;
+          const nextRoom: any = { ...(existing || {}), ...(r as any) };
+          
+          if (existing?.events && (!nextRoom.events || nextRoom.events.length === 0)) {
+            nextRoom.events = existing.events;
+          }
+          if (existing?.currentBooking && !nextRoom.currentBooking) {
+            nextRoom.currentBooking = existing.currentBooking;
+          }
+          
+          return nextRoom as Room;
+        });
+        
+        const snapshotKey = this.buildRoomsSnapshotKey(merged);
+        if (this.realtimeLastSnapshotKey !== snapshotKey) {
+          this.realtimeLastSnapshotKey = snapshotKey;
+          this.rooms = merged;
+          this.lastLoadedHotelId = this.selectedHotelId;
+          this.updateFloorsFromRooms();
+          this.updateCachedRoomCounts();
+          setTimeout(() => {
+            this.loadEventsForOccupiedRooms(false);
+          }, 0);
+          this.cdr.detectChanges();
+        }
+        
+        this.realtimeRefreshing = false;
+      },
+      error: (error) => {
+        console.error('Error realtime reloading rooms:', error);
+        this.realtimeRefreshing = false;
+      }
+    });
+  }
+
+  private refreshOccupiedRoomPricesRealtime(): void {
+    if (!this.selectedHotelId) return;
+    if (this.isRoomsLoading || this.isReloading || this.isModalOpen) return;
+    
+    const occupiedRooms = (this.rooms || []).filter((r) => r && r.status === 'occupied');
+    if (occupiedRooms.length === 0) return;
+    
+    occupiedRooms.forEach((room) => {
+      const events = (room as any)?.events;
+      if (!events || !Array.isArray(events) || events.length === 0) return;
+      const checkinEvent = events.find((e: any) => e && e.type === 'checkin');
+      if (!checkinEvent) return;
+      if (!this.getEventCheckinTime(checkinEvent)) return;
+      this.loadRoomPriceFromAPI(room, checkinEvent, true);
+    });
   }
 
   onFloorChange(floor: string | null): void {
@@ -2101,7 +2282,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
   
   // Load roomPrice từ backend API (đồng bộ với room-content-modal)
-  private loadRoomPriceFromAPI(room: Room, checkinEvent: any): void {
+  private loadRoomPriceFromAPI(room: Room, checkinEvent: any, forceReload: boolean = false): void {
     const checkinTime = this.getEventCheckinTime(checkinEvent);
     if (!room._id || !checkinTime) return;
     const checkoutTime = new Date(); // Thời gian hiện tại
@@ -2111,7 +2292,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     const cacheKey = `${room._id}_${checkinTime.getTime()}_${rawRateType}`;
     
     // Kiểm tra cache trước
-    if (this.roomPriceCache.has(cacheKey)) {
+    if (!forceReload && this.roomPriceCache.has(cacheKey)) {
       console.log(`[loadRoomPriceFromAPI] Using cached price for room ${room.roomNumber}:`, this.roomPriceCache.get(cacheKey));
       return;
     }
