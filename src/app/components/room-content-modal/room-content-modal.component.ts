@@ -100,7 +100,21 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   
   // Định dạng hiển thị tiền Việt Nam
   formatterVND = (value: number): string => `${value} đ`;
-  parserVND = (value: string): string => value.replace(' đ', '');
+  parserVND = (value: string): string => {
+    if (value === null || value === undefined) return '';
+    const cleaned = String(value).replace(/[^\d]/g, '');
+    return cleaned;
+  };
+  
+  selectAllMoneyInput(event: FocusEvent): void {
+    const target = event?.target as HTMLInputElement | null;
+    if (!target) return;
+    setTimeout(() => {
+      try {
+        target.select();
+      } catch (_e) {}
+    }, 0);
+  }
   
   // Lấy thời gian hiện tại theo UTC+7 (múi giờ Việt Nam)
   getCurrentTime(): Date {

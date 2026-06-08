@@ -134,6 +134,7 @@
                 [nzStep]="10000"
                 [nzFormatter]="formatterVND"
                 [nzParser]="parserVND"
+                (nzFocus)="selectAllMoneyInput($event)"
                 [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_ADDITIONAL_CHARGES' | translate"
                 style="width: 100%">
               </nz-input-number>
@@ -156,6 +157,7 @@
                 [nzStep]="10000"
                 [nzFormatter]="formatterVND"
                 [nzParser]="parserVND"
+                (nzFocus)="selectAllMoneyInput($event)"
                 [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_DISCOUNT' | translate"
                 style="width: 100%">
               </nz-input-number>
@@ -186,6 +188,8 @@
                 [nzStep]="10000" 
                 [nzFormatter]="formatterVND" 
                 [nzParser]="parserVND"
+                (nzFocus)="selectAllMoneyInput($event)"
+                [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT_PLACEHOLDER' | translate"
                 style="width: 100%">
               </nz-input-number>
             </nz-form-control>
