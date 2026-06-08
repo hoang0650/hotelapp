@@ -50,7 +50,7 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
 
   private getTenantId(): string {
     const u = this.authService.getCurrentUser();
-    return (u?.hotelId || u?.businessId || 'default').toString();
+    return (u?.hotelId || '').toString();
   }
 
   async ngOnInit(): Promise<void> {
@@ -60,6 +60,11 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
       this.showSidebar = !this.isMobile;
 
       const tenantId = this.getTenantId();
+      if (!tenantId) {
+        this.loading = false;
+        this.cdr.detectChanges();
+        return;
+      }
 
       this.wsSubscription = this.aiAssistant.connectToWebSocket(tenantId).subscribe((msg: any) => {
         if (msg && msg.platform === 'telegram') {

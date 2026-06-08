@@ -66,7 +66,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
 
   private getTenantId(): string {
     const u = this.authService.getCurrentUser();
-    return (u?.hotelId || u?.businessId || 'default').toString();
+    return (u?.hotelId || '').toString();
   }
 
   async ngOnInit(): Promise<void> {
@@ -79,6 +79,11 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
       window.addEventListener('message', this.onPopupMessage);
 
       const tenantId = this.getTenantId();
+      if (!tenantId) {
+        this.loading = false;
+        this.cdr.detectChanges();
+        return;
+      }
       
       this.wsSubscription = this.aiAssistant.connectToWebSocket(tenantId).subscribe((msg: any) => {
         if (msg) {

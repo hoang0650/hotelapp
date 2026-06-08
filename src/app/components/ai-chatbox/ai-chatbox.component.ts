@@ -202,6 +202,11 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
     
     const tenantId = this.getTenantIdForAI();
+    if (!tenantId) {
+      this.message.error('Vui lòng chọn đúng khách sạn trước khi dùng AI.');
+      this.removeSelectedFile();
+      return;
+    }
     if (this.selectedFile && this.selectedFile.type.includes('application/json')) {
       try {
         const text = await this.readFileText(this.selectedFile);
@@ -233,6 +238,10 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       return;
     }
     const tenantId = this.getTenantIdForAI();
+    if (!tenantId) {
+      this.message.error('Vui lòng chọn đúng khách sạn trước khi dùng AI.');
+      return;
+    }
     await this.aiService.sendMessageExternal(message, tenantId);
   }
 
@@ -249,7 +258,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   
   private getTenantIdForAI(): string {
     const u = this.authService.getCurrentUser();
-    return (u?.hotelId || u?.businessId || 'default').toString();
+    return (u?.hotelId || '').toString();
   }
   
   private readFileText(file: File): Promise<string> {
@@ -263,6 +272,10 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   connectFanpage(): void {
     const tenantId = this.getTenantIdForAI();
+    if (!tenantId) {
+      this.message.error('Vui lòng chọn đúng khách sạn trước khi kết nối Fanpage.');
+      return;
+    }
     this.aiService.getFacebookOAuthUrl(tenantId).then(url => {
       if (url) {
         window.open(url, '_blank');

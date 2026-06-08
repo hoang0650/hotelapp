@@ -303,7 +303,12 @@ export class BotSettingComponent implements OnInit {
 
   async syncAI(): Promise<void> {
     const u = this.auth.getCurrentUser();
-    const tenantId = (u?.hotelId || u?.businessId || 'default').toString();
+    const hotelId = u?.hotelId || null;
+    if (!hotelId) {
+      this.msg.error(this.translate.instant('Không tìm thấy khách sạn hiện tại'));
+      return;
+    }
+    const tenantId = hotelId.toString();
     const val = this.form.value;
     const roomItems = this.toProducts(val).map(p => ({
       type: 'room',

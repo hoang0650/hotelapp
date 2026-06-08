@@ -69,7 +69,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
 
   private getTenantId(): string {
     const u = this.authService.getCurrentUser();
-    return (u?.hotelId || u?.businessId || 'default').toString();
+    return (u?.hotelId || '').toString();
   }
 
   async ngOnInit(): Promise<void> {
@@ -79,6 +79,11 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
       this.showSidebar = !this.isMobile;
 
       const tenantId = this.getTenantId();
+      if (!tenantId) {
+        this.loading = false;
+        this.cdr.detectChanges();
+        return;
+      }
 
       window.addEventListener('focus', this.onWindowFocus);
       window.addEventListener('message', this.onPopupMessage);

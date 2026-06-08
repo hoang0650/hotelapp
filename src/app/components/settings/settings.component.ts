@@ -1373,11 +1373,15 @@ export class SettingsComponent implements OnInit {
 
   private getTenantIdForAI(): string {
     const u = this.authService.getCurrentUser();
-    return (u?.hotelId || u?.businessId || 'default').toString();
+    return (u?.hotelId || '').toString();
   }
 
   connectFanpage(): void {
     const tenantId = this.getTenantIdForAI();
+    if (!tenantId) {
+      this.message.error('Vui lòng chọn đúng khách sạn trước khi kết nối Fanpage.');
+      return;
+    }
     this.aiAssistant.getFacebookOAuthUrl(tenantId).then(url => {
       if (url) {
         window.open(url, '_blank');
@@ -1387,6 +1391,10 @@ export class SettingsComponent implements OnInit {
 
   loadFacebookPages(): void {
     const tenantId = this.getTenantIdForAI();
+    if (!tenantId) {
+      this.message.error('Vui lòng chọn đúng khách sạn trước khi tải danh sách Fanpage.');
+      return;
+    }
     this.loadingFacebook = true;
     this.aiAssistant.getFacebookPages(tenantId).then(pages => {
       this.facebookPages = pages || [];
