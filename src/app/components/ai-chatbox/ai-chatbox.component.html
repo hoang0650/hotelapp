@@ -4,35 +4,51 @@
   </button>
   <nz-card *ngIf="!minimized" [nzBodyStyle]="{padding: '8px 0 0 0'}" class="ai-chatbox-card">
     <div class="ai-chatbox-header">
-      <span class="ai-chatbox-title">{{ 'AI_CHATBOX.TITLE' | translate }}</span>
-      <button 
-        nz-button 
-        nzType="default" 
-        nzSize="small" 
-        (click)="openFanpageMessages()">
-        <i nz-icon nzType="message" nzTheme="outline"></i>
-        <span>Xem lịch sử Fanpage</span>
-      </button>
-      <button 
-        nz-button 
-        nzType="default" 
-        nzSize="small" 
-        (click)="connectFanpage()" 
-        [title]="'Kết nối Fanpage'">
-        <i nz-icon nzType="link" nzTheme="outline"></i>
-        <span>Kết nối Fanpage</span>
-      </button>
-      <button 
-        nz-button 
-        nzType="text" 
-        nzSize="small" 
-        (click)="clearChatHistory()" 
-        [disabled]="messages.length === 0"
-        [title]="'AI_CHATBOX.CLEAR_HISTORY_TITLE' | translate"
-        class="clear-history-btn">
-        <i nz-icon nzType="delete" nzTheme="outline"></i>
-        <span class="clear-history-text">{{ 'AI_CHATBOX.CLEAR_HISTORY' | translate }}</span>
-      </button>
+      <div class="ai-chatbox-header-left">
+        <span class="ai-chatbox-title">{{ 'AI_CHATBOX.TITLE' | translate }}</span>
+        <nz-select
+          *ngIf="hotels.length > 0"
+          [(ngModel)]="selectedHotelId"
+          (ngModelChange)="onSelectHotel($event)"
+          [nzDisabled]="isHotelSelectionDisabled"
+          nzSize="small"
+          nzShowSearch
+          [nzAllowClear]="false"
+          class="hotel-select"
+        >
+          <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+        </nz-select>
+      </div>
+      <div class="ai-chatbox-header-actions">
+        <button
+          nz-button
+          nzType="default"
+          nzSize="small"
+          (click)="openFanpageMessages()">
+          <i nz-icon nzType="message" nzTheme="outline"></i>
+          <span>Xem lịch sử Fanpage</span>
+        </button>
+        <button
+          nz-button
+          nzType="default"
+          nzSize="small"
+          (click)="connectFanpage()"
+          [title]="'Kết nối Fanpage'">
+          <i nz-icon nzType="link" nzTheme="outline"></i>
+          <span>Kết nối Fanpage</span>
+        </button>
+        <button
+          nz-button
+          nzType="text"
+          nzSize="small"
+          (click)="clearChatHistory()"
+          [disabled]="messages.length === 0"
+          [title]="'AI_CHATBOX.CLEAR_HISTORY_TITLE' | translate"
+          class="clear-history-btn">
+          <i nz-icon nzType="delete" nzTheme="outline"></i>
+          <span class="clear-history-text">{{ 'AI_CHATBOX.CLEAR_HISTORY' | translate }}</span>
+        </button>
+      </div>
     </div>
     <div class="ai-chatbox-messages" #messagesEnd>
       <div *ngFor="let msg of messages" class="chat-message-row" [ngClass]="msg.role">

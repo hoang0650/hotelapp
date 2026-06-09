@@ -3,6 +3,8 @@ import { AiAssistantService, ChatMessage as BaseChatMessage } from '../../servic
 import { AuthService } from '../../services/auth.service';
 import { PricingService } from '../../services/pricing.service';
 import { HotelService } from '../../services/hotel.service';
+import { ApiService } from '../../services/api.service';
+import { Hotel } from '../../interfaces/hotel';
 import { Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { NzUploadFile } from 'ng-zorro-antd/upload';
@@ -27,6 +29,14 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   isTyping = false;
   inputValue = '';
   minimized = true;
+
+  hotels: Hotel[] = [];
+  selectedHotelId: string | null = null;
+  loadingHotels = false;
+
+  get isHotelSelectionDisabled(): boolean {
+    return this.authService.isHotelManager() || this.authService.isStaff();
+  }
 
   selectedFile?: File;
   selectedFileType?: string;
@@ -54,6 +64,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     private authService: AuthService,
     private pricingService: PricingService,
     private hotelService: HotelService,
+    private apiService: ApiService,
     private modal: NzModalService,
     private message: NzMessageService,
     private translate: TranslateService,
@@ -63,16 +74,129 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   ngOnInit(): void {
     this.msgSub = this.aiService.getMessages().subscribe(msgs => this.messages = msgs as ChatMessage[]);
     this.typingSub = this.aiService.getTypingStatus().subscribe(status => this.isTyping = status);
+    this.initHotelSelector();
     this.checkAiChatboxPermission();
     this.refreshRoleCapabilities();
     this.authService.currentUser$.pipe(take(1)).subscribe(() => {
+      this.initHotelSelector();
       this.checkAiChatboxPermission();
       this.refreshRoleCapabilities();
     });
     this.authService.currentUser$.subscribe(() => {
+      this.initHotelSelector();
       this.checkAiChatboxPermission();
       this.refreshRoleCapabilities();
     });
+  }
+
+  private normalizeHotelList(data: any): Hotel[] {
+    const arr = (data?.data || data?.hotels || data) as any;
+    return Array.isArray(arr) ? (arr as Hotel[]) : [];
+  }
+
+  private initHotelSelector(): void {
+    const u = this.authService.getCurrentUser();
+    if (!u) {
+      this.hotels = [];
+      this.selectedHotelId = null;
+      return;
+    }
+
+    const directHotelId = (u.hotelId || '').toString();
+    if (directHotelId) {
+      this.selectedHotelId = directHotelId;
+      this.hotelService.getHotelInfo(directHotelId).pipe(take(1)).subscribe({
+        next: (hotel) => {
+          this.hotels = hotel ? [hotel] : [];
+        },
+        error: () => {
+          this.hotels = [];
+        }
+      });
+      return;
+    }
+
+    if (this.loadingHotels) return;
+    this.loadingHotels = true;
+
+    const businessId = this.authService.getBusinessId();
+    const getHotels$ = this.authService.isBusiness() && businessId
+      ? this.hotelService.getHotels(businessId)
+      : this.hotelService.getHotels();
+
+    getHotels$.pipe(take(1)).subscribe({
+      next: (data: any) => {
+        const hotels = this.normalizeHotelList(data).filter(h => !h.status || h.status === 'active');
+        this.hotels = hotels;
+
+        const stored = (typeof window !== 'undefined' ? localStorage.getItem('selectedHotelId') : null) || null;
+        if (stored && hotels.some(h => String(h._id) === String(stored))) {
+          this.selectedHotelId = stored;
+          this.persistSelectedHotel(stored);
+        } else if (hotels.length > 0) {
+          this.selectedHotelId = String(hotels[0]._id || '');
+          if (this.selectedHotelId) {
+            this.persistSelectedHotel(this.selectedHotelId);
+          }
+        } else {
+          this.selectedHotelId = null;
+        }
+
+        this.loadingHotels = false;
+      },
+      error: () => {
+        this.hotels = [];
+        this.selectedHotelId = null;
+        this.loadingHotels = false;
+      }
+    });
+
+    const userId = (u._id || '').toString();
+    if (userId) {
+      this.apiService.getSelectedHotel(userId).pipe(take(1)).subscribe({
+        next: (res) => {
+          const sessionSelected = (res?.selectedHotelId || '').toString();
+          if (!sessionSelected) return;
+          if (this.selectedHotelId && String(this.selectedHotelId) === String(sessionSelected)) return;
+          if (this.hotels.length > 0 && this.hotels.some(h => String(h._id) === String(sessionSelected))) {
+            this.selectedHotelId = sessionSelected;
+          } else if (!this.selectedHotelId) {
+            this.selectedHotelId = sessionSelected;
+          }
+          if (this.selectedHotelId) {
+            try {
+              localStorage.setItem('selectedHotelId', this.selectedHotelId);
+            } catch {}
+          }
+        },
+        error: () => {}
+      });
+    }
+  }
+
+  onSelectHotel(hotelId: string): void {
+    const id = (hotelId || '').toString();
+    if (!id) return;
+    if (this.selectedHotelId && String(this.selectedHotelId) === String(id)) return;
+
+    this.selectedHotelId = id;
+    this.persistSelectedHotel(id);
+    this.aiService.clearMessages();
+    this.checkAiChatboxPermission();
+  }
+
+  private persistSelectedHotel(hotelId: string): void {
+    const u = this.authService.getCurrentUser();
+    const userId = (u?._id || '').toString();
+    try {
+      localStorage.setItem('selectedHotelId', hotelId);
+    } catch {}
+    if (userId) {
+      this.apiService.saveSelectedHotel(userId, hotelId).pipe(take(1)).subscribe({
+        next: () => {},
+        error: () => {}
+      });
+    }
   }
 
   private refreshRoleCapabilities(): void {
@@ -100,9 +224,9 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       return;
     }
     
-    // Kiểm tra từ hotel settings nếu có hotelId
-    if (currentUser.hotelId) {
-      this.hotelService.getHotelInfo(currentUser.hotelId).pipe(take(1)).subscribe({
+    const hotelId = this.getTenantIdForAI();
+    if (hotelId) {
+      this.hotelService.getHotelInfo(hotelId).pipe(take(1)).subscribe({
         next: (hotel: any) => {
           if (hotel && hotel.settings) {
             this.canUseAiChatbox = hotel.settings.enableAiChatbox === true;
@@ -258,7 +382,9 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   
   private getTenantIdForAI(): string {
     const u = this.authService.getCurrentUser();
-    return (u?.hotelId || '').toString();
+    const direct = (u?.hotelId || '').toString();
+    if (direct) return direct;
+    return (this.selectedHotelId || '').toString();
   }
   
   private readFileText(file: File): Promise<string> {

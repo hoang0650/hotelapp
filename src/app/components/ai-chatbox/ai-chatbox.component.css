@@ -65,9 +65,28 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
   padding: 16px;
   border-bottom: 1px solid #f0f0f0;
   background: #fff;
+}
+.ai-chatbox-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.ai-chatbox-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.hotel-select {
+  min-width: 200px;
+  max-width: 240px;
 }
 .ai-chatbox-title {
   font-size: 18px;

@@ -5,6 +5,7 @@
     "ng": "node ./node_modules/@angular/cli/bin/ng.js",
     "start": "node ./node_modules/@angular/cli/bin/ng.js serve --proxy-config proxy.conf.json",
     "build": "node ./node_modules/@angular/cli/bin/ng.js build",
+    "build:zalo": "node ./node_modules/@angular/cli/bin/ng.js build --configuration zalo",
     "watch": "node ./node_modules/@angular/cli/bin/ng.js build --watch --configuration development",
     "test": "node ./node_modules/@angular/cli/bin/ng.js test",
     "seed:data": "cd ../nest/backend && node seeders/faker-data.js"
