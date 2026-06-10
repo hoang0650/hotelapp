@@ -38,7 +38,7 @@ interface RoomUpdate {
 })
 export class RoomContentModalComponent implements OnInit, OnDestroy {
   roomData: any;
-  
+  private isFormInitialized = false;
   listData: any[] = [];
   checkInForm!: FormGroup;
   servicesForm!: FormGroup;
@@ -733,7 +733,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             console.log('CheckIn form guestSource control value:', guestInfoFormGroup.get('guestSource')?.value);
           }
           
-          if (!this.checkInForm.dirty) {
+          if (!this.isFormInitialized) {
             this.checkInForm.patchValue({
                 paymentMethod: this.normalizePaymentMethod(lastCheckinEvent.paymentMethod),
                 rateType: lastCheckinEvent.rateType,
@@ -785,7 +785,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             console.log('Checkout form guestSource control value:', checkoutGuestInfoFormGroup.get('guestSource')?.value);
           }
           
-          if (!this.checkOutForm.dirty) {
+          if (!this.isFormInitialized) {
             this.checkOutForm.patchValue({ 
               paymentMethod: this.normalizePaymentMethod(lastCheckinEvent.paymentMethod || 'cash'),
               rateType: lastCheckinEvent.rateType || 'hourly', 
@@ -793,11 +793,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', 
               additionalCharges: 0, 
               discount: 0 
-            }, { emitEvent: false }); // <--- QUAN TRỌNG
+            }, { emitEvent: false }); // Thêm emitEvent: false
           }
           console.log('Checkout form full value after patchValue:', this.checkOutForm.value);
           
           this.advancePayment = eventAdvancePayment;
+
+          // 3. ĐÁNH DẤU LÀ FORM ĐÃ KHỞI TẠO XONG (KHÔNG BAO GIỜ GHI ĐÈ NỮA)
+          this.isFormInitialized = true;
 
           console.log('Updated form with backend data:', {
             guestInfo: guestInfo, // Log guestInfo đã được xử lý
@@ -1183,8 +1186,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const roomPrice = this.calculateRoomTotalByRateType(validDurationInHours, validDurationInDays, rateType, remainingMinutes);
     this._roomPriceTotal = roomPrice;
     this._hasRoomPriceFromAPI = true;
-
-    this.cdr.detectChanges();
 
     const serviceTotal = this.selectedServices.reduce((total, service) => {
       const serviceAmount = service.totalPrice !== undefined ? 
