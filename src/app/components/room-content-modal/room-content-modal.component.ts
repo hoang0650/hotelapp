@@ -23,6 +23,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { TransactionService } from '../../services/transaction.service';
 import { environment } from '../../../environments/environment';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
 
 // Interface cho dữ liệu cập nhật phòng
 interface RoomUpdate {
@@ -368,24 +369,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     // Lấy thông tin phiên phòng nếu có
     if (this.roomData && this.roomData._id) {
-      // Reload room từ backend để đảm bảo dữ liệu mới nhất
-      // excludeCheckedOut = true: chỉ lấy check-in events chưa checkout (tránh lấy phòng đã checkout)
-      // limit: lấy nhiều events hơn nếu cần (mặc định backend trả về 1000)
       this.roomsService.getRoomById(this.roomData._id, { 
         limit: 1000,
-        excludeCheckedOut: true // Chỉ lấy check-in events chưa checkout
+        excludeCheckedOut: true 
       }).subscribe({
         next: (updatedRoom) => {
           this.roomData = updatedRoom;
-          console.log('Reloaded room data from backend (excludeCheckedOut=true):', updatedRoom);
-          console.log('Events count:', updatedRoom.events?.length || 0);
-          
-          // Luôn lấy dữ liệu từ backend, không phụ thuộc vào session
           this.fetchCurrentRoom();
         },
         error: (err) => {
           console.error('Error reloading room:', err);
-          // Fallback: sử dụng roomData đã có
           this.fetchCurrentRoom();
         }
       });
@@ -393,31 +386,24 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.fetchCurrentRoom();
     }
     
-    // Chỉ tính giá nếu là checkout modal và đã có dữ liệu
+    // Đã bỏ setTimeout gây chậm, fetchCurrentRoom đã xử lý việc tính giá
     if (this.modalType === 'checkout') {
-      // Sử dụng setTimeout để đảm bảo dữ liệu đã được load
-      setTimeout(() => {
-        this.calculateTotalPrice();
-      }, 100);
+      this.calculateTotalPrice();
     }
     
     this.loadBusinessInfo();
-    
-    // Load current user để lấy QR code từ profile
     this.loadCurrentUser();
     
-    // Subscribe để reload room data khi có thay đổi (ví dụ sau khi assign khách)
+    // Subscribe để reload room data khi có thay đổi
     this.roomsService.getRoomDataUpdated$().subscribe(() => {
-      if (this.roomData && this.roomData._id) {
-        // Reload room từ backend để đảm bảo dữ liệu mới nhất
+      // CHẶN ĐÈ FORM KHI ĐANG NHẬP DỞ (Chỉ update nếu form chưa bị sửa)
+      if (this.roomData && this.roomData._id && !this.checkOutForm.dirty && !this.checkInForm.dirty) {
         this.roomsService.getRoomById(this.roomData._id, { 
           limit: 1000,
           excludeCheckedOut: true
         }).subscribe({
           next: (updatedRoom) => {
             this.roomData = updatedRoom;
-            console.log('Reloaded room data after update:', updatedRoom);
-            // Reload lại thông tin check-in
             this.fetchCurrentRoom();
           },
           error: (err) => {
@@ -747,14 +733,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             console.log('CheckIn form guestSource control value:', guestInfoFormGroup.get('guestSource')?.value);
           }
           
-          this.checkInForm.patchValue({
-              paymentMethod: this.normalizePaymentMethod(lastCheckinEvent.paymentMethod),
-              rateType: lastCheckinEvent.rateType,
-              advancePayment: this.advancePayment,
-              additionalCharges: this.initialCharges,
-              discount: this.initialDiscount,
-              notes: this.initialNotes
-          });
+          if (!this.checkInForm.dirty) {
+            this.checkInForm.patchValue({
+                paymentMethod: this.normalizePaymentMethod(lastCheckinEvent.paymentMethod),
+                rateType: lastCheckinEvent.rateType,
+                advancePayment: this.advancePayment,
+                additionalCharges: this.initialCharges,
+                discount: this.initialDiscount,
+                notes: this.initialNotes
+            }, { emitEvent: false });
+          }
           this.checkInForm.disable();
 
           // Cập nhật checkout form với thông tin khách và tiền đặt trước từ backend
@@ -797,17 +785,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             console.log('Checkout form guestSource control value:', checkoutGuestInfoFormGroup.get('guestSource')?.value);
           }
           
-          this.checkOutForm.patchValue({ 
-            paymentMethod: this.normalizePaymentMethod(lastCheckinEvent.paymentMethod || 'cash'),
-            rateType: lastCheckinEvent.rateType || 'hourly', // Thêm rateType từ check-in event
-            advancePayment: eventAdvancePayment, // Sử dụng giá trị đã đảm bảo là số
-            advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
-            // QUAN TRỌNG: KHÔNG patch additionalCharges và discount từ event vào form checkout
-            // Form checkout sẽ bắt đầu từ 0, và giá trị từ check-in event được lưu trong initialCharges/initialDiscount
-            // Khi tính tổng: totalAdditionalCharges = initialCharges + checkoutCharges (chỉ giá trị người dùng nhập thêm)
-            additionalCharges: 0, // Form checkout bắt đầu từ 0
-            discount: 0 // Form checkout bắt đầu từ 0
-          });
+          if (!this.checkOutForm.dirty) {
+            this.checkOutForm.patchValue({ 
+              paymentMethod: this.normalizePaymentMethod(lastCheckinEvent.paymentMethod || 'cash'),
+              rateType: lastCheckinEvent.rateType || 'hourly', 
+              advancePayment: eventAdvancePayment, 
+              advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', 
+              additionalCharges: 0, 
+              discount: 0 
+            }, { emitEvent: false }); // <--- QUAN TRỌNG
+          }
           console.log('Checkout form full value after patchValue:', this.checkOutForm.value);
           
           this.advancePayment = eventAdvancePayment;
@@ -3793,53 +3780,50 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestInfo: this.fb.group({
         name: ['Khách lẻ'],
         idNumber: [''],
-        tax_code: [''], // Mã số thuế (cho công ty)
+        tax_code: [''], 
         phone: ['', [Validators.pattern('^[0-9]{10}$')]],
         email: ['', [Validators.email]],
         address: [''],
-        guestSource: ['walkin'] // Mặc định là walkin
+        guestSource: ['walkin'] 
       }),
       paymentMethod: ['cash', [Validators.required]],
-      rateType: ['hourly', [Validators.required]], // Thêm rateType với giá trị mặc định là 'hourly'
+      rateType: ['hourly', [Validators.required]], 
       advancePayment: [0, [Validators.min(0)]],
-      advancePaymentMethod: ['cash', [Validators.required]], // Hình thức thanh toán cho trả trước
+      advancePaymentMethod: ['cash', [Validators.required]], 
       notes: [''],
       additionalCharges: [0],
       discount: [0],
       reason: [''],
-      createDebt: [false] // Checkbox để đưa vào công nợ
+      createDebt: [false] 
     });
     
-    // Lắng nghe sự thay đổi của rateType để tính lại giá
-    this.checkOutForm.get('rateType')?.valueChanges.subscribe((newRateType) => {
-      console.log('RateType changed to:', newRateType);
-      // Reset cached values để force recalculation
-      this._roomPriceTotal = 0;
-      this._hasRoomPriceFromAPI = false; // Reset flag khi rateType thay đổi
-      // Tính lại giá ngay lập tức (không dùng setTimeout để tránh delay)
-      this.calculateTotalPrice();
-    });
-    
-    // Lắng nghe sự thay đổi của additionalCharges và discount để cập nhật tổng tiền
-    this.checkOutForm.get('additionalCharges')?.valueChanges.subscribe(() => {
-      setTimeout(() => {
+    // THÊM DEBOUNCETIME CHỐNG GỌI TÍNH TIỀN LIÊN TỤC
+    this.checkOutForm.get('rateType')?.valueChanges
+      .pipe(distinctUntilChanged())
+      .subscribe((newRateType) => {
+        console.log('RateType changed to:', newRateType);
+        this._roomPriceTotal = 0;
+        this._hasRoomPriceFromAPI = false;
         this.calculateTotalPrice();
-      }, 0);
     });
     
-    this.checkOutForm.get('discount')?.valueChanges.subscribe(() => {
-      setTimeout(() => {
+    this.checkOutForm.get('additionalCharges')?.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe(() => {
         this.calculateTotalPrice();
-      }, 0);
     });
     
-    // Lắng nghe sự thay đổi của advancePayment để cập nhật tổng tiền
-    this.checkOutForm.get('advancePayment')?.valueChanges.subscribe(() => {
-      this.advancePayment = this.checkOutForm.get('advancePayment')?.value || 0;
-      // Tính lại remainingAmount khi advancePayment thay đổi
-      setTimeout(() => {
+    this.checkOutForm.get('discount')?.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe(() => {
         this.calculateTotalPrice();
-      }, 0);
+    });
+    
+    this.checkOutForm.get('advancePayment')?.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe((val) => {
+        this.advancePayment = val || 0;
+        this.calculateTotalPrice();
     });
   }
   
