@@ -146,8 +146,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         // Quick reload: chỉ reload rooms, không reload bookings và history
         // Delay nhẹ để tránh spam reload khi có nhiều thao tác liên tiếp
         setTimeout(() => {
-          this.loadRooms(true);
-          // Reload lịch sử thanh toán sau khi có thay đổi (ví dụ: checkout)
+          // this.loadRooms(true);
           if (!this.isModalOpen) {
             setTimeout(() => {
               this.showRoomHistory();
@@ -1020,7 +1019,21 @@ export class RoomComponent implements OnInit, OnDestroy {
       const hotelId = String(payload?.hotelId || '').trim();
       if (!hotelId || !this.selectedHotelId) return;
       if (hotelId !== String(this.selectedHotelId)) return;
-      this.refreshRoomsLiteRealtime();
+      
+      // THAY ĐỔI TẠI ĐÂY: Thay vì gọi refreshRoomsLiteRealtime();
+      const roomId = payload?.roomId;
+      if (roomId) {
+        // Nếu có ID phòng cụ thể, chỉ cập nhật phòng đó
+        this.updateSingleRoomRealtime(roomId);
+        
+        // Cập nhật luôn phòng liên quan nếu đây là sự kiện chuyển phòng
+        if (payload.relatedRoomId) {
+          this.updateSingleRoomRealtime(payload.relatedRoomId);
+        }
+      } else {
+        // Chỉ reload toàn bộ nếu backend không gửi kèm roomId
+        this.refreshRoomsLiteRealtime();
+      }
     });
   }
 
@@ -1484,16 +1497,22 @@ export class RoomComponent implements OnInit, OnDestroy {
       });
       
       modalRef.afterClose.subscribe((result) => {
-        // Reset flag trước
         this.isModalOpen = false;
 
         if (modalType === 'checkout' && result?.action === 'checkout' && result?.checkoutInfo) {
+          // Code cũ đã làm rất tốt việc cập nhật mảng local
           this.applyCheckoutCloseResult(result.checkoutInfo);
-          setTimeout(() => {
+          
+          // BỎ ĐOẠN NÀY ĐI
+          /* setTimeout(() => {
             if (!this.isModalOpen) {
               this.loadRooms(true);
             }
-          }, 250);
+          }, 250); */
+
+          // THÊM DÒNG NÀY ĐỂ GỌI API LẤY ĐÚNG PHÒNG VỪA CHECKOUT XUỐNG CHO CHẮC CHẮN
+          this.updateSingleRoomRealtime(room._id!);
+
           setTimeout(() => {
             if (!this.isModalOpen) {
               this.showRoomHistory();
@@ -1504,6 +1523,8 @@ export class RoomComponent implements OnInit, OnDestroy {
 
         if (modalType === 'checkin' && result?.success && result?.checkinInfo) {
           this.applyCheckinCloseResult(room._id || '', result.checkinInfo);
+          // THÊM DÒNG NÀY ĐỂ CẬP NHẬT GIAO DIỆN PHÒNG CHECKIN
+          this.updateSingleRoomRealtime(room._id!);
         }
 
         setTimeout(() => {
@@ -3234,5 +3255,55 @@ export class RoomComponent implements OnInit, OnDestroy {
     } else {
       this.activeFloors = this.activeFloors.filter(f => f !== floor);
     }
+  }
+
+  // Thêm hàm này vào class RoomComponent
+  private updateSingleRoomRealtime(roomId: string): void {
+    if (!this.selectedHotelId || !roomId) return;
+    
+    // Chỉ lấy data chi tiết của ĐÚNG 1 phòng bị thay đổi
+    this.roomsService.getRoomById(roomId, { limit: 10, excludeCheckedOut: true }).subscribe({
+      next: (updatedRoom) => {
+        const index = this.rooms.findIndex(r => r._id === roomId);
+        if (index !== -1) {
+          // 1. GHI ĐÈ THUỘC TÍNH (Mutation) thay vì gán mới toàn bộ object
+          // Kỹ thuật này giúp Angular không render lại toàn bộ thẻ HTML gây chớp
+          Object.assign(this.rooms[index], updatedRoom);
+          
+          // 2. Xử lý logic riêng cho phòng đang có khách (Cập nhật thời gian, giá tiền)
+          if (this.rooms[index].status === 'occupied') {
+            this.roomsService.getRoomEvents(roomId, { limit: 10, type: 'checkin', excludeCheckedOut: true })
+              .subscribe(events => {
+                // Lọc và gán đúng event của phòng này
+                const filteredEvents = events.filter(e => !e.roomId || e.roomId.toString() === roomId);
+                this.rooms[index].events = filteredEvents.map(e => ({
+                  ...e,
+                  additionalCharges: Number(e.additionalCharges) || 0,
+                  discount: Number(e.discount) || 0,
+                  advancePayment: Number(e.advancePayment) || 0
+                }));
+                
+                // Tính lại giá phòng & cập nhật thời gian real-time
+                const checkinEvent = filteredEvents.find(e => e.type === 'checkin');
+                if (checkinEvent) {
+                  this.loadRoomPriceFromAPI(this.rooms[index], checkinEvent, true);
+                }
+                this.cdr.detectChanges();
+              });
+          } else {
+            // Xóa sạch event cũ nếu phòng đã trả/đang dọn
+            this.rooms[index].events = [];
+            this.rooms[index].currentBooking = undefined;
+          }
+
+          // 3. Cập nhật lại các con số thống kê trên banner (Trống, Đang ở, Bẩn...)
+          this.updateCachedRoomCounts();
+          
+          // 4. Báo cho Angular biết để vẽ lại UI
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => console.error(`Realtime Sync Error - Phòng ${roomId}:`, err)
+    });
   }
 }
