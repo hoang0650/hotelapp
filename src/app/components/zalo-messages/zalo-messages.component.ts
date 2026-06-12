@@ -27,7 +27,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
 
   messages: ZaloMessage[] = [];
   oas: any[] = [];
-  conversations: { sender_id: string; sender_name?: string; lastText: string; lastTime: number }[] = [];
+  conversations: { sender_id: string; sender_name?: string; lastText: string; lastTime: number; sender_avatar?: string; }[] = [];
   displayed: ZaloMessage[] = [];
   selectedOaId: string = '';
   selectedSenderId: string = '';
