@@ -59,7 +59,8 @@
              [class.active]="c.sender_id === selectedSenderId"
              (click)="selectConversation(c.sender_id)">
           <div class="conv-avatar">
-            <i nz-icon nzType="user" nzTheme="outline"></i>
+            <img *ngIf="c.sender_avatar" [src]="c.sender_avatar" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+            <i *ngIf="!c.sender_avatar" nz-icon nzType="user" nzTheme="outline"></i>
           </div>
           <div class="conv-info">
             <div class="conv-top">
@@ -85,9 +86,15 @@
               <div class="attachments" *ngIf="m.attachments && m.attachments.length > 0">
                 <div *ngFor="let att of m.attachments" class="attachment-item">
                   <ng-container [ngSwitch]="att.type">
+                    
+                    <ng-switch-case="'sticker'">
+                      <img [src]="att.payload?.url || att.url" class="att-sticker" style="max-width: 130px; height: auto; object-fit: contain; background: transparent;">
+                    </ng-switch-case>
+
                     <img *ngSwitchCase="'image'" [src]="att.payload?.url || att.url" class="att-img" (click)="previewImage(att.payload?.url || att.url)">
                     <video *ngSwitchCase="'video'" [src]="att.payload?.url || att.url" controls class="att-video"></video>
                     <audio *ngSwitchCase="'audio'" [src]="att.payload?.url || att.url" controls class="att-audio"></audio>
+                    
                     <a *ngSwitchDefault [href]="att.payload?.url || att.url" target="_blank" class="att-link">
                       <i nz-icon nzType="file" nzTheme="outline"></i> File
                     </a>

@@ -9,6 +9,7 @@ interface ZaloMessage {
   sender_id: string;
   recipient_id?: string;
   sender_name?: string;
+  sender_avatar?: string;
   text: string;
   attachments?: any[];
   direction: 'in' | 'out';
@@ -196,11 +197,26 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
     sorted.forEach(m => {
       const partnerId = m.direction === 'in' ? m.sender_id : (m.recipient_id || 'Unknown');
       if (!partnerId) return;
+      
       if (!convMap.has(partnerId)) {
+        // --- LOGIC PHÂN TÍCH HIỂN THỊ TIN NHẮN CUỐI CÙNG ---
+        let lastMessageText = m.text || '';
+        
+        // Nếu tin nhắn có chứa đính kèm là sticker
+        if (m.attachments && m.attachments.length > 0) {
+          const firstAtt = m.attachments[0];
+          if (firstAtt.type === 'sticker') {
+            lastMessageText = '❤️ [Nhãn dán]';
+          } else if (firstAtt.type === 'image') {
+            lastMessageText = '📷 [Hình ảnh]';
+          }
+        }
+
         convMap.set(partnerId, {
           sender_id: partnerId,
           sender_name: m.sender_name || partnerId,
-          lastText: m.text || (m.attachments && m.attachments.length ? '[Đính kèm]' : ''),
+          sender_avatar: (m as any).sender_avatar || '',
+          lastText: lastMessageText, // Sử dụng biến text đã tối ưu
           lastTime: m.timestamp
         });
       }
