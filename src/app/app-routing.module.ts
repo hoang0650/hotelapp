@@ -101,14 +101,22 @@ const adminSubdomainPaths = new Set([
   'contact-management',
   'e-invoice-management',
   'e-invoice-template',
-  'e-invoice-registration'
+  'e-invoice-registration',
+  'exports'
 ]);
 
 const adminSubdomainMatcher = (segments: UrlSegment[]): UrlMatchResult | null => {
-  if (segments.length === 0) return null;
+  // Đảm bảo chỉ bắt khi đang ở subdomain admin
+  const isAdminSubdomain = typeof window !== 'undefined' && window.location.hostname.startsWith('admin.');
+  if (!isAdminSubdomain) return null;
+
+  // Nếu là trang gốc (admin.phhotel.vn/) thì bắt luôn để redirect về /room
+  if (segments.length === 0) return { consumed: [] };
+
   if (!adminSubdomainPaths.has(segments[0].path)) return null;
   return { consumed: [] };
 };
+
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: 'home', component: HomeComponent, data: { titleKey: 'SEO.HOME.TITLE', descriptionKey: 'SEO.HOME.DESCRIPTION' } },
@@ -141,7 +149,7 @@ const routes: Routes = [
       { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
       { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
-      { path: 'files/:filename', component: FileExportComponent, canActivate: [PermissionGuard] },
+      { path: 'exports/:filename', component: FileExportComponent },
       { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
       {
         path: 'users-management',
@@ -194,6 +202,7 @@ const routes: Routes = [
       { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
       { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
+      { path: 'exports/:filename', component: FileExportComponent },
       { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
       { path: 'users-management', component: UserManagementComponent, canActivate: [PermissionGuard] },
       { path: 'hotel', component: HotelManagementComponent, canActivate: [PermissionGuard] },
