@@ -1,0 +1,26 @@
+<div class="export-container">
+  <nz-card class="export-card">
+    <div class="loading-state" *ngIf="isDownloading && !errorMessage">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <h3 style="margin-top: 20px;">Đang chuẩn bị file tải xuống...</h3>
+      <p style="color: #666;">Trình duyệt sẽ tự động tải file <strong>{{ fileName }}</strong> về máy tính của bạn.</p>
+    </div>
+
+    <div class="error-state" *ngIf="errorMessage">
+      <nz-result nzStatus="error" nzTitle="Lỗi tải file" [nzSubTitle]="errorMessage">
+        <div nz-result-extra>
+          <button nz-button nzType="primary" (click)="goBack()">Quay lại hệ thống</button>
+        </div>
+      </nz-result>
+    </div>
+
+    <div class="success-state" *ngIf="!isDownloading && !errorMessage">
+      <nz-result nzStatus="success" nzTitle="Đã tải file thành công!" nzSubTitle="Vui lòng kiểm tra thư mục Downloads trên máy tính của bạn.">
+        <div nz-result-extra>
+          <button nz-button nzType="default" (click)="triggerDownload()">Tải lại file</button>
+          <button nz-button nzType="primary" (click)="goBack()">Đóng</button>
+        </div>
+      </nz-result>
+    </div>
+  </nz-card>
+</div>

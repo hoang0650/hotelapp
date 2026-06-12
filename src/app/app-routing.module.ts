@@ -60,6 +60,7 @@ import { ZaloMessagesComponent } from './components/zalo-messages/zalo-messages.
 import { TelegramMessagesComponent } from './components/telegram-messages/telegram-messages.component';
 import { BotSettingComponent } from './components/bot-setting/bot-setting.component';
 import { CameraConfigComponent } from './components/camera-config/camera-config.component';
+import { FileExportComponent } from './components/file-export/file-export.component';
 
 const adminSubdomainPaths = new Set([
   'room',
@@ -140,6 +141,7 @@ const routes: Routes = [
       { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
       { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
+      { path: 'files/:filename', component: FileExportComponent, canActivate: [PermissionGuard] },
       { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
       {
         path: 'users-management',
