@@ -157,6 +157,7 @@ import { EInvoiceTemplateComponent } from './components/e-invoice-template/e-inv
 import { HotelFilesComponent } from './components/hotel-files/hotel-files.component';
 import { BotSettingComponent } from './components/bot-setting/bot-setting.component';
 import { CameraConfigComponent } from './components/camera-config/camera-config.component';
+import { FileExportComponent } from './components/file-export/file-export.component';
 
 registerLocaleData(vi);
 
@@ -297,8 +298,8 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         ContactManagementComponent,
         EInvoiceRegistrationComponent,
         EInvoiceManagementComponent,
-        EInvoiceTemplateComponent
-        ,
+        EInvoiceTemplateComponent,
+        FileExportComponent,
         HotelFilesComponent,
         BotSettingComponent,
         CameraConfigComponent
