@@ -73,19 +73,21 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   ngOnInit(): void {
     this.msgSub = this.aiService.getMessages().subscribe(msgs => {
-      // Cho từng tin nhắn chạy qua màng lọc nhận diện link
       this.messages = (msgs as ChatMessage[]).map(msg => this.processMessageLinks(msg));
     });
+
     this.typingSub = this.aiService.getTypingStatus().subscribe(status => this.isTyping = status);
-    this.typingSub = this.aiService.getTypingStatus().subscribe(status => this.isTyping = status);
+    
     this.initHotelSelector();
     this.checkAiChatboxPermission();
     this.refreshRoleCapabilities();
+    
     this.authService.currentUser$.pipe(take(1)).subscribe(() => {
       this.initHotelSelector();
       this.checkAiChatboxPermission();
       this.refreshRoleCapabilities();
     });
+    
     this.authService.currentUser$.subscribe(() => {
       this.initHotelSelector();
       this.checkAiChatboxPermission();
@@ -97,26 +99,27 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
    * Hàm tự động nhận diện link xuất file từ AI và chuyển thành giao diện đính kèm
    */
   private processMessageLinks(msg: ChatMessage): ChatMessage {
-    // Chỉ xử lý tin nhắn của AI và có nội dung là chữ
     if (msg.role === 'assistant' && msg.content && typeof msg.content === 'string') {
-      // Biểu thức chính quy (Regex) tìm link tải file xuất ra
-      const urlRegex = /(?:Link tải:\s*)?(https:\/\/admin\.phhotel\.vn\/exports\/[a-zA-Z0-9_.-]+\.(?:xlsx|docx|pdf))/i;
+      
+      // Regex cực mạnh: Bắt mọi link bắt đầu bằng http và kết thúc bằng xlsx/docx/pdf
+      const urlRegex = /(?:Link tải:\s*)?(https?:\/\/[^\s]+?\.(?:xlsx|docx|pdf))/i;
       const match = msg.content.match(urlRegex);
       
-      // Nếu tìm thấy link và tin nhắn chưa có đính kèm file
       if (match && match[1] && !msg.fileUrl) {
-        // Clone tin nhắn ra để không làm ảnh hưởng luồng gốc
         const newMsg = { ...msg };
-        newMsg.fileUrl = match[1]; // Lấy link url
+        newMsg.fileUrl = match[1]; // Gán link để hiện nút File
         
-        // Cắt lấy đuôi file (xlsx, docx, pdf)
+        // Cắt lấy đuôi file để phân loại
         const ext = match[1].split('.').pop()?.toLowerCase() || '';
-        
-        // Gán fileType giả lập để giao diện nhận diện đây là file tài liệu (không phải ảnh)
         newMsg.fileType = 'application/' + ext;
         
-        // Xóa dòng "Link tải: https..." ra khỏi text gốc để tránh bị lặp nội dung
+        // Xóa sạch dấu vết của cái link thô kệch trong đoạn chat
         newMsg.content = newMsg.content.replace(match[0], '').trim();
+        
+        // Dọn dẹp nốt mấy câu văn dư thừa của AI
+        newMsg.content = newMsg.content.replace('Đã xuất file Excel thành công.', '').trim();
+        newMsg.content = newMsg.content.replace('Đã tạo file Word thành công.', '').trim();
+        newMsg.content = newMsg.content.replace('Đã tạo file PDF thành công.', '').trim();
         
         return newMsg;
       }
