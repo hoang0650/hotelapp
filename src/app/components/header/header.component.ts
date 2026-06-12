@@ -22,6 +22,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   private subscriptions = new Subscription();
   private refreshIntervalId: any = null;
+  isAdminSubdomain: boolean = false;
   
   // Notifications
   notifications: Announcement[] = [];
@@ -67,6 +68,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      this.isAdminSubdomain = window.location.hostname.startsWith('admin.');
+    }
     // Initialize tab titles
     this.updateTabTitles();
     

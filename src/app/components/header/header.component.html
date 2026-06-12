@@ -6,10 +6,10 @@
   </button>
   <div class="collapse navbar-collapse" id="navbarNav">
     <ul class="navbar-nav mb-2 mb-lg-0 mx-auto">
-      <li class="nav-item">
+      <li class="nav-item" *ngIf="!isAdminSubdomain">
         <a class="nav-link" [routerLink]="['/home']" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.HOME' | translate }}</a>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" *ngIf="!isAdminSubdomain">
         <a class="nav-link" [routerLink]="['/about-us']" aria-current="page" data-bs-toggle="toggle" data-bs-target="#navbarNav">{{ 'NAVBAR.ABOUT_US' | translate }}</a>
       </li>
       <li class="nav-item">

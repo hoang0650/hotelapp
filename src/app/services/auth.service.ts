@@ -106,13 +106,13 @@ export class AuthService {
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
     
-    // Nếu đang ở admin subdomain, chuyển về domain chính sau khi logout
-    if (typeof window !== 'undefined' && window.location.hostname.startsWith('admin.')) {
+    // Nếu đang ở domain chính (chưa phải admin), chuyển hẳn sang admin.phhotel.vn/login
+    if (typeof window !== 'undefined' && !window.location.hostname.startsWith('admin.')) {
       const protocol = window.location.protocol;
       const port = window.location.port ? `:${window.location.port}` : '';
-      const mainDomain = 'phhotel.vn';
-      window.location.href = `${protocol}//${mainDomain}${port}/login`;
+      window.location.href = `${protocol}//admin.phhotel.vn${port}/login`;
     } else {
+      // Đã ở admin rồi thì chỉ điều hướng nội bộ
       if (this.router.url !== '/login') {
         this.router.navigate(['/login']);
       }
@@ -191,8 +191,9 @@ export class AuthService {
     const redirectToAdmin = () => {
       window.location.href = `${protocol}//${adminSubdomain}${port}/admin/room`;
     };
+
     const redirectToMainLogin = () => {
-      window.location.href = `${protocol}//${mainDomain}${port}/login`;
+      window.location.href = `${protocol}//${adminSubdomain}${port}/login`;
     };
 
     const user = this.getCurrentUser();
