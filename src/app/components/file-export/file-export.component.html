@@ -1,26 +1,53 @@
 <div class="export-container">
   <nz-card class="export-card">
-    <div class="loading-state" *ngIf="isDownloading && !errorMessage">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <h3 style="margin-top: 20px;">Đang chuẩn bị file tải xuống...</h3>
-      <p style="color: #666;">Trình duyệt sẽ tự động tải file <strong>{{ fileName }}</strong> về máy tính của bạn.</p>
+    
+    <div class="header-actions">
+      <h3 class="file-title">
+        <i nz-icon nzType="file-text" nzTheme="outline" style="margin-right: 8px;"></i>
+        {{ fileName }}
+      </h3>
+      <div class="action-buttons">
+        <button nz-button nzType="primary" (click)="triggerDownload()">
+          <i nz-icon nzType="download"></i> Tải xuống
+        </button>
+        <button nz-button nzType="default" (click)="goBack()">
+          Đóng
+        </button>
+      </div>
     </div>
+
+    <nz-divider style="margin: 15px 0;"></nz-divider>
 
     <div class="error-state" *ngIf="errorMessage">
-      <nz-result nzStatus="error" nzTitle="Lỗi tải file" [nzSubTitle]="errorMessage">
-        <div nz-result-extra>
-          <button nz-button nzType="primary" (click)="goBack()">Quay lại hệ thống</button>
-        </div>
-      </nz-result>
+      <nz-result nzStatus="error" nzTitle="Lỗi tải file" [nzSubTitle]="errorMessage"></nz-result>
     </div>
 
-    <div class="success-state" *ngIf="!isDownloading && !errorMessage">
-      <nz-result nzStatus="success" nzTitle="Đã tải file thành công!" nzSubTitle="Vui lòng kiểm tra thư mục Downloads trên máy tính của bạn.">
-        <div nz-result-extra>
-          <button nz-button nzType="default" (click)="triggerDownload()">Tải lại file</button>
-          <button nz-button nzType="primary" (click)="goBack()">Đóng</button>
-        </div>
-      </nz-result>
+    <div class="preview-area" *ngIf="!errorMessage">
+      
+      <div class="loading-overlay" *ngIf="previewUrl">
+        <nz-spin nzSimple></nz-spin>
+        <p style="margin-top: 10px; color: gray">Đang tải bản xem trước...</p>
+      </div>
+
+      <iframe 
+        *ngIf="previewUrl && !['png', 'jpg', 'jpeg'].includes(fileExtension)"
+        [src]="previewUrl"
+        class="doc-preview"
+        frameborder="0">
+      </iframe>
+
+      <img 
+        *ngIf="['png', 'jpg', 'jpeg'].includes(fileExtension)" 
+        [src]="fileUrl" 
+        class="img-preview" 
+      />
+
+      <nz-empty 
+        *ngIf="!previewUrl && !['png', 'jpg', 'jpeg'].includes(fileExtension)"
+        nzNotFoundImage="simple"
+        nzNotFoundContent="Định dạng file này không hỗ trợ xem trước trên trình duyệt. Vui lòng bấm Tải xuống để xem.">
+      </nz-empty>
     </div>
+
   </nz-card>
 </div>

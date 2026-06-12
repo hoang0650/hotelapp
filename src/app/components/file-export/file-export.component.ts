@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { environment } from '../../../environments/environment'; 
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-file-export',
@@ -9,51 +10,63 @@ import { environment } from '../../../environments/environment';
 })
 export class FileExportComponent implements OnInit {
   fileName: string = '';
+  fileExtension: string = '';
+  fileUrl: string = ''; // Link tải trực tiếp
+  previewUrl: SafeResourceUrl | null = null; // Link để nhúng iframe xem trước
   errorMessage: string = '';
-  isDownloading: boolean = true;
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
-    // Lấy tên file từ thanh địa chỉ (ví dụ: tong_hop_2026...xlsx)
+    // 1. Lấy tên file từ URL
     this.fileName = this.route.snapshot.paramMap.get('filename') || '';
 
     if (!this.fileName) {
-      this.errorMessage = 'Không tìm thấy tên file để tải xuống.';
-      this.isDownloading = false;
+      this.errorMessage = 'Không tìm thấy tên file để tải/xem trước.';
       return;
     }
 
-    this.triggerDownload();
+    // 2. Tạo đường dẫn gốc tới Backend
+    this.fileUrl = `${environment.aiUrl}/exports/${this.fileName}`;
+    this.fileExtension = this.fileName.split('.').pop()?.toLowerCase() || '';
+
+    // 3. Xử lý link xem trước tuỳ theo định dạng file
+    this.setupPreview();
+  }
+
+  setupPreview(): void {
+    if (this.fileExtension === 'pdf' || this.fileExtension === 'txt') {
+      // PDF hoặc Text thì trình duyệt tự đọc được
+      this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.fileUrl);
+    } 
+    else if (['xlsx', 'xls', 'docx', 'doc'].includes(this.fileExtension)) {
+      // Excel, Word: Mượn trình đọc của Microsoft Office Online (Yêu cầu fileUrl phải public trên internet)
+      const msViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(this.fileUrl)}`;
+      this.previewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(msViewerUrl);
+    } 
+    else {
+      // Không hỗ trợ xem trước
+      this.previewUrl = null;
+    }
   }
 
   triggerDownload(): void {
-    // Gọi đến backend Python (aiUrl) nơi chứa thư mục public/exports
-    const backendDownloadUrl = `${environment.aiUrl}/exports/${this.fileName}`;
-
-    // Tạo một thẻ <a> ảo để ép trình duyệt tải file về máy
+    // Kích hoạt tải file xuống máy
     const a = document.createElement('a');
-    a.href = backendDownloadUrl;
-    a.download = this.fileName; // Gợi ý tên file khi lưu
+    a.href = this.fileUrl;
+    a.download = this.fileName;
     a.target = '_blank';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-
-    // Sau khi kích hoạt tải, đổi trạng thái và tự động quay về trang trước đó sau 3 giây
-    setTimeout(() => {
-      this.isDownloading = false;
-      // Tuỳ chọn: Tự động đóng tab nếu nó được mở từ chatbox
-      if (window.history.length > 1) {
-         window.close();
-      }
-    }, 3000);
   }
   
   goBack(): void {
-    this.router.navigate(['/admin']); // Hoặc đường dẫn trang chủ Dashboard của bạn
+    // Trở về trang trước đó
+    window.history.back();
   }
 }
