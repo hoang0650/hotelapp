@@ -87,9 +87,7 @@
                 <div *ngFor="let att of m.attachments" class="attachment-item">
                   <ng-container [ngSwitch]="att.type">
                     
-                    <ng-switch-case="'sticker'">
-                      <img [src]="att.payload?.url || att.url" class="att-sticker" style="max-width: 130px; height: auto; object-fit: contain; background: transparent;">
-                    </ng-switch-case>
+                    <img *ngSwitchCase="'sticker'" [src]="att.payload?.url || att.url" class="att-sticker" style="max-width: 130px; height: auto; object-fit: contain; background: transparent;">
 
                     <img *ngSwitchCase="'image'" [src]="att.payload?.url || att.url" class="att-img" (click)="previewImage(att.payload?.url || att.url)">
                     <video *ngSwitchCase="'video'" [src]="att.payload?.url || att.url" controls class="att-video"></video>
