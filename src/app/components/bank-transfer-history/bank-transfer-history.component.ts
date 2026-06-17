@@ -1,3 +1,5 @@
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment'; // Chú ý đường dẫn có thể thay đổi tùy cấu trúc thư mục của bạn
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -46,6 +48,9 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   private refreshInterval: any = null;
   private readonly REFRESH_INTERVAL = 30000; // 30 giây
 
+  private isFirstLoadSePay = true;
+  private lastPlayedPaymentId: string | null = null;
+
   // Payment method visibility settings
   enablePayPalPayment: boolean = false;
   enableCryptoPayment: boolean = false;
@@ -88,7 +93,8 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     private sepayService: SePayService,
     private authService: AuthService,
     private hotelService: HotelService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private http: HttpClient
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -527,16 +533,93 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     if (!this.userId || !this.enableSePayPayment) return;
 
     this.sepayService.getPaymentHistory({ userId: this.userId, limit: 50 }).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         if (response?.success && response.data) {
           this.sepayPayments = response.data;
+          
+          // LOGIC PHÁT ÂM THANH KHI CÓ TIỀN VÀO
+          const paymentHistories = response.data;
+          if (paymentHistories && paymentHistories.length > 0) {
+            // Tìm giao dịch gần nhất đã thành công
+            const latestCompleted = paymentHistories.find((p: any) => 
+              (p.status === 'completed' || p.status === 'paid') && 
+              (p.amount > 0 || p.totalAmount > 0)
+            );
+
+            if (latestCompleted) {
+              if (this.isFirstLoadSePay) {
+                // Lần đầu mở trang: Chỉ lưu lại ID giao dịch cuối, không phát âm thanh
+                this.lastPlayedPaymentId = latestCompleted._id || latestCompleted.id;
+                this.isFirstLoadSePay = false;
+              } else if (this.lastPlayedPaymentId !== (latestCompleted._id || latestCompleted.id)) {
+                // Các lần refresh sau: Nếu ID giao dịch cuối khác ID đã lưu -> Có tiền mới vào!
+                let amount = latestCompleted.paymentGatewayResponse?.transferAmount || 
+                             latestCompleted.amount || 
+                             latestCompleted.totalAmount || 0;
+                
+                if (amount > 0) {
+                  this.playPaymentSuccessSound(amount);
+                }
+                
+                // Cập nhật lại ID đã phát
+                this.lastPlayedPaymentId = latestCompleted._id || latestCompleted.id;
+              }
+            } else {
+              this.isFirstLoadSePay = false;
+            }
+          }
         }
       },
       error: (error) => {
         console.error('Error loading SePay payments:', error);
-        // Không hiển thị lỗi để không làm phiền user
       }
     });
+  }
+
+  /**
+   * Gọi API Text-to-Speech (FPT AI) để đọc số tiền
+   */
+  private playPaymentSuccessSound(amount: number): void {
+    try {
+      const roundedAmount = Math.round(amount);
+      const formattedAmount = roundedAmount.toLocaleString('vi-VN');
+      const message = `Thanh toán thành công số tiền ${formattedAmount} đồng`;
+      console.log('[BankTransferHistory] Phát âm thanh:', message);
+
+      const ttsUrl = `${environment.apiUrl}/sepay/fpt-tts-file?url=` + 
+        encodeURIComponent(`${environment.apiUrl}/sepay/fpt-tts?text=${encodeURIComponent(message)}`);
+
+      // Gọi endpoint /fpt-tts để generate file âm thanh
+      this.http.post<any>(`${environment.apiUrl}/sepay/fpt-tts`, { message: message }).subscribe({
+        next: (res: any) => {
+          if (res && res.async) {
+            // Lấy URL file mp3 từ FPT
+            const fileUrl = `${environment.apiUrl}/sepay/fpt-tts-file?url=${encodeURIComponent(res.async)}`;
+            
+            this.http.get(fileUrl, { responseType: 'blob' as 'json' }).subscribe({
+              next: (audioBlob: any) => {
+                const blob = audioBlob as Blob;
+                const audioUrl = URL.createObjectURL(blob);
+                const audio = new Audio();
+                audio.src = audioUrl;
+                audio.onended = () => URL.revokeObjectURL(audioUrl);
+                audio.onerror = () => URL.revokeObjectURL(audioUrl);
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch(error => {
+                    console.error('Lỗi khi autoplay audio (Trình duyệt có thể chặn):', error);
+                  });
+                }
+              },
+              error: (err) => console.error('Lỗi tải file âm thanh:', err)
+            });
+          }
+        },
+        error: (err) => console.error('Lỗi gọi FPT TTS API:', err)
+      });
+    } catch (error) {
+      console.error('Lỗi trong luồng phát âm thanh:', error);
+    }
   }
 
   /**

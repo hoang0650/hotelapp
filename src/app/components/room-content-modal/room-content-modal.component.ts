@@ -364,10 +364,20 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Load danh sách dịch vụ từ API
-    this.loadServicesFromAPI();
+    // 1. GỌI NGAY fetchCurrentRoom() ĐỂ RENDER GIAO DIỆN TỨC THÌ BẰNG DỮ LIỆU CÓ SẴN
+    this.fetchCurrentRoom();
     
-    // Lấy thông tin phiên phòng nếu có
+    // Nếu là checkout, chạy ngay hàm tính toán tiền phòng từ dữ liệu sẵn có
+    if (this.modalType === 'checkout') {
+      this.calculateTotalPrice();
+    }
+
+    // Load danh sách dịch vụ ngầm
+    this.loadServicesFromAPI();
+    this.loadBusinessInfo();
+    this.loadCurrentUser();
+    
+    // 2. CHẠY NGẦM GỌI API LẤY THÊM CHI TIẾT SAU KHI UI ĐÃ HIỂN THỊ
     if (this.roomData && this.roomData._id) {
       this.roomsService.getRoomById(this.roomData._id, { 
         limit: 1000,
@@ -375,26 +385,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }).subscribe({
         next: (updatedRoom) => {
           this.roomData = updatedRoom;
+          // Gọi lại lần 2 để đắp thêm dữ liệu chi tiết nếu có
           this.fetchCurrentRoom();
         },
         error: (err) => {
           console.error('Error reloading room:', err);
-          this.fetchCurrentRoom();
         }
       });
-    } else {
-      this.fetchCurrentRoom();
     }
     
-    // Đã bỏ setTimeout gây chậm, fetchCurrentRoom đã xử lý việc tính giá
-    if (this.modalType === 'checkout') {
-      this.calculateTotalPrice();
-    }
-    
-    this.loadBusinessInfo();
-    this.loadCurrentUser();
-    
-    // Subscribe để reload room data khi có thay đổi
+    // Subscribe để reload room data khi có thay đổi từ socket
     this.roomsService.getRoomDataUpdated$().subscribe(() => {
       // CHẶN ĐÈ FORM KHI ĐANG NHẬP DỞ (Chỉ update nếu form chưa bị sửa)
       if (this.roomData && this.roomData._id && !this.checkOutForm.dirty && !this.checkInForm.dirty) {
@@ -413,7 +413,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     });
   }
-  
   /**
    * Load thông tin user hiện tại để lấy QR code từ profile
    */
@@ -1263,8 +1262,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
     this.remainingAmount = this.totalPrice - this.advancePayment - totalDiscount;
 
-    console.log(`Final price calculation: ${roomPrice} (room) + ${totalAdditionalCharges} (total charges: ${this.initialCharges} initial + ${checkoutCharges} checkout) + ${serviceTotal} (services) = ${this.totalPrice} (Tổng cộng)`);
-    console.log(`Remaining amount: ${this.totalPrice} (Tổng cộng) - ${this.advancePayment} (đặt trước) - ${totalDiscount} (total discount: ${this.initialDiscount} initial + ${checkoutDiscount} checkout) = ${this.remainingAmount} (Còn lại phải thanh toán)`);
   }
 
   // Xử lý check-in
@@ -1318,17 +1315,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestSource: guestSourceValue || 'walkin' // Sử dụng giá trị từ form control
     };
     
-    // Log để debug
-    console.log('Check-in guestInfo from form:', {
-      guestInfoFormGroupValue: guestInfoFormGroup?.value,
-      guestInfoFormGroupRawValue: guestInfoFormGroup?.getRawValue(),
-      guestInfoForm: guestInfoForm,
-      guestSourceControl: guestSourceControl?.value,
-      guestSourceControlRaw: guestSourceControl?.getRawValue(),
-      guestSourceValue: guestSourceValue,
-      guestInfo: guestInfo,
-      finalGuestSource: guestInfo.guestSource
-    });
     
     // Đảm bảo advancePayment luôn là số, mặc định 0
     const advancePayment = Number(this.checkInForm.get('advancePayment')?.value) || 0;
@@ -1360,7 +1346,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const newRoom = {
       status: 'occupied',
       events: [
-        ...this.roomData.events || [],
         checkinEventData
       ]
     };
@@ -2743,8 +2728,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       checkoutData.paymentStatus = 'paid';
       invoiceData.paymentStatus = 'paid';
       
-      // Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
-      this.loadLatestPaymentAndPlaySound();
+      // this.loadLatestPaymentAndPlaySound();
       
       // Hiển thị thông báo thành công (màu xanh)
       this.message.success('Check-out thành công');

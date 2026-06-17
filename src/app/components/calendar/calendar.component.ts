@@ -350,20 +350,20 @@ export class CalendarComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Load tất cả bookings để hiển thị bên dưới
+  // Load tất cả bookings để hiển thị bên dưới (Giới hạn 100 cái mới nhất để chống giật)
   loadAllBookings(): void {
     if (!this.hotelId && !this.roomId) return;
     
-    const params: any = {};
+    const params: any = {
+      limit: 100 // TỐI ƯU: Chỉ lấy 100 booking gần nhất để chống treo máy
+    };
     if (this.hotelId) params.hotelId = this.hotelId;
     if (this.roomId) params.roomId = this.roomId;
-    // Không giới hạn tháng để hiển thị tất cả
     
     this.roomsService.getBookings(params).subscribe(
       (data) => {
         this.allBookings = (data.bookings || []).map((booking: any) => {
           const checkInDate = booking.checkInDate ? new Date(booking.checkInDate) : null;
-          // Map status: 'checked_in' -> 'checked_in', 'booked' -> 'booked', 'cancelled' -> 'cancelled'
           const status = booking.status || 'booked';
           return {
             ...booking,
@@ -371,13 +371,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
             startTime: checkInDate ? this.formatTime(checkInDate) : '',
             endTime: booking.checkOutDate ? this.formatTime(new Date(booking.checkOutDate)) : '',
             date: checkInDate || new Date(booking.createdAt || Date.now()),
-            status: status // Giữ nguyên status từ backend
+            status: status
           };
         });
       },
-      (error) => {
-        console.error('Error loading all bookings:', error);
-      }
+      (error) => console.error('Error loading all bookings:', error)
     );
   }
 

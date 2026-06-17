@@ -238,9 +238,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.isCalendarPanelActive = active;
     if (active && this.selectedHotelId && !this.isRoomsLoading) {
       setTimeout(() => {
-        this.loadBookings();
         if (this.calendarComponent) {
           this.calendarComponent.loadBookings();
+          this.calendarComponent.loadAllBookings();
         }
       }, 0);
     }
@@ -261,9 +261,10 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.selectedHotelId && !this.isRoomsLoading) {
       setTimeout(() => {
         this.loadChartDataFromAPI();
-        this.loadBookings();
+        // XÓA this.loadBookings() ở đây
         if (this.calendarComponent) {
           this.calendarComponent.loadBookings();
+          this.calendarComponent.loadAllBookings();
         }
         this.showRoomHistory();
       }, 0);

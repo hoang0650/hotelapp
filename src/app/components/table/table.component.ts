@@ -82,100 +82,11 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   totalItems: number = 0;
   totalPages: number = 0;
   lastFilterType: string = ''; // Lưu filterType cuối cùng để tránh load lại không cần thiết
+  processedPaidData: any[] = []; 
+  displayData: any[] = [];
   
   // Subscription để tự động reload khi có cập nhật dữ liệu phòng
   private roomDataUpdateSubscription?: Subscription;
-  
-  // Getter để lọc các bản ghi checkout (bao gồm cả đã thanh toán và chưa thanh toán)
-  // Không paginate ở đây, để dùng cho tính stats
-  get paidData(): any[] {
-    if (!this.listOfData) return [];
-    return this.listOfData.filter(item => {
-      // Loại trừ các event không liên quan đến thanh toán
-      const excludedEvents = [
-        'cleaning', 'clean', 'maintenance', 'check-in', 'checkin', 
-        'service', 'transfer', 'booking', 'checked_in', 'cancel_booking'
-      ];
-      
-      let eventType = (item.event || item.type || '').toLowerCase();
-      if (!eventType && item?.events && Array.isArray(item.events)) {
-        const hasCheckout = item.events.some((e: any) => {
-          const t = (e?.type || e?.event || '').toString().toLowerCase();
-          return t === 'checkout' || t === 'check-out' || t === 'check_out';
-        });
-        eventType = hasCheckout ? 'checkout' : ((item.events[0]?.type || item.events[0]?.event || '').toString().toLowerCase());
-      }
-      
-      // Nếu là event bị loại trừ thì không hiển thị
-      if (excludedEvents.includes(eventType)) return false;
-      
-      // Loại trừ các booking (đặt trước) - kiểm tra status hoặc type
-      if (item.status === 'booked' || item.status === 'pending' || 
-          item.bookingStatus === 'booked' || item.bookingStatus === 'pending') {
-        return false;
-      }
-      
-      // Loại trừ nếu không có checkOutTime (chưa checkout)
-      const hasCheckoutTime =
-        !!item.checkOutTime ||
-        !!item.checkoutTime ||
-        (Array.isArray(item?.events) && item.events.some((e: any) => !!(e?.checkOutTime || e?.checkoutTime || e?.date)));
-      if (!hasCheckoutTime) return false;
-      
-      // Kiểm tra event checkout
-      const isCheckout = eventType === 'check-out' || eventType === 'checkout';
-      if (!isCheckout) return false;
-      
-      // Áp dụng bộ lọc trạng thái thanh toán
-      if (this.paymentStatusFilter !== 'all') {
-        const normalizedStatus = this.getNormalizedPaymentStatus(item);
-        
-        if (this.paymentStatusFilter === 'paid') {
-          // Chỉ hiển thị các giao dịch đã thanh toán (bao gồm cả 'completed' từ SePay)
-          if (normalizedStatus !== 'paid') {
-            return false;
-          }
-        } else if (this.paymentStatusFilter === 'pending') {
-          // Chỉ hiển thị các giao dịch đang chờ thanh toán (đã checkout, đang chờ xác nhận)
-          if (normalizedStatus !== 'pending') {
-            return false;
-          }
-        } else if (this.paymentStatusFilter === 'unpaid') {
-          // Hiển thị các giao dịch chưa thanh toán (không phải 'paid'/'completed' và không phải 'pending')
-          if (normalizedStatus === 'paid' || normalizedStatus === 'pending') {
-            return false;
-          }
-        }
-      }
-      
-      // Tính lại totalAmount theo công thức: tiền phòng + tiền dịch vụ + phụ thu - khuyến mãi - đặt trước
-      // Nếu có đủ thông tin để tính
-      const roomAmount = item.roomAmount || item.roomTotal || 0;
-      const serviceAmount = item.serviceAmount || item.servicesTotal || 0;
-      const additionalCharges = item.additionalCharges || 0;
-      const discount = item.discount || 0;
-      const advancePayment = item.advancePayment || 0;
-      
-      // Chỉ tính lại nếu có ít nhất một trong các giá trị
-      if (roomAmount > 0 || serviceAmount > 0 || additionalCharges > 0 || discount > 0 || advancePayment > 0) {
-        const calculatedTotal = roomAmount + serviceAmount + additionalCharges - discount - advancePayment;
-        // Cập nhật totalAmount nếu chưa có hoặc khác với giá trị tính được
-        if (!item.totalAmount || Math.abs(item.totalAmount - calculatedTotal) > 0.01) {
-          item.totalAmount = calculatedTotal;
-        }
-      }
-      
-      // Đảm bảo có roomTotal và servicesTotal để hiển thị
-      if (!item.roomTotal && item.roomAmount) {
-        item.roomTotal = item.roomAmount;
-      }
-      if (!item.servicesTotal && item.serviceAmount) {
-        item.servicesTotal = item.serviceAmount;
-      }
-      
-      return true;
-    });
-  }
   
   private getNormalizedPaymentStatus(item: any): string {
     const paymentStatus = item.paymentStatus || item.payment?.status || item.payment?.paymentStatus || item.status || 'unpaid';
@@ -262,13 +173,82 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     const normalizedStatus = this.getNormalizedPaymentStatus(item);
     return normalizedStatus === 'paid';
   }
-  
-  // Getter để paginate paidData
-  get paginatedPaidData(): any[] {
-    const filtered = this.paidData;
+// TỐI ƯU: Hàm này chỉ chạy đúng 1 lần khi có dữ liệu mới, không chạy liên tục như getter
+  processTableData(): void {
+    if (!this.listOfData) {
+      this.processedPaidData = [];
+      this.updateDisplayData();
+      return;
+    }
+
+    this.processedPaidData = this.listOfData.filter(item => {
+      const excludedEvents = [
+        'cleaning', 'clean', 'maintenance', 'check-in', 'checkin', 
+        'service', 'transfer', 'booking', 'checked_in', 'cancel_booking'
+      ];
+      
+      let eventType = (item.event || item.type || '').toLowerCase();
+      if (!eventType && item?.events && Array.isArray(item.events)) {
+        const hasCheckout = item.events.some((e: any) => {
+          const t = (e?.type || e?.event || '').toString().toLowerCase();
+          return t === 'checkout' || t === 'check-out' || t === 'check_out';
+        });
+        eventType = hasCheckout ? 'checkout' : ((item.events[0]?.type || item.events[0]?.event || '').toString().toLowerCase());
+      }
+      
+      if (excludedEvents.includes(eventType)) return false;
+      if (item.status === 'booked' || item.status === 'pending' || 
+          item.bookingStatus === 'booked' || item.bookingStatus === 'pending') {
+        return false;
+      }
+      
+      const hasCheckoutTime = !!item.checkOutTime || !!item.checkoutTime ||
+        (Array.isArray(item?.events) && item.events.some((e: any) => !!(e?.checkOutTime || e?.checkoutTime || e?.date)));
+      if (!hasCheckoutTime) return false;
+      
+      const isCheckout = eventType === 'check-out' || eventType === 'checkout';
+      if (!isCheckout) return false;
+      
+      if (this.paymentStatusFilter !== 'all') {
+        const normalizedStatus = this.getNormalizedPaymentStatus(item);
+        if (this.paymentStatusFilter === 'paid' && normalizedStatus !== 'paid') return false;
+        if (this.paymentStatusFilter === 'pending' && normalizedStatus !== 'pending') return false;
+        if (this.paymentStatusFilter === 'unpaid' && (normalizedStatus === 'paid' || normalizedStatus === 'pending')) return false;
+      }
+      
+      const roomAmount = item.roomAmount || item.roomTotal || 0;
+      const serviceAmount = item.serviceAmount || item.servicesTotal || 0;
+      const additionalCharges = item.additionalCharges || 0;
+      const discount = item.discount || 0;
+      const advancePayment = item.advancePayment || 0;
+      
+      if (roomAmount > 0 || serviceAmount > 0 || additionalCharges > 0 || discount > 0 || advancePayment > 0) {
+        const calculatedTotal = roomAmount + serviceAmount + additionalCharges - discount - advancePayment;
+        if (!item.totalAmount || Math.abs(item.totalAmount - calculatedTotal) > 0.01) {
+          item.totalAmount = calculatedTotal;
+        }
+      }
+      
+      if (!item.roomTotal && item.roomAmount) item.roomTotal = item.roomAmount;
+      if (!item.servicesTotal && item.serviceAmount) item.servicesTotal = item.serviceAmount;
+      
+      return true;
+    });
+
+    // Cập nhật thông số phân trang
+    this.totalItems = this.processedPaidData.length;
+    this.totalPages = Math.ceil(this.totalItems / this.pageSize);
+    if (this.currentPage > this.totalPages && this.totalPages > 0) this.currentPage = this.totalPages;
+    if (this.currentPage < 1) this.currentPage = 1;
+
+    this.updateDisplayData();
+  }
+
+  // TỐI ƯU: Hàm cắt trang chạy cực nhẹ
+  updateDisplayData(): void {
     const startIndex = (this.currentPage - 1) * this.pageSize;
     const endIndex = startIndex + this.pageSize;
-    return filtered.slice(startIndex, endIndex);
+    this.displayData = this.processedPaidData.slice(startIndex, endIndex);
   }
   
   searchText: string = '';
@@ -1199,7 +1179,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   
   calculateTotalPayment(): void {
     const search = (this.searchText || '').toString().trim().toLowerCase();
-    const filtered = this.paidData.filter(item => {
+    const filtered = this.processedPaidData.filter((item: any) => {
       if (!search) {
         return true;
       }
@@ -1208,7 +1188,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       return roomNumber.includes(search) || customerName.includes(search);
     });
 
-    const sum = filtered.reduce((acc, cur) => acc + this.getDisplayTotalAmount(cur), 0);
+    const sum = filtered.reduce((acc: number, cur: any) => acc + this.getDisplayTotalAmount(cur), 0);
     this.totalPayment = Math.max(0, sum);
   }
   
@@ -1217,7 +1197,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
 
     try {
       // Chỉ xuất các bản ghi đã thanh toán
-      const data = this.paidData.map(item => {
+      const data = this.processedPaidData.map(item => {
         // Lấy thông tin khách hàng
         const customerName = item.customerName || item.guestInfo?.name || this.translate.instant('TABLE_EXPORT.WALK_IN_GUEST');
         const customerPhone = item.customerPhone || item.guestInfo?.phone || '';
@@ -1569,7 +1549,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     this.loadStaffList();
     this.loadPreviousShiftAmount(() => {
       this.loadLastManagerHandoverTime(() => {
-        const paidItems = this.paidData.filter(item => this.isPaidTransaction(item));
+        const paidItems = this.processedPaidData.filter(item => this.isPaidTransaction(item));
         
         let totalCash = paidItems
           .filter(item => item.paymentMethod === 'cash')
@@ -1799,7 +1779,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     const totalRevenue = this.getShiftTotalRevenue();
     
-    const roomHistory = this.paidData
+    const roomHistory = this.processedPaidData
       .filter(item => this.isPaidTransaction(item))
       .map(item => {
       // Lấy guestSource từ nhiều nguồn theo thứ tự ưu tiên
@@ -1878,7 +1858,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         };
       });
     
-    const invoices = this.paidData
+    const invoices = this.processedPaidData
       .filter(item => this.isPaidTransaction(item))
       .map(item => ({
       invoiceNumber: item.invoiceNumber,
@@ -2384,11 +2364,10 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   
   // Tính tiền mặt thực tế trong ca (từ thanh toán, trừ tiền mặt chi và cộng tiền mặt thu từ phiếu thu)
   getActualCashInShift(): number {
-    const cashReceived = this.paidData
-      .filter(item => this.isPaidTransaction(item) && item.paymentMethod === 'cash')
-      .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
+    const cashReceived = this.processedPaidData
+      .filter((item: any) => this.isPaidTransaction(item) && item.paymentMethod === 'cash')
+      .reduce((sum: number, item: any) => sum + this.getDisplayTotalAmount(item), 0);
     
-    // Tiền mặt trong ca = Tiền mặt thu - Tiền mặt chi (từ phiếu chi) + Tiền mặt thu (từ phiếu thu)
     return Math.max(0, cashReceived - this.cashExpenseAmount + this.cashIncomeAmount);
   }
   
@@ -2485,7 +2464,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     const totalExpenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
     
     // Lấy lịch sử phòng hiện tại trước khi xóa
-    const roomHistory = this.paidData.map(item => {
+    const roomHistory = this.processedPaidData.map(item => {
       // Lấy guestSource từ nhiều nguồn theo thứ tự ưu tiên
       let guestSource = 'walkin';
       
@@ -2558,7 +2537,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       guestSource: r.guestSource
     })));
     
-    const paidItems = this.paidData.filter(item => this.isPaidTransaction(item));
+    const paidItems = this.processedPaidData.filter(item => this.isPaidTransaction(item));
     
     const totalBankTransfer = paidItems.reduce((sum, item) => {
       if (item.paymentMethod === 'bank_transfer' || item.paymentMethod === 'transfer' || item.paymentMethod === 'banking') {
@@ -2925,13 +2904,13 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         this.loadPreviousShiftAmount();
         
         // Reload lại expenses để cập nhật expenseAmount trong form giao ca (chỉ tính expenses sau giao tiền quản lý)
-        const totalCash = this.paidData
+        const totalCash = this.processedPaidData
           .filter(item => item.paymentMethod === 'cash')
           .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
-        const totalBankTransfer = this.paidData
+        const totalBankTransfer = this.processedPaidData
           .filter(item => ['transfer', 'bank_transfer', 'banking'].includes(item.paymentMethod))
           .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
-        const totalCard = this.paidData
+        const totalCard = this.processedPaidData
           .filter(item => ['card', 'credit_card', 'visa'].includes(item.paymentMethod))
           .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
         this.loadExpensesAndUpdateCash(totalCash, totalBankTransfer, totalCard);
@@ -2955,10 +2934,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     );
   }
 
-  // Tính tổng số tiền
   getTotalAmount(): number {
-    // Công thức cũ: tổng hóa đơn (đã thanh toán) + phiếu thu - phiếu chi
-    const baseTotal = this.paidData.reduce((total, item) => {
+    const baseTotal = this.processedPaidData.reduce((total: number, item: any) => {
       const amount = this.getDisplayTotalAmount(item);
       return total + (typeof amount === 'number' ? amount : 0);
     }, 0);
@@ -2989,11 +2966,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     this.currentPage = 1;
     // Tính lại totalItems và totalPages dựa trên paidData (đã filter payment status)
     setTimeout(() => {
-      const filteredItems = this.paidData.length;
-      this.totalItems = filteredItems;
-      this.totalPages = Math.ceil(filteredItems / this.pageSize);
-      this.calculateTotalPayment();
-    }, 0);
+    this.processTableData();
+    this.calculateTotalPayment();
+  }, 0);
   }
 
   // Getter để đếm số lượng đã thanh toán
@@ -3083,21 +3058,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
               // Tính lại pagination sau khi filter
               // Sử dụng setTimeout để đảm bảo paidData getter đã được tính
               setTimeout(() => {
-                // Tính totalItems từ paidData (đã filter payment status)
-                const filteredItems = this.paidData.length;
-                this.totalItems = filteredItems;
-                this.totalPages = Math.ceil(filteredItems / this.pageSize);
-                
-                // Đảm bảo currentPage không vượt quá totalPages
-                if (this.currentPage > this.totalPages && this.totalPages > 0) {
-                  this.currentPage = this.totalPages;
-                } else if (this.currentPage < 1) {
-                  this.currentPage = 1;
-                }
-                
-                // Tính lại tổng tiền
-                this.calculateTotalPayment();
-              }, 0);
+              this.processTableData();
+              this.calculateTotalPayment();
+            }, 0);
             }
             this.settingValue.loading = false;
           },
@@ -3115,7 +3078,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       
       // Tính lại pagination
       setTimeout(() => {
-        const filteredItems = this.paidData.length;
+        const filteredItems = this.processedPaidData.length;
         this.totalItems = filteredItems;
         this.totalPages = Math.ceil(filteredItems / this.pageSize);
         
@@ -3130,9 +3093,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   }
   
   onPageChange(page: number): void {
-    // Chỉ cập nhật currentPage, không load lại dữ liệu
-    // Dữ liệu đã được load và lưu trong listOfData
-    // paginatedPaidData getter sẽ tự động paginate dựa trên currentPage
+
     this.currentPage = page;
     
     // Đảm bảo currentPage hợp lệ
@@ -3141,6 +3102,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     } else if (this.currentPage < 1) {
       this.currentPage = 1;
     }
+    this.updateDisplayData();
   }
   
   reloadData(): void {
@@ -3153,5 +3115,6 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     this.pageSize = pageSize;
     this.currentPage = 1;
     this.loadHistory(this.currentFilterType, 1);
+    this.updateDisplayData();
   }
 }

@@ -127,7 +127,7 @@
 
 <nz-table
   #basicTable
-  [nzData]="paginatedPaidData | filter:searchText:['roomNumber', 'customerName']"
+  [nzData]="displayData | filter:searchText:['roomNumber', 'customerName']"
   [nzBordered]="settingValue.bordered"
   [nzLoading]="settingValue.loading"
   [nzPaginationType]="settingValue.paginationType"
@@ -724,7 +724,7 @@
     <div class="summary-stats">
       <nz-descriptions nzBordered [nzColumn]="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }">
         <nz-descriptions-item [nzTitle]="'TABLE.SHIFT_HANDOVER_MODAL.ROOMS_CHECKOUT' | translate">
-          <nz-tag nzColor="blue">{{ paidData.length }} {{ 'TABLE.SHIFT_HANDOVER_MODAL.ROOMS' | translate }}</nz-tag>
+          <nz-tag nzColor="blue">{{ processedPaidData.length }} {{ 'TABLE.SHIFT_HANDOVER_MODAL.ROOMS' | translate }}</nz-tag>
         </nz-descriptions-item>
         <nz-descriptions-item [nzTitle]="'TABLE.SHIFT_HANDOVER_MODAL.TOTAL_COLLECTED' | translate">
           <span class="total-amount text-success">{{ formatterVND(getTotalAmount()) }} đ</span>
