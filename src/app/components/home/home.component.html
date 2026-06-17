@@ -12,8 +12,10 @@
             {{ 'HOME.HERO.SUBTITLE' | translate }}
           </div>
           <div class="hero-sky__actions">
-            <button nz-button nzType="primary" nzSize="large" class="hero-sky__btn">{{ 'HOME.HERO.CTA_TRIAL' | translate }}</button>
-            <button nz-button nzType="default" nzSize="large" class="hero-sky__btn hero-sky__btn--ghost">{{ 'HOME.HERO.BUTTON_DEMO' | translate }}</button>
+            <button nz-button nzType="primary" nzSize="large" class="hero-sky__btn">{{ 'HOME.HERO.CTA_TRIAL' | translate
+              }}</button>
+            <button nz-button nzType="default" nzSize="large" class="hero-sky__btn hero-sky__btn--ghost">{{
+              'HOME.HERO.BUTTON_DEMO' | translate }}</button>
           </div>
           <div class="hero-sky__meta">
             {{ 'HOME.HERO.META' | translate }}
@@ -21,7 +23,8 @@
         </div>
         <div nz-col [nzXs]="24" [nzMd]="12">
           <div class="hero-sky__mock">
-            <img [src]="introduceImages[0].src" [attr.alt]="(introduceImages[0].altKey || '') | translate" class="hero-sky__img" loading="lazy" />
+            <img [src]="introduceImages[0].src" [attr.alt]="(introduceImages[0].altKey || '') | translate"
+              class="hero-sky__img" loading="lazy" />
           </div>
         </div>
       </div>
@@ -44,7 +47,8 @@
         </ul>
 
         <div class="intro-article__image">
-          <img [src]="introduceImages[1].src" [attr.alt]="(introduceImages[1].altKey || '') | translate" loading="lazy" />
+          <img [src]="introduceImages[1].src" [attr.alt]="(introduceImages[1].altKey || '') | translate"
+            loading="lazy" />
           <div class="intro-article__caption">{{ 'HOME.ARTICLE.IMAGE_CAPTION' | translate }}</div>
         </div>
       </div>
@@ -167,13 +171,8 @@
       <nz-carousel [nzAutoPlay]="true" nzDotPosition="bottom" class="screenshots-carousel">
         <div nz-carousel-content *ngFor="let img of introduceImages" class="screenshots__content">
           <div class="screenshots__slide">
-            <img
-              [src]="img.src"
-              [attr.alt]="(img.altKey || '') | translate"
-              class="screenshots__img"
-              loading="lazy"
-              (click)="openScreenshotPreview(img)"
-            />
+            <img [src]="img.src" [attr.alt]="(img.altKey || '') | translate" class="screenshots__img" loading="lazy"
+              (click)="openScreenshotPreview(img)" />
             <div class="screenshots__caption">{{ img.captionKey | translate }}</div>
           </div>
         </div>
@@ -181,11 +180,8 @@
 
       <ng-template #screenshotPreviewTpl>
         <div class="screenshots-preview">
-          <img
-            [src]="previewImage?.src"
-            [attr.alt]="(previewImage?.altKey || '') | translate"
-            class="screenshots-preview__img"
-          />
+          <img [src]="previewImage?.src" [attr.alt]="(previewImage?.altKey || '') | translate"
+            class="screenshots-preview__img" />
           <div class="screenshots-preview__caption">{{ (previewImage?.captionKey || '') | translate }}</div>
         </div>
       </ng-template>
@@ -213,13 +209,17 @@
     <div class="container">
       <h2 class="font-weight-bold mb-3 text-white">{{ 'HOME.APP.TITLE' | translate }}</h2>
       <p class="mb-4 lead text-light">{{ 'HOME.APP.SUBTITLE' | translate }}</p>
-      
+
       <div class="d-flex justify-content-center align-items-center flex-wrap gap-3">
-        <a href="https://example.com/demo/phhotel-android.apk" target="_blank" class="mx-2 mb-2 d-inline-block transition-hover">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" height="50" />
+        <a href="https://example.com/demo/phhotel-android.apk" target="_blank"
+          class="mx-2 mb-2 d-inline-block transition-hover">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
+            alt="Google Play" height="50" />
         </a>
-        <a href="https://example.com/demo/phhotel-ios" target="_blank" class="mx-2 mb-2 d-inline-block transition-hover">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store" height="50" />
+        <a href="https://example.com/demo/phhotel-ios" target="_blank"
+          class="mx-2 mb-2 d-inline-block transition-hover">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
+            alt="App Store" height="50" />
         </a>
       </div>
     </div>
@@ -231,12 +231,13 @@
         <h2 class="section-title font-weight-bold">{{ 'HOME.TESTIMONIALS.TITLE' | translate }}</h2>
         <p class="text-muted">{{ 'HOME.TESTIMONIALS.SUBTITLE' | translate }}</p>
       </div>
-      
+
       <div class="mx-auto" style="max-width: 800px;">
         <nz-carousel nzEffect="fade" [nzAutoPlay]="true" nzDotPosition="bottom">
           <div nz-carousel-content *ngFor="let testimonial of testimonials" class="py-4">
             <div class="px-3">
-              <i nz-icon nzType="quote" nzTheme="outline" class="text-primary mb-3" style="font-size: 32px; opacity: 0.5;"></i>
+              <i nz-icon nzType="quote" nzTheme="outline" class="text-primary mb-3"
+                style="font-size: 32px; opacity: 0.5;"></i>
               <h5 class="font-italic text-muted mb-4" style="line-height: 1.6;">"{{ testimonial.quote }}"</h5>
               <div class="mb-3 text-warning">
                 <i nz-icon nzType="star" nzTheme="fill" *ngFor="let star of [1,2,3,4,5]"></i>
@@ -257,19 +258,38 @@
         <div class="col-lg-4 col-md-6 mb-4">
           <h5 class="text-white mb-3">{{ 'FOOTER.ABOUT_US' | translate }}</h5>
           <p class="text-white">{{ 'FOOTER.ABOUT_DESCRIPTION' | translate }}</p>
+          <div class="mt-4 d-flex align-items-center" style="gap: 16px; flex-wrap: wrap;">
+
+            <a href="http://online.gov.vn/Home/WebDetails/143811" target="_blank" rel="noopener noreferrer"
+              title="Đã thông báo Bộ Công Thương">
+              <img src="assets/images/introduce/logo-tbbct.webp" alt="Đã thông báo Bộ Công Thương"
+                style="height: 50px; width: auto; object-fit: contain;">
+            </a>
+
+            <a href="LINK_CUA_LOGO_THU_2" target="_blank" rel="noopener noreferrer" title="Đã đăng ký con dấu DUNS">
+              <img src="assets/images/introduce/duns.png" alt="Đã đăng ký con dấu DUNS"
+                style="height: 50px; width: auto; object-fit: contain;">
+            </a>
+
+          </div>
         </div>
         <div class="col-lg-4 col-md-6 mb-4">
           <h5 class="text-white mb-3">{{ 'FOOTER.QUICK_LINKS' | translate }}</h5>
           <ul class="list-unstyled">
-            <li class="mb-2"><a href="/home" class="text-white text-decoration-none hover-white">{{ 'NAVBAR.HOME' | translate }}</a></li>
-            <li class="mb-2"><a href="/about-us" class="text-white text-decoration-none hover-white">{{ 'NAVBAR.ABOUT_US' | translate }}</a></li>
-            <li class="mb-2"><a href="/pricing" class="text-white text-decoration-none hover-white">{{ 'NAVBAR.PRICING' | translate }}</a></li>
-            <li class="mb-2"><a [routerLink]="['/blog']" class="text-white text-decoration-none hover-white">{{ 'FOOTER.BLOG' | translate }}</a></li>
+            <li class="mb-2"><a href="/home" class="text-white text-decoration-none hover-white">{{ 'NAVBAR.HOME' |
+                translate }}</a></li>
+            <li class="mb-2"><a href="/about-us" class="text-white text-decoration-none hover-white">{{
+                'NAVBAR.ABOUT_US' | translate }}</a></li>
+            <li class="mb-2"><a href="/pricing" class="text-white text-decoration-none hover-white">{{ 'NAVBAR.PRICING'
+                | translate }}</a></li>
+            <li class="mb-2"><a [routerLink]="['/blog']" class="text-white text-decoration-none hover-white">{{
+                'FOOTER.BLOG' | translate }}</a></li>
           </ul>
         </div>
         <div class="col-lg-4 col-md-12 mb-4">
           <h5 class="text-white mb-3">{{ 'FOOTER.CONTACT_US' | translate }}</h5>
-          <p class="text-white mb-2"><i class="fas fa-map-marker-alt mr-2"></i> Lô A1-15 Đường Bình Hoà 24, khu dân cư Đồng An 4, Phường Bình Hòa, Thành phố Thuận An, Tỉnh Bình Dương, Việt Nam</p>
+          <p class="text-white mb-2"><i class="fas fa-map-marker-alt mr-2"></i> Lô A1-15 Đường Bình Hoà 24, khu dân cư
+            Đồng An 4, Phường Bình Hòa, Thành phố Thuận An, Tỉnh Bình Dương, Việt Nam</p>
           <p class="text-white mb-2"><i class="fas fa-phone mr-2"></i> +84 931881584</p>
           <p class="text-white mb-2"><i class="fas fa-envelope mr-2"></i> hotro&#64;phhotel.vn</p>
         </div>
