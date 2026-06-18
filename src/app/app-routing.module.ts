@@ -1,5 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes, UrlMatchResult, UrlSegment } from '@angular/router';
+
+// Các Import Component
 import { LoginComponent } from './components/login/login.component';
 import { HomeComponent } from './components/home/home.component';
 import { SignupComponent } from './components/signup/signup.component';
@@ -61,7 +63,9 @@ import { TelegramMessagesComponent } from './components/telegram-messages/telegr
 import { BotSettingComponent } from './components/bot-setting/bot-setting.component';
 import { CameraConfigComponent } from './components/camera-config/camera-config.component';
 import { FileExportComponent } from './components/file-export/file-export.component';
+import { SubdomainGuard } from './guards/subdomain.guard';
 
+// 1. Khai báo danh sách các path hợp lệ của Admin
 const adminSubdomainPaths = new Set([
   'room',
   'bill',
@@ -80,6 +84,7 @@ const adminSubdomainPaths = new Set([
   'pricing-management',
   'camera-config',
   'files',
+  'exports', // <-- Đã thêm exports
   'users-management',
   'hotel',
   'staff',
@@ -101,85 +106,43 @@ const adminSubdomainPaths = new Set([
   'contact-management',
   'e-invoice-management',
   'e-invoice-template',
-  'e-invoice-registration',
-  'exports'
+  'e-invoice-registration'
 ]);
 
+// 2. Logic kiểm tra Subdomain
 const adminSubdomainMatcher = (segments: UrlSegment[]): UrlMatchResult | null => {
-  // Đảm bảo chỉ bắt khi đang ở subdomain admin
-  const isAdminSubdomain = typeof window !== 'undefined' && window.location.hostname.startsWith('admin.');
+  const isBrowser = typeof window !== 'undefined';
+  const isAdminSubdomain = isBrowser && window.location.hostname.startsWith('admin.');
+
   if (!isAdminSubdomain) return null;
 
-  // Nếu là trang gốc (admin.phhotel.vn/) thì bắt luôn để redirect về /room
+  // Nếu người dùng vào thẳng admin.phhotel.vn/ (Độ dài URL = 0)
   if (segments.length === 0) return { consumed: [] };
 
-  if (!adminSubdomainPaths.has(segments[0].path)) return null;
-  return { consumed: [] };
+  // Khớp chính xác các path của Admin
+  if (adminSubdomainPaths.has(segments[0].path)) {
+    return { consumed: [] };
+  }
+
+  return null;
 };
 
+// 3. MẢNG ROUTES (Đã sắp xếp lại thứ tự từ trên xuống dưới)
 const routes: Routes = [
-  { path: '', redirectTo: 'home', pathMatch: 'full' },
-  { path: 'home', component: HomeComponent, data: { titleKey: 'SEO.HOME.TITLE', descriptionKey: 'SEO.HOME.DESCRIPTION' } },
-  { path: 'pricing', component: PricingComponent, data: { titleKey: 'SEO.PRICING.TITLE', descriptionKey: 'SEO.PRICING.DESCRIPTION' } },
-  { path: 'blog', component: BlogComponent, data: { titleKey: 'SEO.BLOG.TITLE', descriptionKey: 'SEO.BLOG.DESCRIPTION' } },
-  { path: 'blog/:id', component: BlogComponent, data: { titleKey: 'SEO.BLOG_DETAIL.TITLE', robots: 'index,follow' } },
-  { path: 'contact', component: ContactComponent, data: { titleKey: 'SEO.CONTACT.TITLE', descriptionKey: 'SEO.CONTACT.DESCRIPTION' } },
-  { path: 'login', component: LoginComponent, data: { titleKey: 'SEO.LOGIN.TITLE', robots: 'noindex,nofollow' } },
-  { path: 'signup', component: SignupComponent, data: { titleKey: 'SEO.SIGNUP.TITLE', robots: 'noindex,nofollow' } },
-  { path: 'business-signup', component: BusinessSignupComponent, data: { titleKey: 'SEO.BUSINESS_SIGNUP.TITLE', robots: 'noindex,nofollow' } },
-  { path: 'forgot-password', component: ForgotPasswordComponent, data: { titleKey: 'SEO.FORGOT_PASSWORD.TITLE', robots: 'noindex,nofollow' } },
-  { path: 'reset-password/:token', component: ResetPasswordComponent, data: { titleKey: 'SEO.RESET_PASSWORD.TITLE', robots: 'noindex,nofollow' } },
-  { path: 'maintenance', component: MaintenanceComponent, data: { titleKey: 'SEO.MAINTENANCE.TITLE', robots: 'noindex,nofollow' } },
-  { path: 'room/:id', component: ProductDetailComponent },
-  {
-    path: 'admin', component: AdminComponent, data: { robots: 'noindex,nofollow', titleKey: 'SEO.ADMIN.TITLE' }, children: [
-      { path: 'room', component: RoomComponent, canActivate: [PermissionGuard] },
-      { path: 'bill', component: InvoiceComponent },
-      { path: 'calendar', component: CalendarComponent, canActivate: [PermissionGuard] },
-      { path: 'email-admin', component: EmailAdminComponent, canActivate: [PermissionGuard] },
-      { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
-      { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
-      { path: 'company', component: CompanyManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'room-management', component: RoomManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'room-category', component: RoomCategoryPageComponent, canActivate: [PermissionGuard] },
-      { path: 'floor-plan', component: FloorPlanPageComponent, canActivate: [PermissionGuard] },
-      { path: 'service-management', component: ServiceManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'guest-management', component: GuestManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'debt-management', component: DebtManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
-      { path: 'exports/:filename', component: FileExportComponent },
-      { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
-      {
-        path: 'users-management',
-        component: UserManagementComponent,
-        canActivate: [PermissionGuard]
-      },
-      { path: 'hotel', component: HotelManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'staff', component: StaffManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'chart', component: RevenueChartComponent, canActivate: [PermissionGuard] },
-      { path: 'unauthorized', component: UnauthorizedComponent },
-      { path: 'notfound', component: NotfoundComponent },
-      { path: 'shift-handover', component: RoomHistoryComponent, canActivate: [PermissionGuard] },
-      { path: 'shift-handover-history', component: ShiftHandoverHistoryComponent, canActivate: [PermissionGuard] },
-      { path: 'bank-transfer-history', component: BankTransferHistoryComponent, canActivate: [PermissionGuard] },
-      { path: 'financial-summary-report', component: FinancialSummaryReportComponent, canActivate: [PermissionGuard] },
-      { path: 'ota-management', component: OtaManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'fanpage-messages', component: FanpageMessagesComponent, canActivate: [PermissionGuard] },
-      { path: 'zalo-messages', component: ZaloMessagesComponent, canActivate: [PermissionGuard] },
-      { path: 'telegram-messages', component: TelegramMessagesComponent, canActivate: [PermissionGuard] },
-      { path: 'bot-setting', component: BotSettingComponent, canActivate: [PermissionGuard] },
-      { path: 'electric-setting', component: TuyaSwitchComponent, canActivate: [PermissionGuard] },
-      { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },
-      { path: 'settings', component: SettingsComponent, canActivate: [PermissionGuard] },
-      { path: 'contact-management', component: ContactManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'e-invoice-management', component: EInvoiceManagementComponent, canActivate: [PermissionGuard] },
-      { path: 'e-invoice-template', component: EInvoiceTemplateComponent, canActivate: [PermissionGuard] },
-      { path: 'e-invoice-registration', component: EInvoiceRegistrationComponent, canActivate: [PermissionGuard] },
-      // Thêm các route con khác nếu cần
-    ]
-  },
+  
+  // KHỐI 1: CÁC TRANG CÔNG CỘNG (Luôn bắt dính trước tiên)
+  { path: 'login', component: LoginComponent, canActivate: [SubdomainGuard], data: { titleKey: 'SEO.LOGIN.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'signup', component: SignupComponent, canActivate: [SubdomainGuard], data: { titleKey: 'SEO.SIGNUP.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'business-signup', component: BusinessSignupComponent, canActivate: [SubdomainGuard], data: { titleKey: 'SEO.BUSINESS_SIGNUP.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'forgot-password', component: ForgotPasswordComponent, canActivate: [SubdomainGuard], data: { titleKey: 'SEO.FORGOT_PASSWORD.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'reset-password/:token', component: ResetPasswordComponent, canActivate: [SubdomainGuard], data: { titleKey: 'SEO.RESET_PASSWORD.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'unauthorized', component: UnauthorizedComponent, canActivate: [SubdomainGuard] },
+  { path: 'notfound', component: NotfoundComponent },
+  
+  // (Cho phép tải/xem trước file ở giao diện tràn viền toàn màn hình)
+  { path: 'exports/:filename', component: FileExportComponent },
+
+  // KHỐI 2: DÀNH CHO SUBDOMAIN ADMIN (admin.phhotel.vn)
   {
     matcher: adminSubdomainMatcher,
     component: AdminComponent,
@@ -202,7 +165,7 @@ const routes: Routes = [
       { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
       { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
-      { path: 'exports/:filename', component: FileExportComponent },
+      { path: 'exports/:filename', component: FileExportComponent }, // <-- Thêm vào children của Admin
       { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
       { path: 'users-management', component: UserManagementComponent, canActivate: [PermissionGuard] },
       { path: 'hotel', component: HotelManagementComponent, canActivate: [PermissionGuard] },
@@ -228,10 +191,65 @@ const routes: Routes = [
       { path: 'e-invoice-registration', component: EInvoiceRegistrationComponent, canActivate: [PermissionGuard] }
     ]
   },
+
+  // KHỐI 3: DÀNH CHO DOMAIN CHÍNH (phhotel.vn/admin)
+  {
+    path: 'admin', component: AdminComponent, data: { robots: 'noindex,nofollow', titleKey: 'SEO.ADMIN.TITLE' }, children: [
+      { path: '', redirectTo: 'room', pathMatch: 'full' },
+      { path: 'room', component: RoomComponent, canActivate: [PermissionGuard] },
+      { path: 'bill', component: InvoiceComponent },
+      { path: 'calendar', component: CalendarComponent, canActivate: [PermissionGuard] },
+      { path: 'email-admin', component: EmailAdminComponent, canActivate: [PermissionGuard] },
+      { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
+      { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },
+      { path: 'company', component: CompanyManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'room-management', component: RoomManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'room-category', component: RoomCategoryPageComponent, canActivate: [PermissionGuard] },
+      { path: 'floor-plan', component: FloorPlanPageComponent, canActivate: [PermissionGuard] },
+      { path: 'service-management', component: ServiceManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'guest-management', component: GuestManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'debt-management', component: DebtManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
+      { path: 'exports/:filename', component: FileExportComponent }, // <-- Thêm vào children của Admin
+      { path: 'files/:filename', component: FileExportComponent, canActivate: [PermissionGuard] },
+      { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
+      { path: 'users-management', component: UserManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'hotel', component: HotelManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'staff', component: StaffManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'chart', component: RevenueChartComponent, canActivate: [PermissionGuard] },
+      { path: 'unauthorized', component: UnauthorizedComponent },
+      { path: 'notfound', component: NotfoundComponent },
+      { path: 'shift-handover', component: RoomHistoryComponent, canActivate: [PermissionGuard] },
+      { path: 'shift-handover-history', component: ShiftHandoverHistoryComponent, canActivate: [PermissionGuard] },
+      { path: 'bank-transfer-history', component: BankTransferHistoryComponent, canActivate: [PermissionGuard] },
+      { path: 'financial-summary-report', component: FinancialSummaryReportComponent, canActivate: [PermissionGuard] },
+      { path: 'ota-management', component: OtaManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'fanpage-messages', component: FanpageMessagesComponent, canActivate: [PermissionGuard] },
+      { path: 'zalo-messages', component: ZaloMessagesComponent, canActivate: [PermissionGuard] },
+      { path: 'telegram-messages', component: TelegramMessagesComponent, canActivate: [PermissionGuard] },
+      { path: 'bot-setting', component: BotSettingComponent, canActivate: [PermissionGuard] },
+      { path: 'electric-setting', component: TuyaSwitchComponent, canActivate: [PermissionGuard] },
+      { path: 'profile', component: ProfileComponent, canActivate: [PermissionGuard] },
+      { path: 'settings', component: SettingsComponent, canActivate: [PermissionGuard] },
+      { path: 'contact-management', component: ContactManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'e-invoice-management', component: EInvoiceManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'e-invoice-template', component: EInvoiceTemplateComponent, canActivate: [PermissionGuard] },
+      { path: 'e-invoice-registration', component: EInvoiceRegistrationComponent, canActivate: [PermissionGuard] }
+    ]
+  },
+
+  // KHỐI 4: CÁC TRANG NGOÀI (Dành cho domain chính)
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
+  { path: 'home', component: HomeComponent, data: { titleKey: 'SEO.HOME.TITLE', descriptionKey: 'SEO.HOME.DESCRIPTION' } },
+  { path: 'pricing', component: PricingComponent, data: { titleKey: 'SEO.PRICING.TITLE', descriptionKey: 'SEO.PRICING.DESCRIPTION' } },
+  { path: 'blog', component: BlogComponent, data: { titleKey: 'SEO.BLOG.TITLE', descriptionKey: 'SEO.BLOG.DESCRIPTION' } },
+  { path: 'blog/:id', component: BlogComponent, data: { titleKey: 'SEO.BLOG_DETAIL.TITLE', robots: 'index,follow' } },
+  { path: 'contact', component: ContactComponent, data: { titleKey: 'SEO.CONTACT.TITLE', descriptionKey: 'SEO.CONTACT.DESCRIPTION' } },
+  { path: 'maintenance', component: MaintenanceComponent, data: { titleKey: 'SEO.MAINTENANCE.TITLE', robots: 'noindex,nofollow' } },
+  { path: 'room/:id', component: ProductDetailComponent },
   { path: 'modal', component: ModalComponent },
-  { path: 'unauthorized', component: UnauthorizedComponent },
-  { path: 'notfound', component: NotfoundComponent },
-  { path: 'bill', component: InvoiceComponent },
   { path: 'email-list', component: EmailListComponent },
   { path: 'email-compose', component: EmailComposeComponent },
   { path: 'hotel-files', component: HotelFilesComponent },
@@ -243,6 +261,8 @@ const routes: Routes = [
   { path: 'privacy-policy', component: PrivacyPolicyComponent, data: { titleKey: 'SEO.PRIVACY_POLICY.TITLE', descriptionKey: 'SEO.PRIVACY_POLICY.DESCRIPTION' } },
   { path: 'terms-of-service', component: TermsOfServiceComponent, data: { titleKey: 'SEO.TERMS_OF_SERVICE.TITLE', descriptionKey: 'SEO.TERMS_OF_SERVICE.DESCRIPTION' } },
 
+  // KHỐI 5: LUÔN NẰM CUỐI CÙNG LÀ ROUTE BÁO LỖI
+  { path: '**', component: NotfoundComponent }
 ];
 
 @NgModule({
