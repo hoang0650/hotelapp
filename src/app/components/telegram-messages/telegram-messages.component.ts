@@ -50,7 +50,13 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
 
   private getTenantId(): string {
     const u = this.authService.getCurrentUser();
-    return (u?.hotelId || '').toString();
+    const direct = (u?.hotelId || '').toString();
+    if (direct) return direct;
+    
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('selectedHotelId') || '';
+    }
+    return '';
   }
 
   async ngOnInit(): Promise<void> {
@@ -126,12 +132,19 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
   async loadBotStatus(): Promise<void> {
     if (!this.selectedBotId) return;
     const tenantId = this.getTenantId();
+    if (!tenantId) return; // <--- Chặn rỗng
+
     this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedBotId);
   }
 
   async toggleBot(checked: boolean): Promise<void> {
     if (!this.selectedBotId) return;
     const tenantId = this.getTenantId();
+    if (!tenantId) {
+      this.isBotActive = !checked; // Hoàn tác
+      return;
+    }
+    
     this.isBotActive = checked;
     try {
       await this.aiAssistant.toggleBot(tenantId, this.selectedBotId, checked);
@@ -159,6 +172,10 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
 
   async refreshBots(): Promise<void> {
     const tenantId = this.getTenantId();
+    if (!tenantId) {
+      this.bots = [];
+      return;
+    }
     try {
       this.bots = await this.aiAssistant.getTelegramBots(tenantId);
       this.cdr.detectChanges();
@@ -171,6 +188,8 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
   async loadMessages(): Promise<void> {
     if (!this.selectedBotId) return;
     const tenantId = this.getTenantId();
+    if (!tenantId) return;
+
     try {
       this.messages = await this.aiAssistant.getTelegramMessages(tenantId, this.selectedBotId);
       this.buildConversations();
@@ -239,9 +258,12 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
 
   async connectBot(): Promise<void> {
     if (!this.botTokenInput.trim()) return;
+    
+    const tenantId = this.getTenantId();
+    if (!tenantId) return;
+
     this.connecting = true;
     try {
-      const tenantId = this.getTenantId();
       await this.aiAssistant.connectTelegramBot(tenantId, this.botTokenInput.trim());
       this.showConnectModal = false;
       this.botTokenInput = '';
@@ -261,9 +283,12 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
 
   async sendReply(): Promise<void> {
     if (!this.replyText.trim() || !this.selectedSenderId || !this.selectedBotId) return;
+    
+    const tenantId = this.getTenantId();
+    if (!tenantId) return;
+
     this.sending = true;
     try {
-      const tenantId = this.getTenantId();
       await this.aiAssistant.sendTelegramMessage(tenantId, this.selectedBotId, this.selectedSenderId, this.replyText);
       this.replyText = '';
       this.shouldScrollToBottom = true;

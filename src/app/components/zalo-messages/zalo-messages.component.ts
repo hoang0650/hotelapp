@@ -70,7 +70,13 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
 
   private getTenantId(): string {
     const u = this.authService.getCurrentUser();
-    return (u?.hotelId || '').toString();
+    const direct = (u?.hotelId || '').toString();
+    if (direct) return direct;
+    
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('selectedHotelId') || '';
+    }
+    return '';
   }
 
   async ngOnInit(): Promise<void> {
@@ -136,12 +142,19 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
   async loadBotStatus(): Promise<void> {
     if (!this.selectedOaId) return;
     const tenantId = this.getTenantId();
+    if (!tenantId) return; // <--- Chặn rỗng
+
     this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedOaId);
   }
 
   async toggleBot(checked: boolean): Promise<void> {
     if (!this.selectedOaId) return;
     const tenantId = this.getTenantId();
+    if (!tenantId) {
+      this.isBotActive = !checked; // Hoàn tác
+      return;
+    }
+    
     this.isBotActive = checked;
     try {
       await this.aiAssistant.toggleBot(tenantId, this.selectedOaId, checked);
@@ -169,6 +182,10 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
 
   async refreshOAs(): Promise<void> {
     const tenantId = this.getTenantId();
+    if (!tenantId) {
+      this.oas = [];
+      return;
+    }
     try {
       this.oas = await this.aiAssistant.getZaloOAs(tenantId);
       this.cdr.detectChanges();
@@ -181,6 +198,8 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
   async loadMessages(): Promise<void> {
     if (!this.selectedOaId) return;
     const tenantId = this.getTenantId();
+    if (!tenantId) return;
+
     try {
       this.messages = await this.aiAssistant.getZaloMessages(tenantId, this.selectedOaId);
       this.buildConversations();
@@ -251,6 +270,8 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
 
   async connectZaloOA(): Promise<void> {
     const tenantId = this.getTenantId();
+    if (!tenantId) return;
+
     const url = await this.aiAssistant.getZaloOAuthUrl(tenantId);
     if (url) {
       const width = 600, height = 700;
@@ -262,9 +283,12 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
 
   async sendReply(): Promise<void> {
     if (!this.replyText.trim() || !this.selectedSenderId || !this.selectedOaId) return;
+    
+    const tenantId = this.getTenantId();
+    if (!tenantId) return;
+
     this.sending = true;
     try {
-      const tenantId = this.getTenantId();
       await this.aiAssistant.sendZaloMessage(tenantId, this.selectedOaId, this.selectedSenderId, this.replyText);
       this.replyText = '';
     } catch (error) {

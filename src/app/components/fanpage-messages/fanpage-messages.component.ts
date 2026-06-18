@@ -66,7 +66,15 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
 
   private getTenantId(): string {
     const u = this.authService.getCurrentUser();
-    return (u?.hotelId || '').toString();
+    // 1. Nếu là tài khoản nhân viên/quản lý khách sạn (có sẵn ID)
+    const direct = (u?.hotelId || '').toString();
+    if (direct) return direct;
+    
+    // 2. Nếu là Admin/Superadmin: Lấy ID khách sạn đang được chọn từ bộ nhớ
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('selectedHotelId') || '';
+    }
+    return '';
   }
 
   async ngOnInit(): Promise<void> {
@@ -155,21 +163,24 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
   async loadBotStatus(): Promise<void> {
     if (!this.selectedPageId) return;
     const tenantId = this.getTenantId();
+    if (!tenantId) return; // <--- CHẶN NẾU RỖNG
+
     this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedPageId);
   }
 
   async toggleBot(checked: boolean): Promise<void> {
     if (!this.selectedPageId) return;
     const tenantId = this.getTenantId();
+    if (!tenantId) {
+      this.isBotActive = !checked; // Hoàn tác công tắc nếu không có ID
+      return;
+    }
     
-    // Update UI immediately
     this.isBotActive = checked;
-    
     try {
       await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, checked);
     } catch (error) {
       console.error('Lỗi toggle bot:', error);
-      // Revert nếu lỗi
       this.isBotActive = !checked;
     }
   }
@@ -192,15 +203,16 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
 
   async refreshFacebookPages(): Promise<void> {
     const tenantId = this.getTenantId();
+    if (!tenantId) {
+      this.pages = []; // <--- CHẶN NẾU RỖNG
+      return;
+    }
     try {
       const result = await this.aiAssistant.getFacebookPages(tenantId);
       // Log dữ liệu nhận được để debug
       console.log('API Response Pages:', result);
 
-      // Đảm bảo gán đúng mảng (phòng trường hợp service trả về object bọc)
       this.pages = Array.isArray(result) ? result : [];
-
-      // Kích hoạt change detection thủ công
       this.cdr.detectChanges();
     } catch (error) {
       console.error('Lỗi gọi API pages:', error);
@@ -211,6 +223,8 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
   async loadMessages(): Promise<void> {
     if (!this.selectedPageId) return;
     const tenantId = this.getTenantId();
+    if (!tenantId) return; // <--- CHẶN NẾU RỖNG
+    
     try {
       this.messages = await this.aiAssistant.getFacebookMessages(tenantId, this.selectedPageId);
       this.buildConversations();
