@@ -169,8 +169,6 @@ export class AuthService {
 
   /**
    * Kiểm tra subdomain và chuyển hướng nếu cần thiết
-   * Đã đăng nhập (tất cả các role) -> admin.phhotel.vn
-   * Chưa đăng nhập -> phhotel.vn
    */
   checkSubdomainAndRedirect(): void {
     if (typeof window === 'undefined') return;
@@ -178,6 +176,7 @@ export class AuthService {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     const port = window.location.port ? `:${window.location.port}` : '';
+    const pathname = window.location.pathname; // Lấy đường dẫn hiện tại đang đứng
 
     // Không chuyển hướng nếu đang ở localhost
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -185,15 +184,10 @@ export class AuthService {
     }
 
     const isAdminSubdomain = hostname.startsWith('admin.');
-    const mainDomain = 'phhotel.vn';
     const adminSubdomain = 'admin.phhotel.vn';
 
     const redirectToAdmin = () => {
       window.location.href = `${protocol}//${adminSubdomain}${port}/admin/room`;
-    };
-
-    const redirectToMainLogin = () => {
-      window.location.href = `${protocol}//${adminSubdomain}${port}/login`;
     };
 
     const user = this.getCurrentUser();
@@ -214,12 +208,21 @@ export class AuthService {
         return;
       }
 
+      // NẾU CHƯA ĐĂNG NHẬP VÀ ĐANG Ở TÊN MIỀN ADMIN
       if (isAdminSubdomain) {
-        redirectToMainLogin();
+        // Danh sách các trang "ngoại lệ" được phép đứng xem khi chưa đăng nhập
+        const publicPaths = ['/login', '/signup', '/business-signup', '/forgot-password', '/unauthorized', '/notfound'];
+        
+        // Kiểm tra xem URL hiện tại có thuộc các trang ngoại lệ không (Bao gồm cả reset-password/...)
+        const isPublicPath = publicPaths.some(p => pathname.startsWith(p)) || pathname.startsWith('/reset-password');
+        
+        // Nếu người dùng đang cố truy cập trang nội bộ (ví dụ /admin/room) thì mới đẩy về login
+        if (!isPublicPath) {
+          this.router.navigate(['/login']); // Dùng router chuyển hướng nội bộ thay vì reload
+        }
       }
     });
   }
-
   // ============ LẤY THÔNG TIN ID ============
 
   getBusinessId(): string | null {
