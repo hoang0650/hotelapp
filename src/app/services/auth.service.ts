@@ -99,6 +99,14 @@ export class AuthService {
     }
     this.isLoggingOut = true;
 
+    // [CẬP NHẬT MỚI]: Dọn dẹp sạch sẽ bộ nhớ trình duyệt để không dính tài khoản cũ
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('staff');
+      localStorage.removeItem('staffId');
+      localStorage.removeItem('selectedHotelId');
+    }
+
     this.http.post(`${this.apiUrl}/users/logout`, {}, { withCredentials: true }).subscribe({
       next: () => {},
       error: () => {}
@@ -106,13 +114,11 @@ export class AuthService {
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
     
-    // Nếu đang ở domain chính (chưa phải admin), chuyển hẳn sang admin.phhotel.vn/login
     if (typeof window !== 'undefined' && !window.location.hostname.startsWith('admin.')) {
       const protocol = window.location.protocol;
       const port = window.location.port ? `:${window.location.port}` : '';
       window.location.href = `${protocol}//admin.phhotel.vn${port}/login`;
     } else {
-      // Đã ở admin rồi thì chỉ điều hướng nội bộ
       if (this.router.url !== '/login') {
         this.router.navigate(['/login']);
       }
@@ -121,8 +127,12 @@ export class AuthService {
     if (this.tokenExpirationTimer) {
       clearTimeout(this.tokenExpirationTimer);
     }
+    
+    // Đặt lại trạng thái logout sau một khoảng thời gian ngắn để tránh kẹt
+    setTimeout(() => {
+      this.isLoggingOut = false;
+    }, 1000);
   }
-
   isLoggedIn(): boolean {
     return !!this.getToken();
   }

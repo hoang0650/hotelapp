@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { NotificationsService } from '../../services/notifications.service';
+import { Router } from '@angular/router';
 import { SettingsService, NotificationSettings } from '../../services/settings.service';
 import { HotelService } from '../../services/hotel.service';
 import { User } from '../../interfaces/user';
@@ -61,6 +62,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     public translate: TranslateService,
     public translationService: TranslationService,
     private cdr: ChangeDetectorRef,
+    private router: Router,
     @Inject(PLATFORM_ID) private platformId: any
   ) {
     translate.setDefaultLang('vi');
@@ -181,8 +183,23 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    this.userService.clearCurrentUser();
+    // 1. Lấy thông tin môi trường hiện tại
+    const isBrowser = typeof window !== 'undefined';
+    const isAdminSubdomain = isBrowser && window.location.hostname.startsWith('admin.');
+
+    // 2. Thực hiện xoá Token và dữ liệu
     this.authService.logout();
+
+    if (isBrowser) {
+      if (isAdminSubdomain) {
+        // [QUAN TRỌNG]: Nếu đang ở hệ thống Admin, ép tải lại trang hoàn toàn 
+        // để "phá huỷ" layout Admin cũ và nạp lại layout Login sạch sẽ.
+        window.location.href = '/login';
+      } else {
+        // Nếu ở ngoài trang chủ, chuyển hướng bằng Angular Router cho mượt
+        this.router.navigate(['/login']);
+      }
+    }
   }
 
   // Notifications

@@ -2043,7 +2043,6 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
               hotelId: ur.hotelId ?? current?.hotelId
             };
             this.authService.loginFromShiftHandover(response.login.token, normalizedUser);
-            // Cập nhật UserService để header tự động refresh
             this.userService.setCurrentUser(response.login.user);
           }
           
@@ -2054,7 +2053,15 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           }
           
           const displayName = response.login.user?.fullName || response.login.user?.username || 'nhân viên mới';
-          this.message.success(`Đã đăng nhập với tài khoản: ${displayName}`);
+          this.message.success(`Đã đăng nhập với tài khoản: ${displayName}. Hệ thống sẽ tải lại để áp dụng...`);
+          
+          // [CẬP NHẬT QUAN TRỌNG]: Ép tải lại toàn bộ trang web để xóa sạch bộ nhớ của ca trước
+          setTimeout(() => {
+            this.closeShiftHandoverModal();
+            window.location.reload(); 
+          }, 1500);
+
+          return; // Dừng hàm tại đây, không chạy các lệnh xóa list bên dưới nữa vì trang sẽ reload
         }
         
         // Xóa lịch sử thanh toán hiện tại sau khi giao ca thành công
@@ -2114,9 +2121,16 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         }
         
         this.totalPayment = 0;
+        
+        // [CẬP NHẬT 1]: Ép bảng phải tính toán và vẽ lại ngay lập tức dữ liệu mới
+        this.processTableData(); 
         this.calculateTotalPayment();
         
-        this.loadDataAfterHandover();
+        // [CẬP NHẬT 2]: Gọi hàm tải lại dữ liệu chuẩn thay vì dùng hàm loadDataAfterHandover bị sai API
+        this.reloadData();
+        
+        // [CẬP NHẬT 3]: Báo hiệu cho các component khác (như sơ đồ phòng) tự động cập nhật
+        this.roomService.notifyRoomDataUpdated();
         
         setTimeout(() => {
           this.closeShiftHandoverModal();
@@ -2903,7 +2917,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         // Reload lại previousShiftAmount từ backend để đảm bảo đồng bộ
         this.loadPreviousShiftAmount();
         
-        // Reload lại expenses để cập nhật expenseAmount trong form giao ca (chỉ tính expenses sau giao tiền quản lý)
+        // Reload lại expenses để cập nhật expenseAmount trong form giao ca
         const totalCash = this.processedPaidData
           .filter(item => item.paymentMethod === 'cash')
           .reduce((sum, item) => sum + this.getDisplayTotalAmount(item), 0);
@@ -2918,8 +2932,11 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         // Đóng modal
         this.closeManagerHandoverModal();
         
-        // Cập nhật tổng tiền hiển thị (tự động trừ đi tiền giao quản lý và tiền chi)
+        // [CẬP NHẬT]: Ép bảng vẽ lại và đồng bộ với Server
+        this.processTableData();
         this.calculateTotalPayment();
+        this.reloadData();
+        this.roomService.notifyRoomDataUpdated();
         
         // Log để debug
         console.log('Đã cập nhật form giao ca sau khi giao tiền quản lý:', {
