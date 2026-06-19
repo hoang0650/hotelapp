@@ -15,16 +15,16 @@ interface AuthResponse {
 export type UserRole = 'superadmin' | 'admin' | 'business' | 'hotel' | 'staff' | 'guest';
 
 export interface PermissionRules {
-  canManageAll: boolean;           
-  canManageBusinesses: boolean;    
-  canManageHotels: boolean;        
-  canManageRooms: boolean;         
-  canManageStaff: boolean;         
-  canViewShiftHistory: boolean;    
-  canAskAIAboutStaff: boolean;     
-  canAskAIAboutBusiness: boolean;  
-  canAskAIAboutHotel: boolean;     
-  canAskAIAboutRooms: boolean;     
+  canManageAll: boolean;
+  canManageBusinesses: boolean;
+  canManageHotels: boolean;
+  canManageRooms: boolean;
+  canManageStaff: boolean;
+  canViewShiftHistory: boolean;
+  canAskAIAboutStaff: boolean;
+  canAskAIAboutBusiness: boolean;
+  canAskAIAboutHotel: boolean;
+  canAskAIAboutRooms: boolean;
 }
 
 @Injectable({
@@ -37,9 +37,13 @@ export class AuthService {
   private tokenExpirationTimer: any;
   private inMemoryToken: string | null = null;
   private isLoggingOut = false;
+  public authResolved = new BehaviorSubject<boolean>(false);
+  public authResolved$ = this.authResolved.asObservable();
 
   constructor(private http: HttpClient, private router: Router) {
-    this.refreshAccessToken().subscribe();
+    this.refreshAccessToken().subscribe(() => {
+      this.authResolved.next(true);
+    });
   }
 
   refreshAccessToken(): Observable<boolean> {
@@ -52,34 +56,36 @@ export class AuthService {
         }
         return false;
       }),
-      catchError(() => of(false))
+      catchError(() => {
+        this.inMemoryToken = null;
+        this.currentUserSubject.next(null);
+        return of(false);
+      })
     );
   }
 
   login(emailOrUsername: string, password: string): Observable<boolean> {
     const isEmail = emailOrUsername.includes('@');
     const loginPayload: any = { password, remember: true };
-    
+
     if (isEmail) {
       loginPayload.email = emailOrUsername;
     } else {
       loginPayload.username = emailOrUsername;
     }
-    
+
     return this.http.post<AuthResponse>(`${this.apiUrl}/users/login`, loginPayload, { withCredentials: true })
       .pipe(
         map(response => {
           if (response && response.token) {
             this.inMemoryToken = response.token;
             this.currentUserSubject.next(response.user);
+            // Đã xóa dòng lưu localStorage ở đây
             return true;
           }
           return false;
         }),
-        catchError(error => {
-          console.error('Login error:', error);
-          return of(false);
-        })
+        catchError(error => { /*...*/ return of(false); })
       );
   }
 
@@ -89,27 +95,20 @@ export class AuthService {
   }
 
   logout(): void {
-    if (this.isLoggingOut) {
-      return;
-    }
+    if (this.isLoggingOut) return;
     this.isLoggingOut = true;
 
-    // Dọn dẹp sạch sẽ bộ nhớ trình duyệt để không dính tài khoản cũ
+    // Giữ lại việc dọn dẹp các ID cấu hình lặt vặt nếu cần, 
+    // nhưng tuyệt đối không còn dữ liệu 'user' nào trong localStorage nữa
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('user');
       localStorage.removeItem('staff');
-      localStorage.removeItem('staffId');
-      localStorage.removeItem('selectedHotelId');
     }
 
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
-    
-    if (this.tokenExpirationTimer) {
-      clearTimeout(this.tokenExpirationTimer);
-    }
+    if (this.tokenExpirationTimer) clearTimeout(this.tokenExpirationTimer);
 
-    // Đợi Backend xóa cookie xong mới tiến hành chuyển hướng
     this.http.post(`${this.apiUrl}/users/logout`, {}, { withCredentials: true }).subscribe({
       next: () => this.handleLogoutRedirect(),
       error: () => this.handleLogoutRedirect()
@@ -121,7 +120,7 @@ export class AuthService {
       const hostname = window.location.hostname;
       const protocol = window.location.protocol;
       const port = window.location.port ? `:${window.location.port}` : '';
-      
+
       if (!hostname.startsWith('admin.')) {
         window.location.href = `${protocol}//admin.phhotel.vn${port}/login`;
       } else {
@@ -131,7 +130,7 @@ export class AuthService {
     } else {
       this.router.navigate(['/login']);
     }
-    
+
     setTimeout(() => {
       this.isLoggingOut = false;
     }, 1000);
@@ -285,14 +284,14 @@ export class AuthService {
       case 'business':
         return {
           canManageAll: false,
-          canManageBusinesses: false,  
-          canManageHotels: false,      
-          canManageRooms: false,       
-          canManageStaff: true,        
-          canViewShiftHistory: true,   
-          canAskAIAboutStaff: true,    
-          canAskAIAboutBusiness: false, 
-          canAskAIAboutHotel: true,    
+          canManageBusinesses: false,
+          canManageHotels: false,
+          canManageRooms: false,
+          canManageStaff: true,
+          canViewShiftHistory: true,
+          canAskAIAboutStaff: true,
+          canAskAIAboutBusiness: false,
+          canAskAIAboutHotel: true,
           canAskAIAboutRooms: true
         };
 
@@ -300,13 +299,13 @@ export class AuthService {
         return {
           canManageAll: false,
           canManageBusinesses: false,
-          canManageHotels: false,      
-          canManageRooms: true,        
-          canManageStaff: true,        
-          canViewShiftHistory: true,   
-          canAskAIAboutStaff: true,    
+          canManageHotels: false,
+          canManageRooms: true,
+          canManageStaff: true,
+          canViewShiftHistory: true,
+          canAskAIAboutStaff: true,
           canAskAIAboutBusiness: false,
-          canAskAIAboutHotel: false,   
+          canAskAIAboutHotel: false,
           canAskAIAboutRooms: true
         };
 
@@ -315,13 +314,13 @@ export class AuthService {
           canManageAll: false,
           canManageBusinesses: false,
           canManageHotels: false,
-          canManageRooms: false,       
-          canManageStaff: false,       
-          canViewShiftHistory: true,   
-          canAskAIAboutStaff: false,   
+          canManageRooms: false,
+          canManageStaff: false,
+          canViewShiftHistory: true,
+          canAskAIAboutStaff: false,
           canAskAIAboutBusiness: false,
           canAskAIAboutHotel: false,
-          canAskAIAboutRooms: true     
+          canAskAIAboutRooms: true
         };
 
       default:
@@ -340,7 +339,7 @@ export class AuthService {
         return this.isBusiness() && user.businessId === resourceId;
 
       case 'hotel':
-        if (this.isBusiness()) return true; 
+        if (this.isBusiness()) return true;
         return user.hotelId === resourceId;
 
       case 'room':

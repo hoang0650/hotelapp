@@ -33,6 +33,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isNotificationDrawerVisible = false;
   notificationSettings: NotificationSettings | null = null;
   areNotificationsEnabled = true; // Mặc định bật
+  isAuthResolved: boolean = false;
   
   // Tab titles for notifications
   tabAllTitle = '';
@@ -76,10 +77,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     
     // Đăng ký lắng nghe từ UserService
     this.subscriptions.add(
-      this.userService.currentUser.subscribe(user => {
-        this.currentUser = user;
-      })
-    );
+    this.authService.authResolved$.subscribe(resolved => {
+      this.isAuthResolved = resolved;
+    })
+  );
     
     // Đăng ký lắng nghe từ AuthService (cho giao ca)
     this.subscriptions.add(

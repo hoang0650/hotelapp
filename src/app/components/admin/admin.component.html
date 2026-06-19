@@ -2,97 +2,82 @@
   <!-- Mobile Overlay -->
   <div class="mobile-overlay" [class.active]="isMobileMenuOpen" (click)="closeMobileMenu()"></div>
 
-  <!-- <nz-sider nzCollapsible nzWidth="200px">
-    <div class="logo"></div>
-    <ul nz-menu nzTheme="dark" nzMode="inline" (click)="closeMobileMenu($event)">
-      <li nz-submenu nzTitle="Khách sạn" nzIcon="table">
-        <ul>
-          <li nz-menu-item routerLink="/admin/room">Phòng</li>
-          <li nz-menu-item routerLink="/admin/bill">Hoá đơn</li>
-          <li nz-menu-item routerLink="/admin/calendar">Lịch đặt phòng</li>
-        </ul>
-      </li>
-      <li nz-submenu nzTitle="Quản lí" nzIcon="team">
-        <ul>
-          <li nz-menu-item routerLink="/admin/company">Quản lí Doanh nghiệp</li>
-          <li nz-menu-item routerLink="/admin/hotel">Quản lý Khách sạn</li>
-          <li nz-menu-item routerLink="/admin/room-management">Quản lý phòng</li>
-          <li nz-menu-item routerLink="/admin/staff">Quản lý Nhân viên</li>
-        </ul>
-      </li>
-      <li nz-menu-item routerLink="/admin/chart">
-        <span nz-icon nzType="pie-chart"></span>
-        <span>Doanh thu</span>
-      </li>
-      <li nz-submenu nzTitle="Thanh toán" nzIcon="dollar">
-        <ul>
-          <li nz-menu-item routerLink="/admin/qr-payment">Quét mã QR</li>
-          <li nz-menu-item routerLink="/admin/visa-payment">Visa</li>
-        </ul>
-      </li>
-      <li nz-submenu nzTitle="Home Page" nzIcon="plus">
-        <ul>
-          <li nz-menu-item routerLink="/admin/unauthorized">Unauthorized</li>
-          <li nz-menu-item routerLink="/admin/notfound">Notfound</li>
-          <li nz-menu-item routerLink="/admin/email-list">Email List</li>
-          <li nz-menu-item routerLink="/admin/email-compose">Email Compose</li>
-          <li nz-menu-item routerLink="/admin/email-admin">Email Admin</li>
-        </ul>
-      </li>
-      
-      <li nz-menu-item routerLink="/file">
-        <span nz-icon nzType="file"></span>
-        <span>File</span>
-      </li>
-    </ul>
-  </nz-sider> -->
-
-  <nz-sider *ngIf="permissionsReady; else loadingSider" nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null" [class.mobile-open]="isMobileMenuOpen">
-    <div class="logo"></div>
+  <nz-sider *ngIf="permissionsReady; else loadingSider" nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null"
+    [class.mobile-open]="isMobileMenuOpen">
+    <div class="sidebar-logo-wrapper">
+      <img src="assets/phgroup_logo_circle.PNG" alt="PHHotel Logo" />
+      <h1 *ngIf="!isCollapsed">PHHotel</h1>
+    </div>
     <ul nz-menu nzTheme="dark" nzMode="inline" (click)="closeMobileMenu($event)">
       <!-- Vận hành khách sạn -->
-      <li nz-submenu *ngIf="canAccessHotelMenu()" [nzTitle]="'ADMIN_SIDEBAR.HOTEL_OPERATIONS' | translate" nzIcon="home">
+      <li nz-submenu *ngIf="canAccessHotelMenu()" [nzTitle]="'ADMIN_SIDEBAR.HOTEL_OPERATIONS' | translate"
+        nzIcon="home">
         <ul>
           <li nz-menu-item routerLink="/admin/room">{{ 'ADMIN_SIDEBAR.ROOM' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/room-category">{{ 'ADMIN_SIDEBAR.ROOM_CATEGORY' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/floor-plan">{{ 'ADMIN_SIDEBAR.FLOOR_PLAN' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/room-category">{{
+            'ADMIN_SIDEBAR.ROOM_CATEGORY' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/floor-plan">{{
+            'ADMIN_SIDEBAR.FLOOR_PLAN' | translate }}</li>
         </ul>
       </li>
 
       <!-- Quản lý dữ liệu -->
-      <li nz-submenu *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessGuestManagement() || canAccessDebtManagement() || canAccessContactManagement() || canAccessBlogManagement()" [nzTitle]="'ADMIN_SIDEBAR.DATA_MANAGEMENT' | translate" nzIcon="database">
+      <li nz-submenu
+        *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessGuestManagement() || canAccessDebtManagement() || canAccessContactManagement() || canAccessBlogManagement()"
+        [nzTitle]="'ADMIN_SIDEBAR.DATA_MANAGEMENT' | translate" nzIcon="database">
         <ul>
-          <li nz-menu-item *ngIf="canAccessBusinessManagement()" routerLink="/admin/company">{{ 'ADMIN_SIDEBAR.BUSINESS_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessHotelManagement()" routerLink="/admin/hotel">{{ 'ADMIN_SIDEBAR.HOTEL_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/room-management">{{ 'ADMIN_SIDEBAR.ROOM_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessStaffManagement()" routerLink="/admin/staff">{{ 'ADMIN_SIDEBAR.STAFF_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessUserManagement()" routerLink="/admin/users-management">{{ 'ADMIN_SIDEBAR.USER_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessServiceManagement()" routerLink="/admin/service-management">{{ 'ADMIN_SIDEBAR.SERVICE_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessGuestManagement()" routerLink="/admin/guest-management">{{ 'ADMIN_SIDEBAR.GUEST_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessDebtManagement()" routerLink="/admin/debt-management">{{ 'ADMIN_SIDEBAR.DEBT_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessContactManagement()" routerLink="/admin/contact-management">{{ 'ADMIN_SIDEBAR.CONTACT_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessBlogManagement()" routerLink="/admin/blog-management">{{ 'ADMIN_SIDEBAR.BLOG_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessBusinessManagement()" routerLink="/admin/company">{{
+            'ADMIN_SIDEBAR.BUSINESS_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessHotelManagement()" routerLink="/admin/hotel">{{
+            'ADMIN_SIDEBAR.HOTEL_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/room-management">{{
+            'ADMIN_SIDEBAR.ROOM_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessStaffManagement()" routerLink="/admin/staff">{{
+            'ADMIN_SIDEBAR.STAFF_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessUserManagement()" routerLink="/admin/users-management">{{
+            'ADMIN_SIDEBAR.USER_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessServiceManagement()" routerLink="/admin/service-management">{{
+            'ADMIN_SIDEBAR.SERVICE_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessGuestManagement()" routerLink="/admin/guest-management">{{
+            'ADMIN_SIDEBAR.GUEST_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessDebtManagement()" routerLink="/admin/debt-management">{{
+            'ADMIN_SIDEBAR.DEBT_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessContactManagement()" routerLink="/admin/contact-management">{{
+            'ADMIN_SIDEBAR.CONTACT_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessBlogManagement()" routerLink="/admin/blog-management">{{
+            'ADMIN_SIDEBAR.BLOG_MANAGEMENT' | translate }}</li>
         </ul>
       </li>
 
       <!-- Thanh toán & Tài chính -->
-      <li nz-submenu *ngIf="canAccessPaymentMenu() || canAccessHotelMenu() || canAccessFinancialSummary()" [nzTitle]="'ADMIN_SIDEBAR.PAYMENT_FINANCE' | translate" nzIcon="dollar">
+      <li nz-submenu *ngIf="canAccessPaymentMenu() || canAccessHotelMenu() || canAccessFinancialSummary()"
+        [nzTitle]="'ADMIN_SIDEBAR.PAYMENT_FINANCE' | translate" nzIcon="dollar">
         <ul>
-          <li nz-menu-item *ngIf="canAccessFinancialSummary()" routerLink="/admin/financial-summary-report">{{ 'ADMIN_SIDEBAR.FINANCIAL_SUMMARY_REPORT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessHotelMenu()" routerLink="/admin/bank-transfer-history">{{ 'ADMIN_SIDEBAR.BANK_TRANSFER_HISTORY' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/qr-payment">{{ 'ADMIN_SIDEBAR.QR_CODE' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/visa-payment">{{ 'ADMIN_SIDEBAR.VISA' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessFinancialSummary()" routerLink="/admin/financial-summary-report">{{
+            'ADMIN_SIDEBAR.FINANCIAL_SUMMARY_REPORT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessHotelMenu()" routerLink="/admin/bank-transfer-history">{{
+            'ADMIN_SIDEBAR.BANK_TRANSFER_HISTORY' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/qr-payment">{{ 'ADMIN_SIDEBAR.QR_CODE' |
+            translate }}</li>
+          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/visa-payment">{{ 'ADMIN_SIDEBAR.VISA' |
+            translate }}</li>
         </ul>
       </li>
 
       <!-- Tích hợp & Cấu hình -->
-      <li nz-submenu *ngIf="canAccessOTAManagement() || canAccessPricingManagement() || canAccessElectricSetting()" [nzTitle]="'ADMIN_SIDEBAR.INTEGRATION_CONFIG' | translate" nzIcon="tool">
+      <li nz-submenu *ngIf="canAccessOTAManagement() || canAccessPricingManagement() || canAccessElectricSetting()"
+        [nzTitle]="'ADMIN_SIDEBAR.INTEGRATION_CONFIG' | translate" nzIcon="tool">
         <ul>
-          <li nz-menu-item *ngIf="canAccessOTAManagement()" routerLink="/admin/ota-management">{{ 'ADMIN_SIDEBAR.OTAS_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessPricingManagement()" routerLink="/admin/pricing-management">{{ 'ADMIN_SIDEBAR.PRICING_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/fanpage-messages">{{ 'ADMIN_SIDEBAR.FANPAGE_MESSAGES' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/zalo-messages">{{ 'SIDEBAR.ZALO_MESSAGES' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/telegram-messages">{{ 'SIDEBAR.TELEGRAM_MESSAGES' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessOTAManagement()" routerLink="/admin/ota-management">{{
+            'ADMIN_SIDEBAR.OTAS_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessPricingManagement()" routerLink="/admin/pricing-management">{{
+            'ADMIN_SIDEBAR.PRICING_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/fanpage-messages">{{
+            'ADMIN_SIDEBAR.FANPAGE_MESSAGES' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/zalo-messages">{{
+            'SIDEBAR.ZALO_MESSAGES' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/telegram-messages">{{
+            'SIDEBAR.TELEGRAM_MESSAGES' | translate }}</li>
           <li nz-menu-item *ngIf="canAccessElectricSetting()" routerLink="/admin/electric-setting">
             <span>{{ 'ADMIN_SIDEBAR.ELECTRIC_SETTING' | translate }}</span>
           </li>
@@ -102,14 +87,18 @@
       <!-- Hóa đơn điện tử -->
       <li nz-submenu *ngIf="canAccessEInvoice()" [nzTitle]="'ADMIN_SIDEBAR.E_INVOICE' | translate" nzIcon="file-text">
         <ul>
-          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-registration">{{ 'ADMIN_SIDEBAR.E_INVOICE_REGISTRATION' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-management">{{ 'ADMIN_SIDEBAR.E_INVOICE_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-template">{{ 'ADMIN_SIDEBAR.E_INVOICE_TEMPLATE' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-registration">{{
+            'ADMIN_SIDEBAR.E_INVOICE_REGISTRATION' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-management">{{
+            'ADMIN_SIDEBAR.E_INVOICE_MANAGEMENT' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-template">{{
+            'ADMIN_SIDEBAR.E_INVOICE_TEMPLATE' | translate }}</li>
         </ul>
       </li>
 
       <!-- Cài đặt hệ thống -->
-      <li nz-submenu *ngIf="canAccessSettings() || canAccessEmailAdmin() || canAccessFile() || canAccessBotSetting()" [nzTitle]="'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate" nzIcon="setting">
+      <li nz-submenu *ngIf="canAccessSettings() || canAccessEmailAdmin() || canAccessFile() || canAccessBotSetting()"
+        [nzTitle]="'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate" nzIcon="setting">
         <ul>
           <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/settings">
             <span>{{ 'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate }}</span>
@@ -117,11 +106,12 @@
           <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/bot-setting">
             <span>{{ 'ADMIN_SIDEBAR.BOT_SETTING' | translate }}</span>
           </li>
-          
+
           <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/camera-config">
             <span>{{ 'ADMIN_SIDEBAR.CAMERA_CONFIG' | translate }}</span>
           </li>
-          <li nz-menu-item *ngIf="canAccessEmailAdmin()" routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessEmailAdmin()" routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN'
+            | translate }}</li>
           <li nz-menu-item *ngIf="canAccessFile()" routerLink="/admin/files">
             <span>{{ 'ADMIN_SIDEBAR.FILE' | translate }}</span>
           </li>
@@ -131,7 +121,10 @@
   </nz-sider>
   <ng-template #loadingSider>
     <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null" [class.mobile-open]="isMobileMenuOpen">
-      <div class="logo"></div>
+      <div class="sidebar-logo-wrapper">
+        <img src="assets/phgroup_logo_circle.PNG" alt="PHHotel Logo" />
+        <h1 *ngIf="!isCollapsed">PHHotel</h1>
+      </div>
       <div style="padding: 12px; color: rgba(255,255,255,0.85);">
         Đang tải quyền truy cập...
       </div>
@@ -140,38 +133,22 @@
   <nz-layout>
     <nz-breadcrumb>
       <!-- Desktop Trigger -->
-      <span
-        class="trigger desktop-trigger"
-        nz-icon
-        [nzType]="isCollapsed ? 'menu-unfold' : 'menu-fold'"
-        (click)="isCollapsed = !isCollapsed"
-      ></span>
+      <span class="trigger desktop-trigger" nz-icon [nzType]="isCollapsed ? 'menu-unfold' : 'menu-fold'"
+        (click)="isCollapsed = !isCollapsed"></span>
       <!-- Mobile Trigger -->
-      <span
-        class="trigger mobile-trigger"
-        nz-icon
-        [nzType]="isMobileMenuOpen ? 'menu-fold' : 'menu-unfold'"
-        (click)="toggleMobileMenu()"
-      ></span>
+      <span class="trigger mobile-trigger" nz-icon [nzType]="isMobileMenuOpen ? 'menu-fold' : 'menu-unfold'"
+        (click)="toggleMobileMenu()"></span>
       <nz-breadcrumb-item *ngFor="let breadcrumb of breadcrumbs">
         <a [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a>
       </nz-breadcrumb-item>
     </nz-breadcrumb>
-    
+
     <!-- Nút Settings cố định -->
-    <button 
-      class="fixed-settings-btn" 
-      nz-button 
-      nzType="default" 
-      nzShape="circle"
-      nz-dropdown
-      [nzDropdownMenu]="settingsMenu"
-      [nzTrigger]="'click'"
-      [nzPlacement]="'bottomRight'"
-      title="Cài đặt">
+    <button class="fixed-settings-btn" nz-button nzType="default" nzShape="circle" nz-dropdown
+      [nzDropdownMenu]="settingsMenu" [nzTrigger]="'click'" [nzPlacement]="'bottomRight'" title="Cài đặt">
       <i nz-icon nzType="setting" nzTheme="outline"></i>
     </button>
-    
+
     <nz-content>
       <router-outlet></router-outlet>
       <nz-footer></nz-footer>
@@ -179,99 +156,79 @@
     <!-- <nz-footer></nz-footer> -->
   </nz-layout>
 </nz-layout>
-  
-  <!-- Settings Dropdown Menu Template -->
-  <nz-dropdown-menu #settingsMenu="nzDropdownMenu">
-    <ul nz-menu nzSelectable class="settings-dropdown-menu">
-      <li nz-menu-item *ngIf="canAccessSettings()" (click)="openSettings()">
-        <i nz-icon nzType="setting" nzTheme="outline"></i>
-        <span>Cài đặt hệ thống</span>
-      </li>
-      <li nz-menu-item (click)="navigateToPricing()">
-        <i nz-icon nzType="dollar" nzTheme="outline"></i>
-        <span>Quản lý gói đăng ký</span>
-      </li>
-      <li nz-menu-item *ngIf="canAccessElectricSetting()" (click)="navigateToElectric()">
-        <i nz-icon nzType="thunderbolt" nzTheme="outline"></i>
-        <span>Cài đặt điện</span>
-      </li>
-      <li nz-menu-divider></li>
-      <li nz-submenu nzTitle="Lọc phòng" nzIcon="filter">
-        <ul>
-          <li nz-menu-item (click)="openFloorFilterModal()">
-            <i nz-icon nzType="home" nzTheme="outline"></i>
-            <span>Lọc theo tầng</span>
-          </li>
-          <li nz-menu-item (click)="openColumnsModal()">
-            <i nz-icon nzType="appstore" nzTheme="outline"></i>
-            <span>Số cột hiển thị</span>
-          </li>
-        </ul>
-      </li>
-    </ul>
-  </nz-dropdown-menu>
-  
-  <!-- Modal lọc theo tầng -->
-  <nz-modal
-    [(nzVisible)]="isFloorFilterModalVisible"
-    nzTitle="Lọc theo tầng"
-    (nzOnCancel)="isFloorFilterModalVisible = false"
-    (nzOnOk)="applyFloorFilter()"
-    [nzOkText]="'Áp dụng'"
-    [nzCancelText]="'Hủy'"
-    [nzOkDisabled]="isLoadingFloors">
-    <div *nzModalContent>
-      <div *ngIf="!selectedHotelIdForFilter" class="filter-warning">
-        <nz-alert nzType="warning" nzMessage="Vui lòng chọn khách sạn trước khi lọc theo tầng" [nzShowIcon]="true"></nz-alert>
-      </div>
-      <div *ngIf="selectedHotelIdForFilter">
-        <nz-spin [nzSpinning]="isLoadingFloors">
-          <nz-form-item>
-            <nz-form-label>Tầng</nz-form-label>
-            <nz-form-control>
-              <nz-select 
-                nzPlaceHolder="Tất cả tầng" 
-                [(ngModel)]="tempSelectedFloor"
-                class="w-100"
-                nzAllowClear
-                [nzDisabled]="isLoadingFloors || availableFloors.length === 0">
-                <nz-option [nzValue]="null" [nzLabel]="'Tất cả tầng'"></nz-option>
-                <nz-option *ngFor="let floor of availableFloors" [nzValue]="floor" [nzLabel]="getFloorDisplayName(floor)"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
-        </nz-spin>
-      </div>
-    </div>
-  </nz-modal>
-  
-  <!-- Modal số cột -->
-  <nz-modal
-    [(nzVisible)]="isColumnsModalVisible"
-    nzTitle="Số cột hiển thị"
-    (nzOnCancel)="isColumnsModalVisible = false"
-    (nzOnOk)="applyColumns()"
-    [nzOkText]="'Áp dụng'"
-    [nzCancelText]="'Hủy'">
-    <div *nzModalContent>
-      <nz-form-item>
-        <nz-form-label>Số cột</nz-form-label>
-        <nz-form-control>
-          <nz-slider 
-            [nzMarks]="columnMarks" 
-            [nzStep]="null" 
-            [nzMin]="2" 
-            [nzMax]="12" 
-            [(ngModel)]="tempColumnCount"
-            [nzTooltipVisible]="'never'">
-          </nz-slider>
-          <div style="text-align: center; margin-top: 8px;">
-            <span>{{ tempColumnCount }} cột</span>
-          </div>
-        </nz-form-control>
-      </nz-form-item>
-    </div>
-  </nz-modal>
-  
-  <!-- <app-room (showModal)="toggleModal(showModal)"></app-room> -->
 
+<!-- Settings Dropdown Menu Template -->
+<nz-dropdown-menu #settingsMenu="nzDropdownMenu">
+  <ul nz-menu nzSelectable class="settings-dropdown-menu">
+    <li nz-menu-item *ngIf="canAccessSettings()" (click)="openSettings()">
+      <i nz-icon nzType="setting" nzTheme="outline"></i>
+      <span>Cài đặt hệ thống</span>
+    </li>
+    <li nz-menu-item (click)="navigateToPricing()">
+      <i nz-icon nzType="dollar" nzTheme="outline"></i>
+      <span>Quản lý gói đăng ký</span>
+    </li>
+    <li nz-menu-item *ngIf="canAccessElectricSetting()" (click)="navigateToElectric()">
+      <i nz-icon nzType="thunderbolt" nzTheme="outline"></i>
+      <span>Cài đặt điện</span>
+    </li>
+    <li nz-menu-divider></li>
+    <li nz-submenu nzTitle="Lọc phòng" nzIcon="filter">
+      <ul>
+        <li nz-menu-item (click)="openFloorFilterModal()">
+          <i nz-icon nzType="home" nzTheme="outline"></i>
+          <span>Lọc theo tầng</span>
+        </li>
+        <li nz-menu-item (click)="openColumnsModal()">
+          <i nz-icon nzType="appstore" nzTheme="outline"></i>
+          <span>Số cột hiển thị</span>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nz-dropdown-menu>
+
+<!-- Modal lọc theo tầng -->
+<nz-modal [(nzVisible)]="isFloorFilterModalVisible" nzTitle="Lọc theo tầng"
+  (nzOnCancel)="isFloorFilterModalVisible = false" (nzOnOk)="applyFloorFilter()" [nzOkText]="'Áp dụng'"
+  [nzCancelText]="'Hủy'" [nzOkDisabled]="isLoadingFloors">
+  <div *nzModalContent>
+    <div *ngIf="!selectedHotelIdForFilter" class="filter-warning">
+      <nz-alert nzType="warning" nzMessage="Vui lòng chọn khách sạn trước khi lọc theo tầng"
+        [nzShowIcon]="true"></nz-alert>
+    </div>
+    <div *ngIf="selectedHotelIdForFilter">
+      <nz-spin [nzSpinning]="isLoadingFloors">
+        <nz-form-item>
+          <nz-form-label>Tầng</nz-form-label>
+          <nz-form-control>
+            <nz-select nzPlaceHolder="Tất cả tầng" [(ngModel)]="tempSelectedFloor" class="w-100" nzAllowClear
+              [nzDisabled]="isLoadingFloors || availableFloors.length === 0">
+              <nz-option [nzValue]="null" [nzLabel]="'Tất cả tầng'"></nz-option>
+              <nz-option *ngFor="let floor of availableFloors" [nzValue]="floor"
+                [nzLabel]="getFloorDisplayName(floor)"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </nz-spin>
+    </div>
+  </div>
+</nz-modal>
+
+<!-- Modal số cột -->
+<nz-modal [(nzVisible)]="isColumnsModalVisible" nzTitle="Số cột hiển thị" (nzOnCancel)="isColumnsModalVisible = false"
+  (nzOnOk)="applyColumns()" [nzOkText]="'Áp dụng'" [nzCancelText]="'Hủy'">
+  <div *nzModalContent>
+    <nz-form-item>
+      <nz-form-label>Số cột</nz-form-label>
+      <nz-form-control>
+        <nz-slider [nzMarks]="columnMarks" [nzStep]="null" [nzMin]="2" [nzMax]="12" [(ngModel)]="tempColumnCount"
+          [nzTooltipVisible]="'never'">
+        </nz-slider>
+        <div style="text-align: center; margin-top: 8px;">
+          <span>{{ tempColumnCount }} cột</span>
+        </div>
+      </nz-form-control>
+    </nz-form-item>
+  </div>
+</nz-modal>

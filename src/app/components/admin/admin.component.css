@@ -56,11 +56,39 @@ nz-sider.ant-layout-sider-collapsed + nz-layout {
 }
 
 /* ============ Logo ============ */
-.logo {
-  height: 32px;
-  background: rgba(255, 255, 255, 0.3);
-  margin: 16px;
-  border-radius: 6px;
+.sidebar-logo-wrapper {
+  height: 64px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Giữ logo ở giữa khi thu gọn */
+  gap: 12px;
+  background: #002140; /* Màu nền nhấn cho khu vực logo (tuỳ chọn) */
+  transition: all 0.3s;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.sidebar-logo-wrapper img {
+  height: 35px; /* Điều chỉnh kích thước logo cho phù hợp */
+  width: 35px;
+  object-fit: contain;
+  flex-shrink: 0; /* Chống méo ảnh */
+}
+
+.sidebar-logo-wrapper h1 {
+  color: white;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Hiệu ứng mượt mà khi hiện chữ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* ============ Header ============ */
