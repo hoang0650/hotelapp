@@ -6,7 +6,6 @@
     [class.mobile-open]="isMobileMenuOpen">
     <div class="sidebar-logo-wrapper">
       <img src="assets/phgroup_logo_circle.PNG" alt="PHHotel Logo" />
-      <h1 *ngIf="!isCollapsed">PHHotel</h1>
     </div>
     <ul nz-menu nzTheme="dark" nzMode="inline" (click)="closeMobileMenu($event)">
       <!-- Vận hành khách sạn -->
@@ -123,7 +122,6 @@
     <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null" [class.mobile-open]="isMobileMenuOpen">
       <div class="sidebar-logo-wrapper">
         <img src="assets/phgroup_logo_circle.PNG" alt="PHHotel Logo" />
-        <h1 *ngIf="!isCollapsed">PHHotel</h1>
       </div>
       <div style="padding: 12px; color: rgba(255,255,255,0.85);">
         Đang tải quyền truy cập...

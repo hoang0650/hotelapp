@@ -58,46 +58,33 @@ nz-sider.ant-layout-sider-collapsed + nz-layout {
 /* ============ Logo ============ */
 .sidebar-logo-wrapper {
   height: 64px;
-  padding: 10px 16px;
+  padding: 10px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: transparent; /* Xóa màu cũ, để trong suốt để ăn theo màu xanh dương của Sidebar */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15); /* Đường kẻ viền mờ tinh tế phân cách với menu */
+  justify-content: center; /* Luôn căn giữa ảnh bất kể đóng hay mở menu */
+  background: transparent; 
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15); 
   transition: all 0.3s;
   overflow: hidden;
   cursor: pointer;
 }
 
-/* Hiệu ứng sáng nhẹ khi di chuột vào Logo */
 .sidebar-logo-wrapper:hover {
   background: rgba(255, 255, 255, 0.05); 
 }
 
 .sidebar-logo-wrapper img {
-  height: 36px; 
-  width: 36px;
+  height: 42px; /* Cho ảnh to lên một xíu vì không còn chữ */
+  width: auto; 
+  max-width: 100%;
   object-fit: contain;
-  flex-shrink: 0; 
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)); /* Đổ bóng nhẹ giúp ảnh logo nổi bật hơn */
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)); 
+  transition: transform 0.3s ease;
 }
 
-.sidebar-logo-wrapper h1 {
-  color: #ffffff;
-  margin: 0;
-  font-size: 20px; /* Tăng size chữ một xíu */
-  font-weight: 700; /* Làm chữ đậm hơn */
-  letter-spacing: 0.5px; /* Giãn khoảng cách chữ cho sang trọng */
-  white-space: nowrap;
-  animation: fadeIn 0.3s ease-in-out;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Đổ bóng chữ giúp sắc nét hơn */
-}
-
-/* Hiệu ứng mượt mà khi hiện chữ */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
+/* Hiệu ứng phóng to nhẹ ảnh khi di chuột vào */
+.sidebar-logo-wrapper:hover img {
+  transform: scale(1.05);
 }
 
 /* ============ Header ============ */
