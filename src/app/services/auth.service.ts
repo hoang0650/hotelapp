@@ -14,18 +14,17 @@ interface AuthResponse {
 
 export type UserRole = 'superadmin' | 'admin' | 'business' | 'hotel' | 'staff' | 'guest';
 
-// Quy tắc phân quyền
 export interface PermissionRules {
-  canManageAll: boolean;           // Quản lý tất cả (admin)
-  canManageBusinesses: boolean;    // Quản lý businesses
-  canManageHotels: boolean;        // Quản lý hotels
-  canManageRooms: boolean;         // Quản lý rooms
-  canManageStaff: boolean;         // Quản lý staff
-  canViewShiftHistory: boolean;    // Xem lịch sử giao ca
-  canAskAIAboutStaff: boolean;     // Hỏi AI về staff
-  canAskAIAboutBusiness: boolean;  // Hỏi AI về business
-  canAskAIAboutHotel: boolean;     // Hỏi AI về hotel
-  canAskAIAboutRooms: boolean;     // Hỏi AI về rooms
+  canManageAll: boolean;           
+  canManageBusinesses: boolean;    
+  canManageHotels: boolean;        
+  canManageRooms: boolean;         
+  canManageStaff: boolean;         
+  canViewShiftHistory: boolean;    
+  canAskAIAboutStaff: boolean;     
+  canAskAIAboutBusiness: boolean;  
+  canAskAIAboutHotel: boolean;     
+  canAskAIAboutRooms: boolean;     
 }
 
 @Injectable({
@@ -58,7 +57,6 @@ export class AuthService {
   }
 
   login(emailOrUsername: string, password: string): Observable<boolean> {
-    // Kiểm tra xem input có phải là email không (chứa @)
     const isEmail = emailOrUsername.includes('@');
     const loginPayload: any = { password, remember: true };
     
@@ -85,9 +83,6 @@ export class AuthService {
       );
   }
 
-  /**
-   * Login từ giao ca - cập nhật token mới
-   */
   loginFromShiftHandover(token: string, user: User): void {
     this.inMemoryToken = token;
     this.currentUserSubject.next(user);
@@ -99,7 +94,7 @@ export class AuthService {
     }
     this.isLoggingOut = true;
 
-    // [CẬP NHẬT MỚI]: Dọn dẹp sạch sẽ bộ nhớ trình duyệt để không dính tài khoản cũ
+    // Dọn dẹp sạch sẽ bộ nhớ trình duyệt để không dính tài khoản cũ
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('user');
       localStorage.removeItem('staff');
@@ -107,32 +102,41 @@ export class AuthService {
       localStorage.removeItem('selectedHotelId');
     }
 
-    this.http.post(`${this.apiUrl}/users/logout`, {}, { withCredentials: true }).subscribe({
-      next: () => {},
-      error: () => {}
-    });
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
-    
-    if (typeof window !== 'undefined' && !window.location.hostname.startsWith('admin.')) {
-      const protocol = window.location.protocol;
-      const port = window.location.port ? `:${window.location.port}` : '';
-      window.location.href = `${protocol}//admin.phhotel.vn${port}/login`;
-    } else {
-      if (this.router.url !== '/login') {
-        this.router.navigate(['/login']);
-      }
-    }
     
     if (this.tokenExpirationTimer) {
       clearTimeout(this.tokenExpirationTimer);
     }
+
+    // Đợi Backend xóa cookie xong mới tiến hành chuyển hướng
+    this.http.post(`${this.apiUrl}/users/logout`, {}, { withCredentials: true }).subscribe({
+      next: () => this.handleLogoutRedirect(),
+      error: () => this.handleLogoutRedirect()
+    });
+  }
+
+  private handleLogoutRedirect(): void {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const protocol = window.location.protocol;
+      const port = window.location.port ? `:${window.location.port}` : '';
+      
+      if (!hostname.startsWith('admin.')) {
+        window.location.href = `${protocol}//admin.phhotel.vn${port}/login`;
+      } else {
+        // Ép tải lại trang bằng đường dẫn login để xóa sạch bộ nhớ Layout Admin
+        window.location.href = '/login';
+      }
+    } else {
+      this.router.navigate(['/login']);
+    }
     
-    // Đặt lại trạng thái logout sau một khoảng thời gian ngắn để tránh kẹt
     setTimeout(() => {
       this.isLoggingOut = false;
     }, 1000);
   }
+
   isLoggedIn(): boolean {
     return !!this.getToken();
   }
@@ -177,18 +181,14 @@ export class AuthService {
     return !!user && user.role === 'guest';
   }
 
-  /**
-   * Kiểm tra subdomain và chuyển hướng nếu cần thiết
-   */
   checkSubdomainAndRedirect(): void {
     if (typeof window === 'undefined') return;
 
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     const port = window.location.port ? `:${window.location.port}` : '';
-    const pathname = window.location.pathname; // Lấy đường dẫn hiện tại đang đứng
+    const pathname = window.location.pathname;
 
-    // Không chuyển hướng nếu đang ở localhost
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return;
     }
@@ -200,11 +200,21 @@ export class AuthService {
       window.location.href = `${protocol}//${adminSubdomain}${port}/admin/room`;
     };
 
+    // Nhận diện các trang public không yêu cầu token
+    const publicPaths = ['/login', '/signup', '/business-signup', '/forgot-password', '/unauthorized', '/notfound'];
+    const isPublicPath = publicPaths.some(p => pathname.startsWith(p)) || pathname.startsWith('/reset-password');
+
     const user = this.getCurrentUser();
     if (user) {
       if (!isAdminSubdomain) {
         redirectToAdmin();
       }
+      return;
+    }
+
+    // Nếu chưa đăng nhập và đã ở sẵn trang public (/login) thì DỪNG LẠI
+    // Không gọi API refreshAccessToken để chống vòng lặp 401
+    if (isPublicPath) {
       return;
     }
 
@@ -218,22 +228,11 @@ export class AuthService {
         return;
       }
 
-      // NẾU CHƯA ĐĂNG NHẬP VÀ ĐANG Ở TÊN MIỀN ADMIN
       if (isAdminSubdomain) {
-        // Danh sách các trang "ngoại lệ" được phép đứng xem khi chưa đăng nhập
-        const publicPaths = ['/login', '/signup', '/business-signup', '/forgot-password', '/unauthorized', '/notfound'];
-        
-        // Kiểm tra xem URL hiện tại có thuộc các trang ngoại lệ không (Bao gồm cả reset-password/...)
-        const isPublicPath = publicPaths.some(p => pathname.startsWith(p)) || pathname.startsWith('/reset-password');
-        
-        // Nếu người dùng đang cố truy cập trang nội bộ (ví dụ /admin/room) thì mới đẩy về login
-        if (!isPublicPath) {
-          this.router.navigate(['/login']); // Dùng router chuyển hướng nội bộ thay vì reload
-        }
+        this.router.navigate(['/login']);
       }
     });
   }
-  // ============ LẤY THÔNG TIN ID ============
 
   getBusinessId(): string | null {
     const user = this.getCurrentUser();
@@ -250,15 +249,6 @@ export class AuthService {
     return user?._id || null;
   }
 
-  // ============ PHÂN QUYỀN CHI TIẾT ============
-
-  /**
-   * Lấy quy tắc phân quyền dựa trên vai trò
-   * - Admin: Full quyền (quản lý tất cả business, hotel, room, staff, user)
-   * - Business: Chỉ quản lý hotel, room, staff thuộc sở hữu của business đó
-   * - Hotel/Manager: Chỉ quản lý room và staff thuộc hotel đó
-   * - Staff: Chỉ xem và thao tác với room, không được phép hỏi về business/hotel/staff khác
-   */
   getPermissionRules(): PermissionRules {
     const user = this.getCurrentUser();
     const role = user?.role as UserRole;
@@ -295,14 +285,14 @@ export class AuthService {
       case 'business':
         return {
           canManageAll: false,
-          canManageBusinesses: false,  // Business KHÔNG thể tạo/cập nhật doanh nghiệp, chỉ xem
-          canManageHotels: false,      // Business KHÔNG thể tạo/cập nhật khách sạn, chỉ xem
-          canManageRooms: false,       // Business KHÔNG thể tạo/cập nhật phòng, chỉ xem
-          canManageStaff: true,        // Staff thuộc hotels của business
-          canViewShiftHistory: true,   // Được xem lịch sử giao ca
-          canAskAIAboutStaff: true,    // Được hỏi AI về staff thuộc business
-          canAskAIAboutBusiness: false, // Không được hỏi về business khác
-          canAskAIAboutHotel: true,    // Được hỏi về hotels thuộc business
+          canManageBusinesses: false,  
+          canManageHotels: false,      
+          canManageRooms: false,       
+          canManageStaff: true,        
+          canViewShiftHistory: true,   
+          canAskAIAboutStaff: true,    
+          canAskAIAboutBusiness: false, 
+          canAskAIAboutHotel: true,    
           canAskAIAboutRooms: true
         };
 
@@ -310,13 +300,13 @@ export class AuthService {
         return {
           canManageAll: false,
           canManageBusinesses: false,
-          canManageHotels: false,      // Chỉ hotel của mình
-          canManageRooms: true,        // Rooms thuộc hotel
-          canManageStaff: true,        // Staff thuộc hotel
-          canViewShiftHistory: true,   // Được xem lịch sử giao ca của hotel
-          canAskAIAboutStaff: true,    // Được hỏi AI về staff thuộc hotel
+          canManageHotels: false,      
+          canManageRooms: true,        
+          canManageStaff: true,        
+          canViewShiftHistory: true,   
+          canAskAIAboutStaff: true,    
           canAskAIAboutBusiness: false,
-          canAskAIAboutHotel: false,   // Không được hỏi về hotel khác
+          canAskAIAboutHotel: false,   
           canAskAIAboutRooms: true
         };
 
@@ -325,13 +315,13 @@ export class AuthService {
           canManageAll: false,
           canManageBusinesses: false,
           canManageHotels: false,
-          canManageRooms: false,       // Chỉ xem và thao tác cơ bản
-          canManageStaff: false,       // Không được quản lý staff
-          canViewShiftHistory: true,   // Được xem lịch sử giao ca
-          canAskAIAboutStaff: false,   // Không được hỏi về staff khác
+          canManageRooms: false,       
+          canManageStaff: false,       
+          canViewShiftHistory: true,   
+          canAskAIAboutStaff: false,   
           canAskAIAboutBusiness: false,
           canAskAIAboutHotel: false,
-          canAskAIAboutRooms: true     // Chỉ được hỏi về rooms
+          canAskAIAboutRooms: true     
         };
 
       default:
@@ -339,35 +329,24 @@ export class AuthService {
     }
   }
 
-  /**
-   * Kiểm tra xem người dùng có quyền truy cập tài nguyên không
-   */
   canAccessResource(resourceType: 'business' | 'hotel' | 'room' | 'staff', resourceId?: string): boolean {
     const user = this.getCurrentUser();
     if (!user) return false;
 
-    // Admin có quyền truy cập tất cả
     if (this.isAdmin()) return true;
 
     switch (resourceType) {
       case 'business':
-        // Business chỉ có thể truy cập business của mình
         return this.isBusiness() && user.businessId === resourceId;
 
       case 'hotel':
-        // Business có thể truy cập hotels thuộc business
-        // Hotel manager có thể truy cập hotel của mình
-        // Staff có thể truy cập hotel của mình
-        if (this.isBusiness()) return true; // Sẽ kiểm tra chi tiết ở backend
+        if (this.isBusiness()) return true; 
         return user.hotelId === resourceId;
 
       case 'room':
-        // Tất cả user đã đăng nhập có thể truy cập rooms (với giới hạn scope)
         return true;
 
       case 'staff':
-        // Business và hotel manager có thể truy cập staff
-        // Staff không thể quản lý staff khác
         if (this.isStaff()) return false;
         return this.isBusiness() || this.isHotelManager();
 
@@ -376,11 +355,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Kiểm tra quyền cho AI queries
-   * - Business hỏi AI về staff thuộc business -> được phép
-   * - Staff không được phép hỏi về business/hotel/staff khác nhưng được phép hỏi về room
-   */
   canAskAIAbout(targetType: 'business' | 'hotel' | 'staff' | 'room' | 'booking' | 'service'): boolean {
     const rules = this.getPermissionRules();
 
@@ -400,17 +374,10 @@ export class AuthService {
     }
   }
 
-  /**
-   * Kiểm tra xem có thể xem lịch sử giao ca không
-   * Chỉ admin hoặc business được phép xem
-   */
   canViewShiftHistory(): boolean {
     return this.getPermissionRules().canViewShiftHistory;
   }
 
-  /**
-   * Lấy scope cho AI queries
-   */
   getAIScope(): { role: UserRole; businessId?: string; hotelId?: string; allowedTargets: string[] } {
     const user = this.getCurrentUser();
     const role = (user?.role || 'guest') as UserRole;
@@ -432,26 +399,15 @@ export class AuthService {
     };
   }
 
-  /**
-   * Kiểm tra xem tài khoản có bị block không (blocking cascade)
-   * - Admin không thể bị block
-   * - Business bị block -> tất cả cấp dưới bị block
-   * - Hotel bị block -> staff bị block
-   */
   isAccountBlocked(): boolean {
     const user = this.getCurrentUser();
     if (!user) return true;
 
-    // Admin không thể bị block
     if (this.isAdmin()) return false;
 
-    // Kiểm tra status của user
     return user.status !== 'active';
   }
 
-  /**
-   * Cập nhật current user (dùng sau khi cập nhật profile)
-   */
   setCurrentUser(user: User): void {
     this.currentUserSubject.next(user);
   }

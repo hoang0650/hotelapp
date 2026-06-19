@@ -3,7 +3,6 @@ import { isPlatformBrowser } from '@angular/common';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { NotificationsService } from '../../services/notifications.service';
-import { Router } from '@angular/router';
 import { SettingsService, NotificationSettings } from '../../services/settings.service';
 import { HotelService } from '../../services/hotel.service';
 import { User } from '../../interfaces/user';
@@ -55,14 +54,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   constructor(
     private userService: UserService,
-    public authService: AuthService, // Đổi thành public để sử dụng trong template
+    public authService: AuthService, 
     private notificationsService: NotificationsService,
     private settingsService: SettingsService,
     private hotelService: HotelService,
     public translate: TranslateService,
     public translationService: TranslationService,
     private cdr: ChangeDetectorRef,
-    private router: Router,
     @Inject(PLATFORM_ID) private platformId: any
   ) {
     translate.setDefaultLang('vi');
@@ -121,9 +119,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
   
-  /**
-   * Update tab titles based on current language
-   */
   private updateTabTitles(): void {
     this.tabAllTitle = this.getTranslatedOr('NOTIFICATIONS.ALL', 'Tất cả');
     this.tabSystemTitle = this.getTranslatedOr('NOTIFICATIONS.SYSTEM', 'Hệ thống');
@@ -142,17 +137,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
     return this.userService.isLoggedIn || !!this.currentUser;
   }
 
-  // Lấy tên hiển thị - ưu tiên fullName > username > email
   get displayName(): string {
     if (!this.currentUser) return '';
     return this.currentUser.fullName || this.currentUser.username || this.currentUser.email || '';
   }
 
-  // Lấy vai trò người dùng
   get userRole(): string {
     if (!this.currentUser) return '';
     const role = this.currentUser.role || '';
-    // Sử dụng translate cho role labels
     const roleKey = `ROLES.${role.toUpperCase()}`;
     return this.getTranslatedOr(roleKey, role);
   }
@@ -163,18 +155,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
     return v;
   }
 
-  // Chuyển đổi ngôn ngữ - sử dụng TranslationService để đảm bảo tất cả component được cập nhật
   switchLanguage(lang: string): void {
     console.log(`Header: Switching language to ${lang}`);
     this.translationService.switchLanguage(lang);
     
-    // Wait for translation to load, then update
     setTimeout(() => {
-      // Update tab titles after language switch
       this.updateTabTitles();
-      // Force change detection
       this.cdr.detectChanges();
-      // Trigger custom event for other components
       if (isPlatformBrowser(this.platformId)) {
         window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
       }
@@ -183,23 +170,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    // 1. Lấy thông tin môi trường hiện tại
-    const isBrowser = typeof window !== 'undefined';
-    const isAdminSubdomain = isBrowser && window.location.hostname.startsWith('admin.');
-
-    // 2. Thực hiện xoá Token và dữ liệu
+    // Chỉ gọi lệnh dọn dẹp, không chuyển trang ở đây để tránh hủy Request API Logout
+    this.userService.clearCurrentUser();
     this.authService.logout();
-
-    if (isBrowser) {
-      if (isAdminSubdomain) {
-        // [QUAN TRỌNG]: Nếu đang ở hệ thống Admin, ép tải lại trang hoàn toàn 
-        // để "phá huỷ" layout Admin cũ và nạp lại layout Login sạch sẽ.
-        window.location.href = '/login';
-      } else {
-        // Nếu ở ngoài trang chủ, chuyển hướng bằng Angular Router cho mượt
-        this.router.navigate(['/login']);
-      }
-    }
   }
 
   // Notifications
@@ -214,7 +187,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   markAsRead(announcement: Announcement): void {
     this.notificationsService.markAsRead(announcement.id).subscribe({
       next: () => {
-        // Cập nhật trạng thái local
         announcement.isRead = true;
         this.loadUnreadCounts();
         this.filterNotificationsByTab();
@@ -228,7 +200,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   markAllAsRead(): void {
     this.notificationsService.markAllAsRead().subscribe({
       next: () => {
-        // Cập nhật trạng thái local
         this.notifications.forEach(n => n.isRead = true);
         this.loadUnreadCounts();
         this.filterNotificationsByTab();
@@ -239,11 +210,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Load notification settings từ system hoặc hotel
-   */
   private loadNotificationSettings(): void {
-    // Nếu user có hotelId, ưu tiên load từ hotel settings
     if (this.currentUser?.hotelId) {
       forkJoin({
         hotel: this.hotelService.getHotelById(this.currentUser.hotelId).pipe(
@@ -254,9 +221,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
         )
       }).subscribe({
         next: ({ hotel, system }) => {
-          // Ưu tiên hotel settings, nếu không có thì dùng system settings
           if (hotel?.settings?.notificationSettings) {
-            // Convert HotelNotificationSettings (optional) to NotificationSettings (required)
             const hotelNotif = hotel.settings.notificationSettings;
             this.notificationSettings = {
               enableEmailNotifications: hotelNotif.enableEmailNotifications ?? true,
@@ -274,7 +239,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
           } else if (system?.success && system?.data) {
             this.notificationSettings = system.data;
           } else {
-            // Mặc định: bật tất cả
             this.notificationSettings = {
               enableEmailNotifications: true,
               enableSMSNotifications: false,
@@ -294,13 +258,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      // Load từ system settings
       this.settingsService.getSettingsByType('notification').subscribe({
         next: (response) => {
           if (response.success && response.data) {
             this.notificationSettings = response.data;
           } else {
-            // Mặc định: bật tất cả
             this.notificationSettings = {
               enableEmailNotifications: true,
               enableSMSNotifications: false,
@@ -319,7 +281,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
           this.updateNotifications();
         },
         error: () => {
-          // Mặc định: bật tất cả
           this.notificationSettings = {
             enableEmailNotifications: true,
             enableSMSNotifications: false,
@@ -340,25 +301,18 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Cập nhật trạng thái notifications enabled dựa trên cài đặt
-   */
   private updateNotificationsEnabled(): void {
     if (!this.notificationSettings) {
       this.areNotificationsEnabled = true;
       return;
     }
     
-    // Nếu ít nhất một kênh được bật, thì hiển thị thông báo
     this.areNotificationsEnabled = 
       this.notificationSettings.enableEmailNotifications ||
       this.notificationSettings.enableSMSNotifications ||
       this.notificationSettings.enablePushNotifications;
   }
 
-  /**
-   * Cập nhật danh sách notifications (lọc dựa trên cài đặt)
-   */
   private updateNotifications(): void {
     if (!this.areNotificationsEnabled) {
       this.notifications = [];
@@ -369,15 +323,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
     
     const allNotifications = this.notificationsService.getAllNotifications();
     
-    // Filter notifications dựa trên notificationType và notifyOn* settings
     if (this.notificationSettings) {
       this.notifications = allNotifications.filter(notification => {
-        // Nếu notificationType là 'general', hiển thị luôn (không phụ thuộc vào notifyOn*)
         if (!notification.notificationType || notification.notificationType === 'general') {
           return true;
         }
         
-        // Map notificationType với notifyOn* settings
         const notificationTypeMap: { [key: string]: keyof NotificationSettings } = {
           'booking': 'notifyOnBooking',
           'checkin': 'notifyOnCheckin',
@@ -390,15 +341,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
         
         const notifyOnKey = notificationTypeMap[notification.notificationType];
         if (notifyOnKey && this.notificationSettings) {
-          // Chỉ hiển thị nếu notifyOn* tương ứng được bật
           return this.notificationSettings[notifyOnKey] === true;
         }
         
-        // Nếu không map được, hiển thị luôn (fallback)
         return true;
       });
     } else {
-      // Nếu không có notificationSettings, hiển thị tất cả
       this.notifications = allNotifications;
     }
     
@@ -406,9 +354,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.loadUnreadCounts();
   }
   
-  /**
-   * Filter notifications theo tab hiện tại
-   */
   filterNotificationsByTab(): void {
     if (!this.notifications) {
       this.filteredNotifications = [];
@@ -427,17 +372,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
   
-  /**
-   * Chuyển tab
-   */
   switchTab(tab: 'all' | 'system' | 'hotel'): void {
     this.activeTab = tab;
     this.filterNotificationsByTab();
   }
   
-  /**
-   * Chuyển tab từ index (dùng cho nz-tabset)
-   */
   onTabChange(event: any): void {
     const index = typeof event === 'number' ? event : (event?.index ?? 0);
     if (index === 0) {
@@ -449,16 +388,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
   
-  /**
-   * Load số lượng chưa đọc từ backend
-   */
   loadUnreadCounts(): void {
     this.notificationsService.getUnreadCount().subscribe({
       next: (response) => {
         if (response.success && response.data) {
           this.unreadCounts = response.data;
           this.unreadCount = response.data.total;
-          // Update tab titles when counts change
           this.updateTabTitles();
           this.cdr.detectChanges();
         }
@@ -510,7 +445,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     });
   }
 
-
   getNotificationTypeLabel(type: string): string {
     const labelMap: { [key: string]: string } = {
       'maintenance': this.translate.instant('NOTIFICATIONS.TYPE_MAINTENANCE'),
@@ -526,15 +460,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   getImageUrl(urlOrId: string | null | undefined): string {
     if (!urlOrId) return '';
-    // Nếu là URL đầy đủ (http/https), trả về nguyên
     if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
       return urlOrId;
     }
-    // Nếu là imageId hoặc path, thêm base URL
     if (urlOrId.startsWith('/files/')) {
       return `${this.apiBaseUrl}${urlOrId}`;
     }
-    // Nếu chỉ là ID, thêm /files/ prefix
     return `${this.apiBaseUrl}/files/${urlOrId}`;
   }
 
