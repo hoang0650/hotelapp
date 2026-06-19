@@ -61,28 +61,37 @@ nz-sider.ant-layout-sider-collapsed + nz-layout {
   padding: 10px 16px;
   display: flex;
   align-items: center;
-  justify-content: center; /* Giữ logo ở giữa khi thu gọn */
+  justify-content: center;
   gap: 12px;
-  background: #002140; /* Màu nền nhấn cho khu vực logo (tuỳ chọn) */
+  background: transparent; /* Xóa màu cũ, để trong suốt để ăn theo màu xanh dương của Sidebar */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15); /* Đường kẻ viền mờ tinh tế phân cách với menu */
   transition: all 0.3s;
   overflow: hidden;
   cursor: pointer;
 }
 
+/* Hiệu ứng sáng nhẹ khi di chuột vào Logo */
+.sidebar-logo-wrapper:hover {
+  background: rgba(255, 255, 255, 0.05); 
+}
+
 .sidebar-logo-wrapper img {
-  height: 35px; /* Điều chỉnh kích thước logo cho phù hợp */
-  width: 35px;
+  height: 36px; 
+  width: 36px;
   object-fit: contain;
-  flex-shrink: 0; /* Chống méo ảnh */
+  flex-shrink: 0; 
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)); /* Đổ bóng nhẹ giúp ảnh logo nổi bật hơn */
 }
 
 .sidebar-logo-wrapper h1 {
-  color: white;
+  color: #ffffff;
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px; /* Tăng size chữ một xíu */
+  font-weight: 700; /* Làm chữ đậm hơn */
+  letter-spacing: 0.5px; /* Giãn khoảng cách chữ cho sang trọng */
   white-space: nowrap;
   animation: fadeIn 0.3s ease-in-out;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Đổ bóng chữ giúp sắc nét hơn */
 }
 
 /* Hiệu ứng mượt mà khi hiện chữ */
