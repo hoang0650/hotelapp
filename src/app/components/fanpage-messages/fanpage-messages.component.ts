@@ -170,22 +170,24 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
     this.cdr.detectChanges();
   }
 
-  async toggleBot(): Promise<void> {
+  async toggleBot(active: boolean): Promise<void> {
     if (!this.selectedPageId) return;
     const tenantId = this.getTenantId();
     if (!tenantId) return;
 
-    const targetState = !this.isBotActive;
     try {
-      // Gửi yêu cầu cập nhật kèm định danh nền tảng 'facebook'
-      await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, targetState, 'facebook');
-      this.isBotActive = targetState;
+      // Sử dụng trực tiếp giá trị 'active' truyền từ $event sang backend
+      await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, active, 'facebook');
+      this.isBotActive = active;
     } catch (error) {
       console.error('Không thể cập nhật trạng thái AI Facebook:', error);
+      // Nếu lỗi, rollback đảo ngược lại trạng thái switch trên giao diện
+      this.isBotActive = !active; 
     } finally {
       this.cdr.detectChanges();
     }
   }
+
   async refreshData(): Promise<void> {
     this.loading = true;
     try {
