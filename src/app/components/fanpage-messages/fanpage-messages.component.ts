@@ -163,28 +163,29 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
   async loadBotStatus(): Promise<void> {
     if (!this.selectedPageId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) return; // <--- CHẶN NẾU RỖNG
+    if (!tenantId) return;
 
-    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedPageId);
+    // Truyền thêm chữ 'facebook' để đồng bộ hóa cấu hình trang đích
+    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedPageId, 'facebook');
+    this.cdr.detectChanges();
   }
 
-  async toggleBot(checked: boolean): Promise<void> {
+  async toggleBot(): Promise<void> {
     if (!this.selectedPageId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) {
-      this.isBotActive = !checked; // Hoàn tác công tắc nếu không có ID
-      return;
-    }
-    
-    this.isBotActive = checked;
+    if (!tenantId) return;
+
+    const targetState = !this.isBotActive;
     try {
-      await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, checked);
+      // Gửi yêu cầu cập nhật kèm định danh nền tảng 'facebook'
+      await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, targetState, 'facebook');
+      this.isBotActive = targetState;
     } catch (error) {
-      console.error('Lỗi toggle bot:', error);
-      this.isBotActive = !checked;
+      console.error('Không thể cập nhật trạng thái AI Facebook:', error);
+    } finally {
+      this.cdr.detectChanges();
     }
   }
-
   async refreshData(): Promise<void> {
     this.loading = true;
     try {

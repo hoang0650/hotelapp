@@ -431,17 +431,19 @@ export class AiAssistantService {
   /**
    * Bật/Tắt Bot cho Fanpage
    */
-  async toggleBot(tenantId: string, pageId: string, active: boolean): Promise<any> {
+  async toggleBot(tenantId: string, pageId: string, active: boolean, platform: 'zalo' | 'facebook' | 'telegram'): Promise<any> {
     try {
+      const body = {
+        tenant_id: tenantId,
+        page_id: pageId,
+        active: active,
+        platform: platform // Thêm trường này để backend lưu trữ vào đúng file json của platform đó
+      };
       return await firstValueFrom(
-        this.http.post<any>(`${this.aiUrl}/bot/toggle`, {
-          tenant_id: tenantId,
-          page_id: pageId,
-          active
-        })
+        this.http.post<any>(`${this.aiUrl}/bot/toggle`, body)
       );
     } catch (error) {
-      console.error('Lỗi bật/tắt bot:', error);
+      console.error(`Lỗi cập nhật trạng thái bot cho ${platform}:`, error);
       throw error;
     }
   }
@@ -449,16 +451,16 @@ export class AiAssistantService {
   /**
    * Lấy trạng thái Bot
    */
-  async getBotStatus(tenantId: string, pageId: string): Promise<boolean> {
+  async getBotStatus(tenantId: string, pageId: string, platform: 'zalo' | 'facebook' | 'telegram'): Promise<boolean> {
     try {
       const resp = await firstValueFrom(
         this.http.get<any>(`${this.aiUrl}/bot/status`, {
-          params: { tenant_id: tenantId, page_id: pageId }
+          params: { tenant_id: tenantId, page_id: pageId, platform: platform }
         })
       );
       return resp?.active || false;
     } catch (error) {
-      console.error('Lỗi lấy trạng thái bot:', error);
+      console.error(`Lỗi lấy trạng thái bot cho ${platform}:`, error);
       return false;
     }
   }

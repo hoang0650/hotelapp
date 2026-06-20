@@ -142,25 +142,27 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
   async loadBotStatus(): Promise<void> {
     if (!this.selectedOaId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) return; // <--- Chặn rỗng
+    if (!tenantId) return;
 
-    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedOaId);
+    // Truyền thêm chữ 'zalo' làm tham số nền tảng thứ 3
+    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedOaId, 'zalo');
+    this.cdr.detectChanges();
   }
 
-  async toggleBot(checked: boolean): Promise<void> {
+  async toggleBot(): Promise<void> {
     if (!this.selectedOaId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) {
-      this.isBotActive = !checked; // Hoàn tác
-      return;
-    }
-    
-    this.isBotActive = checked;
+    if (!tenantId) return;
+
+    const targetState = !this.isBotActive;
     try {
-      await this.aiAssistant.toggleBot(tenantId, this.selectedOaId, checked);
+      // Gửi yêu cầu toggle kèm định danh nền tảng 'zalo'
+      await this.aiAssistant.toggleBot(tenantId, this.selectedOaId, targetState, 'zalo');
+      this.isBotActive = targetState;
     } catch (error) {
-      console.error('Lỗi toggle bot:', error);
-      this.isBotActive = !checked;
+      console.error('Không thể cập nhật trạng thái AI Zalo:', error);
+    } finally {
+      this.cdr.detectChanges();
     }
   }
 

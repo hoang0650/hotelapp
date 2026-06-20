@@ -132,25 +132,27 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
   async loadBotStatus(): Promise<void> {
     if (!this.selectedBotId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) return; // <--- Chặn rỗng
+    if (!tenantId) return;
 
-    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedBotId);
+    // Truyền thêm chữ 'telegram' phục vụ bộ phân mạch rẽ nhánh bot_controller
+    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedBotId, 'telegram');
+    this.cdr.detectChanges();
   }
 
-  async toggleBot(checked: boolean): Promise<void> {
+  async toggleBot(): Promise<void> {
     if (!this.selectedBotId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) {
-      this.isBotActive = !checked; // Hoàn tác
-      return;
-    }
-    
-    this.isBotActive = checked;
+    if (!tenantId) return;
+
+    const targetState = !this.isBotActive;
     try {
-      await this.aiAssistant.toggleBot(tenantId, this.selectedBotId, checked);
+      // Gửi yêu cầu cập nhật kèm định danh nền tảng 'telegram'
+      await this.aiAssistant.toggleBot(tenantId, this.selectedBotId, targetState, 'telegram');
+      this.isBotActive = targetState;
     } catch (error) {
-      console.error('Lỗi toggle bot:', error);
-      this.isBotActive = !checked;
+      console.error('Không thể cập nhật trạng thái AI Telegram:', error);
+    } finally {
+      this.cdr.detectChanges();
     }
   }
 
