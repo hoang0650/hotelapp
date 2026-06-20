@@ -163,28 +163,25 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
   async loadBotStatus(): Promise<void> {
     if (!this.selectedPageId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) return;
+    if (!tenantId) return; // <--- CHẶN NẾU RỖNG
 
-    // Truyền thêm chữ 'facebook' để đồng bộ hóa cấu hình trang đích
-    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedPageId, 'facebook');
-    this.cdr.detectChanges();
+    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedPageId);
   }
 
-  async toggleBot(active: boolean): Promise<void> {
+  async toggleBot(checked: boolean): Promise<void> {
     if (!this.selectedPageId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) return;
-
+    if (!tenantId) {
+      this.isBotActive = !checked; // Hoàn tác công tắc nếu không có ID
+      return;
+    }
+    
+    this.isBotActive = checked;
     try {
-      // Sử dụng trực tiếp giá trị 'active' truyền từ $event sang backend
-      await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, active, 'facebook');
-      this.isBotActive = active;
+      await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, checked);
     } catch (error) {
-      console.error('Không thể cập nhật trạng thái AI Facebook:', error);
-      // Nếu lỗi, rollback đảo ngược lại trạng thái switch trên giao diện
-      this.isBotActive = !active; 
-    } finally {
-      this.cdr.detectChanges();
+      console.error('Lỗi toggle bot:', error);
+      this.isBotActive = !checked;
     }
   }
 

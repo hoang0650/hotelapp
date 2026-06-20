@@ -142,28 +142,25 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
   async loadBotStatus(): Promise<void> {
     if (!this.selectedOaId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) return;
+    if (!tenantId) return; // <--- Chặn rỗng
 
-    // Truyền thêm chữ 'zalo' làm tham số nền tảng thứ 3
-    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedOaId, 'zalo');
-    this.cdr.detectChanges();
+    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedOaId);
   }
 
-  async toggleBot(active: boolean): Promise<void> {
+  async toggleBot(checked: boolean): Promise<void> {
     if (!this.selectedOaId) return;
     const tenantId = this.getTenantId();
-    if (!tenantId) return;
-
+    if (!tenantId) {
+      this.isBotActive = !checked; // Hoàn tác
+      return;
+    }
+    
+    this.isBotActive = checked;
     try {
-      // Sử dụng trực tiếp giá trị 'active' truyền từ $event sang backend
-      await this.aiAssistant.toggleBot(tenantId, this.selectedOaId, active, 'zalo');
-      this.isBotActive = active;
+      await this.aiAssistant.toggleBot(tenantId, this.selectedOaId, checked);
     } catch (error) {
-      console.error('Không thể cập nhật trạng thái AI Zalo:', error);
-      // Nếu lỗi, rollback đảo ngược lại trạng thái switch trên giao diện
-      this.isBotActive = !active;
-    } finally {
-      this.cdr.detectChanges();
+      console.error('Lỗi toggle bot:', error);
+      this.isBotActive = !checked;
     }
   }
 
