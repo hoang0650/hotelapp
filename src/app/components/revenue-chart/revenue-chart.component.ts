@@ -45,7 +45,13 @@ export class RevenueChartComponent implements OnInit, OnChanges {
   ) {}
 
   ngOnInit(): void {
-    this.loadHotelRevenue();
+    setTimeout(() => {
+      // Chỉ tự gọi API nếu component cha không truyền dữ liệu vào 
+      // (Khắc phục lỗi gọi API 2 lần cùng lúc gây thắt cổ chai mạng)
+      if (this.labels.length === 0 && this.revenueData.length === 0) {
+        this.loadHotelRevenue();
+      }
+    }, 1200);
   }
 
   ngOnChanges(changes: SimpleChanges): void {

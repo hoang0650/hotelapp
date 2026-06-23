@@ -828,9 +828,14 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.isRoomsLoading = false;
         this.isReloading = false;
 
+        // ƯU TIÊN 1: Xử lý giá và sự kiện cho phòng đang có khách (Delay 50ms để DOM kịp vẽ khung phòng)
         setTimeout(() => {
           this.prefetchRoomPricesForOccupiedRooms();
           this.loadEventsForOccupiedRooms();
+        }, 50);
+
+        // ƯU TIÊN 2: Trì hoãn việc tải dữ liệu Biểu đồ, Bảng lịch sử và Lịch (Delay 1000ms nhường tài nguyên cho UI)
+        setTimeout(() => {
           if (this.isRevenuePanelActive) {
             this.loadChartDataFromAPI();
           }
@@ -843,7 +848,7 @@ export class RoomComponent implements OnInit, OnDestroy {
               this.calendarComponent.loadBookings();
             }
           }
-        }, 0);
+        }, 1000); 
       },
       error: (error: any) => {
         this.message.error('Lỗi khi tải danh sách phòng: ' + (error.error?.message || error.message));
@@ -853,6 +858,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
   }
 
+
+  
   private hasRealEvents(room: Room): boolean {
     const events = (room as any)?.events;
     if (!events || !Array.isArray(events) || events.length === 0) return false;

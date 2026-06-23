@@ -408,9 +408,11 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     this.setScrollSize();
     this.calculateTotalPayment();
 
-    // Tải lịch sử checkout mới nhất nếu không có dữ liệu được truyền vào
+    // TRÌ HOÃN TẢI: Đẩy lùi việc gọi API lịch sử checkout xuống 1.5s
     if (this.hotelId && this.listOfData.length === 0) {
-      this.loadHistory(this.currentFilterType);
+      setTimeout(() => {
+        this.loadHistory(this.currentFilterType);
+      }, 1500); 
     }
     
     // Subscribe vào roomDataUpdated$ để tự động reload khi có cập nhật
