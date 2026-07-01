@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, NgZone } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -26,7 +26,8 @@ export class LoginComponent implements OnInit {
     private router: Router,
     private message: NzMessageService,
     private translate: TranslateService,
-    private authService: AuthService
+    private authService: AuthService,
+    private ngZone: NgZone
   ) {
     this.initForm();
   }
@@ -60,13 +61,19 @@ export class LoginComponent implements OnInit {
   private executeFastRedirect(): void {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
-      // Nếu ở môi trường local hoặc dev subdomain, dùng router điều hướng mượt mà
-      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
-        this.router.navigate(['/admin/room']);
-      } else {
-        // Nếu ở root domain hoặc domain khác, cưỡng bức nhảy thẳng sang trang production mong muốn
-        window.location.href = 'https://admin.phhotel.vn/admin/room';
-      }
+      
+      // Bọc toàn bộ logic điều hướng vào bên trong ngZone.run()
+      this.ngZone.run(() => {
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
+          this.router.navigate(['/admin/room']).then(navigated => {
+            if (!navigated) {
+              console.error('Điều hướng thất bại! Có thể do AuthGuard chặn.');
+            }
+          });
+        } else {
+          window.location.href = 'https://admin.phhotel.vn/admin/room';
+        }
+      });
     }
   }
 

@@ -4,6 +4,7 @@ import { Observable, map, BehaviorSubject } from 'rxjs';
 import { User } from '../interfaces/user';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { HotelService } from './hotel.service';
 
 export interface BusinessInfo {
   name: string;
@@ -60,7 +61,7 @@ export class UserService {
   private apiUrl = `${environment.apiUrl}/users`;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   
-  constructor(private http: HttpClient, private authService: AuthService) {
+  constructor(private http: HttpClient, private authService: AuthService, private hotelService: HotelService) {
     this.checkAuthStatus();
   }
 
@@ -128,6 +129,7 @@ export class UserService {
       next: () => {},
       error: () => {}
     });
+    this.hotelService.clearRoomContext();
     this.currentUserSubject.next(null);
   }
 

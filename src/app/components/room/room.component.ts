@@ -179,6 +179,18 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    const storedHotelId = this.hotelService.getStoredHotelId();
+    if (storedHotelId) {
+      this.selectedHotelId = storedHotelId;
+      this.roomSessionService.setHotelId(storedHotelId);
+    } else {
+      this.selectedHotelId = this.authService.getHotelId();
+      if (this.selectedHotelId) {
+        this.roomSessionService.setHotelId(this.selectedHotelId);
+      }
+    }
+
+    this.loadHotels();
     const currentUser = this.authService.getCurrentUser();
     const userId = currentUser?._id;
 
@@ -668,49 +680,29 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.hotelService.getHotels().subscribe(data => {
       const currentUser = this.authService.getCurrentUser();
       
-      // Filter hotels theo role
       if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
-        // Admin/Superadmin thấy tất cả
         this.hotels = data;
       } else if (this.authService.isBusiness()) {
-        // Business chỉ thấy hotels thuộc business của mình
         const userBusinessId = this.extractId(currentUser?.businessId);
-        
         if (userBusinessId) {
-          this.hotels = data.filter(hotel => {
-            const hotelBusinessId = this.extractBusinessId(hotel);
-            return hotelBusinessId === userBusinessId;
-          });
+          this.hotels = data.filter(hotel => this.extractBusinessId(hotel) === userBusinessId);
         } else {
           this.hotels = [];
         }
       } else if (this.authService.isHotelManager() || this.authService.isStaff()) {
-        // Hotel manager và Staff chỉ thấy hotel của mình
         const userHotelId = this.extractId(currentUser?.hotelId);
-        
         if (userHotelId) {
-          // Lọc hotel khớp với hotelId của user
-          this.hotels = data.filter(hotel => {
-            const hotelId = this.extractId(hotel._id);
-            return hotelId === userHotelId;
-          });
-          
-          // Tự động chọn hotel của mình
+          this.hotels = data.filter(hotel => this.extractId(hotel._id) === userHotelId);
           if (this.hotels.length > 0) {
             this.selectedHotelId = userHotelId;
-            // Chỉ load lại nếu chưa load hoặc hotel thay đổi
-            // Gọi onHotelChange để load floors và rooms
             this.onHotelChange(this.selectedHotelId);
           } else {
-            // Trường hợp có hotelId nhưng không tìm thấy trong danh sách (ví dụ hotel bị inactive hoặc deleted)
-            console.warn('User has hotelId but hotel not found in list', userHotelId);
             this.selectedHotelId = null;
             this.rooms = [];
             this.floors = [];
             this.message.warning('Không tìm thấy khách sạn của bạn. Vui lòng liên hệ quản trị viên.');
           }
         } else {
-          console.warn('User (Manager/Staff) has no hotelId');
           this.selectedHotelId = null;
           this.rooms = [];
           this.floors = [];
@@ -720,27 +712,21 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.hotels = [];
       }
       
-      // Logic chọn hotel mặc định cho Admin/Business (nếu chưa chọn)
+      // 2. Logic ưu tiên LocalStorage cho Admin/Business
       if (this.hotels.length > 0 && !this.authService.isStaff() && !this.authService.isHotelManager()) {
-        if (!this.selectedHotelId) {
-          // Nếu chưa có selectedHotelId, chọn hotel đầu tiên
-          this.selectedHotelId = this.hotels[0]._id!;
+        const storedHotelId = this.hotelService.getStoredHotelId();
+        const hotelExists = storedHotelId ? this.hotels.some(h => this.extractId(h._id) === storedHotelId) : false;
+
+        if (hotelExists && storedHotelId) {
+          // 👉 LẦN SAU: Có trong LocalStorage thì sử dụng ngay
+          this.selectedHotelId = storedHotelId;
           this.onHotelChange(this.selectedHotelId);
         } else {
-          // Nếu đã có selectedHotelId, kiểm tra xem hotel đó có trong danh sách không
-          const hotelExists = this.hotels.some(h => this.extractId(h._id) === this.selectedHotelId);
-          
-          if (hotelExists) {
-            // Nếu hotel tồn tại, load rooms cho hotel đó
-            this.onHotelChange(this.selectedHotelId);
-          } else {
-            // Nếu hotel không tồn tại (ví dụ chuyển account khác), chọn hotel đầu tiên
-            this.selectedHotelId = this.hotels[0]._id!;
-            this.onHotelChange(this.selectedHotelId);
-          }
+          // 👉 LẦN ĐẦU (hoặc LocalStorage trống): Lấy mặc định cái đầu tiên từ Service
+          this.selectedHotelId = this.hotels[0]._id!;
+          this.onHotelChange(this.selectedHotelId);
         }
       } else if (this.hotels.length === 0) {
-        // Nếu không có hotel nào
         if (!this.authService.isStaff() && !this.authService.isHotelManager()) {
              this.selectedHotelId = null;
              this.rooms = [];
@@ -881,11 +867,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (hotelId && this.lastLoadedHotelId === hotelId && this.rooms.length > 0 && !this.isRoomsLoading) {
       return;
     }
-    // Staff không được phép thay đổi hotel
     if (this.authService.isStaff()) {
       const currentUser = this.authService.getCurrentUser();
       const staffHotelId = this.extractId(currentUser?.hotelId);
-      
       if (staffHotelId && hotelId !== staffHotelId) {
         this.message.warning(this.translate.instant('ROOM.STAFF_ONLY_HOTEL'));
         this.selectedHotelId = staffHotelId;
@@ -917,28 +901,15 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
 
     this.roomSessionService.setHotelId(hotelId);
-    const currentUser = this.authService.getCurrentUser();
-    const userId = currentUser?._id;
 
-    if (userId) {
-      this.apiService.saveSelectedHotel(userId, hotelId).subscribe({
-        next: () => console.log('[Redis] Selected hotel saved'),
-        error: (err) => console.error('[Redis] Error saving selected hotel:', err)
-      });
-
-      this.apiService.getSelectedFloor(userId, hotelId).subscribe({
-        next: (res) => {
-          const savedFloor = res?.selectedFloor ? String(res.selectedFloor) : null;
-          this.selectedFloor = savedFloor;
-          if (this.selectedFloor && this.floors.length > 0 && !this.floors.includes(this.selectedFloor)) {
-            this.selectedFloor = null;
-          }
-        },
-        error: () => {
-          this.selectedFloor = null;
-        }
-      });
+    // 3. Khôi phục tầng từ LocalStorage (nếu có)
+    const storedFloor = this.hotelService.getStoredFloor();
+    if (storedFloor) {
+      this.selectedFloor = storedFloor;
     }
+
+    // 4. Lưu lại Context hiện tại vào LocalStorage
+    this.hotelService.saveRoomContext(hotelId, this.selectedFloor || '');
 
     this.loadRooms();
     this.startRealtimeSync();
@@ -947,8 +918,11 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.roomsService.getHotelFloors(hotelId).subscribe(
       (data) => {
         this.floors = (data.floors || []).map((f: any) => String(f));
+        
+        // Cân bằng bộ lọc: Nếu tầng lấy từ LocalStorage không có ở khách sạn mới -> Reset filter tầng
         if (this.selectedFloor && !this.floors.includes(this.selectedFloor)) {
           this.selectedFloor = null;
+          this.hotelService.saveRoomContext(hotelId, ''); // Cập nhật lại LS
         }
         this.isLoading = false;
       },
@@ -1145,16 +1119,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   onFloorChange(floor: string | null): void {
     this.selectedFloor = floor;
     this.rebuildDisplayRooms();
-    if (floor) {
-      const currentUser = this.authService.getCurrentUser();
-      const userId = currentUser?._id;
-      const hotelId = this.selectedHotelId;
-      if (userId && hotelId) {
-        this.apiService.saveSelectedFloor(userId, hotelId, floor).subscribe({
-          next: () => console.log('[Redis] Selected floor saved'),
-          error: (err) => console.error('[Redis] Error saving selected floor:', err)
-        });
-      }
+    if (this.selectedHotelId) {
+      this.hotelService.saveRoomContext(this.selectedHotelId, floor || '');
     }
   }
 
