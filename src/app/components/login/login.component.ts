@@ -33,20 +33,20 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     // 1. Kiểm tra nếu đã đăng nhập rồi thì redirect
-  if (this.authService.isLoggedIn()) {
-    this.executeFastRedirect();
-    return;
-  }
+    if (this.authService.isLoggedIn()) {
+      this.executeFastRedirect();
+      return;
+    }
 
-  // 2. TỰ ĐỘNG ĐIỀN nếu người dùng đã chọn Remember Me trước đó
-  const saved = this.authService.getSavedCredentials();
-  if (saved) {
-    this.loginForm.patchValue({
-      emailOrUsername: saved.username,
-      password: saved.password,
-      remember: true
-    });
-  }
+    // 2. TỰ ĐỘNG ĐIỀN nếu người dùng đã chọn Remember Me trước đó
+    const saved = this.authService.getSavedCredentials();
+    if (saved) {
+      this.loginForm.patchValue({
+        emailOrUsername: saved.username,
+        password: saved.password,
+        remember: true
+      });
+    }
   }
 
   private initForm(): void {
@@ -65,10 +65,10 @@ export class LoginComponent implements OnInit {
   private executeFastRedirect(): void {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
-      
+
       if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
         // Ép tải lại trang đích để làm sạch trạng thái
-        window.location.href = '/admin/room'; 
+        window.location.href = '/admin/room';
       } else {
         window.location.href = 'https://admin.phhotel.vn/admin/room';
       }
@@ -89,14 +89,15 @@ export class LoginComponent implements OnInit {
     this.isLoading = true;
     const emailOrUsername = this.loginForm.get('emailOrUsername')?.value;
     const password = this.loginForm.get('password')?.value;
-    
+    const remember = this.loginForm.get('remember')?.value;
+
     const isEmail = emailOrUsername.includes('@');
-    
+
     const loginData: LoginRequest = {
       password: password,
-      remember: this.loginForm.get('remember')?.value === true
+      remember: remember === true
     };
-    
+
     if (isEmail) {
       loginData.email = emailOrUsername;
     } else {
@@ -107,15 +108,15 @@ export class LoginComponent implements OnInit {
       loginData.twoFactorCode = this.loginForm.get('twoFactorCode')?.value;
     }
 
-    const remember = this.loginForm.get('remember')?.value;
+    if (remember) {
+      this.authService.saveCredentials(emailOrUsername, password);
+    } else {
+      this.authService.clearCredentials();
+    }
+
 
     this.userService.login(loginData).subscribe({
       next: (response) => {
-        if (remember) {
-          this.authService.saveCredentials(emailOrUsername, password);
-        } else {
-          this.authService.clearCredentials();
-        }
         if (response.requireTwoFactor) {
           this.showTwoFactorInput = true;
           this.userId = response.userId || null;
