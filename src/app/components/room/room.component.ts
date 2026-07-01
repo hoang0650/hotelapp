@@ -677,6 +677,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   loadHotels(): void {
     this.isLoading = true;
+    this.cdr.detectChanges();
     this.hotelService.getHotels().subscribe(data => {
       const currentUser = this.authService.getCurrentUser();
       
@@ -735,108 +736,37 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
       
       this.isLoading = false;
+      this.cdr.detectChanges();
     }, error => {
       this.message.error('Lỗi khi tải danh sách khách sạn: ' + (error.error?.message || error.message));
       this.isLoading = false;
+      this.cdr.detectChanges();
     });
   }
 
-  loadRooms(quickReload: boolean = false): void {
-    if (!this.selectedHotelId) {
-      this.rooms = [];
-      this.displayRoomsByFloor = {};
-      this.displayFloors = [];
-      return;
-    }
+  loadRooms(): void {
+    if (!this.selectedHotelId) return;
     
-    // Quick reload: chỉ reload rooms, không reload bookings và history
-    if (quickReload) {
-      this.isRoomsLoading = true;
-      this.isReloading = true;
-      this.rooms = [];
-      this.displayRoomsByFloor = {};
-      this.displayFloors = [];
-      this.roomPriceCache.clear();
-      this.roomPriceMap.clear();
-      this.updateCachedRoomCounts();
-      const params: any = { hotelId: this.selectedHotelId, lite: true };
-      
-      this.roomsService.getRooms(params).subscribe(
-        (data) => {
-          // Đảm bảo guestStatus được giữ nguyên từ backend
-          const normalizedRooms = data.map(room => ({
-            ...room,
-            guestStatus: room.guestStatus || undefined
-          }));
-          this.rooms = normalizedRooms;
-          this.lastLoadedHotelId = this.selectedHotelId;
-          this.updateFloorsFromRooms();
-          this.updateCachedRoomCounts();
-          this.isRoomsLoading = false;
-          this.cdr.detectChanges();
-          setTimeout(() => {
-            this.prefetchRoomPricesForOccupiedRooms();
-            this.loadEventsForOccupiedRooms();
-            this.cdr.detectChanges();
-          }, 300);
-        },
-        (error) => {
-          console.error('Error reloading rooms:', error);
-          this.isRoomsLoading = false;
-          this.cdr.detectChanges();
-        }
-      );
-      return;
-    }
-    
-    // Full reload: reload tất cả
     this.isRoomsLoading = true;
-    this.isReloading = true;
-    this.rooms = [];
-    this.roomPriceCache.clear();
-    this.roomPriceMap.clear();
-    this.updateCachedRoomCounts();
+    // Gọi hàm ép chạy Change Detection trước khi load để hiện trạng thái loading nếu cần
+    this.cdr.detectChanges(); 
     const params: any = { hotelId: this.selectedHotelId, lite: true };
 
     this.roomsService.getRooms(params).subscribe({
       next: (data) => {
-        const normalizedRooms = data.map((room: Room) => ({
-          ...room,
-          guestStatus: room.guestStatus || undefined
-        }));
-        this.rooms = normalizedRooms;
-        this.lastLoadedHotelId = this.selectedHotelId;
-        this.updateFloorsFromRooms();
-        this.updateCachedRoomCounts();
+        this.rooms = data || [];
+        
+        // Tính toán chia phòng theo tầng...
+        this.rebuildDisplayRooms(); 
+        
         this.isRoomsLoading = false;
-        this.isReloading = false;
-
-        // ƯU TIÊN 1: Xử lý giá và sự kiện cho phòng đang có khách (Delay 50ms để DOM kịp vẽ khung phòng)
-        setTimeout(() => {
-          this.prefetchRoomPricesForOccupiedRooms();
-          this.loadEventsForOccupiedRooms();
-        }, 50);
-
-        // ƯU TIÊN 2: Trì hoãn việc tải dữ liệu Biểu đồ, Bảng lịch sử và Lịch (Delay 1000ms nhường tài nguyên cho UI)
-        setTimeout(() => {
-          if (this.isRevenuePanelActive) {
-            this.loadChartDataFromAPI();
-          }
-          if (this.isHistoryPanelActive) {
-            this.showRoomHistory();
-          }
-          if (this.isCalendarPanelActive) {
-            this.loadBookings();
-            if (this.calendarComponent) {
-              this.calendarComponent.loadBookings();
-            }
-          }
-        }, 1000); 
+        
+        // 🔥 CHÍ MẠNG: Ép Angular vẽ ngay sơ đồ phòng lên màn hình, không đợi click!
+        this.cdr.detectChanges(); 
       },
-      error: (error: any) => {
-        this.message.error('Lỗi khi tải danh sách phòng: ' + (error.error?.message || error.message));
+      error: (err) => {
         this.isRoomsLoading = false;
-        this.isReloading = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -902,33 +832,37 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.roomSessionService.setHotelId(hotelId);
 
-    // 3. Khôi phục tầng từ LocalStorage (nếu có)
     const storedFloor = this.hotelService.getStoredFloor();
     if (storedFloor) {
       this.selectedFloor = storedFloor;
     }
 
-    // 4. Lưu lại Context hiện tại vào LocalStorage
-    this.hotelService.saveRoomContext(hotelId, this.selectedFloor || '');
+    this.hotelService.saveRoomContext(hotelId!, this.selectedFloor || '');
 
+    // Chạy lệnh tải phòng
     this.loadRooms();
     this.startRealtimeSync();
 
     this.isLoading = true;
-    this.roomsService.getHotelFloors(hotelId).subscribe(
+    this.cdr.detectChanges();
+
+    this.roomsService.getHotelFloors(hotelId!).subscribe(
       (data) => {
         this.floors = (data.floors || []).map((f: any) => String(f));
         
-        // Cân bằng bộ lọc: Nếu tầng lấy từ LocalStorage không có ở khách sạn mới -> Reset filter tầng
         if (this.selectedFloor && !this.floors.includes(this.selectedFloor)) {
           this.selectedFloor = null;
-          this.hotelService.saveRoomContext(hotelId, ''); // Cập nhật lại LS
+          this.hotelService.saveRoomContext(hotelId!, '');
         }
+        
         this.isLoading = false;
+        
+        // 🔥 CHÍ MẠNG: Ép hiển thị các nút bấm bộ lọc Tầng lên UI ngay lập tức
+        this.cdr.detectChanges(); 
       },
       (error) => {
-        this.message.error('Lỗi khi tải danh sách tầng: ' + (error.error?.message || error.message));
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     );
   }

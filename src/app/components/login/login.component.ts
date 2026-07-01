@@ -1,4 +1,4 @@
-import { Component, OnInit, NgZone } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -26,24 +26,27 @@ export class LoginComponent implements OnInit {
     private router: Router,
     private message: NzMessageService,
     private translate: TranslateService,
-    private authService: AuthService,
-    private ngZone: NgZone
+    private authService: AuthService
   ) {
     this.initForm();
   }
 
   ngOnInit(): void {
-    if (this.authService.isLoggedIn()) {
-      this.executeFastRedirect();
-      return;
-    }
+    // 1. Kiểm tra nếu đã đăng nhập rồi thì redirect
+  if (this.authService.isLoggedIn()) {
+    this.executeFastRedirect();
+    return;
+  }
 
-    // Lắng nghe trạng thái đăng nhập (để xử lý trường hợp refresh token chạy sau khi component load)
-    this.authService.currentUser$.subscribe(user => {
-      if (user) {
-        this.executeFastRedirect();
-      }
+  // 2. TỰ ĐỘNG ĐIỀN nếu người dùng đã chọn Remember Me trước đó
+  const saved = this.authService.getSavedCredentials();
+  if (saved) {
+    this.loginForm.patchValue({
+      emailOrUsername: saved.username,
+      password: saved.password,
+      remember: true
     });
+  }
   }
 
   private initForm(): void {
@@ -56,24 +59,19 @@ export class LoginComponent implements OnInit {
   }
 
   /**
-   * Thực hiện điều hướng siêu tốc tránh hiện tượng đứng form login
+   * Thay vì dùng Router ảo, sử dụng Hard Redirect để ép PermissionGuard 
+   * và Layout Admin khởi động lại với thông tin User mới nhất.
    */
   private executeFastRedirect(): void {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
       
-      // Bọc toàn bộ logic điều hướng vào bên trong ngZone.run()
-      this.ngZone.run(() => {
-        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
-          this.router.navigate(['/admin/room']).then(navigated => {
-            if (!navigated) {
-              console.error('Điều hướng thất bại! Có thể do AuthGuard chặn.');
-            }
-          });
-        } else {
-          window.location.href = 'https://admin.phhotel.vn/admin/room';
-        }
-      });
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
+        // Ép tải lại trang đích để làm sạch trạng thái
+        window.location.href = '/admin/room'; 
+      } else {
+        window.location.href = 'https://admin.phhotel.vn/admin/room';
+      }
     }
   }
 
@@ -95,7 +93,8 @@ export class LoginComponent implements OnInit {
     const isEmail = emailOrUsername.includes('@');
     
     const loginData: LoginRequest = {
-      password: password
+      password: password,
+      remember: this.loginForm.get('remember')?.value === true
     };
     
     if (isEmail) {
@@ -107,11 +106,16 @@ export class LoginComponent implements OnInit {
     if (this.showTwoFactorInput) {
       loginData.twoFactorCode = this.loginForm.get('twoFactorCode')?.value;
     }
-    const remember = this.loginForm.get('remember')?.value === true;
-    (loginData as any).remember = remember;
+
+    const remember = this.loginForm.get('remember')?.value;
 
     this.userService.login(loginData).subscribe({
       next: (response) => {
+        if (remember) {
+          this.authService.saveCredentials(emailOrUsername, password);
+        } else {
+          this.authService.clearCredentials();
+        }
         if (response.requireTwoFactor) {
           this.showTwoFactorInput = true;
           this.userId = response.userId || null;
@@ -122,7 +126,7 @@ export class LoginComponent implements OnInit {
           if (response.token && response.user) {
             this.authService.loginFromShiftHandover(response.token, response.user);
           }
-          // Thực hiện điều hướng ngay lập tức không delay
+          // Gọi lệnh chuyển trang duy nhất ở đây
           this.executeFastRedirect();
         }
       },

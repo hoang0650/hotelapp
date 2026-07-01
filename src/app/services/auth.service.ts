@@ -148,6 +148,34 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  // Lưu thông tin đăng nhập vào LocalStorage
+saveCredentials(username: string, password: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('remember_me_user', username);
+    localStorage.setItem('remember_me_pass', btoa(password)); // Mã hóa Base64 đơn giản để tránh lưu plain-text
+  }
+}
+
+// Lấy thông tin đã lưu
+getSavedCredentials(): { username: string, password: string } | null {
+  if (typeof window !== 'undefined') {
+    const user = localStorage.getItem('remember_me_user');
+    const pass = localStorage.getItem('remember_me_pass');
+    if (user && pass) {
+      return { username: user, password: atob(pass) };
+    }
+  }
+  return null;
+}
+
+// Xóa thông tin khi đăng xuất
+clearCredentials(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('remember_me_user');
+    localStorage.removeItem('remember_me_pass');
+  }
+}
+
   // ============ KIỂM TRA VAI TRÒ ============
 
   isSuperAdmin(): boolean {
