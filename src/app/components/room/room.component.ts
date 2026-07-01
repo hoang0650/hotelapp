@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { ProductService } from '../../services/product.service';
 import { Subscription, forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -29,7 +29,8 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-room',
   templateUrl: './room.component.html',
-  styleUrls: ['./room.component.css']
+  styleUrls: ['./room.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomComponent implements OnInit, OnDestroy {
   @ViewChild(TableComponent) tableComponent!: TableComponent;
@@ -68,7 +69,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   usdRate: number = 0;
   
   // Collapse panel states
-  isRevenuePanelActive = true; // Mở mặc định
+  isRevenuePanelActive = false; // Mở mặc định
   isCalendarPanelActive = false;
   isHistoryPanelActive = false;
   activeFloors: string[] = [];
@@ -141,18 +142,13 @@ export class RoomComponent implements OnInit, OnDestroy {
     private apiService: ApiService
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
-      // Reload rooms khi có thay đổi dữ liệu
       if (this.selectedHotelId) {
-        // Quick reload: chỉ reload rooms, không reload bookings và history
-        // Delay nhẹ để tránh spam reload khi có nhiều thao tác liên tiếp
+        // Chỉ reload phòng, KHÔNG tự động gọi showRoomHistory() nữa trừ khi panel lịch sử đang mở
         setTimeout(() => {
-          // this.loadRooms(true);
-          if (!this.isModalOpen) {
-            setTimeout(() => {
-              this.showRoomHistory();
-            }, 150);
+          if (!this.isModalOpen && this.isHistoryPanelActive) {
+             this.showRoomHistory();
           }
-        }, 80);
+        }, 150);
       }
     });
     
@@ -791,16 +787,17 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.updateFloorsFromRooms();
           this.updateCachedRoomCounts();
           this.isRoomsLoading = false;
-          this.isReloading = false;
+          this.cdr.detectChanges();
           setTimeout(() => {
             this.prefetchRoomPricesForOccupiedRooms();
             this.loadEventsForOccupiedRooms();
-          }, 0);
+            this.cdr.detectChanges();
+          }, 300);
         },
         (error) => {
           console.error('Error reloading rooms:', error);
           this.isRoomsLoading = false;
-          this.isReloading = false;
+          this.cdr.detectChanges();
         }
       );
       return;
@@ -981,10 +978,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.realtimeRoomsTimer || this.realtimePricesTimer) return;
     this.realtimeRoomsTimer = setInterval(() => {
       this.refreshRoomsLiteRealtime();
-    }, 5000);
-    this.realtimePricesTimer = setInterval(() => {
       this.refreshOccupiedRoomPricesRealtime();
-    }, 30000);
+      this.cdr.markForCheck();
+    }, 60000);
   }
 
   private stopRealtimePolling(): void {
@@ -1753,7 +1749,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   trackByRoomId(index: number, room: Room): string {
-    return room._id || index.toString();
+    return room._id ? room._id.toString() : index.toString();
   }
 
   // Filter function cho hotel select
