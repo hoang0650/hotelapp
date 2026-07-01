@@ -33,26 +33,14 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.authService.isLoggedIn()) {
-      this.authService.checkSubdomainAndRedirect();
-      if (typeof window !== 'undefined') {
-        const hostname = window.location.hostname;
-        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
-          this.router.navigate(['/admin/room']);
-        }
-      }
+      this.executeFastRedirect();
       return;
     }
 
     // Lắng nghe trạng thái đăng nhập (để xử lý trường hợp refresh token chạy sau khi component load)
     this.authService.currentUser$.subscribe(user => {
       if (user) {
-        this.authService.checkSubdomainAndRedirect();
-        if (typeof window !== 'undefined') {
-          const hostname = window.location.hostname;
-          if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
-            this.router.navigate(['/admin/room']);
-          }
-        }
+        this.executeFastRedirect();
       }
     });
   }
@@ -64,6 +52,22 @@ export class LoginComponent implements OnInit {
       twoFactorCode: [''],
       remember: [false]
     });
+  }
+
+  /**
+   * Thực hiện điều hướng siêu tốc tránh hiện tượng đứng form login
+   */
+  private executeFastRedirect(): void {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      // Nếu ở môi trường local hoặc dev subdomain, dùng router điều hướng mượt mà
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
+        this.router.navigate(['/admin/room']);
+      } else {
+        // Nếu ở root domain hoặc domain khác, cưỡng bức nhảy thẳng sang trang production mong muốn
+        window.location.href = 'https://admin.phhotel.vn/admin/room';
+      }
+    }
   }
 
   submitForm(): void {
@@ -81,14 +85,12 @@ export class LoginComponent implements OnInit {
     const emailOrUsername = this.loginForm.get('emailOrUsername')?.value;
     const password = this.loginForm.get('password')?.value;
     
-    // Kiểm tra xem input có phải là email không (chứa @)
     const isEmail = emailOrUsername.includes('@');
     
     const loginData: LoginRequest = {
       password: password
     };
     
-    // Gán email hoặc username tùy theo input
     if (isEmail) {
       loginData.email = emailOrUsername;
     } else {
@@ -107,18 +109,14 @@ export class LoginComponent implements OnInit {
           this.showTwoFactorInput = true;
           this.userId = response.userId || null;
           this.message.info(this.translate.instant('LOGIN.ENTER_TWO_FACTOR'));
+          this.isLoading = false;
         } else {
           this.message.success(this.translate.instant('COMMON.SUCCESS'));
           if (response.token && response.user) {
             this.authService.loginFromShiftHandover(response.token, response.user);
           }
-          this.authService.checkSubdomainAndRedirect();
-          if (typeof window !== 'undefined') {
-            const hostname = window.location.hostname;
-            if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
-              this.router.navigate(['/admin/room']);
-            }
-          }
+          // Thực hiện điều hướng ngay lập tức không delay
+          this.executeFastRedirect();
         }
       },
       error: (error) => {

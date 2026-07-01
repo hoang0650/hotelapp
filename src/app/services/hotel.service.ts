@@ -20,8 +20,52 @@ interface RevenueData {
 })
 export class HotelService {
   private apiUrl = `${environment.apiUrl}/hotels`;
+  
+  // Định nghĩa key cố định trong localStorage để tránh typo
+  private readonly HOTEL_ID_KEY = 'current_hotel_id';
+  private readonly FLOOR_KEY = 'current_floor';
 
   constructor(private http: HttpClient) { }
+
+  /**
+   * Lưu nhanh hotelId và floor vào LocalStorage
+   */
+  saveRoomContext(hotelId: string, floor: string): void {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(this.HOTEL_ID_KEY, hotelId);
+      localStorage.setItem(this.FLOOR_KEY, floor);
+    }
+  }
+
+  /**
+   * Lấy nhanh hotelId từ LocalStorage (Đồng bộ - Không cần qua Observable)
+   */
+  getStoredHotelId(): string | null {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem(this.HOTEL_ID_KEY);
+    }
+    return null;
+  }
+
+  /**
+   * Lấy nhanh floor từ LocalStorage (Đồng bộ - Không cần qua Observable)
+   */
+  getStoredFloor(): string | null {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem(this.FLOOR_KEY);
+    }
+    return null;
+  }
+
+  /**
+   * Xóa sạch thông tin phòng/khách sạn khi logout
+   */
+  clearRoomContext(): void {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem(this.HOTEL_ID_KEY);
+      localStorage.removeItem(this.FLOOR_KEY);
+    }
+  }
 
   getHotels(businessId?: string, status?: HotelStatus): Observable<Hotel[]> {
     let params = new HttpParams();
@@ -38,7 +82,6 @@ export class HotelService {
     return this.http.get<Hotel>(`${this.apiUrl}/${id}`);
   }
 
-  // Helper method để lấy thông tin hotel với error handling
   getHotelInfo(hotelId: string | null | undefined): Observable<Hotel | null> {
     if (!hotelId) {
       return of(null);
@@ -53,7 +96,6 @@ export class HotelService {
     );
   }
 
-  // Helper method để extract businessId từ hotel object (xử lý cả populated và non-populated)
   extractBusinessId(hotel: any): string | null {
     if (!hotel || !hotel.businessId) {
       return null;
@@ -98,7 +140,6 @@ export class HotelService {
     return this.http.patch<{ message: string, settings: Hotel['settings'] }>(`${this.apiUrl}/${id}/settings`, { settings: settingsUpdate });
   }
 
-  // Lấy doanh thu khách sạn theo khoảng thời gian
   getHotelRevenue(hotelId: string, period: 'day' | 'week' | 'month' = 'day'): Observable<RevenueData> {
     const params = new HttpParams()
       .set('period', period);
@@ -106,7 +147,6 @@ export class HotelService {
     return this.http.get<RevenueData>(`${this.apiUrl}/${hotelId}/revenue`, { params });
   }
 
-  // Lấy doanh thu khách sạn theo period từ shift-handover API
   getHotelRevenueByPeriod(hotelId: string, period: 'day' | 'week' | 'month' = 'day'): Observable<RevenueData> {
     const apiUrl = `${environment.apiUrl}/shift-handover/revenue/period`;
     const params = new HttpParams()
@@ -126,20 +166,17 @@ export class HotelService {
     );
   }
 
-  // API chưa tồn tại, tạm thời sử dụng dữ liệu giả lập
   getHotelRevenueMock(hotelId: string, period: 'day' | 'week' | 'month' = 'day'): Observable<RevenueData> {
     return new Observable<RevenueData>(observer => {
       let labels: string[] = [];
       let revenueData: number[] = [];
       let paymentData: number[] = [];
       
-      // Tạo dữ liệu mẫu dựa trên period
       const now = new Date();
       const totalRevenue = Math.floor(Math.random() * 10000000) + 5000000;
       const totalPayment = Math.floor(totalRevenue * 0.9);
       
       if (period === 'day') {
-        // Dữ liệu theo giờ trong ngày
         for (let i = 0; i < 24; i++) {
           labels.push(`${i}:00`);
           const revenue = Math.floor(Math.random() * 500000);
@@ -147,7 +184,6 @@ export class HotelService {
           paymentData.push(Math.floor(revenue * (0.8 + Math.random() * 0.2)));
         }
       } else if (period === 'week') {
-        // Dữ liệu trong 7 ngày
         const days = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
         const today = now.getDay();
         
@@ -159,7 +195,6 @@ export class HotelService {
           paymentData.push(Math.floor(revenue * (0.85 + Math.random() * 0.15)));
         }
       } else if (period === 'month') {
-        // Dữ liệu trong 30 ngày gần nhất
         const date = new Date(now);
         date.setDate(date.getDate() - 29);
         
