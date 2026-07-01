@@ -1,3 +1,4 @@
 {
-  "maxDuration": 60
+  "version": 2,
+  "cleanUrls": true
 }
