@@ -5,21 +5,41 @@
   padding-bottom: 40px;
 }
 
+.contract-paper {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+}
+
+.contract-title {
+  color: #0f172a;
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.contract-subtitle {
+  text-align: center;
+  font-size: 1rem;
+}
+
 .content-section {
   margin-bottom: 2rem;
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .section-title {
-  color: #0d6efd;
+  color: #0f172a;
   margin-bottom: 1rem;
   font-size: 1.5rem;
   font-weight: 600;
-  border-bottom: 2px solid #0d6efd;
-  padding-bottom: 0.5rem;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .subsection-title {
@@ -59,5 +79,39 @@
 .content-section strong {
   font-weight: 600;
   color: #333;
+}
+
+.intro-section p {
+  margin-bottom: 0.5rem;
+}
+
+.signature-section {
+  margin-top: 3rem;
+  min-height: 10rem;
+}
+
+.signature-box {
+  width: 260px;
+  margin-left: auto;
+  text-align: center;
+}
+
+.signature-label {
+  margin-top: 1rem;
+  font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .contract-paper {
+    padding: 1.25rem;
+  }
+
+  .contract-title {
+    font-size: 1.5rem;
+  }
+
+  .signature-box {
+    width: 100%;
+  }
 }
 
