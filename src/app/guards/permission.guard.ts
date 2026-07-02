@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { map, take, switchMap, filter } from 'rxjs/operators';
+import { map, take, switchMap, filter, catchError, timeout } from 'rxjs/operators';
 import { PermissionService } from '../services/permission.service';
 import { AuthService } from '../services/auth.service';
 
@@ -9,6 +9,8 @@ import { AuthService } from '../services/auth.service';
   providedIn: 'root'
 })
 export class PermissionGuard implements CanActivate {
+  private readonly roomGuardFallbackMs = 1500;
+
   constructor(
     private permissionService: PermissionService,
     private authService: AuthService,
@@ -20,12 +22,48 @@ export class PermissionGuard implements CanActivate {
     return base.replace(/\/+$/, '');
   }
 
+  private canFastTrackRoomAccess(url: string): boolean {
+    if (url !== '/admin/room') {
+      return false;
+    }
+
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      return false;
+    }
+
+    return (
+      user.role === 'superadmin' ||
+      user.role === 'admin' ||
+      user.role === 'business' ||
+      user.role === 'hotel' ||
+      user.role === 'staff'
+    );
+  }
+
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean> | Promise<boolean> | boolean {
     const rawUrl = this.normalize(state.url);
     const url = rawUrl.startsWith('/admin/') ? rawUrl : `/admin${rawUrl}`;
+    const debugGuardStartedAt = Date.now();
+    // #region debug-point B:guard-enter
+    try {
+      fetch('http://127.0.0.1:7777/event', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: 'room-load-delay',
+          runId: 'pre-fix',
+          hypothesisId: 'B',
+          location: 'permission.guard.ts:canActivate',
+          msg: '[DEBUG] permission guard entered',
+          data: { url, startedAt: debugGuardStartedAt },
+          ts: debugGuardStartedAt
+        })
+      }).catch(() => {});
+    } catch {}
+    // #endregion
     const isAdminSubdomain = typeof window !== 'undefined' && window.location.hostname.startsWith('admin.');
     const unauthorizedUrl = isAdminSubdomain ? '/unauthorized' : '/admin/unauthorized';
     const redirectToLogin = () => {
@@ -66,10 +104,38 @@ export class PermissionGuard implements CanActivate {
     };
     
     const waitPermissionsReady = (): Observable<boolean> => {
-      return this.permissionService.ready$.pipe(
+      const ready$ = this.permissionService.ready$.pipe(
         filter(ready => ready),
         take(1),
-        map(() => evaluateAccess())
+        map(() => {
+          // #region debug-point B:guard-ready
+          try {
+            const ts = Date.now();
+            fetch('http://127.0.0.1:7777/event', {
+              method: 'POST',
+              body: JSON.stringify({
+                sessionId: 'room-load-delay',
+                runId: 'pre-fix',
+                hypothesisId: 'B',
+                location: 'permission.guard.ts:waitPermissionsReady',
+                msg: '[DEBUG] permission ready emitted',
+                data: { url, elapsedMs: ts - debugGuardStartedAt },
+                ts
+              })
+            }).catch(() => {});
+          } catch {}
+          // #endregion
+          return evaluateAccess();
+        })
+      );
+
+      if (!this.canFastTrackRoomAccess(url)) {
+        return ready$;
+      }
+
+      return ready$.pipe(
+        timeout(this.roomGuardFallbackMs),
+        catchError(() => of(true))
       );
     };
     

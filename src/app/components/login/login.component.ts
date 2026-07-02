@@ -63,6 +63,25 @@ export class LoginComponent implements OnInit {
    */
   private executeFastRedirect(): void {
     if (typeof window !== 'undefined') {
+      // #region debug-point A:login-redirect
+      try {
+        const ts = Date.now();
+        localStorage.setItem('dbg_room_load_delay_login_success_ts', String(ts));
+        localStorage.setItem('dbg_room_load_delay_redirect_ts', String(ts));
+        fetch('http://127.0.0.1:7777/event', {
+          method: 'POST',
+          body: JSON.stringify({
+            sessionId: 'room-load-delay',
+            runId: 'pre-fix',
+            hypothesisId: 'A',
+            location: 'login.component.ts:executeFastRedirect',
+            msg: '[DEBUG] login redirect started',
+            data: { href: 'https://admin.phhotel.vn/admin/room', ts },
+            ts
+          })
+        }).catch(() => {});
+      } catch {}
+      // #endregion
       window.location.href = 'https://admin.phhotel.vn/admin/room';
     }
   }

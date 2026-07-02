@@ -194,6 +194,29 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     }
 
+    // #region debug-point C:room-init
+    try {
+      const ts = Date.now();
+      const loginSuccessTs = Number(localStorage.getItem('dbg_room_load_delay_login_success_ts') || 0);
+      fetch('http://127.0.0.1:7777/event', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: 'room-load-delay',
+          runId: 'pre-fix',
+          hypothesisId: 'C',
+          location: 'room.component.ts:ngOnInit',
+          msg: '[DEBUG] room ngOnInit entered',
+          data: {
+            selectedHotelId: this.selectedHotelId,
+            storedHotelId,
+            elapsedFromLoginSuccessMs: loginSuccessTs > 0 ? ts - loginSuccessTs : null
+          },
+          ts
+        })
+      }).catch(() => {});
+    } catch {}
+    // #endregion
+
     // Ưu tiên tải ngay sơ đồ phòng theo hotel hiện tại để sau login hiển thị nhanh hơn,
     // không phải đợi fetch xong danh sách khách sạn mới bắt đầu render phòng.
     if (this.selectedHotelId) {
@@ -217,6 +240,23 @@ export class RoomComponent implements OnInit, OnDestroy {
               previousHotelId !== resolvedHotelId ||
               (!this.isRoomsLoading && (this.lastLoadedHotelId !== resolvedHotelId || this.rooms.length === 0))
             ) {
+              // #region debug-point C:selected-hotel
+              try {
+                const ts = Date.now();
+                fetch('http://127.0.0.1:7777/event', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    sessionId: 'room-load-delay',
+                    runId: 'pre-fix',
+                    hypothesisId: 'C',
+                    location: 'room.component.ts:getSelectedHotel',
+                    msg: '[DEBUG] selected hotel resolved from api',
+                    data: { previousHotelId, resolvedHotelId, isRoomsLoading: this.isRoomsLoading, lastLoadedHotelId: this.lastLoadedHotelId },
+                    ts
+                  })
+                }).catch(() => {});
+              } catch {}
+              // #endregion
               this.onHotelChange(resolvedHotelId);
             }
           }
@@ -693,6 +733,23 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   loadHotels(): void {
+    const debugLoadHotelsStartedAt = Date.now();
+    // #region debug-point D:load-hotels-start
+    try {
+      fetch('http://127.0.0.1:7777/event', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: 'room-load-delay',
+          runId: 'pre-fix',
+          hypothesisId: 'D',
+          location: 'room.component.ts:loadHotels',
+          msg: '[DEBUG] loadHotels started',
+          data: { selectedHotelId: this.selectedHotelId },
+          ts: debugLoadHotelsStartedAt
+        })
+      }).catch(() => {});
+    } catch {}
+    // #endregion
     this.isLoading = true;
     this.cdr.detectChanges();
     this.hotelService.getHotels().subscribe(data => {
@@ -760,6 +817,23 @@ export class RoomComponent implements OnInit, OnDestroy {
       
       this.isLoading = false;
       this.cdr.detectChanges();
+      // #region debug-point D:load-hotels-done
+      try {
+        const ts = Date.now();
+        fetch('http://127.0.0.1:7777/event', {
+          method: 'POST',
+          body: JSON.stringify({
+            sessionId: 'room-load-delay',
+            runId: 'pre-fix',
+            hypothesisId: 'D',
+            location: 'room.component.ts:loadHotels',
+            msg: '[DEBUG] loadHotels completed',
+            data: { elapsedMs: ts - debugLoadHotelsStartedAt, hotelsCount: this.hotels.length, selectedHotelId: this.selectedHotelId },
+            ts
+          })
+        }).catch(() => {});
+      } catch {}
+      // #endregion
     }, error => {
       this.message.error('Lỗi khi tải danh sách khách sạn: ' + (error.error?.message || error.message));
       this.isLoading = false;
@@ -769,6 +843,23 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   loadRooms(): void {
     if (!this.selectedHotelId) return;
+    const debugLoadRoomsStartedAt = Date.now();
+    // #region debug-point E:load-rooms-start
+    try {
+      fetch('http://127.0.0.1:7777/event', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: 'room-load-delay',
+          runId: 'pre-fix',
+          hypothesisId: 'E',
+          location: 'room.component.ts:loadRooms',
+          msg: '[DEBUG] loadRooms started',
+          data: { selectedHotelId: this.selectedHotelId },
+          ts: debugLoadRoomsStartedAt
+        })
+      }).catch(() => {});
+    } catch {}
+    // #endregion
     
     this.isRoomsLoading = true;
     // Gọi hàm ép chạy Change Detection trước khi load để hiện trạng thái loading nếu cần
@@ -786,6 +877,30 @@ export class RoomComponent implements OnInit, OnDestroy {
         
         // 🔥 CHÍ MẠNG: Ép Angular vẽ ngay sơ đồ phòng lên màn hình, không đợi click!
         this.cdr.detectChanges();
+        // #region debug-point E:load-rooms-done
+        try {
+          const ts = Date.now();
+          const loginSuccessTs = Number(localStorage.getItem('dbg_room_load_delay_login_success_ts') || 0);
+          fetch('http://127.0.0.1:7777/event', {
+            method: 'POST',
+            body: JSON.stringify({
+              sessionId: 'room-load-delay',
+              runId: 'pre-fix',
+              hypothesisId: 'E',
+              location: 'room.component.ts:loadRooms',
+              msg: '[DEBUG] loadRooms completed and initial render triggered',
+              data: {
+                elapsedMs: ts - debugLoadRoomsStartedAt,
+                roomsCount: this.rooms.length,
+                floorsCount: this.displayFloors.length,
+                occupiedCount: this.cachedOccupiedCount,
+                elapsedFromLoginSuccessMs: loginSuccessTs > 0 ? ts - loginSuccessTs : null
+              },
+              ts
+            })
+          }).catch(() => {});
+        } catch {}
+        // #endregion
 
         setTimeout(() => {
           this.loadEventsForOccupiedRooms(false);
@@ -842,6 +957,23 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (hotelId && this.lastLoadedHotelId === hotelId && this.rooms.length > 0 && !this.isRoomsLoading) {
       return;
     }
+    // #region debug-point C:on-hotel-change
+    try {
+      const ts = Date.now();
+      fetch('http://127.0.0.1:7777/event', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: 'room-load-delay',
+          runId: 'pre-fix',
+          hypothesisId: 'C',
+          location: 'room.component.ts:onHotelChange',
+          msg: '[DEBUG] onHotelChange invoked',
+          data: { hotelId, lastLoadedHotelId: this.lastLoadedHotelId, roomsCount: this.rooms.length, isRoomsLoading: this.isRoomsLoading },
+          ts
+        })
+      }).catch(() => {});
+    } catch {}
+    // #endregion
     if (this.authService.isStaff()) {
       const currentUser = this.authService.getCurrentUser();
       const staffHotelId = this.extractId(currentUser?.hotelId);
@@ -891,6 +1023,23 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.isLoading = true;
     this.cdr.detectChanges();
+    const debugLoadFloorsStartedAt = Date.now();
+    // #region debug-point D:load-floors-start
+    try {
+      fetch('http://127.0.0.1:7777/event', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: 'room-load-delay',
+          runId: 'pre-fix',
+          hypothesisId: 'D',
+          location: 'room.component.ts:getHotelFloors',
+          msg: '[DEBUG] getHotelFloors started',
+          data: { hotelId },
+          ts: debugLoadFloorsStartedAt
+        })
+      }).catch(() => {});
+    } catch {}
+    // #endregion
 
     this.roomsService.getHotelFloors(hotelId!).subscribe(
       (data) => {
@@ -905,6 +1054,23 @@ export class RoomComponent implements OnInit, OnDestroy {
         
         // 🔥 CHÍ MẠNG: Ép hiển thị các nút bấm bộ lọc Tầng lên UI ngay lập tức
         this.cdr.detectChanges(); 
+        // #region debug-point D:load-floors-done
+        try {
+          const ts = Date.now();
+          fetch('http://127.0.0.1:7777/event', {
+            method: 'POST',
+            body: JSON.stringify({
+              sessionId: 'room-load-delay',
+              runId: 'pre-fix',
+              hypothesisId: 'D',
+              location: 'room.component.ts:getHotelFloors',
+              msg: '[DEBUG] getHotelFloors completed',
+              data: { hotelId, elapsedMs: ts - debugLoadFloorsStartedAt, floorsCount: this.floors.length },
+              ts
+            })
+          }).catch(() => {});
+        } catch {}
+        // #endregion
       },
       (error) => {
         this.isLoading = false;
