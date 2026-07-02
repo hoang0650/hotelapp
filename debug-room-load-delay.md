@@ -33,6 +33,7 @@
   - `GET /api/settings/notification` -> `401`
   - `GET /api/settings/announcements/unread-count` -> `401`
   - `GET /rooms` -> `400`
+- Network trace mới cho thấy `loadHotels()` và đặc biệt `getHotelFloors()` đang nằm trên critical path; `getHotelFloors` có lúc mất ~`28s`.
 
 ## Current Assessment
 
@@ -51,3 +52,4 @@
 - `HeaderComponent` chỉ load notification settings và announcements sau khi đã có phiên hợp lệ, đồng thời không còn dựng interval refresh trước login.
 - `AiAssistantService` không còn tự `loadChatHistory()` trong constructor; `app-ai-chatbox` chỉ mount sau khi có user và chỉ load history khi auth đã sẵn sàng.
 - `ProductService` không còn tự gọi `GET /rooms` không có `hotelId` trong constructor.
+- `RoomComponent` ưu tiên render `rooms` trước; nếu đã có `selectedHotelId` thì `loadHotels()` được dời xuống sau render đầu, còn `getHotelFloors()` chỉ chạy nền để đồng bộ thêm, không chặn lần hiển thị đầu tiên.

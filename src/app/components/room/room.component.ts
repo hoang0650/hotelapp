@@ -50,6 +50,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   selectedHotelId: string | null = null;
   floors: string[] = [];
   selectedFloor: string | null = null;
+  private hasInitialRoomsRendered = false;
+  private shouldLoadHotelsAfterInitialRender = false;
   isLoading = false;
   isRoomsLoading = false;
   private isModalOpen = false; // Flag để tránh mở nhiều modal cùng lúc
@@ -221,9 +223,10 @@ export class RoomComponent implements OnInit, OnDestroy {
     // không phải đợi fetch xong danh sách khách sạn mới bắt đầu render phòng.
     if (this.selectedHotelId) {
       this.onHotelChange(this.selectedHotelId);
+      this.shouldLoadHotelsAfterInitialRender = true;
+    } else {
+      this.loadHotels();
     }
-
-    this.loadHotels();
     const currentUser = this.authService.getCurrentUser();
     const userId = currentUser?._id;
 
@@ -874,6 +877,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.updateCachedRoomCounts();
         
         this.isRoomsLoading = false;
+        this.hasInitialRoomsRendered = true;
         
         // 🔥 CHÍ MẠNG: Ép Angular vẽ ngay sơ đồ phòng lên màn hình, không đợi click!
         this.cdr.detectChanges();
@@ -903,6 +907,15 @@ export class RoomComponent implements OnInit, OnDestroy {
         // #endregion
 
         setTimeout(() => {
+          if (this.shouldLoadHotelsAfterInitialRender) {
+            this.shouldLoadHotelsAfterInitialRender = false;
+            this.loadHotels();
+          }
+
+          if (this.selectedHotelId) {
+            this.syncHotelFloorsInBackground(this.selectedHotelId);
+          }
+
           this.loadEventsForOccupiedRooms(false);
           this.prefetchRoomPricesForOccupiedRooms();
         }, 0);
@@ -1020,9 +1033,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     // Chạy lệnh tải phòng
     this.loadRooms();
     this.startRealtimeSync();
+  }
 
-    this.isLoading = true;
-    this.cdr.detectChanges();
+  private syncHotelFloorsInBackground(hotelId: string): void {
     const debugLoadFloorsStartedAt = Date.now();
     // #region debug-point D:load-floors-start
     try {
@@ -1033,7 +1046,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           runId: 'pre-fix',
           hypothesisId: 'D',
           location: 'room.component.ts:getHotelFloors',
-          msg: '[DEBUG] getHotelFloors started',
+          msg: '[DEBUG] getHotelFloors started in background',
           data: { hotelId },
           ts: debugLoadFloorsStartedAt
         })
@@ -1041,19 +1054,29 @@ export class RoomComponent implements OnInit, OnDestroy {
     } catch {}
     // #endregion
 
-    this.roomsService.getHotelFloors(hotelId!).subscribe(
+    this.roomsService.getHotelFloors(hotelId).subscribe(
       (data) => {
-        this.floors = (data.floors || []).map((f: any) => String(f));
-        
+        if (this.selectedHotelId !== hotelId) {
+          return;
+        }
+
+        const apiFloors = (data.floors || []).map((f: any) => String(f));
+        const mergedFloors = Array.from(new Set([...(this.floors || []), ...apiFloors])).sort((a, b) => {
+          const numA = parseInt(a) || 0;
+          const numB = parseInt(b) || 0;
+          return numA - numB;
+        });
+
+        if (mergedFloors.length > 0) {
+          this.floors = mergedFloors;
+        }
+
         if (this.selectedFloor && !this.floors.includes(this.selectedFloor)) {
           this.selectedFloor = null;
-          this.hotelService.saveRoomContext(hotelId!, '');
+          this.hotelService.saveRoomContext(hotelId, '');
         }
-        
-        this.isLoading = false;
-        
-        // 🔥 CHÍ MẠNG: Ép hiển thị các nút bấm bộ lọc Tầng lên UI ngay lập tức
-        this.cdr.detectChanges(); 
+
+        this.cdr.detectChanges();
         // #region debug-point D:load-floors-done
         try {
           const ts = Date.now();
@@ -1064,7 +1087,7 @@ export class RoomComponent implements OnInit, OnDestroy {
               runId: 'pre-fix',
               hypothesisId: 'D',
               location: 'room.component.ts:getHotelFloors',
-              msg: '[DEBUG] getHotelFloors completed',
+              msg: '[DEBUG] getHotelFloors completed in background',
               data: { hotelId, elapsedMs: ts - debugLoadFloorsStartedAt, floorsCount: this.floors.length },
               ts
             })
@@ -1072,10 +1095,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         } catch {}
         // #endregion
       },
-      (error) => {
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
+      () => {}
     );
   }
 
