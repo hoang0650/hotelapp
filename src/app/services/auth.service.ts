@@ -52,6 +52,9 @@ export class AuthService {
       return this.refreshRequest$;
     }
 
+    const startedWithToken = this.inMemoryToken;
+    const startedWithUserId = this.currentUserSubject.value?._id || null;
+
     this.refreshRequest$ = this.http.post<AuthResponse>(`${this.apiUrl}/users/refresh-token`, {}, { withCredentials: true }).pipe(
       map(response => {
         if (response && response.token) {
@@ -62,8 +65,16 @@ export class AuthService {
         return false;
       }),
       catchError(() => {
-        this.inMemoryToken = null;
-        this.currentUserSubject.next(null);
+        const hasNewerSession =
+          !startedWithToken &&
+          !startedWithUserId &&
+          !!this.inMemoryToken &&
+          !!this.currentUserSubject.value;
+
+        if (!hasNewerSession) {
+          this.inMemoryToken = null;
+          this.currentUserSubject.next(null);
+        }
         return of(false);
       }),
       finalize(() => {

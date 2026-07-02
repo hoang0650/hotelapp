@@ -47,23 +47,6 @@ export class PermissionGuard implements CanActivate {
   ): Observable<boolean> | Promise<boolean> | boolean {
     const rawUrl = this.normalize(state.url);
     const url = rawUrl.startsWith('/admin/') ? rawUrl : `/admin${rawUrl}`;
-    const debugGuardStartedAt = Date.now();
-    // #region debug-point B:guard-enter
-    try {
-      fetch('http://127.0.0.1:7777/event', {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionId: 'room-load-delay',
-          runId: 'pre-fix',
-          hypothesisId: 'B',
-          location: 'permission.guard.ts:canActivate',
-          msg: '[DEBUG] permission guard entered',
-          data: { url, startedAt: debugGuardStartedAt },
-          ts: debugGuardStartedAt
-        })
-      }).catch(() => {});
-    } catch {}
-    // #endregion
     const isAdminSubdomain = typeof window !== 'undefined' && window.location.hostname.startsWith('admin.');
     const unauthorizedUrl = isAdminSubdomain ? '/unauthorized' : '/admin/unauthorized';
     const redirectToLogin = () => {
@@ -107,26 +90,7 @@ export class PermissionGuard implements CanActivate {
       const ready$ = this.permissionService.ready$.pipe(
         filter(ready => ready),
         take(1),
-        map(() => {
-          // #region debug-point B:guard-ready
-          try {
-            const ts = Date.now();
-            fetch('http://127.0.0.1:7777/event', {
-              method: 'POST',
-              body: JSON.stringify({
-                sessionId: 'room-load-delay',
-                runId: 'pre-fix',
-                hypothesisId: 'B',
-                location: 'permission.guard.ts:waitPermissionsReady',
-                msg: '[DEBUG] permission ready emitted',
-                data: { url, elapsedMs: ts - debugGuardStartedAt },
-                ts
-              })
-            }).catch(() => {});
-          } catch {}
-          // #endregion
-          return evaluateAccess();
-        })
+        map(() => evaluateAccess())
       );
 
       if (!this.canFastTrackRoomAccess(url)) {
