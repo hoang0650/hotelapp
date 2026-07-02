@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { map, catchError, tap, take } from 'rxjs/operators';
+import { map, catchError, tap, take, finalize, shareReplay } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { User } from '../interfaces/user';
 import { jwtDecode } from 'jwt-decode';
@@ -37,6 +37,7 @@ export class AuthService {
   private tokenExpirationTimer: any;
   private inMemoryToken: string | null = null;
   private isLoggingOut = false;
+  private refreshRequest$: Observable<boolean> | null = null;
   public authResolved = new BehaviorSubject<boolean>(false);
   public authResolved$ = this.authResolved.asObservable();
 
@@ -47,7 +48,11 @@ export class AuthService {
   }
 
   refreshAccessToken(): Observable<boolean> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/users/refresh-token`, {}, { withCredentials: true }).pipe(
+    if (this.refreshRequest$) {
+      return this.refreshRequest$;
+    }
+
+    this.refreshRequest$ = this.http.post<AuthResponse>(`${this.apiUrl}/users/refresh-token`, {}, { withCredentials: true }).pipe(
       map(response => {
         if (response && response.token) {
           this.inMemoryToken = response.token;
@@ -60,8 +65,14 @@ export class AuthService {
         this.inMemoryToken = null;
         this.currentUserSubject.next(null);
         return of(false);
-      })
+      }),
+      finalize(() => {
+        this.refreshRequest$ = null;
+      }),
+      shareReplay(1)
     );
+
+    return this.refreshRequest$;
   }
 
   login(emailOrUsername: string, password: string): Observable<boolean> {

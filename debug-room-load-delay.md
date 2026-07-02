@@ -39,3 +39,4 @@
 - Frontend guard cho route `/admin/room` được thêm fallback timeout ngắn.
 - Nếu `PermissionService.ready$` chưa hoàn tất trong `1500ms`, guard sẽ cho phép các role nền tảng của vận hành (`business`, `hotel`, `staff`, `admin`, `superadmin`) đi thẳng vào màn `room` thay vì tiếp tục bị chặn chờ package permission.
 - Mục tiêu là loại bỏ tình huống production bị treo rất lâu ở bước `getCurrentUserPackage()` trước khi render danh sách phòng.
+- `AuthService.refreshAccessToken()` được chống gọi trùng bằng request dùng chung (`shareReplay(1)` + `finalize()`), vì production path hiện có khả năng gọi refresh token nhiều lần cùng lúc ở app bootstrap, redirect check, và route guard.
