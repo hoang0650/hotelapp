@@ -51,6 +51,17 @@ export class BotSettingComponent implements OnInit {
       checkout_time: ['12:00'],
       hotline: [''],
       email_support: [''],
+      bankTransfer: this.fb.group({
+        enabled: [false],
+        depositAmount: [0],
+        currency: ['VND'],
+        paymentCodePrefix: ['BOT'],
+        depositInstructions: [''],
+        bankName: [''],
+        accountNumber: [''],
+        beneficiaryName: [''],
+        qrPaymentUrl: ['']
+      }),
       rooms: this.fb.array([]),
       questions: this.fb.array([])
     });
@@ -151,13 +162,26 @@ export class BotSettingComponent implements OnInit {
         const contactInfo = hotel.contactInfo || {};
         const hotline = hotel.settings?.botContext?.hotline || contactInfo.phone || '';
         const emailSupport = hotel.settings?.botContext?.email_support || contactInfo.email || '';
+        const botBankTransfer = hotel.settings?.botContext?.bankTransfer || {};
+        const hotelBankAccount = hotel.bankAccount || {};
         this.form.patchValue({
           hotelName: name,
           location: { street, city, country },
           checkin_time: checkIn,
           checkout_time: checkOut,
           hotline,
-          email_support: emailSupport
+          email_support: emailSupport,
+          bankTransfer: {
+            enabled: botBankTransfer.enabled ?? false,
+            depositAmount: botBankTransfer.depositAmount ?? 0,
+            currency: botBankTransfer.currency || 'VND',
+            paymentCodePrefix: botBankTransfer.paymentCodePrefix || 'BOT',
+            depositInstructions: botBankTransfer.depositInstructions || '',
+            bankName: botBankTransfer.bankName || hotelBankAccount.bankName || '',
+            accountNumber: botBankTransfer.accountNumber || hotelBankAccount.accountNumber || '',
+            beneficiaryName: botBankTransfer.beneficiaryName || hotelBankAccount.beneficiaryName || hotelBankAccount.accountHolderName || '',
+            qrPaymentUrl: botBankTransfer.qrPaymentUrl || hotelBankAccount.qrPaymentUrl || ''
+          }
         });
 
         const botContext = hotel.settings?.botContext || {};
@@ -258,28 +282,7 @@ export class BotSettingComponent implements OnInit {
     this.saving = true;
     try {
       const val = this.form.value;
-      const botContext = {
-        hotel_name: val.hotelName,
-        location: [val.location?.street, val.location?.city, val.location?.country].filter(Boolean).join(', '),
-        street: val.location?.street || '',
-        city: val.location?.city || '',
-        checkin_time: val.checkin_time,
-        checkout_time: val.checkout_time,
-        hotline: val.hotline || '',
-        email_support: val.email_support || '',
-        rooms: (val.rooms || []).map((r: any) => ({
-          name: r.name,
-          price: r.price,
-          description: r.description,
-          use_case: r.use_case,
-          images: (r.images || []).filter((x: string) => !!x),
-          amenities: (r.amenities || []).filter((x: string) => !!x)
-        })),
-        questions: (val.questions || []).map((q: any) => ({
-          question: q.question,
-          answer: q.answer
-        }))
-      };
+      const botContext = this.buildBotContext(val);
       await this.hotelService.updateHotelSettings(hotelId, { enableAiChatbox: true, botContext }).pipe(take(1)).toPromise();
       this.msg.success(this.translate.instant('Đã lưu cấu hình bot'));
     } catch {
@@ -299,6 +302,42 @@ export class BotSettingComponent implements OnInit {
       amenities: (r.amenities || []).filter((x: string) => !!x)
     }));
     return rooms;
+  }
+
+  private buildBotContext(val: any): any {
+    return {
+      hotel_name: val.hotelName,
+      location: [val.location?.street, val.location?.city, val.location?.country].filter(Boolean).join(', '),
+      street: val.location?.street || '',
+      city: val.location?.city || '',
+      checkin_time: val.checkin_time,
+      checkout_time: val.checkout_time,
+      hotline: val.hotline || '',
+      email_support: val.email_support || '',
+      bankTransfer: {
+        enabled: !!val.bankTransfer?.enabled,
+        depositAmount: Number(val.bankTransfer?.depositAmount || 0),
+        currency: val.bankTransfer?.currency || 'VND',
+        paymentCodePrefix: val.bankTransfer?.paymentCodePrefix || 'BOT',
+        depositInstructions: val.bankTransfer?.depositInstructions || '',
+        bankName: val.bankTransfer?.bankName || '',
+        accountNumber: val.bankTransfer?.accountNumber || '',
+        beneficiaryName: val.bankTransfer?.beneficiaryName || '',
+        qrPaymentUrl: val.bankTransfer?.qrPaymentUrl || ''
+      },
+      rooms: (val.rooms || []).map((r: any) => ({
+        name: r.name,
+        price: r.price,
+        description: r.description,
+        use_case: r.use_case,
+        images: (r.images || []).filter((x: string) => !!x),
+        amenities: (r.amenities || []).filter((x: string) => !!x)
+      })),
+      questions: (val.questions || []).map((q: any) => ({
+        question: q.question,
+        answer: q.answer
+      }))
+    };
   }
 
   async syncAI(): Promise<void> {
@@ -336,28 +375,7 @@ export class BotSettingComponent implements OnInit {
     }
     this.syncing = true;
     try {
-      const botContext = {
-        hotel_name: val.hotelName,
-        location: [val.location?.street, val.location?.city, val.location?.country].filter(Boolean).join(', '),
-        street: val.location?.street || '',
-        city: val.location?.city || '',
-        checkin_time: val.checkin_time,
-        checkout_time: val.checkout_time,
-        hotline: val.hotline || '',
-        email_support: val.email_support || '',
-        rooms: (val.rooms || []).map((r: any) => ({
-          name: r.name,
-          price: r.price,
-          description: r.description,
-          use_case: r.use_case,
-          images: (r.images || []).filter((x: string) => !!x),
-          amenities: (r.amenities || []).filter((x: string) => !!x)
-        })),
-        questions: (val.questions || []).map((q: any) => ({
-          question: q.question,
-          answer: q.answer
-        }))
-      };
+      const botContext = this.buildBotContext(val);
       await this.aiService.uploadDatasetExternal(tenantId, products as any, botContext);
       this.msg.success(this.translate.instant('Đã đồng bộ dữ liệu AI'));
     } catch {

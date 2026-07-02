@@ -54,6 +54,61 @@
       </div>
     </div>
 
+    <div class="section" formGroupName="bankTransfer">
+      <div class="section-head">
+        <h3>Nhận cọc chuyển khoản qua Bot</h3>
+      </div>
+      <div class="grid-2">
+        <label>
+          Bật nhận cọc qua bot
+          <nz-switch formControlName="enabled"></nz-switch>
+        </label>
+        <label>
+          Số tiền cọc mặc định
+          <input nz-input type="number" formControlName="depositAmount" placeholder="500000" />
+        </label>
+      </div>
+      <div class="grid-2">
+        <label>
+          Tiền tệ
+          <input nz-input formControlName="currency" placeholder="VND" />
+        </label>
+        <label>
+          Tiền tố mã chuyển khoản
+          <input nz-input formControlName="paymentCodePrefix" placeholder="BOT" maxlength="5" />
+        </label>
+      </div>
+      <label>
+        Hướng dẫn chuyển khoản
+        <textarea
+          nz-input
+          formControlName="depositInstructions"
+          rows="2"
+          placeholder="Ví dụ: Khách vui lòng chuyển khoản đúng nội dung mã bot cung cấp để hệ thống tự xác nhận cọc."
+        ></textarea>
+      </label>
+      <div class="grid-2">
+        <label>
+          Ngân hàng nhận cọc
+          <input nz-input formControlName="bankName" placeholder="Vietcombank" />
+        </label>
+        <label>
+          Số tài khoản nhận cọc
+          <input nz-input formControlName="accountNumber" placeholder="0123456789" />
+        </label>
+      </div>
+      <div class="grid-2">
+        <label>
+          Tên người thụ hưởng
+          <input nz-input formControlName="beneficiaryName" placeholder="PH Hotel" />
+        </label>
+        <label>
+          Link QR thanh toán
+          <input nz-input formControlName="qrPaymentUrl" placeholder="https://..." />
+        </label>
+      </div>
+    </div>
+
     <div class="section">
       <div class="section-head">
         <h3>Hạng phòng, giá và tiện ích</h3>

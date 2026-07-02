@@ -34,6 +34,33 @@ export interface HotelNotificationSettings {
   notificationEmail?: string;
 }
 
+export interface HotelBotBankTransferSettings {
+  enabled?: boolean;
+  depositAmount?: number;
+  currency?: string;
+  paymentCodePrefix?: string;
+  depositInstructions?: string;
+  bankName?: string;
+  accountNumber?: string;
+  beneficiaryName?: string;
+  qrPaymentUrl?: string;
+}
+
+export interface HotelBotContext {
+  hotel_name?: string;
+  location?: string;
+  street?: string;
+  city?: string;
+  checkin_time?: string;
+  checkout_time?: string;
+  hotline?: string;
+  email_support?: string;
+  bankTransfer?: HotelBotBankTransferSettings;
+  rooms?: any[];
+  questions?: any[];
+  [key: string]: any;
+}
+
 export interface HotelSettings {
   checkInTime?: string;
   checkOutTime?: string;
@@ -49,7 +76,7 @@ export interface HotelSettings {
   enableDraftInvoice?: boolean;
   enableExportInvoice?: boolean;
   enableAiChatbox?: boolean;
-  botContext?: any;
+  botContext?: HotelBotContext;
   notificationSettings?: HotelNotificationSettings;
 }
 
