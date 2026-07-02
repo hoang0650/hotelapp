@@ -81,6 +81,9 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.initHotelSelector();
     this.checkAiChatboxPermission();
     this.refreshRoleCapabilities();
+    if (this.authService.getCurrentUser() && this.authService.getToken()) {
+      this.aiService.loadChatHistory();
+    }
     
     this.authService.currentUser$.pipe(take(1)).subscribe(() => {
       this.initHotelSelector();
@@ -88,10 +91,15 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.refreshRoleCapabilities();
     });
     
-    this.authService.currentUser$.subscribe(() => {
+    this.authService.currentUser$.subscribe(user => {
       this.initHotelSelector();
       this.checkAiChatboxPermission();
       this.refreshRoleCapabilities();
+      if (user && this.authService.getToken()) {
+        this.aiService.loadChatHistory();
+      } else {
+        this.aiService.clearMessages();
+      }
     });
   }
 

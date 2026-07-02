@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -49,8 +49,10 @@ export class NotificationsService {
   private unreadCountSubject = new BehaviorSubject<number>(0);
   public unreadCount$ = this.unreadCountSubject.asObservable();
 
-  constructor(private http: HttpClient, private authService: AuthService) {
-    this.loadAnnouncements();
+  constructor(private http: HttpClient, private authService: AuthService) {}
+
+  private canRequestNotifications(): boolean {
+    return !!this.authService.getCurrentUser() && !!this.authService.getToken();
   }
 
   private getHeaders(): HttpHeaders {
@@ -63,6 +65,12 @@ export class NotificationsService {
 
   // Lấy tất cả announcements
   loadAnnouncements(): void {
+    if (!this.canRequestNotifications()) {
+      this.announcementsSubject.next([]);
+      this.unreadCountSubject.next(0);
+      return;
+    }
+
     this.getAnnouncements().subscribe({
       next: (response) => {
         if (response.success && response.data) {
@@ -77,6 +85,10 @@ export class NotificationsService {
   }
 
   getAnnouncements(): Observable<NotificationResponse> {
+    if (!this.canRequestNotifications()) {
+      return of({ success: true, data: [] });
+    }
+
     return this.http.get<NotificationResponse>(`${this.apiUrl}/announcements`, { 
       headers: this.getHeaders() 
     });
@@ -105,6 +117,13 @@ export class NotificationsService {
 
   // Lấy số lượng thông báo chưa đọc từ backend
   getUnreadCount(): Observable<UnreadCountResponse> {
+    if (!this.canRequestNotifications()) {
+      return of({
+        success: true,
+        data: { total: 0, system: 0, hotel: 0 }
+      });
+    }
+
     return this.http.get<UnreadCountResponse>(`${this.apiUrl}/announcements/unread-count`, { 
       headers: this.getHeaders() 
     });

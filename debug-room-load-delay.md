@@ -27,12 +27,19 @@
   - `A / login.component.ts:executeFastRedirect`
   - `msg=[DEBUG] login redirect started`
 - Chưa có log từ `PermissionGuard` hoặc `RoomComponent`.
+- Browser console trên production cho thấy nhiều request chạy trước khi auth sẵn sàng:
+  - `GET /ai-assistant/history` -> `401`
+  - `GET /api/settings/announcements` -> `401`
+  - `GET /api/settings/notification` -> `401`
+  - `GET /api/settings/announcements/unread-count` -> `401`
+  - `GET /rooms` -> `400`
 
 ## Current Assessment
 
 - Hypothesis A: Login redirect thực sự xảy ra. `CONFIRMED`
 - Hypothesis B/C/D/E: Chưa đủ evidence để kết luận.
 - Hypothesis 5: Có khả năng rất cao trang đích `admin.phhotel.vn/admin/room` đang chạy bản deploy khác với code local đã gắn instrumentation, nên log phía `room` không quay về collector local. `LIKELY`
+- Hypothesis 1: App bootstrap đang bắn nhiều request trước khi phiên đăng nhập sẵn sàng. `CONFIRMED`
 
 ## Fix Applied
 
@@ -40,3 +47,7 @@
 - Nếu `PermissionService.ready$` chưa hoàn tất trong `1500ms`, guard sẽ cho phép các role nền tảng của vận hành (`business`, `hotel`, `staff`, `admin`, `superadmin`) đi thẳng vào màn `room` thay vì tiếp tục bị chặn chờ package permission.
 - Mục tiêu là loại bỏ tình huống production bị treo rất lâu ở bước `getCurrentUserPackage()` trước khi render danh sách phòng.
 - `AuthService.refreshAccessToken()` được chống gọi trùng bằng request dùng chung (`shareReplay(1)` + `finalize()`), vì production path hiện có khả năng gọi refresh token nhiều lần cùng lúc ở app bootstrap, redirect check, và route guard.
+- `NotificationsService` không còn tự load announcements trong constructor, đồng thời trả fallback rỗng nếu chưa có user/token.
+- `HeaderComponent` chỉ load notification settings và announcements sau khi đã có phiên hợp lệ, đồng thời không còn dựng interval refresh trước login.
+- `AiAssistantService` không còn tự `loadChatHistory()` trong constructor; `app-ai-chatbox` chỉ mount sau khi có user và chỉ load history khi auth đã sẵn sàng.
+- `ProductService` không còn tự gọi `GET /rooms` không có `hotelId` trong constructor.

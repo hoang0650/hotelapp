@@ -14,12 +14,14 @@ export class ProductService {
   products$ = this.productsSource.asObservable()
   // products$ = this.apiService.loadData<any>('rooms');
 
-  constructor(private apiService: ApiService, private http: HttpClient, private roomService: RoomsService) {
-    // Mô phỏng việc tải dữ liệu từ server
-    this.loadProducts();
-  }
+  constructor(private apiService: ApiService, private http: HttpClient, private roomService: RoomsService) {}
 
-  private loadProducts() {
+  private loadProducts(hotelId?: string) {
+    if (!hotelId) {
+      this.productsSource.next([]);
+      return;
+    }
+
     // Cách 1: Data Set Cứng
     // Giả sử có một API hoặc dữ liệu từ server
     // const fakeServerData = [
@@ -48,7 +50,7 @@ export class ProductService {
     //     console.error('Error loading products:', error);
     //   }
     // );
-    this.roomService.getRooms().subscribe(
+    this.roomService.getRooms({ hotelId }).subscribe(
       data =>{
         this.productsSource.next(data)
       },
@@ -60,8 +62,8 @@ export class ProductService {
     
   }
 
-  loadUpdatedData() {
-    this.loadProducts();
+  loadUpdatedData(hotelId?: string) {
+    this.loadProducts(hotelId);
   }
   
   // updateProducts(newData: any[]): void {

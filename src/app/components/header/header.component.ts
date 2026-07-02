@@ -34,6 +34,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   notificationSettings: NotificationSettings | null = null;
   areNotificationsEnabled = true; // Mặc định bật
   isAuthResolved: boolean = false;
+  private lastNotificationUserId: string | null = null;
   
   // Tab titles for notifications
   tabAllTitle = '';
@@ -85,9 +86,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     // Đăng ký lắng nghe từ AuthService (cho giao ca)
     this.subscriptions.add(
       this.authService.currentUser$.subscribe(user => {
-        if (user) {
-          this.currentUser = user;
-        }
+        this.currentUser = user;
+        this.handleNotificationBootstrap(user);
       })
     );
     
@@ -100,23 +100,60 @@ export class HeaderComponent implements OnInit, OnDestroy {
     );
     
     if (isPlatformBrowser(this.platformId)) {
-      this.loadNotificationSettings();
-      this.notificationsService.loadAnnouncements();
-    }
-    
-    if (isPlatformBrowser(this.platformId)) {
       this.subscriptions.add(
         this.notificationsService.announcements$.subscribe(() => {
           this.updateNotifications();
         })
       );
     }
-    
-    if (isPlatformBrowser(this.platformId)) {
-      this.refreshIntervalId = setInterval(() => {
-        this.notificationsService.loadAnnouncements();
-        this.loadNotificationSettings();
-      }, 5 * 60 * 1000);
+  }
+
+  private handleNotificationBootstrap(user: User | null): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const userId = user?._id || null;
+    const hasSession = !!user && !!this.authService.getToken();
+
+    if (!hasSession) {
+      this.lastNotificationUserId = null;
+      this.stopNotificationRefresh();
+      this.notificationSettings = null;
+      this.notifications = [];
+      this.filteredNotifications = [];
+      this.unreadCount = 0;
+      this.unreadCounts = { total: 0, system: 0, hotel: 0 };
+      return;
+    }
+
+    if (this.lastNotificationUserId === userId && this.refreshIntervalId) {
+      return;
+    }
+
+    this.lastNotificationUserId = userId;
+    this.loadNotificationSettings();
+    this.notificationsService.loadAnnouncements();
+    this.startNotificationRefresh();
+  }
+
+  private startNotificationRefresh(): void {
+    this.stopNotificationRefresh();
+    this.refreshIntervalId = setInterval(() => {
+      if (!this.authService.getCurrentUser() || !this.authService.getToken()) {
+        this.stopNotificationRefresh();
+        return;
+      }
+
+      this.notificationsService.loadAnnouncements();
+      this.loadNotificationSettings();
+    }, 5 * 60 * 1000);
+  }
+
+  private stopNotificationRefresh(): void {
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
     }
   }
   
@@ -128,10 +165,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
-    if (this.refreshIntervalId) {
-      clearInterval(this.refreshIntervalId);
-      this.refreshIntervalId = null;
-    }
+    this.stopNotificationRefresh();
   }
 
   get isLoggedIn(): boolean {

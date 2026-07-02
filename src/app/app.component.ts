@@ -26,7 +26,7 @@ export class AppComponent implements OnInit, OnDestroy {
     private translate: TranslateService,
     private translationService: TranslationService,
     private router: Router,
-    private authService: AuthService,
+    public authService: AuthService,
     private settingsService: SettingsService,
     private notificationsService: NotificationsService,
     private seoService: SeoService,

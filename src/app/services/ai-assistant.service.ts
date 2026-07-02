@@ -46,6 +46,7 @@ export class AiAssistantService {
   private wsSubject = new BehaviorSubject<any>(null);
   private socket: WebSocket | null = null;
   private pingInterval: any; // Thêm biến lưu bộ đếm Heartbeat
+  private chatHistoryLoaded = false;
 
   // URL tới Python Backend (FastAPI/Flask) - Nơi xử lý Facebook & AI
   private aiUrl = environment.aiUrl; 
@@ -53,10 +54,7 @@ export class AiAssistantService {
   // URL tới Backend nội bộ (NodeJS/Java...) - Nơi lưu lịch sử chat nội bộ
   private apiUrl = environment.apiUrl; 
 
-  constructor(private http: HttpClient, private authService: AuthService) {
-    // Load lịch sử chat nội bộ khi khởi tạo (nếu cần)
-    this.loadChatHistory();
-  }
+  constructor(private http: HttpClient, private authService: AuthService) {}
 
   private normalizeId(value: any): string | null {
     if (!value) return null;
@@ -153,10 +151,18 @@ export class AiAssistantService {
     return this.isTyping.asObservable();
   }
 
-  async loadChatHistory(): Promise<void> {
+  async loadChatHistory(force = false): Promise<void> {
     try {
       // Kiểm tra nếu chưa cấu hình apiUrl thì bỏ qua
       if (!this.apiUrl) return;
+      if (!this.authService.getCurrentUser() || !this.authService.getToken()) {
+        this.messages.next([]);
+        this.chatHistoryLoaded = false;
+        return;
+      }
+      if (this.chatHistoryLoaded && !force) {
+        return;
+      }
 
       const response = await firstValueFrom(
         this.http.get<ChatHistoryResponse>(`${this.apiUrl}/ai-assistant/history`)
@@ -174,6 +180,7 @@ export class AiAssistantService {
 
         this.messages.next(chatMessages);
       }
+      this.chatHistoryLoaded = true;
     } catch (error) {
       console.warn('Không tải được lịch sử chat (có thể do chưa đăng nhập hoặc API chưa sẵn sàng).');
     }
@@ -244,6 +251,7 @@ export class AiAssistantService {
   }
 
   clearMessages(): void {
+    this.chatHistoryLoaded = false;
     this.messages.next([]);
   }
 

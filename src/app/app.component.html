@@ -9,5 +9,5 @@
 <!-- Modal hóa đơn toàn cục -->
 <app-invoice-modal *ngIf="isBrowser"></app-invoice-modal>
   
-<app-ai-chatbox *ngIf="isBrowser"></app-ai-chatbox>
+<app-ai-chatbox *ngIf="isBrowser && authService.getCurrentUser()"></app-ai-chatbox>
   
