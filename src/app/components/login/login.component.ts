@@ -116,8 +116,9 @@ export class LoginComponent implements OnInit {
           this.isLoading = false;
         } else {
           this.message.success(this.translate.instant('COMMON.SUCCESS'));
-          // Không mutate state auth của shell hiện tại trước hard redirect,
-          // tránh header public nháy user/avatar rồi bị reset bởi refresh cũ.
+          if (response.token && response.user) {
+            this.authService.loginFromShiftHandover(response.token, response.user);
+          }
           this.executeFastRedirect();
         }
       },
