@@ -3,9 +3,27 @@
   </nz-page-header>
 
   <nz-card [nzBordered]="false" style="margin-top: 16px;">
+    <nz-alert
+      *ngIf="isManagementGroup()"
+      nzType="info"
+      [nzMessage]="'Đang đăng nhập với ' + getRoleGroupLabel()"
+      nzDescription="Bạn đang ở khu vực quản trị hệ thống. Các tab bên dưới dùng để cấu hình hệ thống chung, email, thanh toán, thông báo tổng và quản lý thông báo toàn hệ thống."
+      style="margin-bottom: 16px;">
+    </nz-alert>
+
+    <nz-alert
+      *ngIf="isUserGroup()"
+      nzType="info"
+      [nzMessage]="'Đang đăng nhập với ' + getRoleGroupLabel()"
+      [nzDescription]="isReadOnlyUserGroup()
+        ? 'Bạn thuộc nhóm người dùng chỉ xem. Hệ thống chỉ hiển thị khu vực phù hợp với quyền hiện tại, không hiển thị các cài đặt quản trị hệ thống.'
+        : 'Bạn thuộc nhóm người dùng vận hành. Hệ thống chỉ hiển thị cài đặt theo khách sạn/doanh nghiệp, không hiển thị các cài đặt quản trị hệ thống.'"
+      style="margin-bottom: 16px;">
+    </nz-alert>
+
     <nz-tabset [(nzSelectedIndex)]="activeTab" nzType="card">
-      <!-- Tab 1: Cài đặt hệ thống -->
-      <nz-tab [nzTitle]="'SETTINGS.TAB_SYSTEM' | translate" nzIcon="setting">
+      <!-- Tab 1: Cài đặt hệ thống - quản trị -->
+      <nz-tab *ngIf="isManagementGroup()" [nzTitle]="'SETTINGS.TAB_SYSTEM' | translate" nzIcon="setting">
         <form nz-form [formGroup]="systemForm" nzLayout="vertical" style="margin-top: 16px;">
           <div nz-row [nzGutter]="16">
             <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
@@ -170,8 +188,8 @@
         </form>
       </nz-tab>
 
-      <!-- Tab 2: Cài đặt Email -->
-      <nz-tab nzTitle="Cài đặt Email" nzIcon="mail">
+      <!-- Tab 2: Cài đặt Email - quản trị -->
+      <nz-tab *ngIf="isManagementGroup()" nzTitle="Cài đặt Email" nzIcon="mail">
         <form nz-form [formGroup]="emailForm" nzLayout="vertical" style="margin-top: 16px;">
           <div nz-row [nzGutter]="16">
             <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
@@ -381,8 +399,8 @@
         </form>
       </nz-tab>
 
-      <!-- Tab 3: Cài đặt Thanh toán -->
-      <nz-tab nzTitle="Cài đặt Thanh toán" nzIcon="dollar">
+      <!-- Tab 3: Cài đặt Thanh toán - quản trị -->
+      <nz-tab *ngIf="isManagementGroup()" nzTitle="Cài đặt Thanh toán" nzIcon="dollar">
         <form nz-form [formGroup]="paymentForm" nzLayout="vertical" style="margin-top: 16px;">
           <div nz-row [nzGutter]="16">
             <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
@@ -484,10 +502,10 @@
           </div>
 
           <nz-divider nzText="Thông tin ngân hàng (QR thanh toán)"></nz-divider>
-          <nz-alert 
-            nzType="info" 
-            nzMessage="Thông tin ngân hàng cho QR thanh toán" 
-            nzDescription="Thông tin này sẽ được sử dụng làm QR code thanh toán mặc định trong pricing component. Thứ tự ưu tiên: 1) Superadmin profile → 2) System Settings (phần này) → 3) User profile. Vui lòng điền đầy đủ thông tin, đặc biệt là QR Code URL (SePay) để người dùng có thể thanh toán."
+          <nz-alert
+            nzType="info"
+            nzMessage="Thông tin ngân hàng cho QR thanh toán"
+            nzDescription="Thông tin này sẽ được sử dụng làm QR code thanh toán mặc định trong pricing component. Thứ tự ưu tiên: Superadmin profile → System Settings (phần này) → User profile. Vui lòng điền đầy đủ thông tin, đặc biệt là QR Code URL (SePay) để người dùng có thể thanh toán."
             style="margin-bottom: 16px;">
           </nz-alert>
 
@@ -544,19 +562,19 @@
             <!-- Nút tạo QR thanh toán -->
             <nz-row [nzGutter]="16" style="margin-top: 16px; margin-bottom: 16px;">
               <nz-col [nzSpan]="24">
-                <button 
-                  nz-button 
-                  nzType="primary" 
+                <button
+                  nz-button
+                  nzType="primary"
                   nzIcon="qrcode"
                   (click)="generateQrPayment()"
                   [disabled]="!paymentForm.get('bankAccount.bankName')?.value || !paymentForm.get('bankAccount.accountNumber')?.value">
                   <i nz-icon nzType="qrcode" nzTheme="outline"></i>
                   Tạo QR thanh toán
                 </button>
-                <button 
+                <button
                   *ngIf="showQrPreview"
-                  nz-button 
-                  nzType="default" 
+                  nz-button
+                  nzType="default"
                   nzDanger
                   (click)="clearQrPreview()"
                   style="margin-left: 8px;">
@@ -576,12 +594,11 @@
                       QR Code thanh toán đã lưu
                     </h3>
                     <div style="display: inline-block; padding: 16px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                      <img 
-                        [src]="paymentForm.get('bankAccount.qrPaymentUrl')?.value || ''" 
-                        alt="QR Code thanh toán" 
+                      <img
+                        [src]="paymentForm.get('bankAccount.qrPaymentUrl')?.value || ''"
+                        alt="QR Code thanh toán"
                         style="max-width: 300px; width: 100%; height: auto; display: block;"
-                        onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
-                      />
+                        onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27300%27 height=%27300%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%27%23999%27%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';">
                     </div>
                     <div style="margin-top: 16px; font-size: 12px; color: #666;">
                       <p><strong>Ngân hàng:</strong> {{ paymentForm.get('bankAccount.bankName')?.value || 'N/A' }}</p>
@@ -606,18 +623,17 @@
                       QR Code thanh toán SePay (Chưa lưu)
                     </h3>
                     <div style="display: inline-block; padding: 16px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                      <img 
-                        [src]="qrPaymentUrl" 
-                        alt="QR Code thanh toán" 
+                      <img
+                        [src]="qrPaymentUrl"
+                        alt="QR Code thanh toán"
                         style="max-width: 300px; width: 100%; height: auto; display: block;"
-                        onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
-                      />
+                        onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27300%27 height=%27300%27%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 dy=%27.3em%27 fill=%27%23999%27%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';">
                     </div>
                     <div style="margin-top: 16px; font-size: 12px; color: #666;">
                       <p><strong>Ngân hàng:</strong> {{ paymentForm.get('bankAccount.bankName')?.value }}</p>
                       <p><strong>Số tài khoản:</strong> {{ paymentForm.get('bankAccount.accountNumber')?.value }}</p>
                       <p *ngIf="qrBeneficiaryName" style="margin-top: 8px;">
-                        <strong style="color: #ff9800;">Tên người thụ hưởng:</strong> 
+                        <strong style="color: #ff9800;">Tên người thụ hưởng:</strong>
                         <span style="font-weight: 600; color: #333;">{{ qrBeneficiaryName }}</span>
                       </p>
                       <p style="margin-top: 8px; color: #ff9800; font-weight: 600;">
@@ -637,8 +653,8 @@
                   <nz-form-control>
                     <input nz-input formControlName="qrPaymentUrl" placeholder="https://qr.sepay.vn/..." readonly />
                     <div style="margin-top: 8px; color: #666; font-size: 12px;">
-                      <strong>Lưu ý:</strong> URL này được tạo tự động khi bấm nút "Tạo QR thanh toán" ở trên. 
-                      URL này sẽ được sử dụng trong pricing component khi người dùng thanh toán. 
+                      <strong>Lưu ý:</strong> URL này được tạo tự động khi bấm nút "Tạo QR thanh toán" ở trên.
+                      URL này sẽ được sử dụng trong pricing component khi người dùng thanh toán.
                       Thứ tự ưu tiên: Superadmin profile → System Settings (phần này) → User profile.
                     </div>
                   </nz-form-control>
@@ -666,14 +682,33 @@
             </div>
           </div>
 
-          <!-- Cài đặt QR thanh toán cho từng khách sạn -->
-          <nz-divider nzText="QR Thanh toán Tại Khách Sạn" *ngIf="canManageHotelSettings()"></nz-divider>
-          
-          <div *ngIf="canManageHotelSettings()" style="margin-top: 16px;">
-            <nz-alert 
-              nzType="info" 
-              nzMessage="Cài đặt QR thanh toán cho từng khách sạn" 
-              nzDescription="Bật tính năng hiển thị QR code khi thanh toán chuyển khoản trong room. Nếu gói đăng ký có tính năng QR payment, sẽ tự động bật."
+          <div style="margin-top: 24px; text-align: right;">
+            <button nz-button nzType="default" (click)="resetForm(paymentForm)" style="margin-right: 8px;">
+              Khôi phục mặc định
+            </button>
+            <button nz-button nzType="primary" [nzLoading]="saving" (click)="savePaymentSettings()">
+              Lưu cài đặt
+            </button>
+          </div>
+        </form>
+      </nz-tab>
+
+      <!-- Tab 4: Cài đặt Khách sạn - nhóm người dùng vận hành & quản trị -->
+      <nz-tab nzTitle="Cài đặt Khách sạn" nzIcon="appstore" *ngIf="canViewHotelSettingsTab()">
+        <div style="margin-top: 16px;">
+          <nz-alert
+            *ngIf="isReadOnlyUserGroup()"
+            nzType="warning"
+            nzMessage="Tài khoản hiện tại không có quyền chỉnh sửa cài đặt khách sạn"
+            nzDescription="Vai trò staff hoặc guest chỉ được xem các màn vận hành. Nếu bạn cần đổi QR thanh toán, bật tính năng khách sạn hoặc chỉnh thông báo, hãy dùng tài khoản business, hotel manager hoặc admin."
+            style="margin-bottom: 16px;">
+          </nz-alert>
+
+          <ng-container *ngIf="canManageHotelSettings(); else readonlyHotelSettings">
+            <nz-alert
+              nzType="info"
+              nzMessage="Khu vực cài đặt theo khách sạn"
+              nzDescription="Khu vực này dành cho admin, business và hotel manager để cấu hình QR thanh toán, tính năng khách sạn và thông báo riêng cho từng khách sạn."
               style="margin-bottom: 16px;">
             </nz-alert>
 
@@ -685,22 +720,23 @@
               <nz-form-item>
                 <nz-form-label>Chọn khách sạn</nz-form-label>
                 <nz-form-control>
-                  <nz-select 
-                    [(ngModel)]="selectedHotelId" 
+                  <nz-select
+                    [(ngModel)]="selectedHotelId"
                     (ngModelChange)="onHotelChange($event)"
                     nzPlaceHolder="Chọn khách sạn"
                     style="width: 100%;">
-                    <nz-option 
-                      *ngFor="let hotel of hotels" 
-                      [nzValue]="hotel._id" 
+                    <nz-option
+                      *ngFor="let hotel of hotels"
+                      [nzValue]="hotel._id"
                       [nzLabel]="hotel.name">
                     </nz-option>
                   </nz-select>
                 </nz-form-control>
               </nz-form-item>
 
+              <!-- QR thanh toán khách sạn -->
               <form nz-form [formGroup]="hotelQRPaymentForm" nzLayout="vertical" style="margin-top: 16px;">
-                <nz-divider nzText="Cài đặt QR thanh toán"></nz-divider>
+                <nz-divider nzText="QR Thanh toán Tại Khách sạn"></nz-divider>
 
                 <div nz-row [nzGutter]="16">
                   <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
@@ -720,7 +756,299 @@
 
                 <div style="margin-top: 24px; text-align: right;">
                   <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelQRPaymentSettings()">
-                    Lưu cài đặt
+                    Lưu cài đặt QR
+                  </button>
+                </div>
+              </form>
+
+              <!-- Tính năng khách sạn -->
+              <form nz-form [formGroup]="hotelFeaturesForm" nzLayout="vertical" style="margin-top: 16px;">
+                <nz-divider nzText="Tính năng Khách sạn"></nz-divider>
+
+                <div style="margin-bottom: 16px; text-align: right;">
+                  <button nz-button nzType="default" (click)="toggleAllFeatures(true)" style="margin-right: 8px;">
+                    Bật tất cả
+                  </button>
+                  <button nz-button nzType="default" (click)="toggleAllFeatures(false)">
+                    Tắt tất cả
+                  </button>
+                </div>
+
+                <nz-divider nzText="Cài đặt tính năng"></nz-divider>
+
+                <div nz-row [nzGutter]="16">
+                  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enableOTAManagement" [nzDisabled]="isFeatureDisabledByPackage('enableOTAManagement')">
+                          Bật quản lý OTA
+                          <span *ngIf="isFeatureDisabledByPackage('enableOTAManagement')" style="color: #52c41a; margin-left: 8px;">
+                            (Tự động bật từ gói đăng ký)
+                          </span>
+                        </label>
+                        <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                          Khi bật, khách sạn có thể quản lý tích hợp với các kênh OTA (Booking.com, Agoda, v.v.).
+                          Nếu gói đăng ký có tính năng OTA management, tính năng này sẽ tự động được bật.
+                        </div>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+                  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enableEmailManagement" [nzDisabled]="isFeatureDisabledByPackage('enableEmailManagement')">
+                          Bật quản lý email
+                          <span *ngIf="isFeatureDisabledByPackage('enableEmailManagement')" style="color: #52c41a; margin-left: 8px;">
+                            (Tự động bật từ gói đăng ký)
+                          </span>
+                        </label>
+                        <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                          Khi bật, khách sạn có thể quản lý cấu hình email và gửi email.
+                          Nếu gói đăng ký có tính năng Email management, tính năng này sẽ tự động được bật.
+                        </div>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+                  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enableElectricManagement" [nzDisabled]="isFeatureDisabledByPackage('enableElectricManagement')">
+                          Bật quản lý điện
+                          <span *ngIf="isFeatureDisabledByPackage('enableElectricManagement')" style="color: #52c41a; margin-left: 8px;">
+                            (Tự động bật từ gói đăng ký)
+                          </span>
+                        </label>
+                        <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                          Khi bật, khách sạn có thể quản lý cài đặt và theo dõi điện năng tiêu thụ.
+                          Nếu gói đăng ký có tính năng Electric management, tính năng này sẽ tự động được bật.
+                        </div>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+                  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enablePayPalPayment" [nzDisabled]="isFeatureDisabledByPackage('enablePayPalPayment')">
+                          Bật thanh toán PayPal
+                          <span *ngIf="isFeatureDisabledByPackage('enablePayPalPayment')" style="color: #52c41a; margin-left: 8px;">
+                            (Tự động bật từ gói đăng ký)
+                          </span>
+                        </label>
+                        <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                          Khi bật, khách sạn có thể sử dụng PayPal để thanh toán.
+                          Nếu gói đăng ký có tính năng PayPal payment, tính năng này sẽ tự động được bật.
+                        </div>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+                  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enableCryptoPayment" [nzDisabled]="isFeatureDisabledByPackage('enableCryptoPayment')">
+                          Bật thanh toán Crypto
+                          <span *ngIf="isFeatureDisabledByPackage('enableCryptoPayment')" style="color: #52c41a; margin-left: 8px;">
+                            (Tự động bật từ gói đăng ký)
+                          </span>
+                        </label>
+                        <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                          Khi bật, khách sạn có thể sử dụng tiền điện tử (Bitcoin, Ethereum, USDT, v.v.) để thanh toán.
+                          Nếu gói đăng ký có tính năng Crypto payment, tính năng này sẽ tự động được bật.
+                        </div>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+                  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enableDraftInvoice" [nzDisabled]="isFeatureDisabledByPackage('enableDraftInvoice')">
+                          Bật xem hóa đơn nháp
+                          <span *ngIf="isFeatureDisabledByPackage('enableDraftInvoice')" style="color: #52c41a; margin-left: 8px;">
+                            (Tự động bật từ gói đăng ký)
+                          </span>
+                        </label>
+                        <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                          Khi bật, khách sạn có thể xem hóa đơn nháp trước khi xuất hóa đơn chính thức.
+                          Nếu gói đăng ký có tính năng Draft invoice, tính năng này sẽ tự động được bật.
+                        </div>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+                  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enableExportInvoice" [nzDisabled]="isFeatureDisabledByPackage('enableExportInvoice')">
+                          Bật xuất hóa đơn
+                          <span *ngIf="isFeatureDisabledByPackage('enableExportInvoice')" style="color: #52c41a; margin-left: 8px;">
+                            (Tự động bật từ gói đăng ký)
+                          </span>
+                        </label>
+                        <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                          Khi bật, khách sạn có thể xuất hóa đơn ra file PDF hoặc các định dạng khác.
+                          Nếu gói đăng ký có tính năng Export invoice, tính năng này sẽ tự động được bật.
+                        </div>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+                  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enableAiChatbox" [nzDisabled]="isFeatureDisabledByPackage('enableAiChatbox')">
+                          Bật AI Chatbox
+                          <span *ngIf="isFeatureDisabledByPackage('enableAiChatbox')" style="color: #52c41a; margin-left: 8px;">
+                            (Tự động bật từ gói đăng ký)
+                          </span>
+                        </label>
+                        <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                          Khi bật, khách sạn có thể sử dụng trợ lý AI để hỗ trợ và trả lời câu hỏi.
+                          Nếu gói đăng ký có tính năng AI Chatbox, tính năng này sẽ tự động được bật.
+                        </div>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div style="margin-top: 24px; text-align: right;">
+                  <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelFeaturesSettings()">
+                    Lưu cài đặt tính năng
+                  </button>
+                </div>
+              </form>
+
+              <!-- Thông báo khách sạn -->
+              <form nz-form [formGroup]="hotelNotificationForm" nzLayout="vertical" style="margin-top: 16px;">
+                <nz-divider nzText="Thông báo Tại Khách sạn"></nz-divider>
+
+                <div nz-row [nzGutter]="16">
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enableEmailNotifications">Thông báo Email</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enableSMSNotifications">Thông báo SMS</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enablePushNotifications">Thông báo Push</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <nz-divider nzText="Loa thông báo thanh toán"></nz-divider>
+
+                <div nz-row [nzGutter]="16">
+                  <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="enablePaymentSpeaker">
+                          Bật loa thông báo khi SePay báo thanh toán thành công
+                        </label>
+                        <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                          Khi bật, màn hình `room` sẽ phát loa ngay khi backend nhận webhook SePay thanh toán thành công cho khách sạn này.
+                          Màn `bank-transfer-history` cũng sẽ dùng chung cài đặt này.
+                        </div>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <nz-divider nzText="Loại thông báo"></nz-divider>
+
+                <div nz-row [nzGutter]="16">
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="notifyOnBooking">Thông báo khi có đặt phòng</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="notifyOnCheckin">Thông báo khi check-in</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="notifyOnCheckout">Thông báo khi check-out</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="notifyOnPayment">Thông báo khi thanh toán</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="notifyOnCancellation">Thông báo khi hủy đặt phòng</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="notifyOnLowInventory">Thông báo khi hết hàng</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                    <nz-form-item>
+                      <nz-form-control>
+                        <label nz-checkbox formControlName="notifyOnSystemError">Thông báo lỗi hệ thống</label>
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div nz-row [nzGutter]="16" style="margin-top: 16px;">
+                  <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
+                    <nz-form-item>
+                      <nz-form-label>Email nhận thông báo</nz-form-label>
+                      <nz-form-control nzErrorTip="Email không hợp lệ!">
+                        <input nz-input formControlName="notificationEmail" type="email" placeholder="admin@example.com" />
+                      </nz-form-control>
+                    </nz-form-item>
+                  </div>
+                </div>
+
+                <div style="margin-top: 24px; text-align: right;">
+                  <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelNotificationSettings()">
+                    Lưu cài đặt thông báo
                   </button>
                 </div>
               </form>
@@ -729,230 +1057,18 @@
             <div *ngIf="!loadingHotels && hotels.length === 0" style="text-align: center; padding: 40px;">
               <nz-empty nzNotFoundContent="Chưa có khách sạn nào"></nz-empty>
             </div>
-          </div>
+          </ng-container>
 
-          <div style="margin-top: 24px; text-align: right;">
-            <button nz-button nzType="default" (click)="resetForm(paymentForm)" style="margin-right: 8px;">
-              Khôi phục mặc định
-            </button>
-            <button nz-button nzType="primary" [nzLoading]="saving" (click)="savePaymentSettings()">
-              Lưu cài đặt
-            </button>
-          </div>
-        </form>
-      </nz-tab>
-
-      <!-- Tab 5: Cài đặt Tính năng Khách sạn -->
-      <nz-tab nzTitle="Tính năng Khách sạn" nzIcon="appstore" *ngIf="canManageHotelSettings()">
-        <div style="margin-top: 16px;">
-          <nz-alert 
-            nzType="info" 
-            nzMessage="Cài đặt tính năng cho từng khách sạn" 
-            nzDescription="Bật/tắt các tính năng quản lý OTA, Email và Điện cho từng khách sạn. Nếu gói đăng ký có tính năng tương ứng, sẽ tự động bật."
-            style="margin-bottom: 16px;">
-          </nz-alert>
-
-          <div *ngIf="loadingHotels" style="text-align: center; padding: 20px;">
-            <nz-spin nzSize="large"></nz-spin>
-          </div>
-
-          <div *ngIf="!loadingHotels && hotels.length > 0">
-            <nz-form-item>
-              <nz-form-label>Chọn khách sạn</nz-form-label>
-              <nz-form-control>
-                <nz-select 
-                  [(ngModel)]="selectedHotelId" 
-                  (ngModelChange)="onHotelChange($event)"
-                  nzPlaceHolder="Chọn khách sạn"
-                  style="width: 100%;">
-                  <nz-option 
-                    *ngFor="let hotel of hotels" 
-                    [nzValue]="hotel._id" 
-                    [nzLabel]="hotel.name">
-                  </nz-option>
-                </nz-select>
-              </nz-form-control>
-            </nz-form-item>
-
-            <form nz-form [formGroup]="hotelFeaturesForm" nzLayout="vertical" style="margin-top: 16px;">
-              <div style="margin-bottom: 16px; text-align: right;">
-                <button nz-button nzType="default" (click)="toggleAllFeatures(true)" style="margin-right: 8px;">
-                  Bật tất cả
-                </button>
-                <button nz-button nzType="default" (click)="toggleAllFeatures(false)">
-                  Tắt tất cả
-                </button>
-              </div>
-              <nz-divider nzText="Cài đặt tính năng"></nz-divider>
-
-              <div nz-row [nzGutter]="16">
-                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enableOTAManagement" [nzDisabled]="isFeatureDisabledByPackage('enableOTAManagement')">
-                        Bật quản lý OTA
-                        <span *ngIf="isFeatureDisabledByPackage('enableOTAManagement')" style="color: #52c41a; margin-left: 8px;">
-                          (Tự động bật từ gói đăng ký)
-                        </span>
-                      </label>
-                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
-                        Khi bật, khách sạn có thể quản lý tích hợp với các kênh OTA (Booking.com, Agoda, v.v.).
-                        Nếu gói đăng ký có tính năng OTA management, tính năng này sẽ tự động được bật.
-                      </div>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enableEmailManagement" [nzDisabled]="isFeatureDisabledByPackage('enableEmailManagement')">
-                        Bật quản lý email
-                        <span *ngIf="isFeatureDisabledByPackage('enableEmailManagement')" style="color: #52c41a; margin-left: 8px;">
-                          (Tự động bật từ gói đăng ký)
-                        </span>
-                      </label>
-                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
-                        Khi bật, khách sạn có thể quản lý cấu hình email và gửi email.
-                        Nếu gói đăng ký có tính năng Email management, tính năng này sẽ tự động được bật.
-                      </div>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enableElectricManagement" [nzDisabled]="isFeatureDisabledByPackage('enableElectricManagement')">
-                        Bật quản lý điện
-                        <span *ngIf="isFeatureDisabledByPackage('enableElectricManagement')" style="color: #52c41a; margin-left: 8px;">
-                          (Tự động bật từ gói đăng ký)
-                        </span>
-                      </label>
-                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
-                        Khi bật, khách sạn có thể quản lý cài đặt và theo dõi điện năng tiêu thụ.
-                        Nếu gói đăng ký có tính năng Electric management, tính năng này sẽ tự động được bật.
-                      </div>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enablePayPalPayment" [nzDisabled]="isFeatureDisabledByPackage('enablePayPalPayment')">
-                        Bật thanh toán PayPal
-                        <span *ngIf="isFeatureDisabledByPackage('enablePayPalPayment')" style="color: #52c41a; margin-left: 8px;">
-                          (Tự động bật từ gói đăng ký)
-                        </span>
-                      </label>
-                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
-                        Khi bật, khách sạn có thể sử dụng PayPal để thanh toán.
-                        Nếu gói đăng ký có tính năng PayPal payment, tính năng này sẽ tự động được bật.
-                      </div>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enableCryptoPayment" [nzDisabled]="isFeatureDisabledByPackage('enableCryptoPayment')">
-                        Bật thanh toán Crypto
-                        <span *ngIf="isFeatureDisabledByPackage('enableCryptoPayment')" style="color: #52c41a; margin-left: 8px;">
-                          (Tự động bật từ gói đăng ký)
-                        </span>
-                      </label>
-                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
-                        Khi bật, khách sạn có thể sử dụng tiền điện tử (Bitcoin, Ethereum, USDT, v.v.) để thanh toán.
-                        Nếu gói đăng ký có tính năng Crypto payment, tính năng này sẽ tự động được bật.
-                      </div>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enableDraftInvoice" [nzDisabled]="isFeatureDisabledByPackage('enableDraftInvoice')">
-                        Bật xem hóa đơn nháp
-                        <span *ngIf="isFeatureDisabledByPackage('enableDraftInvoice')" style="color: #52c41a; margin-left: 8px;">
-                          (Tự động bật từ gói đăng ký)
-                        </span>
-                      </label>
-                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
-                        Khi bật, khách sạn có thể xem hóa đơn nháp trước khi xuất hóa đơn chính thức.
-                        Nếu gói đăng ký có tính năng Draft invoice, tính năng này sẽ tự động được bật.
-                      </div>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enableExportInvoice" [nzDisabled]="isFeatureDisabledByPackage('enableExportInvoice')">
-                        Bật xuất hóa đơn
-                        <span *ngIf="isFeatureDisabledByPackage('enableExportInvoice')" style="color: #52c41a; margin-left: 8px;">
-                          (Tự động bật từ gói đăng ký)
-                        </span>
-                      </label>
-                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
-                        Khi bật, khách sạn có thể xuất hóa đơn ra file PDF hoặc các định dạng khác.
-                        Nếu gói đăng ký có tính năng Export invoice, tính năng này sẽ tự động được bật.
-                      </div>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-                <div nz-col [nzXs]="24" [nzSm]="24" [nzMd]="24" [nzLg]="24">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enableAiChatbox" [nzDisabled]="isFeatureDisabledByPackage('enableAiChatbox')">
-                        Bật AI Chatbox
-                        <span *ngIf="isFeatureDisabledByPackage('enableAiChatbox')" style="color: #52c41a; margin-left: 8px;">
-                          (Tự động bật từ gói đăng ký)
-                        </span>
-                      </label>
-                      <div style="margin-top: 8px; color: #666; font-size: 12px;">
-                        Khi bật, khách sạn có thể sử dụng trợ lý AI để hỗ trợ và trả lời câu hỏi.
-                        Nếu gói đăng ký có tính năng AI Chatbox, tính năng này sẽ tự động được bật.
-                      </div>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div style="margin-top: 24px; text-align: right;">
-                <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelFeaturesSettings()">
-                  Lưu cài đặt
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <div *ngIf="!loadingHotels && hotels.length === 0" style="text-align: center; padding: 40px;">
-            <nz-empty nzNotFoundContent="Chưa có khách sạn nào"></nz-empty>
-          </div>
+          <ng-template #readonlyHotelSettings>
+            <nz-card [nzBordered]="false">
+              <nz-empty nzNotFoundContent="Tài khoản hiện tại không có quyền chỉnh sửa cài đặt khách sạn"></nz-empty>
+            </nz-card>
+          </ng-template>
         </div>
       </nz-tab>
 
-      <!-- Tab 6: Cài đặt Thông báo -->
-      <nz-tab nzTitle="Cài đặt Thông báo" nzIcon="bell">
+      <!-- Tab 5: Cài đặt Thông báo chung - quản trị -->
+      <nz-tab *ngIf="isManagementGroup()" nzTitle="Cài đặt Thông báo" nzIcon="bell">
         <form nz-form [formGroup]="notificationForm" nzLayout="vertical" style="margin-top: 16px;">
           <nz-divider nzText="Bật/Tắt kênh thông báo"></nz-divider>
 
@@ -1054,148 +1170,10 @@
             </button>
           </div>
         </form>
-
-        <!-- Cài đặt thông báo cho từng khách sạn -->
-        <nz-divider nzText="Thông báo Tại Khách Sạn" *ngIf="canManageHotelSettings()"></nz-divider>
-        
-        <div *ngIf="canManageHotelSettings()" style="margin-top: 16px;">
-          <nz-alert 
-            nzType="info" 
-            nzMessage="Cài đặt kênh thông báo cho từng khách sạn" 
-            nzDescription="Cài đặt này sẽ ghi đè cài đặt thông báo chung của hệ thống cho khách sạn được chọn. Nếu không cài đặt, khách sạn sẽ sử dụng cài đặt chung của hệ thống."
-            style="margin-bottom: 16px;">
-          </nz-alert>
-
-          <div *ngIf="loadingHotels" style="text-align: center; padding: 20px;">
-            <nz-spin nzSize="large"></nz-spin>
-          </div>
-
-          <div *ngIf="!loadingHotels && hotels.length > 0">
-            <nz-form-item>
-              <nz-form-label>Chọn khách sạn</nz-form-label>
-              <nz-form-control>
-                <nz-select 
-                  [(ngModel)]="selectedHotelId" 
-                  (ngModelChange)="onHotelChange($event)"
-                  nzPlaceHolder="Chọn khách sạn"
-                  style="width: 100%;">
-                  <nz-option 
-                    *ngFor="let hotel of hotels" 
-                    [nzValue]="hotel._id" 
-                    [nzLabel]="hotel.name">
-                  </nz-option>
-                </nz-select>
-              </nz-form-control>
-            </nz-form-item>
-
-            <form nz-form [formGroup]="hotelNotificationForm" nzLayout="vertical" style="margin-top: 16px;">
-              <nz-divider nzText="Bật/Tắt kênh thông báo"></nz-divider>
-
-              <div nz-row [nzGutter]="16">
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enableEmailNotifications">Thông báo Email</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enableSMSNotifications">Thông báo SMS</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="8">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="enablePushNotifications">Thông báo Push</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <nz-divider nzText="Loại thông báo"></nz-divider>
-
-              <div nz-row [nzGutter]="16">
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="notifyOnBooking">Thông báo khi có đặt phòng</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="notifyOnCheckin">Thông báo khi check-in</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="notifyOnCheckout">Thông báo khi check-out</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="notifyOnPayment">Thông báo khi thanh toán</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="notifyOnCancellation">Thông báo khi hủy đặt phòng</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="notifyOnLowInventory">Thông báo khi hết hàng</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-                  <nz-form-item>
-                    <nz-form-control>
-                      <label nz-checkbox formControlName="notifyOnSystemError">Thông báo lỗi hệ thống</label>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-                <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" [nzLg]="12">
-                  <nz-form-item>
-                    <nz-form-label>Email nhận thông báo</nz-form-label>
-                    <nz-form-control nzErrorTip="Email không hợp lệ!">
-                      <input nz-input formControlName="notificationEmail" type="email" placeholder="admin@example.com" />
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
-
-              <div style="margin-top: 24px; text-align: right;">
-                <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelNotificationSettings()">
-                  Lưu cài đặt
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <div *ngIf="!loadingHotels && hotels.length === 0" style="text-align: center; padding: 40px;">
-            <nz-empty nzNotFoundContent="Chưa có khách sạn nào"></nz-empty>
-          </div>
-        </div>
       </nz-tab>
 
-      <!-- Tab 5: Cài đặt Chung -->
-      <nz-tab nzTitle="Cài đặt Chung" nzIcon="global">
+      <!-- Tab 6: Cài đặt Chung - quản trị -->
+      <nz-tab *ngIf="isManagementGroup()" nzTitle="Cài đặt Chung" nzIcon="global">
         <form nz-form [formGroup]="generalForm" nzLayout="vertical" style="margin-top: 16px;">
           <nz-divider nzText="Thông tin công ty"></nz-divider>
 
@@ -1365,8 +1343,8 @@
         </form>
       </nz-tab>
 
-      <!-- Tab 7: Quản lý Thông báo (Chỉ Superadmin/Admin) -->
-      <nz-tab nzTitle="Quản lý Thông báo" nzIcon="notification" *ngIf="authService.isSuperAdmin() || authService.isAdmin()">
+      <!-- Tab 7: Quản lý Thông báo - quản trị -->
+      <nz-tab *ngIf="isManagementGroup()" nzTitle="Quản lý Thông báo" nzIcon="notification">
         <div style="margin-top: 16px;">
           <div style="margin-bottom: 16px; text-align: right;">
             <button nz-button nzType="primary" (click)="openAnnouncementModal()">
@@ -1375,8 +1353,8 @@
             </button>
           </div>
 
-          <nz-table 
-            [nzData]="announcements" 
+          <nz-table
+            [nzData]="announcements"
             [nzLoading]="loadingAnnouncements"
             [nzShowPagination]="true"
             [nzPageSize]="10">
@@ -1414,28 +1392,14 @@
                   </nz-tag>
                 </td>
                 <td>
-                  <nz-tag [nzColor]="
-                    announcement.notificationType === 'general' ? 'cyan' :
-                    announcement.notificationType === 'booking' ? 'blue' :
-                    announcement.notificationType === 'checkin' ? 'green' :
-                    announcement.notificationType === 'checkout' ? 'orange' :
-                    announcement.notificationType === 'payment' ? 'purple' :
-                    announcement.notificationType === 'cancellation' ? 'red' :
-                    announcement.notificationType === 'lowInventory' ? 'gold' :
-                    announcement.notificationType === 'systemError' ? 'volcano' : 'default'
-                  ">
-                    {{ getNotificationTypeLabel(announcement.notificationType || 'general') }}
-                  </nz-tag>
-                </td>
-                <td>
                   <nz-tag>{{ getTargetTypeLabel(announcement.targetType || 'system') }}</nz-tag>
                   <div *ngIf="announcement.targetBusinesses && announcement.targetBusinesses.length > 0" style="margin-top: 4px; font-size: 12px;">
-                    <span *ngFor="let businessId of announcement.targetBusinesses; let last = last">
+                    <span *ngFor="let businessId of announcement.targetBusinesses; let last = last;">
                       {{ getBusinessName(businessId) }}<span *ngIf="!last">, </span>
                     </span>
                   </div>
                   <div *ngIf="announcement.targetHotels && announcement.targetHotels.length > 0" style="margin-top: 4px; font-size: 12px;">
-                    <span *ngFor="let hotelId of announcement.targetHotels; let last = last">
+                    <span *ngFor="let hotelId of announcement.targetHotels; let last = last;">
                       {{ getHotelName(hotelId) }}<span *ngIf="!last">, </span>
                     </span>
                   </div>
@@ -1450,7 +1414,7 @@
                   <button nz-button nzType="link" nzSize="small" (click)="openAnnouncementModal(announcement)">
                     <i nz-icon nzType="edit" nzTheme="outline"></i>
                   </button>
-                  <nz-popconfirm 
+                  <nz-popconfirm
                     nzTitle="Bạn có chắc muốn xóa thông báo này?"
                     (nzOnConfirm)="deleteAnnouncement(announcement)">
                     <button *nz-popconfirm nz-button nzType="link" nzSize="small" nzDanger>
@@ -1574,13 +1538,13 @@
       <nz-form-item *ngIf="announcementForm.get('targetType')?.value === 'business'">
         <nz-form-label>Chọn doanh nghiệp</nz-form-label>
         <nz-form-control>
-          <nz-select 
-            formControlName="targetBusinesses" 
+          <nz-select
+            formControlName="targetBusinesses"
             nzMode="multiple"
             nzPlaceHolder="Chọn doanh nghiệp">
-            <nz-option 
-              *ngFor="let business of businesses" 
-              [nzValue]="business._id" 
+            <nz-option
+              *ngFor="let business of businesses"
+              [nzValue]="business._id"
               [nzLabel]="business.name">
             </nz-option>
           </nz-select>
@@ -1590,13 +1554,13 @@
       <nz-form-item *ngIf="announcementForm.get('targetType')?.value === 'hotel'">
         <nz-form-label>Chọn khách sạn</nz-form-label>
         <nz-form-control>
-          <nz-select 
-            formControlName="targetHotels" 
+          <nz-select
+            formControlName="targetHotels"
             nzMode="multiple"
             nzPlaceHolder="Chọn khách sạn">
-            <nz-option 
-              *ngFor="let hotel of hotels" 
-              [nzValue]="hotel._id" 
+            <nz-option
+              *ngFor="let hotel of hotels"
+              [nzValue]="hotel._id"
               [nzLabel]="hotel.name">
             </nz-option>
           </nz-select>
@@ -1606,8 +1570,8 @@
       <nz-form-item>
         <nz-form-label>Vai trò nhận thông báo</nz-form-label>
         <nz-form-control>
-          <nz-select 
-            formControlName="targetRoles" 
+          <nz-select
+            formControlName="targetRoles"
             nzMode="multiple"
             nzPlaceHolder="Để trống = Tất cả vai trò">
             <nz-option nzValue="superadmin" nzLabel="Superadmin"></nz-option>
@@ -1627,4 +1591,3 @@
     </form>
   </div>
 </nz-modal>
-

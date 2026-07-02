@@ -232,6 +232,7 @@ export class SettingsComponent implements OnInit {
       enableEmailNotifications: [true],
       enableSMSNotifications: [false],
       enablePushNotifications: [true],
+      enablePaymentSpeaker: [false],
       notifyOnBooking: [true],
       notifyOnCheckin: [true],
       notifyOnCheckout: [true],
@@ -1085,6 +1086,12 @@ export class SettingsComponent implements OnInit {
         this.saving = false;
         this.message.success(response.message || 'Đã lưu cài đặt thông báo cho khách sạn');
         this.currentHotelSettings = response.settings || {};
+        window.dispatchEvent(new CustomEvent('hotelPaymentSpeakerChanged', {
+          detail: {
+            hotelId: this.selectedHotelId,
+            enabled: !!this.hotelNotificationForm.value.enablePaymentSpeaker
+          }
+        }));
       },
       error: (error) => {
         this.saving = false;
@@ -1098,6 +1105,37 @@ export class SettingsComponent implements OnInit {
            this.authService.isAdmin() || 
            this.authService.isBusiness() || 
            this.authService.isHotelManager();
+  }
+
+  isManagementGroup(): boolean {
+    return this.authService.isSuperAdmin() || this.authService.isAdmin();
+  }
+
+  isUserGroup(): boolean {
+    return this.authService.isBusiness() ||
+           this.authService.isHotelManager() ||
+           this.authService.isStaff() ||
+           this.authService.isGuest();
+  }
+
+  isReadOnlyUserGroup(): boolean {
+    return this.authService.isStaff() || this.authService.isGuest();
+  }
+
+  canViewHotelSettingsTab(): boolean {
+    return this.canManageHotelSettings() || this.isReadOnlyUserGroup();
+  }
+
+  getRoleGroupLabel(): string {
+    if (this.isManagementGroup()) {
+      return 'Nhóm quản trị';
+    }
+
+    if (this.isUserGroup()) {
+      return 'Nhóm người dùng';
+    }
+
+    return 'Người dùng';
   }
   
   // ============ ANNOUNCEMENTS MANAGEMENT ============

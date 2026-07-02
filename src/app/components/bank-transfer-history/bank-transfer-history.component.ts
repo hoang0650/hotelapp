@@ -1,5 +1,3 @@
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment'; // Chú ý đường dẫn có thể thay đổi tùy cấu trúc thư mục của bạn
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -11,6 +9,7 @@ import { CryptoService } from '../../services/crypto.service';
 import { SePayService } from '../../services/sepay.service';
 import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
+import { PaymentSpeakerService } from '../../services/payment-speaker.service';
 import { forkJoin } from 'rxjs';
 
 @Component({
@@ -55,6 +54,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   enablePayPalPayment: boolean = false;
   enableCryptoPayment: boolean = false;
   enableSePayPayment: boolean = true; // Mặc định bật SePay
+  enablePaymentSpeaker: boolean = false;
 
   // Định dạng ngày tháng
   dateRange: Date[] = [];
@@ -94,7 +94,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private hotelService: HotelService,
     private message: NzMessageService,
-    private http: HttpClient
+    private paymentSpeakerService: PaymentSpeakerService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -139,8 +139,12 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     this.hotelService.getHotelById(hotelId).subscribe({
       next: (hotel: any) => {
         // Lấy settings từ hotel
-        this.enablePayPalPayment = hotel.enablePayPalPayment || false;
-        this.enableCryptoPayment = hotel.enableCryptoPayment || false;
+        const hotelSettings = hotel?.settings || {};
+        const notificationSettings = hotelSettings?.notificationSettings || {};
+
+        this.enablePayPalPayment = hotelSettings.enablePayPalPayment || hotel.enablePayPalPayment || false;
+        this.enableCryptoPayment = hotelSettings.enableCryptoPayment || hotel.enableCryptoPayment || false;
+        this.enablePaymentSpeaker = !!notificationSettings.enablePaymentSpeaker;
         // SePay mặc định bật, có thể kiểm tra thêm nếu cần
         this.enableSePayPayment = true;
         
@@ -557,8 +561,8 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
                              latestCompleted.amount || 
                              latestCompleted.totalAmount || 0;
                 
-                if (amount > 0) {
-                  this.playPaymentSuccessSound(amount);
+                if (amount > 0 && this.enablePaymentSpeaker) {
+                  this.paymentSpeakerService.playPaymentSuccess(amount);
                 }
                 
                 // Cập nhật lại ID đã phát
@@ -574,52 +578,6 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
         console.error('Error loading SePay payments:', error);
       }
     });
-  }
-
-  /**
-   * Gọi API Text-to-Speech (FPT AI) để đọc số tiền
-   */
-  private playPaymentSuccessSound(amount: number): void {
-    try {
-      const roundedAmount = Math.round(amount);
-      const formattedAmount = roundedAmount.toLocaleString('vi-VN');
-      const message = `Thanh toán thành công số tiền ${formattedAmount} đồng`;
-      console.log('[BankTransferHistory] Phát âm thanh:', message);
-
-      const ttsUrl = `${environment.apiUrl}/sepay/fpt-tts-file?url=` + 
-        encodeURIComponent(`${environment.apiUrl}/sepay/fpt-tts?text=${encodeURIComponent(message)}`);
-
-      // Gọi endpoint /fpt-tts để generate file âm thanh
-      this.http.post<any>(`${environment.apiUrl}/sepay/fpt-tts`, { message: message }).subscribe({
-        next: (res: any) => {
-          if (res && res.async) {
-            // Lấy URL file mp3 từ FPT
-            const fileUrl = `${environment.apiUrl}/sepay/fpt-tts-file?url=${encodeURIComponent(res.async)}`;
-            
-            this.http.get(fileUrl, { responseType: 'blob' as 'json' }).subscribe({
-              next: (audioBlob: any) => {
-                const blob = audioBlob as Blob;
-                const audioUrl = URL.createObjectURL(blob);
-                const audio = new Audio();
-                audio.src = audioUrl;
-                audio.onended = () => URL.revokeObjectURL(audioUrl);
-                audio.onerror = () => URL.revokeObjectURL(audioUrl);
-                const playPromise = audio.play();
-                if (playPromise !== undefined) {
-                  playPromise.catch(error => {
-                    console.error('Lỗi khi autoplay audio (Trình duyệt có thể chặn):', error);
-                  });
-                }
-              },
-              error: (err) => console.error('Lỗi tải file âm thanh:', err)
-            });
-          }
-        },
-        error: (err) => console.error('Lỗi gọi FPT TTS API:', err)
-      });
-    } catch (error) {
-      console.error('Lỗi trong luồng phát âm thanh:', error);
-    }
   }
 
   /**

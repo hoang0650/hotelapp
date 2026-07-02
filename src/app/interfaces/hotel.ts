@@ -23,6 +23,7 @@ export interface HotelNotificationSettings {
   enableEmailNotifications?: boolean;
   enableSMSNotifications?: boolean;
   enablePushNotifications?: boolean;
+  enablePaymentSpeaker?: boolean;
   notifyOnBooking?: boolean;
   notifyOnCheckin?: boolean;
   notifyOnCheckout?: boolean;

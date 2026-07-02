@@ -23,6 +23,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { CurrencyService } from '../../services/currency.service';
 import { RoomSessionService } from '../../services/room-session.service';
 import { ApiService } from '../../services/api.service';
+import { PaymentSpeakerService } from '../../services/payment-speaker.service';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 
@@ -114,6 +115,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   private roomsSocket: Socket | null = null;
   private roomsSocketConnected = false;
   private roomsSocketHotelId: string | null = null;
+  private paymentSpeakerEnabled = false;
+  private lastPaymentSpeakerEventKey: string | null = null;
 
   roomStatusDisplayOptions: { value: RoomStatus, label: string, color: string }[] = [
     { value: 'vacant', label: '', color: 'green' }, // Label sẽ được translate trong getRoomStatusLabelAndColor
@@ -139,7 +142,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     private translate: TranslateService,
     private currencyService: CurrencyService,
     private roomSessionService: RoomSessionService,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private paymentSpeakerService: PaymentSpeakerService
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
       if (this.selectedHotelId) {
@@ -190,6 +194,12 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     }
 
+    // Ưu tiên tải ngay sơ đồ phòng theo hotel hiện tại để sau login hiển thị nhanh hơn,
+    // không phải đợi fetch xong danh sách khách sạn mới bắt đầu render phòng.
+    if (this.selectedHotelId) {
+      this.onHotelChange(this.selectedHotelId);
+    }
+
     this.loadHotels();
     const currentUser = this.authService.getCurrentUser();
     const userId = currentUser?._id;
@@ -198,8 +208,17 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.apiService.getSelectedHotel(userId).subscribe({
         next: (res) => {
           if (res?.selectedHotelId) {
-            this.selectedHotelId = res.selectedHotelId;
-            this.roomSessionService.setHotelId(res.selectedHotelId);
+            const resolvedHotelId = res.selectedHotelId;
+            const previousHotelId = this.selectedHotelId;
+            this.selectedHotelId = resolvedHotelId;
+            this.roomSessionService.setHotelId(resolvedHotelId);
+
+            if (
+              previousHotelId !== resolvedHotelId ||
+              (!this.isRoomsLoading && (this.lastLoadedHotelId !== resolvedHotelId || this.rooms.length === 0))
+            ) {
+              this.onHotelChange(resolvedHotelId);
+            }
           }
         },
         error: () => {}
@@ -210,8 +229,6 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.roomSessionService.setHotelId(this.selectedHotelId);
       }
     }
-
-    this.loadHotels();
 
     if (userId) {
       this.apiService.getRoomColumnsCount(userId).subscribe({
@@ -696,7 +713,9 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.hotels = data.filter(hotel => this.extractId(hotel._id) === userHotelId);
           if (this.hotels.length > 0) {
             this.selectedHotelId = userHotelId;
-            this.onHotelChange(this.selectedHotelId);
+            if (this.lastLoadedHotelId !== userHotelId && !this.isRoomsLoading) {
+              this.onHotelChange(this.selectedHotelId);
+            }
           } else {
             this.selectedHotelId = null;
             this.rooms = [];
@@ -715,17 +734,21 @@ export class RoomComponent implements OnInit, OnDestroy {
       
       // 2. Logic ưu tiên LocalStorage cho Admin/Business
       if (this.hotels.length > 0 && !this.authService.isStaff() && !this.authService.isHotelManager()) {
-        const storedHotelId = this.hotelService.getStoredHotelId();
-        const hotelExists = storedHotelId ? this.hotels.some(h => this.extractId(h._id) === storedHotelId) : false;
+        const preferredHotelId = this.selectedHotelId || this.hotelService.getStoredHotelId();
+        const hotelExists = preferredHotelId ? this.hotels.some(h => this.extractId(h._id) === preferredHotelId) : false;
 
-        if (hotelExists && storedHotelId) {
+        if (hotelExists && preferredHotelId) {
           // 👉 LẦN SAU: Có trong LocalStorage thì sử dụng ngay
-          this.selectedHotelId = storedHotelId;
-          this.onHotelChange(this.selectedHotelId);
+          this.selectedHotelId = preferredHotelId;
+          if (this.lastLoadedHotelId !== preferredHotelId && !this.isRoomsLoading) {
+            this.onHotelChange(this.selectedHotelId);
+          }
         } else {
           // 👉 LẦN ĐẦU (hoặc LocalStorage trống): Lấy mặc định cái đầu tiên từ Service
           this.selectedHotelId = this.hotels[0]._id!;
-          this.onHotelChange(this.selectedHotelId);
+          if (this.lastLoadedHotelId !== this.selectedHotelId && !this.isRoomsLoading) {
+            this.onHotelChange(this.selectedHotelId);
+          }
         }
       } else if (this.hotels.length === 0) {
         if (!this.authService.isStaff() && !this.authService.isHotelManager()) {
@@ -853,6 +876,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
 
     this.roomSessionService.setHotelId(hotelId);
+    this.loadPaymentSpeakerSetting(hotelId);
 
     const storedFloor = this.hotelService.getStoredFloor();
     if (storedFloor) {
@@ -969,6 +993,10 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.refreshRoomsLiteRealtime();
       }
     });
+
+    this.roomsSocket.on('payment_received', (payload: any) => {
+      this.handleRealtimePaymentReceived(payload);
+    });
   }
 
   private stopRoomsSocketRealtime(): void {
@@ -977,6 +1005,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.roomsSocket.off('connect');
         this.roomsSocket.off('disconnect');
         this.roomsSocket.off('rooms_updated');
+        this.roomsSocket.off('payment_received');
         this.roomsSocket.disconnect();
       } catch (_e) {}
     }
@@ -996,6 +1025,57 @@ export class RoomComponent implements OnInit, OnDestroy {
       })
       .sort();
     return parts.join('|');
+  }
+
+  private loadPaymentSpeakerSetting(hotelId: string): void {
+    if (!hotelId) {
+      this.paymentSpeakerEnabled = false;
+      return;
+    }
+
+    this.hotelService.getHotelById(hotelId).subscribe({
+      next: (hotel) => {
+        this.paymentSpeakerEnabled = !!hotel?.settings?.notificationSettings?.enablePaymentSpeaker;
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.paymentSpeakerEnabled = false;
+        console.error('Error loading payment speaker setting:', error);
+      }
+    });
+  }
+
+  private handleRealtimePaymentReceived(payload: any): void {
+    const hotelId = String(payload?.hotelId || '').trim();
+    if (!hotelId || !this.selectedHotelId) {
+      return;
+    }
+
+    if (hotelId !== String(this.selectedHotelId)) {
+      return;
+    }
+
+    if (!this.paymentSpeakerEnabled) {
+      return;
+    }
+
+    const eventKey = String(
+      payload?.paymentHistoryId ||
+      payload?.transactionId ||
+      payload?.id ||
+      `${hotelId}_${payload?.amount || 0}_${payload?.roomId || ''}`
+    );
+
+    if (eventKey && this.lastPaymentSpeakerEventKey === eventKey) {
+      return;
+    }
+
+    this.lastPaymentSpeakerEventKey = eventKey;
+
+    const amount = Number(payload?.amount || 0);
+    if (amount > 0) {
+      this.paymentSpeakerService.playPaymentSuccess(amount);
+    }
   }
 
   private refreshRoomsLiteRealtime(): void {
