@@ -59,19 +59,11 @@ export class LoginComponent implements OnInit {
   }
 
   /**
-   * Thay vì dùng Router ảo, sử dụng Hard Redirect để ép PermissionGuard 
-   * và Layout Admin khởi động lại với thông tin User mới nhất.
+   * Hard Redirect lập tức đến trang quản lý phòng
    */
   private executeFastRedirect(): void {
     if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-
-      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('admin.')) {
-        // Ép tải lại trang đích để làm sạch trạng thái
-        window.location.href = '/admin/room';
-      } else {
-        window.location.href = 'https://admin.phhotel.vn/admin/room';
-      }
+      window.location.href = 'https://admin.phhotel.vn/admin/room';
     }
   }
 

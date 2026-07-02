@@ -754,15 +754,20 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.roomsService.getRooms(params).subscribe({
       next: (data) => {
-        this.rooms = data || [];
-        
-        // Tính toán chia phòng theo tầng...
-        this.rebuildDisplayRooms(); 
+        this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(data || []);
+        this.lastLoadedHotelId = this.selectedHotelId;
+        this.updateFloorsFromRooms();
+        this.updateCachedRoomCounts();
         
         this.isRoomsLoading = false;
         
         // 🔥 CHÍ MẠNG: Ép Angular vẽ ngay sơ đồ phòng lên màn hình, không đợi click!
-        this.cdr.detectChanges(); 
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+          this.loadEventsForOccupiedRooms(false);
+          this.prefetchRoomPricesForOccupiedRooms();
+        }, 0);
       },
       error: (err) => {
         this.isRoomsLoading = false;
@@ -773,10 +778,27 @@ export class RoomComponent implements OnInit, OnDestroy {
 
 
   
-  private hasRealEvents(room: Room): boolean {
+  private hasRenderableOccupiedData(room: Room): boolean {
+    if (!room || room.status !== 'occupied') {
+      return false;
+    }
+
     const events = (room as any)?.events;
-    if (!events || !Array.isArray(events) || events.length === 0) return false;
-    return !events.some((e: any) => e && e.__synthetic === true);
+    if (Array.isArray(events) && events.length > 0) {
+      return true;
+    }
+
+    if (room.currentBooking && typeof room.currentBooking === 'object') {
+      return true;
+    }
+
+    const roomId = room._id?.toString() || '';
+    if (!roomId) {
+      return false;
+    }
+
+    const session = this.roomSessionService.getSession(roomId);
+    return !!session?.checkinTime;
   }
 
   // Load danh sách bookings
@@ -996,7 +1018,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           if (id) existingById.set(id, r);
         });
         
-        const merged: Room[] = incomingRooms.map((r) => {
+        const mergedBase: Room[] = incomingRooms.map((r) => {
           const id = this.extractId((r as any)?._id);
           const existing = id ? existingById.get(id) : undefined;
           const nextRoom: any = { ...(existing || {}), ...(r as any) };
@@ -1010,6 +1032,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           
           return nextRoom as Room;
         });
+        const merged = this.hydrateSyntheticEventsFromCurrentBooking(mergedBase);
         
         const snapshotKey = this.buildRoomsSnapshotKey(merged);
         if (this.realtimeLastSnapshotKey !== snapshotKey) {
@@ -1938,7 +1961,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (room.status !== 'occupied') {
       return null;
     }
-    if (!this.hasRealEvents(room)) {
+    if (!this.hasRenderableOccupiedData(room)) {
       return null;
     }
     const checkinInfo = this.getRoomCheckinInfo(room);
@@ -2199,6 +2222,8 @@ export class RoomComponent implements OnInit, OnDestroy {
             }
           }
         });
+        this.rebuildDisplayRooms();
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading events for occupied rooms:', error);
@@ -2852,7 +2877,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Lấy nguồn khách từ phòng
   getRoomGuestSource(room: Room): string {
     if (room.status !== 'occupied') return 'walkin';
-    if (!this.hasRealEvents(room)) return '';
+    if (!this.hasRenderableOccupiedData(room)) return '';
     
     const checkinInfo = this.getRoomCheckinInfo(room);
     if (checkinInfo?.guestSource) {
@@ -2878,7 +2903,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (room.status !== 'occupied') {
       return '';
     }
-    if (!this.hasRealEvents(room)) {
+    if (!this.hasRenderableOccupiedData(room)) {
       return '';
     }
 
@@ -3170,13 +3195,19 @@ export class RoomComponent implements OnInit, OnDestroy {
       next: (updatedRoom) => {
         const index = this.rooms.findIndex(r => r._id === roomId);
         if (index !== -1) {
+          const hydratedRoom = this.hydrateSyntheticEventsFromCurrentBooking([updatedRoom])[0] || updatedRoom;
           // 1. GHI ĐÈ THUỘC TÍNH (Mutation) thay vì gán mới toàn bộ object
           // Kỹ thuật này giúp Angular không render lại toàn bộ thẻ HTML gây chớp
-          Object.assign(this.rooms[index], updatedRoom);
+          Object.assign(this.rooms[index], hydratedRoom);
           
           // 2. Xử lý logic riêng cho phòng đang có khách (Cập nhật thời gian, giá tiền)
-          if (this.rooms[index].status === 'occupied') {
-            this.roomsService.getRoomEvents(roomId, { limit: 10, type: 'checkin', excludeCheckedOut: true })
+          if (this.rooms[index].status === 'occupied' || this.rooms[index].status === 'booked') {
+            const eventType = this.rooms[index].status === 'occupied' ? 'checkin' : 'booking';
+            this.roomsService.getRoomEvents(roomId, {
+              limit: 10,
+              type: eventType,
+              excludeCheckedOut: this.rooms[index].status === 'occupied'
+            })
               .subscribe(events => {
                 // Lọc và gán đúng event của phòng này
                 const filteredEvents = events.filter(e => !e.roomId || e.roomId.toString() === roomId);
@@ -3192,6 +3223,7 @@ export class RoomComponent implements OnInit, OnDestroy {
                 if (checkinEvent) {
                   this.loadRoomPriceFromAPI(this.rooms[index], checkinEvent, true);
                 }
+                this.rebuildDisplayRooms();
                 this.cdr.detectChanges();
               });
           } else {
@@ -3202,6 +3234,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
           // 3. Cập nhật lại các con số thống kê trên banner (Trống, Đang ở, Bẩn...)
           this.updateCachedRoomCounts();
+          this.rebuildDisplayRooms();
           
           // 4. Báo cho Angular biết để vẽ lại UI
           this.cdr.detectChanges();
