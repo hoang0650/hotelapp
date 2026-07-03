@@ -188,14 +188,39 @@
   display: block;
   border: 1px solid #e6f7ff;
 }
-.file-link {
+.file-card-link {
+  display: block;
+  text-decoration: none;
+  margin-top: 10px;
+}
+.file-card {
+  border: 1px solid #d6e4ff;
+  background: #f8fbff;
+  border-radius: 12px;
+  padding: 12px;
+}
+.file-card-header {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  margin-bottom: 6px;
   color: #1890ff;
+}
+.file-card-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+.file-card-name {
   font-size: 14px;
-  margin: 4px 0;
-  text-decoration: underline;
+  color: #222;
+  font-weight: 500;
+  word-break: break-word;
+}
+.file-card-action {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #1890ff;
+  font-weight: 600;
 }
 .ai-chatbox-input {
   display: flex;
@@ -214,6 +239,24 @@
 }
 .quick-action-btn {
   border-radius: 14px;
+}
+.ai-chatbox-export-actions {
+  padding-top: 8px;
+  border-top: none;
+}
+.export-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0f7ff;
+  border-color: #bfdbfe;
+  color: #1890ff;
+}
+.export-action-btn:hover,
+.export-action-btn:focus {
+  color: #1890ff;
+  border-color: #91caff;
+  background: #e6f4ff;
 }
 .ai-chatbox-typing {
   padding: 12px;

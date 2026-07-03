@@ -49,6 +49,15 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     { label: 'Doanh thu tháng này', query: 'Doanh thu tháng này' },
     { label: 'Doanh thu năm nay', query: 'Doanh thu năm nay' }
   ];
+  exportQuickActions = [
+    { label: 'Xuất Excel', query: 'Xuất file Excel báo cáo doanh thu tháng này' },
+    { label: 'Xuất Word', query: 'Xuất file Word báo cáo doanh thu tháng này' },
+    { label: 'Xuất PDF', query: 'Xuất file PDF báo cáo doanh thu tháng này' }
+  ];
+  webQuickActions = [
+    { label: 'Tóm tắt web', query: 'Tóm tắt nội dung link web này: https://vnexpress.net/' },
+    { label: 'Tin tức mới', query: 'Tìm tin tức mới nhất về du lịch Việt Nam hôm nay và tóm tắt ngắn gọn' }
+  ];
   
   // Kiểm tra tính năng AI Chatbox
   canUseAiChatbox: boolean = true; // Mặc định cho phép
@@ -413,6 +422,22 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       return;
     }
     await this.aiService.sendMessageExternal(message, tenantId);
+  }
+
+  getFileDisplayName(msg: ChatMessage): string {
+    if (!msg.fileUrl) return 'AI generated file';
+    return msg.fileUrl.split('/').pop() || 'AI generated file';
+  }
+
+  getFileIconType(msg: ChatMessage): string {
+    const fileType = (msg.fileType || '').toLowerCase();
+    if (fileType.includes('sheet') || fileType.includes('xlsx')) {
+      return 'file-excel';
+    }
+    if (fileType.includes('word') || fileType.includes('doc')) {
+      return 'file-word';
+    }
+    return 'file-pdf';
   }
 
   toggleMinimize() {

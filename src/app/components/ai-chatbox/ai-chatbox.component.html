@@ -58,7 +58,16 @@
             <div class="msg-content markdown-content" [innerHTML]="msg.content | markdown"></div>
             <ng-container *ngIf="msg.fileUrl">
               <img *ngIf="msg.fileType?.startsWith('image')" [src]="msg.fileUrl" class="chat-img-in-bubble" [alt]="'AI_CHATBOX.ATTACHED_IMAGE' | translate" />
-              <a *ngIf="!msg.fileType?.startsWith('image')" [href]="msg.fileUrl" target="_blank" class="file-link"><i nz-icon nzType="file" nzTheme="outline"></i> {{msg.fileUrl.split('/').pop()}}</a>
+              <a *ngIf="!msg.fileType?.startsWith('image')" [href]="msg.fileUrl" target="_blank" class="file-card-link">
+                <div class="file-card">
+                  <div class="file-card-header">
+                    <i nz-icon [nzType]="getFileIconType(msg)" nzTheme="outline"></i>
+                    <span class="file-card-title">File AI tạo</span>
+                  </div>
+                  <div class="file-card-name">{{ getFileDisplayName(msg) }}</div>
+                  <div class="file-card-action">Mở file</div>
+                </div>
+              </a>
             </ng-container>
             <div class="msg-time">{{msg.timestamp | date:'shortTime'}}</div>
           </div>
@@ -93,6 +102,34 @@
         [disabled]="isTyping"
       >
         {{ action.label }}
+      </button>
+    </div>
+    <div class="ai-chatbox-quick-actions ai-chatbox-export-actions" *ngIf="canAskRevenue">
+      <button
+        nz-button
+        nzSize="small"
+        nzType="default"
+        class="quick-action-btn export-action-btn"
+        *ngFor="let action of exportQuickActions"
+        (click)="sendQuickMessage(action.query)"
+        [disabled]="isTyping"
+      >
+        <i nz-icon nzType="download" nzTheme="outline"></i>
+        <span>{{ action.label }}</span>
+      </button>
+    </div>
+    <div class="ai-chatbox-quick-actions ai-chatbox-export-actions">
+      <button
+        nz-button
+        nzSize="small"
+        nzType="default"
+        class="quick-action-btn export-action-btn"
+        *ngFor="let action of webQuickActions"
+        (click)="sendQuickMessage(action.query)"
+        [disabled]="isTyping"
+      >
+        <i nz-icon nzType="global" nzTheme="outline"></i>
+        <span>{{ action.label }}</span>
       </button>
     </div>
     <div class="ai-chatbox-input">
