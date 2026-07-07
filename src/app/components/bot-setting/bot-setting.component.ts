@@ -6,6 +6,7 @@ import { HotelService } from '../../services/hotel.service';
 import { RoomsService } from '../../services/rooms.service';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { take } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { Router } from '@angular/router';
 
@@ -270,6 +271,7 @@ export class BotSettingComponent implements OnInit {
 
   async saveSettings(): Promise<void> {
     if (this.form.invalid) {
+      this.form.markAllAsTouched();
       this.msg.warning(this.translate.instant('Vui lòng điền đủ thông tin bắt buộc'));
       return;
     }
@@ -283,8 +285,13 @@ export class BotSettingComponent implements OnInit {
     try {
       const val = this.form.value;
       const botContext = this.buildBotContext(val);
-      await this.hotelService.updateHotelSettings(hotelId, { enableAiChatbox: true, botContext }).pipe(take(1)).toPromise();
-      this.msg.success(this.translate.instant('Đã lưu cấu hình bot'));
+      await firstValueFrom(this.hotelService.updateHotelSettings(hotelId, { enableAiChatbox: true, botContext }).pipe(take(1)));
+      try {
+        await this.syncAIContext(hotelId, val, botContext);
+        this.msg.success(this.translate.instant('Đã lưu cấu hình bot và đồng bộ AI'));
+      } catch {
+        this.msg.warning(this.translate.instant('Đã lưu cấu hình bot nhưng đồng bộ AI chưa thành công'));
+      }
     } catch {
       this.msg.error(this.translate.instant('Lưu cấu hình thất bại'));
     } finally {
@@ -310,8 +317,11 @@ export class BotSettingComponent implements OnInit {
       location: [val.location?.street, val.location?.city, val.location?.country].filter(Boolean).join(', '),
       street: val.location?.street || '',
       city: val.location?.city || '',
+      country: val.location?.country || '',
       checkin_time: val.checkin_time,
+      check_in_time: val.checkin_time,
       checkout_time: val.checkout_time,
+      check_out_time: val.checkout_time,
       hotline: val.hotline || '',
       email_support: val.email_support || '',
       bankTransfer: {
@@ -376,12 +386,36 @@ export class BotSettingComponent implements OnInit {
     this.syncing = true;
     try {
       const botContext = this.buildBotContext(val);
-      await this.aiService.uploadDatasetExternal(tenantId, products as any, botContext);
+      await this.syncAIContext(hotelId, val, botContext);
       this.msg.success(this.translate.instant('Đã đồng bộ dữ liệu AI'));
     } catch {
       this.msg.error(this.translate.instant('Đồng bộ AI thất bại'));
     } finally {
       this.syncing = false;
     }
+  }
+
+  private async syncAIContext(hotelId: string, val: any, botContext?: any): Promise<void> {
+    const tenantId = hotelId.toString();
+    const resolvedBotContext = botContext || this.buildBotContext(val);
+    const roomItems = this.toProducts(val).map(p => ({
+      type: 'room',
+      name: p.name,
+      price: p.price,
+      description: [p.description, (p.amenities || []).join(', ')].filter(Boolean).join(' | '),
+      use_case: p.use_case || ''
+    }));
+
+    const qaItems = (val.questions || []).map((q: any) => ({
+      type: 'qa',
+      name: 'Q&A',
+      price: '',
+      description: `Câu hỏi: ${q.question}\nTrả lời: ${q.answer}`,
+      use_case: 'Thông tin chung',
+      question: q.question,
+      answer: q.answer
+    }));
+
+    await this.aiService.uploadDatasetExternal(tenantId, [...roomItems, ...qaItems] as any, resolvedBotContext);
   }
 }
