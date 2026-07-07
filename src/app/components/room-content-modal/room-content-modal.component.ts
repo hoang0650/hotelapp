@@ -88,6 +88,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   private saveTotalPriceTimer?: ReturnType<typeof setTimeout>;
   private destroy$ = new Subject<void>();
   private roomReloadInFlight = false;
+  private servicesLoadedHotelId: string | null = null;
   
   // SePay payment
   showSePayModal = false;
@@ -391,6 +392,30 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         }
       });
   }
+
+  private getResolvedHotelId(): string | null {
+    return this.normalizeObjectId(
+      this.roomData?.hotelId ||
+      this.authService.getHotelId() ||
+      this.currentUser?.hotelId
+    );
+  }
+
+  private mapServiceOption(service: any) {
+    const serviceId = service?._id || service?.id || service?.serviceId;
+    if (!serviceId || !service?.name) {
+      return null;
+    }
+
+    return {
+      id: String(serviceId),
+      name: String(service.name),
+      price: Number(service.price || service.unitPrice || 0),
+      category: service.category || 'custom',
+      description: service.description || ''
+    };
+  }
+
   /**
    * Load thông tin user hiện tại để lấy QR code từ profile
    */
@@ -403,54 +428,80 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: (user) => {
           this.currentUser = user;
+          if (!this.services.length || !this.servicesLoadedHotelId) {
+            this.loadServicesFromAPI(true);
+          }
         }
       });
     }
   }
   
   // Load dịch vụ từ API
-  loadServicesFromAPI(): void {
-    if (this.roomData?.hotelId) {
-      const hotelId = String(this.roomData.hotelId);
-      const cachedServices = RoomContentModalComponent.servicesCache.get(hotelId);
-      if (cachedServices) {
-        this.services = cachedServices;
-        this.cdr.markForCheck();
-      }
-
-      this.serviceService.getAvailableServicesForModal(this.roomData.hotelId).subscribe({
-        next: (response) => {
-          if (response?.data?.services) {
-            this.services = response.data.services.map((s: any) => ({
-              id: s._id,
-              name: s.name,
-              price: s.price,
-              category: s.category,
-              description: s.description
-            }));
-            RoomContentModalComponent.servicesCache.set(hotelId, this.services);
-            this.cdr.markForCheck();
-          }
-        },
-        error: (error) => {
-          console.error('Lỗi khi tải danh sách dịch vụ:', error);
-          // Fallback nếu API lỗi
-          this.serviceService.getServices(this.roomData.hotelId).subscribe({
-            next: (data) => {
-              this.services = data.map((s: any) => ({
-                id: s._id,
-                name: s.name,
-                price: s.price,
-                category: s.category
-              }));
-              RoomContentModalComponent.servicesCache.set(hotelId, this.services);
-              this.cdr.markForCheck();
-            },
-            error: (err) => console.error('Fallback cũng lỗi:', err)
-          });
-        }
-      });
+  loadServicesFromAPI(forceReload: boolean = false): void {
+    const hotelId = this.getResolvedHotelId();
+    if (!hotelId) {
+      this.services = [];
+      this.servicesLoadedHotelId = null;
+      this.cdr.markForCheck();
+      return;
     }
+
+    const cachedServices = RoomContentModalComponent.servicesCache.get(hotelId);
+    if (cachedServices && !forceReload) {
+      this.services = cachedServices;
+      this.servicesLoadedHotelId = hotelId;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.serviceService.getAvailableServicesForModal(hotelId).pipe(
+      take(1),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        const mappedServices = (response?.data?.services || [])
+          .map((service: any) => this.mapServiceOption(service))
+          .filter((service: any) => !!service);
+
+        if (mappedServices.length > 0) {
+          this.services = mappedServices;
+          this.servicesLoadedHotelId = hotelId;
+          RoomContentModalComponent.servicesCache.set(hotelId, mappedServices);
+          this.cdr.markForCheck();
+          return;
+        }
+
+        this.loadServicesFallback(hotelId);
+      },
+      error: (error) => {
+        console.error('Lỗi khi tải danh sách dịch vụ:', error);
+        this.loadServicesFallback(hotelId);
+      }
+    });
+  }
+
+  private loadServicesFallback(hotelId: string): void {
+    this.serviceService.getServices(hotelId).pipe(
+      take(1),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (data) => {
+        const mappedServices = (data || [])
+          .map((service: any) => this.mapServiceOption(service))
+          .filter((service: any) => !!service);
+
+        this.services = mappedServices;
+        this.servicesLoadedHotelId = hotelId;
+        RoomContentModalComponent.servicesCache.set(hotelId, mappedServices);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.services = [];
+        this.servicesLoadedHotelId = hotelId;
+        this.cdr.markForCheck();
+        console.error('Fallback cũng lỗi:', err);
+      }
+    });
   }
   
   ngOnDestroy(): void {
@@ -499,6 +550,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
 
     this.roomData = updatedRoom;
+    const latestHotelId = this.getResolvedHotelId();
+    if (latestHotelId && latestHotelId !== this.servicesLoadedHotelId) {
+      this.loadServicesFromAPI();
+    }
+
     if (forcePatchForm || (!this.checkOutForm?.dirty && !this.checkInForm?.dirty)) {
       this.fetchCurrentRoom();
     }
