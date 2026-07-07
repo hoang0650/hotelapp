@@ -172,7 +172,7 @@
             <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.PAYMENT_METHOD' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="16">
               <nz-select formControlName="paymentMethod" [nzPlaceHolder]="'ROOM_CONTENT_MODAL.SELECT_PAYMENT_METHOD' | translate">
-                <nz-option *ngFor="let method of paymentMethods" [nzValue]="method.value" [nzLabel]="method.label | translate"></nz-option>
+                <nz-option *ngFor="let method of paymentMethods; trackBy: trackByValue" [nzValue]="method.value" [nzLabel]="method.label | translate"></nz-option>
               </nz-select>
             </nz-form-control>
           </nz-form-item>
@@ -216,7 +216,7 @@
             <div nz-row [nzGutter]="8" class="service-selection-row">
               <div nz-col [nzSpan]="14">
                 <nz-select formControlName="serviceId" style="width: 100%; text-align: left;" class="service-select">
-                  <nz-option *ngFor="let service of services" [nzValue]="service.id" [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'"></nz-option>
+                  <nz-option *ngFor="let service of services; trackBy: trackByServiceId" [nzValue]="service.id" [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'"></nz-option>
                 </nz-select>
               </div>
               <div nz-col [nzSpan]="6">
@@ -246,7 +246,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let service of selectedServices; let i = index">
+            <tr *ngFor="let service of selectedServices; let i = index; trackBy: trackBySelectedService">
               <td>{{ service.serviceName }}</td>
               <td>{{ service.quantity }}</td>
               <td>{{ service.price | number }} đ</td>

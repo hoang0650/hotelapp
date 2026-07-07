@@ -181,16 +181,16 @@
                   [ngClass]="{'compact-mode': isCompactMode}">
                   <div 
                     class="room-item" 
-                    [ngClass]="[getRoomStatusClass(getRoomDisplayStatus(room), room.guestStatus), isPrebookedAvailable(room) ? 'prebooked-available' : '']"
+                    [ngClass]="[room.__viewMeta?.statusClass || '', room.__viewMeta?.isPrebookedAvailable ? 'prebooked-available' : '']"
                     appModalControl 
                     [room]="room"
-                    [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.status === 'occupied' ? ('ROOM.OCCUPIED' | translate) : getRoomStatusLabelAndColor(getRoomDisplayStatus(room)).label)"
+                    [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.__viewMeta?.ariaStatusLabel || '')"
                     role="button"
                     tabindex="0">
                   
                   <!-- Icon phòng -->
                   <div class="room-icon" *ngIf="!isCompactMode">
-                    <i nz-icon [nzType]="getRoomIcon(room)" nzTheme="outline"></i>
+                    <i nz-icon [nzType]="room.__viewMeta?.icon || 'home'" nzTheme="outline"></i>
                   </div>
                   
                   <!-- Công tắc điện compact -->
@@ -214,34 +214,34 @@
                   <!-- Badges và labels -->
                   <div class="room-badges" *ngIf="!isCompactMode">
                     <!-- Hình thức (chỉ hiển thị khi phòng đang có khách) -->
-                  <ng-container *ngIf="room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
+                  <ng-container *ngIf="room.status === 'occupied' && room.__viewMeta?.displayInfo as displayInfo">
                     <nz-tag [nzColor]="'blue'" class="room-badge">{{ displayInfo.rateTypeLabel }}</nz-tag>
                   </ng-container>
                   
                   <!-- Trạng thái phòng (hiển thị khi không phải occupied) -->
                   <ng-container *ngIf="room.status !== 'occupied'">
-                    <nz-tag [nzColor]="getRoomStatusLabelAndColor(getRoomDisplayStatus(room)).color" class="room-badge">
-                      {{ getRoomStatusLabelAndColor(getRoomDisplayStatus(room)).label }}
+                    <nz-tag [nzColor]="room.__viewMeta?.statusColor || 'default'" class="room-badge">
+                      {{ room.__viewMeta?.statusLabel }}
                     </nz-tag>
                   </ng-container>
                   
                   <!-- Nguồn khách (chỉ hiển thị khi phòng đang có khách) -->
                   <ng-container *ngIf="room.status === 'occupied'">
-                    <ng-container *ngIf="getRoomGuestSource(room) as guestSource">
+                    <ng-container *ngIf="room.__viewMeta?.guestSource">
                       <nz-tag 
-                        [nzColor]="getGuestSourceLabelAndColor(guestSource).color" 
+                        [nzColor]="room.__viewMeta?.guestSourceColor || 'default'" 
                         class="room-badge source-badge">
-                        {{ getGuestSourceLabelAndColor(guestSource).label }}
+                        {{ room.__viewMeta?.guestSourceLabel }}
                       </nz-tag>
                     </ng-container>
                     
                     <!-- Thời gian lưu trú (hiển thị ở cả chế độ bình thường và compact) -->
                     <nz-tag 
-                      *ngIf="getRoomDurationText(room)"
+                      *ngIf="room.__viewMeta?.durationText"
                       nzColor="blue"
                       class="room-badge duration-badge">
                       <i nz-icon nzType="clock-circle" nzTheme="outline"></i>
-                      {{ getRoomDurationText(room) }}
+                      {{ room.__viewMeta?.durationText }}
                     </nz-tag>
                     
                     <!-- Trạng thái khách (ra ngoài/quay lại) -->
@@ -258,24 +258,24 @@
                 <!-- Thời gian lưu trú cho chế độ rút gọn -->
                 <div class="room-badges-compact" *ngIf="isCompactMode && room.status === 'occupied'">
                   <nz-tag 
-                    *ngIf="getRoomDurationText(room)"
+                    *ngIf="room.__viewMeta?.durationText"
                     nzColor="blue"
                     class="room-badge duration-badge">
                     <i nz-icon nzType="clock-circle" nzTheme="outline"></i>
-                    {{ getRoomDurationText(room) }}
+                    {{ room.__viewMeta?.durationText }}
                   </nz-tag>
                 </div>
                 
                 <!-- Thông tin booking cho phòng đã đặt / đặt trước -->
-                <ng-container *ngIf="!isCompactMode && room.status !== 'occupied' && getRoomBookingInfo(room) as bookingInfo">
+                <ng-container *ngIf="!isCompactMode && room.status !== 'occupied' && room.__viewMeta?.bookingInfo as bookingInfo">
                   <div class="room-details">
                     <!-- Hiển thị thông tin chuyển phòng nếu có -->
-                    <div class="detail-row" *ngIf="getBookingTransferInfo(room)">
+                    <div class="detail-row" *ngIf="room.__viewMeta?.transferInfo as transferInfo">
                       <span class="detail-label">{{ 'ROOM.TRANSFERRED_FROM' | translate }}:</span>
                       <span class="detail-value highlight" style="color: #ff9800;">
-                        Phòng {{ getBookingTransferInfo(room)?.fromRoomNumber || 'N/A' }}
-                        <span *ngIf="getBookingTransferInfo(room)?.transferredAt" style="font-size: 0.85em; color: #999; margin-left: 4px;">
-                          ({{ getBookingTransferInfo(room)?.transferredAt | date:'dd/MM/yyyy HH:mm' }})
+                        Phòng {{ transferInfo.fromRoomNumber || 'N/A' }}
+                        <span *ngIf="transferInfo.transferredAt" style="font-size: 0.85em; color: #999; margin-left: 4px;">
+                          ({{ transferInfo.transferredAt | date:'dd/MM/yyyy HH:mm' }})
                         </span>
                       </span>
                     </div>
@@ -299,20 +299,20 @@
                 </ng-container>
                 
                 <!-- Thông tin chi tiết cho phòng đang có khách -->
-                <ng-container *ngIf="!isCompactMode && room.status === 'occupied' && getRoomDisplayInfo(room) as displayInfo">
+                <ng-container *ngIf="!isCompactMode && room.status === 'occupied' && room.__viewMeta?.displayInfo as displayInfo">
                   <div class="room-details">
                     <!-- Hiển thị thông tin chuyển phòng từ nhiều nguồn -->
-                    <div class="detail-row" *ngIf="displayInfo.transferredFrom || getBookingTransferInfo(room)">
+                    <div class="detail-row" *ngIf="displayInfo.transferredFrom || room.__viewMeta?.transferInfo">
                       <span class="detail-label">{{ 'ROOM.TRANSFERRED_FROM' | translate }}:</span>
                       <span class="detail-value highlight" style="color: #ff9800;">
-                        <ng-container *ngIf="getBookingTransferInfo(room) as transferInfo">
-                          Phòng {{ transferInfo.fromRoomNumber || getRoomNumberById(transferInfo.fromRoomId || '') || 'N/A' }}
+                        <ng-container *ngIf="room.__viewMeta?.transferInfo as transferInfo">
+                          Phòng {{ transferInfo.fromRoomNumber || 'N/A' }}
                           <span *ngIf="transferInfo.transferredAt" style="font-size: 0.85em; color: #999; margin-left: 4px;">
                             ({{ transferInfo.transferredAt | date:'dd/MM/yyyy HH:mm' }})
                           </span>
                         </ng-container>
-                        <ng-container *ngIf="!getBookingTransferInfo(room) && displayInfo.transferredFrom">
-                          Phòng {{ getRoomNumberById(displayInfo.transferredFrom) || displayInfo.transferredFrom }}
+                        <ng-container *ngIf="!room.__viewMeta?.transferInfo && displayInfo.transferredFrom">
+                          Phòng {{ room.__viewMeta?.transferredFromRoomNumber || displayInfo.transferredFrom }}
                           <span *ngIf="displayInfo.transferredAt" style="font-size: 0.85em; color: #999; margin-left: 4px;">
                             ({{ displayInfo.transferredAt | date:'dd/MM/yyyy HH:mm' }})
                           </span>

@@ -23,7 +23,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { TransactionService } from '../../services/transaction.service';
 import { environment } from '../../../environments/environment';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
+import { debounceTime, distinctUntilChanged, takeUntil, take } from 'rxjs/operators'
+import { Subject } from 'rxjs';
 
 // Interface cho dữ liệu cập nhật phòng
 interface RoomUpdate {
@@ -37,6 +38,7 @@ interface RoomUpdate {
   styleUrls: ['./room-content-modal.component.css']
 })
 export class RoomContentModalComponent implements OnInit, OnDestroy {
+  private static servicesCache = new Map<string, any[]>();
   roomData: any;
   private isFormInitialized = false;
   listData: any[] = [];
@@ -84,6 +86,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   modalType: string = 'info'; // Loại modal: checkin, checkout, cleaning
   private sessionSubscription?: Subscription;
   private saveTotalPriceTimer?: ReturnType<typeof setTimeout>;
+  private destroy$ = new Subject<void>();
+  private roomReloadInFlight = false;
   
   // SePay payment
   showSePayModal = false;
@@ -364,65 +368,39 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // 1. GỌI NGAY fetchCurrentRoom() ĐỂ RENDER GIAO DIỆN TỨC THÌ BẰNG DỮ LIỆU CÓ SẴN
     this.fetchCurrentRoom();
     
-    // Nếu là checkout, chạy ngay hàm tính toán tiền phòng từ dữ liệu sẵn có
     if (this.modalType === 'checkout') {
       this.calculateTotalPrice();
     }
 
-    // Load danh sách dịch vụ ngầm
     this.loadServicesFromAPI();
     this.loadBusinessInfo();
     this.loadCurrentUser();
-    
-    // 2. CHẠY NGẦM GỌI API LẤY THÊM CHI TIẾT SAU KHI UI ĐÃ HIỂN THỊ
-    if (this.roomData && this.roomData._id) {
-      this.roomsService.getRoomById(this.roomData._id, { 
-        limit: 1000,
-        excludeCheckedOut: true 
-      }).subscribe({
-        next: (updatedRoom) => {
-          this.roomData = updatedRoom;
-          // Gọi lại lần 2 để đắp thêm dữ liệu chi tiết nếu có
-          this.fetchCurrentRoom();
-        },
-        error: (err) => {
-          console.error('Error reloading room:', err);
+
+    Promise.resolve().then(() => this.reloadRoomDetails(false));
+
+    this.roomsService.getRoomDataUpdated$()
+      .pipe(
+        debounceTime(120),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        if (!this.checkOutForm.dirty && !this.checkInForm.dirty) {
+          this.reloadRoomDetails(false);
         }
       });
-    }
-    
-    // Subscribe để reload room data khi có thay đổi từ socket
-    this.roomsService.getRoomDataUpdated$().subscribe(() => {
-      // CHẶN ĐÈ FORM KHI ĐANG NHẬP DỞ (Chỉ update nếu form chưa bị sửa)
-      if (this.roomData && this.roomData._id && !this.checkOutForm.dirty && !this.checkInForm.dirty) {
-        this.roomsService.getRoomById(this.roomData._id, { 
-          limit: 1000,
-          excludeCheckedOut: true
-        }).subscribe({
-          next: (updatedRoom) => {
-            this.roomData = updatedRoom;
-            this.fetchCurrentRoom();
-          },
-          error: (err) => {
-            console.error('Error reloading room after update:', err);
-          }
-        });
-      }
-    });
   }
   /**
    * Load thông tin user hiện tại để lấy QR code từ profile
    */
   loadCurrentUser(): void {
-    // Lấy user từ AuthService
     this.currentUser = this.authService.getCurrentUser();
     
-    // Nếu chưa có user, subscribe để lấy khi có
     if (!this.currentUser) {
-      this.authService.currentUser$.subscribe({
+      this.authService.currentUser$.pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
         next: (user) => {
           this.currentUser = user;
         }
@@ -433,6 +411,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   // Load dịch vụ từ API
   loadServicesFromAPI(): void {
     if (this.roomData?.hotelId) {
+      const hotelId = String(this.roomData.hotelId);
+      const cachedServices = RoomContentModalComponent.servicesCache.get(hotelId);
+      if (cachedServices) {
+        this.services = cachedServices;
+        this.cdr.markForCheck();
+      }
+
       this.serviceService.getAvailableServicesForModal(this.roomData.hotelId).subscribe({
         next: (response) => {
           if (response?.data?.services) {
@@ -443,6 +428,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               category: s.category,
               description: s.description
             }));
+            RoomContentModalComponent.servicesCache.set(hotelId, this.services);
+            this.cdr.markForCheck();
           }
         },
         error: (error) => {
@@ -456,6 +443,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                 price: s.price,
                 category: s.category
               }));
+              RoomContentModalComponent.servicesCache.set(hotelId, this.services);
+              this.cdr.markForCheck();
             },
             error: (err) => console.error('Fallback cũng lỗi:', err)
           });
@@ -465,7 +454,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
   
   ngOnDestroy(): void {
-    // Hủy subscription khi component bị hủy
+    this.destroy$.next();
+    this.destroy$.complete();
+
     if (this.sessionSubscription) {
       this.sessionSubscription.unsubscribe();
     }
@@ -476,6 +467,59 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     // Dừng polling khi component bị hủy
     this.stopPaymentStatusPolling();
+  }
+
+  private reloadRoomDetails(forcePatchForm: boolean): void {
+    if (!this.roomData?._id || this.roomReloadInFlight) {
+      return;
+    }
+
+    this.roomReloadInFlight = true;
+    this.roomsService.getRoomById(this.roomData._id, {
+      limit: 1000,
+      excludeCheckedOut: true
+    }).pipe(
+      take(1),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (updatedRoom) => {
+        this.applyLatestRoomData(updatedRoom, forcePatchForm);
+        this.roomReloadInFlight = false;
+      },
+      error: (err) => {
+        console.error('Error reloading room:', err);
+        this.roomReloadInFlight = false;
+      }
+    });
+  }
+
+  private applyLatestRoomData(updatedRoom: any, forcePatchForm: boolean): void {
+    if (!updatedRoom) {
+      return;
+    }
+
+    this.roomData = updatedRoom;
+    if (forcePatchForm || (!this.checkOutForm?.dirty && !this.checkInForm?.dirty)) {
+      this.fetchCurrentRoom();
+    }
+
+    if (this.modalType === 'checkout') {
+      this.calculateTotalPrice();
+    }
+
+    this.cdr.markForCheck();
+  }
+
+  trackByValue(index: number, item: { value: string }): string {
+    return item.value;
+  }
+
+  trackByServiceId(index: number, item: any): string {
+    return item?.id || item?._id || `service-${index}`;
+  }
+
+  trackBySelectedService(index: number, item: OrderedService): string {
+    return item?.serviceId || item?.serviceName || `selected-service-${index}`;
   }
   
   // Cập nhật UI từ dữ liệu phiên

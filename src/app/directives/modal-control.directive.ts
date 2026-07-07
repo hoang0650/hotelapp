@@ -24,6 +24,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   private contextMenuModalRef: NzModalRef | null = null;
   private isModalOpening = false; // Flag để tránh mở modal nhiều lần
   private clickEventHandlers: Map<string, (e: Event) => void> = new Map(); // Lưu handlers để có thể remove
+  private isMobileDeviceCached: boolean | null = null;
   newRoom: any;
   constructor(
     private modalService: NzModalService,
@@ -33,7 +34,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Khởi tạo nếu cần
+    this.isMobileDeviceCached = this.isMobileDevice();
   }
 
   ngOnDestroy(): void {
@@ -43,6 +44,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
   // Kiểm tra xem có phải thiết bị mobile không
   private isMobileDevice(): boolean {
+    if (this.isMobileDeviceCached !== null) {
+      return this.isMobileDeviceCached;
+    }
+
     if (typeof window === 'undefined') return false;
     
     // Kiểm tra user agent
@@ -55,7 +60,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     // Kiểm tra kích thước màn hình
     const isSmallScreen = window.innerWidth <= 768;
     
-    return mobileRegex.test(userAgent) || (hasTouchScreen && isSmallScreen);
+    this.isMobileDeviceCached = mobileRegex.test(userAgent) || (hasTouchScreen && isSmallScreen);
+    return this.isMobileDeviceCached;
   }
 
   @HostListener('click', ['$event']) 
@@ -157,12 +163,19 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     }
     
     this.contextMenuModalRef = this.modalService.create(modalConfig);
+    this.contextMenuModalRef.afterClose.pipe(
+      take(1),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.contextMenuModalRef = null;
+    });
 
     // Lắng nghe event từ component
     this.contextMenuModalRef.afterOpen.subscribe(() => {
       const componentInstance = this.contextMenuModalRef?.getContentComponent();
       if (componentInstance && componentInstance instanceof RoomContextMenuComponent) {
         componentInstance.actionSelected.pipe(
+          take(1),
           takeUntil(this.destroy$)
         ).subscribe((action: string) => {
           // Đóng context menu
@@ -172,9 +185,9 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           }
           
           // Xử lý action tương ứng
-          setTimeout(() => {
+          Promise.resolve().then(() => {
             this.handleContextMenuAction(action);
-          }, 100);
+          });
         });
       }
     });
@@ -1276,82 +1289,31 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     }
     
     this.isModalOpening = true;
-    
-    // Reload room từ backend để đảm bảo dữ liệu mới nhất
-    this.roomsService.getRoomById(room._id).subscribe({
-      next: (updatedRoom) => {
-        this.modalRef = this.modalService.create({
-          nzTitle: `Phòng ${updatedRoom.roomNumber}`,
-          nzContent: RoomContentModalComponent,
-          nzFooter: null,
-          nzMaskClosable: false,
-          nzClassName: 'room-detail-modal',
-          nzWidth: 700,
-          nzData: {
-            roomData: updatedRoom,
-            modalType: type
-          }
-        });
 
-        // Đảm bảo modal được đóng sau khi hoàn tất
-        if (this.modalRef) {
-          this.modalRef.afterClose.pipe(
-            take(1),
-            takeUntil(this.destroy$)
-          ).subscribe(() => {
-            // Reset flag trước
-            this.isModalOpening = false;
-            const closedModalRef = this.modalRef;
-            this.modalRef = null;
-            
-            // Delay notify để tránh trigger mở modal lại
-            setTimeout(() => {
-              // Chỉ notify nếu modal đã thực sự đóng và không có modal mới được mở
-              if (!this.modalRef && closedModalRef) {
-                this.roomsService.notifyRoomDataUpdated();
-              }
-            }, 200);
-          });
-        }
-      },
-      error: (err) => {
-        this.isModalOpening = false;
-        console.error('Error reloading room before opening modal:', err);
-        // Fallback: sử dụng room data đã có
-        this.modalRef = this.modalService.create({
-          nzTitle: `Phòng ${room.roomNumber}`,
-          nzContent: RoomContentModalComponent,
-          nzFooter: null,
-          nzMaskClosable: false,
-          nzClassName: 'room-detail-modal',
-          nzWidth: 700,
-          nzData: {
-            roomData: room,
-            modalType: type
-          }
-        });
-
-        // Đảm bảo modal được đóng sau khi hoàn tất
-        if (this.modalRef) {
-          this.modalRef.afterClose.pipe(
-            take(1),
-            takeUntil(this.destroy$)
-          ).subscribe(() => {
-            // Reset flag trước
-            this.isModalOpening = false;
-            const closedModalRef = this.modalRef;
-            this.modalRef = null;
-            
-            // Delay notify để tránh trigger mở modal lại
-            setTimeout(() => {
-              // Chỉ notify nếu modal đã thực sự đóng và không có modal mới được mở
-              if (!this.modalRef && closedModalRef) {
-                this.roomsService.notifyRoomDataUpdated();
-              }
-            }, 200);
-          });
-        }
+    this.modalRef = this.modalService.create({
+      nzTitle: `Phòng ${room.roomNumber}`,
+      nzContent: RoomContentModalComponent,
+      nzFooter: null,
+      nzMaskClosable: false,
+      nzClassName: 'room-detail-modal',
+      nzWidth: 700,
+      nzData: {
+        roomData: room,
+        modalType: type
       }
+    });
+
+    this.modalRef.afterClose.pipe(
+      take(1),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.isModalOpening = false;
+      this.modalRef = null;
+      Promise.resolve().then(() => {
+        if (!this.modalRef) {
+          this.roomsService.notifyRoomDataUpdated();
+        }
+      });
     });
   }
 

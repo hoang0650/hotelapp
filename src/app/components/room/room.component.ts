@@ -27,6 +27,59 @@ import { PaymentSpeakerService } from '../../services/payment-speaker.service';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 
+interface RoomBookingInfoView {
+  guestName: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rateTypeLabel: string;
+}
+
+interface RoomDisplayInfoView {
+  checkinTime: string;
+  customerName: string;
+  rateTypeLabel: string;
+  totalAmount: number;
+  advancePayment: number;
+  remainingAmount: number;
+  guestSource: string;
+  additionalCharges: number;
+  discount: number;
+  transferredFrom?: string;
+  transferredAt?: Date;
+}
+
+interface RoomTransferInfoView {
+  fromRoomId?: string;
+  fromRoomNumber?: string;
+  toRoomId?: string;
+  toRoomNumber?: string;
+  transferredAt?: Date;
+  transferredBy?: string;
+  transferHistory?: any[];
+}
+
+interface RoomCardMeta {
+  displayStatus: RoomStatus;
+  isPrebookedAvailable: boolean;
+  statusClass: string;
+  statusLabel: string;
+  statusColor: string;
+  icon: string;
+  durationText: string;
+  guestSource: string;
+  guestSourceLabel: string;
+  guestSourceColor: string;
+  displayInfo: RoomDisplayInfoView | null;
+  bookingInfo: RoomBookingInfoView | null;
+  transferInfo: RoomTransferInfoView | null;
+  transferredFromRoomNumber: string;
+  ariaStatusLabel: string;
+}
+
+type RoomWithMeta = Room & {
+  __viewMeta?: RoomCardMeta;
+};
+
 @Component({
   selector: 'app-room',
   templateUrl: './room.component.html',
@@ -42,7 +95,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   private tableTotalPaymentSubscription: Subscription | null = null;
   
   rooms: Room[] = [];
-  displayRoomsByFloor: { [floor: string]: Room[] } = {};
+  displayRoomsByFloor: { [floor: string]: RoomWithMeta[] } = {};
   displayFloors: string[] = [];
   roomTableData: BookingHistory[] = [];
   selectedRoomId: string | null = null;
@@ -118,6 +171,11 @@ export class RoomComponent implements OnInit, OnDestroy {
   private roomsSocketHotelId: string | null = null;
   private paymentSpeakerEnabled = false;
   private lastPaymentSpeakerEventKey: string | null = null;
+  private roomNumberByIdMap = new Map<string, string>();
+  private historyReloadQueued = false;
+  private historyReloadInFlight = false;
+  private lastHistoryLoadedAt = 0;
+  private occupiedEventsReloadQueued = false;
 
   roomStatusDisplayOptions: { value: RoomStatus, label: string, color: string }[] = [
     { value: 'vacant', label: '', color: 'green' }, // Label sẽ được translate trong getRoomStatusLabelAndColor
@@ -148,12 +206,9 @@ export class RoomComponent implements OnInit, OnDestroy {
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
       if (this.selectedHotelId) {
-        // Chỉ reload phòng, KHÔNG tự động gọi showRoomHistory() nữa trừ khi panel lịch sử đang mở
-        setTimeout(() => {
-          if (!this.isModalOpen && this.isHistoryPanelActive) {
-             this.showRoomHistory();
-          }
-        }, 150);
+        if (!this.isModalOpen && this.isHistoryPanelActive) {
+          this.scheduleRoomHistoryReload();
+        }
       }
     });
     
@@ -276,7 +331,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   onHistoryPanelChange(active: boolean): void {
     this.isHistoryPanelActive = active;
     if (active && this.selectedHotelId && !this.isRoomsLoading) {
-      setTimeout(() => this.showRoomHistory(), 0);
+      this.scheduleRoomHistoryReload(true);
     }
   }
   
@@ -293,7 +348,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.calendarComponent.loadBookings();
           this.calendarComponent.loadAllBookings();
         }
-        this.showRoomHistory();
+        this.scheduleRoomHistoryReload(true);
       }, 0);
     }
   }
@@ -399,30 +454,50 @@ export class RoomComponent implements OnInit, OnDestroy {
     );
   }
   
-  showRoomHistory(): void {
+  showRoomHistory(force: boolean = false): void {
     if (!this.selectedHotelId) {
       this.message.warning(this.translate.instant('ROOM.SELECT_HOTEL'));
       return;
     }
+
+    const now = Date.now();
+    if (!force && this.historyReloadInFlight) {
+      return;
+    }
+    if (!force && now - this.lastHistoryLoadedAt < 500) {
+      return;
+    }
     
-    // Không set isLoading = true để không block UI khi quick reload
-    // Chỉ load history, không block UI
+    this.historyReloadInFlight = true;
     this.roomsService.getRoomHistory(this.selectedHotelId, 'all', 1, 100)
     .subscribe(
       (data) => {
         this.roomTableData = data.history || [];
         this.totalPayment = data.totalPayment || 0;
         this.totalRoomCount = data.totalItems || 0;
-        // Đợi table component tính toán xong, sau đó lấy totalPayment từ table
-        setTimeout(() => {
-          this.updateRevenueFromTable();
-        }, 100);
+        this.lastHistoryLoadedAt = Date.now();
+        Promise.resolve().then(() => this.updateRevenueFromTable());
+        this.historyReloadInFlight = false;
       },
       (error) => {
         console.error('Lỗi tải lịch sử phòng:', error);
-        // Không hiển thị error message để không làm phiền user
+        this.historyReloadInFlight = false;
       }
     );
+  }
+
+  private scheduleRoomHistoryReload(force: boolean = false): void {
+    if (this.historyReloadQueued && !force) {
+      return;
+    }
+
+    this.historyReloadQueued = true;
+    Promise.resolve().then(() => {
+      this.historyReloadQueued = false;
+      if (this.selectedHotelId && !this.isRoomsLoading) {
+        this.showRoomHistory(force);
+      }
+    });
   }
   
   // Load danh sách phiếu chi
@@ -782,7 +857,6 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(data || []);
         this.lastLoadedHotelId = this.selectedHotelId;
         this.updateFloorsFromRooms();
-        this.updateCachedRoomCounts();
         
         this.isRoomsLoading = false;
         
@@ -799,7 +873,7 @@ export class RoomComponent implements OnInit, OnDestroy {
             this.syncHotelFloorsInBackground(this.selectedHotelId);
           }
 
-          this.loadEventsForOccupiedRooms(false);
+          this.scheduleOccupiedEventsReload();
           this.prefetchRoomPricesForOccupiedRooms();
         }, 0);
       },
@@ -1137,10 +1211,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.rooms = merged;
           this.lastLoadedHotelId = this.selectedHotelId;
           this.updateFloorsFromRooms();
-          this.updateCachedRoomCounts();
-          setTimeout(() => {
-            this.loadEventsForOccupiedRooms(false);
-          }, 0);
+          this.scheduleOccupiedEventsReload();
           this.cdr.detectChanges();
         }
         
@@ -1577,7 +1648,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         guestStatus: undefined,
         currentBooking: null
       };
-      this.updateCachedRoomCounts();
+      this.updateFloorsFromRooms();
     }
 
     const checkOutTime = checkoutInfo.checkOutTime ? new Date(checkoutInfo.checkOutTime) : new Date();
@@ -1647,7 +1718,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       ]
     };
-    this.updateCachedRoomCounts();
+    this.updateFloorsFromRooms();
   }
 
   // Tính tổng tiền đặt trước từ tất cả các phòng đang có khách
@@ -1816,61 +1887,145 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   // Cập nhật cached room counts cho template performance
   private updateCachedRoomCounts(): void {
-    this.cachedVacantCount = this.rooms.filter(r => r.status === 'vacant').length;
-    this.cachedOccupiedCount = this.rooms.filter(r => r.status === 'occupied').length;
-    this.cachedDirtyCount = this.rooms.filter(r => r.status === 'dirty').length;
-    this.cachedMaintenanceCount = this.rooms.filter(r => r.status === 'maintenance').length;
-    this.cachedBookedCount = this.rooms.filter(r => r.status === 'booked').length;
-    this.cachedGuestOutCount = this.rooms.filter(r => r.status === 'occupied' && r.guestStatus === 'out').length;
+    this.recomputeRoomDerivedState();
   }
 
   // Cập nhật danh sách tầng từ phòng thực tế
   updateFloorsFromRooms(): void {
-    const floorsSet = new Set<string>();
-    this.rooms.forEach(room => {
-      // Normalize floor thành string
+    this.recomputeRoomDerivedState();
+  }
+
+  private rebuildDisplayRooms(): void {
+    this.recomputeRoomDerivedState();
+  }
+
+  private scheduleOccupiedEventsReload(forceReload: boolean = false): void {
+    if (this.occupiedEventsReloadQueued) {
+      return;
+    }
+
+    this.occupiedEventsReloadQueued = true;
+    Promise.resolve().then(() => {
+      this.occupiedEventsReloadQueued = false;
+      this.loadEventsForOccupiedRooms(forceReload);
+    });
+  }
+
+  private recomputeRoomDerivedState(): void {
+    const floorSet = new Set<string>();
+    const roomNumberMap = new Map<string, string>();
+    let vacantCount = 0;
+    let occupiedCount = 0;
+    let dirtyCount = 0;
+    let maintenanceCount = 0;
+    let bookedCount = 0;
+    let guestOutCount = 0;
+
+    for (const room of this.rooms) {
       const floor = room.floor ? String(room.floor) : '0';
-      floorsSet.add(floor);
-    });
-    this.floors = Array.from(floorsSet).sort((a, b) => {
-      const numA = parseInt(a) || 0;
-      const numB = parseInt(b) || 0;
-      return numA - numB;
-    });
+      floorSet.add(floor);
+
+      if (room._id) {
+        roomNumberMap.set(String(room._id), room.roomNumber || '');
+      }
+
+      switch (room.status) {
+        case 'vacant':
+          vacantCount += 1;
+          break;
+        case 'occupied':
+          occupiedCount += 1;
+          if (room.guestStatus === 'out') {
+            guestOutCount += 1;
+          }
+          break;
+        case 'dirty':
+          dirtyCount += 1;
+          break;
+        case 'maintenance':
+          maintenanceCount += 1;
+          break;
+        case 'booked':
+          bookedCount += 1;
+          break;
+      }
+    }
+
+    this.roomNumberByIdMap = roomNumberMap;
+    this.cachedVacantCount = vacantCount;
+    this.cachedOccupiedCount = occupiedCount;
+    this.cachedDirtyCount = dirtyCount;
+    this.cachedMaintenanceCount = maintenanceCount;
+    this.cachedBookedCount = bookedCount;
+    this.cachedGuestOutCount = guestOutCount;
+    this.floors = Array.from(floorSet).sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
 
     if (this.isFirstLoadForHotel && this.floors.length > 0) {
       this.activeFloors = [...this.floors];
       this.isFirstLoadForHotel = false;
     }
-    
-    // Kiểm tra lại selectedFloor sau khi cập nhật floors từ rooms
-    // Nếu selectedFloor không còn tồn tại trong floors, reset nó
+
     if (this.selectedFloor && !this.floors.includes(this.selectedFloor)) {
       this.selectedFloor = null;
     }
-    this.rebuildDisplayRooms();
+
+    const normalizedSelectedFloor = this.selectedFloor ? String(this.selectedFloor) : null;
+    const grouped: { [floor: string]: RoomWithMeta[] } = {};
+
+    for (const room of this.rooms) {
+      const floor = room.floor ? String(room.floor) : '0';
+      if (normalizedSelectedFloor && floor !== normalizedSelectedFloor) {
+        continue;
+      }
+
+      const roomWithMeta = room as RoomWithMeta;
+      roomWithMeta.__viewMeta = this.buildRoomCardMeta(room);
+
+      if (!grouped[floor]) {
+        grouped[floor] = [];
+      }
+      grouped[floor].push(roomWithMeta);
+    }
+
+    const displayFloors = Object.keys(grouped).sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+    const sortedGrouped: { [floor: string]: RoomWithMeta[] } = {};
+    displayFloors.forEach((floor) => {
+      sortedGrouped[floor] = grouped[floor];
+    });
+
+    this.displayRoomsByFloor = sortedGrouped;
+    this.displayFloors = displayFloors;
   }
 
-  private rebuildDisplayRooms(): void {
-    const grouped: { [floor: string]: Room[] } = {};
-    const normalizedSelectedFloor = this.selectedFloor ? String(this.selectedFloor) : null;
-    const sourceRooms = normalizedSelectedFloor
-      ? this.rooms.filter(room => (room.floor ? String(room.floor) : '0') === normalizedSelectedFloor)
-      : this.rooms;
+  private buildRoomCardMeta(room: Room): RoomCardMeta {
+    const displayStatus = this.getRoomDisplayStatus(room);
+    const isPrebookedAvailable = displayStatus === 'vacant' && room.status !== 'occupied';
+    const statusMeta = this.getRoomStatusLabelAndColor(displayStatus);
+    const guestSource = room.status === 'occupied' ? this.getRoomGuestSource(room) : '';
+    const guestSourceMeta = guestSource ? this.getGuestSourceLabelAndColor(guestSource) : { label: '', color: 'default' };
+    const displayInfo = room.status === 'occupied' ? this.getRoomDisplayInfo(room) : null;
+    const bookingInfo = room.status !== 'occupied' ? this.getRoomBookingInfo(room) : null;
+    const transferInfo = this.getBookingTransferInfo(room);
+    const transferredFromRoomNumber =
+      (displayInfo?.transferredFrom && (this.getRoomNumberById(displayInfo.transferredFrom) || displayInfo.transferredFrom)) || '';
 
-    for (const room of sourceRooms) {
-      const floor = room.floor ? String(room.floor) : '0';
-      if (!grouped[floor]) grouped[floor] = [];
-      grouped[floor].push(room);
-    }
-
-    const floors = Object.keys(grouped).sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
-    const sortedGrouped: { [floor: string]: Room[] } = {};
-    for (const f of floors) {
-      sortedGrouped[f] = grouped[f];
-    }
-    this.displayRoomsByFloor = sortedGrouped;
-    this.displayFloors = floors;
+    return {
+      displayStatus,
+      isPrebookedAvailable,
+      statusClass: this.getRoomStatusClass(displayStatus, room.guestStatus),
+      statusLabel: statusMeta.label,
+      statusColor: statusMeta.color,
+      icon: this.getRoomIcon(room),
+      durationText: room.status === 'occupied' ? this.getRoomDurationText(room) : '',
+      guestSource,
+      guestSourceLabel: guestSourceMeta.label,
+      guestSourceColor: guestSourceMeta.color,
+      displayInfo,
+      bookingInfo,
+      transferInfo,
+      transferredFromRoomNumber,
+      ariaStatusLabel: room.status === 'occupied' ? this.translate.instant('ROOM.OCCUPIED') : statusMeta.label,
+    };
   }
 
   // Lấy thông tin chuyển phòng từ Booking
@@ -2967,8 +3122,8 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   // Lấy số phòng theo ID
   getRoomNumberById(roomId: string): string | null {
-    const room = this.rooms.find(r => r._id === roomId);
-    return room ? room.roomNumber : null;
+    if (!roomId) return null;
+    return this.roomNumberByIdMap.get(roomId) || null;
   }
 
   // Lấy nguồn khách từ phòng
@@ -3320,7 +3475,7 @@ export class RoomComponent implements OnInit, OnDestroy {
                 if (checkinEvent) {
                   this.loadRoomPriceFromAPI(this.rooms[index], checkinEvent, true);
                 }
-                this.rebuildDisplayRooms();
+                this.updateFloorsFromRooms();
                 this.cdr.detectChanges();
               });
           } else {
@@ -3329,9 +3484,8 @@ export class RoomComponent implements OnInit, OnDestroy {
             this.rooms[index].currentBooking = undefined;
           }
 
-          // 3. Cập nhật lại các con số thống kê trên banner (Trống, Đang ở, Bẩn...)
-          this.updateCachedRoomCounts();
-          this.rebuildDisplayRooms();
+          // 3. Cập nhật lại trạng thái hiển thị và banner theo một nhịp duy nhất
+          this.updateFloorsFromRooms();
           
           // 4. Báo cho Angular biết để vẽ lại UI
           this.cdr.detectChanges();
