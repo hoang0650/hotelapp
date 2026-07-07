@@ -176,6 +176,11 @@ export class RoomComponent implements OnInit, OnDestroy {
   private historyReloadInFlight = false;
   private lastHistoryLoadedAt = 0;
   private occupiedEventsReloadQueued = false;
+  private chartDataLoading = false;
+  private expensesLoadedHotelId: string | null = null;
+  private incomesLoadedHotelId: string | null = null;
+  private chartLoadedKey: string | null = null;
+  private postRoomLoadPrefetchHotelId: string | null = null;
 
   roomStatusDisplayOptions: { value: RoomStatus, label: string, color: string }[] = [
     { value: 'vacant', label: '', color: 'green' }, // Label sẽ được translate trong getRoomStatusLabelAndColor
@@ -331,7 +336,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   onHistoryPanelChange(active: boolean): void {
     this.isHistoryPanelActive = active;
     if (active && this.selectedHotelId && !this.isRoomsLoading) {
-      this.scheduleRoomHistoryReload(true);
+      this.scheduleRoomHistoryReload();
     }
   }
   
@@ -348,7 +353,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.calendarComponent.loadBookings();
           this.calendarComponent.loadAllBookings();
         }
-        this.scheduleRoomHistoryReload(true);
+        this.scheduleRoomHistoryReload();
       }, 0);
     }
   }
@@ -501,18 +506,31 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
   
   // Load danh sách phiếu chi
-  loadExpenses(): void {
+  loadExpenses(force: boolean = false, prefetch: boolean = false): void {
     if (!this.selectedHotelId) return;
-    
-    this.expenseLoading = true;
+
+    const hotelId = this.selectedHotelId;
+    if (!force) {
+      if (this.expenseLoading) {
+        return;
+      }
+      if (this.expensesLoadedHotelId === hotelId && this.expenseList.length > 0) {
+        return;
+      }
+    }
+
+    if (!prefetch) {
+      this.expenseLoading = true;
+    }
     this.transactionService.getExpenses({
-      hotelId: this.selectedHotelId,
+      hotelId,
       page: 1,
       limit: 1000
     }).subscribe(
       (data) => {
         this.expenseList = data.data || [];
         this.totalExpense = this.expenseList.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+        this.expensesLoadedHotelId = hotelId;
         this.expenseLoading = false;
       },
       (error) => {
@@ -559,17 +577,30 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
   
   // Load danh sách phiếu thu
-  loadIncomes(): void {
+  loadIncomes(force: boolean = false, prefetch: boolean = false): void {
     if (!this.selectedHotelId) return;
-    
-    this.incomeLoading = true;
+
+    const hotelId = this.selectedHotelId;
+    if (!force) {
+      if (this.incomeLoading) {
+        return;
+      }
+      if (this.incomesLoadedHotelId === hotelId && this.incomeList.length > 0) {
+        return;
+      }
+    }
+
+    if (!prefetch) {
+      this.incomeLoading = true;
+    }
     this.transactionService.getIncomes({
-      hotelId: this.selectedHotelId,
+      hotelId,
       page: 1,
       limit: 1000
     }).subscribe(
       (data) => {
         this.incomeList = data.data || [];
+        this.incomesLoadedHotelId = hotelId;
         this.incomeLoading = false;
       },
       (error) => {
@@ -601,8 +632,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       (response) => {
         this.message.success(this.translate.instant('COMMON.CREATE_SUCCESS'));
         this.isIncomeModalVisible = false;
-        this.loadIncomes();
-        this.showRoomHistory(); // Reload để cập nhật biểu đồ
+        this.loadIncomes(true);
+        this.showRoomHistory(true); // Reload để cập nhật biểu đồ
+        this.loadChartDataFromAPI(true);
         // Cập nhật lại totalRevenue từ table sau khi tạo phiếu thu
         setTimeout(() => {
           this.updateRevenueFromTable();
@@ -628,8 +660,9 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.transactionService.deleteIncome(incomeId).subscribe(
           () => {
             this.message.success(this.translate.instant('COMMON.DELETE_SUCCESS'));
-            this.loadIncomes();
-            this.showRoomHistory(); // Reload để cập nhật biểu đồ
+            this.loadIncomes(true);
+            this.showRoomHistory(true); // Reload để cập nhật biểu đồ
+            this.loadChartDataFromAPI(true);
             // Cập nhật lại totalRevenue từ table sau khi xóa phiếu thu
             setTimeout(() => {
               this.updateRevenueFromTable();
@@ -665,8 +698,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       (response) => {
         this.message.success(this.translate.instant('COMMON.CREATE_SUCCESS'));
         this.isExpenseModalVisible = false;
-        this.loadExpenses();
-        this.showRoomHistory(); // Reload để cập nhật biểu đồ
+        this.loadExpenses(true);
+        this.showRoomHistory(true); // Reload để cập nhật biểu đồ
+        this.loadChartDataFromAPI(true);
         // Cập nhật lại totalRevenue từ table sau khi tạo phiếu chi
         setTimeout(() => {
           this.updateRevenueFromTable();
@@ -692,8 +726,9 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.transactionService.deleteExpense(expenseId).subscribe(
           () => {
             this.message.success(this.translate.instant('COMMON.DELETE_SUCCESS'));
-            this.loadExpenses();
-            this.showRoomHistory(); // Reload để cập nhật biểu đồ
+            this.loadExpenses(true);
+            this.showRoomHistory(true); // Reload để cập nhật biểu đồ
+            this.loadChartDataFromAPI(true);
             // Cập nhật lại totalRevenue từ table sau khi xóa phiếu chi
             setTimeout(() => {
               this.updateRevenueFromTable();
@@ -875,12 +910,41 @@ export class RoomComponent implements OnInit, OnDestroy {
 
           this.scheduleOccupiedEventsReload();
           this.prefetchRoomPricesForOccupiedRooms();
+          this.prefetchAuxiliaryDataAfterRoomsLoaded(this.selectedHotelId!);
         }, 0);
       },
       error: (err) => {
         this.isRoomsLoading = false;
         this.cdr.detectChanges();
       }
+    });
+  }
+
+  private prefetchAuxiliaryDataAfterRoomsLoaded(hotelId: string): void {
+    if (!hotelId) {
+      return;
+    }
+
+    this.postRoomLoadPrefetchHotelId = hotelId;
+    requestAnimationFrame(() => {
+      if (
+        !this.selectedHotelId ||
+        this.selectedHotelId !== hotelId ||
+        this.isRoomsLoading ||
+        this.postRoomLoadPrefetchHotelId !== hotelId
+      ) {
+        return;
+      }
+
+      // Tải nền sau khi sơ đồ phòng đã render xong để modal/panel mở ra dùng ngay dữ liệu có sẵn.
+      this.scheduleRoomHistoryReload(true);
+      Promise.resolve().then(() => {
+        if (this.selectedHotelId === hotelId) {
+          this.loadChartDataFromAPI(true, true);
+          this.loadIncomes(true, true);
+          this.loadExpenses(true, true);
+        }
+      });
     });
   }
 
@@ -944,6 +1008,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.displayFloors = [];
     this.bookings = [];
     this.roomTableData = [];
+    this.expenseList = [];
+    this.incomeList = [];
     this.selectedFloor = null;
     this.floors = [];
     this.chartLabels = [];
@@ -954,6 +1020,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.totalRevenue = 0;
     this.totalExpense = 0;
     this.lastLoadedHotelId = null;
+    this.expensesLoadedHotelId = null;
+    this.incomesLoadedHotelId = null;
+    this.chartLoadedKey = null;
+    this.chartDataLoading = false;
+    this.postRoomLoadPrefetchHotelId = null;
+    this.historyReloadQueued = false;
+    this.historyReloadInFlight = false;
+    this.lastHistoryLoadedAt = 0;
 
     if (!hotelId) {
       this.isRoomsLoading = false;
@@ -1268,15 +1342,29 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
   
   // Load dữ liệu biểu đồ từ API
-  loadChartDataFromAPI(): void {
+  loadChartDataFromAPI(force: boolean = false, prefetch: boolean = false): void {
     if (!this.selectedHotelId) return;
-    
-    this.hotelService.getHotelRevenueByPeriod(this.selectedHotelId, this.selectedPeriod).subscribe(
+
+    const hotelId = this.selectedHotelId;
+    const chartKey = `${hotelId}:${this.selectedPeriod}`;
+
+    if (!force) {
+      if (this.chartDataLoading) {
+        return;
+      }
+      if (this.chartLoadedKey === chartKey && this.chartLabels.length > 0) {
+        return;
+      }
+    }
+
+    this.chartDataLoading = true;
+    this.hotelService.getHotelRevenueByPeriod(hotelId, this.selectedPeriod).subscribe(
       (data) => {
         this.chartLabels = data.labels;
         this.chartRevenueData = data.revenueData;
         this.chartPaymentData = data.paymentData;
         this.chartExpenseData = data.expenseData || [];
+        this.chartLoadedKey = chartKey;
         const canUseTableRevenue =
           this.isHistoryPanelActive &&
           !!this.tableComponent &&
@@ -1294,9 +1382,11 @@ export class RoomComponent implements OnInit, OnDestroy {
             this.updateRevenueFromTable();
           }, 100);
         }
+        this.chartDataLoading = false;
       },
       (error) => {
         console.error('Error loading chart data:', error);
+        this.chartDataLoading = false;
       }
     );
   }
