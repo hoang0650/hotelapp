@@ -168,6 +168,40 @@ export interface ManagerHandover {
     createdAt?: Date;
 }
 
+export interface ManagerHandoverRequest {
+    hotelId: string;
+    fromStaffId: string;
+    managerUsername: string;
+    managerPassword: string;
+    amount: number;
+    cashBeforeHandover?: number;
+    cashAfterHandover?: number;
+    notes?: string;
+    roomHistory?: ShiftRoomHistory[];
+    previousShiftAmount?: number;
+    cashInShift?: number;
+    cashAmount?: number;
+    bankTransferAmount?: number;
+    cardPaymentAmount?: number;
+    expenseAmount?: number;
+    incomeAmount?: number;
+    expenses?: ShiftExpense[];
+    incomes?: ShiftIncome[];
+}
+
+export interface ManagerHandoverResponse {
+    message: string;
+    transaction?: any;
+    shiftHandover?: ShiftHandover;
+    managerInfo?: {
+        name?: string;
+        position?: string;
+        userId?: string;
+        username?: string;
+        email?: string;
+    };
+}
+
 // ============ SHIFT HANDOVER CREATE REQUEST ============
 
 export interface ShiftHandoverCreateRequest {

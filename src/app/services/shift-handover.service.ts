@@ -9,7 +9,9 @@ import {
   ShiftHandoverHistoryResponse,
   ShiftHandoverStats,
   RevenueResponse,
-  ManagerHandover
+  ManagerHandover,
+  ManagerHandoverRequest,
+  ManagerHandoverResponse
 } from '../interfaces/shift-handover';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
@@ -90,14 +92,8 @@ export class ShiftHandoverService {
    * Giao tiền cho quản lý
    * POST /shift-handover/manager
    */
-  createManagerHandover(data: {
-    hotelId: string;
-    staffId: string;
-    managerId: string;
-    amount: number;
-    notes?: string;
-  }): Observable<{ message: string; transaction: any }> {
-    return this.http.post<{ message: string; transaction: any }>(`${this.apiUrl}/manager`, data);
+  createManagerHandover(data: ManagerHandoverRequest): Observable<ManagerHandoverResponse> {
+    return this.http.post<ManagerHandoverResponse>(`${this.apiUrl}/manager`, data);
   }
 
   // ============ LỊCH SỬ GIAO CA (CHỈ ADMIN/BUSINESS) ============

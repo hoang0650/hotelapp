@@ -227,6 +227,22 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   getTotalAmount(list: any[]): number {
     return (list || []).reduce((sum, i) => sum + this.getAmount(i), 0);
   }
+
+  getConfirmedCount(): number {
+    return this.shiftHistory.filter(record => record.status === 'confirmed').length;
+  }
+
+  getPendingCount(): number {
+    return this.shiftHistory.filter(record => record.status === 'pending').length;
+  }
+
+  getTotalHandoverAmountSummary(): number {
+    return this.shiftHistory.reduce((sum, record) => sum + (record.handoverAmount || 0), 0);
+  }
+
+  getTotalManagerHandoverSummary(): number {
+    return this.shiftHistory.reduce((sum, record) => sum + (record.managerHandoverAmount || 0), 0);
+  }
   
   resetFilters(): void {
     this.startDate = null;

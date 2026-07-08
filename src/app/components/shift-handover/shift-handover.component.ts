@@ -31,7 +31,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
   staffList: any[] = [];
   managerList: any[] = [];
   shiftHistory: ShiftHandover[] = [];
-  currentStaff: any = null;
+  currentStaffId = '';
   
   // UI State
   isLoading = false;
@@ -76,7 +76,6 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.checkPermissions();
     this.loadStaffList();
-    this.loadManagerList();
     this.loadPreviousShiftAmount();
     this.loadRevenue();
     
@@ -113,7 +112,8 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
 
   private initManagerHandoverForm(): void {
     this.managerHandoverForm = this.fb.group({
-      managerId: [null, Validators.required],
+      managerUsername: ['', [Validators.required, Validators.minLength(3)]],
+      managerPassword: ['', Validators.required],
       amount: [0, [Validators.required, Validators.min(1)]],
       notes: ['']
     });
@@ -132,32 +132,17 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.staffService.getStaffByHotel(hotelId).subscribe(
         (staffList: any[]) => {
-          // Lọc bỏ nhân viên hiện tại
           const currentUserId = this.authService.getUserId();
-          this.staffList = staffList.filter(staff => staff.userId !== currentUserId);
+          this.currentStaffId = this.resolveCurrentStaffId(staffList, currentUserId ?? '');
+          this.staffList = staffList.filter(staff => {
+            const staffId = this.normalizeId(staff?._id);
+            const staffUserId = this.normalizeId(staff?.userId);
+            return staffId !== this.currentStaffId && staffUserId !== currentUserId;
+          });
         },
         (error) => {
           this.message.error(this.translate.instant('SHIFT_HANDOVER.LOAD_STAFF_ERROR'));
           console.error(error);
-        }
-      )
-    );
-  }
-
-  private loadManagerList(): void {
-    const hotelId = this.authService.getHotelId();
-    if (!hotelId) return;
-
-    this.subscriptions.add(
-      this.staffService.getStaffByHotel(hotelId).subscribe(
-        (staffList: any[]) => {
-          this.managerList = staffList.filter(staff => {
-            const role = staff.userId?.role || staff.role || '';
-            return ['admin', 'superadmin', 'business', 'hotel_manager'].includes(role);
-          });
-        },
-        (error) => {
-          console.error('Error loading manager list:', error);
         }
       )
     );
@@ -251,6 +236,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
 
   private calculateHandoverAmount(): void {
     const values = this.handoverForm.value;
+    this.managerHandoverAmount = values.managerHandoverAmount || 0;
     // Công thức: Số tiền giao ca = Số tiền ca trước + Tiền mặt trong ca - Tiền giao quản lý
     this.handoverAmount = this.shiftHandoverService.calculateHandoverAmount(
       values.previousShiftAmount || 0,
@@ -285,8 +271,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
 
   closeModal(): void {
     this.isModalVisible = false;
-    this.handoverForm.reset();
-    this.handoverForm.patchValue({ previousShiftAmount: this.previousShiftAmount });
+    this.resetHandoverForm();
   }
 
   submitHandover(): void {
@@ -312,7 +297,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
 
   private performHandover(): void {
     const hotelId = this.authService.getHotelId();
-    const fromStaffId = this.authService.getUserId();
+    const fromStaffId = this.currentStaffId;
     
     if (!hotelId || !fromStaffId) {
       this.message.error(this.translate.instant('SHIFT_HANDOVER.SELECT_STAFF_ERROR'));
@@ -341,7 +326,9 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
           }
           
           // Reload data
+          this.resetHandoverForm();
           this.loadPreviousShiftAmount();
+          this.loadRevenue();
           if (this.canViewHistory) {
             this.loadShiftHistory();
           }
@@ -359,8 +346,9 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
 
   openManagerHandoverModal(): void {
     this.managerHandoverForm.reset({
-      managerId: null,
-      amount: this.handoverForm.value.managerHandoverAmount || 0,
+      managerUsername: '',
+      managerPassword: '',
+      amount: 0,
       notes: ''
     });
     this.isManagerHandoverModalVisible = true;
@@ -383,11 +371,23 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     }
 
     const hotelId = this.authService.getHotelId();
-    const staffId = this.authService.getUserId();
+    const fromStaffId = this.currentStaffId;
     const formValues = this.managerHandoverForm.value;
+    const amount = Number(formValues.amount || 0);
+    const availableAmount = this.getAvailableCashForManagerHandover();
     
-    if (!hotelId || !staffId) {
+    if (!hotelId || !fromStaffId) {
       this.message.error(this.translate.instant('SHIFT_HANDOVER.SELECT_STAFF_ERROR'));
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      this.message.warning('Vui long nhap so tien giao quan ly hop le');
+      return;
+    }
+
+    if (amount > availableAmount) {
+      this.message.warning(`So tien giao quan ly khong duoc vuot qua ${this.formatCurrency(availableAmount)}`);
       return;
     }
 
@@ -395,21 +395,36 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.shiftHandoverService.createManagerHandover({
         hotelId,
-        staffId,
-        managerId: formValues.managerId,
-        amount: formValues.amount,
+        fromStaffId,
+        managerUsername: String(formValues.managerUsername || '').trim(),
+        managerPassword: String(formValues.managerPassword || ''),
+        amount,
+        cashBeforeHandover: this.previousShiftAmount + this.cashInShift,
+        cashAfterHandover: Math.max(0, this.previousShiftAmount + this.cashInShift - amount),
+        previousShiftAmount: this.previousShiftAmount,
+        cashInShift: this.cashInShift,
+        cashAmount: Math.max(0, this.cashInShift - amount),
+        bankTransferAmount: this.handoverForm.value.bankTransferAmount || 0,
+        cardPaymentAmount: this.handoverForm.value.cardPaymentAmount || 0,
+        expenseAmount: this.handoverForm.value.expenseAmount || 0,
+        incomeAmount: this.handoverForm.value.incomeAmount || 0,
         notes: formValues.notes || ''
       }).subscribe(
         (response) => {
           this.isLoading = false;
           this.isManagerHandoverModalVisible = false;
-          this.message.success(this.translate.instant('SHIFT_HANDOVER.MANAGER_HANDOVER_SUCCESS') || 'Giao tiền quản lý thành công');
+          this.message.success(response.message || this.translate.instant('SHIFT_HANDOVER.MANAGER_HANDOVER_SUCCESS') || 'Giao tiền quản lý thành công');
           // Update the form with the new manager handover amount
           const currentManagerAmount = this.handoverForm.value.managerHandoverAmount || 0;
           this.handoverForm.patchValue({
-            managerHandoverAmount: currentManagerAmount + formValues.amount
+            managerHandoverAmount: currentManagerAmount + amount
           });
           this.managerHandoverAmount = this.handoverForm.value.managerHandoverAmount;
+          this.loadPreviousShiftAmount();
+          this.loadRevenue();
+          if (this.canViewHistory) {
+            this.loadShiftHistory();
+          }
         },
         (error) => {
           this.isLoading = false;
@@ -456,6 +471,56 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
 
   formatDate(date: Date | string): string {
     return new Date(date).toLocaleString('vi-VN');
+  }
+
+  getAvailableCashForManagerHandover(): number {
+    const currentManagerAmount = this.handoverForm?.value?.managerHandoverAmount || 0;
+    return Math.max(0, this.previousShiftAmount + this.cashInShift - currentManagerAmount);
+  }
+
+  private resetHandoverForm(): void {
+    this.handoverForm.reset({
+      toStaffId: null,
+      toUserPassword: '',
+      previousShiftAmount: this.previousShiftAmount,
+      cashInShift: this.cashInShift,
+      managerHandoverAmount: this.managerHandoverAmount,
+      cashAmount: this.revenueData?.cashTotal || 0,
+      bankTransferAmount: this.revenueData?.bankTransferTotal || 0,
+      cardPaymentAmount: this.revenueData?.cardTotal || 0,
+      expenseAmount: this.revenueData?.expenseTotal || 0,
+      incomeAmount: this.revenueData?.incomeTotal || 0,
+      notes: '',
+      pendingIssues: []
+    });
+  }
+
+  private resolveCurrentStaffId(staffList: any[], currentUserId: string): string {
+    const savedStaffId = this.normalizeId(localStorage.getItem('staffId'));
+    if (savedStaffId && staffList.some(staff => this.normalizeId(staff?._id) === savedStaffId)) {
+      return savedStaffId;
+    }
+
+    const matchedStaff = staffList.find(staff => this.normalizeId(staff?.userId) === currentUserId);
+    const matchedStaffId = this.normalizeId(matchedStaff?._id);
+    if (matchedStaffId) {
+      localStorage.setItem('staffId', matchedStaffId);
+      return matchedStaffId;
+    }
+    return '';
+  }
+
+  private normalizeId(value: any): string {
+    if (!value) {
+      return '';
+    }
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    if (typeof value === 'object') {
+      return String(value._id || value.id || '').trim();
+    }
+    return String(value).trim();
   }
 
   // Currency formatter and parser for nz-input-number

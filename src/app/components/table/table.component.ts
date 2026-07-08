@@ -2392,6 +2392,17 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     const managerAmount = this.managerHandoverForm?.get('managerHandoverAmount')?.value || 0;
     return this.getActualCashInShift() + this.previousShiftAmount - managerAmount;
   }
+
+  getManagerHandoverCashAvailable(): number {
+    return Math.max(0, this.previousShiftAmount + this.getActualCashInShift());
+  }
+
+  getShiftHandoverPreviewAmount(): number {
+    const previousShiftAmount = this.shiftHandoverForm?.get('previousShiftAmount')?.value || 0;
+    const cashInShift = this.shiftHandoverForm?.get('cashInShift')?.value || 0;
+    const managerHandoverAmount = this.shiftHandoverForm?.get('managerHandoverAmount')?.value || 0;
+    return Math.max(0, previousShiftAmount + cashInShift - managerHandoverAmount);
+  }
   
   submitManagerHandover(): void {
     if (this.managerHandoverForm.invalid) {

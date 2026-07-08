@@ -111,6 +111,28 @@
         </ul>
       </nz-dropdown-menu>
     </div>
+
+    <div nz-row [nzGutter]="16" style="margin-bottom: 16px;">
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzLg]="6">
+        <nz-statistic [nzTitle]="'Tong giao ca'" [nzValue]="shiftHistory.length"></nz-statistic>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzLg]="6">
+        <nz-statistic [nzTitle]="'Da xac nhan'" [nzValue]="getConfirmedCount()" [nzValueStyle]="{ color: '#52c41a' }"></nz-statistic>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzLg]="6">
+        <nz-statistic [nzTitle]="'Cho xu ly'" [nzValue]="getPendingCount()" [nzValueStyle]="{ color: '#faad14' }"></nz-statistic>
+      </div>
+      <div nz-col [nzXs]="24" [nzSm]="12" [nzLg]="6">
+        <nz-statistic [nzTitle]="'Tong giao quan ly'" [nzValue]="getTotalManagerHandoverSummary()" [nzPrefix]="'₫'" [nzValueStyle]="{ color: '#722ed1' }"></nz-statistic>
+      </div>
+    </div>
+
+    <nz-alert
+      nzType="info"
+      nzShowIcon
+      [nzMessage]="'Tong tien giao ca tren trang hien tai: ' + formatCurrency(getTotalHandoverAmountSummary())"
+      style="margin-bottom: 16px;">
+    </nz-alert>
     
     <!-- Table -->
     <nz-table
@@ -161,6 +183,8 @@
         </tr>
       </tbody>
     </nz-table>
+
+    <nz-empty *ngIf="!isLoading && shiftHistory.length === 0" [nzNotFoundContent]="'Chua co lich su giao ca phu hop bo loc hien tai'"></nz-empty>
   </nz-card>
   
   <!-- Detail Modal -->

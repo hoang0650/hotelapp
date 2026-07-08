@@ -271,25 +271,30 @@
             [nzFooter]="managerHandoverFooter">
     <ng-container *nzModalContent>
       <form nz-form [formGroup]="managerHandoverForm" nzLayout="vertical">
+        <nz-alert nzType="info" nzShowIcon style="margin-bottom: 16px;"
+                  [nzMessage]="'Tien mat co the giao: ' + formatCurrency(getAvailableCashForManagerHandover())">
+        </nz-alert>
+
         <nz-form-item>
-          <nz-form-label nzRequired>{{ 'SHIFT_HANDOVER.SELECT_MANAGER' | translate }}</nz-form-label>
-          <nz-form-control [nzErrorTip]="'SHIFT_HANDOVER.SELECT_MANAGER_ERROR' | translate">
-            <nz-select formControlName="managerId" 
-                       [nzPlaceHolder]="'SHIFT_HANDOVER.SELECT_MANAGER' | translate" 
-                       nzShowSearch>
-              <nz-option *ngFor="let manager of managerList"
-                         [nzValue]="manager._id"
-                         [nzLabel]="manager.personalInfo?.firstName + ' ' + manager.personalInfo?.lastName">
-              </nz-option>
-            </nz-select>
+          <nz-form-label nzRequired>Tai khoan quan ly</nz-form-label>
+          <nz-form-control nzErrorTip="Vui long nhap username hoac email quan ly">
+            <input nz-input formControlName="managerUsername" placeholder="Nhap username hoac email quan ly" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>Mat khau quan ly</nz-form-label>
+          <nz-form-control nzErrorTip="Vui long nhap mat khau quan ly">
+            <input nz-input type="password" formControlName="managerPassword" placeholder="Nhap mat khau quan ly" />
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
           <nz-form-label nzRequired>{{ 'SHIFT_HANDOVER.MANAGER_HANDOVER_AMOUNT_LABEL' | translate }}</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng nhập số tiền lớn hơn 0">
+          <nz-form-control nzErrorTip="Vui long nhap so tien lon hon 0">
             <nz-input-number formControlName="amount"
                              [nzMin]="1"
+                             [nzMax]="getAvailableCashForManagerHandover()"
                              [nzStep]="1000"
                              [nzFormatter]="currencyFormatter"
                              [nzParser]="currencyParser"
