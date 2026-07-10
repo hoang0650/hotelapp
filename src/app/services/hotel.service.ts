@@ -20,6 +20,7 @@ interface RevenueData {
 })
 export class HotelService {
   private apiUrl = `${environment.apiUrl}/hotels`;
+  private revenueByPeriodCache = new Map<string, { payload: RevenueData; updatedAt: number }>();
   
   // Định nghĩa key cố định trong localStorage để tránh typo
   private readonly HOTEL_ID_KEY = 'current_hotel_id';
@@ -164,6 +165,40 @@ export class HotelService {
         totalExpense: response.totalExpense || 0
       }))
     );
+  }
+
+  private buildRevenueCacheKey(hotelId: string, period: 'day' | 'week' | 'month'): string {
+    return `${hotelId}:${period}`;
+  }
+
+  getCachedHotelRevenueByPeriod(hotelId: string, period: 'day' | 'week' | 'month' = 'day') {
+    if (!hotelId) {
+      return null;
+    }
+    return this.revenueByPeriodCache.get(this.buildRevenueCacheKey(hotelId, period)) || null;
+  }
+
+  setCachedHotelRevenueByPeriod(hotelId: string, period: 'day' | 'week' | 'month', payload: RevenueData): void {
+    if (!hotelId) {
+      return;
+    }
+    this.revenueByPeriodCache.set(this.buildRevenueCacheKey(hotelId, period), {
+      payload,
+      updatedAt: Date.now()
+    });
+  }
+
+  clearCachedHotelRevenueByPeriod(hotelId?: string): void {
+    if (!hotelId) {
+      this.revenueByPeriodCache.clear();
+      return;
+    }
+
+    Array.from(this.revenueByPeriodCache.keys()).forEach((cacheKey) => {
+      if (cacheKey.startsWith(`${hotelId}:`)) {
+        this.revenueByPeriodCache.delete(cacheKey);
+      }
+    });
   }
 
   getHotelRevenueMock(hotelId: string, period: 'day' | 'week' | 'month' = 'day'): Observable<RevenueData> {

@@ -44,8 +44,96 @@ export interface ExpenseListResponse {
 })
 export class TransactionService {
   private apiUrl = `${environment.apiUrl}/transactions`;
+  private expensesCache = new Map<string, { payload: ExpenseListResponse; updatedAt: number }>();
+  private incomesCache = new Map<string, { payload: ExpenseListResponse; updatedAt: number }>();
 
   constructor(private http: HttpClient) { }
+
+  private buildTransactionCacheKey(params: {
+    hotelId: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): string {
+    return [
+      params.hotelId,
+      params.startDate || '',
+      params.endDate || '',
+      params.page || 1,
+      params.limit || 10
+    ].join(':');
+  }
+
+  getCachedExpenses(params: {
+    hotelId: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    return this.expensesCache.get(this.buildTransactionCacheKey(params)) || null;
+  }
+
+  setCachedExpenses(params: {
+    hotelId: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }, payload: ExpenseListResponse): void {
+    this.expensesCache.set(this.buildTransactionCacheKey(params), {
+      payload,
+      updatedAt: Date.now()
+    });
+  }
+
+  clearCachedExpenses(hotelId?: string): void {
+    if (!hotelId) {
+      this.expensesCache.clear();
+      return;
+    }
+    Array.from(this.expensesCache.keys()).forEach((cacheKey) => {
+      if (cacheKey.startsWith(`${hotelId}:`)) {
+        this.expensesCache.delete(cacheKey);
+      }
+    });
+  }
+
+  getCachedIncomes(params: {
+    hotelId: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    return this.incomesCache.get(this.buildTransactionCacheKey(params)) || null;
+  }
+
+  setCachedIncomes(params: {
+    hotelId: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }, payload: ExpenseListResponse): void {
+    this.incomesCache.set(this.buildTransactionCacheKey(params), {
+      payload,
+      updatedAt: Date.now()
+    });
+  }
+
+  clearCachedIncomes(hotelId?: string): void {
+    if (!hotelId) {
+      this.incomesCache.clear();
+      return;
+    }
+    Array.from(this.incomesCache.keys()).forEach((cacheKey) => {
+      if (cacheKey.startsWith(`${hotelId}:`)) {
+        this.incomesCache.delete(cacheKey);
+      }
+    });
+  }
 
   /**
    * Tạo phiếu chi mới

@@ -7,14 +7,94 @@ import { tap, catchError } from 'rxjs/operators';
 import { throwError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+interface RoomHistoryCacheEntry {
+  payload: {
+    history: BookingHistory[],
+    totalPages: number,
+    currentPage: number,
+    totalPayment: number,
+    totalItems: number
+  };
+  updatedAt: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class RoomsService {
   private roomDataUpdated$ = new Subject<void>();
   private apiUrl = `${environment.apiUrl}/rooms`;
+  private roomsCache = new Map<string, { rooms: Room[]; updatedAt: number }>();
+  private roomHistoryCache = new Map<string, RoomHistoryCacheEntry>();
 
   constructor(private http: HttpClient) { }
+
+  getCachedRooms(hotelId: string): Room[] | null {
+    if (!hotelId || !this.roomsCache.has(hotelId)) {
+      return null;
+    }
+    return this.roomsCache.get(hotelId)?.rooms || null;
+  }
+
+  setCachedRooms(hotelId: string, rooms: Room[]): void {
+    if (!hotelId) {
+      return;
+    }
+    this.roomsCache.set(hotelId, {
+      rooms,
+      updatedAt: Date.now()
+    });
+  }
+
+  clearCachedRooms(hotelId?: string): void {
+    if (hotelId) {
+      this.roomsCache.delete(hotelId);
+      return;
+    }
+    this.roomsCache.clear();
+  }
+
+  private buildRoomHistoryCacheKey(hotelId?: string, filterType?: string, page: number = 1, limit: number = 10): string {
+    return `${hotelId || 'all'}:${filterType || 'all'}:${page}:${limit}`;
+  }
+
+  getCachedRoomHistory(hotelId?: string, filterType?: string, page: number = 1, limit: number = 10) {
+    const cacheKey = this.buildRoomHistoryCacheKey(hotelId, filterType, page, limit);
+    return this.roomHistoryCache.get(cacheKey) || null;
+  }
+
+  setCachedRoomHistory(
+    payload: {
+      history: BookingHistory[],
+      totalPages: number,
+      currentPage: number,
+      totalPayment: number,
+      totalItems: number
+    },
+    hotelId?: string,
+    filterType?: string,
+    page: number = 1,
+    limit: number = 10
+  ): void {
+    const cacheKey = this.buildRoomHistoryCacheKey(hotelId, filterType, page, limit);
+    this.roomHistoryCache.set(cacheKey, {
+      payload,
+      updatedAt: Date.now()
+    });
+  }
+
+  clearCachedRoomHistory(hotelId?: string): void {
+    if (!hotelId) {
+      this.roomHistoryCache.clear();
+      return;
+    }
+
+    Array.from(this.roomHistoryCache.keys()).forEach((cacheKey) => {
+      if (cacheKey.startsWith(`${hotelId}:`)) {
+        this.roomHistoryCache.delete(cacheKey);
+      }
+    });
+  }
 
   getRooms(params?: { hotelId?: string, floor?: number, lite?: boolean }): Observable<Room[]> {
     let httpParams = new HttpParams();
