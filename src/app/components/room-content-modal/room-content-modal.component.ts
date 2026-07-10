@@ -320,8 +320,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private transactionService: TransactionService
   ) {
-    // Log dữ liệu nhận được từ directive để debug
-    console.log('Room Content Modal received data:', data);
     
     this.roomData = data.roomData;
     this.skipValidation = data.skipValidation || false;
@@ -938,8 +936,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.businessInfo = data;
         // Lưu thông tin ngân hàng của hotel
         this.hotelBankAccount = data.bankAccount || null;
-        console.log('Thông tin doanh nghiệp:', this.businessInfo);
-        console.log('Thông tin ngân hàng hotel:', this.hotelBankAccount);
+        
         
         // Nếu hotel không có bankAccount, thử lấy từ manager
         if (!this.hotelBankAccount?.qrPaymentUrl && data.managerId) {
@@ -947,7 +944,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           if (manager?.bankAccount?.qrPaymentUrl) {
             // Sử dụng QR code từ manager nếu hotel không có
             this.hotelBankAccount = manager.bankAccount;
-            console.log('Sử dụng QR code từ manager vì hotel chưa có:', this.hotelBankAccount);
           }
         }
         
