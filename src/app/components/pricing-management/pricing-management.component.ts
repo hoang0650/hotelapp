@@ -289,16 +289,7 @@ export class PricingManagementComponent implements OnInit {
     this.loading = true;
     this.pricingService.getAllPackages().subscribe({
       next: (response) => {
-        this.packages = response.data || [];
-        
-        // Đánh dấu gói free (giá = 0) bằng cách thêm flag isFree
-        this.packages = this.packages.map((pkg: any) => ({
-          ...pkg,
-          isFree: !pkg.isContactOnly && (
-            (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) ||
-            (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
-          )
-        }));
+        this.packages = (response.data || []).map((pkg: any) => this.normalizePackageLimits(pkg));
         
         this.loading = false;
       },
@@ -318,7 +309,7 @@ export class PricingManagementComponent implements OnInit {
     this.loading = true;
     this.pricingService.getCurrentUserPackage(this.currentUser._id).subscribe({
       next: (response: any) => {
-        const packageData = response.data || response;
+        const packageData = this.normalizePackageLimits(response.data || response);
         if (packageData && packageData._id) {
           this.currentUserPackage = packageData;
           this.packages = [packageData]; // Chỉ hiển thị gói của user
@@ -343,7 +334,7 @@ export class PricingManagementComponent implements OnInit {
     this.loading = true;
     this.pricingService.getAllSubscribers().subscribe({
       next: (response) => {
-        this.subscribers = response.data || [];
+        this.subscribers = (response.data || []).map((subscriber: any) => this.normalizeSubscriberLimits(subscriber));
         this.loading = false;
       },
       error: (error) => {
@@ -358,42 +349,43 @@ export class PricingManagementComponent implements OnInit {
     if (packageId) {
       const pkg = this.packages.find(p => p._id === packageId || p.id === packageId);
       if (pkg) {
+        const normalizedPkg = this.normalizePackageLimits(pkg);
         // Backend: 0 hoặc null = không giới hạn
-        const isUnlimited = pkg.maxUsers === 0 || pkg.maxUsers === null || pkg.maxUsers === undefined;
-        const isUnlimitedRooms = pkg.maxRooms === 0 || pkg.maxRooms === null || pkg.maxRooms === undefined;
+        const isUnlimited = normalizedPkg.maxUsers === 0 || normalizedPkg.maxUsers === null || normalizedPkg.maxUsers === undefined;
+        const isUnlimitedRooms = normalizedPkg.maxRooms === 0 || normalizedPkg.maxRooms === null || normalizedPkg.maxRooms === undefined;
         this.packageForm.patchValue({
-          name: pkg.name,
-          description: pkg.description,
-          monthlyPrice: pkg.monthlyPrice || pkg.price || 0,
-          yearlyPrice: pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0),
-          yearlyDiscount: pkg.yearlyDiscount || 0,
-          isContactOnly: !!pkg.isContactOnly,
-          contactLabel: pkg.contactLabel || '',
-          contactPhone: pkg.contactPhone || '',
-          contactEmail: pkg.contactEmail || '',
-          contactUrl: pkg.contactUrl || '',
-          duration: pkg.duration || 1, // Giữ lại để tương thích
-          monthlyDuration: pkg.monthlyDuration || pkg.duration || 1, // Thời hạn gói tháng
-          yearlyDuration: pkg.yearlyDuration || pkg.duration || 12, // Thời hạn gói năm
-          features: pkg.features || [],
-          permissions: pkg.permissions || ['view'],
+          name: normalizedPkg.name,
+          description: normalizedPkg.description,
+          monthlyPrice: normalizedPkg.monthlyPrice || normalizedPkg.price || 0,
+          yearlyPrice: normalizedPkg.yearlyPrice || (normalizedPkg.price ? normalizedPkg.price * 12 : 0),
+          yearlyDiscount: normalizedPkg.yearlyDiscount || 0,
+          isContactOnly: !!normalizedPkg.isContactOnly,
+          contactLabel: normalizedPkg.contactLabel || '',
+          contactPhone: normalizedPkg.contactPhone || '',
+          contactEmail: normalizedPkg.contactEmail || '',
+          contactUrl: normalizedPkg.contactUrl || '',
+          duration: normalizedPkg.duration || 1, // Giữ lại để tương thích
+          monthlyDuration: normalizedPkg.monthlyDuration || normalizedPkg.duration || 1, // Thời hạn gói tháng
+          yearlyDuration: normalizedPkg.yearlyDuration || normalizedPkg.duration || 12, // Thời hạn gói năm
+          features: normalizedPkg.features || [],
+          permissions: normalizedPkg.permissions || ['view'],
           // Hiển thị: nếu không giới hạn thì hiển thị 0 (để người dùng có thể thấy và chỉnh sửa)
           // Nếu có giới hạn thì hiển thị giá trị thực
-          maxUsers: isUnlimited ? 0 : (pkg.maxUsers >= 1 ? pkg.maxUsers : 1),
+          maxUsers: isUnlimited ? 0 : (normalizedPkg.maxUsers >= 1 ? normalizedPkg.maxUsers : 1),
           unlimitedUsers: isUnlimited,
-          maxRooms: isUnlimitedRooms ? 0 : (pkg.maxRooms >= 1 ? pkg.maxRooms : 20),
+          maxRooms: isUnlimitedRooms ? 0 : (normalizedPkg.maxRooms >= 1 ? normalizedPkg.maxRooms : 20),
           unlimitedRooms: isUnlimitedRooms,
-          qrPaymentFeature: pkg.qrPaymentFeature || false,
-          otaManagementFeature: pkg.otaManagementFeature || false,
-          emailManagementFeature: pkg.emailManagementFeature || false,
-          electricManagementFeature: pkg.electricManagementFeature || false,
-          paypalPaymentFeature: pkg.paypalPaymentFeature || false,
-          cryptoPaymentFeature: pkg.cryptoPaymentFeature || false,
-          draftInvoiceFeature: pkg.draftInvoiceFeature || false,
-          exportInvoiceFeature: pkg.exportInvoiceFeature || false,
-          aiChatboxFeature: pkg.aiChatboxFeature || false,
-          hotelNotificationFeature: pkg.hotelNotificationFeature || false,
-          isActive: pkg.isActive
+          qrPaymentFeature: normalizedPkg.qrPaymentFeature || false,
+          otaManagementFeature: normalizedPkg.otaManagementFeature || false,
+          emailManagementFeature: normalizedPkg.emailManagementFeature || false,
+          electricManagementFeature: normalizedPkg.electricManagementFeature || false,
+          paypalPaymentFeature: normalizedPkg.paypalPaymentFeature || false,
+          cryptoPaymentFeature: normalizedPkg.cryptoPaymentFeature || false,
+          draftInvoiceFeature: normalizedPkg.draftInvoiceFeature || false,
+          exportInvoiceFeature: normalizedPkg.exportInvoiceFeature || false,
+          aiChatboxFeature: normalizedPkg.aiChatboxFeature || false,
+          hotelNotificationFeature: normalizedPkg.hotelNotificationFeature || false,
+          isActive: normalizedPkg.isActive
         });
         // Bật checkbox cho admin (để người dùng có thể chuyển trạng thái không giới hạn)
         if (this.isAdmin) {
@@ -508,7 +500,9 @@ export class PricingManagementComponent implements OnInit {
       // Tính maxUsers/maxRooms:
       // - Superadmin: lấy từ form (cho phép chỉnh sửa)
       // - Khác: giữ nguyên giá trị gói đang sửa (nếu có), tránh bị set 1 mặc định khi controls bị disable
-      const editingPkg = this.editingPackageId ? (this.packages.find(p => p._id === this.editingPackageId || p.id === this.editingPackageId) || {}) : {};
+      const editingPkg = this.editingPackageId
+        ? this.normalizePackageLimits(this.packages.find(p => p._id === this.editingPackageId || p.id === this.editingPackageId) || {})
+        : {};
       const computeMaxUsers = () => {
         if (this.isSuperAdmin) {
           return (formData.unlimitedUsers || formData.maxUsers === 0) ? 0 : (formData.maxUsers >= 1 ? formData.maxUsers : 1);
@@ -837,5 +831,73 @@ export class PricingManagementComponent implements OnInit {
         });
       }
     });
+  }
+
+  isUnlimitedUsers(pkg: any): boolean {
+    return this.getDisplayMaxUsers(pkg) === 0;
+  }
+
+  getDisplayMaxUsers(pkg: any): number {
+    const normalizedPkg = this.normalizePackageLimits(pkg);
+    const maxUsers = normalizedPkg?.maxUsers;
+    return maxUsers === null || maxUsers === undefined ? 0 : maxUsers;
+  }
+
+  isUnlimitedSubscriber(subscriber: any): boolean {
+    return this.getSubscriberDisplayMaxUsers(subscriber) === 0;
+  }
+
+  getSubscriberDisplayMaxUsers(subscriber: any): number {
+    const normalizedSubscriber = this.normalizeSubscriberLimits(subscriber);
+    const maxUsers = normalizedSubscriber?.maxUsers;
+    return maxUsers === null || maxUsers === undefined ? 0 : maxUsers;
+  }
+
+  private normalizePackageLimits(pkg: any): any {
+    if (!pkg) {
+      return pkg;
+    }
+
+    const isFree = this.isFreePackage(pkg);
+    const rawMaxUsers = pkg.maxUsers;
+    const normalizedMaxUsers = isFree && (rawMaxUsers === null || rawMaxUsers === undefined || rawMaxUsers === 0)
+      ? 1
+      : rawMaxUsers;
+
+    return {
+      ...pkg,
+      isFree,
+      maxUsers: normalizedMaxUsers
+    };
+  }
+
+  private normalizeSubscriberLimits(subscriber: any): any {
+    if (!subscriber) {
+      return subscriber;
+    }
+
+    const packageName = String(subscriber.packageName || '').trim().toUpperCase();
+    const isFreeSubscriber = packageName === 'FREE';
+    const rawMaxUsers = subscriber.maxUsers;
+    const normalizedMaxUsers = isFreeSubscriber && (rawMaxUsers === null || rawMaxUsers === undefined || rawMaxUsers === 0)
+      ? 1
+      : rawMaxUsers;
+
+    return {
+      ...subscriber,
+      maxUsers: normalizedMaxUsers
+    };
+  }
+
+  private isFreePackage(pkg: any): boolean {
+    if (!pkg || pkg.isContactOnly) {
+      return false;
+    }
+
+    const monthlyPrice = Number(pkg.monthlyPrice ?? pkg.price ?? 0);
+    const yearlyPrice = Number(pkg.yearlyPrice ?? (pkg.price ? pkg.price * 12 : 0));
+    const packageName = String(pkg.name || '').trim().toUpperCase();
+
+    return packageName === 'FREE' || (monthlyPrice === 0 && yearlyPrice === 0);
   }
 } 

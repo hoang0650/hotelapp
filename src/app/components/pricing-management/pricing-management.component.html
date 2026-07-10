@@ -49,7 +49,7 @@
                   {{ pkg.duration }} {{ 'PRICING_MANAGEMENT.MONTHS' | translate }}
                 </span>
               </td>
-              <td>{{ pkg.maxUsers === 0 || pkg.maxUsers === null ? ('PRICING_MANAGEMENT.UNLIMITED' | translate) : pkg.maxUsers }}</td>
+              <td>{{ isUnlimitedUsers(pkg) ? ('PRICING_MANAGEMENT.UNLIMITED' | translate) : getDisplayMaxUsers(pkg) }}</td>
               <td>{{ (pkg.maxRooms === 0 || pkg.maxRooms === null) ? ('PRICING_MANAGEMENT.UNLIMITED' | translate) : (pkg.maxRooms || 0) }}</td>
               <td>
                 <nz-tag [nzColor]="pkg.isActive ? 'success' : 'error'">
@@ -148,11 +148,11 @@
               <td>{{ sub.subscriptionDate ? (sub.subscriptionDate | date:'dd/MM/yyyy') : 'N/A' }}</td>
               <td>{{ sub.expiryDate | date:'dd/MM/yyyy' }}</td>
               <td>
-                <span *ngIf="sub.maxUsers === 0 || sub.maxUsers === null">
+                <span *ngIf="isUnlimitedSubscriber(sub)">
                   {{ sub.staffCount || 0 }} / {{ 'PRICING_MANAGEMENT.UNLIMITED' | translate }}
                 </span>
-                <span *ngIf="sub.maxUsers !== 0 && sub.maxUsers !== null">
-                  {{ sub.staffCount || 0 }} / {{ sub.maxUsers }}
+                <span *ngIf="!isUnlimitedSubscriber(sub)">
+                  {{ sub.staffCount || 0 }} / {{ getSubscriberDisplayMaxUsers(sub) }}
                 </span>
               </td>
               <td>
