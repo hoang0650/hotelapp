@@ -247,4 +247,3 @@ export class TransactionService {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/income/${id}`);
   }
 }
-
