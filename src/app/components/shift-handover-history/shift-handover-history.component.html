@@ -233,14 +233,35 @@
           <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.CARD_PAYMENT' | translate">
             {{ formatCurrency(selectedRecord.cardPaymentAmount || 0) }}
           </nz-descriptions-item>
-          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.EXPENSE_AMOUNT' | translate">
-            {{ formatCurrency(selectedRecord.expenseAmount || 0) }}
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.EXPENSE_AMOUNT' | translate" [nzSpan]="2">
+            <strong class="text-danger">{{ formatCurrency(selectedRecordBreakdown?.expenses?.total || 0) }}</strong>
+            <div>
+              Tiền mặt: {{ formatCurrency(selectedRecordBreakdown?.expenses?.cash || 0) }} |
+              Chuyển khoản: {{ formatCurrency(selectedRecordBreakdown?.expenses?.bankTransfer || 0) }} |
+              Thẻ: {{ formatCurrency(selectedRecordBreakdown?.expenses?.card || 0) }}
+            </div>
           </nz-descriptions-item>
-          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.INCOME_AMOUNT' | translate">
-            {{ formatCurrency(selectedRecord.incomeAmount || 0) }}
+          <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.INCOME_AMOUNT' | translate" [nzSpan]="2">
+            <strong class="text-success">{{ formatCurrency(selectedRecordBreakdown?.incomes?.total || 0) }}</strong>
+            <div>
+              Tiền mặt: {{ formatCurrency(selectedRecordBreakdown?.incomes?.cash || 0) }} |
+              Chuyển khoản: {{ formatCurrency(selectedRecordBreakdown?.incomes?.bankTransfer || 0) }} |
+              Thẻ: {{ formatCurrency(selectedRecordBreakdown?.incomes?.card || 0) }}
+            </div>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Lịch sử tiền nhận từ khách" [nzSpan]="2">
+            <strong>{{ formatCurrency(selectedRecordBreakdown?.customerPayments?.total || 0) }}</strong>
+            <div>
+              Tiền mặt: {{ formatCurrency(selectedRecordBreakdown?.customerPayments?.cash || 0) }} |
+              Chuyển khoản: {{ formatCurrency(selectedRecordBreakdown?.customerPayments?.bankTransfer || 0) }} |
+              Thẻ: {{ formatCurrency(selectedRecordBreakdown?.customerPayments?.card || 0) }}
+            </div>
           </nz-descriptions-item>
           <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.TOTAL_REVENUE' | translate">
             <strong class="text-primary">{{ formatCurrency(getTotalRevenue(selectedRecord)) }}</strong>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Cong thuc tong doanh thu" [nzSpan]="2">
+            Lịch sử tiền nhận từ khách + phiếu thu trong ca + tiền mặt trong ca - phiếu chi trong ca
           </nz-descriptions-item>
           <nz-descriptions-item [nzTitle]="'SHIFT_HANDOVER.HISTORY.NOTES' | translate" [nzSpan]="2">
             {{ selectedRecord.notes || ('SHIFT_HANDOVER.HISTORY.NO_NOTES' | translate) }}
@@ -474,4 +495,3 @@
     </ng-container>
   </nz-modal>
 </div>
-

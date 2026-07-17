@@ -246,18 +246,11 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
   }
 
   getTotalRevenue(): number {
-    if (this.revenueData) {
-      const totalRoomRevenue = this.revenueData.totalRevenue || 0;
-      const incomeAmount = this.revenueData.incomeTotal || 0;
-      return totalRoomRevenue + incomeAmount;
-    }
-    const values = this.handoverForm.value;
-    const cashAmount = values.cashAmount || 0;
-    const bankTransferAmount = values.bankTransferAmount || 0;
-    const cardPaymentAmount = values.cardPaymentAmount || 0;
-    const expenseAmount = values.expenseAmount || 0;
-    const incomeAmount = values.incomeAmount || 0;
-    return cashAmount + bankTransferAmount + cardPaymentAmount + incomeAmount - expenseAmount;
+    return this.calculateRevenueFromValues(this.handoverForm.value);
+  }
+
+  getRecordTotalRevenue(record: ShiftHandover): number {
+    return this.calculateRevenueFromValues(record);
   }
 
   // ============ GIAO CA ============
@@ -478,6 +471,24 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     return Math.max(0, this.previousShiftAmount + this.cashInShift - currentManagerAmount);
   }
 
+  private calculateRevenueFromValues(values: any): number {
+    const cashAmount = this.toNumber(values?.cashAmount);
+    const bankTransferAmount = this.toNumber(values?.bankTransferAmount);
+    const cardPaymentAmount = this.toNumber(values?.cardPaymentAmount);
+    const expenseAmount = this.toNumber(values?.expenseAmount);
+    const incomeAmount = this.toNumber(values?.incomeAmount);
+    const cashInShift = this.toNumber(values?.cashInShift);
+
+    return this.shiftHandoverService.calculateTotalRevenue(
+      cashAmount,
+      bankTransferAmount,
+      cardPaymentAmount,
+      expenseAmount,
+      incomeAmount,
+      cashInShift
+    );
+  }
+
   private resetHandoverForm(): void {
     this.handoverForm.reset({
       toStaffId: null,
@@ -521,6 +532,11 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
       return String(value._id || value.id || '').trim();
     }
     return String(value).trim();
+  }
+
+  private toNumber(value: any): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   // Currency formatter and parser for nz-input-number

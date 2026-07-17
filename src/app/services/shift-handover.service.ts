@@ -276,16 +276,17 @@ export class ShiftHandoverService {
 
   /**
    * Tính tổng doanh thu
-   * Công thức: Tổng doanh thu = Tiền mặt + Chuyển khoản + Cà thẻ + Phiếu thu - Tiền chi
+   * Công thức: Tiền nhận từ khách + Phiếu thu + Tiền mặt trong ca - Phiếu chi
    */
   calculateTotalRevenue(
     cashAmount: number,
     bankTransferAmount: number,
     cardPaymentAmount: number,
     expenseAmount: number,
-    incomeAmount: number = 0
+    incomeAmount: number = 0,
+    cashInShift: number = 0
   ): number {
-    return cashAmount + bankTransferAmount + cardPaymentAmount + incomeAmount - expenseAmount;
+    return cashAmount + bankTransferAmount + cardPaymentAmount + incomeAmount + cashInShift - expenseAmount;
   }
 
   /**

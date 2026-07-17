@@ -87,6 +87,7 @@ type RoomWithMeta = Room & {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomComponent implements OnInit, OnDestroy {
+  private static readonly ROOM_COLUMNS_STORAGE_PREFIX = 'room_columns_count_';
   @ViewChild(TableComponent) tableComponent!: TableComponent;
   @ViewChild(CalendarComponent) calendarComponent!: CalendarComponent;
   @ViewChild('shiftHandoverContent') shiftHandoverContent!: TemplateRef<any>;
@@ -164,6 +165,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   private lastLoadedHotelId: string | null = null;
   private realtimeRoomsTimer: ReturnType<typeof setInterval> | null = null;
   private realtimePricesTimer: ReturnType<typeof setInterval> | null = null;
+  private lastRealtimePriceRefreshAt = 0;
   private realtimeLastSnapshotKey: string | null = null;
   private realtimeRefreshing = false;
   private roomsSocket: Socket | null = null;
@@ -176,6 +178,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   private historyReloadInFlight = false;
   private lastHistoryLoadedAt = 0;
   private occupiedEventsReloadQueued = false;
+  private displayRebuildQueued = false;
   private chartDataLoading = false;
   private expensesLoadedHotelId: string | null = null;
   private incomesLoadedHotelId: string | null = null;
@@ -209,11 +212,38 @@ export class RoomComponent implements OnInit, OnDestroy {
     private apiService: ApiService,
     private paymentSpeakerService: PaymentSpeakerService
   ) {
-    this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe(() => {
-      if (this.selectedHotelId) {
-        if (!this.isModalOpen && this.isHistoryPanelActive) {
-          this.scheduleRoomHistoryReload();
+    this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe((event) => {
+      if (!this.selectedHotelId) {
+        return;
+      }
+
+      const eventHotelId = event?.hotelId ? String(event.hotelId) : '';
+      if (eventHotelId && eventHotelId !== String(this.selectedHotelId)) {
+        return;
+      }
+
+      const runUpdate = () => {
+        if (event?.refreshRooms) {
+          if (event.roomId && !event.force && event.reason !== 'recheckin' && event.reason !== 'delete_checkout_history') {
+            this.updateSingleRoomRealtime(event.roomId);
+            if (event.relatedRoomId) {
+              this.updateSingleRoomRealtime(event.relatedRoomId);
+            }
+          } else {
+            this.loadRooms(true);
+          }
         }
+
+        if (!this.isModalOpen && (this.isHistoryPanelActive || event?.refreshHistory)) {
+          this.scheduleRoomHistoryReload(!!event?.force || !!event?.refreshHistory);
+        }
+      };
+
+      const delayMs = event?.delayMs ?? 0;
+      if (delayMs > 0) {
+        setTimeout(runUpdate, delayMs);
+      } else {
+        runUpdate();
       }
     });
     
@@ -266,7 +296,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     const currentUser = this.authService.getCurrentUser();
     const userId = currentUser?._id;
 
-    if (userId) {
+    if (userId && !this.selectedHotelId) {
       this.apiService.getSelectedHotel(userId).subscribe({
         next: (res) => {
           if (res?.selectedHotelId) {
@@ -292,11 +322,17 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (userId) {
+    const cachedColumnsCount = this.getStoredRoomColumnsCount(userId);
+    if (cachedColumnsCount !== null) {
+      this.count = cachedColumnsCount;
+    }
+
+    if (userId && cachedColumnsCount === null) {
       this.apiService.getRoomColumnsCount(userId).subscribe({
         next: (res) => {
           if (res?.columnsCount && res.columnsCount >= 2 && res.columnsCount <= 12) {
             this.count = res.columnsCount;
+            this.storeRoomColumnsCount(userId, res.columnsCount);
           }
         },
         error: () => {}
@@ -1138,29 +1174,59 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.stopRoomsSocketRealtime();
     this.stopRealtimePolling();
     this.realtimeRefreshing = false;
+    this.lastRealtimePriceRefreshAt = 0;
     this.realtimeLastSnapshotKey = null;
   }
 
   private startRealtimePolling(): void {
     if (!this.selectedHotelId) return;
-    if (this.realtimeRoomsTimer || this.realtimePricesTimer) return;
-    this.realtimeRoomsTimer = setInterval(() => {
-      this.refreshRoomsLiteRealtime();
-      this.refreshOccupiedRoomPricesRealtime();
-      this.updateFloorsFromRooms();
-      this.cdr.markForCheck();
-    }, 60000);
+    if (!this.realtimeRoomsTimer) {
+      this.realtimeRoomsTimer = setInterval(() => {
+        this.refreshRoomsLiteRealtime();
+      }, 60000);
+    }
+
+    if (!this.realtimePricesTimer) {
+      this.realtimePricesTimer = setInterval(() => {
+        this.runRealtimeDisplayTick();
+      }, 30000);
+    }
+
+    this.runRealtimeDisplayTick(true);
   }
 
   private stopRealtimePolling(): void {
-    if (this.realtimeRoomsTimer) {
-      clearInterval(this.realtimeRoomsTimer);
-      this.realtimeRoomsTimer = null;
-    }
+    this.stopRealtimeRoomsPolling();
     if (this.realtimePricesTimer) {
       clearInterval(this.realtimePricesTimer);
       this.realtimePricesTimer = null;
     }
+  }
+
+  private stopRealtimeRoomsPolling(): void {
+    if (this.realtimeRoomsTimer) {
+      clearInterval(this.realtimeRoomsTimer);
+      this.realtimeRoomsTimer = null;
+    }
+  }
+
+  private runRealtimeDisplayTick(forcePriceRefresh: boolean = false): void {
+    if (!this.selectedHotelId) return;
+    if (this.isRoomsLoading || this.isReloading || this.isModalOpen) return;
+
+    const now = Date.now();
+    const shouldRefreshPrices =
+      forcePriceRefresh ||
+      this.lastRealtimePriceRefreshAt === 0 ||
+      now - this.lastRealtimePriceRefreshAt >= 60000;
+
+    if (shouldRefreshPrices) {
+      this.lastRealtimePriceRefreshAt = now;
+      this.refreshOccupiedRoomPricesRealtime();
+    }
+
+    this.scheduleDisplayRebuild();
+    this.cdr.markForCheck();
   }
 
   private startRoomsSocketRealtime(): void {
@@ -1179,7 +1245,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.roomsSocketConnected = true;
       this.roomsSocketHotelId = this.selectedHotelId;
       this.roomsSocket?.emit('join_hotel', this.selectedHotelId);
-      this.stopRealtimePolling();
+      this.stopRealtimeRoomsPolling();
+      this.runRealtimeDisplayTick(true);
     });
     
     this.roomsSocket.on('disconnect', () => {
@@ -1235,11 +1302,57 @@ export class RoomComponent implements OnInit, OnDestroy {
         const id = this.extractId((r as any)?._id);
         const status = (r as any)?.status || '';
         const guestStatus = (r as any)?.guestStatus || '';
-        const currentBookingId = this.extractId((r as any)?.currentBooking?._id || (r as any)?.currentBooking);
-        return `${id}:${status}:${guestStatus}:${currentBookingId}`;
+        const roomUpdatedAt = (r as any)?.updatedAt ? new Date((r as any).updatedAt).getTime() : 0;
+        const currentBookingSignature = this.buildCurrentBookingRealtimeSignature((r as any)?.currentBooking);
+        return `${id}:${status}:${guestStatus}:${roomUpdatedAt}:${currentBookingSignature}`;
       })
       .sort();
     return parts.join('|');
+  }
+
+  private buildCurrentBookingRealtimeSignature(currentBooking: any): string {
+    if (!currentBooking) {
+      return '';
+    }
+
+    if (typeof currentBooking !== 'object') {
+      return this.extractId(currentBooking) || String(currentBooking);
+    }
+
+    const bookingId = this.extractId(currentBooking._id) || '';
+    const updatedAt = currentBooking.updatedAt ? new Date(currentBooking.updatedAt).getTime() : 0;
+    const checkInDate = currentBooking.checkInDate ? new Date(currentBooking.checkInDate).getTime() : 0;
+    const checkOutDate = currentBooking.checkOutDate ? new Date(currentBooking.checkOutDate).getTime() : 0;
+    const advancePayment = this.normalizeMoneyValue(currentBooking.advancePayment ?? currentBooking.deposit);
+    const additionalCharges = this.normalizeMoneyValue(currentBooking.additionalCharges);
+    const discount = this.normalizeMoneyValue(currentBooking.discount ?? currentBooking.discounts);
+    const totalAmount = this.normalizeMoneyValue(currentBooking.totalAmount);
+    const paidAmount = this.normalizeMoneyValue(currentBooking.paidAmount);
+    const remainingAmount = this.normalizeMoneyValue(
+      currentBooking.remainingAmount ?? currentBooking.paymentDetails?.remainingAmount
+    );
+    const selectedServices = this.normalizeMoneyValue(currentBooking.selectedServices ?? currentBooking.services);
+    const rateType = currentBooking.rateType || currentBooking.bookingType || '';
+    const guestName =
+      currentBooking.guestInfo?.name ||
+      currentBooking.guestDetails?.name ||
+      '';
+
+    return [
+      bookingId,
+      updatedAt,
+      checkInDate,
+      checkOutDate,
+      rateType,
+      advancePayment,
+      additionalCharges,
+      discount,
+      totalAmount,
+      paidAmount,
+      remainingAmount,
+      selectedServices,
+      guestName
+    ].join(':');
   }
 
   private loadPaymentSpeakerSetting(hotelId: string): void {
@@ -1654,6 +1767,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.count = count;
     const currentUser = this.authService.getCurrentUser();
     const userId = currentUser?._id;
+    this.storeRoomColumnsCount(userId, count);
     if (userId) {
       this.apiService.saveRoomColumnsCount(userId, count).subscribe({
         next: () => console.log('[Redis] Room columns count saved'),
@@ -1682,6 +1796,28 @@ export class RoomComponent implements OnInit, OnDestroy {
       return Math.max(1, Math.floor(24 / compactCount));
     }
     return 24 / this.count;
+  }
+
+  private getStoredRoomColumnsCount(userId?: string): number | null {
+    if (!userId || typeof window === 'undefined' || !window.localStorage) {
+      return null;
+    }
+
+    const rawValue = localStorage.getItem(`${RoomComponent.ROOM_COLUMNS_STORAGE_PREFIX}${userId}`);
+    const parsedValue = Number(rawValue);
+    if (!Number.isFinite(parsedValue) || parsedValue < 2 || parsedValue > 12) {
+      return null;
+    }
+
+    return parsedValue;
+  }
+
+  private storeRoomColumnsCount(userId: string | undefined, count: number): void {
+    if (!userId || typeof window === 'undefined' || !window.localStorage) {
+      return;
+    }
+
+    localStorage.setItem(`${RoomComponent.ROOM_COLUMNS_STORAGE_PREFIX}${userId}`, String(count));
   }
 
   // Responsive methods for different breakpoints
@@ -1822,7 +1958,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
           setTimeout(() => {
             if (!this.isModalOpen) {
-              this.showRoomHistory();
+              this.showRoomHistory(true);
             }
           }, 900);
           return;
@@ -1836,7 +1972,14 @@ export class RoomComponent implements OnInit, OnDestroy {
 
         setTimeout(() => {
           if (!this.isModalOpen) {
-            this.roomsService.notifyRoomDataUpdated();
+            this.roomsService.notifyRoomDataUpdated({
+              hotelId: this.selectedHotelId || undefined,
+              roomId: room._id!,
+              reason: modalType === 'checkin' ? 'checkin' : 'generic',
+              refreshRooms: modalType !== 'checkout',
+              refreshHistory: true,
+              force: modalType !== 'checkout'
+            });
           }
         }, 300);
       });
@@ -2112,6 +2255,19 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   private rebuildDisplayRooms(): void {
     this.recomputeRoomDerivedState();
+  }
+
+  private scheduleDisplayRebuild(): void {
+    if (this.displayRebuildQueued) {
+      return;
+    }
+
+    this.displayRebuildQueued = true;
+    requestAnimationFrame(() => {
+      this.displayRebuildQueued = false;
+      this.rebuildDisplayRooms();
+      this.cdr.detectChanges();
+    });
   }
 
   private scheduleOccupiedEventsReload(forceReload: boolean = false): void {
@@ -2691,8 +2847,7 @@ export class RoomComponent implements OnInit, OnDestroy {
             }
           }
         });
-        this.rebuildDisplayRooms();
-        this.cdr.detectChanges();
+        this.scheduleDisplayRebuild();
       },
       error: (error) => {
         console.error('Error loading events for occupied rooms:', error);
@@ -2728,8 +2883,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       const fallbackPrice = this.calculateRoomPriceLocal(room, checkinTime, rawRateType);
       this.roomPriceCache.set(cacheKey, fallbackPrice);
       this.roomPriceMap.set(cacheKey, fallbackPrice);
-      this.updateFloorsFromRooms();
-      this.cdr.detectChanges();
+      this.scheduleDisplayRebuild();
       return;
     }
 
@@ -2749,8 +2903,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.roomPriceCache.delete(loadingKey);
         
         // Trigger change detection để cập nhật UI
-        this.updateFloorsFromRooms();
-        this.cdr.detectChanges();
+        this.scheduleDisplayRebuild();
       },
       error: (error) => {
         console.error(`[loadRoomPriceFromAPI] Error loading price for room ${room.roomNumber}:`, error);
@@ -2760,8 +2913,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         const fallbackPrice = this.calculateRoomPriceLocal(room, checkinTime, rawRateType);
         this.roomPriceCache.set(cacheKey, fallbackPrice);
         this.roomPriceMap.set(cacheKey, fallbackPrice);
-        this.updateFloorsFromRooms();
-        this.cdr.detectChanges();
+        this.scheduleDisplayRebuild();
       }
     });
   }
@@ -3726,6 +3878,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           // 1. GHI ĐÈ THUỘC TÍNH (Mutation) thay vì gán mới toàn bộ object
           // Kỹ thuật này giúp Angular không render lại toàn bộ thẻ HTML gây chớp
           Object.assign(this.rooms[index], hydratedRoom);
+          this.lastLoadedHotelId = this.selectedHotelId;
           
           // 2. Xử lý logic riêng cho phòng đang có khách (Cập nhật thời gian, giá tiền)
           if (this.rooms[index].status === 'occupied' || this.rooms[index].status === 'booked') {
@@ -3750,20 +3903,16 @@ export class RoomComponent implements OnInit, OnDestroy {
                 if (checkinEvent) {
                   this.loadRoomPriceFromAPI(this.rooms[index], checkinEvent, true);
                 }
-                this.updateFloorsFromRooms();
-                this.cdr.detectChanges();
+                this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
+                this.scheduleDisplayRebuild();
               });
           } else {
             // Xóa sạch event cũ nếu phòng đã trả/đang dọn
             this.rooms[index].events = [];
             this.rooms[index].currentBooking = undefined;
+            this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
+            this.scheduleDisplayRebuild();
           }
-
-          // 3. Cập nhật lại trạng thái hiển thị và banner theo một nhịp duy nhất
-          this.updateFloorsFromRooms();
-          
-          // 4. Báo cho Angular biết để vẽ lại UI
-          this.cdr.detectChanges();
         }
       },
       error: (err) => console.error(`Realtime Sync Error - Phòng ${roomId}:`, err)

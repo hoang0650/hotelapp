@@ -11,6 +11,14 @@ import { format, isSameDay } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { TranslateService } from '@ngx-translate/core';
 
+interface PaymentSummary {
+  cash: number;
+  bankTransfer: number;
+  card: number;
+  other: number;
+  total: number;
+}
+
 @Component({
   selector: 'app-shift-handover-history',
   templateUrl: './shift-handover-history.component.html',
@@ -38,6 +46,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   
   // Selected record for detail view
   selectedRecord: ShiftHandover | null = null;
+  selectedRecordBreakdown: {
+    customerPayments: PaymentSummary;
+    incomes: PaymentSummary;
+    expenses: PaymentSummary;
+    totalRevenue: number;
+  } | null = null;
   isDetailModalVisible = false;
   
   // Translated titles
@@ -181,12 +195,19 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     };
 
     this.selectedRecord = filteredRecord;
+    this.selectedRecordBreakdown = {
+      customerPayments: this.getCustomerPaymentSummary(filteredRecord),
+      incomes: this.getIncomeSummary(filteredRecord),
+      expenses: this.getExpenseSummary(filteredRecord),
+      totalRevenue: this.getTotalRevenue(filteredRecord)
+    };
     this.isDetailModalVisible = true;
   }
   
   closeDetailModal(): void {
     this.isDetailModalVisible = false;
     this.selectedRecord = null;
+    this.selectedRecordBreakdown = null;
   }
   
   getCustomerPayments(record: any): any[] {
@@ -340,33 +361,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
 
   getTotalRevenue(record: ShiftHandover): number {
-    const handoverDate = new Date(record.handoverTime);
-    
-    // Lọc roomHistory theo đúng ngày giao ca để bắt đúng doanh thu của từng ngày
-    // Tránh việc dồn tích doanh thu từ các ngày trước nếu không giao ca
-    const filteredRoomHistory = (record.roomHistory || []).filter(room => {
-      const timestamp = room.timestamp ? new Date(room.timestamp) : null;
-      return timestamp && isSameDay(timestamp, handoverDate);
-    });
+    const customerPayments = this.getCustomerPaymentSummary(record).total;
+    const incomes = this.getIncomeSummary(record).total;
+    const expenses = this.getExpenseSummary(record).total;
+    const cashInShift = this.toAmount(record.cashInShift);
 
-    const adjustedRoomRevenue = filteredRoomHistory.reduce((sum, room: any) => {
-      const roomTotal = room.roomTotal || 0;
-      const serviceAmount = room.serviceAmount || room.serviceTotal || 0;
-      const additionalCharges = room.additionalCharges || 0;
-      const discount = room.discount || 0;
-      const advancePayment = room.advancePayment || 0;
-      return sum + (roomTotal + serviceAmount + additionalCharges - discount - advancePayment);
-    }, 0);
-
-    // Lọc incomes theo đúng ngày giao ca
-    const filteredIncomes = (record.incomes || []).filter(income => {
-      const timestamp = income.timestamp ? new Date(income.timestamp) : null;
-      return timestamp && isSameDay(timestamp, handoverDate);
-    });
-
-    const incomeAmount = filteredIncomes.reduce((sum, income: any) => sum + (income.amount || 0), 0);
-    
-    return adjustedRoomRevenue + incomeAmount;
+    return customerPayments + incomes + cashInShift - expenses;
   }
 
   // Helper methods để lấy các giá trị từ room history
@@ -413,9 +413,85 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     return this.getAdjustedTotal(room);
   }
 
+  getCustomerPaymentSummary(record: any): PaymentSummary {
+    return this.summarizePayments(
+      this.getCustomerPayments(record),
+      (item) => this.getAmount(item),
+      (item) => item?.paymentMethod
+    );
+  }
+
+  getIncomeSummary(record: any): PaymentSummary {
+    return this.summarizePayments(
+      Array.isArray(record?.incomes) ? record.incomes : [],
+      (item) => item?.amount,
+      (item) => item?.method
+    );
+  }
+
+  getExpenseSummary(record: any): PaymentSummary {
+    return this.summarizePayments(
+      Array.isArray(record?.expenses) ? record.expenses : [],
+      (item) => item?.amount,
+      (item) => item?.method
+    );
+  }
+
   getCheckinTime(room: any): Date | null {
     const checkinTime = room.checkinTime || room.checkInTime;
     return checkinTime ? new Date(checkinTime) : null;
+  }
+
+  private summarizePayments(
+    items: any[],
+    amountGetter: (item: any) => number,
+    methodGetter: (item: any) => any
+  ): PaymentSummary {
+    return (items || []).reduce<PaymentSummary>((summary, item) => {
+      const amount = this.toAmount(amountGetter(item));
+      const method = this.normalizePaymentMethod(methodGetter(item));
+
+      if (amount <= 0) {
+        return summary;
+      }
+
+      summary.total += amount;
+      if (method === 'cash') {
+        summary.cash += amount;
+      } else if (method === 'bank_transfer') {
+        summary.bankTransfer += amount;
+      } else if (method === 'card') {
+        summary.card += amount;
+      } else {
+        summary.other += amount;
+      }
+      return summary;
+    }, {
+      cash: 0,
+      bankTransfer: 0,
+      card: 0,
+      other: 0,
+      total: 0
+    });
+  }
+
+  private normalizePaymentMethod(method: any): 'cash' | 'bank_transfer' | 'card' | 'other' {
+    const normalized = String(method || '').toLowerCase().trim();
+    if (normalized === 'cash') {
+      return 'cash';
+    }
+    if (normalized === 'bank_transfer' || normalized === 'transfer' || normalized === 'bank') {
+      return 'bank_transfer';
+    }
+    if (normalized === 'card' || normalized === 'credit_card') {
+      return 'card';
+    }
+    return 'other';
+  }
+
+  private toAmount(value: any): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   getGuestSource(room: any): string {

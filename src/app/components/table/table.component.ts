@@ -416,13 +416,22 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     }
     
     // Subscribe vào roomDataUpdated$ để tự động reload khi có cập nhật
-    this.roomDataUpdateSubscription = this.roomService.getRoomDataUpdated$().subscribe(() => {
-      if (this.hotelId) {
-        // Đợi một chút để đảm bảo backend đã cập nhật xong
-        setTimeout(() => {
-          this.loadHistory(this.currentFilterType);
-        }, 500);
+    this.roomDataUpdateSubscription = this.roomService.getRoomDataUpdated$().subscribe((event) => {
+      if (!this.hotelId) {
+        return;
       }
+
+      const eventHotelId = event?.hotelId ? String(event.hotelId) : '';
+      if (eventHotelId && eventHotelId !== String(this.hotelId)) {
+        return;
+      }
+
+      const delayMs = event?.delayMs ?? 200;
+      const shouldForceReload = !!event?.force || !!event?.refreshHistory;
+
+      setTimeout(() => {
+        this.loadHistory(this.currentFilterType, 1, shouldForceReload);
+      }, delayMs);
     });
     
     // Tỷ giá VND -> USD cho hiển thị quy đổi
@@ -592,7 +601,15 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
               setTimeout(() => {
                 this.loadHistory(this.currentFilterType);
                 // Notify room component để reload rooms với force reload
-                this.roomService.notifyRoomDataUpdated();
+                this.roomService.notifyRoomDataUpdated({
+                  hotelId: this.hotelId || undefined,
+                  roomId: roomId?.toString(),
+                  reason: 'recheckin',
+                  refreshRooms: true,
+                  refreshHistory: true,
+                  force: true,
+                  delayMs: 150
+                });
               }, 300);
             }
           },
@@ -656,7 +673,15 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
               setTimeout(() => {
                 this.loadHistory(this.currentFilterType);
                 // Notify room component để reload rooms và cập nhật tổng tiền
-                this.roomService.notifyRoomDataUpdated();
+                this.roomService.notifyRoomDataUpdated({
+                  hotelId: this.hotelId || undefined,
+                  roomId: roomId?.toString(),
+                  reason: 'delete_checkout_history',
+                  refreshRooms: true,
+                  refreshHistory: true,
+                  force: true,
+                  delayMs: 150
+                });
               }, 300);
             }
           },
@@ -1416,24 +1441,10 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       shiftId: [this.defaultShiftId]
     });
 
-    const toNumber = (v: any): number => {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
-    };
-
-    const calculateShiftTotalRevenue = (values: any): number => {
-      const cash = toNumber(values?.cashAmount);
-      const bankTransfer = toNumber(values?.bankTransferAmount);
-      const card = toNumber(values?.cardPaymentAmount);
-      const income = toNumber(values?.incomeAmount);
-      const expense = toNumber(values?.expenseAmount);
-      return cash + bankTransfer + card + income - expense;
-    };
-
     // Tính số tiền giao ca = Số tiền ca trước + Tiền mặt trong ca - Tiền giao quản lý
     this.shiftHandoverForm.valueChanges.subscribe(values => {
       const handoverAmount = (values.previousShiftAmount || 0) + (values.cashInShift || 0) - (values.managerHandoverAmount || 0);
-      const totalRevenue = calculateShiftTotalRevenue(values);
+      const totalRevenue = this.calculateShiftTotalRevenue(values);
       
       if (handoverAmount >= 0) {
         this.handoverMessage = `${this.translate.instant('TABLE.SHIFT_HANDOVER_MODAL.HANDOVER_AMOUNT_LABEL')} ${this.formatterVND(handoverAmount)} đ | ${this.translate.instant('TABLE.SHIFT_HANDOVER_MODAL.TOTAL_REVENUE_LABEL')} ${this.formatterVND(totalRevenue)} đ`;
@@ -1446,18 +1457,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   getShiftTotalRevenue(): number {
-    const toNumber = (v: any): number => {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
-    };
-
-    const values = this.shiftHandoverForm?.value;
-    const cash = toNumber(values?.cashAmount);
-    const bankTransfer = toNumber(values?.bankTransferAmount);
-    const card = toNumber(values?.cardPaymentAmount);
-    const income = toNumber(values?.incomeAmount);
-    const expense = toNumber(values?.expenseAmount);
-    return cash + bankTransfer + card + income - expense;
+    return this.calculateShiftTotalRevenue(this.shiftHandoverForm?.value);
   }
   
   // Load danh sách nhân viên cho giao ca
@@ -2132,7 +2132,13 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         this.reloadData();
         
         // [CẬP NHẬT 3]: Báo hiệu cho các component khác (như sơ đồ phòng) tự động cập nhật
-        this.roomService.notifyRoomDataUpdated();
+        this.roomService.notifyRoomDataUpdated({
+          hotelId: this.hotelId || undefined,
+          reason: 'generic',
+          refreshRooms: true,
+          refreshHistory: true,
+          force: true
+        });
         
         setTimeout(() => {
           this.closeShiftHandoverModal();
@@ -2949,7 +2955,13 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         this.processTableData();
         this.calculateTotalPayment();
         this.reloadData();
-        this.roomService.notifyRoomDataUpdated();
+        this.roomService.notifyRoomDataUpdated({
+          hotelId: this.hotelId || undefined,
+          reason: 'generic',
+          refreshRooms: true,
+          refreshHistory: true,
+          force: true
+        });
         
         // Log để debug
         console.log('Đã cập nhật form giao ca sau khi giao tiền quản lý:', {
@@ -2965,13 +2977,22 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   getTotalAmount(): number {
-    const baseTotal = this.processedPaidData.reduce((total: number, item: any) => {
-      const amount = this.getDisplayTotalAmount(item);
-      return total + (typeof amount === 'number' ? amount : 0);
-    }, 0);
-    const incomeAmount = this.shiftHandoverForm?.get('incomeAmount')?.value || 0;
-    const expenseAmount = this.shiftHandoverForm?.get('expenseAmount')?.value || 0;
-    return Math.max(0, baseTotal + incomeAmount - expenseAmount);
+    return this.getShiftTotalRevenue();
+  }
+
+  private calculateShiftTotalRevenue(values: any): number {
+    const cash = this.toSafeNumber(values?.cashAmount);
+    const bankTransfer = this.toSafeNumber(values?.bankTransferAmount);
+    const card = this.toSafeNumber(values?.cardPaymentAmount);
+    const income = this.toSafeNumber(values?.incomeAmount);
+    const expense = this.toSafeNumber(values?.expenseAmount);
+    const cashInShift = this.toSafeNumber(values?.cashInShift);
+    return cash + bankTransfer + card + income + cashInShift - expense;
+  }
+
+  private toSafeNumber(value: any): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
   
   // Mở modal lịch sử giao ca

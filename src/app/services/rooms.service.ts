@@ -18,11 +18,22 @@ interface RoomHistoryCacheEntry {
   updatedAt: number;
 }
 
+export interface RoomDataUpdateEvent {
+  hotelId?: string;
+  roomId?: string;
+  relatedRoomId?: string;
+  reason?: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'generic';
+  refreshRooms?: boolean;
+  refreshHistory?: boolean;
+  force?: boolean;
+  delayMs?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class RoomsService {
-  private roomDataUpdated$ = new Subject<void>();
+  private roomDataUpdated$ = new Subject<RoomDataUpdateEvent>();
   private apiUrl = `${environment.apiUrl}/rooms`;
   private roomsCache = new Map<string, { rooms: Room[]; updatedAt: number }>();
   private roomHistoryCache = new Map<string, RoomHistoryCacheEntry>();
@@ -211,8 +222,16 @@ export class RoomsService {
     return this.roomDataUpdated$.asObservable();
   }
 
-  notifyRoomDataUpdated(): void {
-    this.roomDataUpdated$.next();
+  notifyRoomDataUpdated(event: RoomDataUpdateEvent = {}): void {
+    if (event.hotelId) {
+      this.clearCachedRooms(event.hotelId);
+      this.clearCachedRoomHistory(event.hotelId);
+    } else if (event.force) {
+      this.clearCachedRooms();
+      this.clearCachedRoomHistory();
+    }
+
+    this.roomDataUpdated$.next(event);
   }
 
   // Cập nhật trạng thái phòng
@@ -294,8 +313,16 @@ export class RoomsService {
   cleanRoom(roomId: string, roomUpdate: any): Observable<any> {
     const url = `${this.apiUrl}/clean/${roomId}`;
     return this.http.post<any>(url, roomUpdate).pipe(
-      tap(() => {
-        this.notifyRoomDataUpdated();
+      tap((response: any) => {
+        const hotelId = response?.room?.hotelId || roomUpdate?.hotelId;
+        this.notifyRoomDataUpdated({
+          hotelId,
+          roomId,
+          reason: 'cleaning',
+          refreshRooms: true,
+          refreshHistory: true,
+          force: true
+        });
       }),
       catchError(this.handleError<any>('cleanRoom'))
     );

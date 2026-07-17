@@ -1086,10 +1086,15 @@ export class SettingsComponent implements OnInit {
         this.saving = false;
         this.message.success(response.message || 'Đã lưu cài đặt thông báo cho khách sạn');
         this.currentHotelSettings = response.settings || {};
+        const savedNotificationSettings = this.currentHotelSettings?.notificationSettings || this.hotelNotificationForm.value;
+        this.hotelNotificationForm.patchValue({
+          ...this.hotelNotificationForm.value,
+          ...savedNotificationSettings
+        });
         window.dispatchEvent(new CustomEvent('hotelPaymentSpeakerChanged', {
           detail: {
             hotelId: this.selectedHotelId,
-            enabled: !!this.hotelNotificationForm.value.enablePaymentSpeaker
+            enabled: !!savedNotificationSettings.enablePaymentSpeaker
           }
         }));
       },

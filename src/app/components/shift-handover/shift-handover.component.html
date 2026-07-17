@@ -58,7 +58,7 @@
                     [nzValueStyle]="{ color: '#f5222d' }"
                     [nzPrefix]="'₫'">
       </nz-statistic>
-      <nz-statistic [nzTitle]="'SHIFT_HANDOVER.TOTAL_REVENUE' | translate" [nzValue]="revenueData.totalRevenue"
+      <nz-statistic [nzTitle]="'SHIFT_HANDOVER.TOTAL_REVENUE' | translate" [nzValue]="getTotalRevenue()"
                     [nzValueStyle]="{ color: '#faad14', fontWeight: 'bold' }"
                     [nzPrefix]="'₫'">
       </nz-statistic>
@@ -238,7 +238,7 @@
         <ng-template #revenueMessage>
           <strong>{{ 'SHIFT_HANDOVER.TOTAL_REVENUE_CALCULATION' | translate }}</strong> {{ formatCurrency(getTotalRevenue()) }}
           <br>
-          <small>{{ 'SHIFT_HANDOVER.TOTAL_REVENUE_FORMULA' | translate }}</small>
+          <small>Lịch sử tiền nhận từ khách + phiếu thu + tiền mặt trong ca - phiếu chi</small>
         </ng-template>
 
         <!-- Ghi chú -->
@@ -354,7 +354,7 @@
             <td>{{ record.fromStaffName || 'N/A' }}</td>
             <td>{{ record.toStaffName || 'N/A' }}</td>
             <td>{{ formatCurrency(record.handoverAmount) }}</td>
-            <td>{{ formatCurrency(record.totalRevenue) }}</td>
+            <td>{{ formatCurrency(getRecordTotalRevenue(record)) }}</td>
             <td>
               <nz-tag [nzColor]="getStatusColor(record.status)">
                 {{ getStatusLabel(record.status) }}
@@ -366,4 +366,3 @@
     </ng-container>
   </nz-drawer>
 </div>
-

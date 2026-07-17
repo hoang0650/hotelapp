@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, Input, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Inject, OnInit, Input, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { NzModalRef, NZ_MODAL_DATA, NzModalService } from 'ng-zorro-antd/modal';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RoomsService } from '../../services/rooms.service';
@@ -35,7 +35,8 @@ interface RoomUpdate {
 @Component({
   selector: 'app-room-content-modal',
   templateUrl: './room-content-modal.component.html',
-  styleUrls: ['./room-content-modal.component.css']
+  styleUrls: ['./room-content-modal.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomContentModalComponent implements OnInit, OnDestroy {
   private static servicesCache = new Map<string, any[]>();
@@ -89,6 +90,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private roomReloadInFlight = false;
   private servicesLoadedHotelId: string | null = null;
+  currentTime: Date = new Date();
+  bookingTransferInfo: {
+    fromRoomId?: string;
+    fromRoomNumber?: string;
+    toRoomId?: string;
+    toRoomNumber?: string;
+    transferredAt?: Date;
+    transferredBy?: string;
+    transferHistory?: any[];
+  } | null = null;
+  transferInfoDescription = '';
   
   // SePay payment
   showSePayModal = false;
@@ -99,10 +111,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   sepayBankName = '';
   sepayAccountNumber = '';
   sepayPaymentHistoryId: string = ''; // ID của payment history để kiểm tra trạng thái
+  sepayInitializing = false;
   currentUser: any = null;
   hotelBankAccount: any = null; // Thông tin ngân hàng của hotel
   private paymentStatusCheckInterval: any = null; // Interval để kiểm tra trạng thái thanh toán
+  private paymentStatusCheckInFlight = false;
+  private paymentSuccessHandled = false;
+  private activeSePayTransactionToken = '';
   private pendingCheckoutCloseResult: any = null;
+  private pendingCheckoutData: any = null;
+  private pendingInvoiceData: any = null;
   
   // Định dạng hiển thị tiền Việt Nam
   formatterVND = (value: number): string => `${value} đ`;
@@ -124,11 +142,23 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   
   // Lấy thời gian hiện tại theo UTC+7 (múi giờ Việt Nam)
   getCurrentTime(): Date {
-    return this.getUTCTimePlus7();
+    return this.currentTime;
   }
   
   // Lấy thông tin chuyển phòng từ Booking
   getBookingTransferInfo(): {
+    fromRoomId?: string;
+    fromRoomNumber?: string;
+    toRoomId?: string;
+    toRoomNumber?: string;
+    transferredAt?: Date;
+    transferredBy?: string;
+    transferHistory?: any[];
+  } | null {
+    return this.bookingTransferInfo;
+  }
+
+  private computeBookingTransferInfo(): {
     fromRoomId?: string;
     fromRoomNumber?: string;
     toRoomId?: string;
@@ -174,7 +204,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   
   // Tạo mô tả thông tin chuyển phòng
   getTransferInfoDescription(): string {
-    const transferInfo = this.getBookingTransferInfo();
+    return this.transferInfoDescription;
+  }
+
+  private buildTransferInfoDescription(transferInfo: {
+    fromRoomId?: string;
+    fromRoomNumber?: string;
+    toRoomId?: string;
+    toRoomNumber?: string;
+    transferredAt?: Date;
+    transferredBy?: string;
+    transferHistory?: any[];
+  } | null): string {
     if (!transferInfo) return '';
 
     const na = this.translate.instant('COMMON.N_A');
@@ -215,6 +256,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
 
     return lines.join('\n');
+  }
+
+  private refreshComputedViewState(): void {
+    this.currentTime = this.getUTCTimePlus7();
+    this.bookingTransferInfo = this.computeBookingTransferInfo();
+    this.transferInfoDescription = this.buildTransferInfoDescription(this.bookingTransferInfo);
   }
   
   // Helper function để lọc các event check-in CHƯA CHECKOUT
@@ -368,6 +415,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.fetchCurrentRoom();
+    this.refreshComputedViewState();
     
     if (this.modalType === 'checkout') {
       this.calculateTotalPrice();
@@ -515,7 +563,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
     
     // Dừng polling khi component bị hủy
-    this.stopPaymentStatusPolling();
+    this.resetSePayTransactionState();
   }
 
   private reloadRoomDetails(forcePatchForm: boolean): void {
@@ -525,7 +573,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
     this.roomReloadInFlight = true;
     this.roomsService.getRoomById(this.roomData._id, {
-      limit: 1000,
+      limit: 100,
       excludeCheckedOut: true
     }).pipe(
       take(1),
@@ -548,6 +596,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
 
     this.roomData = updatedRoom;
+    this.refreshComputedViewState();
     const latestHotelId = this.getResolvedHotelId();
     if (latestHotelId && latestHotelId !== this.servicesLoadedHotelId) {
       this.loadServicesFromAPI();
@@ -1537,13 +1586,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             });
             
             // Notify để reload data - dữ liệu sẽ được lấy từ RoomEvent khi reload
-            this.roomsService.notifyRoomDataUpdated();
+            this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, delayMs: 100 });
           }, 100);
         },
         (error) => {
           setTimeout(() => {
             this.message.error('Lỗi khi nhận phòng: ' + error.message);
-            this.roomsService.notifyRoomDataUpdated();
+            this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, delayMs: 100 });
           }, 100);
         }
       );
@@ -2234,7 +2283,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               }
               
               // Tự động reload danh sách phòng ngay lập tức
-              this.roomsService.notifyRoomDataUpdated();
+              this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, delayMs: 120 });
               
               // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
               this.tuyaService.autoTurnOffOnCheckOut(this.roomData._id).subscribe({
@@ -2262,21 +2311,21 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                       // Cập nhật danh sách phòng với delay để đảm bảo backend đã cập nhật xong
                       // QUAN TRỌNG: Sau khi checkout, phòng chuyển sang dirty, nhưng cần reload events để hiển thị đúng giá trị cuối cùng
                       setTimeout(() => {
-                        this.roomsService.notifyRoomDataUpdated();
+                        this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
                       }, 500); // Tăng delay lên 500ms để đảm bảo backend đã lưu xong checkout event với additionalCharges và discount mới
                     },
                     error: (err) => {
                       console.error('Error reloading room data:', err);
                       // Vẫn cập nhật danh sách phòng dù có lỗi
                       setTimeout(() => {
-                        this.roomsService.notifyRoomDataUpdated();
+                        this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
                       }, 500);
                     }
                   });
                 } else {
                   // Cập nhật danh sách phòng với delay
                   setTimeout(() => {
-                    this.roomsService.notifyRoomDataUpdated();
+                    this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
                   }, 500);
                 }
               }, 300); // Delay 300ms trước khi reload room data
@@ -2294,7 +2343,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           (error) => {
             setTimeout(() => {
               this.message.error('Lỗi khi trả phòng: ' + error.message);
-              this.roomsService.notifyRoomDataUpdated();
+              this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 120 });
             }, 100);
           }
         );
@@ -2305,6 +2354,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
    * Kiểm tra và xử lý thanh toán chuyển khoản với QR (nếu được bật)
    */
   checkAndHandleTransferPayment(amount: number, invoiceData: any, checkoutData: any): void {
+    const normalizedAmount = Number(amount) || 0;
+    if (normalizedAmount <= 0) {
+      checkoutData.paymentStatus = 'paid';
+      checkoutData.remainingAmount = 0;
+      invoiceData.paymentStatus = 'paid';
+      invoiceData.remainingAmount = 0;
+      this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
+      return;
+    }
+
     // Ưu tiên: nếu có QR từ các nguồn business/hotel/manager/user thì hiển thị ngay
     const manager = (this.businessInfo && typeof this.businessInfo.managerId === 'object') ? this.businessInfo.managerId : null;
     const isQrAvailable = !!(
@@ -2432,7 +2491,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             this.message.success('Check-out thành công');
             
             // Tự động reload danh sách phòng ngay lập tức
-            this.roomsService.notifyRoomDataUpdated();
+            this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, delayMs: 120 });
             
             // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
             this.tuyaService.autoTurnOffOnCheckOut(this.roomData._id).subscribe({
@@ -2455,17 +2514,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                 next: (updatedRoom) => {
                   this.roomData = updatedRoom;
                   // Tự động reload danh sách phòng lại một lần nữa để đảm bảo
-                  this.roomsService.notifyRoomDataUpdated();
+                  this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
                 },
                 error: (err) => {
                   console.error('Error reloading room data:', err);
                   // Vẫn reload danh sách phòng dù có lỗi
-                  this.roomsService.notifyRoomDataUpdated();
+                  this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
                 }
               });
             } else {
               // Tự động reload danh sách phòng
-              this.roomsService.notifyRoomDataUpdated();
+              this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
             }
             
             // Hiển thị hóa đơn nếu paymentStatus = 'paid' (khi QR bị tắt và chọn chuyển khoản)
@@ -2491,6 +2550,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
    * Xử lý thanh toán chuyển khoản với SePay
    */
   handleTransferPayment(amount: number, invoiceData: any, checkoutData: any): void {
+    const normalizedAmount = Number(amount) || 0;
+    if (normalizedAmount <= 0) {
+      checkoutData.paymentStatus = 'paid';
+      checkoutData.remainingAmount = 0;
+      invoiceData.paymentStatus = 'paid';
+      invoiceData.remainingAmount = 0;
+      this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
+      return;
+    }
+
     // Lấy userId từ currentUser
     const userId = this.currentUser?._id || this.currentUser?.id;
     
@@ -2546,12 +2615,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
       return;
     }
+
+    this.prepareSePayModalState(amount, qrPaymentUrl, beneficiaryName, bankName, accountNumber, checkoutData, invoiceData);
     
     // Tạo payment history SePay
     // Gọi trực tiếp API với roomId và roomNumber
     const payload = {
       userId: userId,
-      amount: amount,
+      amount: normalizedAmount,
       currency: 'VND',
       description: `Thanh toán phòng ${this.roomData.roomNumber} - ${invoiceData.customerName || 'Khách lẻ'}`,
       roomId: this.roomData._id,
@@ -2559,28 +2630,20 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     };
     
     this.isLoading = true;
+    this.sepayInitializing = true;
     this.sepayService.createPaymentHistoryForRoom(payload).subscribe({
       next: (response: any) => {
         this.isLoading = false;
+        this.sepayInitializing = false;
         if (response.success) {
-          // Lưu thông tin payment (không lưu paymentCode vì không cần hiển thị)
-          this.sepayAmount = amount;
-          this.sepayQrUrl = qrPaymentUrl;
-          this.sepayBeneficiaryName = beneficiaryName;
-          this.sepayBankName = bankName;
-          this.sepayAccountNumber = accountNumber;
           this.sepayPaymentHistoryId = response.paymentHistoryId || ''; // Lưu paymentHistoryId để kiểm tra trạng thái
-          
-          // Hiển thị modal với QR code và thông tin thanh toán
-          this.showSePayModal = true;
-          
-          // Lưu checkoutData và invoiceData để sử dụng sau khi đóng modal QR
-          (this as any)._pendingCheckoutData = checkoutData;
-          (this as any)._pendingInvoiceData = invoiceData;
-          
-          // Bắt đầu polling để kiểm tra trạng thái thanh toán và tự động đóng modal khi thành công
+          if (!this.showSePayModal) {
+            return;
+          }
           this.startPaymentStatusPolling();
         } else {
+          this.showSePayModal = false;
+          this.resetSePayTransactionState();
           this.message.error(response.error || 'Có lỗi xảy ra khi tạo payment history');
           // Vẫn tiếp tục checkout
           this.proceedWithCheckout(checkoutData, invoiceData);
@@ -2588,7 +2651,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       },
       error: (error: any) => {
         this.isLoading = false;
+        this.sepayInitializing = false;
         console.error('Error creating SePay payment history:', error);
+        this.showSePayModal = false;
+        this.resetSePayTransactionState();
         this.message.error('Có lỗi xảy ra khi tạo payment history. Vui lòng thử lại.');
         // Vẫn tiếp tục checkout
         this.proceedWithCheckout(checkoutData, invoiceData);
@@ -2669,17 +2735,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                 next: (updatedRoom) => {
                   this.roomData = updatedRoom;
                   // Cập nhật danh sách phòng
-                  this.roomsService.notifyRoomDataUpdated();
+                  this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
                 },
                 error: (err) => {
                   console.error('Error reloading room data:', err);
                   // Vẫn cập nhật danh sách phòng dù có lỗi
-                  this.roomsService.notifyRoomDataUpdated();
+                  this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
                 }
               });
             } else {
               // Cập nhật danh sách phòng
-              this.roomsService.notifyRoomDataUpdated();
+              this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
             }
             
             // Chỉ hiển thị hóa đơn nếu đã thanh toán (paymentStatus = 'paid')
@@ -2694,7 +2760,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         (error) => {
           setTimeout(() => {
             this.message.error('Lỗi khi trả phòng: ' + error.message);
-            this.roomsService.notifyRoomDataUpdated();
+            this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 120 });
           }, 100);
         }
       );
@@ -2704,99 +2770,50 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
    * Bắt đầu kiểm tra trạng thái thanh toán (polling)
    */
   private startPaymentStatusPolling(): void {
-    // Dừng interval cũ nếu có
-    if (this.paymentStatusCheckInterval) {
-      clearInterval(this.paymentStatusCheckInterval);
+    this.stopPaymentStatusPolling(false);
+
+    if (!this.sepayPaymentHistoryId || !this.activeSePayTransactionToken) {
+      return;
     }
-    
-    // Kiểm tra mỗi 5 giây, tối đa 5 phút (60 lần)
+
     let checkCount = 0;
-    const maxChecks = 60;
-    
-    this.paymentStatusCheckInterval = setInterval(() => {
+    const maxChecks = 90;
+    const transactionToken = this.activeSePayTransactionToken;
+    const runCheck = () => {
       checkCount++;
-      
-      if (!this.sepayPaymentHistoryId) {
+      this.checkPaymentStatusOnce(transactionToken, checkCount >= maxChecks);
+      if (checkCount >= maxChecks) {
         this.stopPaymentStatusPolling();
+        console.log('Đã kiểm tra trạng thái thanh toán tối đa, dừng polling');
+      }
+    };
+
+    setTimeout(() => {
+      if (transactionToken === this.activeSePayTransactionToken) {
+        runCheck();
+      }
+    }, 1200);
+
+    this.paymentStatusCheckInterval = setInterval(() => {
+      if (transactionToken !== this.activeSePayTransactionToken) {
+        this.stopPaymentStatusPolling(false);
         return;
       }
-      
-      // Kiểm tra trạng thái thanh toán
-      // Tìm payment history bằng paymentHistoryId (không cần paymentCode)
-      this.sepayService.getPaymentHistory({
-        limit: 100, // Lấy nhiều hơn để tìm được payment history
-        skip: 0
-      }).subscribe({
-        next: (response: any) => {
-          // Tìm payment history với paymentHistoryId
-          const paymentHistories = Array.isArray(response) 
-            ? response 
-            : (response.data || []);
-          
-          // Tìm bằng paymentHistoryId
-          const paymentHistory = paymentHistories.find((p: any) => {
-            // Tìm bằng paymentHistoryId
-            if (this.sepayPaymentHistoryId && (p._id === this.sepayPaymentHistoryId || p.id === this.sepayPaymentHistoryId)) {
-              return true;
-            }
-            return false;
-          });
-          
-          if (paymentHistory) {
-            // Kiểm tra số tiền có khớp không (so sánh với số tiền cần thanh toán)
-            const expectedAmount = this.sepayAmount;
-            const receivedAmount = paymentHistory.paymentGatewayResponse?.transferAmount || paymentHistory.amount;
-            const amountDifference = Math.abs(receivedAmount - expectedAmount);
-            const amountTolerance = expectedAmount * 0.01; // Cho phép sai số 1%
-            
-            // Kiểm tra trạng thái thanh toán
-            if (paymentHistory.status === 'completed' || paymentHistory.status === 'paid') {
-              // Kiểm tra số tiền có khớp không
-              if (amountDifference <= amountTolerance) {
-                // Thanh toán thành công và số tiền khớp
-                this.stopPaymentStatusPolling();
-                this.onPaymentSuccess();
-              } else {
-                console.warn('Số tiền không khớp:', {
-                  expected: expectedAmount,
-                  received: receivedAmount,
-                  difference: amountDifference
-                });
-                // Vẫn coi là thành công nếu status là completed (có thể do phí giao dịch)
-                this.stopPaymentStatusPolling();
-                this.onPaymentSuccess();
-              }
-            } else if (paymentHistory.status === 'failed' || paymentHistory.status === 'cancelled') {
-              // Thanh toán thất bại
-              this.stopPaymentStatusPolling();
-              this.message.warning('Thanh toán đã bị hủy hoặc thất bại. Vui lòng thử lại.');
-            }
-          }
-          
-          // Dừng polling sau maxChecks lần
-          if (checkCount >= maxChecks) {
-            this.stopPaymentStatusPolling();
-            console.log('Đã kiểm tra trạng thái thanh toán tối đa, dừng polling');
-          }
-        },
-        error: (error) => {
-          console.error('Error checking payment status:', error);
-          // Tiếp tục polling nếu chưa đạt maxChecks
-          if (checkCount >= maxChecks) {
-            this.stopPaymentStatusPolling();
-          }
-        }
-      });
-    }, 5000); // Kiểm tra mỗi 5 giây
+      runCheck();
+    }, 2000);
   }
   
   /**
    * Dừng kiểm tra trạng thái thanh toán
    */
-  private stopPaymentStatusPolling(): void {
+  private stopPaymentStatusPolling(resetState: boolean = true): void {
     if (this.paymentStatusCheckInterval) {
       clearInterval(this.paymentStatusCheckInterval);
       this.paymentStatusCheckInterval = null;
+    }
+    this.paymentStatusCheckInFlight = false;
+    if (resetState) {
+      this.sepayInitializing = false;
     }
   }
   
@@ -2804,6 +2821,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
    * Xử lý khi thanh toán thành công
    */
   private onPaymentSuccess(): void {
+    if (this.paymentSuccessHandled) {
+      return;
+    }
+
+    this.paymentSuccessHandled = true;
     console.log('[onPaymentSuccess] Thanh toán thành công, đóng modal QR và hiển thị invoice');
     
     // Dừng polling
@@ -2816,8 +2838,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
     
     // Lấy checkoutData và invoiceData đã lưu
-    const checkoutData = (this as any)._pendingCheckoutData;
-    const invoiceData = (this as any)._pendingInvoiceData;
+    const checkoutData = this.pendingCheckoutData;
+    const invoiceData = this.pendingInvoiceData;
     
     if (checkoutData && invoiceData) {
       // Cập nhật paymentStatus thành 'paid'
@@ -2876,36 +2898,39 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                   next: (updatedRoom) => {
                     this.roomData = updatedRoom;
                     // Tự động reload danh sách phòng
-                    this.roomsService.notifyRoomDataUpdated();
+                    this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
                   },
                   error: (err) => {
                     console.error('Error reloading room data:', err);
                     // Vẫn reload danh sách phòng dù có lỗi
-                    this.roomsService.notifyRoomDataUpdated();
+                    this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
                   }
                 });
               } else {
                 // Tự động reload danh sách phòng
-                this.roomsService.notifyRoomDataUpdated();
+                this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
               }
               
               // Hiển thị invoice sau khi checkout thành công
               setTimeout(() => {
                 this.showInvoice(invoiceData);
               }, 500);
+              this.resetSePayTransactionState();
             },
             (error) => {
               console.error('Error updating checkout with payment status:', error);
               // Vẫn reload danh sách phòng và hiển thị invoice ngay cả khi có lỗi
-              this.roomsService.notifyRoomDataUpdated();
+              this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 120 });
               setTimeout(() => {
                 this.showInvoice(invoiceData);
               }, 500);
+              this.resetSePayTransactionState();
             }
           );
       }, 300);
     } else {
       console.error('[onPaymentSuccess] Không tìm thấy checkoutData hoặc invoiceData');
+      this.resetSePayTransactionState();
     }
   }
   
@@ -2917,8 +2942,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     if (!currentUser?._id) {
       console.warn('[loadLatestPaymentAndPlaySound] Không tìm thấy userId');
       // Fallback: lấy từ invoiceData ngay lập tức
-      const amount = (this as any)._pendingInvoiceData?.totalAmount || 
-                    (this as any)._pendingInvoiceData?.remainingAmount || 0;
+      const amount = this.pendingInvoiceData?.totalAmount || 
+                    this.pendingInvoiceData?.remainingAmount || 0;
       if (amount > 0) {
         this.playPaymentSuccessSound(amount);
       }
@@ -2958,8 +2983,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           
           // Nếu không lấy được từ API, thử lấy từ invoiceData
           if (amount === 0) {
-            amount = (this as any)._pendingInvoiceData?.totalAmount || 
-                    (this as any)._pendingInvoiceData?.remainingAmount || 0;
+            amount = this.pendingInvoiceData?.totalAmount || 
+                    this.pendingInvoiceData?.remainingAmount || 0;
           }
           
           if (amount > 0) {
@@ -2973,8 +2998,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('[loadLatestPaymentAndPlaySound] Lỗi khi lấy lịch sử thanh toán:', error);
           // Fallback: lấy từ invoiceData
-          const amount = (this as any)._pendingInvoiceData?.totalAmount || 
-                        (this as any)._pendingInvoiceData?.remainingAmount || 0;
+          const amount = this.pendingInvoiceData?.totalAmount || 
+                        this.pendingInvoiceData?.remainingAmount || 0;
           if (amount > 0) {
             console.log('[loadLatestPaymentAndPlaySound] Sử dụng số tiền từ invoiceData:', amount);
             this.playPaymentSuccessSound(amount);
@@ -3041,8 +3066,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.stopPaymentStatusPolling();
     
     // Lấy checkoutData và invoiceData đã lưu
-    const checkoutData = (this as any)._pendingCheckoutData;
-    const invoiceData = (this as any)._pendingInvoiceData;
+    const checkoutData = this.pendingCheckoutData;
+    const invoiceData = this.pendingInvoiceData;
     
     if (checkoutData && invoiceData) {
       // Hiển thị thông báo
@@ -3085,12 +3110,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         .subscribe(
           (response) => {
             // Cập nhật danh sách phòng
-            this.roomsService.notifyRoomDataUpdated();
+            this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: true, delayMs: 150 });
             
             // Hiển thị invoice ngay lập tức
             setTimeout(() => {
               this.showInvoice(invoiceData);
             }, 300);
+            this.resetSePayTransactionState();
           },
           (error) => {
             console.error('Error during checkout:', error);
@@ -3098,10 +3124,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             setTimeout(() => {
               this.showInvoice(invoiceData);
             }, 300);
+            this.resetSePayTransactionState();
           }
         );
     } else {
       console.warn('[closeSePayModal] Không tìm thấy checkoutData hoặc invoiceData');
+      this.resetSePayTransactionState();
     }
   }
   
@@ -3661,13 +3689,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             
             // Không còn dùng session nữa, dữ liệu đã được lưu vào RoomEvent
             
-            this.roomsService.notifyRoomDataUpdated();
+            this.emitRoomDataUpdated('cleaning', { roomId: this.roomData?._id, force: true, delayMs: 100 });
           }, 100);
         },
         (error) => {
           setTimeout(() => {
             this.message.error('Lỗi khi cập nhật trạng thái phòng: ' + error.message);
-            this.roomsService.notifyRoomDataUpdated();
+            this.emitRoomDataUpdated('cleaning', { roomId: this.roomData?._id, force: true, delayMs: 100 });
           }, 100);
         }
       );
@@ -3999,12 +4027,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             this.ngOnInit();
             
             // Thông báo cho room.component để reload
-            this.roomsService.notifyRoomDataUpdated();
+            this.emitRoomDataUpdated('generic', { roomId: this.roomData?._id, force: true, delayMs: 100 });
           },
           error: (error) => {
             console.error('Error reloading room:', error);
             // Vẫn thông báo để room.component reload
-            this.roomsService.notifyRoomDataUpdated();
+            this.emitRoomDataUpdated('generic', { roomId: this.roomData?._id, force: true, delayMs: 100 });
           }
         });
       }
@@ -4206,11 +4234,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }).subscribe({
             next: (updatedRoom) => {
               this.roomData = updatedRoom;
-              this.roomsService.notifyRoomDataUpdated();
+              this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, force: true, delayMs: 100 });
             },
             error: (err) => {
               console.error('Error reloading room:', err);
-              this.roomsService.notifyRoomDataUpdated();
+              this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, force: true, delayMs: 100 });
             }
           });
         }, 300);
@@ -4274,6 +4302,128 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     if (typeof value === 'string') return value;
     if (typeof value === 'object' && value._id) return String(value._id);
     return String(value);
+  }
+
+  private prepareSePayModalState(
+    amount: number,
+    qrPaymentUrl: string,
+    beneficiaryName: string,
+    bankName: string,
+    accountNumber: string,
+    checkoutData: any,
+    invoiceData: any
+  ): void {
+    this.stopPaymentStatusPolling(false);
+    this.paymentSuccessHandled = false;
+    this.activeSePayTransactionToken = `${this.roomData?._id || 'room'}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    this.sepayPaymentHistoryId = '';
+    this.sepayAmount = amount;
+    this.sepayQrUrl = qrPaymentUrl;
+    this.sepayBeneficiaryName = beneficiaryName;
+    this.sepayBankName = bankName;
+    this.sepayAccountNumber = accountNumber;
+    this.pendingCheckoutData = checkoutData;
+    this.pendingInvoiceData = invoiceData;
+    this.showSePayModal = true;
+    this.cdr.markForCheck();
+  }
+
+  private checkPaymentStatusOnce(transactionToken: string, isLastAttempt: boolean = false): void {
+    if (
+      this.paymentStatusCheckInFlight ||
+      !this.sepayPaymentHistoryId ||
+      !this.showSePayModal ||
+      this.paymentSuccessHandled ||
+      transactionToken !== this.activeSePayTransactionToken
+    ) {
+      return;
+    }
+
+    this.paymentStatusCheckInFlight = true;
+    this.sepayService.getPaymentHistory({
+      limit: 20,
+      skip: 0
+    }).subscribe({
+      next: (response: any) => {
+        this.paymentStatusCheckInFlight = false;
+
+        if (transactionToken !== this.activeSePayTransactionToken || this.paymentSuccessHandled) {
+          return;
+        }
+
+        const paymentHistories = Array.isArray(response) ? response : (response.data || []);
+        const paymentHistory = paymentHistories.find((p: any) =>
+          this.sepayPaymentHistoryId && (p._id === this.sepayPaymentHistoryId || p.id === this.sepayPaymentHistoryId)
+        );
+
+        if (!paymentHistory) {
+          if (isLastAttempt) {
+            this.stopPaymentStatusPolling();
+          }
+          return;
+        }
+
+        const expectedAmount = this.sepayAmount;
+        const receivedAmount = paymentHistory.paymentGatewayResponse?.transferAmount || paymentHistory.amount;
+        const amountDifference = Math.abs(receivedAmount - expectedAmount);
+        const amountTolerance = expectedAmount * 0.01;
+
+        if (paymentHistory.status === 'completed' || paymentHistory.status === 'paid') {
+          if (amountDifference > amountTolerance) {
+            console.warn('Số tiền không khớp:', {
+              expected: expectedAmount,
+              received: receivedAmount,
+              difference: amountDifference
+            });
+          }
+          this.stopPaymentStatusPolling(false);
+          this.onPaymentSuccess();
+          return;
+        }
+
+        if (paymentHistory.status === 'failed' || paymentHistory.status === 'cancelled') {
+          this.stopPaymentStatusPolling();
+          this.message.warning('Thanh toán đã bị hủy hoặc thất bại. Vui lòng thử lại.');
+        }
+      },
+      error: (error) => {
+        this.paymentStatusCheckInFlight = false;
+        if (transactionToken !== this.activeSePayTransactionToken) {
+          return;
+        }
+        console.error('Error checking payment status:', error);
+        if (isLastAttempt) {
+          this.stopPaymentStatusPolling();
+        }
+      }
+    });
+  }
+
+  private resetSePayTransactionState(): void {
+    this.stopPaymentStatusPolling(false);
+    this.sepayInitializing = false;
+    this.paymentSuccessHandled = false;
+    this.activeSePayTransactionToken = '';
+    this.sepayPaymentHistoryId = '';
+    this.pendingCheckoutData = null;
+    this.pendingInvoiceData = null;
+  }
+
+  private emitRoomDataUpdated(
+    reason: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'generic',
+    options?: { roomId?: string; relatedRoomId?: string; force?: boolean; delayMs?: number }
+  ): void {
+    const hotelId = this.normalizeObjectId(this.roomData?.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
+    this.roomsService.notifyRoomDataUpdated({
+      hotelId: hotelId || undefined,
+      roomId: options?.roomId,
+      relatedRoomId: options?.relatedRoomId,
+      reason,
+      refreshRooms: true,
+      refreshHistory: true,
+      force: options?.force ?? false,
+      delayMs: options?.delayMs
+    });
   }
   
   // Getter để lấy phụ thu checkin sớm từ roomPriceDetails

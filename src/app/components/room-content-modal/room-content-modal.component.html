@@ -300,12 +300,12 @@
     <h3>{{ 'ROOM_CONTENT_MODAL.CHECKOUT_TITLE' | translate }} {{ roomData.roomNumber }} - {{ 'ROOM.FLOOR' | translate }} {{ roomData.floor }}</h3>
     
     <!-- Hiển thị thông tin chuyển phòng từ Booking nếu có -->
-    <div *ngIf="getBookingTransferInfo()" class="transfer-info-alert mb-3">
+    <div *ngIf="bookingTransferInfo" class="transfer-info-alert mb-3">
       <nz-alert 
         nzType="info" 
         nzShowIcon
         [nzMessage]="'ROOM_CONTENT_MODAL.TRANSFER_ROOM_INFO' | translate"
-        [nzDescription]="getTransferInfoDescription()">
+        [nzDescription]="transferInfoDescription">
       </nz-alert>
     </div>
     
@@ -429,7 +429,7 @@
           {{ listData[0]?.checkinTime | date: 'dd/MM/yyyy HH:mm:ss' }}
         </nz-descriptions-item>
         <nz-descriptions-item [nzTitle]="'ROOM_CONTENT_MODAL.CURRENT_TIME_LABEL' | translate">
-          {{ getCurrentTime() | date: 'dd/MM/yyyy HH:mm:ss' }}
+          {{ currentTime | date: 'dd/MM/yyyy HH:mm:ss' }}
         </nz-descriptions-item>
       </nz-descriptions>
     </div>
@@ -865,6 +865,15 @@
         [nzDescription]="'ROOM_CONTENT_MODAL.SEPAY_INFO_DESC' | translate"
         [nzShowIcon]="true"
         style="margin-bottom: 20px;">
+      </nz-alert>
+
+      <nz-alert
+        *ngIf="sepayInitializing"
+        nzType="warning"
+        nzMessage="Dang khoi tao giao dich thanh toan..."
+        nzDescription="Ma QR da san sang. He thong dang lien ket giao dich de tu dong xac nhan nhanh nhat."
+        [nzShowIcon]="true"
+        style="margin-bottom: 16px;">
       </nz-alert>
 
       <nz-descriptions nzBordered [nzColumn]="1" style="margin-bottom: 20px;">
