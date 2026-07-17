@@ -1491,7 +1491,7 @@ export class SettingsComponent implements OnInit {
 
     this.approvingOpenClawPairing = true;
     this.aiAssistant.approveOpenClawDevicePairing({
-      requestId: requestId || null,
+      requestId: requestId || undefined,
       clientId: 'openclaw-control-ui',
       clientMode: 'ui',
       role: 'operator'
