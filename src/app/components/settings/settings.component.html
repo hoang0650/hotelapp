@@ -1332,6 +1332,96 @@
             </tbody>
           </nz-table>
 
+          <nz-divider nzText="OpenClaw Device Pairing"></nz-divider>
+          <nz-alert
+            nzType="info"
+            nzMessage="Quản trị approve pairing cho OpenClaw Control UI"
+            nzDescription="Khi màn hình OpenClaw báo cần ghép đôi thiết bị, admin có thể bấm tải pending pairing rồi approve trực tiếp từ đây, không cần mở Render Shell."
+            style="margin-bottom: 16px;">
+          </nz-alert>
+
+          <div style="margin-bottom: 12px;">
+            <button nz-button nzType="default" [nzLoading]="loadingOpenClawPairings" (click)="loadOpenClawDevicePairings()">
+              Tải pending pairing
+            </button>
+            <button
+              nz-button
+              nzType="primary"
+              [nzLoading]="approvingOpenClawPairing"
+              [disabled]="!openClawPendingPairings.length"
+              (click)="approveLatestOpenClawPairing()"
+              style="margin-left: 8px;">
+              Approve mới nhất
+            </button>
+          </div>
+
+          <nz-table
+            [nzData]="openClawPendingPairings"
+            [nzLoading]="loadingOpenClawPairings"
+            [nzPageSize]="5"
+            *ngIf="openClawPendingPairings.length">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Client</th>
+                <th>Role</th>
+                <th>Scopes</th>
+                <th>Thời gian</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let pairing of openClawPendingPairings">
+                <td>{{ pairing.requestId || '-' }}</td>
+                <td>{{ pairing.clientId || '-' }} / {{ pairing.clientMode || '-' }}</td>
+                <td>{{ pairing.role || (pairing.roles?.join(', ') || '-') }}</td>
+                <td>{{ pairing.scopes?.join(', ') || '-' }}</td>
+                <td>{{ getOpenClawPairingRequestedAt(pairing) ? (getOpenClawPairingRequestedAt(pairing) | date:'dd/MM/yyyy HH:mm:ss') : '-' }}</td>
+                <td>
+                  <button
+                    nz-button
+                    nzType="link"
+                    nzSize="small"
+                    [nzLoading]="approvingOpenClawPairing"
+                    (click)="approveLatestOpenClawPairing(pairing.requestId)">
+                    Approve
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </nz-table>
+
+          <nz-alert
+            *ngIf="!loadingOpenClawPairings && !openClawPendingPairings.length"
+            nzType="default"
+            nzMessage="Chưa có pending OpenClaw pairing"
+            nzDescription="Bấm Kết nối ở OpenClaw Control UI trước, sau đó quay lại đây bấm Tải pending pairing."
+            style="margin-bottom: 16px;">
+          </nz-alert>
+
+          <nz-table
+            [nzData]="openClawPairedDevices"
+            [nzLoading]="loadingOpenClawPairings"
+            [nzPageSize]="5"
+            *ngIf="openClawPairedDevices.length">
+            <thead>
+              <tr>
+                <th>Device ID</th>
+                <th>Client</th>
+                <th>Role</th>
+                <th>Scopes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let device of openClawPairedDevices">
+                <td>{{ device.deviceId || '-' }}</td>
+                <td>{{ device.clientId || '-' }} / {{ device.clientMode || '-' }}</td>
+                <td>{{ device.role || (device.roles?.join(', ') || '-') }}</td>
+                <td>{{ device.scopes?.join(', ') || '-' }}</td>
+              </tr>
+            </tbody>
+          </nz-table>
+
           <div style="margin-top: 24px; text-align: right;">
             <button nz-button nzType="default" (click)="resetForm(generalForm)" style="margin-right: 8px;">
               Khôi phục mặc định

@@ -37,6 +37,41 @@ interface ChatHistoryResponse {
   messages: ChatMessage[];
 }
 
+export interface OpenClawDevicePairingItem {
+  requestId?: string;
+  deviceId?: string;
+  clientId?: string;
+  clientMode?: string;
+  role?: string;
+  roles?: string[];
+  scopes?: string[];
+  requestedAtMs?: number;
+  updatedAtMs?: number;
+  ts?: number;
+  status?: string;
+  [key: string]: any;
+}
+
+export interface OpenClawDevicePairingsResponse {
+  success: boolean;
+  pending: OpenClawDevicePairingItem[];
+  paired: OpenClawDevicePairingItem[];
+  summary?: {
+    pendingCount: number;
+    pairedCount: number;
+  };
+  message?: string;
+}
+
+export interface OpenClawApprovePairingResponse {
+  success: boolean;
+  message?: string;
+  result?: {
+    request?: OpenClawDevicePairingItem;
+    approved?: any;
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -351,6 +386,40 @@ export class AiAssistantService {
     } catch (_) {
       return null;
     }
+  }
+
+  getOpenClawDevicePairings(params?: {
+    clientId?: string;
+    clientMode?: string;
+    role?: string;
+  }): Observable<OpenClawDevicePairingsResponse> {
+    const query: any = {
+      clientId: params?.clientId || 'openclaw-control-ui',
+      clientMode: params?.clientMode || 'ui',
+      role: params?.role || 'operator'
+    };
+    return this.http.get<OpenClawDevicePairingsResponse>(`${this.apiUrl}/ai-assistant/openclaw/device-pairings`, {
+      params: query
+    });
+  }
+
+  approveOpenClawDevicePairing(payload?: {
+    requestId?: string;
+    clientId?: string;
+    clientMode?: string;
+    role?: string;
+    scopes?: string[];
+  }): Observable<OpenClawApprovePairingResponse> {
+    return this.http.post<OpenClawApprovePairingResponse>(
+      `${this.apiUrl}/ai-assistant/openclaw/device-pairings/approve`,
+      {
+        requestId: payload?.requestId || null,
+        clientId: payload?.clientId || 'openclaw-control-ui',
+        clientMode: payload?.clientMode || 'ui',
+        role: payload?.role || 'operator',
+        scopes: Array.isArray(payload?.scopes) ? payload?.scopes : null
+      }
+    );
   }
 
   // --- 3. CÁC HÀM FACEBOOK INTEGRATION (Dành cho FanpageMessagesComponent) ---

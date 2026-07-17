@@ -5,7 +5,10 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SettingsService, EmailSettings } from '../../services/settings.service';
-import { AiAssistantService } from '../../services/ai-assistant.service';
+import {
+  AiAssistantService,
+  OpenClawDevicePairingItem
+} from '../../services/ai-assistant.service';
 import { NotificationsService, Announcement } from '../../services/notifications.service';
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
@@ -1413,6 +1416,10 @@ export class SettingsComponent implements OnInit {
 
   facebookPages: any[] = [];
   loadingFacebook = false;
+  loadingOpenClawPairings = false;
+  approvingOpenClawPairing = false;
+  openClawPendingPairings: OpenClawDevicePairingItem[] = [];
+  openClawPairedDevices: OpenClawDevicePairingItem[] = [];
 
   private getTenantIdForAI(): string {
     const u = this.authService.getCurrentUser();
@@ -1449,6 +1456,64 @@ export class SettingsComponent implements OnInit {
       this.loadingFacebook = false;
       this.message.error('Lỗi tải danh sách fanpage');
     });
+  }
+
+  loadOpenClawDevicePairings(): void {
+    if (!this.isManagementGroup()) {
+      this.message.warning('Chỉ admin hoặc superadmin mới được phép quản lý OpenClaw pairing.');
+      return;
+    }
+
+    this.loadingOpenClawPairings = true;
+    this.aiAssistant.getOpenClawDevicePairings().subscribe({
+      next: (response) => {
+        this.loadingOpenClawPairings = false;
+        this.openClawPendingPairings = Array.isArray(response?.pending) ? response.pending : [];
+        this.openClawPairedDevices = Array.isArray(response?.paired) ? response.paired : [];
+        if (!this.openClawPendingPairings.length) {
+          this.message.info('Hiện tại không có pending OpenClaw pairing nào.');
+        } else {
+          this.message.success(`Đã tải ${this.openClawPendingPairings.length} pending OpenClaw pairing.`);
+        }
+      },
+      error: (error) => {
+        this.loadingOpenClawPairings = false;
+        this.message.error(error?.error?.message || 'Lỗi khi tải danh sách OpenClaw pairing.');
+      }
+    });
+  }
+
+  approveLatestOpenClawPairing(requestId?: string): void {
+    if (!this.isManagementGroup()) {
+      this.message.warning('Chỉ admin hoặc superadmin mới được phép approve OpenClaw pairing.');
+      return;
+    }
+
+    this.approvingOpenClawPairing = true;
+    this.aiAssistant.approveOpenClawDevicePairing({
+      requestId: requestId || null,
+      clientId: 'openclaw-control-ui',
+      clientMode: 'ui',
+      role: 'operator'
+    }).subscribe({
+      next: (response) => {
+        this.approvingOpenClawPairing = false;
+        this.message.success(response?.message || 'Đã approve OpenClaw pairing thành công.');
+        this.loadOpenClawDevicePairings();
+      },
+      error: (error) => {
+        this.approvingOpenClawPairing = false;
+        this.message.error(error?.error?.message || 'Không approve được OpenClaw pairing.');
+      }
+    });
+  }
+
+  getOpenClawPairingRequestedAt(item: OpenClawDevicePairingItem): Date | null {
+    const timestamp =
+      Number(item?.requestedAtMs || 0) ||
+      Number(item?.updatedAtMs || 0) ||
+      Number(item?.ts || 0);
+    return Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp) : null;
   }
 }
 
