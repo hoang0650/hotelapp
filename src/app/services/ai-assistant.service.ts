@@ -270,35 +270,22 @@ export class AiAssistantService {
     this.addMessage(userMessage);
     this.isTyping.next(true);
     const currentUser = this.authService.getCurrentUser();
-    const userRole = currentUser?.role || null;
-    const userId = currentUser?._id || null;
-    let userToken = this.authService.getToken();
-    if (!userToken) {
-      try {
-        await firstValueFrom(this.authService.refreshAccessToken());
-        userToken = this.authService.getToken();
-      } catch (_) {
-        userToken = this.authService.getToken();
-      }
-    }
     const hotelId = this.normalizeId(await this.resolveHotelIdForAi());
     const businessId = this.normalizeId(currentUser?.businessId || null);
     const normalizedTenantId = this.normalizeId(tenantId) || tenantId;
 
     try {
       const response = await firstValueFrom(
-        this.http.post<any>(`${this.aiUrl}/chat`, { 
-          tenant_id: normalizedTenantId, 
-          hotel_id: hotelId,
-          business_id: businessId,
-          question,
-          user_role: userRole,
-          user_id: userId,
-          user_token: userToken,
-          api_url: this.apiUrl
+        this.http.post<any>(`${this.apiUrl}/ai-assistant/chat`, {
+          message: question,
+          tenantId: normalizedTenantId,
+          hotelId: hotelId || normalizedTenantId || null,
+          businessId,
+          apiUrl: this.apiUrl
         })
       );
-      const answerText = response?.answer || 'Xin lỗi, tôi chưa có dữ liệu để tư vấn.';
+      const answerText =
+        response?.response || response?.answer || 'Xin lỗi, tôi chưa có dữ liệu để tư vấn.';
       
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
