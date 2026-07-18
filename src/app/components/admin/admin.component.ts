@@ -182,7 +182,26 @@ export class AdminComponent implements OnInit {
   }
 
   canAccessSettings(): boolean {
-    return this.permissionService.hasFeatureAccess('settings_management');
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      return false;
+    }
+
+    return ['superadmin', 'admin', 'business', 'hotel', 'staff'].includes(user.role);
+  }
+
+  canManageSystemSettings(): boolean {
+    return this.authService.isSuperAdmin() || this.authService.isAdmin();
+  }
+
+  getSettingsMenuLabel(): string {
+    return this.canManageSystemSettings() ? 'Cài đặt hệ thống' : 'Cài đặt phạm vi làm việc';
+  }
+
+  getSettingsMenuDescription(): string {
+    return this.canManageSystemSettings()
+      ? 'Quản trị cấu hình chung'
+      : 'Xem hoặc chỉnh cài đặt theo quyền hiện tại';
   }
 
   canAccessBotSetting(): boolean {

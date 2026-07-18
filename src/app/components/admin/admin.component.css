@@ -203,10 +203,20 @@ nz-footer {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 ::ng-deep .settings-dropdown-menu i {
   font-size: 16px;
+}
+
+::ng-deep .settings-dropdown-menu .settings-item-note {
+  display: block;
+  width: 100%;
+  margin-left: 24px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 /* ============ Mobile Menu Overlay ============ */

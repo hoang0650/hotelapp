@@ -64,6 +64,21 @@ export class SettingsComponent implements OnInit {
 
   // Email providers - will be initialized in ngOnInit
   emailProviders: { value: string, label: string, description: string }[] = [];
+  readonly systemAdminCapabilities: string[] = [
+    'Cấu hình hệ thống chung, bảo trì, bảo mật và định dạng vận hành',
+    'Quản lý email gửi hệ thống, thanh toán mặc định, Fanpage và OpenClaw pairing',
+    'Thiết lập thông báo toàn hệ thống và phát hành thông báo diện rộng'
+  ];
+  readonly operatorCapabilities: string[] = [
+    'Quản lý cài đặt theo khách sạn đang làm việc',
+    'Bật hoặc tắt tính năng khách sạn theo gói đăng ký',
+    'Điều chỉnh QR thanh toán và thông báo riêng của khách sạn'
+  ];
+  readonly readonlyCapabilities: string[] = [
+    'Xem phân quyền và cài đặt đang áp dụng cho phạm vi làm việc',
+    'Không được thay đổi cấu hình hệ thống hoặc cấu hình khách sạn',
+    'Cần dùng tài khoản business, hotel manager hoặc admin khi muốn chỉnh sửa'
+  ];
   
   constructor(
     private fb: FormBuilder,
@@ -85,7 +100,9 @@ export class SettingsComponent implements OnInit {
   ngOnInit(): void {
     this.initEmailProviders();
     this.loadCurrentUser();
-    this.loadSettings();
+    if (this.isManagementGroup()) {
+      this.loadSettings();
+    }
     this.loadHotels();
     if (this.authService.isSuperAdmin() || this.authService.isAdmin()) {
       this.loadAnnouncements();
@@ -1115,6 +1132,13 @@ export class SettingsComponent implements OnInit {
            this.authService.isHotelManager();
   }
 
+  canAccessScopedSettings(): boolean {
+    return this.isManagementGroup() ||
+      this.authService.isBusiness() ||
+      this.authService.isHotelManager() ||
+      this.authService.isStaff();
+  }
+
   isManagementGroup(): boolean {
     return this.authService.isSuperAdmin() || this.authService.isAdmin();
   }
@@ -1132,6 +1156,22 @@ export class SettingsComponent implements OnInit {
 
   canViewHotelSettingsTab(): boolean {
     return this.canManageHotelSettings() || this.isReadOnlyUserGroup();
+  }
+
+  getSettingsPageTitle(): string {
+    return this.isManagementGroup() ? 'Cài đặt hệ thống' : 'Cài đặt phạm vi làm việc';
+  }
+
+  getSettingsPageSubtitle(): string {
+    if (this.isManagementGroup()) {
+      return 'Quản trị hệ thống, tích hợp, thanh toán và chính sách vận hành toàn cục';
+    }
+
+    if (this.canManageHotelSettings()) {
+      return 'Quản lý cấu hình theo khách sạn, gói dịch vụ và thông báo vận hành';
+    }
+
+    return 'Theo dõi quyền truy cập và các cài đặt đang áp dụng cho tài khoản hiện tại';
   }
 
   getRoleGroupLabel(): string {

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { PricingService } from './pricing.service';
 
 // Interface cho sản phẩm (Dataset)
 export interface Product {
@@ -82,6 +83,13 @@ export class AiAssistantService {
   private socket: WebSocket | null = null;
   private pingInterval: any; // Thêm biến lưu bộ đếm Heartbeat
   private chatHistoryLoaded = false;
+  private packageScopeCache:
+    | {
+        userId: string;
+        cachedAt: number;
+        value: any;
+      }
+    | null = null;
 
   // URL tới Python Backend (FastAPI/Flask) - Nơi xử lý Facebook & AI
   private aiUrl = environment.aiUrl; 
@@ -89,7 +97,11 @@ export class AiAssistantService {
   // URL tới Backend nội bộ (NodeJS/Java...) - Nơi lưu lịch sử chat nội bộ
   private apiUrl = environment.apiUrl; 
 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+    private pricingService: PricingService
+  ) {}
 
   private normalizeId(value: any): string | null {
     if (!value) return null;
@@ -97,6 +109,108 @@ export class AiAssistantService {
     if (typeof value === 'object' && value._id) return String(value._id);
     if (typeof value === 'object' && value.id) return String(value.id);
     return String(value);
+  }
+
+  private normalizeStringArray(values: any): string[] {
+    if (!Array.isArray(values)) {
+      return [];
+    }
+    const normalized = values
+      .map(value => String(value || '').trim())
+      .filter(Boolean);
+    return Array.from(new Set(normalized));
+  }
+
+  private async resolveCurrentPackageSnapshot(userId: string | null): Promise<any | null> {
+    if (!userId) {
+      return null;
+    }
+
+    const now = Date.now();
+    if (
+      this.packageScopeCache &&
+      this.packageScopeCache.userId === userId &&
+      now - this.packageScopeCache.cachedAt < 30000
+    ) {
+      return this.packageScopeCache.value;
+    }
+
+    try {
+      const response = await firstValueFrom(this.pricingService.getCurrentUserPackage(userId));
+      const pkg = response && (response as any).success !== false
+        ? (response as any).data || response
+        : response;
+      this.packageScopeCache = {
+        userId,
+        cachedAt: now,
+        value: pkg || null
+      };
+      return pkg || null;
+    } catch {
+      this.packageScopeCache = {
+        userId,
+        cachedAt: now,
+        value: null
+      };
+      return null;
+    }
+  }
+
+  private async buildAiScopePayload(): Promise<{
+    selectedHotelId: string | null;
+    hotelId: string | null;
+    businessId: string | null;
+    aiScope: {
+      role: string;
+      businessId?: string;
+      hotelId?: string;
+      allowedTargets: string[];
+    };
+    packageId: string | null;
+    packageFeatures: string[];
+    packagePermissions: string[];
+    maxUsers: number | null;
+    maxRooms: number | null;
+    source: string;
+  }> {
+    const currentUser = this.authService.getCurrentUser();
+    const userId = this.normalizeId(currentUser?._id);
+    const selectedHotelId = this.normalizeId(await this.resolveHotelIdForAi());
+    const aiScope = this.authService.getAIScope();
+    const packageSnapshot = await this.resolveCurrentPackageSnapshot(userId);
+
+    const packageFeatures = this.normalizeStringArray(packageSnapshot?.features);
+    const packagePermissions = this.normalizeStringArray(packageSnapshot?.permissions);
+    const delegatedFeatures = this.normalizeStringArray((currentUser as any)?.features);
+    const delegatedPackagePermissions = this.normalizeStringArray((currentUser as any)?.packagePermissions);
+
+    const effectiveFeatures = delegatedFeatures.length
+      ? packageFeatures.filter(feature => delegatedFeatures.includes(feature))
+      : packageFeatures;
+    const effectivePackagePermissions = delegatedPackagePermissions.length
+      ? packagePermissions.filter(permission => delegatedPackagePermissions.includes(permission))
+      : packagePermissions;
+
+    const businessId = this.normalizeId(aiScope.businessId || currentUser?.businessId || null);
+    const hotelId = this.normalizeId(selectedHotelId || aiScope.hotelId || currentUser?.hotelId || null);
+
+    return {
+      selectedHotelId: hotelId,
+      hotelId,
+      businessId,
+      aiScope: {
+        role: aiScope.role || currentUser?.role || 'guest',
+        ...(businessId ? { businessId } : {}),
+        ...(hotelId ? { hotelId } : {}),
+        allowedTargets: this.normalizeStringArray(aiScope.allowedTargets)
+      },
+      packageId: this.normalizeId(packageSnapshot?._id || packageSnapshot?.id || null),
+      packageFeatures: effectiveFeatures,
+      packagePermissions: effectivePackagePermissions,
+      maxUsers: typeof packageSnapshot?.maxUsers === 'number' ? packageSnapshot.maxUsers : null,
+      maxRooms: typeof packageSnapshot?.maxRooms === 'number' ? packageSnapshot.maxRooms : null,
+      source: 'hotelapp-web'
+    };
   }
 
   // --- WEBSOCKET FOR REALTIME UPDATES ---
@@ -199,8 +313,14 @@ export class AiAssistantService {
         return;
       }
 
+      const scopePayload = await this.buildAiScopePayload();
       const response = await firstValueFrom(
-        this.http.get<ChatHistoryResponse>(`${this.apiUrl}/ai-assistant/history`)
+        this.http.get<ChatHistoryResponse>(`${this.apiUrl}/ai-assistant/history`, {
+          params: {
+            selectedHotelId: scopePayload.selectedHotelId || '',
+            source: scopePayload.source
+          }
+        })
       );
 
       if (response.success && response.messages && response.messages.length > 0) {
@@ -235,10 +355,25 @@ export class AiAssistantService {
     this.isTyping.next(true);
 
     try {
+      const scopePayload = await this.buildAiScopePayload();
       const response = await firstValueFrom(
         this.http.post<ChatResponse>(
           `${this.apiUrl}/ai-assistant/chat`,
-          { message: content, fileUrl, fileType }
+          {
+            message: content,
+            fileUrl,
+            fileType,
+            selectedHotelId: scopePayload.selectedHotelId,
+            hotelId: scopePayload.hotelId,
+            businessId: scopePayload.businessId,
+            aiScope: scopePayload.aiScope,
+            packageId: scopePayload.packageId,
+            packageFeatures: scopePayload.packageFeatures,
+            packagePermissions: scopePayload.packagePermissions,
+            maxUsers: scopePayload.maxUsers,
+            maxRooms: scopePayload.maxRooms,
+            source: scopePayload.source
+          }
         )
       );
 
@@ -272,7 +407,13 @@ export class AiAssistantService {
 
   async clearChatHistory(): Promise<void> {
     try {
-      await firstValueFrom(this.http.delete(`${this.apiUrl}/ai-assistant/history`));
+      const scopePayload = await this.buildAiScopePayload();
+      await firstValueFrom(this.http.delete(`${this.apiUrl}/ai-assistant/history`, {
+        body: {
+          selectedHotelId: scopePayload.selectedHotelId,
+          source: scopePayload.source
+        }
+      }));
       this.messages.next([]);
     } catch (error) {
       console.error('Error clearing chat history:', error);
@@ -304,9 +445,7 @@ export class AiAssistantService {
     };
     this.addMessage(userMessage);
     this.isTyping.next(true);
-    const currentUser = this.authService.getCurrentUser();
-    const hotelId = this.normalizeId(await this.resolveHotelIdForAi());
-    const businessId = this.normalizeId(currentUser?.businessId || null);
+    const scopePayload = await this.buildAiScopePayload();
     const normalizedTenantId = this.normalizeId(tenantId) || tenantId;
 
     try {
@@ -314,9 +453,17 @@ export class AiAssistantService {
         this.http.post<any>(`${this.apiUrl}/ai-assistant/chat`, {
           message: question,
           tenantId: normalizedTenantId,
-          hotelId: hotelId || normalizedTenantId || null,
-          businessId,
-          apiUrl: this.apiUrl
+          selectedHotelId: scopePayload.selectedHotelId,
+          hotelId: scopePayload.hotelId || normalizedTenantId || null,
+          businessId: scopePayload.businessId,
+          aiScope: scopePayload.aiScope,
+          packageId: scopePayload.packageId,
+          packageFeatures: scopePayload.packageFeatures,
+          packagePermissions: scopePayload.packagePermissions,
+          maxUsers: scopePayload.maxUsers,
+          maxRooms: scopePayload.maxRooms,
+          apiUrl: this.apiUrl,
+          source: scopePayload.source
         })
       );
       const answerText =

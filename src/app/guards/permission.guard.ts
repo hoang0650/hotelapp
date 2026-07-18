@@ -72,6 +72,10 @@ export class PermissionGuard implements CanActivate {
         return true;
       }
 
+      if (url === '/admin/settings') {
+        return u.role === 'business' || u.role === 'hotel' || u.role === 'staff';
+      }
+
       if (u.role === 'guest') {
         if (url === '/admin/pricing-management') return true;
         this.router.navigate([unauthorizedUrl]);
