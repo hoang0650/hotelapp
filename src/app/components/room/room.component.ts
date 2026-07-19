@@ -1374,7 +1374,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.hotelService.getHotelById(hotelId).subscribe({
+    this.hotelService.getHotelById(hotelId, { lite: true }).subscribe({
       next: (hotel) => {
         this.paymentSpeakerEnabled = !!hotel?.settings?.notificationSettings?.enablePaymentSpeaker;
         this.cdr.markForCheck();

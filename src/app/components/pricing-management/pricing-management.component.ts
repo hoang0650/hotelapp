@@ -312,9 +312,7 @@ export class PricingManagementComponent implements OnInit {
         const packageData = this.normalizePackageLimits(response.data || response);
         if (packageData && packageData._id) {
           this.currentUserPackage = packageData;
-          this.packages = [packageData]; // Chỉ hiển thị gói của user
         } else {
-          this.packages = [];
           this.currentUserPackage = null;
         }
         this.loading = false;
@@ -323,7 +321,6 @@ export class PricingManagementComponent implements OnInit {
         if (error.status !== 404) {
           this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.LOAD_USER_PACKAGE_ERROR'));
         }
-        this.packages = [];
         this.currentUserPackage = null;
         this.loading = false;
       }
@@ -706,41 +703,21 @@ export class PricingManagementComponent implements OnInit {
       return;
     }
 
-    // Non-admin chỉ có thể đăng ký cho chính mình
     const selectedPackage = this.packages.find(p => (p._id === packageId || p.id === packageId));
-    const packageName = selectedPackage?.name || 'gói này';
-    
-    this.modal.confirm({
-      nzTitle: 'Xác nhận đăng ký',
-      nzContent: `Bạn có chắc chắn muốn đăng ký ${packageName} ${billingType === 'yearly' ? 'theo năm' : 'theo tháng'}?`,
-      nzOkText: 'Đăng ký',
-      nzCancelText: 'Hủy',
-      nzOnOk: () => {
-        this.loading = true;
-        // Non-admin chỉ có thể subscribe cho chính mình
-        this.pricingService.subscribe(this.currentUser._id, packageId, billingType).subscribe({
-          next: (response) => {
-            if (response.success) {
-              this.message.success(response.message || 'Đăng ký gói thành công');
-              this.loadPackages();
-              this.loadCurrentUserPackage();
-            } else {
-              this.message.error(response.message || 'Đăng ký gói thất bại');
-            }
-            this.loading = false;
-          },
-          error: (error) => {
-            this.message.error(error.error?.message || 'Đăng ký gói thất bại');
-            this.loading = false;
-          }
-        });
-      }
-    });
+    if (!selectedPackage) {
+      this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.PACKAGE_NOT_FOUND'));
+      return;
+    }
+
+    this.redirectToPricing(packageId, billingType);
   }
 
   upgradeOrDowngradePackage(packageId: string, billingType: 'monthly' | 'yearly' = 'monthly'): void {
-    // Chuyển hướng về trang /pricing với tham số để tiền xử lý
-    const target = `/pricing?upgradePackageId=${encodeURIComponent(packageId)}&billingType=${encodeURIComponent(billingType)}`;
+    this.redirectToPricing(packageId, billingType);
+  }
+
+  private redirectToPricing(packageId: string, billingType: 'monthly' | 'yearly'): void {
+    const target = `/pricing?packageId=${encodeURIComponent(packageId)}&billingType=${encodeURIComponent(billingType)}`;
     window.location.href = target;
   }
 
@@ -823,31 +800,82 @@ export class PricingManagementComponent implements OnInit {
       this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.USER_NOT_FOUND'));
       return;
     }
-    this.modal.confirm({
-      nzTitle: 'Xác nhận hủy gói',
-      nzContent: 'Hủy gói sẽ có hiệu lực khi hết hạn nếu gói đã được thanh toán.',
-      nzOkText: 'Hủy gói',
-      nzCancelText: this.translate.instant('COMMON.CANCEL'),
-      nzOnOk: () => {
-        this.loading = true;
-        this.pricingService.cancelSubscription(this.currentUser._id).subscribe({
-          next: (response) => {
-            if (response.success) {
-              this.message.success(response.message || 'Đã ghi nhận yêu cầu hủy gói');
-              this.loadPackages();
-              this.loadCurrentUserPackage();
-            } else {
-              this.message.error(response.message || 'Hủy gói thất bại');
-            }
-            this.loading = false;
-          },
-          error: (error) => {
-            this.message.error(error.error?.message || 'Hủy gói thất bại');
-            this.loading = false;
-          }
-        });
-      }
-    });
+    this.message.warning(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.CANCEL_NOT_ALLOWED_BEFORE_EXPIRY'));
+  }
+
+  getCurrentUserPackageId(): string {
+    return String(this.currentUserPackage?._id || this.currentUserPackage?.id || '').trim();
+  }
+
+  isUserCurrentPackage(pkg: any): boolean {
+    const packageId = String(pkg?._id || pkg?.id || '').trim();
+    return !!packageId && packageId === this.getCurrentUserPackageId();
+  }
+
+  hasActiveCurrentPackage(): boolean {
+    const expiryDate = this.currentUserPackage?.expiryDate || this.currentUserPackage?.packageExpiryDate;
+    if (!expiryDate) {
+      return false;
+    }
+    const expiry = new Date(expiryDate);
+    return !Number.isNaN(expiry.getTime()) && expiry.getTime() > Date.now();
+  }
+
+  getCurrentPackageDisplayPrice(): number {
+    if (!this.currentUserPackage) {
+      return 0;
+    }
+    const isYearly = this.currentUserPackage?.billingType === 'yearly';
+    if (isYearly) {
+      return Number(this.currentUserPackage?.yearlyPrice || (this.currentUserPackage?.monthlyPrice || this.currentUserPackage?.price || 0) * 12 || 0);
+    }
+    return Number(this.currentUserPackage?.monthlyPrice || this.currentUserPackage?.price || 0);
+  }
+
+  getPackagePriceByBilling(pkg: any, billingType: 'monthly' | 'yearly'): number {
+    if (!pkg || pkg.isContactOnly) {
+      return 0;
+    }
+    if (billingType === 'yearly') {
+      const yearlyPrice = Number(pkg.yearlyPrice || ((pkg.monthlyPrice || pkg.price || 0) * 12));
+      const discount = Number(pkg.yearlyDiscount || 0);
+      return Math.round(yearlyPrice * (1 - discount / 100));
+    }
+    return Number(pkg.monthlyPrice || pkg.price || 0);
+  }
+
+  getUpgradeDelta(pkg: any, billingType: 'monthly' | 'yearly'): number {
+    const targetPrice = this.getPackagePriceByBilling(pkg, billingType);
+    const currentPrice = this.hasActiveCurrentPackage() ? this.getCurrentPackageDisplayPrice() : 0;
+    return Math.max(0, targetPrice - currentPrice);
+  }
+
+  isDowngradeBlocked(pkg: any, billingType: 'monthly' | 'yearly'): boolean {
+    if (!this.hasActiveCurrentPackage() || !this.currentUserPackage) {
+      return false;
+    }
+    const targetPrice = this.getPackagePriceByBilling(pkg, billingType);
+    const currentPrice = this.getCurrentPackageDisplayPrice();
+    return currentPrice > 0 && targetPrice <= currentPrice && !this.isUserCurrentPackage(pkg);
+  }
+
+  getPackageActionLabel(pkg: any, billingType: 'monthly' | 'yearly'): string {
+    if (this.isUserCurrentPackage(pkg)) {
+      return this.translate.instant('PRICING_MANAGEMENT.CURRENT_PLAN');
+    }
+    if (this.isDowngradeBlocked(pkg, billingType)) {
+      return this.translate.instant('PRICING_MANAGEMENT.WAIT_UNTIL_EXPIRY');
+    }
+    if (this.hasActiveCurrentPackage() && this.getUpgradeDelta(pkg, billingType) > 0) {
+      return this.translate.instant('PRICING_MANAGEMENT.UPGRADE_PAY_DIFF', {
+        amount: this.formatCurrency(this.getUpgradeDelta(pkg, billingType))
+      });
+    }
+    return this.translate.instant(
+      billingType === 'yearly'
+        ? 'PRICING_MANAGEMENT.SUBSCRIBE_YEARLY'
+        : 'PRICING_MANAGEMENT.SUBSCRIBE_MONTHLY'
+    );
   }
 
   isUnlimitedUsers(pkg: any): boolean {

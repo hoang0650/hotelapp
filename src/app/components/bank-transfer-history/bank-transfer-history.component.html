@@ -21,10 +21,10 @@
     style="margin-bottom: 16px;">
     <ng-container *nzAlertContent>
       <div>
-        <strong>{{ configuredBankAccount?.bankName || 'Ngân hàng đã cấu hình' }}</strong>
-        - {{ configuredBankAccount?.accountNumber }}
-        <span *ngIf="configuredBankAccount?.beneficiaryName || configuredBankAccount?.accountHolderName">
-          - {{ configuredBankAccount?.beneficiaryName || configuredBankAccount?.accountHolderName }}
+          <strong>{{ configuredBankAccount.bankName || 'Ngân hàng đã cấu hình' }}</strong>
+          - {{ configuredBankAccount.accountNumber }}
+          <span *ngIf="configuredBankAccount.beneficiaryName || configuredBankAccount.accountHolderName">
+            - {{ configuredBankAccount.beneficiaryName || configuredBankAccount.accountHolderName }}
         </span>
       </div>
       <div style="margin-top: 4px; font-size: 12px; color: #666;">

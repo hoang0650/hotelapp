@@ -77,47 +77,36 @@
                     nz-button
                     nzType="primary"
                     (click)="contactPackage(pkg)">
-                    Liên hệ
+                    {{ 'PRICING_MANAGEMENT.CONTACT' | translate }}
                   </button>
                   <button 
-                    *ngIf="!pkg.isContactOnly && (!currentUserPackage || (currentUserPackage._id !== pkg._id && currentUserPackage.id !== pkg.id))"
+                    *ngIf="!pkg.isContactOnly"
                     nz-button 
                     nzType="primary" 
+                    [disabled]="isUserCurrentPackage(pkg) || isDowngradeBlocked(pkg, 'monthly')"
                     (click)="subscribeToPackage(pkg._id || pkg.id, 'monthly')">
-                    {{ 'PRICING_MANAGEMENT.SUBSCRIBE_MONTHLY' | translate }}
+                    {{ getPackageActionLabel(pkg, 'monthly') }}
                   </button>
                   <button 
-                    *ngIf="!pkg.isContactOnly && (!currentUserPackage || (currentUserPackage._id !== pkg._id && currentUserPackage.id !== pkg.id))"
+                    *ngIf="!pkg.isContactOnly"
                     nz-button 
                     nzType="default" 
                     style="margin-left: 8px;" 
+                    [disabled]="isUserCurrentPackage(pkg) || isDowngradeBlocked(pkg, 'yearly')"
                     (click)="subscribeToPackage(pkg._id || pkg.id, 'yearly')">
-                    {{ 'PRICING_MANAGEMENT.SUBSCRIBE_YEARLY' | translate }}
+                    {{ getPackageActionLabel(pkg, 'yearly') }}
                   </button>
-                  <button 
-                    *ngIf="!pkg.isContactOnly && currentUserPackage && (currentUserPackage._id === pkg._id || currentUserPackage.id === pkg.id)"
-                    nz-button 
-                    nzType="primary" 
-                    (click)="upgradeOrDowngradePackage(pkg._id || pkg.id, 'monthly')">
-                    {{ 'PRICING_MANAGEMENT.UPGRADE_DOWNGRADE_MONTHLY' | translate }}
-                  </button>
-                  <button 
-                    *ngIf="!pkg.isContactOnly && currentUserPackage && (currentUserPackage._id === pkg._id || currentUserPackage.id === pkg.id)"
-                    nz-button 
-                    nzType="default" 
-                    style="margin-left: 8px;" 
-                    (click)="upgradeOrDowngradePackage(pkg._id || pkg.id, 'yearly')">
-                    {{ 'PRICING_MANAGEMENT.UPGRADE_DOWNGRADE_YEARLY' | translate }}
-                  </button>
-                  <button
-                    *ngIf="!pkg.isContactOnly && currentUserPackage && (currentUserPackage._id === pkg._id || currentUserPackage.id === pkg.id)"
-                    nz-button
-                    nzType="default"
-                    nzDanger
-                    style="margin-left: 8px;"
-                    (click)="cancelUserSubscription()">
-                    Hủy gói
-                  </button>
+                  <div *ngIf="!pkg.isContactOnly && hasActiveCurrentPackage() && !isUserCurrentPackage(pkg)" class="package-action-note">
+                    <span *ngIf="!isDowngradeBlocked(pkg, 'monthly')">
+                      {{ 'PRICING_MANAGEMENT.UPGRADE_NOTE' | translate:{ amount: formatCurrency(getUpgradeDelta(pkg, 'monthly')) } }}
+                    </span>
+                    <span *ngIf="isDowngradeBlocked(pkg, 'monthly')">
+                      {{ 'PRICING_MANAGEMENT.DOWNGRADE_BLOCKED_NOTE' | translate }}
+                    </span>
+                  </div>
+                  <div *ngIf="isUserCurrentPackage(pkg)" class="package-action-note current">
+                    {{ 'PRICING_MANAGEMENT.CURRENT_PLAN_NOTE' | translate }}
+                  </div>
                 </ng-container>
                 <button *ngIf="isAdmin" nz-button nzType="default" (click)="onAdminSubscribe(pkg._id || pkg.id)">{{ 'PRICING_MANAGEMENT.ADMIN_SUBSCRIBE_TEST' | translate }}</button>
               </td>
@@ -207,35 +196,35 @@
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Gói liên hệ</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.CONTACT_PLAN' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
-            <label nz-checkbox formControlName="isContactOnly">Hiển thị dạng “Liên hệ” (gói cao cấp)</label>
+            <label nz-checkbox formControlName="isContactOnly">{{ 'PRICING_MANAGEMENT.FORM.CONTACT_PLAN_ENABLE' | translate }}</label>
           </nz-form-control>
         </nz-form-item>
 
         <ng-container *ngIf="packageForm.get('isContactOnly')?.value">
           <nz-form-item>
-            <nz-form-label [nzSpan]="6">Tiêu đề liên hệ</nz-form-label>
+            <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.CONTACT_LABEL' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="18">
-              <input nz-input formControlName="contactLabel" placeholder="Ví dụ: Liên hệ tư vấn" />
+              <input nz-input formControlName="contactLabel" [placeholder]="'PRICING_MANAGEMENT.FORM.CONTACT_LABEL_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSpan]="6">Số điện thoại</nz-form-label>
+            <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.CONTACT_PHONE' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="18">
-              <input nz-input formControlName="contactPhone" placeholder="Ví dụ: 0909xxxxxx" />
+              <input nz-input formControlName="contactPhone" [placeholder]="'PRICING_MANAGEMENT.FORM.CONTACT_PHONE_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSpan]="6">Email</nz-form-label>
+            <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.CONTACT_EMAIL' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="18">
-              <input nz-input formControlName="contactEmail" placeholder="Ví dụ: support@phhotel.vn" />
+              <input nz-input formControlName="contactEmail" [placeholder]="'PRICING_MANAGEMENT.FORM.CONTACT_EMAIL_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label [nzSpan]="6">Link liên hệ</nz-form-label>
+            <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.CONTACT_URL' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="18">
-              <input nz-input formControlName="contactUrl" placeholder="Ví dụ: https://zalo.me/..." />
+              <input nz-input formControlName="contactUrl" [placeholder]="'PRICING_MANAGEMENT.FORM.CONTACT_URL_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
         </ng-container>
@@ -374,19 +363,22 @@
 
         <!-- Số phòng tối đa -->
         <nz-form-item>
-          <nz-form-label [nzSpan]="6">Max Rooms</nz-form-label>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.MAX_ROOMS' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18">
             <nz-checkbox formControlName="unlimitedRooms" style="margin-bottom: 8px;">
-              Không giới hạn phòng
+              {{ 'PRICING_MANAGEMENT.FORM.UNLIMITED_ROOMS' | translate }}
             </nz-checkbox>
             <nz-input-number 
               formControlName="maxRooms" 
               [nzMin]="0" 
               [nzStep]="1" 
               [nzDisabled]="!isAdmin"
-              [nzPlaceHolder]="'Nhập số phòng tối đa (0 = không giới hạn)'" 
+              [nzPlaceHolder]="'PRICING_MANAGEMENT.FORM.MAX_ROOMS_PLACEHOLDER' | translate" 
               style="width: 100%">
             </nz-input-number>
+            <div nz-typography nzType="secondary" style="margin-top: 8px; font-size: 12px;">
+              {{ 'PRICING_MANAGEMENT.FORM.MAX_ROOMS_HINT' | translate }}
+            </div>
           </nz-form-control>
         </nz-form-item>
 

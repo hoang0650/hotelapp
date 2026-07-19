@@ -1,29 +1,29 @@
 <div class="pricing-container">
   <nz-spin [nzSpinning]="loading">
     <div class="pricing-header">
-      <h1>Chọn gói dịch vụ phù hợp với bạn</h1>
+      <h1>{{ 'PRICING_PAGE.TITLE' | translate }}</h1>
       <div class="billing-toggle">
         <p class="billing-toggle-subtitle">
-          Chọn hình thức thanh toán cho gói đăng ký:
+          {{ 'PRICING_PAGE.SUBTITLE' | translate }}
         </p>
         <nz-radio-group [ngModel]="billingType" (ngModelChange)="onBillingTypeChange($event)" class="billing-radio-group">
           <label nz-radio-button [nzValue]="'monthly'" class="billing-radio-option">
-            <span>Thanh toán theo tháng</span>
+            <span>{{ 'PRICING_PAGE.BILLING.MONTHLY' | translate }}</span>
           </label>
           <label nz-radio-button [nzValue]="'yearly'" class="billing-radio-option">
-            <span>Thanh toán theo năm</span>
+            <span>{{ 'PRICING_PAGE.BILLING.YEARLY' | translate }}</span>
           </label>
         </nz-radio-group>
         <div *ngIf="billingType === 'yearly'" class="billing-info-box billing-info-yearly">
           <i nz-icon nzType="info-circle" nzTheme="outline" class="info-icon"></i>
           <span class="info-text">
-            Bạn sẽ đăng ký gói theo năm với giá ưu đãi và thời hạn 12 tháng
+            {{ 'PRICING_PAGE.BILLING.YEARLY_NOTE' | translate }}
           </span>
         </div>
         <div *ngIf="billingType === 'monthly'" class="billing-info-box billing-info-monthly">
           <i nz-icon nzType="info-circle" nzTheme="outline" class="info-icon"></i>
           <span class="info-text">
-            Bạn sẽ đăng ký gói theo tháng với thời hạn 1 tháng
+            {{ 'PRICING_PAGE.BILLING.MONTHLY_NOTE' | translate }}
           </span>
         </div>
       </div>
@@ -32,10 +32,18 @@
     <!-- Thông báo gói đã chọn -->
     <div *ngIf="selectedPackage" class="selected-package-notification selected-package-banner">
       <i nz-icon nzType="check-circle" nzTheme="fill" class="banner-icon"></i>
-      <strong>Đã chọn gói: {{ selectedPackage.name }} - {{ selectedPackage.billingType === 'yearly' ? 'Theo năm' : 'Theo tháng' }}</strong>
-      <p class="banner-subtitle">
-        Tổng tiền: {{ formatPrice(getPackagePrice(selectedPackage)) }}
-      </p>
+      <strong>{{ 'PRICING_PAGE.SELECTED_PACKAGE' | translate:{ packageName: selectedPackage.name, billingType: getBillingLabel(selectedPackage.billingType) } }}</strong>
+      <div class="selected-package-breakdown">
+        <p class="banner-subtitle">
+          {{ 'PRICING_PAGE.GROSS_AMOUNT' | translate }}: {{ formatPrice(getSelectedPackageGrossAmount()) }}
+        </p>
+        <p class="banner-subtitle credit" *ngIf="hasSelectedPackageCredit()">
+          {{ 'PRICING_PAGE.CREDIT_AMOUNT' | translate }}: -{{ formatPrice(getSelectedPackageCreditAmount()) }}
+        </p>
+        <p class="banner-total">
+          {{ 'PRICING_PAGE.NET_AMOUNT' | translate }}: {{ formatPrice(getSelectedPackageNetAmount()) }}
+        </p>
+      </div>
     </div>
 
     <div class="pricing-plans-wrapper">
@@ -44,7 +52,7 @@
         class="nav-button prev" 
         (click)="scrollPlans('left')"
         [disabled]="!canScrollLeft"
-        title="Xem các gói trước">
+        [title]="'PRICING_PAGE.PREVIOUS_PACKAGES' | translate">
         <i nz-icon nzType="left" nzTheme="outline"></i>
       </button>
       <div class="pricing-plans" #pricingPlansContainer>
@@ -56,10 +64,10 @@
           <div class="price">
             <ng-container *ngIf="!package.isContactOnly; else contactOnlyPrice">
               <span class="amount">{{ formatPrice(getPackagePrice(package)) }}</span>
-              <span class="period">/{{ billingType === 'yearly' ? 'năm' : 'tháng' }}</span>
+              <span class="period">/{{ billingType === 'yearly' ? ('PRICING_PAGE.PER_YEAR' | translate) : ('PRICING_PAGE.PER_MONTH' | translate) }}</span>
             </ng-container>
             <ng-template #contactOnlyPrice>
-              <span class="amount">{{ package.contactLabel || 'Liên hệ' }}</span>
+              <span class="amount">{{ package.contactLabel || ('PRICING_PAGE.CONTACT' | translate) }}</span>
             </ng-template>
           </div>
           
@@ -67,18 +75,18 @@
           <div *ngIf="!package.isContactOnly && billingType === 'yearly' && getSavingsPercentage(package) > 0" class="savings-info">
             <p class="savings">
               <i nz-icon nzType="check-circle" nzTheme="fill"></i>
-              Tiết kiệm {{ getSavingsPercentage(package) }}% 
+              {{ 'PRICING_PAGE.SAVE_PERCENT' | translate:{ percent: getSavingsPercentage(package) } }}
               <span class="savings-amount">({{ formatPrice(getSavingsAmount(package)) }})</span>
             </p>
             <p class="original-price">
-              Giá gốc: {{ formatPrice(getOriginalYearlyPrice(package)) }}/năm
+              {{ 'PRICING_PAGE.ORIGINAL_YEARLY_PRICE' | translate:{ amount: formatPrice(getOriginalYearlyPrice(package)) } }}
             </p>
           </div>
           
           <!-- Hiển thị giá tháng khi chọn tháng -->
           <div *ngIf="!package.isContactOnly && billingType === 'monthly'" class="billing-monthly-note">
             <p>
-              Thanh toán hàng tháng
+              {{ 'PRICING_PAGE.MONTHLY_PAYMENT_NOTE' | translate }}
             </p>
           </div>
           
@@ -93,17 +101,17 @@
             </li>
             <li *ngIf="package.maxUsers !== undefined && package.maxUsers !== null">
               <i nz-icon nzType="user" nzTheme="outline"></i>
-              <span *ngIf="package.maxUsers === 0 || package.maxUsers === null">Không giới hạn người dùng</span>
-              <span *ngIf="package.maxUsers !== 0 && package.maxUsers !== null">Tối đa {{ package.maxUsers }} người dùng</span>
+              <span *ngIf="package.maxUsers === 0 || package.maxUsers === null">{{ 'PRICING_PAGE.UNLIMITED_USERS' | translate }}</span>
+              <span *ngIf="package.maxUsers !== 0 && package.maxUsers !== null">{{ 'PRICING_PAGE.MAX_USERS' | translate:{ count: package.maxUsers } }}</span>
             </li>
             <li *ngIf="package.maxRooms !== undefined">
               <i nz-icon nzType="home" nzTheme="outline"></i>
-              <span *ngIf="package.maxRooms === 0 || package.maxRooms === null">Không giới hạn số phòng</span>
-              <span *ngIf="package.maxRooms > 0">Tối đa {{ package.maxRooms }} phòng</span>
+              <span *ngIf="package.maxRooms === 0 || package.maxRooms === null">{{ 'PRICING_PAGE.UNLIMITED_ROOMS' | translate }}</span>
+              <span *ngIf="package.maxRooms > 0">{{ 'PRICING_PAGE.MAX_ROOMS' | translate:{ count: package.maxRooms } }}</span>
             </li>
             <li *ngIf="package.permissions && package.permissions.length > 0">
               <i nz-icon nzType="safety-certificate" nzTheme="outline"></i>
-              Quyền: {{ package.permissions.join(', ') }}
+              {{ 'PRICING_PAGE.PERMISSIONS' | translate }}: {{ package.permissions.join(', ') }}
             </li>
             <li *ngFor="let addon of getOpenClawAddonHighlights(package)">
               <i nz-icon nzType="api" nzTheme="outline"></i>
@@ -115,7 +123,7 @@
         <div class="plan-footer">
           <ng-container *ngIf="package.isContactOnly; else normalPlanActions">
             <button nz-button nzType="primary" (click)="contactPackage(package)" [disabled]="loading">
-              Liên hệ
+              {{ 'PRICING_PAGE.CONTACT' | translate }}
             </button>
           </ng-container>
 
@@ -125,26 +133,42 @@
               <button
                 nz-button
                 nzType="primary"
-                nzDanger
-                (click)="cancelSubscription()"
-                [disabled]="isFreePackage(package) || loading">
-                Hủy gói
+                [disabled]="true">
+                {{ 'PRICING_PAGE.CURRENT_PLAN_BUTTON' | translate }}
               </button>
-              <p class="current-plan-text">Gói hiện tại của bạn</p>
+              <p class="current-plan-text">{{ 'PRICING_PAGE.CURRENT_PLAN_TEXT' | translate }}</p>
+              <p class="current-plan-lock">{{ 'PRICING_PAGE.CURRENT_PLAN_NO_CANCEL' | translate }}</p>
               <p *ngIf="currentPackage?.billingType || billingType">
-                Thanh toán: {{ (currentPackage?.billingType || billingType) === 'yearly' ? 'Theo năm' : 'Theo tháng' }}
+                {{ 'PRICING_PAGE.BILLING_LABEL' | translate }}: {{ getBillingLabel(currentPackage?.billingType || billingType) }}
               </p>
               <p *ngIf="currentPackage?.expiryDate || currentPackage?.packageExpiryDate">
-                Hết hạn: {{ (currentPackage.expiryDate || currentPackage.packageExpiryDate) | date:'dd/MM/yyyy' }}
+                {{ 'PRICING_PAGE.EXPIRY_DATE' | translate }}: {{ (currentPackage.expiryDate || currentPackage.packageExpiryDate) | date:'dd/MM/yyyy' }}
               </p>
               <p *ngIf="currentPackage?.maxRooms !== undefined">
-                Số phòng: {{ (currentPackage.maxRooms === 0 || currentPackage.maxRooms === null) ? 'Không giới hạn' : (currentPackage.maxRooms + ' phòng') }}
+                {{ 'PRICING_PAGE.ROOM_LIMIT' | translate }}: {{ (currentPackage.maxRooms === 0 || currentPackage.maxRooms === null) ? ('PRICING_PAGE.UNLIMITED_SHORT' | translate) : (currentPackage.maxRooms + ' ' + ('PRICING_PAGE.ROOMS' | translate)) }}
               </p>
               </ng-container>
             <ng-template #subscribeButton>
               <!-- Hiển thị nút thanh toán nếu đã chọn gói này -->
               <ng-container *ngIf="selectedPackage && (selectedPackage.packageId === (package._id || package.id)); else selectPackageButton">
                 <div class="payment-actions">
+                  <div class="payment-summary-box">
+                    <div class="summary-row">
+                      <span>{{ 'PRICING_PAGE.GROSS_AMOUNT' | translate }}</span>
+                      <strong>{{ formatPrice(getSelectedPackageGrossAmount()) }}</strong>
+                    </div>
+                    <div class="summary-row credit" *ngIf="hasSelectedPackageCredit()">
+                      <span>{{ 'PRICING_PAGE.CREDIT_AMOUNT' | translate }}</span>
+                      <strong>-{{ formatPrice(getSelectedPackageCreditAmount()) }}</strong>
+                    </div>
+                    <div class="summary-row total">
+                      <span>{{ 'PRICING_PAGE.NET_AMOUNT' | translate }}</span>
+                      <strong>{{ formatPrice(getSelectedPackageNetAmount()) }}</strong>
+                    </div>
+                    <p class="summary-note" *ngIf="hasSelectedPackageCredit()">
+                      {{ 'PRICING_PAGE.UPGRADE_CREDIT_EXPLAINER' | translate }}
+                    </p>
+                  </div>
                   <div class="payment-buttons-grid">
                     <button
                       nz-button
@@ -170,7 +194,7 @@
                   </div>
                   <div class="crypto-section" *ngIf="canUseCrypto">
                     <nz-form-item class="crypto-form-item">
-                      <nz-form-label class="crypto-label">Chọn mạng Crypto:</nz-form-label>
+                      <nz-form-label class="crypto-label">{{ 'PRICING_PAGE.CRYPTO_NETWORK_LABEL' | translate }}</nz-form-label>
                       <nz-form-control>
                         <nz-select 
                           [(ngModel)]="selectedCryptoNetwork" 
@@ -198,10 +222,10 @@
                     [nzSize]="'small'"
                     (click)="cancelPackageSelection()"
                     class="cancel-selection-btn">
-                    Hủy chọn
+                    {{ 'PRICING_PAGE.CANCEL_SELECTION' | translate }}
                   </button>
                   <p class="payment-total-text">
-                    Tổng tiền: {{ formatPrice(getPackagePrice(selectedPackage)) }}
+                    {{ 'PRICING_PAGE.NET_AMOUNT' | translate }}: {{ formatPrice(getSelectedPackageNetAmount()) }}
                   </p>
                 </div>
               </ng-container>
@@ -209,19 +233,19 @@
                 <button
                   nz-button
                   nzType="primary"
-                  [disabled]="isCurrentPackage(package._id || package.id) || loading || !package.isActive"
+                  [disabled]="isCurrentPackage(package._id || package.id) || loading || !package.isActive || isDowngradeSelection(package, billingType)"
                   (click)="subscribeToPlan(package._id || package.id)">
-                  {{ isCurrentPackage(package._id || package.id) ? 'Đã đăng ký' : (loading ? 'Đang xử lý...' : (package.isActive ? ('Chọn gói ' + (billingType === 'yearly' ? 'theo năm' : 'theo tháng')) : 'Không khả dụng')) }}
+                  {{ getSelectPlanButtonText(package) }}
                 </button>
                 <p class="package-billing-hint">
-                  Chọn gói {{ billingType === 'yearly' ? 'theo năm' : 'theo tháng' }}
+                  {{ getActionHint(package) }}
                 </p>
               </ng-template>
             </ng-template>
             </ng-container>
             <ng-template #loginButton>
-              <button nz-button nzType="primary" (click)="redirectToLogin()">Đăng nhập để đăng ký gói</button>
-              <p class="package-billing-hint">Bạn có thể xem thông tin gói mà không cần đăng nhập</p>
+              <button nz-button nzType="primary" (click)="redirectToLogin()">{{ 'PRICING_PAGE.LOGIN_TO_SUBSCRIBE' | translate }}</button>
+              <p class="package-billing-hint">{{ 'PRICING_PAGE.VIEW_ONLY_HINT' | translate }}</p>
             </ng-template>
           </ng-template>
         </div>
@@ -232,7 +256,7 @@
         class="nav-button next" 
         (click)="scrollPlans('right')"
         [disabled]="!canScrollRight"
-        title="Xem các gói tiếp theo">
+        [title]="'PRICING_PAGE.NEXT_PACKAGES' | translate">
         <i nz-icon nzType="right" nzTheme="outline"></i>
       </button>
     </div>
@@ -241,7 +265,7 @@
     <div class="additional-fees-section">
       <h2 class="additional-fees-title">
         <i nz-icon nzType="info-circle" nzTheme="outline"></i>
-        Thông tin phí bổ sung
+        {{ 'PRICING_PAGE.ADDITIONAL_FEES_TITLE' | translate }}
       </h2>
       
       <div class="additional-fees-grid">
@@ -249,32 +273,32 @@
         <div class="fee-card">
           <div class="fee-card-header">
             <i nz-icon nzType="dollar-circle" nzTheme="fill" class="fee-card-icon green"></i>
-            <h3>Phí riêng</h3>
+            <h3>{{ 'PRICING_PAGE.CUSTOM_FEES_TITLE' | translate }}</h3>
           </div>
           <p class="fee-card-description">
-            Dịch vụ phí riêng với các tính năng tùy chỉnh theo yêu cầu đặc biệt của khách sạn bạn:
+            {{ 'PRICING_PAGE.CUSTOM_FEES_DESC' | translate }}
           </p>
           <ul class="fee-list">
             <li class="fee-list-item">
               <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
-              <span><strong>Số lượng giao dịch chuyển khoản:</strong> Tùy chỉnh số lượng giao dịch theo nhu cầu thực tế của bạn</span>
+              <span>{{ 'PRICING_PAGE.CUSTOM_FEE_TRANSACTION' | translate }}</span>
             </li>
             <li class="fee-list-item">
               <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
-              <span><strong>Hóa đơn điện tử:</strong> Tích hợp hệ thống hóa đơn điện tử chuyên nghiệp</span>
+              <span>{{ 'PRICING_PAGE.CUSTOM_FEE_INVOICE' | translate }}</span>
             </li>
             <li class="fee-list-item">
               <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
-              <span><strong>Chữ ký số tập trung:</strong> Quản lý và sử dụng chữ ký số tập trung cho toàn bộ hệ thống</span>
+              <span>{{ 'PRICING_PAGE.CUSTOM_FEE_SIGNATURE' | translate }}</span>
             </li>
             <li class="fee-list-item">
               <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
-              <span><strong>Các tính năng thiết kế theo yêu cầu riêng:</strong> Phát triển tính năng đặc biệt phù hợp với quy trình của bạn</span>
+              <span>{{ 'PRICING_PAGE.CUSTOM_FEE_CUSTOM_FEATURE' | translate }}</span>
             </li>
           </ul>
           <div class="fee-note green">
             <p>
-              <strong>Liên hệ:</strong> Để biết thêm chi tiết về phí riêng, vui lòng liên hệ với chúng tôi.
+              {{ 'PRICING_PAGE.CUSTOM_FEES_CONTACT' | translate }}
             </p>
           </div>
         </div>
@@ -283,15 +307,14 @@
         <div class="fee-card">
           <div class="fee-card-header">
             <i nz-icon nzType="rocket" nzTheme="fill" class="fee-card-icon blue"></i>
-            <h3>Phí khởi tạo</h3>
+            <h3>{{ 'PRICING_PAGE.ONBOARDING_FEE_TITLE' | translate }}</h3>
           </div>
           <p class="fee-card-description no-margin">
-            Phí khởi tạo một lần khi bạn đăng ký gói dịch vụ mới. 
-            Phí này bao gồm việc thiết lập tài khoản, cấu hình hệ thống và hướng dẫn sử dụng.
+            {{ 'PRICING_PAGE.ONBOARDING_FEE_DESC' | translate }}
           </p>
           <div class="fee-note blue">
             <p>
-              <strong>Lưu ý:</strong> Phí khởi tạo chỉ áp dụng cho lần đăng ký đầu tiên.
+              {{ 'PRICING_PAGE.ONBOARDING_FEE_NOTE' | translate }}
             </p>
           </div>
         </div>
@@ -300,9 +323,9 @@
       <div class="contact-bar">
         <p>
           <i nz-icon nzType="phone" nzTheme="outline" class="contact-icon"></i>
-          Để biết thêm thông tin chi tiết về phí riêng và phí khởi tạo, vui lòng 
-          <a href="/contact" class="contact-link">liên hệ với chúng tôi</a> 
-          hoặc gọi hotline hỗ trợ.
+          {{ 'PRICING_PAGE.CONTACT_BAR_PREFIX' | translate }}
+          <a href="/contact" class="contact-link">{{ 'PRICING_PAGE.CONTACT_BAR_LINK' | translate }}</a>
+          {{ 'PRICING_PAGE.CONTACT_BAR_SUFFIX' | translate }}
         </p>
       </div>
     </div>
@@ -312,7 +335,7 @@
       <div class="payment-history-header">
         <div class="payment-history-title">
           <i nz-icon nzType="history" nzTheme="outline" class="history-icon"></i>
-          <h2>Lịch sử thanh toán</h2>
+          <h2>{{ 'PRICING_PAGE.PAYMENT_HISTORY_TITLE' | translate }}</h2>
           <nz-badge [nzCount]="paymentHistory.length" [nzShowZero]="false" class="history-badge"></nz-badge>
         </div>
         <button 
@@ -323,7 +346,7 @@
           [nzLoading]="paymentHistoryLoading"
           class="toggle-history-btn">
           <i nz-icon [nzType]="showPaymentHistory ? 'up' : 'down'" nzTheme="outline"></i>
-          {{ showPaymentHistory ? 'Ẩn' : 'Hiển thị' }} lịch sử
+          {{ showPaymentHistory ? ('PRICING_PAGE.HIDE_HISTORY' | translate) : ('PRICING_PAGE.SHOW_HISTORY' | translate) }}
         </button>
       </div>
 
@@ -331,7 +354,7 @@
         <nz-spin [nzSpinning]="paymentHistoryLoading">
           <nz-empty 
             *ngIf="!paymentHistoryLoading && paymentHistory.length === 0"
-            nzNotFoundContent="Chưa có lịch sử thanh toán"
+            [nzNotFoundContent]="'PRICING_PAGE.NO_PAYMENT_HISTORY' | translate"
             [nzNotFoundImage]="'simple'">
           </nz-empty>
 
@@ -373,14 +396,14 @@
                   <div class="payment-info-item">
                     <span class="payment-info-label">
                       <i nz-icon nzType="gift" nzTheme="outline"></i>
-                      Gói dịch vụ:
+                      {{ 'PRICING_PAGE.PACKAGE_LABEL' | translate }}
                     </span>
                     <span class="payment-info-value">{{ item.packageId?.name || 'N/A' }}</span>
                   </div>
                   <div class="payment-info-item payment-amount">
                     <span class="payment-info-label">
                       <i nz-icon nzType="dollar" nzTheme="outline"></i>
-                      Số tiền:
+                      {{ 'PRICING_PAGE.AMOUNT_LABEL' | translate }}
                     </span>
                     <span class="payment-info-value amount-value">
                       <span *ngIf="item.currency === 'USD'">
@@ -400,7 +423,7 @@
                   <div class="payment-info-item payment-transaction">
                     <span class="payment-info-label">
                       <i nz-icon nzType="file-text" nzTheme="outline"></i>
-                      Mã giao dịch:
+                      {{ 'PRICING_PAGE.TRANSACTION_ID_LABEL' | translate }}
                     </span>
                     <code class="transaction-code">{{ item.transactionId }}</code>
                   </div>
@@ -434,14 +457,14 @@
   <!-- SePay QR Payment Modal -->
   <nz-modal
     [(nzVisible)]="showSePayModal"
-    nzTitle="Thanh toán SePay"
+    [nzTitle]="'PRICING_PAGE.SEPAY_MODAL_TITLE' | translate"
     [nzWidth]="600"
     [nzFooter]="null"
     (nzOnCancel)="closeSePayModal()">
     <div *nzModalContent>
       <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
         <nz-descriptions-item nzTitle="Gói dịch vụ">
-          <strong>{{ selectedPackage?.name || 'N/A' }}</strong>
+          <strong>{{ selectedPackage?.name || ('PRICING_PAGE.NOT_AVAILABLE' | translate) }}</strong>
         </nz-descriptions-item>
         <nz-descriptions-item nzTitle="Số tiền">
           <strong class="sepay-amount-text">
@@ -460,7 +483,7 @@
       <div *ngIf="sepayQrUrl" class="sepay-qr-section">
         <h3 class="sepay-qr-title">
           <i nz-icon nzType="qrcode" nzTheme="outline" class="payment-btn-icon"></i>
-          Quét QR để thanh toán
+          {{ 'PRICING_PAGE.SCAN_QR_TO_PAY' | translate }}
         </h3>
         <div class="sepay-qr-wrapper">
           <img 
@@ -486,8 +509,8 @@
       <div class="sepay-notice">
         <p>
           <i nz-icon nzType="info-circle" nzTheme="outline" class="notice-icon"></i>
-          Sau khi chuyển khoản, hệ thống sẽ tự động xác nhận và đăng ký gói cho bạn trong vòng vài phút.
-          <strong>Modal này sẽ tự động đóng khi thanh toán thành công.</strong>
+          {{ 'PRICING_PAGE.SEPAY_NOTICE' | translate }}
+          <strong>{{ 'PRICING_PAGE.SEPAY_NOTICE_STRONG' | translate }}</strong>
         </p>
       </div>
     </div>

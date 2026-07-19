@@ -79,16 +79,25 @@ export class HotelService {
     return this.http.get<Hotel[]>(this.apiUrl, { params });
   }
 
-  getHotelById(id: string): Observable<Hotel> {
-    return this.http.get<Hotel>(`${this.apiUrl}/${id}`);
+  getHotelById(id: string, options?: { lite?: boolean }): Observable<Hotel> {
+    let params = new HttpParams();
+    if (options?.lite) {
+      params = params.set('lite', '1');
+    }
+    return this.http.get<Hotel>(`${this.apiUrl}/${id}`, { params });
   }
 
-  getHotelInfo(hotelId: string | null | undefined): Observable<Hotel | null> {
+  getHotelInfo(hotelId: string | null | undefined, options?: { lite?: boolean }): Observable<Hotel | null> {
     if (!hotelId) {
       return of(null);
     }
     
-    return this.http.get<Hotel>(`${this.apiUrl}/${hotelId}`).pipe(
+    let params = new HttpParams();
+    if (options?.lite) {
+      params = params.set('lite', '1');
+    }
+
+    return this.http.get<Hotel>(`${this.apiUrl}/${hotelId}`, { params }).pipe(
       map((hotel: Hotel) => hotel),
       catchError((error: any) => {
         console.error('Error fetching hotel info:', error);

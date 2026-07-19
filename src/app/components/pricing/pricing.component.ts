@@ -14,6 +14,7 @@ import { SettingsService } from '../../services/settings.service';
 import { NotificationsService, Announcement } from '../../services/notifications.service';
 import { forkJoin } from 'rxjs';
 import { HotelService } from '../../services/hotel.service';
+import { TranslateService } from '@ngx-translate/core';
 
 interface PricingPlan {
   name: string;
@@ -184,7 +185,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     private settingsService: SettingsService,
     private notificationsService: NotificationsService,
     private http: HttpClient,
-    private hotelService: HotelService
+    private hotelService: HotelService,
+    private translate: TranslateService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -387,7 +389,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
     if (paymentStatus === 'success') {
       // Thanh toán thành công - webhook sẽ tự động xử lý đăng ký gói
-      this.message.success('Thanh toán thành công! Hệ thống đang xử lý đăng ký gói. Vui lòng đợi vài giây...');
+      this.message.success(this.t('PRICING_PAGE.MESSAGES.PAYMENT_SUCCESS_PROCESSING'));
       
       // Lưu thông tin package trước khi reset để tạo thông báo
       const packageInfo = this.selectedPackage ? { ...this.selectedPackage } : null;
@@ -421,11 +423,11 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       // Xóa query params để tránh xử lý lại
       window.history.replaceState({}, '', '/pricing');
     } else if (paymentStatus === 'error') {
-      this.message.error('Thanh toán thất bại. Vui lòng thử lại.');
+      this.message.error(this.t('PRICING_PAGE.MESSAGES.PAYMENT_FAILED'));
       this.selectedPackage = null; // Reset selected package
       window.history.replaceState({}, '', '/pricing');
     } else if (paymentStatus === 'cancel') {
-      this.message.warning('Bạn đã hủy thanh toán.');
+      this.message.warning(this.t('PRICING_PAGE.MESSAGES.PAYMENT_CANCELLED'));
       this.selectedPackage = null; // Reset selected package
       window.history.replaceState({}, '', '/pricing');
     }
@@ -487,7 +489,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         console.error('Error loading packages:', error);
         // Chỉ hiển thị lỗi nếu không phải lỗi 401/403 (không cần đăng nhập)
         if (error.status !== 401 && error.status !== 403) {
-          this.message.error(error.error?.message || 'Không thể tải thông tin gói dịch vụ');
+          this.message.error(error.error?.message || this.t('PRICING_PAGE.MESSAGES.LOAD_PACKAGES_ERROR'));
         }
         this.loading = false;
       }
@@ -544,7 +546,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         console.error('Error loading current package:', error);
         // Không hiển thị lỗi nếu user chưa có gói (404 hoặc null)
         if (error.status !== 404 && error.status !== 400) {
-          this.message.error(error.error?.message || 'Không thể tải thông tin gói hiện tại');
+          this.message.error(error.error?.message || this.t('PRICING_PAGE.MESSAGES.LOAD_CURRENT_PACKAGE_ERROR'));
         }
         this.currentPackage = null;
         
@@ -623,17 +625,17 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
   subscribeToPlan(packageId: string) {
     if (!this.userId) {
-      this.message.warning('Vui lòng đăng nhập để đăng ký gói');
+      this.message.warning(this.t('PRICING_PAGE.MESSAGES.LOGIN_REQUIRED'));
       return;
     }
 
     const pkg = this.packages.find(p => (p._id || p.id) === packageId);
     if (!pkg) {
-      this.message.error('Không tìm thấy gói dịch vụ.');
+      this.message.error(this.t('PRICING_PAGE.MESSAGES.PACKAGE_NOT_FOUND'));
       return;
     }
 
-    const billingTypeText = this.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+    const billingTypeText = this.getBillingLabel(this.billingType);
 
     // Kiểm tra nếu là gói miễn phí
     if (this.isFreePackage(pkg)) {
@@ -646,7 +648,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       this.pricingService.subscribe(this.userId, packageId, this.billingType).subscribe({
         next: (response: any) => {
           if (response.success !== false) {
-            this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công`);
+            this.message.success(response.message || this.t('PRICING_PAGE.MESSAGES.SUBSCRIBE_SUCCESS', { billingType: billingTypeText }));
             this.loadCurrentPackage();
             this.selectedPackage = null;
             // Tạo thông báo hệ thống
@@ -658,53 +660,49 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
               this.createSubscriptionAnnouncement(pkg.name, billingTypeText, 'subscribe');
             }
           } else {
-            this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
+            this.message.error(response.message || this.t('PRICING_PAGE.MESSAGES.SUBSCRIBE_ERROR'));
           }
           this.loading = false;
         },
         error: (error: any) => {
           console.error('Subscribe error:', error);
-          this.message.error(error.error?.message || 'Có lỗi xảy ra khi đăng ký gói dịch vụ');
+          this.message.error(error.error?.message || this.t('PRICING_PAGE.MESSAGES.SUBSCRIBE_ERROR'));
           this.loading = false;
         }
       });
       return;
     }
 
-    // Tính số tiền cần thanh toán ròng (khấu trừ phần còn lại của gói hiện tại nếu nâng cấp)
-    const netAmount = this.computeNetAmount(pkg, this.billingType);
-
-    // Nếu số tiền gói mới <= gói hiện tại (hạ gói) hoặc netAmount = 0 => tự động cập nhật gói không cần thanh toán
-    const currentPkgObj = this.packages.find(p => (p._id || p.id) === (this.currentPackage?._id || this.currentPackage?.packageId));
-    const originalBilling = this.billingType;
-    let isDowngrade = false;
-    if (currentPkgObj) {
-      this.billingType = this.currentPackage?.billingType || this.billingType;
-      const currentPrice = this.getPackagePrice(currentPkgObj);
-      this.billingType = originalBilling;
-      const targetPrice = this.getPackagePrice(pkg);
-      isDowngrade = (targetPrice <= currentPrice);
+    if (this.isDowngradeSelection(pkg, this.billingType)) {
+      this.message.warning(this.t('PRICING_PAGE.MESSAGES.NO_DOWNGRADE_BEFORE_EXPIRY'));
+      return;
     }
 
-    if (isDowngrade || netAmount === 0) {
+    // Tính số tiền cần thanh toán ròng (khấu trừ trực tiếp giá gói hiện tại nếu còn hạn)
+    const netAmount = this.computeNetAmount(pkg, this.billingType);
+
+    if (netAmount === 0) {
       this.loading = true;
       this.pricingService.subscribe(this.userId, packageId, this.billingType).subscribe({
         next: (response: any) => {
           if (response.success !== false) {
-            const billingTypeText = this.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
-            this.message.success(response.message || `Đã chuyển sang gói ${pkg.name} ${billingTypeText} mà không cần thanh toán`);
+            const billingTypeText = this.getBillingLabel(this.billingType);
+            this.message.success(response.message || this.t('PRICING_PAGE.MESSAGES.SWITCH_WITHOUT_PAYMENT', {
+              packageName: pkg.name,
+              billingType: billingTypeText
+            }));
             this.loadCurrentPackage();
             this.selectedPackage = null;
             // Tạo thông báo hệ thống (hạ gói/cập nhật)
-            this.createSubscriptionAnnouncement(pkg.name, billingTypeText, isDowngrade ? 'update' : 'subscribe');
+            this.createSubscriptionAnnouncement(pkg.name, billingTypeText, 'subscribe');
           } else {
-            this.message.error(response.message || 'Cập nhật gói thất bại');
+            this.message.error(response.message || this.t('PRICING_PAGE.MESSAGES.UPDATE_PACKAGE_ERROR'));
           }
           this.loading = false;
         },
         error: (error: any) => {
           console.error('Subscribe (downgrade/no-charge) error:', error);
-          this.message.error(error.error?.message || 'Có lỗi xảy ra khi cập nhật gói');
+          this.message.error(error.error?.message || this.t('PRICING_PAGE.MESSAGES.UPDATE_PACKAGE_ERROR'));
           this.loading = false;
         }
       });
@@ -722,7 +720,11 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     // Kiểm tra tính năng thanh toán từ package đã chọn
     this.checkPaymentFeatures();
 
-    this.message.success(`Đã chọn gói ${pkg.name} - ${billingTypeText}. Số tiền cần thanh toán: ${this.formatPrice(netAmount)}.`);
+    this.message.success(this.t('PRICING_PAGE.MESSAGES.SELECTED_PLAN_SUCCESS', {
+      packageName: pkg.name,
+      billingType: billingTypeText,
+      amount: this.formatPrice(netAmount)
+    }));
   }
 
   /**
@@ -730,13 +732,13 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   payWithPayPal(): void {
     if (!this.selectedPackage || !this.userId) {
-      this.message.warning('Vui lòng chọn gói trước khi thanh toán');
+      this.message.warning(this.t('PRICING_PAGE.MESSAGES.SELECT_PLAN_BEFORE_PAYMENT'));
       return;
     }
     
     // Kiểm tra tính năng PayPal
     if (!this.canUsePayPal) {
-      this.message.warning('Gói này không hỗ trợ thanh toán bằng PayPal');
+      this.message.warning(this.t('PRICING_PAGE.MESSAGES.PAYPAL_NOT_SUPPORTED'));
       return;
     }
 
@@ -745,7 +747,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     const packagePrice = (this.selectedPackage.netAmount !== undefined) 
       ? this.selectedPackage.netAmount 
       : this.getPackagePrice(pkg);
-    const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+    const billingTypeText = this.getBillingLabel(this.selectedPackage.billingType);
 
     this.payPalPaymentData = {
       packageId: packageId,
@@ -763,13 +765,13 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   payWithCrypto(): void {
     if (!this.selectedPackage || !this.userId) {
-      this.message.warning('Vui lòng chọn gói trước khi thanh toán');
+      this.message.warning(this.t('PRICING_PAGE.MESSAGES.SELECT_PLAN_BEFORE_PAYMENT'));
       return;
     }
     
     // Kiểm tra tính năng Crypto
     if (!this.canUseCrypto) {
-      this.message.warning('Gói này không hỗ trợ thanh toán bằng Crypto');
+      this.message.warning(this.t('PRICING_PAGE.MESSAGES.CRYPTO_NOT_SUPPORTED'));
       return;
     }
 
@@ -799,7 +801,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   payWithSePay(): void {
     if (!this.selectedPackage || !this.userId) {
-      this.message.warning('Vui lòng chọn gói trước khi thanh toán');
+      this.message.warning(this.t('PRICING_PAGE.MESSAGES.SELECT_PLAN_BEFORE_PAYMENT'));
       return;
     }
 
@@ -813,7 +815,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     const packagePrice = (this.selectedPackage.netAmount !== undefined) 
       ? this.selectedPackage.netAmount 
       : this.getPackagePrice(pkg);
-    const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
+    const billingTypeText = this.getBillingLabel(this.selectedPackage.billingType);
 
     // Luôn load lại QR code từ superadmin profile trước khi thanh toán
     // Ưu tiên: superadmin profile > settings (chỉ lấy từ hệ thống)
@@ -869,7 +871,9 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
             // Nếu không có QR code, có thể là do hệ thống chưa có QR code
             // Nhưng vẫn cho phép tiếp tục nếu có paymentHistoryId (để user có thể thanh toán sau)
             console.warn('[Pricing] No QR code in response, but payment history created');
-            this.message.warning('Hệ thống chưa có QR code thanh toán. Vui lòng liên hệ quản trị viên để cập nhật. Mã thanh toán: ' + (response.paymentCode || response.paymentHistoryId));
+            this.message.warning(this.t('PRICING_PAGE.MESSAGES.QR_NOT_CONFIGURED', {
+              code: response.paymentCode || response.paymentHistoryId || 'N/A'
+            }));
             return;
           }
           
@@ -895,14 +899,14 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         } else {
           // Response có success: false hoặc error
           console.error('[Pricing] Payment history creation failed:', response);
-          const errorMsg = response.error || response.message || 'Có lỗi xảy ra khi tạo payment history';
+          const errorMsg = response.error || response.message || this.t('PRICING_PAGE.MESSAGES.CREATE_PAYMENT_HISTORY_ERROR');
           this.message.error(errorMsg);
         }
       },
       error: (error: any) => {
         this.loading = false;
         console.error('Error creating SePay payment history:', error);
-        const errorMessage = error.error?.error || error.error?.message || error.message || 'Có lỗi xảy ra khi tạo payment history. Vui lòng thử lại.';
+        const errorMessage = error.error?.error || error.error?.message || error.message || this.t('PRICING_PAGE.MESSAGES.CREATE_PAYMENT_HISTORY_ERROR');
         this.message.error(errorMessage);
       }
     });
@@ -927,7 +931,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   cancelPackageSelection(): void {
     this.selectedPackage = null;
-    this.message.info('Đã hủy chọn gói');
+    this.message.info(this.t('PRICING_PAGE.MESSAGES.SELECTION_CANCELLED'));
   }
 
   cancelSubscription(): void {
@@ -1048,18 +1052,28 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   getOpenClawAddonHighlights(pkg: any): string[] {
     const highlights: string[] = [];
     if (pkg?.aiChatboxFeature) {
-      highlights.push('AI Chatbox + OpenClaw cho business/hotel');
+      highlights.push(this.t('PRICING_PAGE.OPENCLAW_HIGHLIGHTS.AI_CHATBOX'));
     }
     if (pkg?.features?.includes('fanpage_messages')) {
-      highlights.push('Hotel agent cho Fanpage');
+      highlights.push(this.t('PRICING_PAGE.OPENCLAW_HIGHLIGHTS.FANPAGE'));
     }
     if (pkg?.features?.includes('zalo_messages')) {
-      highlights.push('Hotel agent cho Zalo');
+      highlights.push(this.t('PRICING_PAGE.OPENCLAW_HIGHLIGHTS.ZALO'));
     }
     if (pkg?.features?.includes('telegram_messages')) {
-      highlights.push('Hotel agent cho Telegram');
+      highlights.push(this.t('PRICING_PAGE.OPENCLAW_HIGHLIGHTS.TELEGRAM'));
     }
     return highlights;
+  }
+
+  private t(key: string, params?: Record<string, unknown>): string {
+    return this.translate.instant(key, params);
+  }
+
+  getBillingLabel(type: 'monthly' | 'yearly' | null | undefined): string {
+    return type === 'yearly'
+      ? this.t('PRICING_PAGE.BILLING.YEARLY_SHORT')
+      : this.t('PRICING_PAGE.BILLING.MONTHLY_SHORT');
   }
 
   getPackagePrice(pkg: any): number {
@@ -1073,6 +1087,125 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       // Khi chọn tháng, hiển thị giá tháng
       return pkg.monthlyPrice || pkg.price || 0;
     }
+  }
+
+  private getPackagePriceForBilling(pkg: any, billing: 'monthly' | 'yearly'): number {
+    if (pkg?.isContactOnly) return 0;
+    if (billing === 'yearly') {
+      const yearlyPrice = pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0);
+      const discount = pkg.yearlyDiscount || 0;
+      return Math.round(yearlyPrice * (1 - discount / 100));
+    }
+    return pkg.monthlyPrice || pkg.price || 0;
+  }
+
+  private resolvePackageId(pkg: any): string {
+    return String(pkg?.packageId || pkg?._id || pkg?.id || '').trim();
+  }
+
+  isCurrentPackageActive(): boolean {
+    const expiryDate = this.currentPackage?.expiryDate || this.currentPackage?.packageExpiryDate;
+    if (!expiryDate) {
+      return false;
+    }
+    const expiry = new Date(expiryDate);
+    return !Number.isNaN(expiry.getTime()) && expiry.getTime() > Date.now();
+  }
+
+  private getCurrentPackageResolvedBilling(): 'monthly' | 'yearly' {
+    return this.currentPackage?.billingType === 'yearly' ? 'yearly' : 'monthly';
+  }
+
+  getCurrentPackageCreditAmount(): number {
+    if (!this.currentPackage || !this.isCurrentPackageActive()) {
+      return 0;
+    }
+
+    const currentPackageId = this.resolvePackageId(this.currentPackage);
+    const currentPackageObject = this.packages.find(p => this.resolvePackageId(p) === currentPackageId) || this.currentPackage;
+    if (this.isFreePackage(currentPackageObject)) {
+      return 0;
+    }
+
+    return this.getPackagePriceForBilling(currentPackageObject, this.getCurrentPackageResolvedBilling());
+  }
+
+  getSelectedPackageGrossAmount(): number {
+    if (!this.selectedPackage) {
+      return 0;
+    }
+    return this.getPackagePriceForBilling(this.selectedPackage, this.selectedPackage.billingType || this.billingType);
+  }
+
+  getSelectedPackageNetAmount(): number {
+    if (!this.selectedPackage) {
+      return 0;
+    }
+    return this.selectedPackage.netAmount ?? this.getSelectedPackageGrossAmount();
+  }
+
+  getSelectedPackageCreditAmount(): number {
+    if (!this.selectedPackage) {
+      return 0;
+    }
+    const grossAmount = this.getSelectedPackageGrossAmount();
+    const netAmount = this.getSelectedPackageNetAmount();
+    return Math.max(0, grossAmount - netAmount);
+  }
+
+  hasSelectedPackageCredit(): boolean {
+    return this.getSelectedPackageCreditAmount() > 0;
+  }
+
+  isDowngradeSelection(targetPkg: any, billing: 'monthly' | 'yearly' = this.billingType): boolean {
+    if (!this.isCurrentPackageActive()) {
+      return false;
+    }
+
+    const currentPrice = this.getCurrentPackageCreditAmount();
+    const targetPrice = this.getPackagePriceForBilling(targetPkg, billing);
+    return currentPrice > 0 && targetPrice <= currentPrice;
+  }
+
+  getActionHint(packageItem: any): string {
+    if (this.isCurrentPackage(packageItem._id || packageItem.id)) {
+      return this.t('PRICING_PAGE.CURRENT_PLAN_NO_CANCEL');
+    }
+
+    if (this.isCurrentPackageActive() && this.isDowngradeSelection(packageItem, this.billingType)) {
+      return this.t('PRICING_PAGE.DOWNGRADE_BLOCKED_HINT');
+    }
+
+    if (this.isCurrentPackageActive()) {
+      const creditAmount = this.computeNetAmount(packageItem, this.billingType);
+      if (creditAmount > 0 && creditAmount < this.getPackagePriceForBilling(packageItem, this.billingType)) {
+        return this.t('PRICING_PAGE.UPGRADE_CREDIT_HINT', {
+          amount: this.formatPrice(creditAmount)
+        });
+      }
+    }
+
+    return this.t('PRICING_PAGE.SELECT_PLAN_HINT', {
+      billingType: this.getBillingLabel(this.billingType).toLowerCase()
+    });
+  }
+
+  getSelectPlanButtonText(packageItem: any): string {
+    if (this.isCurrentPackage(packageItem._id || packageItem.id)) {
+      return this.t('PRICING_PAGE.CURRENT_PLAN_BUTTON');
+    }
+    if (this.loading) {
+      return this.t('PRICING_PAGE.BUTTON_PROCESSING');
+    }
+    if (!packageItem.isActive) {
+      return this.t('PRICING_PAGE.BUTTON_UNAVAILABLE');
+    }
+    if (this.isCurrentPackageActive() && this.isDowngradeSelection(packageItem, this.billingType)) {
+      return this.t('PRICING_PAGE.BUTTON_WAIT_UNTIL_EXPIRY');
+    }
+    return this.t('PRICING_PAGE.BUTTON_SELECT_PLAN', {
+      billingType: this.getBillingLabel(this.billingType).toLowerCase()
+    });
   }
 
   contactPackage(pkg: any): void {
@@ -1094,9 +1227,9 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.modal.info({
-      nzTitle: pkg?.contactLabel || 'Liên hệ',
-      nzContent: 'Vui lòng liên hệ để được tư vấn gói này.',
-      nzOkText: 'Đóng',
+      nzTitle: pkg?.contactLabel || this.t('PRICING_PAGE.CONTACT'),
+      nzContent: this.t('PRICING_PAGE.CONTACT_PACKAGE_MESSAGE'),
+      nzOkText: this.t('PRICING_PAGE.CLOSE'),
       nzMaskClosable: true
     });
   }
@@ -1107,32 +1240,10 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
    * - yearly: chia theo 365 ngày
    */
   private getRemainingCredit(billing: 'monthly' | 'yearly'): number {
-    if (!this.currentPackage) return 0;
-    const now = new Date();
-    const expiry = new Date(this.currentPackage.expiryDate || this.currentPackage.packageExpiryDate || 0);
-    if (isNaN(expiry.getTime()) || expiry <= now) return 0;
-    const totalDays = billing === 'yearly' ? 365 : 30;
-    const remainingDays = Math.max(0, Math.min(totalDays, Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))));
-    // Lấy giá gói hiện tại theo billing
-    let currentPrice = 0;
-    const currentPkgObj = this.packages.find(p => (p._id || p.id) === (this.currentPackage._id || this.currentPackage.packageId));
-    if (currentPkgObj) {
-      // Tạm mượn billingType hiện tại để tính đúng discount năm
-      const originalBilling = this.billingType;
-      this.billingType = billing;
-      currentPrice = this.getPackagePrice(currentPkgObj);
-      this.billingType = originalBilling;
-    } else {
-      // Fallback từ currentPackage nếu có field giá
-      if (billing === 'yearly') {
-        const yearlyPrice = this.currentPackage.yearlyPrice || ((this.currentPackage.monthlyPrice || this.currentPackage.price || 0) * 12);
-        const discount = this.currentPackage.yearlyDiscount || 0;
-        currentPrice = yearlyPrice * (1 - discount / 100);
-      } else {
-        currentPrice = this.currentPackage.monthlyPrice || this.currentPackage.price || 0;
-      }
+    if (!this.isCurrentPackageActive()) {
+      return 0;
     }
-    return Math.round((currentPrice * remainingDays / totalDays));
+    return this.getCurrentPackageCreditAmount();
   }
 
   /**
@@ -1140,12 +1251,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
    * Nếu bằng 0 hoặc âm, coi như hạ gói/không cần thanh toán.
    */
   private computeNetAmount(targetPkg: any, billing: 'monthly' | 'yearly'): number {
-    // Tạm mượn billingType để dùng getPackagePrice với đúng kiểu
-    const originalBilling = this.billingType;
-    this.billingType = billing;
-    const targetPrice = this.getPackagePrice(targetPkg);
-    this.billingType = originalBilling;
-    const credit = this.getRemainingCredit(billing);
+    const targetPrice = this.getPackagePriceForBilling(targetPkg, billing);
+    const credit = Math.min(targetPrice, this.getRemainingCredit(billing));
     return Math.max(0, Math.round(targetPrice - credit));
   }
 
@@ -1222,7 +1329,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       return false;
     }
     // So sánh bằng _id (từ API) hoặc id
-    const currentPackageId = this.currentPackage._id || this.currentPackage.id;
+    const currentPackageId = this.currentPackage.packageId || this.currentPackage._id || this.currentPackage.id;
     return currentPackageId === packageId || currentPackageId?.toString() === packageId?.toString();
   }
 
@@ -1237,6 +1344,19 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   onBillingTypeChange(value: 'monthly' | 'yearly'): void {
     // Cập nhật billingType từ event
     this.billingType = value;
+    if (this.selectedPackage) {
+      const packageId = this.resolvePackageId(this.selectedPackage);
+      const selectedPackage = this.packages.find(p => this.resolvePackageId(p) === packageId);
+      if (selectedPackage) {
+        this.selectedPackage = {
+          ...selectedPackage,
+          packageId,
+          billingType: value,
+          netAmount: this.computeNetAmount(selectedPackage, value)
+        };
+        this.checkPaymentFeatures();
+      }
+    }
     // Force change detection để cập nhật UI
     this.cdr.detectChanges();
     console.log('Billing type changed to:', this.billingType);

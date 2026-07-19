@@ -2,7 +2,7 @@
   <!-- Mobile Overlay -->
   <div class="mobile-overlay" [class.active]="isMobileMenuOpen" (click)="closeMobileMenu()"></div>
 
-  <nz-sider *ngIf="permissionsReady; else loadingSider" nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null"
+  <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null"
     [class.mobile-open]="isMobileMenuOpen">
     <div class="sidebar-logo-wrapper">
       <img src="assets/phgroup_logo_circle.PNG" alt="PHHotel Logo" />
@@ -117,17 +117,10 @@
         </ul>
       </li>
     </ul>
+    <div *ngIf="!permissionsReady" style="padding: 10px 12px; color: rgba(255,255,255,0.75); font-size: 12px;">
+      Đang đồng bộ quyền truy cập...
+    </div>
   </nz-sider>
-  <ng-template #loadingSider>
-    <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzTrigger]="null" [class.mobile-open]="isMobileMenuOpen">
-      <div class="sidebar-logo-wrapper">
-        <img src="assets/phgroup_logo_circle.PNG" alt="PHHotel Logo" />
-      </div>
-      <div style="padding: 12px; color: rgba(255,255,255,0.85);">
-        Đang tải quyền truy cập...
-      </div>
-    </nz-sider>
-  </ng-template>
   <nz-layout>
     <nz-breadcrumb>
       <!-- Desktop Trigger -->

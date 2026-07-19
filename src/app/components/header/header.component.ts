@@ -248,7 +248,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private loadNotificationSettings(): void {
     if (this.currentUser?.hotelId) {
       forkJoin({
-        hotel: this.hotelService.getHotelById(this.currentUser.hotelId).pipe(
+        hotel: this.hotelService.getHotelById(this.currentUser.hotelId, { lite: true }).pipe(
           catchError(() => of(null))
         ),
         system: this.settingsService.getSettingsByType('notification').pipe(

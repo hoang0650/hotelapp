@@ -129,6 +129,35 @@ export class PermissionService {
     });
   }
 
+  private hydratePermissionsFromUserSnapshot(user: any, role: UserRole): boolean {
+    const snapshotPackage = user?.pricingPackage && typeof user.pricingPackage === 'object'
+      ? user.pricingPackage
+      : null;
+
+    const delegatedPackagePermissions = Array.isArray(user?.packagePermissions) ? user.packagePermissions : [];
+
+    if (snapshotPackage?.permissions && Array.isArray(snapshotPackage.permissions) && snapshotPackage.permissions.length > 0) {
+      this.currentPackageSubject.next(snapshotPackage);
+      if (delegatedPackagePermissions.length > 0) {
+        const effective = snapshotPackage.permissions.filter((p: string) => delegatedPackagePermissions.includes(p));
+        this.permissionsSubject.next(effective.length > 0 ? effective : ['view']);
+      } else {
+        this.permissionsSubject.next(snapshotPackage.permissions);
+      }
+      return true;
+    }
+
+    if (delegatedPackagePermissions.length > 0) {
+      this.currentPackageSubject.next(snapshotPackage || null);
+      this.permissionsSubject.next(delegatedPackagePermissions);
+      return true;
+    }
+
+    this.currentPackageSubject.next(snapshotPackage || null);
+    this.setDefaultPermissionsByRole(role);
+    return false;
+  }
+
   /**
    * Set permissions mặc định theo role
    */
@@ -395,8 +424,12 @@ export class PermissionService {
       return;
     }
 
-    this.readySubject.next(false);
-    this.loadUserPermissions(user._id, user.role);
+    this.hydratePermissionsFromUserSnapshot(user, user.role);
+    this.readySubject.next(true);
+
+    if (user?._id && !user?.pricingPackage) {
+      this.loadUserPermissions(user._id, user.role);
+    }
   }
 }
 

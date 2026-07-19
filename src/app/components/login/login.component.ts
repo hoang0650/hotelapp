@@ -63,6 +63,11 @@ export class LoginComponent implements OnInit {
    */
   private executeFastRedirect(): void {
     if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname || '';
+      if (hostname.startsWith('admin.') || hostname === 'localhost' || hostname === '127.0.0.1') {
+        this.router.navigateByUrl('/admin/room');
+        return;
+      }
       window.location.href = 'https://admin.phhotel.vn/admin/room';
     }
   }
@@ -118,6 +123,7 @@ export class LoginComponent implements OnInit {
           this.message.success(this.translate.instant('COMMON.SUCCESS'));
           if (response.token && response.user) {
             this.authService.loginFromShiftHandover(response.token, response.user);
+            this.authService.authResolved.next(true);
           }
           this.executeFastRedirect();
         }

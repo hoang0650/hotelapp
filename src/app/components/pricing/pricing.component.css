@@ -205,6 +205,64 @@
   background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
 }
 
+.selected-package-breakdown {
+  margin-top: 10px;
+}
+
+.selected-package-breakdown .banner-subtitle,
+.selected-package-breakdown .banner-total {
+  margin: 4px 0;
+}
+
+.selected-package-breakdown .credit {
+  color: #389e0d;
+}
+
+.selected-package-breakdown .banner-total {
+  font-weight: 700;
+  color: #1d39c4;
+}
+
+.payment-summary-box {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f5f8ff;
+  border: 1px solid #d6e4ff;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.summary-row.credit {
+  color: #389e0d;
+}
+
+.summary-row.total {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #adc6ff;
+  font-weight: 700;
+  color: #1d39c4;
+}
+
+.summary-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #595959;
+}
+
+.current-plan-lock {
+  margin: 8px 0 0;
+  color: #d46b08;
+  font-size: 12px;
+}
+
 .plan-header {
   text-align: center;
   padding-bottom: 20px;
