@@ -775,6 +775,23 @@ export class PricingManagementComponent implements OnInit {
     });
   }
 
+  getAiOpenClawSummary(pkg: any): string {
+    const parts: string[] = [];
+    if (pkg?.aiChatboxFeature) {
+      parts.push('OpenClaw cho business/hotel qua AI Chatbox');
+    }
+    if (pkg?.features?.includes('fanpage_messages')) {
+      parts.push('Agent Fanpage');
+    }
+    if (pkg?.features?.includes('zalo_messages')) {
+      parts.push('Agent Zalo');
+    }
+    if (pkg?.features?.includes('telegram_messages')) {
+      parts.push('Agent Telegram');
+    }
+    return parts.join(' | ');
+  }
+
   sendPaymentReminder(subscriber: any): void {
     if (!subscriber.userId) {
       this.message.error(this.translate.instant('PRICING_MANAGEMENT.MESSAGES.USER_NOT_FOUND'));

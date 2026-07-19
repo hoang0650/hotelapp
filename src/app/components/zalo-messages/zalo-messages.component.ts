@@ -82,7 +82,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
 
   get botModeText(): string {
     return this.isBotActive
-      ? 'Sale Agent đang bật: ChatEngine + OpenClaw sẽ tự tư vấn khách trên Zalo OA.'
+      ? 'Hotel Agent đang bật: OpenClaw là lớp xử lý chính, ChatEngine điều phối tư vấn, đặt phòng và chốt sale trên Zalo OA.'
       : 'Sale Agent đang tắt: chỉ trả lời thủ công.';
   }
 

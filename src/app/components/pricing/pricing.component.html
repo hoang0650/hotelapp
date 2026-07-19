@@ -105,6 +105,10 @@
               <i nz-icon nzType="safety-certificate" nzTheme="outline"></i>
               Quyền: {{ package.permissions.join(', ') }}
             </li>
+            <li *ngFor="let addon of getOpenClawAddonHighlights(package)">
+              <i nz-icon nzType="api" nzTheme="outline"></i>
+              {{ addon }}
+            </li>
           </ul>
         </div>
 

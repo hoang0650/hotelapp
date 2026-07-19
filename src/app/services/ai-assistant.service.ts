@@ -220,7 +220,7 @@ export class AiAssistantService {
       packagePermissions: effectivePackagePermissions,
       maxUsers: typeof packageSnapshot?.maxUsers === 'number' ? packageSnapshot.maxUsers : null,
       maxRooms: typeof packageSnapshot?.maxRooms === 'number' ? packageSnapshot.maxRooms : null,
-      source: 'hotelapp-web'
+      source: 'hotelapp-management'
     };
   }
 
@@ -687,9 +687,16 @@ export class AiAssistantService {
     platform?: 'facebook' | 'zalo' | 'telegram'
   ): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.get<any>(`${this.aiUrl}/bot/status`, {
-          params: { tenant_id: tenantId, page_id: pageId, platform }
+      const params: Record<string, string> = {
+        tenant_id: tenantId,
+        page_id: pageId
+      };
+      if (platform) {
+        params['platform'] = platform;
+      }
+      const resp = await firstValueFrom<{ active?: boolean }>(
+        this.http.get<{ active?: boolean }>(`${this.aiUrl}/bot/status`, {
+          params
         })
       );
       return resp?.active || false;

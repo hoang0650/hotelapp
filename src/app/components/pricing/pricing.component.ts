@@ -1045,6 +1045,23 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     return String(feature || '');
   }
 
+  getOpenClawAddonHighlights(pkg: any): string[] {
+    const highlights: string[] = [];
+    if (pkg?.aiChatboxFeature) {
+      highlights.push('AI Chatbox + OpenClaw cho business/hotel');
+    }
+    if (pkg?.features?.includes('fanpage_messages')) {
+      highlights.push('Hotel agent cho Fanpage');
+    }
+    if (pkg?.features?.includes('zalo_messages')) {
+      highlights.push('Hotel agent cho Zalo');
+    }
+    if (pkg?.features?.includes('telegram_messages')) {
+      highlights.push('Hotel agent cho Telegram');
+    }
+    return highlights;
+  }
+
   getPackagePrice(pkg: any): number {
     if (pkg?.isContactOnly) return 0;
     if (this.billingType === 'yearly') {

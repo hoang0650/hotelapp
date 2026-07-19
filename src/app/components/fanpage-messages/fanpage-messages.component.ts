@@ -79,7 +79,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
 
   get botModeText(): string {
     return this.isBotActive
-      ? 'Sale Agent đang bật: ChatEngine + OpenClaw sẽ tự tư vấn khách theo từng hội thoại.'
+      ? 'Hotel Agent đang bật: OpenClaw là lớp xử lý chính, ChatEngine điều phối tư vấn, đặt phòng và chốt sale theo từng khách.'
       : 'Sale Agent đang tắt: chỉ trả lời thủ công.';
   }
 

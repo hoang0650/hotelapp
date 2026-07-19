@@ -28,7 +28,12 @@
           <tbody>
             <tr *ngFor="let pkg of packagesTable.data">
               <td>{{ pkg.name }}</td>
-              <td>{{ pkg.description }}</td>
+              <td>
+                <div>{{ pkg.description }}</div>
+                <div *ngIf="getAiOpenClawSummary(pkg)" style="margin-top: 6px; font-size: 12px; color: #6b7280;">
+                  {{ getAiOpenClawSummary(pkg) }}
+                </div>
+              </td>
               <td>
                 <span *ngIf="pkg.isContactOnly" style="color: #fa8c16; font-weight: bold;">Liên hệ</span>
                 <span *ngIf="!pkg.isContactOnly && (pkg.monthlyPrice || 0) === 0 && (pkg.yearlyPrice || 0) === 0" style="color: #52c41a; font-weight: bold;">{{ 'PRICING_MANAGEMENT.FREE' | translate }}</span>
@@ -507,6 +512,9 @@
             </label>
             <div style="margin-top: 8px; color: #666; font-size: 12px;">
               {{ 'PRICING_MANAGEMENT.FEATURES.AI_CHATBOX_DESC' | translate }}
+            </div>
+            <div style="margin-top: 6px; color: #8c8c8c; font-size: 12px;">
+              Khi bật, role `business` và `hotel` trong gói sẽ được mở AI Chatbox để dùng OpenClaw như trợ lý quản lý. Các kênh Fanpage/Zalo/Telegram nếu cũng được bật feature tương ứng sẽ dùng OpenClaw làm hotel agent theo `chat_engine.py`.
             </div>
           </nz-form-control>
         </nz-form-item>

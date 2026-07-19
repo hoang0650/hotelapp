@@ -5,7 +5,10 @@
   <nz-card *ngIf="!minimized" [nzBodyStyle]="{padding: '8px 0 0 0'}" class="ai-chatbox-card">
     <div class="ai-chatbox-header">
       <div class="ai-chatbox-header-left">
-        <span class="ai-chatbox-title">{{ 'AI_CHATBOX.TITLE' | translate }}</span>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <span class="ai-chatbox-title">{{ chatboxModeTitle }}</span>
+          <span style="font-size:12px; color:#6b7280;">{{ chatboxModeDescription }}</span>
+        </div>
         <nz-select
           *ngIf="hotels.length > 0"
           [(ngModel)]="selectedHotelId"

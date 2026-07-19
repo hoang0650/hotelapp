@@ -40,7 +40,26 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   get canOpenOpenClaw(): boolean {
-    return this.authService.isSuperAdmin() || this.authService.isAdmin();
+    return this.canUseAiChatbox && this.isOpenClawRoleEligible();
+  }
+
+  get chatboxModeTitle(): string {
+    return this.isManagementAssistantMode()
+      ? 'Trợ lý quản lý OpenClaw'
+      : 'AI Chatbox';
+  }
+
+  get chatboxModeDescription(): string {
+    if (this.authService.isBusiness()) {
+      return 'Dùng OpenClaw để hỗ trợ chủ doanh nghiệp quản lý chuỗi khách sạn, doanh thu, vận hành và ra quyết định.';
+    }
+    if (this.authService.isHotelManager()) {
+      return 'Dùng OpenClaw để hỗ trợ quản lý khách sạn theo phạm vi khách sạn đang chọn.';
+    }
+    if (this.authService.isSuperAdmin() || this.authService.isAdmin()) {
+      return 'Dùng OpenClaw để giám sát và hỗ trợ quản trị toàn hệ thống.';
+    }
+    return 'Dùng AI theo phạm vi gói và quyền hiện tại.';
   }
 
   selectedFile?: File;
@@ -267,6 +286,19 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       rules.canAskAIAboutHotel === true ||
       rules.canViewShiftHistory === true;
   }
+
+  private isManagementAssistantMode(): boolean {
+    return this.authService.isBusiness() || this.authService.isHotelManager();
+  }
+
+  private isOpenClawRoleEligible(): boolean {
+    return (
+      this.authService.isSuperAdmin() ||
+      this.authService.isAdmin() ||
+      this.authService.isBusiness() ||
+      this.authService.isHotelManager()
+    );
+  }
   
   /**
    * Kiểm tra quyền sử dụng AI Chatbox từ hotel settings hoặc pricing package
@@ -288,10 +320,9 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (hotelId) {
       this.hotelService.getHotelInfo(hotelId).pipe(take(1)).subscribe({
         next: (hotel: any) => {
-          if (hotel && hotel.settings) {
-            this.canUseAiChatbox = hotel.settings.enableAiChatbox === true;
+          if (hotel && hotel.settings?.enableAiChatbox === true) {
+            this.canUseAiChatbox = true;
           } else {
-            // Nếu không có hotel settings, kiểm tra từ pricing package
             this.checkPricingPackagePermission();
           }
         },
@@ -520,7 +551,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   openOpenClawGateway(): void {
     if (this.openingOpenClaw) return;
     if (!this.canOpenOpenClaw) {
-      this.message.warning('Chỉ admin hoặc superadmin mới được mở OpenClaw gateway.');
+      this.message.warning('Role hiện tại hoặc gói dịch vụ của bạn chưa được phép mở OpenClaw.');
       return;
     }
 
@@ -554,7 +585,10 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
         }
 
         const accessLabel = response?.access === 'limited' ? 'quyền giới hạn' : 'quyền đầy đủ';
-        this.message.success(`Đã mở OpenClaw gateway với ${accessLabel}. Sale agent cho Fanpage/Zalo/Telegram sẽ dùng ChatEngine theo từng hội thoại.`);
+        const modeLabel = this.isManagementAssistantMode()
+          ? 'Trợ lý quản lý cho business/hotel đã sẵn sàng trên OpenClaw.'
+          : 'OpenClaw đã sẵn sàng cho vận hành AI.';
+        this.message.success(`Đã mở OpenClaw gateway với ${accessLabel}. ${modeLabel}`);
         this.openingOpenClaw = false;
       },
       error: (error) => {
