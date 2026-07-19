@@ -25,6 +25,14 @@ export interface BankHubBankAccount {
   status: string;
 }
 
+export interface BankHubBankAccountsResponse {
+  data: BankHubBankAccount[];
+  configured_account_number?: string;
+  configured_account_source?: string | null;
+  matched_bank_account?: BankHubBankAccount | null;
+  configured_account_linked?: boolean;
+}
+
 export interface BankHubTransaction {
   xid: string;
   bank_account_xid: string;
@@ -36,6 +44,16 @@ export interface BankHubTransaction {
   accumulated: number;
   transaction_content: string;
   reference_number: string;
+}
+
+export interface BankHubTransactionsResponse {
+  data: BankHubTransaction[];
+  total?: number;
+  configured_account_number?: string;
+  configured_account_source?: string | null;
+  matched_bank_account?: BankHubBankAccount | null;
+  configured_account_linked?: boolean;
+  bank_account_xid?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -52,10 +70,10 @@ export class BankHubService {
     return this.http.post<BankHubLinkToken>(`${this.apiUrl}/link-token`, data || {});
   }
 
-  getBankAccounts(companyXid?: string): Observable<{ data: BankHubBankAccount[] }> {
+  getBankAccounts(companyXid?: string): Observable<BankHubBankAccountsResponse> {
     let params = new HttpParams();
     if (companyXid) params = params.set('company_xid', companyXid);
-    return this.http.get<{ data: BankHubBankAccount[] }>(`${this.apiUrl}/bank-accounts`, { params });
+    return this.http.get<BankHubBankAccountsResponse>(`${this.apiUrl}/bank-accounts`, { params });
   }
 
   getTransactions(queryParams?: {
@@ -64,7 +82,8 @@ export class BankHubService {
     to_date?: string;
     page?: number;
     limit?: number;
-  }): Observable<{ data: BankHubTransaction[]; total?: number }> {
+    account_number?: string;
+  }): Observable<BankHubTransactionsResponse> {
     let params = new HttpParams();
     if (queryParams) {
       Object.entries(queryParams).forEach(([key, value]) => {
@@ -73,6 +92,6 @@ export class BankHubService {
         }
       });
     }
-    return this.http.get<{ data: BankHubTransaction[]; total?: number }>(`${this.apiUrl}/transactions`, { params });
+    return this.http.get<BankHubTransactionsResponse>(`${this.apiUrl}/transactions`, { params });
   }
 }

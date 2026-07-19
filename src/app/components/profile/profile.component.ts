@@ -220,7 +220,7 @@ export class ProfileComponent implements OnInit {
         bankName: this.bankAccountForm.get('bankName')?.value || undefined,
         accountNumber: this.bankAccountForm.get('accountNumber')?.value || undefined,
         accountHolderName: this.bankAccountForm.get('accountHolderName')?.value || undefined,
-        beneficiaryName: this.qrBeneficiaryName || undefined, // Lưu tên người thụ hưởng
+        beneficiaryName: this.bankAccountForm.get('beneficiaryName')?.value || this.qrBeneficiaryName || undefined,
         branch: this.bankAccountForm.get('branch')?.value || undefined,
         swiftCode: this.bankAccountForm.get('swiftCode')?.value || undefined,
         iban: this.bankAccountForm.get('iban')?.value || undefined,
@@ -326,7 +326,7 @@ export class ProfileComponent implements OnInit {
    */
   clearQrPreview(): void {
     this.qrPaymentUrl = '';
-    this.qrBeneficiaryName = '';
+    this.qrBeneficiaryName = this.bankAccountForm.get('beneficiaryName')?.value?.trim() || '';
     this.showQrPreview = false;
   }
 

@@ -1,15 +1,14 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { BankTransferService, BankTransfer, SepayTransaction } from '../../services/bank-transfer.service';
-import { BankHubService, BankHubStatus, BankHubBankAccount } from '../../services/bankhub.service';
+import { BankTransferService, BankTransfer } from '../../services/bank-transfer.service';
 import { PayPalService } from '../../services/paypal.service';
 import { CryptoService } from '../../services/crypto.service';
 import { SePayService } from '../../services/sepay.service';
 import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
 import { PaymentSpeakerService } from '../../services/payment-speaker.service';
+import { UserService } from '../../services/user.service';
 import { forkJoin } from 'rxjs';
 
 @Component({
@@ -23,8 +22,6 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   isLoading = false;
   isDetailVisible = false;
   selectedTransfer: BankTransfer | null = null;
-  transactions: SepayTransaction[] = [];
-  errorMessage: string | null = null;
   
   // Payment history từ các phương thức khác
   paypalPayments: any[] = [];
@@ -33,15 +30,15 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   allPayments: any[] = []; // Tổng hợp tất cả payment history
   activeTabIndex = 0; // 0: Tất cả, 1: SePay, 2: PayPal, 3: Crypto
   userId: string = '';
+  hotelId: string = '';
   allPaymentsLoading = false;
-  
-  // BankHub integration
-  bankHubStatus: BankHubStatus | null = null;
-  bankHubVerified = false;
-  bankHubLoading = false;
-  bankHubLinkUrl: SafeResourceUrl | null = null;
-  showBankHubIframe = false;
-  linkedBankAccounts: BankHubBankAccount[] = [];
+  configuredBankAccount: {
+    bankName: string;
+    accountNumber: string;
+    accountHolderName: string;
+    beneficiaryName: string;
+  } | null = null;
+  updatingPaymentIds = new Set<string>();
 
   // Auto-refresh interval
   private refreshInterval: any = null;
@@ -49,6 +46,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
 
   private isFirstLoadSePay = true;
   private lastPlayedPaymentId: string | null = null;
+  private readonly paymentSpeakerChangedHandler = (event: Event) => this.handlePaymentSpeakerChanged(event as CustomEvent);
 
   // Payment method visibility settings
   enablePayPalPayment: boolean = false;
@@ -56,49 +54,24 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   enableSePayPayment: boolean = true; // Mặc định bật SePay
   enablePaymentSpeaker: boolean = false;
 
-  // Định dạng ngày tháng
-  dateRange: Date[] = [];
-  pageSize = 10;
-  pageIndex = 1;
-  totalTransactions = 0;
-  
-  // Các cột sẽ hiển thị trong bảng
-  listOfColumns: Array<{ 
-    name: string; 
-    sortOrder: 'ascend' | 'descend' | null;
-    sortFn: ((a: SepayTransaction, b: SepayTransaction) => number) | null; 
-    sortDirections: Array<'ascend' | 'descend' | null>;
-    filterMultiple: boolean;
-    listOfFilter?: Array<{ text: string; value: any }>; 
-    filterFn?: ((value: any, record: SepayTransaction) => boolean) | null; 
-    priority?: boolean | number; 
-  }> = [
-    { name: 'ID', sortOrder: null, sortFn: (a, b) => a.id.localeCompare(b.id), sortDirections: ['ascend', 'descend', null], filterMultiple: false },
-    { name: 'Ngân hàng', sortOrder: null, sortFn: (a, b) => a.bank_brand_name.localeCompare(b.bank_brand_name), sortDirections: ['ascend', 'descend', null], filterMultiple: true, listOfFilter: [], filterFn: (list: string[], item: SepayTransaction) => list.some(name => item.bank_brand_name.indexOf(name) !== -1) },
-    { name: 'Số tài khoản', sortOrder: null, sortFn: (a, b) => a.account_number.localeCompare(b.account_number), sortDirections: ['ascend', 'descend', null], filterMultiple: false },
-    { name: 'Ngày giao dịch', sortOrder: 'descend', sortFn: (a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime(), sortDirections: ['descend', 'ascend', null], filterMultiple: false },
-    { name: 'Số tiền ra', sortOrder: null, sortFn: (a, b) => parseFloat(a.amount_out) - parseFloat(b.amount_out), sortDirections: ['descend', 'ascend', null], filterMultiple: false },
-    { name: 'Số tiền vào', sortOrder: null, sortFn: (a, b) => parseFloat(a.amount_in) - parseFloat(b.amount_in), sortDirections: ['descend', 'ascend', null], filterMultiple: false },
-    { name: 'Nội dung', sortOrder: null, sortFn: null, sortDirections: ['ascend', 'descend', null], filterMultiple: false },
-    { name: 'Mã tham chiếu', sortOrder: null, sortFn: null, sortDirections: ['ascend', 'descend', null], filterMultiple: false }
-  ];
-
   constructor(
     private fb: FormBuilder,
-    private sanitizer: DomSanitizer,
     private bankTransferService: BankTransferService,
-    private bankHubService: BankHubService,
     private paypalService: PayPalService,
     private cryptoService: CryptoService,
     private sepayService: SePayService,
     private authService: AuthService,
     private hotelService: HotelService,
     private message: NzMessageService,
-    private paymentSpeakerService: PaymentSpeakerService
+    private paymentSpeakerService: PaymentSpeakerService,
+    private userService: UserService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
       this.userId = currentUser._id;
+    }
+    if (currentUser?.hotelId) {
+      this.hotelId = currentUser.hotelId;
     }
     this.searchForm = this.fb.group({
       startDate: [null],
@@ -109,21 +82,16 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.checkBankHubStatus();
+    this.loadConfiguredBankAccount();
     this.loadTransfers();
     this.loadHotelSettings();
-    
-    if (this.userId) {
-      this.loadPayPalPayments();
-      this.loadCryptoPayments();
-      this.loadSePayPayments();
-      this.loadAllPayments();
+    if (!this.hotelId && this.userId) {
+      this.refreshPaymentHistory();
     }
 
     this.startAutoRefresh();
 
-    // Listen for BankHub iframe postMessage events
-    window.addEventListener('message', this.handleBankHubMessage.bind(this));
+    window.addEventListener('hotelPaymentSpeakerChanged', this.paymentSpeakerChangedHandler);
   }
 
   /**
@@ -147,17 +115,13 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
         this.enablePaymentSpeaker = !!notificationSettings.enablePaymentSpeaker;
         // SePay mặc định bật, có thể kiểm tra thêm nếu cần
         this.enableSePayPayment = true;
-        
-        // Fetch SePay transactions nếu SePay được bật
-        if (this.enableSePayPayment) {
-          this.fetchSepayTransactions();
-        }
+        this.refreshPaymentHistory();
       },
       error: (error) => {
         console.error('Error loading hotel settings:', error);
         // Fallback: cho phép hiển thị tất cả nếu không load được settings
         this.enableSePayPayment = true;
-        this.fetchSepayTransactions();
+        this.refreshPaymentHistory();
       }
     });
   }
@@ -167,113 +131,47 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
     }
-    window.removeEventListener('message', this.handleBankHubMessage.bind(this));
+    window.removeEventListener('hotelPaymentSpeakerChanged', this.paymentSpeakerChangedHandler);
   }
 
-  // ============ BankHub Methods ============
-
-  checkBankHubStatus(): void {
-    this.bankHubLoading = true;
-    this.bankHubService.getStatus().subscribe({
-      next: (status) => {
-        this.bankHubStatus = status;
-        this.bankHubVerified = !!(status.configured && status.authenticated);
-        if (this.bankHubVerified) {
-          this.loadLinkedBankAccounts();
-        }
-        this.bankHubLoading = false;
-      },
-      error: () => {
-        this.bankHubStatus = { configured: false };
-        this.bankHubVerified = false;
-        this.bankHubLoading = false;
-      }
-    });
-  }
-
-  loadLinkedBankAccounts(): void {
-    this.bankHubService.getBankAccounts().subscribe({
-      next: (res: any) => {
-        this.linkedBankAccounts = res.data || [];
-      },
-      error: () => {
-        this.linkedBankAccounts = [];
-      }
-    });
-  }
-
-  openBankHubLink(): void {
-    this.bankHubLoading = true;
-    this.bankHubService.createLinkToken().subscribe({
-      next: (res) => {
-        const hostedUrl = String((res as any)?.hosted_link_url || '').trim();
-        const allowed = ['https://bankhub.sepay.vn', 'https://bankhub-sandbox.sepay.vn'];
-        const safe = this.toSafeResourceUrl(hostedUrl, allowed);
-        if (!safe) {
-          this.message.error('Liên kết BankHub không hợp lệ');
-          this.bankHubLoading = false;
+  private loadConfiguredBankAccount(): void {
+    this.userService.getProfile().subscribe({
+      next: (user: any) => {
+        const bankAccount = user?.bankAccount || null;
+        const accountNumber = String(bankAccount?.accountNumber || '').trim();
+        if (!accountNumber) {
+          this.configuredBankAccount = null;
           return;
         }
-        this.bankHubLinkUrl = safe;
-        this.showBankHubIframe = true;
-        this.bankHubLoading = false;
+
+        this.configuredBankAccount = {
+          bankName: String(bankAccount?.bankName || '').trim(),
+          accountNumber,
+          accountHolderName: String(bankAccount?.accountHolderName || '').trim(),
+          beneficiaryName: String(bankAccount?.beneficiaryName || '').trim()
+        };
       },
-      error: (err) => {
-        this.message.error(err.error?.message || 'Không thể tạo liên kết BankHub');
-        this.bankHubLoading = false;
+      error: (error) => {
+        console.error('Error loading configured bank account:', error);
+        this.configuredBankAccount = null;
       }
     });
   }
 
-  closeBankHubIframe(): void {
-    this.showBankHubIframe = false;
-    this.bankHubLinkUrl = null;
-    this.checkBankHubStatus();
-  }
-
-  handleBankHubMessage(event: MessageEvent): void {
-    if (!event.data?.event) return;
-    const bankHubOrigins = ['https://bankhub.sepay.vn', 'https://bankhub-sandbox.sepay.vn'];
-    if (!bankHubOrigins.includes(event.origin)) return;
-
-    switch (event.data.event) {
-      case 'FINISHED_BANK_ACCOUNT_LINK':
-        this.message.success('Liên kết tài khoản ngân hàng thành công!');
-        this.closeBankHubIframe();
-        break;
-      case 'FINISHED_BANK_ACCOUNT_UNLINK':
-        this.message.info('Đã hủy liên kết tài khoản ngân hàng');
-        this.closeBankHubIframe();
-        break;
-      case 'BANKHUB_CLOSE_LINK':
-        this.closeBankHubIframe();
-        break;
-      case 'BANKHUB_TOKEN_EXPIRED':
-      case 'BANKHUB_SESSION_EXPIRED':
-        this.message.warning('Phiên làm việc đã hết hạn, vui lòng thử lại');
-        this.closeBankHubIframe();
-        break;
+  private handlePaymentSpeakerChanged(event: CustomEvent): void {
+    const detail = event?.detail || {};
+    const hotelId = String(detail?.hotelId || '').trim();
+    if (!hotelId || !this.hotelId || hotelId !== String(this.hotelId)) {
+      return;
     }
-  }
 
-  private toSafeResourceUrl(url: string, allowedOrigins: string[]): any {
-    try {
-      const u = new URL(url);
-      if (u.protocol !== 'https:') return null;
-      const origin = u.origin;
-      if (!allowedOrigins.includes(origin)) return null;
-      return this.sanitizer.bypassSecurityTrustResourceUrl(u.toString());
-    } catch {
-      return null;
-    }
+    this.enablePaymentSpeaker = !!detail?.enabled;
   }
-
   /**
    * Bắt đầu auto-refresh payment history
    */
   startAutoRefresh(): void {
-    // Chỉ auto-refresh nếu có userId
-    if (!this.userId) return;
+    if (!this.userId && !this.hotelId) return;
 
     // Clear interval cũ nếu có
     if (this.refreshInterval) {
@@ -291,7 +189,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Refresh tất cả payment history (không refresh SePay transactions)
    */
   refreshPaymentHistory(): void {
-    if (!this.userId) return;
+    if (!this.userId && !this.hotelId) return;
 
     // Refresh payment history từ các phương thức thanh toán
     this.loadPayPalPayments();
@@ -305,12 +203,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    */
   refreshAllData(): void {
     this.isLoading = true;
-    
-    // Refresh SePay transactions nếu được bật
-    if (this.enableSePayPayment) {
-      this.fetchSepayTransactions();
-    }
-    
+
     // Refresh payment history
     this.refreshPaymentHistory();
     
@@ -406,92 +299,6 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     }
   }
 
-  fetchSepayTransactions(): void {
-    if (!this.enableSePayPayment) {
-      return;
-    }
-
-    this.isLoading = true;
-    this.errorMessage = null;
-
-    // Chuẩn bị params từ dateRange và pagination
-    const params: any = {
-      page: this.pageIndex.toString(),
-      pageSize: this.pageSize.toString()
-    };
-
-    // Thêm date_from và date_to nếu có
-    if (this.dateRange && this.dateRange.length === 2) {
-      const startDate = new Date(this.dateRange[0]);
-      const endDate = new Date(this.dateRange[1]);
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
-      params.date_from = startDate.toISOString().split('T')[0];
-      params.date_to = endDate.toISOString().split('T')[0];
-    }
-
-    // Gọi backend proxy - backend sẽ tự quản lý token
-    this.bankTransferService.getSepayTransactions(null, params).subscribe(
-      response => {
-        if (response && response.data) {
-          this.transactions = response.data;
-          this.totalTransactions = response.total || response.data.length;
-          
-          // Cập nhật bộ lọc cho cột Ngân hàng
-          const bankNames = [...new Set(this.transactions.map(t => t.bank_brand_name))];
-          const bankColumn = this.listOfColumns.find(col => col.name === 'Ngân hàng');
-          if (bankColumn) {
-            bankColumn.listOfFilter = bankNames.map(name => ({ text: name, value: name }));
-          }
-        } else {
-          this.errorMessage = 'Không thể lấy dữ liệu giao dịch hoặc định dạng phản hồi không đúng.';
-          console.error('API response error or invalid format:', response);
-        }
-        this.isLoading = false;
-      },
-      error => {
-        console.error('Lỗi khi gọi API SePay qua backend:', error);
-        console.error('Error details:', {
-          status: error.status,
-          error: error.error,
-          message: error.message
-        });
-        
-        if (error.status === 0) {
-          this.errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và đảm bảo backend đang chạy.';
-        } else if (error.error?.error) {
-          this.errorMessage = error.error.error;
-          if (error.error.message) {
-            this.errorMessage += `: ${error.error.message}`;
-          }
-        } else {
-          this.errorMessage = 'Đã xảy ra lỗi khi cố gắng kết nối đến SePay. Vui lòng thử lại sau.';
-        }
-        this.isLoading = false;
-      }
-    );
-  }
-  
-  onDateChange(result: Date[]): void {
-    if (result && result.length === 2) {
-      this.dateRange = result;
-      this.pageIndex = 1; // Reset về trang đầu khi đổi ngày
-      this.fetchSepayTransactions();
-    }
-  }
-
-  onPageIndexChange(index: number): void {
-    this.pageIndex = index;
-    this.fetchSepayTransactions();
-  }
-
-  onPageSizeChange(size: number): void {
-    this.pageSize = size;
-    this.pageIndex = 1; // Reset về trang đầu khi đổi page size
-    this.fetchSepayTransactions();
-  }
-
-
   /**
    * Load lịch sử thanh toán PayPal
    */
@@ -534,9 +341,13 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Load lịch sử thanh toán SePay từ PaymentHistory
    */
   loadSePayPayments(): void {
-    if (!this.userId || !this.enableSePayPayment) return;
+    if ((!this.userId && !this.hotelId) || !this.enableSePayPayment) return;
 
-    this.sepayService.getPaymentHistory({ userId: this.userId, limit: 50 }).subscribe({
+    this.sepayService.getPaymentHistory({
+      hotelId: this.hotelId || undefined,
+      userId: this.hotelId ? undefined : this.userId,
+      limit: 100
+    }).subscribe({
       next: (response: any) => {
         if (response?.success && response.data) {
           this.sepayPayments = response.data;
@@ -584,7 +395,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Load tất cả lịch sử thanh toán (tổng hợp từ tất cả phương thức)
    */
   loadAllPayments(): void {
-    if (!this.userId) return;
+    if (!this.userId && !this.hotelId) return;
 
     this.allPaymentsLoading = true;
 
@@ -598,7 +409,11 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
       requests.push(this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 100 }));
     }
     if (this.enableSePayPayment) {
-      requests.push(this.sepayService.getPaymentHistory({ userId: this.userId, limit: 100 }));
+      requests.push(this.sepayService.getPaymentHistory({
+        hotelId: this.hotelId || undefined,
+        userId: this.hotelId ? undefined : this.userId,
+        limit: 100
+      }));
     }
 
     if (requests.length === 0) {
@@ -789,6 +604,49 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
       default:
         return '#999';
     }
+  }
+
+  getPaymentHistoryId(item: any): string {
+    return String(item?._id || item?.id || '');
+  }
+
+  isUpdatingPayment(item: any): boolean {
+    const paymentHistoryId = this.getPaymentHistoryId(item);
+    return !!paymentHistoryId && this.updatingPaymentIds.has(paymentHistoryId);
+  }
+
+  getSePayPaymentTypeLabel(item: any): string {
+    const paymentType = String(item?.metadata?.paymentType || '').trim();
+    switch (paymentType) {
+      case 'room_checkout':
+        return 'Thanh toán phòng';
+      case 'booking_deposit':
+        return 'Đặt cọc';
+      case 'bank_transfer_in':
+        return 'Tiền vào tài khoản';
+      default:
+        return 'Giao dịch SePay';
+    }
+  }
+
+  updateSePayPaymentStatus(item: any, status: 'pending' | 'completed'): void {
+    const paymentHistoryId = this.getPaymentHistoryId(item);
+    if (!paymentHistoryId || this.updatingPaymentIds.has(paymentHistoryId)) {
+      return;
+    }
+
+    this.updatingPaymentIds.add(paymentHistoryId);
+    this.sepayService.updatePaymentHistoryStatus(paymentHistoryId, status).subscribe({
+      next: (response: any) => {
+        this.updatingPaymentIds.delete(paymentHistoryId);
+        this.message.success(response?.message || 'Đã cập nhật trạng thái thanh toán');
+        this.refreshPaymentHistory();
+      },
+      error: (error) => {
+        this.updatingPaymentIds.delete(paymentHistoryId);
+        this.message.error(error?.error?.message || 'Không thể cập nhật trạng thái thanh toán');
+      }
+    });
   }
 
   // Các hàm xử lý sắp xếp, lọc có thể được thêm ở đây nếu cần

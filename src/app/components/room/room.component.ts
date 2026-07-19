@@ -341,6 +341,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     
     window.addEventListener('floorFilterChanged', this.__onFloorFilterChanged as EventListener);
     window.addEventListener('columnsCountChanged', this.__onColumnsCountChanged as EventListener);
+    window.addEventListener('hotelPaymentSpeakerChanged', this.__onHotelPaymentSpeakerChanged as EventListener);
     
     // Tỷ giá VND -> USD cho hiển thị quy đổi
     this.currencyService.getExchangeRate('VND', 'USD').subscribe({
@@ -413,6 +414,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.stopRealtimeSync();
     window.removeEventListener('floorFilterChanged', this.__onFloorFilterChanged as EventListener);
     window.removeEventListener('columnsCountChanged', this.__onColumnsCountChanged as EventListener);
+    window.removeEventListener('hotelPaymentSpeakerChanged', this.__onHotelPaymentSpeakerChanged as EventListener);
   }
 
   private __onFloorFilterChanged = (event: Event): void => {
@@ -427,6 +429,17 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.reGenerateArray(newCount);
       this.cdr.detectChanges();
     }
+  };
+
+  private __onHotelPaymentSpeakerChanged = (event: Event): void => {
+    const detail = (event as CustomEvent)?.detail || {};
+    const hotelId = String(detail?.hotelId || '').trim();
+    if (!hotelId || !this.selectedHotelId || hotelId !== String(this.selectedHotelId)) {
+      return;
+    }
+
+    this.paymentSpeakerEnabled = !!detail?.enabled;
+    this.cdr.markForCheck();
   };
 
   openShiftHandoverModal(contentTemplate: any): void {

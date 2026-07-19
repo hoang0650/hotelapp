@@ -274,6 +274,7 @@ export class SePayService {
    */
   getPaymentHistory(params?: {
     userId?: string;
+    hotelId?: string;
     status?: string;
     limit?: number;
     skip?: number;
@@ -282,12 +283,20 @@ export class SePayService {
     if (params) {
       const query = new URLSearchParams();
       if (params.userId) query.append('userId', params.userId);
+      if (params.hotelId) query.append('hotelId', params.hotelId);
       if (params.status) query.append('status', params.status);
       if (params.limit) query.append('limit', params.limit.toString());
       if (params.skip) query.append('skip', params.skip.toString());
       queryParams = '?' + query.toString();
     }
     return this.http.get(`${this.apiUrl}/payment-history${queryParams}`);
+  }
+
+  updatePaymentHistoryStatus(paymentHistoryId: string, status: 'pending' | 'completed' | 'failed' | 'cancelled', note?: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/payment-history/${paymentHistoryId}/status`, {
+      status,
+      note: note || ''
+    });
   }
 }
 
