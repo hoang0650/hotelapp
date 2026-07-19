@@ -555,9 +555,10 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       return;
     }
 
+    const initialOpenClawUrl = this.resolveOpenClawDashboardBaseUrl();
     const popup =
       typeof window !== 'undefined'
-        ? window.open('about:blank', '_blank')
+        ? window.open(initialOpenClawUrl, '_blank')
         : null;
 
     this.openingOpenClaw = true;
@@ -579,7 +580,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
 
         const openClawUrl = this.buildOpenClawDashboardUrl(gatewayUrl, bootstrapToken);
         if (popup && !popup.closed) {
-          popup.location.href = openClawUrl;
+          popup.location.replace(openClawUrl);
         } else if (typeof window !== 'undefined') {
           window.open(openClawUrl, '_blank');
         }
