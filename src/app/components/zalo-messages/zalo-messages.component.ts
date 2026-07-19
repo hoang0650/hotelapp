@@ -15,6 +15,7 @@ interface ZaloMessage {
   direction: 'in' | 'out';
   timestamp: number;
   mid?: string;
+  is_bot?: boolean;
 }
 
 @Component({
@@ -77,6 +78,12 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
       return localStorage.getItem('selectedHotelId') || '';
     }
     return '';
+  }
+
+  get botModeText(): string {
+    return this.isBotActive
+      ? 'Sale Agent đang bật: ChatEngine + OpenClaw sẽ tự tư vấn khách trên Zalo OA.'
+      : 'Sale Agent đang tắt: chỉ trả lời thủ công.';
   }
 
   async ngOnInit(): Promise<void> {
@@ -144,7 +151,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
     const tenantId = this.getTenantId();
     if (!tenantId) return; // <--- Chặn rỗng
 
-    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedOaId);
+    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedOaId, 'zalo');
   }
 
   async toggleBot(checked: boolean): Promise<void> {
@@ -157,7 +164,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
     
     this.isBotActive = checked;
     try {
-      await this.aiAssistant.toggleBot(tenantId, this.selectedOaId, checked);
+      await this.aiAssistant.toggleBot(tenantId, this.selectedOaId, checked, 'zalo');
     } catch (error) {
       console.error('Lỗi toggle bot:', error);
       this.isBotActive = !checked;

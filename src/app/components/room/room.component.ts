@@ -3497,7 +3497,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       weekly: this.translate.instant('ROOM.RATE_TYPE_WEEKLY') || 'Theo tuần',
       monthly: this.translate.instant('ROOM.RATE_TYPE_MONTHLY') || 'Theo tháng'
     };
-    return rateTypeLabels[rateType] || rateTypeLabels.hourly;
+    return rateTypeLabels[rateType] || rateTypeLabels['hourly'];
   }
 
   // Tính phụ thu checkin sớm/checkout trễ (tương tự room-content-modal.component.ts)

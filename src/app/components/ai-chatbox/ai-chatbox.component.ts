@@ -554,7 +554,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
         }
 
         const accessLabel = response?.access === 'limited' ? 'quyền giới hạn' : 'quyền đầy đủ';
-        this.message.success(`Đã mở OpenClaw gateway với ${accessLabel}.`);
+        this.message.success(`Đã mở OpenClaw gateway với ${accessLabel}. Sale agent cho Fanpage/Zalo/Telegram sẽ dùng ChatEngine theo từng hội thoại.`);
         this.openingOpenClaw = false;
       },
       error: (error) => {

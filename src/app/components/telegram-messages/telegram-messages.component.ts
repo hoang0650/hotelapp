@@ -59,6 +59,12 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
     return '';
   }
 
+  get botModeText(): string {
+    return this.isBotActive
+      ? 'Sale Agent đang bật: ChatEngine + OpenClaw sẽ tự tư vấn khách trên Telegram.'
+      : 'Sale Agent đang tắt: chỉ trả lời thủ công.';
+  }
+
   async ngOnInit(): Promise<void> {
     this.loading = true;
     try {
@@ -134,7 +140,7 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
     const tenantId = this.getTenantId();
     if (!tenantId) return; // <--- Chặn rỗng
 
-    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedBotId);
+    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedBotId, 'telegram');
   }
 
   async toggleBot(checked: boolean): Promise<void> {
@@ -147,7 +153,7 @@ export class TelegramMessagesComponent implements OnInit, OnDestroy, AfterViewCh
     
     this.isBotActive = checked;
     try {
-      await this.aiAssistant.toggleBot(tenantId, this.selectedBotId, checked);
+      await this.aiAssistant.toggleBot(tenantId, this.selectedBotId, checked, 'telegram');
     } catch (error) {
       console.error('Lỗi toggle bot:', error);
       this.isBotActive = !checked;

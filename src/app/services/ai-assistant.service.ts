@@ -657,13 +657,19 @@ export class AiAssistantService {
   /**
    * Bật/Tắt Bot cho Fanpage
    */
-  async toggleBot(tenantId: string, pageId: string, active: boolean): Promise<any> {
+  async toggleBot(
+    tenantId: string,
+    pageId: string,
+    active: boolean,
+    platform?: 'facebook' | 'zalo' | 'telegram'
+  ): Promise<any> {
     try {
       return await firstValueFrom(
         this.http.post<any>(`${this.aiUrl}/bot/toggle`, {
           tenant_id: tenantId,
           page_id: pageId,
-          active
+          active,
+          platform
         })
       );
     } catch (error) {
@@ -675,11 +681,15 @@ export class AiAssistantService {
   /**
    * Lấy trạng thái Bot
    */
-  async getBotStatus(tenantId: string, pageId: string): Promise<boolean> {
+  async getBotStatus(
+    tenantId: string,
+    pageId: string,
+    platform?: 'facebook' | 'zalo' | 'telegram'
+  ): Promise<boolean> {
     try {
       const resp = await firstValueFrom(
         this.http.get<any>(`${this.aiUrl}/bot/status`, {
-          params: { tenant_id: tenantId, page_id: pageId }
+          params: { tenant_id: tenantId, page_id: pageId, platform }
         })
       );
       return resp?.active || false;

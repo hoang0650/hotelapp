@@ -77,6 +77,12 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
     return '';
   }
 
+  get botModeText(): string {
+    return this.isBotActive
+      ? 'Sale Agent đang bật: ChatEngine + OpenClaw sẽ tự tư vấn khách theo từng hội thoại.'
+      : 'Sale Agent đang tắt: chỉ trả lời thủ công.';
+  }
+
   async ngOnInit(): Promise<void> {
     this.loading = true;
     try {
@@ -165,7 +171,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
     const tenantId = this.getTenantId();
     if (!tenantId) return; // <--- CHẶN NẾU RỖNG
 
-    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedPageId);
+    this.isBotActive = await this.aiAssistant.getBotStatus(tenantId, this.selectedPageId, 'facebook');
   }
 
   async toggleBot(checked: boolean): Promise<void> {
@@ -178,7 +184,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
     
     this.isBotActive = checked;
     try {
-      await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, checked);
+      await this.aiAssistant.toggleBot(tenantId, this.selectedPageId, checked, 'facebook');
     } catch (error) {
       console.error('Lỗi toggle bot:', error);
       this.isBotActive = !checked;

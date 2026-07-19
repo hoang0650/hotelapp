@@ -30,6 +30,9 @@
             nzUnCheckedChildren="Tắt">
           </nz-switch>
         </div>
+        <span *ngIf="selectedBotId" style="font-size: 12px; color: #6b7280;" class="mr-3">
+          {{ botModeText }}
+        </span>
 
         <button nz-button nzType="default" (click)="refreshData()" title="Làm mới dữ liệu" class="mr-2">
           <i nz-icon nzType="reload" nzTheme="outline"></i>
