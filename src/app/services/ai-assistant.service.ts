@@ -73,6 +73,17 @@ export interface OpenClawApprovePairingResponse {
   };
 }
 
+export interface OpenClawSetupCodeResponse {
+  success: boolean;
+  setupCode?: string;
+  gatewayUrl?: string;
+  gatewayUrls?: string[];
+  auth?: string;
+  access?: 'full' | 'limited' | 'node';
+  accessDowngraded?: boolean;
+  message?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -567,6 +578,10 @@ export class AiAssistantService {
         scopes: Array.isArray(payload?.scopes) ? payload?.scopes : null
       }
     );
+  }
+
+  getOpenClawSetupCode(): Observable<OpenClawSetupCodeResponse> {
+    return this.http.get<OpenClawSetupCodeResponse>(`${this.apiUrl}/ai-assistant/openclaw/setup-code`);
   }
 
   // --- 3. CÁC HÀM FACEBOOK INTEGRATION (Dành cho FanpageMessagesComponent) ---

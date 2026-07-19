@@ -29,6 +29,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   isTyping = false;
   inputValue = '';
   minimized = true;
+  openingOpenClaw = false;
 
   hotels: Hotel[] = [];
   selectedHotelId: string | null = null;
@@ -36,6 +37,10 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   get isHotelSelectionDisabled(): boolean {
     return this.authService.isHotelManager() || this.authService.isStaff();
+  }
+
+  get canOpenOpenClaw(): boolean {
+    return this.authService.isSuperAdmin() || this.authService.isAdmin();
   }
 
   selectedFile?: File;
@@ -510,5 +515,109 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   openFanpageMessages(): void {
     this.router.navigate(['/admin/fanpage-messages']);
+  }
+
+  openOpenClawGateway(): void {
+    if (this.openingOpenClaw) return;
+    if (!this.canOpenOpenClaw) {
+      this.message.warning('Chỉ admin hoặc superadmin mới được mở OpenClaw gateway.');
+      return;
+    }
+
+    const popup =
+      typeof window !== 'undefined'
+        ? window.open('about:blank', '_blank')
+        : null;
+
+    this.openingOpenClaw = true;
+    this.aiService.getOpenClawSetupCode().pipe(take(1)).subscribe({
+      next: (response) => {
+        const setupCode = String(response?.setupCode || '').trim();
+        const decoded = this.decodeOpenClawSetupCode(setupCode);
+        const gatewayUrl = decoded?.gatewayUrl || String(response?.gatewayUrl || '').trim();
+        const bootstrapToken = decoded?.bootstrapToken || '';
+
+        if (!gatewayUrl || !bootstrapToken) {
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          this.openingOpenClaw = false;
+          this.message.error('Không lấy được bootstrap token hợp lệ để đăng nhập OpenClaw.');
+          return;
+        }
+
+        const openClawUrl = this.buildOpenClawDashboardUrl(gatewayUrl, bootstrapToken);
+        if (popup && !popup.closed) {
+          popup.location.href = openClawUrl;
+        } else if (typeof window !== 'undefined') {
+          window.open(openClawUrl, '_blank');
+        }
+
+        const accessLabel = response?.access === 'limited' ? 'quyền giới hạn' : 'quyền đầy đủ';
+        this.message.success(`Đã mở OpenClaw gateway với ${accessLabel}.`);
+        this.openingOpenClaw = false;
+      },
+      error: (error) => {
+        console.error('OpenClaw setup error:', error);
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+        this.openingOpenClaw = false;
+        this.message.error(error?.error?.message || 'Không thể mở OpenClaw gateway.');
+      }
+    });
+  }
+
+  private decodeOpenClawSetupCode(setupCode: string): { gatewayUrl: string; bootstrapToken: string } | null {
+    const value = String(setupCode || '').trim();
+    if (!value || typeof window === 'undefined') {
+      return null;
+    }
+
+    try {
+      const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+      const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
+      const binary = window.atob(normalized + padding);
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      const json = typeof TextDecoder !== 'undefined'
+        ? new TextDecoder().decode(bytes)
+        : binary;
+      const parsed = JSON.parse(json);
+      const gatewayUrl = String(parsed?.url || '').trim();
+      const bootstrapToken = String(parsed?.bootstrapToken || '').trim();
+
+      if (!gatewayUrl || !bootstrapToken) {
+        return null;
+      }
+
+      return { gatewayUrl, bootstrapToken };
+    } catch (error) {
+      console.error('OpenClaw setup decode error:', error);
+      return null;
+    }
+  }
+
+  private buildOpenClawDashboardUrl(gatewayUrl: string, bootstrapToken: string): string {
+    const baseUrl = this.resolveOpenClawDashboardBaseUrl(gatewayUrl);
+    const hashParams = new URLSearchParams();
+    hashParams.set('gatewayUrl', gatewayUrl);
+    hashParams.set('bootstrapToken', bootstrapToken);
+    hashParams.set('session', 'main');
+    return `${baseUrl.replace(/\/$/, '')}/#${hashParams.toString()}`;
+  }
+
+  private resolveOpenClawDashboardBaseUrl(gatewayUrl: string): string {
+    const fallback = 'https://openclaw.phhotel.vn';
+
+    try {
+      const parsed = new URL(gatewayUrl);
+      if (parsed.hostname === 'openclaw.phhotel.vn') {
+        return fallback;
+      }
+      const protocol = parsed.protocol === 'wss:' ? 'https:' : 'http:';
+      return `${protocol}//${parsed.host}`;
+    } catch {
+      return fallback;
+    }
   }
 }

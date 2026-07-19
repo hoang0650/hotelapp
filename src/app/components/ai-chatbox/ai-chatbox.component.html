@@ -21,6 +21,17 @@
       </div>
       <div class="ai-chatbox-header-actions">
         <button
+          *ngIf="canOpenOpenClaw"
+          nz-button
+          nzType="default"
+          nzSize="small"
+          [nzLoading]="openingOpenClaw"
+          (click)="openOpenClawGateway()"
+          [title]="'Mở OpenClaw gateway'">
+          <i nz-icon nzType="api" nzTheme="outline"></i>
+          <span>Mở OpenClaw</span>
+        </button>
+        <button
           nz-button
           nzType="default"
           nzSize="small"
