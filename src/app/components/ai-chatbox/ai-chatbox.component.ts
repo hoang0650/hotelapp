@@ -632,7 +632,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private buildOpenClawDashboardUrl(gatewayUrl: string, bootstrapToken: string): string {
-    const baseUrl = this.resolveOpenClawDashboardBaseUrl(gatewayUrl);
+    const baseUrl = this.resolveOpenClawDashboardBaseUrl();
     const hashParams = new URLSearchParams();
     hashParams.set('gatewayUrl', gatewayUrl);
     hashParams.set('bootstrapToken', bootstrapToken);
@@ -640,18 +640,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     return `${baseUrl.replace(/\/$/, '')}/#${hashParams.toString()}`;
   }
 
-  private resolveOpenClawDashboardBaseUrl(gatewayUrl: string): string {
-    const fallback = 'https://openclaw.phhotel.vn';
-
-    try {
-      const parsed = new URL(gatewayUrl);
-      if (parsed.hostname === 'openclaw.phhotel.vn') {
-        return fallback;
-      }
-      const protocol = parsed.protocol === 'wss:' ? 'https:' : 'http:';
-      return `${protocol}//${parsed.host}`;
-    } catch {
-      return fallback;
-    }
+  private resolveOpenClawDashboardBaseUrl(): string {
+    return 'https://openclaw.phhotel.vn';
   }
 }
