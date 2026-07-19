@@ -556,9 +556,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     const openClawContext = this.getOpenClawGatewayContext();
-    const initialOpenClawUrl = this.resolveOpenClawDashboardBaseUrl(
-      this.buildTenantScopedGatewayUrl(openClawContext.tenantId || openClawContext.selectedHotelId || '')
-    );
+    const initialOpenClawUrl = this.resolveOpenClawDashboardBaseUrl();
     const popup =
       typeof window !== 'undefined'
         ? window.open(initialOpenClawUrl, '_blank')
@@ -687,29 +685,6 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     } catch {
       return rawValue;
     }
-  }
-
-  private buildTenantScopedGatewayUrl(tenantId: string): string {
-    const tenantLabel = this.normalizeTenantSubdomainLabel(tenantId);
-    if (!tenantLabel) {
-      return '';
-    }
-    return `wss://${tenantLabel}.phhotel.vn`;
-  }
-
-  private normalizeTenantSubdomainLabel(value: string): string {
-    const rawValue = String(value || '').trim().toLowerCase();
-    if (!rawValue) {
-      return '';
-    }
-
-    const normalized = rawValue
-      .replace(/[^a-z0-9._-\s]/g, '')
-      .replace(/[._\s]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
-    return normalized.slice(0, 63);
   }
 
   private getOpenClawGatewayContext(): {
