@@ -71,6 +71,12 @@ export class UserService {
   }
 
   private checkAuthStatus(): void {
+    const existingUser = this.authService.getCurrentUser();
+    if (existingUser) {
+      this.currentUserSubject.next(existingUser);
+      return;
+    }
+
     const token = this.authService.getToken();
     if (token) {
       this.getUserInfo().subscribe({

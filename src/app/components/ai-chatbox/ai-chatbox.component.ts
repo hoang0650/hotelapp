@@ -555,18 +555,23 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       return;
     }
 
-    const initialOpenClawUrl = this.resolveOpenClawDashboardBaseUrl();
+    const openClawContext = this.getOpenClawGatewayContext();
+    const initialOpenClawUrl = this.resolveOpenClawDashboardBaseUrl(
+      this.buildTenantScopedGatewayUrl(openClawContext.tenantId || openClawContext.selectedHotelId || '')
+    );
     const popup =
       typeof window !== 'undefined'
         ? window.open(initialOpenClawUrl, '_blank')
         : null;
 
     this.openingOpenClaw = true;
-    this.aiService.getOpenClawSetupCode().pipe(take(1)).subscribe({
+    this.aiService.getOpenClawSetupCode(openClawContext).pipe(take(1)).subscribe({
       next: (response) => {
         const setupCode = String(response?.setupCode || '').trim();
         const decoded = this.decodeOpenClawSetupCode(setupCode);
-        const gatewayUrl = decoded?.gatewayUrl || String(response?.gatewayUrl || '').trim();
+        const gatewayUrl = this.normalizeOpenClawGatewayUrl(
+          decoded?.gatewayUrl || String(response?.gatewayUrl || '').trim()
+        );
         const bootstrapToken = decoded?.bootstrapToken || '';
         const gatewayToken = String(response?.gatewayToken || '').trim();
         const autoConnectMode = String(response?.autoConnectMode || '').trim().toLowerCase();
@@ -620,7 +625,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
         ? new TextDecoder().decode(bytes)
         : binary;
       const parsed = JSON.parse(json);
-      const gatewayUrl = String(parsed?.url || '').trim();
+      const gatewayUrl = this.normalizeOpenClawGatewayUrl(String(parsed?.url || '').trim());
       const bootstrapToken = String(parsed?.bootstrapToken || '').trim();
 
       if (!gatewayUrl || !bootstrapToken) {
@@ -638,9 +643,10 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     gatewayUrl: string,
     options: { bootstrapToken?: string; token?: string }
   ): string {
-    const baseUrl = this.resolveOpenClawDashboardBaseUrl();
+    const normalizedGatewayUrl = this.normalizeOpenClawGatewayUrl(gatewayUrl);
+    const baseUrl = this.resolveOpenClawDashboardBaseUrl(normalizedGatewayUrl);
     const hashParams = new URLSearchParams();
-    hashParams.set('gatewayUrl', gatewayUrl);
+    hashParams.set('gatewayUrl', normalizedGatewayUrl);
     if (options.bootstrapToken) {
       hashParams.set('bootstrapToken', options.bootstrapToken);
     }
@@ -651,7 +657,76 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     return `${baseUrl.replace(/\/$/, '')}/#${hashParams.toString()}`;
   }
 
-  private resolveOpenClawDashboardBaseUrl(): string {
+  private resolveOpenClawDashboardBaseUrl(gatewayUrl?: string): string {
+    const normalizedGatewayUrl = this.normalizeOpenClawGatewayUrl(gatewayUrl || '');
+    if (normalizedGatewayUrl) {
+      try {
+        const parsed = new URL(normalizedGatewayUrl);
+        const protocol = parsed.protocol === 'ws:' ? 'http:' : 'https:';
+        return `${protocol}//${parsed.host}${parsed.pathname || '/'}`.replace(/\/$/, '');
+      } catch {}
+    }
+
     return 'https://openclaw.phhotel.vn';
+  }
+
+  private normalizeOpenClawGatewayUrl(gatewayUrl: string): string {
+    const rawValue = String(gatewayUrl || '').trim();
+    if (!rawValue) {
+      return '';
+    }
+
+    try {
+      const parsed = new URL(rawValue);
+      const normalizedPath = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname.replace(/\/$/, '') : '/';
+      parsed.pathname = normalizedPath;
+      parsed.hash = '';
+      parsed.search = '';
+      const normalized = parsed.toString();
+      return normalizedPath === '/' ? normalized.replace(/\/$/, '') : normalized.replace(/\/$/, '');
+    } catch {
+      return rawValue;
+    }
+  }
+
+  private buildTenantScopedGatewayUrl(tenantId: string): string {
+    const tenantLabel = this.normalizeTenantSubdomainLabel(tenantId);
+    if (!tenantLabel) {
+      return '';
+    }
+    return `wss://${tenantLabel}.phhotel.vn`;
+  }
+
+  private normalizeTenantSubdomainLabel(value: string): string {
+    const rawValue = String(value || '').trim().toLowerCase();
+    if (!rawValue) {
+      return '';
+    }
+
+    const normalized = rawValue
+      .replace(/[^a-z0-9._-\s]/g, '')
+      .replace(/[._\s]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    return normalized.slice(0, 63);
+  }
+
+  private getOpenClawGatewayContext(): {
+    tenantId: string | null;
+    hotelId: string | null;
+    selectedHotelId: string | null;
+    userId: string | null;
+  } {
+    const tenantId = this.getTenantIdForAI();
+    const currentUser = this.authService.getCurrentUser();
+    const directHotelId = (currentUser?.hotelId || '').toString() || null;
+
+    return {
+      tenantId,
+      hotelId: directHotelId || tenantId,
+      selectedHotelId: (this.selectedHotelId || '').toString() || tenantId,
+      userId: (currentUser?._id || '').toString() || null
+    };
   }
 }

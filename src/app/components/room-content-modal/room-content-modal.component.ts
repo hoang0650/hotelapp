@@ -87,6 +87,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   modalType: string = 'info'; // Loại modal: checkin, checkout, cleaning
   private sessionSubscription?: Subscription;
   private saveTotalPriceTimer?: ReturnType<typeof setTimeout>;
+  private roomReloadTimer?: ReturnType<typeof setTimeout>;
   private destroy$ = new Subject<void>();
   private roomReloadInFlight = false;
   private servicesLoadedHotelId: string | null = null;
@@ -425,18 +426,56 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.loadBusinessInfo();
     this.loadCurrentUser();
 
-    Promise.resolve().then(() => this.reloadRoomDetails(false));
+    Promise.resolve().then(() => this.scheduleRoomDetailsReload(false));
 
     this.roomsService.getRoomDataUpdated$()
       .pipe(
         debounceTime(120),
         takeUntil(this.destroy$)
       )
-      .subscribe(() => {
+      .subscribe((event) => {
+        if (!this.shouldHandleRoomUpdateEvent(event)) {
+          return;
+        }
+
         if (!this.checkOutForm.dirty && !this.checkInForm.dirty) {
-          this.reloadRoomDetails(false);
+          this.scheduleRoomDetailsReload(false, Math.max(0, Number(event?.delayMs) || 0));
         }
       });
+  }
+
+  private shouldHandleRoomUpdateEvent(event: any): boolean {
+    const currentRoomId = this.normalizeObjectId(this.roomData?._id);
+    if (!currentRoomId) {
+      return false;
+    }
+
+    const currentHotelId = this.getResolvedHotelId();
+    const eventHotelId = this.normalizeObjectId(event?.hotelId);
+    if (currentHotelId && eventHotelId && currentHotelId !== eventHotelId) {
+      return false;
+    }
+
+    const eventRoomId = this.normalizeObjectId(event?.roomId);
+    const relatedRoomId = this.normalizeObjectId(event?.relatedRoomId);
+    if (!eventRoomId && !relatedRoomId) {
+      return true;
+    }
+
+    return eventRoomId === currentRoomId || relatedRoomId === currentRoomId;
+  }
+
+  private scheduleRoomDetailsReload(forcePatchForm: boolean, delayMs: number = 0): void {
+    if (this.roomReloadTimer) {
+      clearTimeout(this.roomReloadTimer);
+      this.roomReloadTimer = undefined;
+    }
+
+    const normalizedDelay = Math.max(0, delayMs);
+    this.roomReloadTimer = setTimeout(() => {
+      this.roomReloadTimer = undefined;
+      this.reloadRoomDetails(forcePatchForm);
+    }, normalizedDelay);
   }
 
   private getResolvedHotelId(): string | null {
@@ -560,6 +599,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
     if (this.saveTotalPriceTimer) {
       clearTimeout(this.saveTotalPriceTimer);
+    }
+
+    if (this.roomReloadTimer) {
+      clearTimeout(this.roomReloadTimer);
+      this.roomReloadTimer = undefined;
     }
     
     // Dừng polling khi component bị hủy

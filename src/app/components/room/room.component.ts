@@ -879,40 +879,56 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   loadHotels(): void {
-    this.isLoading = true;
-    this.cdr.detectChanges();
-    this.hotelService.getHotels().subscribe(data => {
-      const currentUser = this.authService.getCurrentUser();
-      
-      if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
-        this.hotels = data;
-      } else if (this.authService.isBusiness()) {
-        const userBusinessId = this.extractId(currentUser?.businessId);
-        if (userBusinessId) {
-          this.hotels = data.filter(hotel => this.extractBusinessId(hotel) === userBusinessId);
-        } else {
-          this.hotels = [];
-        }
-      } else if (this.authService.isHotelManager() || this.authService.isStaff()) {
-        const userHotelId = this.extractId(currentUser?.hotelId);
-        if (userHotelId) {
-          this.hotels = data.filter(hotel => this.extractId(hotel._id) === userHotelId);
-          if (this.hotels.length > 0) {
-            this.selectedHotelId = userHotelId;
-            if (this.lastLoadedHotelId !== userHotelId && !this.isRoomsLoading) {
+    const currentUser = this.authService.getCurrentUser();
+    const userHotelId = this.extractId(currentUser?.hotelId);
+    const userBusinessId = this.extractId(currentUser?.businessId);
+
+    if ((this.authService.isHotelManager() || this.authService.isStaff()) && userHotelId) {
+      this.isLoading = true;
+      this.cdr.detectChanges();
+      this.hotelService.getHotelById(userHotelId, { lite: true }).subscribe({
+        next: (hotel) => {
+          this.hotels = hotel ? [hotel] : [];
+          this.selectedHotelId = hotel?._id || userHotelId;
+
+          if (this.selectedHotelId) {
+            this.hotelService.saveRoomContext(this.selectedHotelId, this.selectedFloor || '');
+            if (this.lastLoadedHotelId !== this.selectedHotelId && !this.isRoomsLoading) {
               this.onHotelChange(this.selectedHotelId);
             }
           } else {
-            this.selectedHotelId = null;
             this.rooms = [];
             this.floors = [];
             this.message.warning('Không tìm thấy khách sạn của bạn. Vui lòng liên hệ quản trị viên.');
           }
-        } else {
+
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          this.hotels = [];
           this.selectedHotelId = null;
           this.rooms = [];
           this.floors = [];
-          this.message.warning('Tài khoản chưa được gán vào khách sạn nào.');
+          this.message.error('Lỗi khi tải thông tin khách sạn: ' + (error.error?.message || error.message));
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
+      });
+      return;
+    }
+
+    this.isLoading = true;
+    this.cdr.detectChanges();
+    this.hotelService.getHotels(userBusinessId || undefined).subscribe(data => {
+      
+      if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
+        this.hotels = data;
+      } else if (this.authService.isBusiness()) {
+        if (userBusinessId) {
+          this.hotels = data.filter(hotel => this.extractBusinessId(hotel) === userBusinessId);
+        } else {
+          this.hotels = [];
         }
       } else {
         this.hotels = [];

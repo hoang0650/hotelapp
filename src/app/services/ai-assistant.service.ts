@@ -86,6 +86,13 @@ export interface OpenClawSetupCodeResponse {
   message?: string;
 }
 
+export interface OpenClawGatewayContext {
+  tenantId?: string | null;
+  hotelId?: string | null;
+  selectedHotelId?: string | null;
+  userId?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -132,6 +139,30 @@ export class AiAssistantService {
       .map(value => String(value || '').trim())
       .filter(Boolean);
     return Array.from(new Set(normalized));
+  }
+
+  private buildOpenClawContextParams(context?: OpenClawGatewayContext): Record<string, string> {
+    const currentUser = this.authService.getCurrentUser();
+    const params: Record<string, string> = {};
+    const tenantId = this.normalizeId(context?.tenantId || context?.selectedHotelId || context?.hotelId || null);
+    const hotelId = this.normalizeId(context?.hotelId || context?.selectedHotelId || this.authService.getHotelId() || null);
+    const selectedHotelId = this.normalizeId(context?.selectedHotelId || context?.hotelId || context?.tenantId || null);
+    const userId = this.normalizeId(context?.userId || currentUser?._id || null);
+
+    if (tenantId) {
+      params['tenant_id'] = tenantId;
+    }
+    if (hotelId) {
+      params['hotel_id'] = hotelId;
+    }
+    if (selectedHotelId) {
+      params['selected_hotel_id'] = selectedHotelId;
+    }
+    if (userId) {
+      params['user_id'] = userId;
+    }
+
+    return params;
   }
 
   private async resolveCurrentPackageSnapshot(userId: string | null): Promise<any | null> {
@@ -552,12 +583,14 @@ export class AiAssistantService {
     clientId?: string;
     clientMode?: string;
     role?: string;
+    context?: OpenClawGatewayContext;
   }): Observable<OpenClawDevicePairingsResponse> {
     const query: any = {
       clientId: params?.clientId || 'openclaw-control-ui',
       clientMode: params?.clientMode || 'ui',
       role: params?.role || 'operator'
     };
+    Object.assign(query, this.buildOpenClawContextParams(params?.context));
     return this.http.get<OpenClawDevicePairingsResponse>(`${this.apiUrl}/ai-assistant/openclaw/device-pairings`, {
       params: query
     });
@@ -569,6 +602,7 @@ export class AiAssistantService {
     clientMode?: string;
     role?: string;
     scopes?: string[];
+    context?: OpenClawGatewayContext;
   }): Observable<OpenClawApprovePairingResponse> {
     return this.http.post<OpenClawApprovePairingResponse>(
       `${this.apiUrl}/ai-assistant/openclaw/device-pairings/approve`,
@@ -578,12 +612,17 @@ export class AiAssistantService {
         clientMode: payload?.clientMode || 'ui',
         role: payload?.role || 'operator',
         scopes: Array.isArray(payload?.scopes) ? payload?.scopes : null
+      },
+      {
+        params: this.buildOpenClawContextParams(payload?.context)
       }
     );
   }
 
-  getOpenClawSetupCode(): Observable<OpenClawSetupCodeResponse> {
-    return this.http.get<OpenClawSetupCodeResponse>(`${this.apiUrl}/ai-assistant/openclaw/setup-code`);
+  getOpenClawSetupCode(context?: OpenClawGatewayContext): Observable<OpenClawSetupCodeResponse> {
+    return this.http.get<OpenClawSetupCodeResponse>(`${this.apiUrl}/ai-assistant/openclaw/setup-code`, {
+      params: this.buildOpenClawContextParams(context)
+    });
   }
 
   // --- 3. CÁC HÀM FACEBOOK INTEGRATION (Dành cho FanpageMessagesComponent) ---

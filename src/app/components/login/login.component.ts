@@ -65,10 +65,10 @@ export class LoginComponent implements OnInit {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname || '';
       if (hostname.startsWith('admin.') || hostname === 'localhost' || hostname === '127.0.0.1') {
-        this.router.navigateByUrl('/admin/room');
+        this.router.navigateByUrl('/admin/room', { replaceUrl: true });
         return;
       }
-      window.location.href = 'https://admin.phhotel.vn/admin/room';
+      window.location.replace('https://admin.phhotel.vn/admin/room');
     }
   }
 
@@ -120,7 +120,6 @@ export class LoginComponent implements OnInit {
           this.message.info(this.translate.instant('LOGIN.ENTER_TWO_FACTOR'));
           this.isLoading = false;
         } else {
-          this.message.success(this.translate.instant('COMMON.SUCCESS'));
           if (response.token && response.user) {
             this.authService.loginFromShiftHandover(response.token, response.user);
             this.authService.authResolved.next(true);
