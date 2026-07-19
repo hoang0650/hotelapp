@@ -568,17 +568,18 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
         const decoded = this.decodeOpenClawSetupCode(setupCode);
         const gatewayUrl = decoded?.gatewayUrl || String(response?.gatewayUrl || '').trim();
         const bootstrapToken = decoded?.bootstrapToken || '';
+        const gatewayToken = String(response?.gatewayToken || '').trim();
+        const autoConnectMode = String(response?.autoConnectMode || '').trim().toLowerCase();
 
-        if (!gatewayUrl || !bootstrapToken) {
-          if (popup && !popup.closed) {
-            popup.close();
-          }
+        if (!gatewayUrl || (!bootstrapToken && !gatewayToken)) {
           this.openingOpenClaw = false;
-          this.message.error('Không lấy được bootstrap token hợp lệ để đăng nhập OpenClaw.');
+          this.message.error('Không lấy được token đăng nhập OpenClaw hợp lệ.');
           return;
         }
 
-        const openClawUrl = this.buildOpenClawDashboardUrl(gatewayUrl, bootstrapToken);
+        const openClawUrl = bootstrapToken
+          ? this.buildOpenClawDashboardUrl(gatewayUrl, { bootstrapToken })
+          : this.buildOpenClawDashboardUrl(gatewayUrl, { token: gatewayToken });
         if (popup && !popup.closed) {
           popup.location.replace(openClawUrl);
         } else if (typeof window !== 'undefined') {
@@ -589,14 +590,15 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
         const modeLabel = this.isManagementAssistantMode()
           ? 'Trợ lý quản lý cho business/hotel đã sẵn sàng trên OpenClaw.'
           : 'OpenClaw đã sẵn sàng cho vận hành AI.';
-        this.message.success(`Đã mở OpenClaw gateway với ${accessLabel}. ${modeLabel}`);
+        const authModeLabel =
+          autoConnectMode === 'token' || (!bootstrapToken && gatewayToken)
+            ? 'đăng nhập trực tiếp bằng gateway token'
+            : 'đăng nhập tự động bằng setup code';
+        this.message.success(`Đã mở OpenClaw gateway với ${accessLabel}, ${authModeLabel}. ${modeLabel}`);
         this.openingOpenClaw = false;
       },
       error: (error) => {
         console.error('OpenClaw setup error:', error);
-        if (popup && !popup.closed) {
-          popup.close();
-        }
         this.openingOpenClaw = false;
         this.message.error(error?.error?.message || 'Không thể mở OpenClaw gateway.');
       }
@@ -632,11 +634,19 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
-  private buildOpenClawDashboardUrl(gatewayUrl: string, bootstrapToken: string): string {
+  private buildOpenClawDashboardUrl(
+    gatewayUrl: string,
+    options: { bootstrapToken?: string; token?: string }
+  ): string {
     const baseUrl = this.resolveOpenClawDashboardBaseUrl();
     const hashParams = new URLSearchParams();
     hashParams.set('gatewayUrl', gatewayUrl);
-    hashParams.set('bootstrapToken', bootstrapToken);
+    if (options.bootstrapToken) {
+      hashParams.set('bootstrapToken', options.bootstrapToken);
+    }
+    if (options.token) {
+      hashParams.set('token', options.token);
+    }
     hashParams.set('session', 'main');
     return `${baseUrl.replace(/\/$/, '')}/#${hashParams.toString()}`;
   }

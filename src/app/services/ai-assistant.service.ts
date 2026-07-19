@@ -78,9 +78,11 @@ export interface OpenClawSetupCodeResponse {
   setupCode?: string;
   gatewayUrl?: string;
   gatewayUrls?: string[];
+  gatewayToken?: string;
   auth?: string;
   access?: 'full' | 'limited' | 'node';
   accessDowngraded?: boolean;
+  autoConnectMode?: 'bootstrap' | 'token';
   message?: string;
 }
 
