@@ -7,7 +7,7 @@ import { AuthService } from './services/auth.service';
 import { SettingsService } from './services/settings.service';
 import { NotificationsService } from './services/notifications.service';
 import { SeoService } from './services/seo.service';
-import { filter, interval, Subscription } from 'rxjs';
+import { filter, interval, Subscription, take } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -19,6 +19,8 @@ export class AppComponent implements OnInit, OnDestroy {
   isMaintenanceMode = false;
   maintenanceMessage = 'Hệ thống đang bảo trì. Vui lòng quay lại sau.';
   isBrowser = false;
+  authResolved = false;
+  currentUrl = '/';
   private maintenanceCheckInterval?: Subscription;
   private maintenanceModeChangeListener?: any;
 
@@ -38,9 +40,17 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.translate.setDefaultLang('vi');
     this.translate.use(this.translationService.getCurrentLang());
-    
-    // Kiểm tra subdomain và chuyển hướng dựa trên role
-    this.authService.checkSubdomainAndRedirect();
+
+    this.currentUrl = this.router.url || (this.isBrowser ? window.location.pathname : '/');
+    this.authService.authResolved$.subscribe(resolved => {
+      this.authResolved = resolved;
+    });
+    this.authService.authResolved$.pipe(
+      filter(resolved => resolved),
+      take(1)
+    ).subscribe(() => {
+      this.authService.checkSubdomainAndRedirect();
+    });
     
     if (isPlatformBrowser(this.platformId)) {
       this.checkMaintenanceMode();
@@ -50,6 +60,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {
+      this.currentUrl = this.router.url || (this.isBrowser ? window.location.pathname : '/');
       if (isPlatformBrowser(this.platformId)) {
         this.checkMaintenanceMode();
       }
@@ -187,5 +198,24 @@ export class AppComponent implements OnInit, OnDestroy {
       // Reload notifications
       this.notificationsService.loadAnnouncements();
     }
+  }
+
+  isAuthResolvingForAdminRoute(): boolean {
+    if (!this.isBrowser || this.authResolved) {
+      return false;
+    }
+
+    const pathname = this.currentUrl || window.location.pathname || '/';
+    const normalizedPath = pathname.split('?')[0];
+    const publicPaths = ['/login', '/signup', '/business-signup', '/forgot-password', '/unauthorized', '/notfound'];
+    const isPublicPath = publicPaths.some(p => normalizedPath.startsWith(p)) || normalizedPath.startsWith('/reset-password');
+    if (isPublicPath) {
+      return false;
+    }
+
+    const hostname = window.location.hostname || '';
+    const isAdminSubdomain = hostname.startsWith('admin.');
+    const isAdminPath = normalizedPath.startsWith('/admin/');
+    return isAdminSubdomain || isAdminPath;
   }
 }

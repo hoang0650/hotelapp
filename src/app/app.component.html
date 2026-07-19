@@ -1,10 +1,19 @@
-<nz-layout class="layout-container" style="min-height: 100vh; display: flex; flex-direction: column;">
-  <app-header></app-header>
-  <nz-content style="flex: 1;">
-    <router-outlet></router-outlet>
-  </nz-content>
-  <app-footer></app-footer>
-</nz-layout>
+<ng-container *ngIf="!isAuthResolvingForAdminRoute(); else authResolvingTemplate">
+  <nz-layout class="layout-container" style="min-height: 100vh; display: flex; flex-direction: column;">
+    <app-header></app-header>
+    <nz-content style="flex: 1;">
+      <router-outlet></router-outlet>
+    </nz-content>
+    <app-footer></app-footer>
+  </nz-layout>
+</ng-container>
+
+<ng-template #authResolvingTemplate>
+  <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; background: #f5f7fb;">
+    <nz-spin nzSimple [nzSize]="'large'"></nz-spin>
+    <div style="color: #4b5563; font-size: 14px;">Đang khôi phục phiên đăng nhập...</div>
+  </div>
+</ng-template>
 
 <!-- Modal hóa đơn toàn cục -->
 <app-invoice-modal *ngIf="isBrowser"></app-invoice-modal>
