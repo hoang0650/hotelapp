@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AiAssistantService, ChatMessage as BaseChatMessage } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 import { PricingService } from '../../services/pricing.service';
@@ -25,23 +26,29 @@ interface ChatMessage extends BaseChatMessage {
   styleUrls: ['./ai-chatbox.component.css']
 })
 export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
+  canOpenOpenClaw: boolean = true;
+  openingOpenClaw: boolean = false;
+  isOpenClawModalVisible = false;
+  isApprovingOpenClaw = false;
+  openClawIframeUrl: SafeResourceUrl | null = null;
+  openclawGatewayUrl = '';
+  openclawToken = '';
+  openclawSetupCode = '';
   messages: ChatMessage[] = [];
   isTyping = false;
   inputValue = '';
   minimized = true;
-  openingOpenClaw = false;
 
   hotels: Hotel[] = [];
   selectedHotelId: string | null = null;
+  currentTenantId: string = '';
+  currentUserId: string = '';
   loadingHotels = false;
 
   get isHotelSelectionDisabled(): boolean {
     return this.authService.isHotelManager() || this.authService.isStaff();
   }
 
-  get canOpenOpenClaw(): boolean {
-    return this.canUseAiChatbox && this.isOpenClawRoleEligible();
-  }
 
   get chatboxModeTitle(): string {
     return this.isManagementAssistantMode()
@@ -82,7 +89,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     { label: 'Tóm tắt web', query: 'Tóm tắt nội dung link web này: https://vnexpress.net/' },
     { label: 'Tin tức mới', query: 'Tìm tin tức mới nhất về du lịch Việt Nam hôm nay và tóm tắt ngắn gọn' }
   ];
-  
+
   // Kiểm tra tính năng AI Chatbox
   canUseAiChatbox: boolean = true; // Mặc định cho phép
   canAskRevenue: boolean = false;
@@ -95,6 +102,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   constructor(
     private aiService: AiAssistantService,
     private authService: AuthService,
+    private sanitizer: DomSanitizer,
     private pricingService: PricingService,
     private hotelService: HotelService,
     private apiService: ApiService,
@@ -102,7 +110,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     private message: NzMessageService,
     private translate: TranslateService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.msgSub = this.aiService.getMessages().subscribe(msgs => {
@@ -110,20 +118,20 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     });
 
     this.typingSub = this.aiService.getTypingStatus().subscribe(status => this.isTyping = status);
-    
+
     this.initHotelSelector();
     this.checkAiChatboxPermission();
     this.refreshRoleCapabilities();
     if (this.authService.getCurrentUser() && this.authService.getToken()) {
       this.aiService.loadChatHistory();
     }
-    
+
     this.authService.currentUser$.pipe(take(1)).subscribe(() => {
       this.initHotelSelector();
       this.checkAiChatboxPermission();
       this.refreshRoleCapabilities();
     });
-    
+
     this.authService.currentUser$.subscribe(user => {
       this.initHotelSelector();
       this.checkAiChatboxPermission();
@@ -141,27 +149,27 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
    */
   private processMessageLinks(msg: ChatMessage): ChatMessage {
     if (msg.role === 'assistant' && msg.content && typeof msg.content === 'string') {
-      
+
       // Regex cực mạnh: Bắt mọi link bắt đầu bằng http và kết thúc bằng xlsx/docx/pdf
       const urlRegex = /(?:Link tải:\s*)?(https?:\/\/[^\s]+?\.(?:xlsx|docx|pdf))/i;
       const match = msg.content.match(urlRegex);
-      
+
       if (match && match[1] && !msg.fileUrl) {
         const newMsg = { ...msg };
         newMsg.fileUrl = match[1]; // Gán link để hiện nút File
-        
+
         // Cắt lấy đuôi file để phân loại
         const ext = match[1].split('.').pop()?.toLowerCase() || '';
         newMsg.fileType = 'application/' + ext;
-        
+
         // Xóa sạch dấu vết của cái link thô kệch trong đoạn chat
         newMsg.content = newMsg.content.replace(match[0], '').trim();
-        
+
         // Dọn dẹp nốt mấy câu văn dư thừa của AI
         newMsg.content = newMsg.content.replace('Đã xuất file Excel thành công.', '').trim();
         newMsg.content = newMsg.content.replace('Đã tạo file Word thành công.', '').trim();
         newMsg.content = newMsg.content.replace('Đã tạo file PDF thành công.', '').trim();
-        
+
         return newMsg;
       }
     }
@@ -245,10 +253,10 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
           if (this.selectedHotelId) {
             try {
               localStorage.setItem('selectedHotelId', this.selectedHotelId);
-            } catch {}
+            } catch { }
           }
         },
-        error: () => {}
+        error: () => { }
       });
     }
   }
@@ -269,11 +277,11 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     const userId = (u?._id || '').toString();
     try {
       localStorage.setItem('selectedHotelId', hotelId);
-    } catch {}
+    } catch { }
     if (userId) {
       this.apiService.saveSelectedHotel(userId, hotelId).pipe(take(1)).subscribe({
-        next: () => {},
-        error: () => {}
+        next: () => { },
+        error: () => { }
       });
     }
   }
@@ -299,7 +307,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.authService.isHotelManager()
     );
   }
-  
+
   /**
    * Kiểm tra quyền sử dụng AI Chatbox từ hotel settings hoặc pricing package
    */
@@ -309,13 +317,13 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.canUseAiChatbox = true;
       return;
     }
-    
+
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser) {
       this.canUseAiChatbox = false;
       return;
     }
-    
+
     const hotelId = this.getTenantIdForAI();
     if (hotelId) {
       this.hotelService.getHotelInfo(hotelId).pipe(take(1)).subscribe({
@@ -335,7 +343,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.checkPricingPackagePermission();
     }
   }
-  
+
   /**
    * Kiểm tra tính năng từ pricing package
    */
@@ -345,7 +353,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.canUseAiChatbox = false;
       return;
     }
-    
+
     this.pricingService.getCurrentUserPackage(currentUser._id).pipe(take(1)).subscribe({
       next: (response: any) => {
         if (response && response.success !== false) {
@@ -382,7 +390,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
         top: this.messagesEnd.nativeElement.scrollHeight,
         behavior: 'smooth'
       });
-    } catch (err) {}
+    } catch (err) { }
   }
 
   beforeUpload = (file: NzUploadFile): boolean => {
@@ -415,7 +423,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
       fileType = this.selectedFile.type;
       fileUrl = this.selectedFilePreview || '';
     }
-    
+
     const tenantId = this.getTenantIdForAI();
     if (!tenantId) {
       this.message.error('Vui lòng chọn đúng khách sạn trước khi dùng AI.');
@@ -486,14 +494,14 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.selectedFilePreview = undefined;
     this.selectedFileName = undefined;
   }
-  
+
   private getTenantIdForAI(): string {
     const u = this.authService.getCurrentUser();
     const direct = (u?.hotelId || '').toString();
     if (direct) return direct;
     return (this.selectedHotelId || '').toString();
   }
-  
+
   private readFileText(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -549,184 +557,144 @@ export class AiChatboxComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   openOpenClawGateway(): void {
-    if (this.openingOpenClaw) return;
-    if (!this.canOpenOpenClaw) {
-      this.message.warning('Role hiện tại hoặc gói dịch vụ của bạn chưa được phép mở OpenClaw.');
-      return;
-    }
-
-    const openClawContext = this.getOpenClawGatewayContext();
-    const initialOpenClawUrl = this.resolveOpenClawDashboardBaseUrl(
-      this.buildTenantScopedGatewayUrl(openClawContext.tenantId || openClawContext.selectedHotelId || '')
-    );
-    const popup =
-      typeof window !== 'undefined'
-        ? window.open(initialOpenClawUrl, '_blank')
-        : null;
-
     this.openingOpenClaw = true;
-    this.aiService.getOpenClawSetupCode(openClawContext).pipe(take(1)).subscribe({
-      next: (response) => {
-        const setupCode = String(response?.setupCode || '').trim();
-        const decoded = this.decodeOpenClawSetupCode(setupCode);
-        const gatewayUrl = this.normalizeOpenClawGatewayUrl(
-          decoded?.gatewayUrl || String(response?.gatewayUrl || '').trim()
-        );
-        const bootstrapToken = decoded?.bootstrapToken || '';
-        const gatewayToken = String(response?.gatewayToken || '').trim();
-        const autoConnectMode = String(response?.autoConnectMode || '').trim().toLowerCase();
 
-        if (!gatewayUrl || (!bootstrapToken && !gatewayToken)) {
-          this.openingOpenClaw = false;
-          this.message.error('Không lấy được token đăng nhập OpenClaw hợp lệ.');
-          return;
-        }
+    const tenantId = this.currentTenantId || 'default';
+    const queryParams = {
+      tenant_id: tenantId,
+      selected_hotel_id: this.selectedHotelId || undefined,
+      user_id: this.currentUserId || undefined
+    };
 
-        const openClawUrl = bootstrapToken
-          ? this.buildOpenClawDashboardUrl(gatewayUrl, { bootstrapToken })
-          : this.buildOpenClawDashboardUrl(gatewayUrl, { token: gatewayToken });
-        if (popup && !popup.closed) {
-          popup.location.replace(openClawUrl);
-        } else if (typeof window !== 'undefined') {
-          window.open(openClawUrl, '_blank');
-        }
-
-        const accessLabel = response?.access === 'limited' ? 'quyền giới hạn' : 'quyền đầy đủ';
-        const modeLabel = this.isManagementAssistantMode()
-          ? 'Trợ lý quản lý cho business/hotel đã sẵn sàng trên OpenClaw.'
-          : 'OpenClaw đã sẵn sàng cho vận hành AI.';
-        const authModeLabel =
-          autoConnectMode === 'token' || (!bootstrapToken && gatewayToken)
-            ? 'đăng nhập trực tiếp bằng gateway token'
-            : 'đăng nhập tự động bằng setup code';
-        this.message.success(`Đã mở OpenClaw gateway với ${accessLabel}, ${authModeLabel}. ${modeLabel}`);
+    // 1. Gọi backend lấy setupCode / direct token
+    this.aiService.getOpenClawSetupCode(queryParams).subscribe({
+      next: (res) => {
         this.openingOpenClaw = false;
+
+        if (res && res.success) {
+          // 2. Chuẩn hóa domain tenant: https://{tenant}.phhotel.vn
+          const baseUrl = this.resolveTenantDomain(tenantId, res.gatewayUrl);
+
+          // 3. Tạo hash payload để OpenClaw UI tự động fill token / setup code
+          let targetUrl = baseUrl;
+
+          if (res.setupCode) {
+            // Trường hợp 1: Có setupCode mã hóa
+            targetUrl += `/#setup=${encodeURIComponent(res.setupCode)}`;
+          } else if (res.gatewayToken) {
+            // Trường hợp 2: Pass token & gateway URL qua hash fragment
+            const wsGatewayUrl = res.gatewayUrl || `wss://${this.sanitizeSubdomain(tenantId)}.phhotel.vn`;
+            targetUrl += `/#gatewayUrl=${encodeURIComponent(wsGatewayUrl)}&token=${encodeURIComponent(res.gatewayToken)}&autoConnect=true`;
+          }
+
+          // 4. Gắn URL đã mã hóa an toàn vào iframe
+          this.openClawIframeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(targetUrl);
+          this.isOpenClawModalVisible = true;
+
+          // 5. Tự động Trigger Approve Device Pairing trong background
+          this.autoApproveDevicePairing(queryParams);
+        } else {
+          this.message.error(res?.message || 'Không lấy được thông tin cấu hình OpenClaw.');
+        }
       },
-      error: (error) => {
-        console.error('OpenClaw setup error:', error);
+      error: (err) => {
         this.openingOpenClaw = false;
-        this.message.error(error?.error?.message || 'Không thể mở OpenClaw gateway.');
+        this.message.error('Lỗi kết nối tới máy chủ OpenClaw Gateway.');
+        console.error('OpenClaw connect error:', err);
       }
     });
   }
 
-  private decodeOpenClawSetupCode(setupCode: string): { gatewayUrl: string; bootstrapToken: string } | null {
-    const value = String(setupCode || '').trim();
-    if (!value || typeof window === 'undefined') {
-      return null;
+  private resolveTenantDomain(tenantId: string, gatewayUrlFromApi?: string): string {
+    const cleanTenant = this.sanitizeSubdomain(tenantId);
+    if (cleanTenant) {
+      return `https://${cleanTenant}.phhotel.vn`;
     }
 
-    try {
-      const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
-      const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
-      const binary = window.atob(normalized + padding);
-      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-      const json = typeof TextDecoder !== 'undefined'
-        ? new TextDecoder().decode(bytes)
-        : binary;
-      const parsed = JSON.parse(json);
-      const gatewayUrl = this.normalizeOpenClawGatewayUrl(String(parsed?.url || '').trim());
-      const bootstrapToken = String(parsed?.bootstrapToken || '').trim();
-
-      if (!gatewayUrl || !bootstrapToken) {
-        return null;
-      }
-
-      return { gatewayUrl, bootstrapToken };
-    } catch (error) {
-      console.error('OpenClaw setup decode error:', error);
-      return null;
+    if (gatewayUrlFromApi) {
+      // Chuyển đổi wss:// hoặc ws:// thành https://
+      const cleanUrl = gatewayUrlFromApi.replace(/^(wss?:\/\/|https?:\/\/)/, '');
+      const host = cleanUrl.split('/')[0];
+      return `https://${host}`;
     }
+
+    return 'https://phhotel.vn';
   }
 
-  private buildOpenClawDashboardUrl(
-    gatewayUrl: string,
-    options: { bootstrapToken?: string; token?: string }
-  ): string {
-    const normalizedGatewayUrl = this.normalizeOpenClawGatewayUrl(gatewayUrl);
-    const baseUrl = this.resolveOpenClawDashboardBaseUrl(normalizedGatewayUrl);
-    const hashParams = new URLSearchParams();
-    hashParams.set('gatewayUrl', normalizedGatewayUrl);
-    if (options.bootstrapToken) {
-      hashParams.set('bootstrapToken', options.bootstrapToken);
-    }
-    if (options.token) {
-      hashParams.set('token', options.token);
-    }
-    hashParams.set('session', 'main');
-    return `${baseUrl.replace(/\/$/, '')}/#${hashParams.toString()}`;
-  }
-
-  private resolveOpenClawDashboardBaseUrl(gatewayUrl?: string): string {
-    const normalizedGatewayUrl = this.normalizeOpenClawGatewayUrl(gatewayUrl || '');
-    if (normalizedGatewayUrl) {
-      try {
-        const parsed = new URL(normalizedGatewayUrl);
-        const protocol = parsed.protocol === 'ws:' ? 'http:' : 'https:';
-        return `${protocol}//${parsed.host}${parsed.pathname || '/'}`.replace(/\/$/, '');
-      } catch {}
-    }
-
-    return 'https://openclaw.phhotel.vn';
-  }
-
-  private normalizeOpenClawGatewayUrl(gatewayUrl: string): string {
-    const rawValue = String(gatewayUrl || '').trim();
-    if (!rawValue) {
-      return '';
-    }
-
-    try {
-      const parsed = new URL(rawValue);
-      const normalizedPath = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname.replace(/\/$/, '') : '/';
-      parsed.pathname = normalizedPath;
-      parsed.hash = '';
-      parsed.search = '';
-      const normalized = parsed.toString();
-      return normalizedPath === '/' ? normalized.replace(/\/$/, '') : normalized.replace(/\/$/, '');
-    } catch {
-      return rawValue;
-    }
-  }
-
-  private buildTenantScopedGatewayUrl(tenantId: string): string {
-    const tenantLabel = this.normalizeTenantSubdomainLabel(tenantId);
-    if (!tenantLabel) {
-      return '';
-    }
-    return `wss://${tenantLabel}.phhotel.vn`;
-  }
-
-  private normalizeTenantSubdomainLabel(value: string): string {
-    const rawValue = String(value || '').trim().toLowerCase();
-    if (!rawValue) {
-      return '';
-    }
-
-    const normalized = rawValue
-      .replace(/[^a-z0-9._-\s]/g, '')
-      .replace(/[._\s]+/g, '-')
+  private sanitizeSubdomain(value: string): string {
+    if (!value) return '';
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
       .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
-    return normalized.slice(0, 63);
+      .replace(/^-|-$/g, '');
   }
 
-  private getOpenClawGatewayContext(): {
-    tenantId: string | null;
-    hotelId: string | null;
-    selectedHotelId: string | null;
-    userId: string | null;
-  } {
-    const tenantId = this.getTenantIdForAI();
-    const currentUser = this.authService.getCurrentUser();
-    const directHotelId = (currentUser?.hotelId || '').toString() || null;
+  private autoApproveDevicePairing(queryParams: any): void {
+    // Chờ 1.5s để OpenClaw Control UI trong iframe khởi tạo WebSocket connection
+    setTimeout(() => {
+      this.aiService
+        .approveOpenClawPairing(
+          {
+            client_id: 'openclaw-control-ui',
+            client_mode: 'ui',
+            role: 'operator',
+            scopes: ['operator.read', 'operator.write', 'operator.admin']
+          },
+          queryParams
+        )
+        .subscribe({
+          next: (approveRes) => {
+            if (approveRes?.success) {
+              console.log('✅ Auto-approved OpenClaw pairing successfully');
+            }
+          },
+          error: (err) => {
+            // Bỏ qua nếu đã tự phê duyệt thành công trước đó
+            console.warn('Auto approve pairing notification:', err);
+          }
+        });
+    }, 1500);
+  }
 
-    return {
-      tenantId,
-      hotelId: directHotelId || tenantId,
-      selectedHotelId: (this.selectedHotelId || '').toString() || tenantId,
-      userId: (currentUser?._id || '').toString() || null
+  closeOpenClawModal(): void {
+    this.isOpenClawModalVisible = false;
+    this.openClawIframeUrl = null;
+  }
+  async submitOpenClawLogin() {
+    this.isApprovingOpenClaw = true;
+    const queryParams = {
+      tenant_id: this.currentTenantId || 'default', // Hoặc lấy từ biến quản lý tenant của bạn
+      selected_hotel_id: this.selectedHotelId || undefined,
+      user_id: this.currentUserId || undefined
     };
+    try {
+      await this.aiService.approveOpenClawPairing(
+        // Tham số thứ 1: body
+        {
+          request_id: '...', // Nếu bạn có lưu request_id cụ thể, còn không có thể bỏ qua để backend tự tìm pending request mới nhất
+          client_id: 'openclaw-control-ui'
+        },
+        // Tham số thứ 2: queryParams (Thêm tham số này để fix lỗi)
+        queryParams
+      ).toPromise();
+
+      // Gắn setupCode vào URL
+      const finalUrl = this.openclawSetupCode
+        ? `${this.openclawGatewayUrl}#${this.openclawSetupCode}`
+        : this.openclawGatewayUrl;
+
+      // Mở ở tab MỚI để không redirect/mất trang hiện tại
+      window.open(finalUrl, '_blank');
+
+      // Đóng form modal
+      this.closeOpenClawModal();
+    } catch (error) {
+      console.error('Lỗi khi đăng nhập OpenClaw:', error);
+      this.message.error('Có lỗi xảy ra khi xác thực.');
+    } finally {
+      this.isApprovingOpenClaw = false;
+    }
   }
+
 }

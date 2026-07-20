@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -619,10 +619,22 @@ export class AiAssistantService {
     );
   }
 
-  getOpenClawSetupCode(context?: OpenClawGatewayContext): Observable<OpenClawSetupCodeResponse> {
-    return this.http.get<OpenClawSetupCodeResponse>(`${this.apiUrl}/ai-assistant/openclaw/setup-code`, {
-      params: this.buildOpenClawContextParams(context)
+  getOpenClawSetupCode(queryParams: {
+    tenant_id?: string;
+    hotel_id?: string;
+    selected_hotel_id?: string;
+    user_id?: string;
+  }): Observable<any> {
+    let params = new HttpParams();
+    
+    // Sử dụng Object.entries để tránh lỗi implicit 'any'
+    Object.entries(queryParams).forEach(([key, value]) => {
+      if (value) {
+        params = params.set(key, value);
+      }
     });
+
+    return this.http.get(`${this.apiUrl}/admin/openclaw/setup-code`, { params});
   }
 
   // --- 3. CÁC HÀM FACEBOOK INTEGRATION (Dành cho FanpageMessagesComponent) ---
@@ -842,5 +854,31 @@ export class AiAssistantService {
         tenant_id: tenantId, bot_id: botId, chat_id: chatId, text
       })
     );
+  }
+
+  approveOpenClawPairing(
+    body: {
+      request_id?: string;
+      client_id?: string;
+      client_mode?: string;
+      role?: string;
+      scopes?: string[];
+    },
+    queryParams: {
+      tenant_id?: string;
+      hotel_id?: string;
+      selected_hotel_id?: string;
+      user_id?: string;
+    }
+  ): Observable<any> {
+    let params = new HttpParams();
+Object.entries(queryParams).forEach(([key, value]) => {
+  if (value) {
+    params = params.set(key, value);
+  }
+});
+
+
+    return this.http.post(`${this.apiUrl}/admin/openclaw/device-pairings/approve`, body, {params});
   }
 }

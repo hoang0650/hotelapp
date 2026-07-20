@@ -1,5 +1,7 @@
 <div class="ai-chatbox-container" [class.minimized]="minimized" *ngIf="canUseAiChatbox">
-  <button nz-button nzType="primary" nzShape="circle" class="chatbox-toggle" (click)="toggleMinimize()" [title]="(minimized ? ('AI_CHATBOX.OPEN_CHAT' | translate) : ('AI_CHATBOX.CLOSE_CHAT' | translate))" [attr.aria-label]="(minimized ? ('AI_CHATBOX.OPEN_CHAT' | translate) : ('AI_CHATBOX.CLOSE_CHAT' | translate))">
+  <button nz-button nzType="primary" nzShape="circle" class="chatbox-toggle" (click)="toggleMinimize()"
+    [title]="(minimized ? ('AI_CHATBOX.OPEN_CHAT' | translate) : ('AI_CHATBOX.CLOSE_CHAT' | translate))"
+    [attr.aria-label]="(minimized ? ('AI_CHATBOX.OPEN_CHAT' | translate) : ('AI_CHATBOX.CLOSE_CHAT' | translate))">
     <i nz-icon [nzType]="minimized ? 'message' : 'close'" nzTheme="outline"></i>
   </button>
   <nz-card *ngIf="!minimized" [nzBodyStyle]="{padding: '8px 0 0 0'}" class="ai-chatbox-card">
@@ -9,56 +11,28 @@
           <span class="ai-chatbox-title">{{ chatboxModeTitle }}</span>
           <span style="font-size:12px; color:#6b7280;">{{ chatboxModeDescription }}</span>
         </div>
-        <nz-select
-          *ngIf="hotels.length > 0"
-          [(ngModel)]="selectedHotelId"
-          (ngModelChange)="onSelectHotel($event)"
-          [nzDisabled]="isHotelSelectionDisabled"
-          nzSize="small"
-          nzShowSearch
-          [nzAllowClear]="false"
-          class="hotel-select"
-        >
+        <nz-select *ngIf="hotels.length > 0" [(ngModel)]="selectedHotelId" (ngModelChange)="onSelectHotel($event)"
+          [nzDisabled]="isHotelSelectionDisabled" nzSize="small" nzShowSearch [nzAllowClear]="false"
+          class="hotel-select">
           <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
         </nz-select>
       </div>
       <div class="ai-chatbox-header-actions">
-        <button
-          *ngIf="canOpenOpenClaw"
-          nz-button
-          nzType="default"
-          nzSize="small"
-          [nzLoading]="openingOpenClaw"
-          (click)="openOpenClawGateway()"
-          [title]="'Mở OpenClaw gateway'">
+        <button *ngIf="canOpenOpenClaw" nz-button nzType="default" nzSize="small" [nzLoading]="openingOpenClaw"
+          (click)="openOpenClawGateway()" [title]="'Mở OpenClaw gateway'">
           <i nz-icon nzType="api" nzTheme="outline"></i>
           <span>Mở OpenClaw</span>
         </button>
-        <button
-          nz-button
-          nzType="default"
-          nzSize="small"
-          (click)="openFanpageMessages()">
+        <button nz-button nzType="default" nzSize="small" (click)="openFanpageMessages()">
           <i nz-icon nzType="message" nzTheme="outline"></i>
           <span>Xem lịch sử Fanpage</span>
         </button>
-        <button
-          nz-button
-          nzType="default"
-          nzSize="small"
-          (click)="connectFanpage()"
-          [title]="'Kết nối Fanpage'">
+        <button nz-button nzType="default" nzSize="small" (click)="connectFanpage()" [title]="'Kết nối Fanpage'">
           <i nz-icon nzType="link" nzTheme="outline"></i>
           <span>Kết nối Fanpage</span>
         </button>
-        <button
-          nz-button
-          nzType="text"
-          nzSize="small"
-          (click)="clearChatHistory()"
-          [disabled]="messages.length === 0"
-          [title]="'AI_CHATBOX.CLEAR_HISTORY_TITLE' | translate"
-          class="clear-history-btn">
+        <button nz-button nzType="text" nzSize="small" (click)="clearChatHistory()" [disabled]="messages.length === 0"
+          [title]="'AI_CHATBOX.CLEAR_HISTORY_TITLE' | translate" class="clear-history-btn">
           <i nz-icon nzType="delete" nzTheme="outline"></i>
           <span class="clear-history-text">{{ 'AI_CHATBOX.CLEAR_HISTORY' | translate }}</span>
         </button>
@@ -67,11 +41,13 @@
     <div class="ai-chatbox-messages" #messagesEnd>
       <div *ngFor="let msg of messages" class="chat-message-row" [ngClass]="msg.role">
         <div class="chat-message-bubble-group" [ngClass]="msg.role">
-          <nz-avatar *ngIf="msg.role === 'assistant'" nzIcon="robot" nzShape="circle" nzSize="small" class="avatar"></nz-avatar>
+          <nz-avatar *ngIf="msg.role === 'assistant'" nzIcon="robot" nzShape="circle" nzSize="small"
+            class="avatar"></nz-avatar>
           <div class="bubble" [ngClass]="msg.role">
             <div class="msg-content markdown-content" [innerHTML]="msg.content | markdown"></div>
             <ng-container *ngIf="msg.fileUrl">
-              <img *ngIf="msg.fileType?.startsWith('image')" [src]="msg.fileUrl" class="chat-img-in-bubble" [alt]="'AI_CHATBOX.ATTACHED_IMAGE' | translate" />
+              <img *ngIf="msg.fileType?.startsWith('image')" [src]="msg.fileUrl" class="chat-img-in-bubble"
+                [alt]="'AI_CHATBOX.ATTACHED_IMAGE' | translate" />
               <a *ngIf="!msg.fileType?.startsWith('image')" [href]="msg.fileUrl" target="_blank" class="file-card-link">
                 <div class="file-card">
                   <div class="file-card-header">
@@ -85,81 +61,74 @@
             </ng-container>
             <div class="msg-time">{{msg.timestamp | date:'shortTime'}}</div>
           </div>
-          <nz-avatar *ngIf="msg.role === 'user'" nzIcon="user" nzShape="circle" nzSize="small" class="avatar"></nz-avatar>
+          <nz-avatar *ngIf="msg.role === 'user'" nzIcon="user" nzShape="circle" nzSize="small"
+            class="avatar"></nz-avatar>
         </div>
       </div>
       <div *ngIf="isTyping" class="ai-chatbox-typing">
         <nz-spin nzSimple></nz-spin>
-        <span class="ai-typing-text">{{ 'AI_CHATBOX.AI_TYPING' | translate }}<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>
+        <span class="ai-typing-text">{{ 'AI_CHATBOX.AI_TYPING' | translate }}<span class="dot">.</span><span
+            class="dot">.</span><span class="dot">.</span></span>
       </div>
     </div>
     <div *ngIf="selectedFile" class="selected-file-preview">
       <div class="file-preview-content">
-        <img *ngIf="selectedFileType?.startsWith('image')" [src]="selectedFilePreview" class="chat-img-thumb" [alt]="'AI_CHATBOX.PREVIEW_IMAGE' | translate" />
+        <img *ngIf="selectedFileType?.startsWith('image')" [src]="selectedFilePreview" class="chat-img-thumb"
+          [alt]="'AI_CHATBOX.PREVIEW_IMAGE' | translate" />
         <ng-container *ngIf="!selectedFileType?.startsWith('image')">
           <i nz-icon nzType="file" nzTheme="outline" class="file-icon"></i>
           <span class="file-name">{{selectedFileName}}</span>
         </ng-container>
-        <button nz-button nzType="link" (click)="removeSelectedFile()" [title]="'AI_CHATBOX.REMOVE_FILE' | translate" class="remove-file-btn">
+        <button nz-button nzType="link" (click)="removeSelectedFile()" [title]="'AI_CHATBOX.REMOVE_FILE' | translate"
+          class="remove-file-btn">
           <i nz-icon nzType="close"></i>
         </button>
       </div>
     </div>
     <div class="ai-chatbox-quick-actions" *ngIf="canAskRevenue">
-      <button
-        nz-button
-        nzSize="small"
-        nzType="default"
-        class="quick-action-btn"
-        *ngFor="let action of revenueQuickActions"
-        (click)="sendQuickMessage(action.query)"
-        [disabled]="isTyping"
-      >
+      <button nz-button nzSize="small" nzType="default" class="quick-action-btn"
+        *ngFor="let action of revenueQuickActions" (click)="sendQuickMessage(action.query)" [disabled]="isTyping">
         {{ action.label }}
       </button>
     </div>
     <div class="ai-chatbox-quick-actions ai-chatbox-export-actions" *ngIf="canAskRevenue">
-      <button
-        nz-button
-        nzSize="small"
-        nzType="default"
-        class="quick-action-btn export-action-btn"
-        *ngFor="let action of exportQuickActions"
-        (click)="sendQuickMessage(action.query)"
-        [disabled]="isTyping"
-      >
+      <button nz-button nzSize="small" nzType="default" class="quick-action-btn export-action-btn"
+        *ngFor="let action of exportQuickActions" (click)="sendQuickMessage(action.query)" [disabled]="isTyping">
         <i nz-icon nzType="download" nzTheme="outline"></i>
         <span>{{ action.label }}</span>
       </button>
     </div>
     <div class="ai-chatbox-quick-actions ai-chatbox-export-actions">
-      <button
-        nz-button
-        nzSize="small"
-        nzType="default"
-        class="quick-action-btn export-action-btn"
-        *ngFor="let action of webQuickActions"
-        (click)="sendQuickMessage(action.query)"
-        [disabled]="isTyping"
-      >
+      <button nz-button nzSize="small" nzType="default" class="quick-action-btn export-action-btn"
+        *ngFor="let action of webQuickActions" (click)="sendQuickMessage(action.query)" [disabled]="isTyping">
         <i nz-icon nzType="global" nzTheme="outline"></i>
         <span>{{ action.label }}</span>
       </button>
     </div>
     <div class="ai-chatbox-input">
-      <nz-upload
-        [nzShowUploadList]="false"
-        [nzBeforeUpload]="beforeUpload"
-        nzAccept="image/*,.pdf,.doc,.docx,.txt"
-      >
-        <button nz-button nzShape="circle" nzType="default" [title]="'AI_CHATBOX.UPLOAD_FILE_IMAGE' | translate" class="upload-btn" [attr.aria-label]="'AI_CHATBOX.UPLOAD_FILE_IMAGE' | translate">
+      <nz-upload [nzShowUploadList]="false" [nzBeforeUpload]="beforeUpload" nzAccept="image/*,.pdf,.doc,.docx,.txt">
+        <button nz-button nzShape="circle" nzType="default" [title]="'AI_CHATBOX.UPLOAD_FILE_IMAGE' | translate"
+          class="upload-btn" [attr.aria-label]="'AI_CHATBOX.UPLOAD_FILE_IMAGE' | translate">
           <i nz-icon nzType="paper-clip"></i>
         </button>
       </nz-upload>
-      <input nz-input [(ngModel)]="inputValue" (keydown.enter)="sendMessage()" [disabled]="isTyping" [placeholder]="'AI_CHATBOX.MESSAGE_PLACEHOLDER' | translate" />
-      <button nz-button nzType="primary" (click)="sendMessage()" [disabled]="!inputValue && !selectedFile || isTyping" [title]="'AI_CHATBOX.SEND' | translate">
+      <input nz-input [(ngModel)]="inputValue" (keydown.enter)="sendMessage()" [disabled]="isTyping"
+        [placeholder]="'AI_CHATBOX.MESSAGE_PLACEHOLDER' | translate" />
+      <button nz-button nzType="primary" (click)="sendMessage()" [disabled]="!inputValue && !selectedFile || isTyping"
+        [title]="'AI_CHATBOX.SEND' | translate">
         <i nz-icon nzType="send" nzTheme="outline"></i>
       </button>
     </div>
   </nz-card>
+  <nz-modal [(nzVisible)]="isOpenClawModalVisible" nzTitle="Hệ thống quản trị OpenClaw Gateway"
+    (nzOnCancel)="closeOpenClawModal()" [nzFooter]="null" nzWidth="85%"
+    [nzBodyStyle]="{ padding: '0', height: '75vh', overflow: 'hidden' }">
+    <ng-container *nzModalContent>
+      <!-- Iframe load ứng dụng trên chính domain của tenant, tự fill form qua hash code -->
+      <iframe *ngIf="openClawIframeUrl" [src]="openClawIframeUrl"
+        style="width: 100%; height: 100%; border: none; display: block;"
+        allow="clipboard-read; clipboard-write; geometric-search"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+    </ng-container>
+  </nz-modal>
 </div>
