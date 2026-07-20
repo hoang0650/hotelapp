@@ -634,7 +634,7 @@ export class AiAssistantService {
       }
     });
 
-    return this.http.get(`${this.apiUrl}/admin/openclaw/setup-code`, { params});
+    return this.http.get(`${this.aiUrl}/admin/openclaw/setup-code`, { params});
   }
 
   // --- 3. CÁC HÀM FACEBOOK INTEGRATION (Dành cho FanpageMessagesComponent) ---
