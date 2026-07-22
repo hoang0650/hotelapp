@@ -1133,7 +1133,7 @@
     "REMEMBER_ME": "Remember me",
     "FORGOT_PASSWORD": "Forgot password?",
     "LOGIN_BUTTON": "Login",
-    "SIGNUP_LINK": "Don't have an account? <a routerLink=\"/signup\">Sign up now</a>",
+    "SIGNUP_LINK": "Don't have an account? <a href=\"\">Sign up now</a>",
     "ENTER_USERNAME": "Enter username",
     "ENTER_PASSWORD": "Enter password"
   },

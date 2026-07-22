@@ -1185,7 +1185,7 @@
     "REMEMBER_ME": "Angemeldet bleiben",
     "FORGOT_PASSWORD": "Passwort vergessen?",
     "LOGIN_BUTTON": "Anmelden",
-    "SIGNUP_LINK": "Noch kein Konto? <a routerLink=\"/signup\">Jetzt registrieren</a>",
+    "SIGNUP_LINK": "Noch kein Konto? <a href=\"\">Jetzt registrieren</a>",
     "ENTER_USERNAME": "Benutzername eingeben",
     "ENTER_PASSWORD": "Passwort eingeben"
   },
