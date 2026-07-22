@@ -118,11 +118,11 @@ export class AiChatboxComponent implements OnInit {
 
     try {
       // 1. Chuẩn bị params và headers xác thực
-      const params: any = 'fick_dich'
+      const params: any = { tenant_id: this.selectedHotelId };
       const token = localStorage.getItem('access_token') || localStorage.getItem('token') || '';
       const headers = new HttpHeaders({
         'Authorization': `Bearer ${token}`,
-        'X-Shared-Secret': params
+        'X-Service-Secret': params
       });
 
       // 2. Gọi API /admin/openclaw/direct-url từ Backend Python
