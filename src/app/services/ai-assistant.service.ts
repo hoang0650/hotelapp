@@ -146,6 +146,14 @@ export class AiAssistantService {
     }
   }
 
+  public getEffectiveTenantId(): string {
+    const currentHotelId = localStorage.getItem('current_hotel_id');
+    const selectedHotelId = localStorage.getItem('selectedHotelId');
+    const hotelId = localStorage.getItem('hotel_id');
+
+    return (currentHotelId || selectedHotelId || hotelId || '').trim();
+  }
+
   private async buildAiScopePayload(): Promise<{
     selectedHotelId: string | null;
     hotelId: string | null;
@@ -538,31 +546,67 @@ export class AiAssistantService {
   /**
    * Gọi API sinh URL Auto-Login kèm Hash Token cho OpenClaw
    */
-  getOpenClawDirectUrl(tenantId: string, selectedHotelId?: string | null): Observable<OpenClawDirectUrlResponse> {
-    let params = new HttpParams().set('tenant_id', tenantId);
-    if (selectedHotelId) {
-      params = params.set('selected_hotel_id', selectedHotelId);
+  getOpenClawDirectUrl(userId?: string): Observable<OpenClawDirectUrlResponse> {
+    const currentHotelId = localStorage.getItem('current_hotel_id') || '';
+    const selectedHotelId = localStorage.getItem('selectedHotelId') || '';
+    const effectiveTenantId = this.getEffectiveTenantId();
+
+    let params = new HttpParams()
+      .set('tenant_id', effectiveTenantId)
+      .set('current_hotel_id', currentHotelId)
+      .set('selected_hotel_id', selectedHotelId);
+
+    if (userId) {
+      params = params.set('user_id', userId);
     }
 
     return this.http.get<OpenClawDirectUrlResponse>(
       `${this.aiUrl}/admin/openclaw/direct-url`,
-      {
-        params,
-        headers: this.getAuthHeaders()
-      }
+      { params }
     );
   }
-
   /**
    * Gọi API tự động Approve phiên đăng nhập Device Pairing
    */
-  approveOpenClawDevicePairing(payload: OpenClawDevicePairingItem | string): Observable<any> {
-    return this.http.post<any>(`${this.aiUrl}/admin/openclaw/device-pairings/approve`, payload);
+ approveOpenClawPairing(requestId?: string): Observable<{ success: boolean; message?: string }> {
+    const currentHotelId = localStorage.getItem('current_hotel_id') || '';
+    const selectedHotelId = localStorage.getItem('selectedHotelId') || '';
+    const effectiveTenantId = this.getEffectiveTenantId();
+
+    const params = new HttpParams()
+      .set('tenant_id', effectiveTenantId)
+      .set('current_hotel_id', currentHotelId)
+      .set('selected_hotel_id', selectedHotelId);
+
+    const body = {
+      requestId: requestId || null,
+      tenant_id: effectiveTenantId,
+      current_hotel_id: currentHotelId,
+      selected_hotel_id: selectedHotelId
+    };
+
+    return this.http.post<{ success: boolean; message?: string }>(
+      `${this.aiUrl}/admin/openclaw/device-pairings/approve`,
+      body,
+      { params }
+    );
   }
 
   // Add the missing method
-  getOpenClawDevicePairings(): Observable<OpenClawDevicePairingItem[]> {
-    return this.http.get<OpenClawDevicePairingItem[]>(`${this.aiUrl}/admin/openclaw/device-pairings`);
+  getOpenClawPendingPairings(): Observable<{ success: boolean; data?: OpenClawDevicePairingItem[]; message?: string }> {
+    const currentHotelId = localStorage.getItem('current_hotel_id') || '';
+    const selectedHotelId = localStorage.getItem('selectedHotelId') || '';
+    const effectiveTenantId = this.getEffectiveTenantId();
+
+    const params = new HttpParams()
+      .set('tenant_id', effectiveTenantId)
+      .set('current_hotel_id', currentHotelId)
+      .set('selected_hotel_id', selectedHotelId);
+
+    return this.http.get<{ success: boolean; data?: OpenClawDevicePairingItem[]; message?: string }>(
+      `${this.aiUrl}/admin/openclaw/device-pairings`,
+      { params }
+    );
   }
 
   // --- 3. CÁC HÀM FACEBOOK INTEGRATION (Dành cho FanpageMessagesComponent) ---

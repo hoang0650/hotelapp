@@ -4,7 +4,10 @@
     [attr.aria-label]="(minimized ? ('AI_CHATBOX.OPEN_CHAT' | translate) : ('AI_CHATBOX.CLOSE_CHAT' | translate))">
     <i nz-icon [nzType]="minimized ? 'message' : 'close'" nzTheme="outline"></i>
   </button>
+
   <nz-card *ngIf="!minimized" [nzBodyStyle]="{padding: '8px 0 0 0'}" class="ai-chatbox-card">
+    
+    <!-- HEADER -->
     <div class="ai-chatbox-header">
       <div class="ai-chatbox-header-left">
         <div style="display:flex; flex-direction:column; gap:2px;">
@@ -17,12 +20,28 @@
           <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
         </nz-select>
       </div>
+
+      <!-- HEADER ACTIONS -->
       <div class="ai-chatbox-header-actions">
-        <button nz-button nzType="default" nzSize="small" [nzLoading]="openingOpenClaw" [disabled]="!canOpenOpenClaw"
-          (click)="openOpenClawGateway()" class="btn-openclaw">
-          <i nz-icon nzType="dashboard" nzTheme="outline"></i>
-          <span>Mở OpenClaw</span>
+        <!-- Nút Mở OpenClaw (Tự động kích hoạt triggerAutoApproveDevicePairing) -->
+        <button nz-button nzType="default" nzSize="small" 
+          [nzLoading]="openingOpenClaw || isApprovingDevice" 
+          [disabled]="!canOpenOpenClaw"
+          (click)="openOpenClawGateway()" 
+          class="btn-openclaw"
+          [title]="isApprovingDevice ? 'Đang tự động duyệt kết nối...' : 'Mở giao diện điều khiển OpenClaw'">
+          <i nz-icon [nzType]="isApprovingDevice ? 'sync' : 'dashboard'" [nzSpin]="isApprovingDevice" nzTheme="outline"></i>
+          <span>{{ isApprovingDevice ? 'Đang Approve...' : 'Mở OpenClaw' }}</span>
         </button>
+
+        <!-- Nút Duyệt ghép đôi thủ công (Dự phòng) -->
+        <button *ngIf="!isApprovingDevice" nz-button nzType="text" nzSize="small" 
+          (click)="manualApprovePairing()" 
+          title="Thử duyệt lại kết nối thiết bị" class="approve-retry-btn">
+          <i nz-icon nzType="check-circle" nzTheme="outline"></i>
+        </button>
+
+        <!-- Nút Xóa lịch sử -->
         <button nz-button nzType="text" nzSize="small" (click)="clearChatHistory()" [disabled]="messages.length === 0"
           [title]="'AI_CHATBOX.CLEAR_HISTORY_TITLE' | translate" class="clear-history-btn">
           <i nz-icon nzType="delete" nzTheme="outline"></i>
@@ -30,6 +49,8 @@
         </button>
       </div>
     </div>
+
+    <!-- KHUNG CHAT MESSAGES -->
     <div class="ai-chatbox-messages" #messagesEnd>
       <div *ngFor="let msg of messages" class="chat-message-row" [ngClass]="msg.role">
         <div class="chat-message-bubble-group" [ngClass]="msg.role">
@@ -63,6 +84,8 @@
             class="dot">.</span><span class="dot">.</span></span>
       </div>
     </div>
+
+    <!-- PREVIEW FILE DỰ ĐỊNH GỬI -->
     <div *ngIf="selectedFile" class="selected-file-preview">
       <div class="file-preview-content">
         <img *ngIf="selectedFileType?.startsWith('image')" [src]="selectedFilePreview" class="chat-img-thumb"
@@ -77,6 +100,8 @@
         </button>
       </div>
     </div>
+
+    <!-- QUICK ACTIONS -->
     <div class="ai-chatbox-quick-actions" *ngIf="canAskRevenue">
       <button nz-button nzSize="small" nzType="default" class="quick-action-btn"
         *ngFor="let action of revenueQuickActions" (click)="sendQuickMessage(action.query)" [disabled]="isTyping">
@@ -97,6 +122,8 @@
         <span>{{ action.label }}</span>
       </button>
     </div>
+
+    <!-- INPUT CHAT -->
     <div class="ai-chatbox-input">
       <nz-upload [nzShowUploadList]="false" [nzBeforeUpload]="beforeUpload" nzAccept="image/*,.pdf,.doc,.docx,.txt">
         <button nz-button nzShape="circle" nzType="default" [title]="'AI_CHATBOX.UPLOAD_FILE_IMAGE' | translate"

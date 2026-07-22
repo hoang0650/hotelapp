@@ -29,6 +29,7 @@ export class AiChatboxComponent implements OnInit {
   selectedFileName: string = '';
   selectedFilePreview: string | ArrayBuffer | null = null;
   isTyping: boolean = false;
+  isApprovingDevice = false;
   
   private readonly pyAiApiUrl = 'https://ai.phhotel.vn';
   // Visibility & Header Properties
@@ -113,61 +114,65 @@ export class AiChatboxComponent implements OnInit {
   /**
    * Mở modal và tự động điền Token đăng nhập vào OpenClaw Gateway Iframe
    */
-  openOpenClawGateway() {
-  if (this.openingOpenClaw) return;
-  this.openingOpenClaw = true;
+  openOpenClawGateway(): void {
+    if (this.openingOpenClaw) return;
+    
+    this.openingOpenClaw = true;
 
-  // Gọi API lấy direct auto-login URL
-  this.aiAssistantService.getOpenClawDirectUrl(this.tenantId, this.selectedHotelId).subscribe({
-    next: (res: any) => {
-      this.openingOpenClaw = false;
+    this.aiAssistantService.getOpenClawDirectUrl().subscribe({
+      next: (res) => {
+        this.openingOpenClaw = false;
 
-      // Lấy URL trả về từ Backend FastAPI
-      const redirectUrl = res?.url || res?.direct_url || res?.data?.url;
+        if (res && res.url) {
+          // 1. Mở trang OpenClaw Control UI ở tab mới
+          window.open(res.url, '_blank');
 
-      if (redirectUrl) {
-        // MỞ TRỰC TIẾP TRÊN TAB MỚI CỦA TRÌNH DUYỆT
-        window.open(redirectUrl, '_blank', 'noopener,noreferrer');
-      } else {
-        this.message.error('Không tìm thấy đường dẫn OpenClaw Gateway.');
+          // 2. Kích hoạt tự động Approve ghép đôi thiết bị ngầm
+          this.triggerAutoApproveDevicePairing();
+        } else {
+          this.message.error('Không lấy được đường dẫn OpenClaw Gateway.');
+        }
+      },
+      error: (err) => {
+        this.openingOpenClaw = false;
+        this.message.error('Lỗi khi lấy URL OpenClaw: ' + (err?.error?.detail || err.message));
       }
-    },
-    error: (err) => {
-      this.openingOpenClaw = false;
-      console.error('Lỗi lấy URL OpenClaw:', err);
-      this.message.error('Không thể kết nối đến OpenClaw Gateway.');
-    }
-  });
-}
+    });
+  }
+
+  manualApprovePairing(): void {
+    this.triggerAutoApproveDevicePairing(1, 0);
+  }
 
   /**
    * Tự động duyệt Device Pairing Request (Auto-Approve Login)
    */
-  private triggerAutoApproveDevicePairing(): void {
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token') || '';
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
+  triggerAutoApproveDevicePairing(maxAttempts = 5, intervalMs = 2000): void {
+    let attempts = 0;
+    this.isApprovingDevice = true;
 
-    const params: any = { tenant_id: this.tenantId };
-    if (this.selectedHotelId) {
-      params.selected_hotel_id = this.selectedHotelId;
-    }
+    const pollInterval = setInterval(() => {
+      attempts++;
 
-    this.http.post(`${this.pyAiApiUrl}/admin/openclaw/device-pairings/approve`, {}, { params, headers })
-      .subscribe({
-        next: (res: any) => {
-          if (res?.success) {
-            console.log('✅ Auto-approved OpenClaw login session thành công!');
+      this.aiAssistantService.approveOpenClawPairing().subscribe({
+        next: (res) => {
+          if (res && res.success) {
+            this.message.success('Đã tự động Approve kết nối thiết bị OpenClaw!');
+            this.isApprovingDevice = false;
+            clearInterval(pollInterval);
           }
         },
         error: (err) => {
-          // Bỏ qua lỗi 404 nếu session đã được auto-approve bằng kết nối WebSocket nội bộ
-          if (err?.status !== 404) {
-            console.warn('⚠️ Auto-approve device pairing:', err);
+          console.warn(`[Auto-Approve] Lần thử ${attempts}/${maxAttempts} chưa thành công:`, err?.error?.detail || err.message);
+          
+          // Khi đạt quá số lần thử thì dừng lại
+          if (attempts >= maxAttempts) {
+            this.isApprovingDevice = false;
+            clearInterval(pollInterval);
           }
         }
       });
+    }, intervalMs);
   }
 
   /**

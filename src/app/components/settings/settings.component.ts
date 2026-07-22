@@ -1506,11 +1506,11 @@ export class SettingsComponent implements OnInit {
     }
 
     this.loadingOpenClawPairings = true;
-    this.aiAssistant.getOpenClawDevicePairings().subscribe({
+    this.aiAssistant.getOpenClawPendingPairings().subscribe({
       next: (response) => {
         this.loadingOpenClawPairings = false;
-        this.openClawPendingPairings = Array.isArray((response as any)?.pending) ? (response as any).pending : [];
-        this.openClawPairedDevices = Array.isArray((response as any)?.paired) ? (response as any).paired : [];
+        this.openClawPendingPairings = Array.isArray((response as any)?.data) ? (response as any).data : [];
+        this.openClawPairedDevices = Array.isArray((response as any)?.data) ? (response as any).data : [];
         if (!this.openClawPendingPairings.length) {
           this.message.info('Hiện tại không có pending OpenClaw pairing nào.');
         } else {
@@ -1531,12 +1531,7 @@ export class SettingsComponent implements OnInit {
     }
 
     this.approvingOpenClawPairing = true;
-    this.aiAssistant.approveOpenClawDevicePairing({
-      requestId: requestId || undefined,
-      clientId: 'openclaw-control-ui',
-      clientMode: 'ui',
-      role: 'operator'
-    }).subscribe({
+    this.aiAssistant.approveOpenClawPairing(requestId).subscribe({
       next: (response) => {
         this.approvingOpenClawPairing = false;
         this.message.success(response?.message || 'Đã approve OpenClaw pairing thành công.');
