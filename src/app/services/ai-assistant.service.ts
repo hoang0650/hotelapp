@@ -38,59 +38,17 @@ interface ChatHistoryResponse {
   messages: ChatMessage[];
 }
 
-export interface OpenClawDevicePairingItem {
-  requestId?: string;
-  deviceId?: string;
-  clientId?: string;
-  clientMode?: string;
-  role?: string;
-  roles?: string[];
-  scopes?: string[];
-  requestedAtMs?: number;
-  updatedAtMs?: number;
-  ts?: number;
-  status?: string;
-  [key: string]: any;
-}
-
-export interface OpenClawDevicePairingsResponse {
+export interface OpenClawDirectUrlResponse {
   success: boolean;
-  pending: OpenClawDevicePairingItem[];
-  paired: OpenClawDevicePairingItem[];
-  summary?: {
-    pendingCount: number;
-    pairedCount: number;
-  };
+  url?: string;
+  payload?: any;
   message?: string;
 }
 
-export interface OpenClawApprovePairingResponse {
+export interface OpenClawApproveResponse {
   success: boolean;
   message?: string;
-  result?: {
-    request?: OpenClawDevicePairingItem;
-    approved?: any;
-  };
-}
-
-export interface OpenClawSetupCodeResponse {
-  success: boolean;
-  setupCode?: string;
-  gatewayUrl?: string;
-  gatewayUrls?: string[];
-  gatewayToken?: string;
-  auth?: string;
-  access?: 'full' | 'limited' | 'node';
-  accessDowngraded?: boolean;
-  autoConnectMode?: 'bootstrap' | 'token';
-  message?: string;
-}
-
-export interface OpenClawGatewayContext {
-  tenantId?: string | null;
-  hotelId?: string | null;
-  selectedHotelId?: string | null;
-  userId?: string | null;
+  result?: any;
 }
 
 @Injectable({
@@ -139,30 +97,6 @@ export class AiAssistantService {
       .map(value => String(value || '').trim())
       .filter(Boolean);
     return Array.from(new Set(normalized));
-  }
-
-  private buildOpenClawContextParams(context?: OpenClawGatewayContext): Record<string, string> {
-    const currentUser = this.authService.getCurrentUser();
-    const params: Record<string, string> = {};
-    const tenantId = this.normalizeId(context?.tenantId || context?.selectedHotelId || context?.hotelId || null);
-    const hotelId = this.normalizeId(context?.hotelId || context?.selectedHotelId || this.authService.getHotelId() || null);
-    const selectedHotelId = this.normalizeId(context?.selectedHotelId || context?.hotelId || context?.tenantId || null);
-    const userId = this.normalizeId(context?.userId || currentUser?._id || null);
-
-    if (tenantId) {
-      params['tenant_id'] = tenantId;
-    }
-    if (hotelId) {
-      params['hotel_id'] = hotelId;
-    }
-    if (selectedHotelId) {
-      params['selected_hotel_id'] = selectedHotelId;
-    }
-    if (userId) {
-      params['user_id'] = userId;
-    }
-
-    return params;
   }
 
   private async resolveCurrentPackageSnapshot(userId: string | null): Promise<any | null> {
@@ -579,62 +513,56 @@ export class AiAssistantService {
     }
   }
 
-  getOpenClawDevicePairings(params?: {
-    clientId?: string;
-    clientMode?: string;
-    role?: string;
-    context?: OpenClawGatewayContext;
-  }): Observable<OpenClawDevicePairingsResponse> {
-    const query: any = {
-      clientId: params?.clientId || 'openclaw-control-ui',
-      clientMode: params?.clientMode || 'ui',
-      role: params?.role || 'operator'
-    };
-    Object.assign(query, this.buildOpenClawContextParams(params?.context));
-    return this.http.get<OpenClawDevicePairingsResponse>(`${this.apiUrl}/ai-assistant/openclaw/device-pairings`, {
-      params: query
+  /**
+   * Lấy Bearer Token từ LocalStorage để đính kèm vào Header
+   */
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token') || '';
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`
     });
   }
 
-  approveOpenClawDevicePairing(payload?: {
-    requestId?: string;
-    clientId?: string;
-    clientMode?: string;
-    role?: string;
-    scopes?: string[];
-    context?: OpenClawGatewayContext;
-  }): Observable<OpenClawApprovePairingResponse> {
-    return this.http.post<OpenClawApprovePairingResponse>(
-      `${this.apiUrl}/ai-assistant/openclaw/device-pairings/approve`,
+  /**
+   * Gọi API sinh URL Auto-Login kèm Hash Token cho OpenClaw
+   */
+  getOpenClawDirectUrl(tenantId: string, selectedHotelId?: string | null): Observable<OpenClawDirectUrlResponse> {
+    let params = new HttpParams().set('tenant_id', tenantId);
+    if (selectedHotelId) {
+      params = params.set('selected_hotel_id', selectedHotelId);
+    }
+
+    return this.http.get<OpenClawDirectUrlResponse>(
+      `${this.aiUrl}/admin/openclaw/direct-url`,
       {
-        requestId: payload?.requestId || null,
-        clientId: payload?.clientId || 'openclaw-control-ui',
-        clientMode: payload?.clientMode || 'ui',
-        role: payload?.role || 'operator',
-        scopes: Array.isArray(payload?.scopes) ? payload?.scopes : null
-      },
-      {
-        params: this.buildOpenClawContextParams(payload?.context)
+        params,
+        headers: this.getAuthHeaders()
       }
     );
   }
 
-  getOpenClawSetupCode(queryParams: {
-    tenant_id?: string;
-    hotel_id?: string;
-    selected_hotel_id?: string;
-    user_id?: string;
-  }): Observable<any> {
-    let params = new HttpParams();
-    
-    // Sử dụng Object.entries để tránh lỗi implicit 'any'
-    Object.entries(queryParams).forEach(([key, value]) => {
-      if (value) {
-        params = params.set(key, value);
-      }
-    });
+  /**
+   * Gọi API tự động Approve phiên đăng nhập Device Pairing
+   */
 
-    return this.http.get(`${this.aiUrl}/admin/openclaw/setup-code`, { params});
+  approveOpenClawDevicePairing(
+    tenantId: string, 
+    selectedHotelId?: string | null, 
+    payload: any = {}
+  ): Observable<OpenClawApproveResponse> {
+    let params = new HttpParams().set('tenant_id', tenantId);
+    if (selectedHotelId) {
+      params = params.set('selected_hotel_id', selectedHotelId);
+    }
+
+    return this.http.post<OpenClawApproveResponse>(
+      `${this.aiUrl}/admin/openclaw/device-pairings/approve`,
+      payload,
+      {
+        params,
+        headers: this.getAuthHeaders()
+      }
+    );
   }
 
   // --- 3. CÁC HÀM FACEBOOK INTEGRATION (Dành cho FanpageMessagesComponent) ---
@@ -856,29 +784,4 @@ export class AiAssistantService {
     );
   }
 
-  approveOpenClawPairing(
-    body: {
-      request_id?: string;
-      client_id?: string;
-      client_mode?: string;
-      role?: string;
-      scopes?: string[];
-    },
-    queryParams: {
-      tenant_id?: string;
-      hotel_id?: string;
-      selected_hotel_id?: string;
-      user_id?: string;
-    }
-  ): Observable<any> {
-    let params = new HttpParams();
-Object.entries(queryParams).forEach(([key, value]) => {
-  if (value) {
-    params = params.set(key, value);
-  }
-});
-
-
-    return this.http.post(`${this.apiUrl}/admin/openclaw/device-pairings/approve`, body, {params});
-  }
 }

@@ -18,9 +18,9 @@
         </nz-select>
       </div>
       <div class="ai-chatbox-header-actions">
-        <button *ngIf="canOpenOpenClaw" nz-button nzType="default" nzSize="small" [nzLoading]="openingOpenClaw"
-          (click)="openOpenClawGateway()" [title]="'Mở OpenClaw gateway'">
-          <i nz-icon nzType="api" nzTheme="outline"></i>
+        <button nz-button nzType="default" nzSize="small" [nzLoading]="openingOpenClaw" [disabled]="!canOpenOpenClaw"
+          (click)="openOpenClawGateway()" class="btn-openclaw">
+          <i nz-icon nzType="dashboard" nzTheme="outline"></i>
           <span>Mở OpenClaw</span>
         </button>
         <button nz-button nzType="default" nzSize="small" (click)="openFanpageMessages()">
@@ -120,15 +120,22 @@
       </button>
     </div>
   </nz-card>
-  <nz-modal [(nzVisible)]="isOpenClawModalVisible" nzTitle="Hệ thống quản trị OpenClaw Gateway"
-    (nzOnCancel)="closeOpenClawModal()" [nzFooter]="null" nzWidth="85%"
-    [nzBodyStyle]="{ padding: '0', height: '75vh', overflow: 'hidden' }">
+  <!-- Modal chứa Iframe OpenClaw Gateway -->
+  <nz-modal [(nzVisible)]="isOpenClawModalVisible" nzTitle="Hệ thống quản lý OpenClaw Gateway" [nzFooter]="null"
+    [nzWidth]="'92vw'" (nzOnCancel)="closeOpenClawModal()"
+    [nzBodyStyle]="{ padding: '0px', height: '82vh', overflow: 'hidden' }" nzCentered>
     <ng-container *nzModalContent>
-      <!-- Iframe load ứng dụng trên chính domain của tenant, tự fill form qua hash code -->
-      <iframe *ngIf="openClawIframeUrl" [src]="openClawIframeUrl"
-        style="width: 100%; height: 100%; border: none; display: block;"
-        allow="clipboard-read; clipboard-write; geometric-search"
-        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+      <div class="openclaw-iframe-wrapper">
+        <!-- Loading Spinner trong lúc chờ nạp Iframe -->
+        <div *ngIf="!openClawIframeUrl" class="iframe-loading-state">
+          <nz-spin nzSimple nzTip="Đang khởi tạo kết nối OpenClaw Gateway..."></nz-spin>
+        </div>
+
+        <!-- Iframe hiển thị OpenClaw Control Panel -->
+        <iframe *ngIf="openClawIframeUrl" [src]="openClawIframeUrl" class="openclaw-iframe"
+          allow="clipboard-read; clipboard-write; autoplay; camera; microphone" title="OpenClaw Gateway Control Panel">
+        </iframe>
+      </div>
     </ng-container>
   </nz-modal>
 </div>
