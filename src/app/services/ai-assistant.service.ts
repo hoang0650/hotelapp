@@ -557,12 +557,12 @@ export class AiAssistantService {
    * Gọi API tự động Approve phiên đăng nhập Device Pairing
    */
   approveOpenClawDevicePairing(payload: OpenClawDevicePairingItem | string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/openclaw/approve`, payload);
+    return this.http.post<any>(`${this.aiUrl}/admin/openclaw/device-pairings/approve`, payload);
   }
 
   // Add the missing method
   getOpenClawDevicePairings(): Observable<OpenClawDevicePairingItem[]> {
-    return this.http.get<OpenClawDevicePairingItem[]>(`${this.apiUrl}/openclaw/pairings`);
+    return this.http.get<OpenClawDevicePairingItem[]>(`${this.aiUrl}/admin/openclaw/device-pairings`);
   }
 
   // --- 3. CÁC HÀM FACEBOOK INTEGRATION (Dành cho FanpageMessagesComponent) ---
