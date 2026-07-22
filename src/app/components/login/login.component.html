@@ -60,7 +60,8 @@
             </button>
             
             <div nz-row class="login-form-margin">
-              <span routerLink="/signup" [innerHTML]="'LOGIN.SIGNUP_LINK' | translate"></span>
+              <span><a>{{ 'LOGIN.SIGNUP_LINK' | translate }}</a></span>
+              <span><a routerLink="/signup">{{ 'LOGIN.SIGNUP_LINK1' | translate }}</a></span>
             </div>
           </form>
           <div class=" social-login">

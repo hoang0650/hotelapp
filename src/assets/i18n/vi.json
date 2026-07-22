@@ -1144,7 +1144,8 @@
     "REMEMBER_ME": "Ghi nhớ đăng nhập",
     "FORGOT_PASSWORD": "Quên mật khẩu?",
     "LOGIN_BUTTON": "Đăng nhập",
-    "SIGNUP_LINK": "Chưa có tài khoản? <a href=\"\">Đăng ký ngay</a>",
+    "SIGNUP_LINK": "Chưa có tài khoản?",
+    "SIGNUP_LINK1": "Đăng ký ngay",
     "ENTER_USERNAME": "Nhập tên đăng nhập",
     "ENTER_PASSWORD": "Nhập mật khẩu" 
   },
