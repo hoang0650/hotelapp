@@ -122,11 +122,8 @@ export class AiChatboxComponent implements OnInit {
       if (this.selectedHotelId) {
         params.selected_hotel_id = this.selectedHotelId;
       }
-
-      // Lấy JWT Token từ LocalStorage để đính kèm vào Authorization header
-      const token = localStorage.getItem('access_token') || localStorage.getItem('token') || '';
       const headers = new HttpHeaders({
-        'Authorization': `Bearer ${token}`
+        'X-Shared-Secret': params
       });
 
       // 2. Gọi API /admin/openclaw/direct-url từ Backend Python
