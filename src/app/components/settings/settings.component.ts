@@ -15,6 +15,7 @@ import { BusinessService } from '../../services/business.service';
 import { PricingService } from '../../services/pricing.service';
 import { TranslateService } from '@ngx-translate/core';
 
+
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.component.html',
@@ -1508,8 +1509,8 @@ export class SettingsComponent implements OnInit {
     this.aiAssistant.getOpenClawDevicePairings().subscribe({
       next: (response) => {
         this.loadingOpenClawPairings = false;
-        this.openClawPendingPairings = Array.isArray(response?.pending) ? response.pending : [];
-        this.openClawPairedDevices = Array.isArray(response?.paired) ? response.paired : [];
+        this.openClawPendingPairings = Array.isArray((response as any)?.pending) ? (response as any).pending : [];
+        this.openClawPairedDevices = Array.isArray((response as any)?.paired) ? (response as any).paired : [];
         if (!this.openClawPendingPairings.length) {
           this.message.info('Hiện tại không có pending OpenClaw pairing nào.');
         } else {
@@ -1550,9 +1551,9 @@ export class SettingsComponent implements OnInit {
 
   getOpenClawPairingRequestedAt(item: OpenClawDevicePairingItem): Date | null {
     const timestamp =
-      Number(item?.requestedAtMs || 0) ||
-      Number(item?.updatedAtMs || 0) ||
-      Number(item?.ts || 0);
+      Number((item as any)?.requestedAtMs || 0) ||
+      Number((item as any)?.updatedAtMs || 0) ||
+      Number((item as any)?.ts || 0);
     return Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp) : null;
   }
 }

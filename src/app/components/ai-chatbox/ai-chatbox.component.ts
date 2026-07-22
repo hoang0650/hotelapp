@@ -1,7 +1,20 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzUploadFile } from 'ng-zorro-antd/upload';
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  fileUrl?: string;
+  fileType?: string;
+  timestamp: Date | string;
+}
+
+export interface QuickAction {
+  label: string;
+  query: string;
+}
 
 @Component({
   selector: 'app-ai-chatbox',
@@ -9,17 +22,51 @@ import { NzMessageService } from 'ng-zorro-antd/message';
   styleUrls: ['./ai-chatbox.component.scss']
 })
 export class AiChatboxComponent implements OnInit {
+  inputValue: string = '';
+  selectedFile: any = null; // Khai báo type cụ thể (ví dụ File hoặc NzUploadFile) nếu có
+  selectedFileType: string = '';
+  selectedFileName: string = '';
+  selectedFilePreview: string | ArrayBuffer | null = null;
+  isTyping: boolean = false;
+  
+  private readonly pyAiApiUrl = 'https://ai.phhotel.vn';
+  // Visibility & Header Properties
+  minimized = false;
   canUseAiChatbox = true;
-  canOpenOpenClaw = true;
+  chatboxModeTitle = 'AI Assistant';
+  chatboxModeDescription = 'Trợ lý AI hỗ trợ vận hành';
+  tenantId: string = '';
+
+  // Hotel Selection Properties
+  hotels: Array<{ _id: string; name: string }> = [];
+  selectedHotelId: string | null = null;
+  isHotelSelectionDisabled = false;
+
+  // Chat History & Inputs
+  messages: ChatMessage[] = [];
+
+  // Quick Action Lists
+  canAskRevenue = true;
+  revenueQuickActions: QuickAction[] = [];
+  exportQuickActions: QuickAction[] = [];
+  webQuickActions: QuickAction[] = [];
+
+  // OpenClaw Modal & Actions
   openingOpenClaw = false;
+  canOpenOpenClaw = true;
   isOpenClawModalVisible = false;
   openClawIframeUrl: SafeResourceUrl | null = null;
 
-  selectedHotelId: string | null = null;
-  currentTenantId = 'default'; // Thay bằng biến lấy từ Auth state/Context thực tế của bạn
+  // --- Methods referenced in template ---
 
-  // URL tới backend Python AI
-  private readonly pyAiApiUrl = 'https://ai.phhotel.vn';
+  toggleMinimize(): void {
+    this.minimized = !this.minimized;
+  }
+
+  onSelectHotel(hotelId: string): void {
+    this.selectedHotelId = hotelId;
+  }
+
 
   constructor(
     private sanitizer: DomSanitizer,
@@ -37,7 +84,7 @@ export class AiChatboxComponent implements OnInit {
 
     try {
       // 1. Chuẩn bị params và headers xác thực
-      const params: any = { tenant_id: this.currentTenantId };
+      const params: any = { tenant_id: this.tenantId };
       if (this.selectedHotelId) {
         params.selected_hotel_id = this.selectedHotelId;
       }
@@ -88,7 +135,7 @@ export class AiChatboxComponent implements OnInit {
       'Authorization': `Bearer ${token}`
     });
 
-    const params: any = { tenant_id: this.currentTenantId };
+    const params: any = { tenant_id: this.tenantId };
     if (this.selectedHotelId) {
       params.selected_hotel_id = this.selectedHotelId;
     }
@@ -117,5 +164,118 @@ export class AiChatboxComponent implements OnInit {
     setTimeout(() => {
       this.openClawIframeUrl = null;
     }, 300);
+  }
+
+  clearChatHistory(): void {
+    this.messages = []; // Xóa mảng chứa tin nhắn
+  }
+
+  /**
+   * 2. Xử lý lỗi getFileIconType
+   * Hàm này trả về loại icon của ng-zorro dựa trên định dạng file
+   */
+  getFileIconType(msg: any): string {
+    if (!msg || !msg.fileType) {
+      return 'file'; // Icon mặc định
+    }
+    
+    const type = msg.fileType.toLowerCase();
+    if (type.includes('pdf')) return 'file-pdf';
+    if (type.includes('word') || type.includes('document')) return 'file-word';
+    if (type.includes('excel') || type.includes('sheet')) return 'file-excel';
+    if (type.includes('zip') || type.includes('compressed')) return 'file-zip';
+    if (type.includes('image')) return 'picture';
+    
+    return 'file';
+  }
+
+  /**
+   * 3. Xử lý lỗi getFileDisplayName
+   * Hàm này trả về tên file để hiển thị trên giao diện
+   */
+  getFileDisplayName(msg: any): string {
+    // Nếu object msg có sẵn trường fileName
+    if (msg && msg.fileName) {
+      return msg.fileName;
+    }
+    
+    // Nếu không có fileName, thử cắt tên file từ cuối chuỗi fileUrl
+    if (msg && msg.fileUrl) {
+      const urlParts = msg.fileUrl.split('/');
+      return urlParts[urlParts.length - 1] || 'Tài liệu tải về';
+    }
+    
+    return 'Tài liệu tải về';
+  }
+
+  /**
+   * Xử lý lỗi removeSelectedFile
+   * Xóa file đính kèm đang được chọn khỏi UI
+   */
+  removeSelectedFile(): void {
+    this.selectedFile = null;
+    this.selectedFileType = '';
+    this.selectedFileName = '';
+    this.selectedFilePreview = null;
+  }
+
+  /**
+   * Xử lý lỗi sendQuickMessage
+   * Gắn nội dung từ các nút gợi ý vào ô chat và gửi đi
+   */
+  sendQuickMessage(query: string): void {
+    this.inputValue = query;
+    this.sendMessage();
+  }
+
+  /**
+   * Xử lý lỗi beforeUpload
+   * Chặn hành vi tự động upload của ng-zorro và lưu file vào biến để gửi sau
+   * Lưu ý: Sử dụng arrow function (= (file) =>) để giữ nguyên context của 'this'
+   */
+  beforeUpload = (file: NzUploadFile): boolean => {
+    const nativeFile = file as any as File;
+    
+    this.selectedFile = nativeFile;
+    this.selectedFileName = nativeFile.name;
+    this.selectedFileType = nativeFile.type;
+
+    // Nếu file là ảnh, tạo preview để hiển thị lên UI
+    if (nativeFile.type && nativeFile.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.selectedFilePreview = e.target.result;
+      };
+      reader.readAsDataURL(nativeFile);
+    } else {
+      this.selectedFilePreview = null;
+    }
+
+    // Return false để chặn nz-upload tự động gọi API upload
+    return false;
+  };
+
+  /**
+   * Xử lý lỗi sendMessage
+   * Xử lý logic gửi tin nhắn văn bản và file
+   */
+  sendMessage(): void {
+    // Không làm gì nếu input trống, không có file, hoặc AI đang trả lời
+    if ((!this.inputValue.trim() && !this.selectedFile) || this.isTyping) {
+      return;
+    }
+
+    // TODO: Thêm tin nhắn của User vào mảng this.messages tại đây
+
+    const textToSend = this.inputValue;
+    const fileToSend = this.selectedFile;
+
+    // Xóa trắng ô input và file đính kèm chuẩn bị cho tin nhắn tiếp theo
+    this.inputValue = '';
+    this.removeSelectedFile(); 
+    this.isTyping = true; // Hiển thị trạng thái đang nhập (typing)
+
+    // TODO: Gọi API đến AI Assistant Service tại đây
+    // Sau khi API trả về kết quả thành công hoặc lỗi, nhớ set lại: this.isTyping = false;
   }
 }

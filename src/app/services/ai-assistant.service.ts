@@ -51,6 +51,18 @@ export interface OpenClawApproveResponse {
   result?: any;
 }
 
+// Đổi tên hoặc đảm bảo Interface trùng tên OpenClawDevicePairingItem mà Template sử dụng
+export interface OpenClawDevicePairingItem {
+  requestId?: string;
+  clientId?: string;
+  clientMode?: string;
+  role?: string;
+  roles?: string[];     
+  scopes?: string[];    
+  requestedAt?: string | Date;
+  deviceId?: string;  
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -544,25 +556,13 @@ export class AiAssistantService {
   /**
    * Gọi API tự động Approve phiên đăng nhập Device Pairing
    */
+  approveOpenClawDevicePairing(payload: OpenClawDevicePairingItem | string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/openclaw/approve`, payload);
+  }
 
-  approveOpenClawDevicePairing(
-    tenantId: string, 
-    selectedHotelId?: string | null, 
-    payload: any = {}
-  ): Observable<OpenClawApproveResponse> {
-    let params = new HttpParams().set('tenant_id', tenantId);
-    if (selectedHotelId) {
-      params = params.set('selected_hotel_id', selectedHotelId);
-    }
-
-    return this.http.post<OpenClawApproveResponse>(
-      `${this.aiUrl}/admin/openclaw/device-pairings/approve`,
-      payload,
-      {
-        params,
-        headers: this.getAuthHeaders()
-      }
-    );
+  // Add the missing method
+  getOpenClawDevicePairings(): Observable<OpenClawDevicePairingItem[]> {
+    return this.http.get<OpenClawDevicePairingItem[]>(`${this.apiUrl}/openclaw/pairings`);
   }
 
   // --- 3. CÁC HÀM FACEBOOK INTEGRATION (Dành cho FanpageMessagesComponent) ---
@@ -783,5 +783,6 @@ export class AiAssistantService {
       })
     );
   }
+  
 
 }
