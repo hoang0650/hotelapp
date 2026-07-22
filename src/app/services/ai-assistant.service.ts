@@ -539,7 +539,7 @@ export class AiAssistantService {
   private getAuthHeaders(): HttpHeaders {
     const token = localStorage.getItem('access_token') || localStorage.getItem('token') || '';
     return new HttpHeaders({
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Bearer ${token}`,
     });
   }
 
@@ -568,29 +568,26 @@ export class AiAssistantService {
   /**
    * Gọi API tự động Approve phiên đăng nhập Device Pairing
    */
- approveOpenClawPairing(requestId?: string): Observable<{ success: boolean; message?: string }> {
-    const currentHotelId = localStorage.getItem('current_hotel_id') || '';
-    const selectedHotelId = localStorage.getItem('selectedHotelId') || '';
-    const effectiveTenantId = this.getEffectiveTenantId();
-
-    const params = new HttpParams()
-      .set('tenant_id', effectiveTenantId)
-      .set('current_hotel_id', currentHotelId)
-      .set('selected_hotel_id', selectedHotelId);
-
-    const body = {
-      requestId: requestId || null,
-      tenant_id: effectiveTenantId,
-      current_hotel_id: currentHotelId,
-      selected_hotel_id: selectedHotelId
-    };
-
-    return this.http.post<{ success: boolean; message?: string }>(
-      `${this.aiUrl}/admin/openclaw/device-pairings/approve`,
-      body,
-      { params }
-    );
-  }
+ approveOpenClawPairing(requestId?: string): Observable<OpenClawApproveResponse> {
+        const currentHotelId = localStorage.getItem('current_hotel_id') || '';
+        const selectedHotelId = localStorage.getItem('selectedHotelId') || '';
+        const effectiveTenantId = this.getEffectiveTenantId();
+        const params = new HttpParams()
+          .set('tenant_id', effectiveTenantId)
+          .set('current_hotel_id', currentHotelId)
+          .set('selected_hotel_id', selectedHotelId);
+        const body = {
+          requestId: requestId || null,
+          tenant_id: effectiveTenantId,
+          current_hotel_id: currentHotelId,
+          selected_hotel_id: selectedHotelId
+        };
+        return this.http.post<OpenClawApproveResponse>(
+          `${this.aiUrl}/admin/openclaw/device-pairings/approve`,
+          body,
+          { params }
+        );
+      }
 
   // Add the missing method
   getOpenClawPendingPairings(): Observable<{ success: boolean; data?: OpenClawDevicePairingItem[]; message?: string }> {
