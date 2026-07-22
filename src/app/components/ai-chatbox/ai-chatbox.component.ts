@@ -112,33 +112,41 @@ export class AiChatboxComponent implements OnInit {
   }
 
   /**
-   * Mở modal và tự động điền Token đăng nhập vào OpenClaw Gateway Iframe
-   */
-  openOpenClawGateway(): void {
-    if (this.openingOpenClaw) return;
-    
-    this.openingOpenClaw = true;
+ * Mở giao diện OpenClaw Gateway với Token tự động
+ */
+openOpenClawGateway(): void {
+  if (this.openingOpenClaw) return;
+  this.openingOpenClaw = true;
 
-    this.aiAssistantService.getOpenClawDirectUrl().subscribe({
-      next: (res) => {
-        this.openingOpenClaw = false;
+  // 1. Mở trước 1 tab trống để tránh trình duyệt chặn Popup sau khi gọi Async API
+  const newTab = window.open('about:blank', '_blank');
 
-        if (res && res.url) {
-          // 1. Mở trang OpenClaw Control UI ở tab mới
-          window.open(res.url, '_blank');
+  this.aiAssistantService.getOpenClawDirectUrl().subscribe({
+    next: (res) => {
+      this.openingOpenClaw = false;
 
-          // 2. Kích hoạt tự động Approve ghép đôi thiết bị ngầm
-          this.triggerAutoApproveDevicePairing();
+      if (res && res.url) {
+        // 2. Nạp URL chứa đầy đủ Token & Query Params vào Tab mới mở
+        if (newTab) {
+          newTab.location.href = res.url;
         } else {
-          this.message.error('Không lấy được đường dẫn OpenClaw Gateway.');
+          window.open(res.url, '_blank');
         }
-      },
-      error: (err) => {
-        this.openingOpenClaw = false;
-        this.message.error('Lỗi khi lấy URL OpenClaw: ' + (err?.error?.detail || err.message));
+
+        // 3. Kích hoạt Polling tự động Approve kết nối thiết bị ngầm
+        this.triggerAutoApproveDevicePairing();
+      } else {
+        if (newTab) newTab.close();
+        this.message.error('Không lấy được đường dẫn OpenClaw Gateway.');
       }
-    });
-  }
+    },
+    error: (err) => {
+      this.openingOpenClaw = false;
+      if (newTab) newTab.close();
+      this.message.error('Lỗi khi lấy URL OpenClaw: ' + (err?.error?.detail || err.message));
+    }
+  });
+}
 
   manualApprovePairing(): void {
     this.triggerAutoApproveDevicePairing(1, 0);
