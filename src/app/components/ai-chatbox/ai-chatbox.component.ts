@@ -3,6 +3,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzUploadFile } from 'ng-zorro-antd/upload';
+import { AiAssistantService } from '../../services/ai-assistant.service';
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -71,10 +72,43 @@ export class AiChatboxComponent implements OnInit {
   constructor(
     private sanitizer: DomSanitizer,
     private http: HttpClient,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private aiAssistantService: AiAssistantService
   ) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.initTenantId();
+    this.loadHotels();
+  }
+
+  initTenantId() {
+    try {
+      // 1. Lấy giá trị từ Local Storage
+      const storedId = localStorage.getItem('selectedHotelId');
+
+      // 2. Kiểm tra nghiêm ngặt: không null, không rỗng, và không phải là chuỗi chữ "undefined"/"null"
+      if (storedId && storedId !== 'undefined' && storedId !== 'null' && storedId.trim() !== '') {
+        // Loại bỏ dấu ngoặc kép (nếu có) phòng trường hợp value bị lưu qua JSON.stringify
+        this.selectedHotelId = storedId.replace(/['"]+/g, '');
+      }
+    } catch (e) {
+      console.error('Lỗi khi đọc selectedHotelId từ localStorage:', e);
+    }
+  }
+
+  loadHotels() {
+    // Gọi API lấy danh sách hotels
+    // this.hotelService.getHotels().subscribe(res => {
+    //   this.hotels = res.data;
+      
+      // Fallback: Nếu trong localStorage không có, lấy hotel đầu tiên trong danh sách làm mặc định
+      if (this.hotels && this.hotels.length > 0 && !this.selectedHotelId) {
+        this.selectedHotelId = this.hotels[0]._id;
+        // Có thể lưu ngược lại vào localStorage để đồng bộ
+        localStorage.setItem('selectedHotelId', this.selectedHotelId as string);
+      }
+    // });
+  }
 
   /**
    * Mở modal và tự động điền Token đăng nhập vào OpenClaw Gateway Iframe
@@ -260,22 +294,30 @@ export class AiChatboxComponent implements OnInit {
    * Xử lý logic gửi tin nhắn văn bản và file
    */
   sendMessage(): void {
-    // Không làm gì nếu input trống, không có file, hoặc AI đang trả lời
-    if ((!this.inputValue.trim() && !this.selectedFile) || this.isTyping) {
+    if ((!this.inputValue && !this.selectedFile) || this.isTyping) {
       return;
     }
 
-    // TODO: Thêm tin nhắn của User vào mảng this.messages tại đây
+    // Chặn gửi tin nhắn nếu selectedHotelId (tenantid) vẫn không hợp lệ
+    if (!this.selectedHotelId) {
+      this.message.warning('Không tìm thấy thông tin Khách sạn (Tenant ID). Vui lòng tải lại trang.');
+      return;
+    }
 
-    const textToSend = this.inputValue;
-    const fileToSend = this.selectedFile;
+    const userMessage = this.inputValue;
+    this.inputValue = ''; 
+    this.messages.push({ role: 'user', content: userMessage, timestamp: new Date() });
+    this.isTyping = true;
 
-    // Xóa trắng ô input và file đính kèm chuẩn bị cho tin nhắn tiếp theo
-    this.inputValue = '';
-    this.removeSelectedFile(); 
-    this.isTyping = true; // Hiển thị trạng thái đang nhập (typing)
-
-    // TODO: Gọi API đến AI Assistant Service tại đây
-    // Sau khi API trả về kết quả thành công hoặc lỗi, nhớ set lại: this.isTyping = false;
+    try {
+      // Gọi service, truyền selectedHotelId làm tenant_id
+      this.aiAssistantService.sendMessage(this.selectedHotelId, userMessage);
+      this.messages.push({ role: 'assistant', content: userMessage, timestamp: new Date() });
+    } catch (error) {
+      this.message.error('Lỗi khi kết nối với AI Assistant.');
+      console.error('Chat error:', error);
+    } finally {
+      this.isTyping = false;
+    }
   }
 }
