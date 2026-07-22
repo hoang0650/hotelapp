@@ -118,10 +118,7 @@ export class AiChatboxComponent implements OnInit {
 
     try {
       // 1. Chuẩn bị params và headers xác thực
-      const params: any = { tenant_id: this.tenantId };
-      if (this.selectedHotelId) {
-        params.selected_hotel_id = this.selectedHotelId;
-      }
+      const params: any = { tenant_id: this.selectedHotelId };
       const headers = new HttpHeaders({
         'X-Shared-Secret': params
       });
