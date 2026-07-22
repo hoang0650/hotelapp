@@ -113,48 +113,32 @@ export class AiChatboxComponent implements OnInit {
   /**
    * Mở modal và tự động điền Token đăng nhập vào OpenClaw Gateway Iframe
    */
-  async openOpenClawGateway(): Promise<void> {
-    this.openingOpenClaw = true;
+  openOpenClawGateway() {
+  if (this.openingOpenClaw) return;
+  this.openingOpenClaw = true;
 
-    try {
-      // 1. Chuẩn bị params và headers xác thực
-      const params: any = { tenant_id: this.selectedHotelId };
-      const token = localStorage.getItem('access_token') || localStorage.getItem('token') || '';
-      const headers = new HttpHeaders({
-        'Authorization': `Bearer ${token}`,
-        'X-Service-Secret': params
-      });
-
-      // 2. Gọi API /admin/openclaw/direct-url từ Backend Python
-      const res: any = await this.http.get(`${this.pyAiApiUrl}/admin/openclaw/direct-url`, {
-        params,
-        headers
-      }).toPromise();
-
-      if (res && res.success && res.url) {
-        // 3. Bypass Security để nhúng URL dạng https://{tenant}.phhotel.vn/#config=... vào iframe
-        this.openClawIframeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(res.url);
-        this.isOpenClawModalVisible = true;
-
-        // 4. Gọi API Approve Device Pairing ngầm sau 2.5 giây
-        setTimeout(() => {
-          this.triggerAutoApproveDevicePairing();
-        }, 2500);
-
-      } else {
-        this.message.error(res?.message || 'Không thể tạo liên kết kết nối OpenClaw Gateway.');
-      }
-    } catch (err: any) {
-      console.error('Lỗi mở OpenClaw Gateway:', err);
-      if (err?.status === 401) {
-        this.message.error('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
-      } else {
-        this.message.error('Không thể mở kết nối tới OpenClaw Gateway.');
-      }
-    } finally {
+  // Gọi API lấy direct auto-login URL
+  this.aiAssistantService.getOpenClawDirectUrl(this.tenantId, this.selectedHotelId).subscribe({
+    next: (res: any) => {
       this.openingOpenClaw = false;
+
+      // Lấy URL trả về từ Backend FastAPI
+      const redirectUrl = res?.url || res?.direct_url || res?.data?.url;
+
+      if (redirectUrl) {
+        // MỞ TRỰC TIẾP TRÊN TAB MỚI CỦA TRÌNH DUYỆT
+        window.open(redirectUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        this.message.error('Không tìm thấy đường dẫn OpenClaw Gateway.');
+      }
+    },
+    error: (err) => {
+      this.openingOpenClaw = false;
+      console.error('Lỗi lấy URL OpenClaw:', err);
+      this.message.error('Không thể kết nối đến OpenClaw Gateway.');
     }
-  }
+  });
+}
 
   /**
    * Tự động duyệt Device Pairing Request (Auto-Approve Login)

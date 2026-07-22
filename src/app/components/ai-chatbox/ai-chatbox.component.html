@@ -112,22 +112,4 @@
       </button>
     </div>
   </nz-card>
-  <!-- Modal chứa Iframe OpenClaw Gateway -->
-  <nz-modal [(nzVisible)]="isOpenClawModalVisible" nzTitle="Hệ thống quản lý OpenClaw Gateway" [nzFooter]="null"
-    [nzWidth]="'92vw'" (nzOnCancel)="closeOpenClawModal()"
-    [nzBodyStyle]="{ padding: '0px', height: '82vh', overflow: 'hidden' }" nzCentered>
-    <ng-container *nzModalContent>
-      <div class="openclaw-iframe-wrapper">
-        <!-- Loading Spinner trong lúc chờ nạp Iframe -->
-        <div *ngIf="!openClawIframeUrl" class="iframe-loading-state">
-          <nz-spin nzSimple nzTip="Đang khởi tạo kết nối OpenClaw Gateway..."></nz-spin>
-        </div>
-
-        <!-- Iframe hiển thị OpenClaw Control Panel -->
-        <iframe *ngIf="openClawIframeUrl" [src]="openClawIframeUrl" class="openclaw-iframe"
-          allow="clipboard-read; clipboard-write; autoplay; camera; microphone" title="OpenClaw Gateway Control Panel">
-        </iframe>
-      </div>
-    </ng-container>
-  </nz-modal>
 </div>
