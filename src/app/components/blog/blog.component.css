@@ -308,12 +308,42 @@
   border-radius: 8px;
 }
 
+/* Định dạng nội dung bài viết đã được cập nhật */
 .blog-content {
   font-size: 1.1rem;
   line-height: 1.8;
   color: #333;
-  white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+.blog-content p {
+  margin-bottom: 16px;
+}
+
+.blog-content p:last-child {
+  margin-bottom: 0;
+}
+
+.blog-content ul, 
+.blog-content ol {
+  margin-bottom: 16px;
+  padding-left: 24px; 
+}
+
+.blog-content li {
+  margin-bottom: 8px;
+}
+
+.blog-content li p {
+  margin-bottom: 0;
+  display: inline-block; 
+}
+
+.blog-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 16px 0;
 }
 
 .pagination-section {
@@ -533,4 +563,3 @@
     min-height: 420px;
   }
 }
-
