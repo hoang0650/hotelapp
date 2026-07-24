@@ -169,6 +169,7 @@ export class BlogComponent implements OnInit {
       }
     });
   }
+  
 
   getCurrentDateTime(): string {
     const now = new Date();
@@ -467,15 +468,29 @@ export class BlogComponent implements OnInit {
 
   getImageUrl(urlOrId: string | null | undefined): string {
     if (!urlOrId) return '';
-    // Nếu là URL đầy đủ (http/https), trả về nguyên
+
+    // 1. Kiểm tra xem có phải là link Google Drive dạng /file/d/ không
+    // Ví dụ: https://drive.google.com/file/d/1-1RqyFSOl2xlyp_VCjDUGgJecUDVYoDM/view
+    const driveRegex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
+    const match = urlOrId.match(driveRegex);
+
+    if (match && match[1]) {
+      const fileId = match[1];
+      // Trả về link trực tiếp (direct link) để thẻ <img> có thể render
+      return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    }
+
+    // 2. Nếu là URL đầy đủ (http/https) khác, trả về nguyên bản
     if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
       return urlOrId;
     }
-    // Nếu là imageId hoặc path, thêm base URL
+
+    // 3. Nếu là imageId hoặc path của hệ thống, thêm base URL
     if (urlOrId.startsWith('/files/')) {
       return `${this.apiBaseUrl}${urlOrId}`;
     }
-    // Nếu chỉ là ID, thêm /files/ prefix
+
+    // 4. Nếu chỉ là ID, thêm /files/ prefix
     return `${this.apiBaseUrl}/files/${urlOrId}`;
   }
 }
