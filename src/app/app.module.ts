@@ -3,6 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgxEchartsModule } from 'ngx-echarts'; // Import NgxEchartsModule
 import { HighchartsChartModule } from 'highcharts-angular';
 import { DatePipe, registerLocaleData } from '@angular/common'; // Import DatePipe
+import { SafeHtmlPipe } from './pipes/safe-html.pipe';
 import { CommonModule } from '@angular/common'; // Đảm bảo CommonModule được import
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
@@ -217,6 +218,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
     declarations: [
         AppComponent,
         HeaderComponent,
+        SafeHtmlPipe,
         ProductListComponent,
         LoginComponent,
         HomeComponent,
