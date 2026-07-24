@@ -15,9 +15,9 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./blog.component.css']
 })
 export class BlogComponent implements OnInit {
-  blogs: Blog[] = [];
-  selectedBlog: Blog | null = null;
-  relatedBlogs: Blog[] = [];
+  selectedBlog: any = null;
+  blogs: any[] = [];
+  relatedBlogs: any[] = [];
   isLoading = false;
   pageIndex = 1;
   pageSize = 9;
