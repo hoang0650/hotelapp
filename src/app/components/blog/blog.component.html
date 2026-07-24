@@ -48,7 +48,7 @@
           </div>
 
           <div class="blog-featured-image mb-3" *ngIf="selectedBlog.featuredImage">
-            <img [src]="getImageUrl(selectedBlog.featuredImage || selectedBlog.imageUrl)" [alt]="selectedBlog.title" />
+            <img [src]="getImageUrl(selectedBlog?.featuredImage || selectedBlog?.imageUrl)" [alt]="selectedBlog.title" />
           </div>
 
          <div class="blog-content" [innerHTML]="selectedBlog.content"></div>
@@ -229,7 +229,7 @@
             <div class="related-blogs">
               <div class="related-blog-item" *ngFor="let blog of relatedBlogs" (click)="viewBlogDetail(blog)">
                 <div class="related-blog-image" *ngIf="blog.featuredImage || blog.imageUrl">
-                  <img [src]="getImageUrl(selectedBlog.featuredImage || selectedBlog.imageUrl)" [alt]="blog.title" />
+                  <img [src]="getImageUrl(selectedBlog?.featuredImage || selectedBlog?.imageUrl)" [alt]="blog.title" />
                 </div>
                 <div class="related-blog-content">
                   <h4 class="related-blog-title">{{ blog.title }}</h4>
@@ -299,7 +299,7 @@
                 <nz-card class="blog-card" [nzHoverable]="true" (click)="viewBlogDetail(blog)"
                   style="cursor: pointer; height: 100%;">
                   <div class="blog-card-image" *ngIf="blog.featuredImage || blog.imageUrl">
-                    <img [src]="getImageUrl(selectedBlog.featuredImage || selectedBlog.imageUrl)" [alt]="blog.title" />
+                    <img [src]="getImageUrl(selectedBlog?.featuredImage || selectedBlog?.imageUrl)" [alt]="blog.title" />
                   </div>
                   <div class="blog-card-content">
                     <h3 class="blog-card-title">{{ blog.title }}</h3>
@@ -366,7 +366,7 @@
             <div class="related-blogs">
               <div class="related-blog-item" *ngFor="let blog of blogs.slice(0, 5)" (click)="viewBlogDetail(blog)">
                 <div class="related-blog-image" *ngIf="blog.featuredImage || blog.imageUrl">
-                  <img [src]="getImageUrl(selectedBlog.featuredImage || selectedBlog.imageUrl)" [alt]="blog.title" />
+                  <img [src]="getImageUrl(selectedBlog?.featuredImage || selectedBlog?.imageUrl)" [alt]="blog.title" />
                 </div>
                 <div class="related-blog-content">
                   <h4 class="related-blog-title">{{ blog.title }}</h4>
