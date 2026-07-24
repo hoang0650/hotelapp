@@ -51,7 +51,7 @@
             <img [src]="getImageUrl(selectedBlog.featuredImage || selectedBlog.imageUrl)" [alt]="selectedBlog.title" />
           </div>
 
-         <img [src]="getImageUrl(selectedBlog.featuredImage || selectedBlog.imageUrl)" /></div>
+         <div class="blog-content" [innerHTML]="selectedBlog.content"></div>
 
           <!-- Like/Dislike Blog -->
           <div class="blog-actions mt-4 mb-4">
