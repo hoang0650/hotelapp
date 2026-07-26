@@ -120,6 +120,19 @@
     <div *ngIf="!permissionsReady" style="padding: 10px 12px; color: rgba(255,255,255,0.75); font-size: 12px;">
       Đang đồng bộ quyền truy cập...
     </div>
+    <div class="sidebar-account">
+      <div class="sidebar-account-name" *ngIf="!isCollapsed" [title]="getCurrentUserLabel()">
+        {{ getCurrentUserLabel() }}
+      </div>
+      <button
+        type="button"
+        class="sidebar-logout-btn"
+        (click)="logout()"
+        [attr.title]="'NAVBAR.LOGOUT' | translate">
+        <i nz-icon nzType="logout" nzTheme="outline"></i>
+        <span *ngIf="!isCollapsed">{{ 'NAVBAR.LOGOUT' | translate }}</span>
+      </button>
+    </div>
   </nz-sider>
   <nz-layout>
     <nz-breadcrumb>
@@ -176,6 +189,16 @@
           <span>Số cột hiển thị</span>
         </li>
       </ul>
+    </li>
+    <li nz-menu-divider></li>
+    <li nz-menu-item (click)="openProfile()">
+      <i nz-icon nzType="user" nzTheme="outline"></i>
+      <span>{{ 'NAVBAR.PROFILE' | translate }}</span>
+      <small class="settings-item-note">{{ getCurrentUserLabel() }}</small>
+    </li>
+    <li nz-menu-item class="logout-menu-item" (click)="logout()">
+      <i nz-icon nzType="logout" nzTheme="outline"></i>
+      <span>{{ 'NAVBAR.LOGOUT' | translate }}</span>
     </li>
   </ul>
 </nz-dropdown-menu>

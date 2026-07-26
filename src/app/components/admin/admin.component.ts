@@ -6,6 +6,7 @@ import { PermissionService } from '../../services/permission.service';
 import { NzMarks } from 'ng-zorro-antd/slider';
 import { RoomsService } from '../../services/rooms.service';
 import { SessionContextService } from '../../services/session-context.service';
+import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-admin',
@@ -41,6 +42,7 @@ export class AdminComponent implements OnInit {
     private router: Router, 
     private activatedRoute: ActivatedRoute,
     private authService: AuthService,
+    private userService: UserService,
     private roomsService: RoomsService,
     private permissionService: PermissionService,
     private sessionContext: SessionContextService
@@ -324,6 +326,20 @@ export class AdminComponent implements OnInit {
       return 'Tầng trệt';
     }
     return `Tầng ${floor}`;
+  }
+
+  getCurrentUserLabel(): string {
+    const user = this.authService.getCurrentUser();
+    return user?.fullName || user?.username || user?.email || 'Tài khoản';
+  }
+
+  openProfile(): void {
+    this.router.navigate(['/admin/profile']);
+  }
+
+  logout(): void {
+    this.userService.clearCurrentUser();
+    this.authService.logout();
   }
 
 }
