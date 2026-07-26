@@ -328,11 +328,13 @@ export class RoomComponent implements OnInit, OnDestroy {
     window.addEventListener('columnsCountChanged', this.__onColumnsCountChanged as EventListener);
     window.addEventListener('hotelPaymentSpeakerChanged', this.__onHotelPaymentSpeakerChanged as EventListener);
     
-    // Tỷ giá VND -> USD cho hiển thị quy đổi
-    this.currencyService.getExchangeRate('VND', 'USD').subscribe({
-      next: (rate) => { this.usdRate = rate || 0; },
-      error: () => { this.usdRate = 0; }
-    });
+    // Tỷ giá VND -> USD — không chặn first paint sơ đồ phòng
+    setTimeout(() => {
+      this.currencyService.getExchangeRate('VND', 'USD').subscribe({
+        next: (rate) => { this.usdRate = rate || 0; },
+        error: () => { this.usdRate = 0; }
+      });
+    }, 1500);
   }
 
   // Collapse panel change handlers
@@ -1258,7 +1260,25 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   private startRoomsSocketRealtime(): void {
     if (!this.selectedHotelId) return;
-    if (this.roomsSocket) return;
+    const hotelId = String(this.selectedHotelId);
+
+    // Đã kết nối đúng hotel → chỉ đảm bảo còn trong room
+    if (this.roomsSocket?.connected && this.roomsSocketHotelId === hotelId) {
+      this.roomsSocket.emit('join_hotel', hotelId);
+      return;
+    }
+
+    // Đổi hotel hoặc chưa có socket → reconnect
+    if (this.roomsSocket && this.roomsSocketHotelId !== hotelId) {
+      this.stopRoomsSocketRealtime();
+    }
+
+    if (this.roomsSocket) {
+      this.roomsSocket.emit('join_hotel', hotelId);
+      this.roomsSocketHotelId = hotelId;
+      return;
+    }
+
     const socketUrl = String(environment.apiUrl || '').replace(/\/$/, '');
     if (!socketUrl) return;
     
@@ -1283,22 +1303,17 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
     
     this.roomsSocket.on('rooms_updated', (payload: any) => {
-      const hotelId = String(payload?.hotelId || '').trim();
-      if (!hotelId || !this.selectedHotelId) return;
-      if (hotelId !== String(this.selectedHotelId)) return;
+      const payloadHotelId = String(payload?.hotelId || '').trim();
+      if (!payloadHotelId || !this.selectedHotelId) return;
+      if (payloadHotelId !== String(this.selectedHotelId)) return;
       
-      // THAY ĐỔI TẠI ĐÂY: Thay vì gọi refreshRoomsLiteRealtime();
       const roomId = payload?.roomId;
       if (roomId) {
-        // Nếu có ID phòng cụ thể, chỉ cập nhật phòng đó
         this.updateSingleRoomRealtime(roomId);
-        
-        // Cập nhật luôn phòng liên quan nếu đây là sự kiện chuyển phòng
         if (payload.relatedRoomId) {
           this.updateSingleRoomRealtime(payload.relatedRoomId);
         }
       } else {
-        // Chỉ reload toàn bộ nếu backend không gửi kèm roomId
         this.refreshRoomsLiteRealtime();
       }
     });
@@ -1410,10 +1425,6 @@ export class RoomComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.paymentSpeakerEnabled) {
-      return;
-    }
-
     const eventKey = String(
       payload?.paymentHistoryId ||
       payload?.transactionId ||
@@ -1428,6 +1439,18 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.lastPaymentSpeakerEventKey = eventKey;
 
     const amount = Number(payload?.amount || 0);
+    const amountLabel = amount > 0 ? amount.toLocaleString('vi-VN') + ' VND' : '';
+    const roomLabel = payload?.roomNumber ? ` · Phòng ${payload.roomNumber}` : '';
+    this.message.success(
+      amountLabel
+        ? `Thanh toán SePay thành công: ${amountLabel}${roomLabel}`
+        : `Thanh toán SePay thành công${roomLabel}`
+    );
+
+    if (!this.paymentSpeakerEnabled) {
+      return;
+    }
+
     if (amount > 0) {
       this.paymentSpeakerService.playPaymentSuccess(amount);
     }
@@ -1972,10 +1995,10 @@ export class RoomComponent implements OnInit, OnDestroy {
             this.roomsService.notifyRoomDataUpdated({
               hotelId: this.selectedHotelId || undefined,
               roomId: room._id!,
-              reason: modalType === 'checkin' ? 'checkin' : 'generic',
+              reason: modalType === 'checkin' ? 'checkin' : modalType === 'checkout' ? 'checkout' : 'generic',
               refreshRooms: modalType !== 'checkout',
               refreshHistory: true,
-              force: modalType !== 'checkout'
+              force: false
             });
           }
         }, 300);
@@ -2064,6 +2087,8 @@ export class RoomComponent implements OnInit, OnDestroy {
           guestInfo: checkinInfo?.guestInfo,
           rateType: checkinInfo?.rateType || 'hourly',
           advancePayment: Number(checkinInfo?.advancePayment) || 0,
+          additionalCharges: Number(checkinInfo?.additionalCharges) || 0,
+          discount: Number(checkinInfo?.discount) || 0,
           paymentMethod: checkinInfo?.paymentMethod,
           notes: checkinInfo?.notes,
           selectedServices: checkinInfo?.selectedServices || []
@@ -3968,7 +3993,8 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   // Thêm hàm này vào class RoomComponent
   private updateSingleRoomRealtime(roomId: string): void {
-    if (!this.selectedHotelId || !roomId) return;
+    const hotelId = this.selectedHotelId;
+    if (!hotelId || !roomId) return;
     
     // Chỉ lấy data chi tiết của ĐÚNG 1 phòng bị thay đổi
     this.roomsService.getRoomById(roomId, { limit: 10, excludeCheckedOut: true }).subscribe({
@@ -3979,9 +4005,10 @@ export class RoomComponent implements OnInit, OnDestroy {
           // 1. GHI ĐÈ THUỘC TÍNH (Mutation) thay vì gán mới toàn bộ object
           // Kỹ thuật này giúp Angular không render lại toàn bộ thẻ HTML gây chớp
           Object.assign(this.rooms[index], hydratedRoom);
-          this.lastLoadedHotelId = this.selectedHotelId;
+          this.lastLoadedHotelId = hotelId;
+          this.roomsService.patchCachedRoom(hotelId, this.rooms[index]);
           
-          // 2. Xử lý logic riêng cho phòng đang có khách (Cập nhật thời gian, giá tiền)
+          // 2. Xử lý logic riêng cho phòng đang có khách (Cập nhật thời gian, giá tiền, phụ thu, KM)
           if (this.rooms[index].status === 'occupied' || this.rooms[index].status === 'booked') {
             const eventType = this.rooms[index].status === 'occupied' ? 'checkin' : 'booking';
             this.roomsService.getRoomEvents(roomId, {
@@ -4004,13 +4031,16 @@ export class RoomComponent implements OnInit, OnDestroy {
                 if (checkinEvent) {
                   this.loadRoomPriceFromAPI(this.rooms[index], checkinEvent, true);
                 }
+                this.roomsService.patchCachedRoom(hotelId, this.rooms[index]);
                 this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
                 this.scheduleDisplayRebuild();
               });
           } else {
-            // Xóa sạch event cũ nếu phòng đã trả/đang dọn
+            // Xóa sạch event cũ nếu phòng đã trả/đang dọn / bảo trì
             this.rooms[index].events = [];
             this.rooms[index].currentBooking = undefined;
+            this.rooms[index].guestStatus = undefined;
+            this.roomsService.patchCachedRoom(hotelId, this.rooms[index]);
             this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
             this.scheduleDisplayRebuild();
           }

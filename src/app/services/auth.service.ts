@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { map, catchError, tap, take, finalize, shareReplay } from 'rxjs/operators';
+import { map, catchError, tap, take, finalize, shareReplay, timeout } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { User } from '../interfaces/user';
 import { jwtDecode } from 'jwt-decode';
@@ -40,11 +40,62 @@ export class AuthService {
   private refreshRequest$: Observable<boolean> | null = null;
   public authResolved = new BehaviorSubject<boolean>(false);
   public authResolved$ = this.authResolved.asObservable();
+  private readonly sessionTokenKey = 'phhotel_session_token';
+  private readonly sessionUserKey = 'phhotel_session_user';
 
   constructor(private http: HttpClient, private router: Router) {
+    this.restoreSessionFromStorage();
     this.refreshAccessToken().subscribe(() => {
       this.authResolved.next(true);
     });
+  }
+
+  private restoreSessionFromStorage(): void {
+    if (typeof sessionStorage === 'undefined') return;
+    try {
+      const token = sessionStorage.getItem(this.sessionTokenKey);
+      const rawUser = sessionStorage.getItem(this.sessionUserKey);
+      if (!token || !rawUser) return;
+      if (!this.isJwtStillValid(token)) {
+        this.clearSessionStorage();
+        return;
+      }
+      this.inMemoryToken = token;
+      this.currentUserSubject.next(JSON.parse(rawUser));
+    } catch {
+      this.clearSessionStorage();
+    }
+  }
+
+  private persistSession(token: string, user: User): void {
+    if (typeof sessionStorage === 'undefined') return;
+    try {
+      sessionStorage.setItem(this.sessionTokenKey, token);
+      sessionStorage.setItem(this.sessionUserKey, JSON.stringify(user));
+    } catch {}
+  }
+
+  private clearSessionStorage(): void {
+    if (typeof sessionStorage === 'undefined') return;
+    try {
+      sessionStorage.removeItem(this.sessionTokenKey);
+      sessionStorage.removeItem(this.sessionUserKey);
+    } catch {}
+  }
+
+  private isJwtStillValid(token: string): boolean {
+    try {
+      const decoded: any = jwtDecode(token);
+      const exp = Number(decoded?.exp || 0);
+      if (!exp) return true;
+      return exp * 1000 > Date.now() + 5000;
+    } catch {
+      return false;
+    }
+  }
+
+  private hasValidStoredSession(): boolean {
+    return !!(this.inMemoryToken && this.currentUserSubject.value && this.isJwtStillValid(this.inMemoryToken));
   }
 
   refreshAccessToken(): Observable<boolean> {
@@ -53,17 +104,24 @@ export class AuthService {
     }
 
     this.refreshRequest$ = this.http.post<AuthResponse>(`${this.apiUrl}/users/refresh-token`, {}, { withCredentials: true }).pipe(
+      timeout(8000),
       map(response => {
         if (response && response.token) {
           this.inMemoryToken = response.token;
           this.currentUserSubject.next(response.user);
+          this.persistSession(response.token, response.user);
           return true;
         }
-        return false;
+        return this.hasValidStoredSession();
       }),
       catchError(() => {
+        // Không xóa phiên sessionStorage nếu JWT vẫn còn hạn (cookie refresh lỗi tạm thời)
+        if (this.hasValidStoredSession()) {
+          return of(true);
+        }
         this.inMemoryToken = null;
         this.currentUserSubject.next(null);
+        this.clearSessionStorage();
         return of(false);
       }),
       finalize(() => {
@@ -91,7 +149,7 @@ export class AuthService {
           if (response && response.token) {
             this.inMemoryToken = response.token;
             this.currentUserSubject.next(response.user);
-            // Đã xóa dòng lưu localStorage ở đây
+            this.persistSession(response.token, response.user);
             return true;
           }
           return false;
@@ -103,6 +161,7 @@ export class AuthService {
   loginFromShiftHandover(token: string, user: User): void {
     this.inMemoryToken = token;
     this.currentUserSubject.next(user);
+    this.persistSession(token, user);
   }
 
   logout(): void {
@@ -115,6 +174,7 @@ export class AuthService {
       localStorage.removeItem('user');
       localStorage.removeItem('staff');
     }
+    this.clearSessionStorage();
 
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
@@ -277,14 +337,20 @@ clearCredentials(): void {
     return user?.businessId || null;
   }
 
-  getHotelId(): string | null {
-    const user = this.getCurrentUser();
-    return user?.hotelId || null;
-  }
-
   getUserId(): string | null {
     const user = this.getCurrentUser();
-    return user?._id || null;
+    const id = user?._id as any;
+    if (!id) return null;
+    if (typeof id === 'object' && id.toString) return String(id);
+    return String(id);
+  }
+
+  getHotelId(): string | null {
+    const user = this.getCurrentUser();
+    const raw = user?.hotelId as any;
+    if (!raw) return null;
+    if (typeof raw === 'object' && raw._id) return String(raw._id);
+    return String(raw);
   }
 
   getPermissionRules(): PermissionRules {

@@ -6,6 +6,9 @@ import { UserService, LoginRequest } from '../../services/user.service';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../services/auth.service';
 import { LoginBootstrapService } from '../../services/login-bootstrap.service';
+import { timeout, catchError } from 'rxjs/operators';
+import { throwError } from 'rxjs';
+
 
 @Component({
   selector: 'app-login',
@@ -85,6 +88,10 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    if (this.isLoading) {
+      return;
+    }
+
     this.isLoading = true;
     const emailOrUsername = this.loginForm.get('emailOrUsername')?.value;
     const password = this.loginForm.get('password')?.value;
@@ -113,26 +120,42 @@ export class LoginComponent implements OnInit {
       this.authService.clearCredentials();
     }
 
-    this.userService.login(loginData).subscribe({
+    this.userService.login(loginData).pipe(
+      timeout(20000),
+      catchError((err) => {
+        if (err?.name === 'TimeoutError') {
+          return throwError(() => ({
+            error: { message: 'Đăng nhập quá lâu. Vui lòng thử lại.' }
+          }));
+        }
+        return throwError(() => err);
+      })
+    ).subscribe({
       next: (response) => {
-        if (response.requireTwoFactor) {
-          this.showTwoFactorInput = true;
-          this.userId = response.userId || null;
-          this.message.info(this.translate.instant('LOGIN.ENTER_TWO_FACTOR'));
-          this.isLoading = false;
-          return;
-        }
+        try {
+          if (response.requireTwoFactor) {
+            this.showTwoFactorInput = true;
+            this.userId = response.userId || null;
+            this.message.info(this.translate.instant('LOGIN.ENTER_TWO_FACTOR'));
+            return;
+          }
 
-        if (response.token && response.user) {
-          // Seed auth + warm Redis/rooms cache rồi vào /admin ngay (không đợi prefetch xong)
-          this.loginBootstrap.bootstrapAfterLogin(response.token, response.user);
-          this.isLoading = false;
-          this.executeFastRedirect();
-          return;
-        }
+          if (response.token && response.user) {
+            try {
+              this.loginBootstrap.bootstrapAfterLogin(response.token, response.user);
+            } catch (bootstrapErr) {
+              console.error('[login] bootstrap failed, continue redirect:', bootstrapErr);
+              this.authService.loginFromShiftHandover(response.token, response.user);
+              this.authService.authResolved.next(true);
+            }
+            this.executeFastRedirect();
+            return;
+          }
 
-        this.isLoading = false;
-        this.message.error(this.translate.instant('COMMON.ERROR_OCCURRED'));
+          this.message.error(this.translate.instant('COMMON.ERROR_OCCURRED'));
+        } finally {
+          this.isLoading = false;
+        }
       },
       error: (error) => {
         this.isLoading = false;

@@ -106,85 +106,102 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Mở giao diện OpenClaw Gateway với Token tự động
-   * SỬA: Thêm delay trước khi bắt đầu auto-approve polling
+   * Mở OpenClaw Control UI: URL đã gắn token_gateway sẵn + auto-approve pairing.
    */
   openOpenClawGateway(): void {
     if (this.openingOpenClaw) return;
     this.openingOpenClaw = true;
+    this.clearApproveTimers();
 
-    // 1. Mở trước  tab trống để tránh trình duyệt chặn Popup
     const newTab = window.open('about:blank', '_blank');
 
     this.aiAssistantService.getOpenClawDirectUrl().subscribe({
       next: (res) => {
         this.openingOpenClaw = false;
         if (res && res.success && res.url) {
-          // 2. Nạp URL chứa đầy đủ Token & Query Params vào Tab mới
           if (newTab) {
             newTab.location.href = res.url;
           } else {
             window.open(res.url, '_blank');
           }
-          this.message.info('Đang mở OpenClaw... Tự động duyệt kết nối sau 5 giây.');
-
-          // 3. SỬA: Delay 5 giây rồi mới bắt đầu poll auto-approve
-          //    Lý do: OpenClaw UI cần thời gian load + tạo device pairing request
+          this.message.info('Đang mở OpenClaw với token gateway... Tự động duyệt kết nối.');
+          // Backend cũng poll approve; chatbox poll sớm để UX nhanh hơn.
           this.approveDelayTimer = setTimeout(() => {
-            this.triggerAutoApproveDevicePairing(10, 3000);
-          }, 5000);
+            this.triggerAutoApproveDevicePairing(20, 1500);
+          }, 1000);
         } else {
           if (newTab) newTab.close();
-          this.message.error('Không lấy được đường dẫn OpenClaw Gateway.');
+          this.message.error(res?.message || 'Không lấy được đường dẫn OpenClaw Gateway.');
         }
       },
       error: (err) => {
         this.openingOpenClaw = false;
         if (newTab) newTab.close();
-        this.message.error('Lỗi khi lấy URL OpenClaw: ' + (err?.error?.detail || err.message));
+        this.message.error('Lỗi khi lấy URL OpenClaw: ' + (err?.error?.detail || err?.error?.message || err.message));
       }
     });
   }
 
   manualApprovePairing(): void {
-    this.triggerAutoApproveDevicePairing(3, 2000);
+    this.clearApproveTimers();
+    this.triggerAutoApproveDevicePairing(8, 1500);
   }
 
   /**
    * Tự động duyệt Device Pairing Request (Auto-Approve Login)
-   * SỬA: Tăng số lần thử, tăng interval, kiểm tra result chặt hơn
    */
   triggerAutoApproveDevicePairing(maxAttempts = 5, intervalMs = 2000): void {
+    this.clearApproveTimers();
     let attempts = 0;
     this.isApprovingDevice = true;
 
-    const pollInterval = setInterval(() => {
+    const tick = () => {
       attempts++;
-
       this.aiAssistantService.approveOpenClawPairing().subscribe({
         next: (res) => {
           if (res && res.success) {
             this.message.success('Đã tự động Approve kết nối OpenClaw!');
             this.isApprovingDevice = false;
-            clearInterval(pollInterval);
-          } else {
-            // Nếu chưa có request kết nối từ UI mới mở, tiếp tục thử lại cho đến khi hết maxAttempts
-            console.log(`[Auto-Approve] Lần thử ${attempts}/${maxAttempts}: Đang đợi thiết bị kết nối...`);
-            if (attempts >= maxAttempts) {
-              this.isApprovingDevice = false;
-              clearInterval(pollInterval);
-            }
+            this.clearApproveTimers();
+            return;
+          }
+          console.log(`[Auto-Approve] Lần thử ${attempts}/${maxAttempts}: Đang đợi thiết bị kết nối...`);
+          if (attempts >= maxAttempts) {
+            this.isApprovingDevice = false;
+            this.clearApproveTimers();
+            this.message.warning('Chưa duyệt được pairing. Bấm "Duyệt lại" sau khi OpenClaw hiện yêu cầu ghép đôi.');
           }
         },
         error: (err) => {
           console.warn(`[Auto-Approve] Lỗi kết nối lần ${attempts}:`, err);
           if (attempts >= maxAttempts) {
             this.isApprovingDevice = false;
-            clearInterval(pollInterval);
+            this.clearApproveTimers();
           }
         }
       });
+    };
+
+    tick();
+    this.approvePollTimer = setInterval(() => {
+      if (attempts >= maxAttempts) {
+        this.clearApproveTimers();
+        this.isApprovingDevice = false;
+        return;
+      }
+      tick();
     }, intervalMs);
+  }
+
+  private clearApproveTimers(): void {
+    if (this.approvePollTimer) {
+      clearInterval(this.approvePollTimer);
+      this.approvePollTimer = null;
+    }
+    if (this.approveDelayTimer) {
+      clearTimeout(this.approveDelayTimer);
+      this.approveDelayTimer = null;
+    }
   }
 
   closeOpenClawModal(): void {
@@ -275,13 +292,6 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.approvePollTimer) {
-      clearInterval(this.approvePollTimer);
-      this.approvePollTimer = null;
-    }
-    if (this.approveDelayTimer) {
-      clearTimeout(this.approveDelayTimer);
-      this.approveDelayTimer = null;
-    }
+    this.clearApproveTimers();
   }
 }

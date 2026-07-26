@@ -29,22 +29,29 @@ export class LoginBootstrapService {
    * Seed auth + Redis session + prefetch rooms lite (không chặn navigation).
    */
   bootstrapAfterLogin(token: string, user: User): void {
-    this.authService.loginFromShiftHandover(token, user);
-    this.authService.authResolved.next(true);
-    this.permissionService.refreshPermissions();
+    try {
+      this.authService.loginFromShiftHandover(token, user);
+      this.authService.authResolved.next(true);
+      this.permissionService.refreshPermissions();
 
-    const hotelId = this.resolveHotelId(user);
-    if (hotelId) {
-      this.sessionContext.setSelectedHotelId(hotelId, { persist: true });
-      this.hotelService.saveRoomContext(hotelId, this.sessionContext.getSelectedFloor() || '');
-      this.prefetchHotelBundle(hotelId);
-    } else {
-      void this.sessionContext.ensureHydrated().then(() => {
-        const resolved = this.sessionContext.getSelectedHotelId();
-        if (resolved) {
-          this.prefetchHotelBundle(resolved);
-        }
-      });
+      const hotelId = this.resolveHotelId(user);
+      if (hotelId) {
+        // Seed local ngay; persist Redis chạy nền (không chặn UI)
+        this.sessionContext.setSelectedHotelId(hotelId, { persist: true });
+        this.hotelService.saveRoomContext(hotelId, this.sessionContext.getSelectedFloor() || '');
+        this.prefetchHotelBundle(hotelId);
+      } else {
+        void this.sessionContext.ensureHydrated().then(() => {
+          const resolved = this.sessionContext.getSelectedHotelId();
+          if (resolved) {
+            this.prefetchHotelBundle(resolved);
+          }
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error('[LoginBootstrap] bootstrapAfterLogin error:', err);
+      this.authService.loginFromShiftHandover(token, user);
+      this.authService.authResolved.next(true);
     }
   }
 

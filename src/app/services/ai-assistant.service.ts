@@ -42,6 +42,8 @@ interface ChatHistoryResponse {
 export interface OpenClawDirectUrlResponse {
   success: boolean;
   url?: string;
+  autoApprove?: boolean;
+  tenantId?: string;
   payload?: any;
   message?: string;
 }
@@ -560,35 +562,42 @@ export class AiAssistantService {
 
     return this.http.get<OpenClawDirectUrlResponse>(
       `${this.aiUrl}/admin/openclaw/direct-url`,
-      { params }
+      { params, headers: this.getAuthHeaders() }
     );
   }
+
   /**
    * Gọi API tự động Approve phiên đăng nhập Device Pairing
    */
- approveOpenClawPairing(requestId?: string): Observable<OpenClawApproveResponse> {
-        const selectedHotelId = this.sessionContext.getSelectedHotelId() || '';
-        const currentHotelId = selectedHotelId;
-        const effectiveTenantId = this.getEffectiveTenantId();
-        const params = new HttpParams()
-          .set('tenant_id', effectiveTenantId)
-          .set('current_hotel_id', currentHotelId)
-          .set('selected_hotel_id', selectedHotelId);
-        const body = {
-          requestId: requestId || null,
-          tenant_id: effectiveTenantId,
-          current_hotel_id: currentHotelId,
-          selected_hotel_id: selectedHotelId
-        };
-        return this.http.post<OpenClawApproveResponse>(
-          `${this.aiUrl}/admin/openclaw/device-pairings/approve`,
-          body,
-          { params }
-        );
-      }
+  approveOpenClawPairing(requestId?: string): Observable<OpenClawApproveResponse> {
+    const selectedHotelId = this.sessionContext.getSelectedHotelId() || '';
+    const currentHotelId = selectedHotelId;
+    const effectiveTenantId = this.getEffectiveTenantId();
+    const params = new HttpParams()
+      .set('tenant_id', effectiveTenantId)
+      .set('current_hotel_id', currentHotelId)
+      .set('selected_hotel_id', selectedHotelId);
+    const body = {
+      request_id: requestId || null,
+      requestId: requestId || null,
+      client_id: 'openclaw-control-ui',
+      clientId: 'openclaw-control-ui',
+      client_mode: 'webchat',
+      clientMode: 'webchat',
+      role: 'operator',
+      scopes: ['operator.read', 'operator.write', 'operator.admin', 'operator.pairing'],
+      tenant_id: effectiveTenantId,
+      current_hotel_id: currentHotelId,
+      selected_hotel_id: selectedHotelId,
+    };
+    return this.http.post<OpenClawApproveResponse>(
+      `${this.aiUrl}/admin/openclaw/device-pairings/approve`,
+      body,
+      { params, headers: this.getAuthHeaders() }
+    );
+  }
 
-  // Add the missing method
-  getOpenClawPendingPairings(): Observable<{ success: boolean; data?: OpenClawDevicePairingItem[]; message?: string }> {
+  getOpenClawPendingPairings(): Observable<{ success: boolean; data?: any; message?: string }> {
     const selectedHotelId = this.sessionContext.getSelectedHotelId() || '';
     const currentHotelId = selectedHotelId;
     const effectiveTenantId = this.getEffectiveTenantId();
@@ -598,9 +607,9 @@ export class AiAssistantService {
       .set('current_hotel_id', currentHotelId)
       .set('selected_hotel_id', selectedHotelId);
 
-    return this.http.get<{ success: boolean; data?: OpenClawDevicePairingItem[]; message?: string }>(
+    return this.http.get<{ success: boolean; data?: any; message?: string }>(
       `${this.aiUrl}/admin/openclaw/device-pairings`,
-      { params }
+      { params, headers: this.getAuthHeaders() }
     );
   }
 

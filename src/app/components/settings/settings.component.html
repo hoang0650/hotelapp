@@ -561,13 +561,14 @@
           <nz-alert
             nzType="info"
             nzMessage="Chỉ superadmin/admin mới được approve pairing"
-            nzDescription="Khi OpenClaw Control UI yêu cầu ghép đôi thiết bị, hãy tải pending pairing và approve trực tiếp tại đây."
+            nzDescription="Bấm Mở OpenClaw để tự động điền token_gateway và duyệt pairing. Hoặc tải pending pairing để duyệt thủ công."
             style="margin-bottom: 16px;">
           </nz-alert>
 
           <div class="settings-toolbar">
+            <button nz-button nzType="primary" [nzLoading]="openingOpenClaw" (click)="openOpenClawControlUi()">Mở OpenClaw (auto login)</button>
             <button nz-button nzType="default" [nzLoading]="loadingOpenClawPairings" (click)="loadOpenClawDevicePairings()">Tải pending pairing</button>
-            <button nz-button nzType="primary" [nzLoading]="approvingOpenClawPairing" [disabled]="!openClawPendingPairings.length" (click)="approveLatestOpenClawPairing()">Approve mới nhất</button>
+            <button nz-button nzType="default" [nzLoading]="approvingOpenClawPairing" [disabled]="!openClawPendingPairings.length" (click)="approveLatestOpenClawPairing()">Approve mới nhất</button>
           </div>
 
           <nz-table [nzData]="openClawPendingPairings" [nzLoading]="loadingOpenClawPairings" [nzPageSize]="5" *ngIf="openClawPendingPairings.length">

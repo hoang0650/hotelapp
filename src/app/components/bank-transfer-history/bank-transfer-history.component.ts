@@ -10,6 +10,8 @@ import { HotelService } from '../../services/hotel.service';
 import { PaymentSpeakerService } from '../../services/payment-speaker.service';
 import { UserService } from '../../services/user.service';
 import { forkJoin } from 'rxjs';
+import { io, Socket } from 'socket.io-client';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-bank-transfer-history',
@@ -43,6 +45,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   // Auto-refresh interval
   private refreshInterval: any = null;
   private readonly REFRESH_INTERVAL = 30000; // 30 giây
+  private paymentSocket: Socket | null = null;
 
   private isFirstLoadSePay = true;
   private lastPlayedPaymentId: string | null = null;
@@ -70,9 +73,8 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     if (currentUser?._id) {
       this.userId = currentUser._id;
     }
-    if (currentUser?.hotelId) {
-      this.hotelId = currentUser.hotelId;
-    }
+    const resolvedHotelId = this.authService.getHotelId() || currentUser?.hotelId || '';
+    this.hotelId = typeof resolvedHotelId === 'string' ? resolvedHotelId : String((resolvedHotelId as any)?._id || '');
     this.searchForm = this.fb.group({
       startDate: [null],
       endDate: [null],
@@ -90,6 +92,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     }
 
     this.startAutoRefresh();
+    this.startPaymentSocket();
 
     window.addEventListener('hotelPaymentSpeakerChanged', this.paymentSpeakerChangedHandler);
   }
@@ -98,11 +101,12 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Load hotel settings để kiểm tra các phương thức thanh toán được bật
    */
   loadHotelSettings(): void {
-    const hotelId = this.authService.getHotelId();
+    const hotelId = this.authService.getHotelId() || this.hotelId;
     if (!hotelId) {
       // Nếu không có hotelId, vẫn cho phép hiển thị tất cả (fallback)
       return;
     }
+    this.hotelId = String(hotelId);
 
     this.hotelService.getHotelById(hotelId).subscribe({
       next: (hotel: any) => {
@@ -116,12 +120,14 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
         // SePay mặc định bật, có thể kiểm tra thêm nếu cần
         this.enableSePayPayment = true;
         this.refreshPaymentHistory();
+        this.startPaymentSocket();
       },
       error: (error) => {
         console.error('Error loading hotel settings:', error);
         // Fallback: cho phép hiển thị tất cả nếu không load được settings
         this.enableSePayPayment = true;
         this.refreshPaymentHistory();
+        this.startPaymentSocket();
       }
     });
   }
@@ -131,7 +137,75 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
     }
+    this.stopPaymentSocket();
     window.removeEventListener('hotelPaymentSpeakerChanged', this.paymentSpeakerChangedHandler);
+  }
+
+  private startPaymentSocket(): void {
+    const hotelId = String(this.hotelId || this.authService.getHotelId() || '').trim();
+    if (!hotelId || this.paymentSocket) {
+      return;
+    }
+
+    const socketUrl = String(environment.apiUrl || '').replace(/\/$/, '');
+    if (!socketUrl) return;
+
+    this.hotelId = hotelId;
+    this.paymentSocket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      autoConnect: true
+    });
+
+    this.paymentSocket.on('connect', () => {
+      this.paymentSocket?.emit('join_hotel', hotelId);
+    });
+
+    this.paymentSocket.on('payment_received', (payload: any) => {
+      this.handleSocketPaymentReceived(payload);
+    });
+  }
+
+  private stopPaymentSocket(): void {
+    if (!this.paymentSocket) return;
+    try {
+      this.paymentSocket.off('connect');
+      this.paymentSocket.off('payment_received');
+      this.paymentSocket.disconnect();
+    } catch (_e) {}
+    this.paymentSocket = null;
+  }
+
+  private handleSocketPaymentReceived(payload: any): void {
+    const hotelId = String(payload?.hotelId || '').trim();
+    if (!hotelId || hotelId !== String(this.hotelId)) {
+      return;
+    }
+
+    const paymentId = String(payload?.paymentHistoryId || payload?.transactionId || '').trim();
+    const amount = Number(payload?.amount || 0);
+
+    if (paymentId && this.lastPlayedPaymentId === paymentId) {
+      return;
+    }
+
+    if (paymentId) {
+      this.lastPlayedPaymentId = paymentId;
+    }
+
+    this.message.success(
+      amount > 0
+        ? `Thanh toán SePay thành công: ${amount.toLocaleString('vi-VN')} VND`
+        : 'Thanh toán SePay thành công'
+    );
+
+    if (this.enablePaymentSpeaker && amount > 0) {
+      this.paymentSpeakerService.playPaymentSuccess(amount);
+    }
+
+    // Refresh danh sách ngay để thấy giao dịch mới
+    this.loadSePayPayments();
+    this.loadAllPayments();
   }
 
   private loadConfiguredBankAccount(): void {
@@ -161,7 +235,8 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   private handlePaymentSpeakerChanged(event: CustomEvent): void {
     const detail = event?.detail || {};
     const hotelId = String(detail?.hotelId || '').trim();
-    if (!hotelId || !this.hotelId || hotelId !== String(this.hotelId)) {
+    const currentHotelId = String(this.hotelId || this.authService.getHotelId() || '').trim();
+    if (!hotelId || !currentHotelId || hotelId !== currentHotelId) {
       return;
     }
 

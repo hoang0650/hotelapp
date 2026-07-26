@@ -169,7 +169,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   get isLoggedIn(): boolean {
-    return this.userService.isLoggedIn || !!this.currentUser;
+    return !!(this.currentUser && this.authService.getToken()) || this.userService.isLoggedIn;
   }
 
   get displayName(): string {

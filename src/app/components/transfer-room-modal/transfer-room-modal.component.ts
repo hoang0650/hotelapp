@@ -172,7 +172,22 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
         // 2. Tạo checkout event cho phòng nguồn
         // 3. Cập nhật room status (phòng nguồn -> dirty, phòng đích -> occupied)
         setTimeout(() => {
-          this.roomsService.notifyRoomDataUpdated();
+          const sourceId = this.sourceRoom?._id;
+          const targetId = response?.targetRoom?._id || this.transferForm?.get('targetRoomId')?.value;
+          const hotelRaw = this.sourceRoom?.hotelId as any;
+          const hotelId = typeof hotelRaw === 'string'
+            ? hotelRaw
+            : (hotelRaw?._id || this.sessionContext.getSelectedHotelId() || undefined);
+          this.roomsService.notifyRoomDataUpdated({
+            hotelId,
+            roomId: sourceId,
+            relatedRoomId: targetId,
+            reason: 'transfer',
+            refreshRooms: true,
+            refreshHistory: true,
+            force: false,
+            delayMs: 0
+          });
         }, 500);
         
         this.modalRef.close({ success: true, response });

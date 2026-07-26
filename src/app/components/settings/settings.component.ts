@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Router } from '@angular/router';
@@ -21,7 +21,7 @@ import { TranslateService } from '@ngx-translate/core';
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css']
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
   // Tab hiện tại
   activeTab = 0;
   
@@ -109,6 +109,10 @@ export class SettingsComponent implements OnInit {
       this.loadAnnouncements();
       this.loadBusinesses();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.clearOpenClawApprovePoll();
   }
 
   private initEmailProviders(): void {
@@ -1453,8 +1457,10 @@ export class SettingsComponent implements OnInit {
   loadingFacebook = false;
   loadingOpenClawPairings = false;
   approvingOpenClawPairing = false;
+  openingOpenClaw = false;
   openClawPendingPairings: OpenClawDevicePairingItem[] = [];
   openClawPairedDevices: OpenClawDevicePairingItem[] = [];
+  private openClawApprovePollTimer: ReturnType<typeof setInterval> | null = null;
 
   private getTenantIdForAI(): string {
     const u = this.authService.getCurrentUser();
@@ -1493,6 +1499,99 @@ export class SettingsComponent implements OnInit {
     });
   }
 
+  /**
+   * Mở OpenClaw Control UI với token_gateway sẵn + auto-approve pairing (cùng flow AI chatbox).
+   */
+  openOpenClawControlUi(): void {
+    if (!this.isManagementGroup()) {
+      this.message.warning('Chỉ admin hoặc superadmin mới được phép mở OpenClaw.');
+      return;
+    }
+    if (this.openingOpenClaw) {
+      return;
+    }
+    this.openingOpenClaw = true;
+    this.clearOpenClawApprovePoll();
+    const newTab = window.open('about:blank', '_blank');
+
+    this.aiAssistant.getOpenClawDirectUrl().subscribe({
+      next: (res) => {
+        this.openingOpenClaw = false;
+        if (res?.success && res.url) {
+          if (newTab) {
+            newTab.location.href = res.url;
+          } else {
+            window.open(res.url, '_blank');
+          }
+          this.message.info('Đang mở OpenClaw với token gateway... Tự động duyệt kết nối.');
+          this.startOpenClawAutoApprovePolling(20, 1500);
+        } else {
+          if (newTab) {
+            newTab.close();
+          }
+          this.message.error(res?.message || 'Không lấy được URL OpenClaw.');
+        }
+      },
+      error: (error) => {
+        this.openingOpenClaw = false;
+        if (newTab) {
+          newTab.close();
+        }
+        this.message.error(error?.error?.message || error?.error?.detail || 'Lỗi khi lấy URL OpenClaw.');
+      }
+    });
+  }
+
+  private startOpenClawAutoApprovePolling(maxAttempts = 20, intervalMs = 1500): void {
+    this.clearOpenClawApprovePoll();
+    let attempts = 0;
+    this.approvingOpenClawPairing = true;
+
+    const tick = () => {
+      attempts++;
+      this.aiAssistant.approveOpenClawPairing().subscribe({
+        next: (response) => {
+          if (response?.success) {
+            this.message.success(response?.message || 'Đã auto-approve OpenClaw pairing.');
+            this.approvingOpenClawPairing = false;
+            this.clearOpenClawApprovePoll();
+            this.loadOpenClawDevicePairings();
+            return;
+          }
+          if (attempts >= maxAttempts) {
+            this.approvingOpenClawPairing = false;
+            this.clearOpenClawApprovePoll();
+            this.message.info('Chưa có pending pairing. Có thể thiết bị đã được duyệt hoặc chưa kết nối.');
+            this.loadOpenClawDevicePairings();
+          }
+        },
+        error: () => {
+          if (attempts >= maxAttempts) {
+            this.approvingOpenClawPairing = false;
+            this.clearOpenClawApprovePoll();
+          }
+        }
+      });
+    };
+
+    tick();
+    this.openClawApprovePollTimer = setInterval(() => {
+      if (attempts >= maxAttempts) {
+        this.clearOpenClawApprovePoll();
+        this.approvingOpenClawPairing = false;
+        return;
+      }
+      tick();
+    }, intervalMs);
+  }
+
+  private clearOpenClawApprovePoll(): void {
+    if (this.openClawApprovePollTimer) {
+      clearInterval(this.openClawApprovePollTimer);
+      this.openClawApprovePollTimer = null;
+    }
+  }
+
   loadOpenClawDevicePairings(): void {
     if (!this.isManagementGroup()) {
       this.message.warning('Chỉ admin hoặc superadmin mới được phép quản lý OpenClaw pairing.');
@@ -1503,8 +1602,19 @@ export class SettingsComponent implements OnInit {
     this.aiAssistant.getOpenClawPendingPairings().subscribe({
       next: (response) => {
         this.loadingOpenClawPairings = false;
-        this.openClawPendingPairings = Array.isArray((response as any)?.data) ? (response as any).data : [];
-        this.openClawPairedDevices = Array.isArray((response as any)?.data) ? (response as any).data : [];
+        const data = (response as any)?.data;
+        if (Array.isArray(data)) {
+          this.openClawPendingPairings = data;
+          this.openClawPairedDevices = [];
+        } else if (data && typeof data === 'object') {
+          this.openClawPendingPairings = Array.isArray(data.pending) ? data.pending : [];
+          this.openClawPairedDevices = Array.isArray(data.paired)
+            ? data.paired
+            : (Array.isArray(data.devices) ? data.devices : []);
+        } else {
+          this.openClawPendingPairings = [];
+          this.openClawPairedDevices = [];
+        }
         if (!this.openClawPendingPairings.length) {
           this.message.info('Hiện tại không có pending OpenClaw pairing nào.');
         } else {
@@ -1528,7 +1638,11 @@ export class SettingsComponent implements OnInit {
     this.aiAssistant.approveOpenClawPairing(requestId).subscribe({
       next: (response) => {
         this.approvingOpenClawPairing = false;
-        this.message.success(response?.message || 'Đã approve OpenClaw pairing thành công.');
+        if (response?.success) {
+          this.message.success(response?.message || 'Đã approve OpenClaw pairing thành công.');
+        } else {
+          this.message.info(response?.message || 'Chưa có pending pairing để approve.');
+        }
         this.loadOpenClawDevicePairings();
       },
       error: (error) => {

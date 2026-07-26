@@ -14,15 +14,15 @@
         <a class="nav-link" [routerLink]="['/about-us']" aria-current="page" data-bs-toggle="toggle"
           data-bs-target="#navbarNav">{{ 'NAVBAR.ABOUT_US' | translate }}</a>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" *ngIf="!isAdminSubdomain">
         <a class="nav-link" [routerLink]="['/pricing']" aria-current="page" data-bs-toggle="toggle"
           data-bs-target="#navbarNav">{{ 'NAVBAR.PRICING' | translate }}</a>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" *ngIf="!isAdminSubdomain">
         <a class="nav-link" [routerLink]="['/blog']" aria-current="page" data-bs-toggle="toggle"
           data-bs-target="#navbarNav">Blog</a>
       </li>
-      <li class="nav-item" *ngIf="isLoggedIn">
+      <li class="nav-item" *ngIf="isLoggedIn && !isAdminSubdomain">
         <a class="nav-link" [routerLink]="['/admin/room']" aria-current="page" data-bs-toggle="toggle"
           data-bs-target="#navbarNav">{{ 'NAVBAR.ADMIN' | translate }}</a>
       </li>
@@ -32,10 +32,10 @@
     </ul>
     <ul class="navbar-nav mb-2 mb-lg-0 ms-auto justify-content-end" *ngIf="isAuthResolved; else authLoading">
       <!-- Language Switcher -->
-      <li *ngIf="!isLoggedIn" class="nav-item">
+      <li *ngIf="!isLoggedIn && !isAdminSubdomain" class="nav-item">
         <a class="nav-link" [routerLink]="['/signup']" aria-current="page">{{ 'NAVBAR.SIGN_UP' | translate }}</a>
       </li>
-      <li *ngIf="!isLoggedIn" class="nav-item">
+      <li *ngIf="!isLoggedIn && !isAdminSubdomain" class="nav-item">
         <a class="nav-link" [routerLink]="['/login']" aria-current="page">{{ 'NAVBAR.LOG_IN' | translate }}</a>
       </li>
       <li *ngIf="isLoggedIn" class="nav-item dropdown">

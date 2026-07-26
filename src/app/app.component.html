@@ -1,10 +1,10 @@
 <ng-container *ngIf="!isAuthResolvingForAdminRoute(); else authResolvingTemplate">
   <nz-layout class="layout-container" style="min-height: 100vh; display: flex; flex-direction: column;">
-    <app-header></app-header>
+    <app-header *ngIf="!isAdminShellRoute()"></app-header>
     <nz-content style="flex: 1;">
       <router-outlet></router-outlet>
     </nz-content>
-    <app-footer></app-footer>
+    <app-footer *ngIf="!isAdminShellRoute()"></app-footer>
   </nz-layout>
 </ng-container>
 
@@ -19,4 +19,3 @@
 <app-invoice-modal *ngIf="isBrowser"></app-invoice-modal>
   
 <app-ai-chatbox *ngIf="isBrowser && authService.getCurrentUser()"></app-ai-chatbox>
-  

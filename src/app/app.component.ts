@@ -212,4 +212,16 @@ export class AppComponent implements OnInit, OnDestroy {
     const isAdminPath = normalizedPath.startsWith('/admin/');
     return isAdminSubdomain || isAdminPath;
   }
+
+  /** Admin shell đã có sidebar — ẩn header/footer public để tránh hiện Đăng nhập/Bảng giá khi reload. */
+  isAdminShellRoute(): boolean {
+    if (!this.isBrowser) return false;
+    const pathname = this.currentUrl || window.location.pathname || '/';
+    const normalizedPath = pathname.split('?')[0];
+    const hostname = window.location.hostname || '';
+    if (normalizedPath.startsWith('/login') || normalizedPath.startsWith('/signup') || normalizedPath.startsWith('/forgot-password')) {
+      return false;
+    }
+    return hostname.startsWith('admin.') || normalizedPath.startsWith('/admin/');
+  }
 }

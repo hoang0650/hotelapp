@@ -23,7 +23,7 @@ export interface RoomDataUpdateEvent {
   hotelId?: string;
   roomId?: string;
   relatedRoomId?: string;
-  reason?: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'generic';
+  reason?: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'generic';
   refreshRooms?: boolean;
   refreshHistory?: boolean;
   force?: boolean;
@@ -227,15 +227,37 @@ export class RoomsService {
   }
 
   notifyRoomDataUpdated(event: RoomDataUpdateEvent = {}): void {
-    if (event.hotelId) {
-      this.clearCachedRooms(event.hotelId);
-      this.clearCachedRoomHistory(event.hotelId);
-    } else if (event.force) {
-      this.clearCachedRooms();
-      this.clearCachedRoomHistory();
+    const payload: RoomDataUpdateEvent = {
+      ...event,
+      // Mặc định refresh sơ đồ; chỉ full-reload khi force && không có roomId
+      refreshRooms: event.refreshRooms !== false,
+      refreshHistory: !!event.refreshHistory,
+      force: !!event.force,
+    };
+
+    // Chỉ xóa cache toàn khách sạn khi bắt buộc full reload (không có roomId).
+    if (payload.force && !payload.roomId) {
+      if (payload.hotelId) {
+        this.clearCachedRooms(payload.hotelId);
+        this.clearCachedRoomHistory(payload.hotelId);
+      } else {
+        this.clearCachedRooms();
+        this.clearCachedRoomHistory();
+      }
     }
 
-    this.roomDataUpdated$.next(event);
+    this.roomDataUpdated$.next(payload);
+  }
+
+  /** Cập nhật 1 phòng trong cache (tránh clear toàn bộ hotel). */
+  patchCachedRoom(hotelId: string, room: Room): void {
+    if (!hotelId || !room?._id) return;
+    const cached = this.roomsCache.get(hotelId);
+    if (!cached) return;
+    const idx = cached.rooms.findIndex(r => r._id === room._id);
+    if (idx < 0) return;
+    cached.rooms[idx] = { ...cached.rooms[idx], ...room };
+    this.roomsCache.set(hotelId, { rooms: cached.rooms, updatedAt: Date.now() });
   }
 
   // Cập nhật trạng thái phòng
@@ -325,7 +347,7 @@ export class RoomsService {
           reason: 'cleaning',
           refreshRooms: true,
           refreshHistory: true,
-          force: true
+          force: false
         });
       }),
       catchError(this.handleError<any>('cleanRoom'))
