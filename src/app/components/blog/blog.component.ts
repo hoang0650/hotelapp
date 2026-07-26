@@ -485,12 +485,17 @@ export class BlogComponent implements OnInit {
       return urlOrId;
     }
 
-    // 3. Nếu là imageId hoặc path của hệ thống, thêm base URL
+    // 3. Ảnh blog lưu trong hotelapp assets (/assets/blog/...)
+    if (urlOrId.startsWith('/assets/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+
+    // 4. Nếu là imageId hoặc path của hệ thống, thêm base URL
     if (urlOrId.startsWith('/files/')) {
       return `${this.apiBaseUrl}${urlOrId}`;
     }
 
-    // 4. Nếu chỉ là ID, thêm /files/ prefix
+    // 5. Nếu chỉ là ID, thêm /files/ prefix
     return `${this.apiBaseUrl}/files/${urlOrId}`;
   }
 }

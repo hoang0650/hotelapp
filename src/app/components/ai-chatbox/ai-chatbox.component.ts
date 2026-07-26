@@ -127,8 +127,8 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
           this.message.info('Đang mở OpenClaw với token gateway... Tự động duyệt kết nối.');
           // Backend cũng poll approve; chatbox poll sớm để UX nhanh hơn.
           this.approveDelayTimer = setTimeout(() => {
-            this.triggerAutoApproveDevicePairing(20, 1500);
-          }, 1000);
+            this.triggerAutoApproveDevicePairing(30, 1000);
+          }, 800);
         } else {
           if (newTab) newTab.close();
           this.message.error(res?.message || 'Không lấy được đường dẫn OpenClaw Gateway.');

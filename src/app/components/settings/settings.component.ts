@@ -1524,7 +1524,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
             window.open(res.url, '_blank');
           }
           this.message.info('Đang mở OpenClaw với token gateway... Tự động duyệt kết nối.');
-          this.startOpenClawAutoApprovePolling(20, 1500);
+          this.startOpenClawAutoApprovePolling(30, 1000);
         } else {
           if (newTab) {
             newTab.close();

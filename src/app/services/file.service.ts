@@ -119,13 +119,37 @@ async ocrCard(front: File, back: File): Promise<any> {
   }
 
   /**
-   * Upload ảnh lên server
+   * Upload ảnh lên server (MongoDB /files)
    */
   uploadImage(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('image', file);
 
     return this.http.post(`${this.apiUrl}/upload`, formData, {
+      headers: this.getHeaders()
+    });
+  }
+
+  /**
+   * Upload ảnh blog vào hotelapp/src/assets/blog, trả về link /assets/blog/<file>
+   */
+  uploadBlogAsset(file: File): Observable<{
+    success: boolean;
+    message?: string;
+    filename?: string;
+    imageUrl?: string;
+    absoluteUrl?: string;
+  }> {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    return this.http.post<{
+      success: boolean;
+      message?: string;
+      filename?: string;
+      imageUrl?: string;
+      absoluteUrl?: string;
+    }>(`${this.apiUrl}/upload-blog-asset`, formData, {
       headers: this.getHeaders()
     });
   }

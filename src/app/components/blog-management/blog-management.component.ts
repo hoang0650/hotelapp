@@ -53,7 +53,7 @@ export class BlogManagementComponent implements OnInit {
   imageUrl: string | ArrayBuffer | null = '';
   fileList: any[] = [];
   apiBaseUrl = environment.apiUrl;
-  uploadUrl = `${this.apiBaseUrl}/files/upload`;
+  uploadUrl = `${this.apiBaseUrl}/files/upload-blog-asset`;
   pageIndex = 1;
   pageSize = 10;
   total = 0;
@@ -113,10 +113,10 @@ export class BlogManagementComponent implements OnInit {
     };
   }
 
-  addSection(): void {
+  addSection(title = '', content = ''): void {
     const sectionForm = this.fb.group({
-      title: ['', Validators.required],
-      content: ['', Validators.required]
+      title: [title || ''],
+      content: [content || '', Validators.required]
     });
     this.sections.push(sectionForm);
   }
@@ -225,22 +225,16 @@ export class BlogManagementComponent implements OnInit {
     
     // Load sections từ blog hoặc tạo section mặc định từ content
     if (blog.sections && blog.sections.length > 0) {
-      blog.sections.forEach(section => {
-        const sectionForm = this.fb.group({
-          title: [section.title || '', Validators.required],
-          content: [section.content || '', Validators.required]
-        });
-        this.sections.push(sectionForm);
+      blog.sections.forEach((section, index) => {
+        this.addSection(
+          section.title || `Phần ${index + 1}`,
+          section.content || ''
+        );
       });
     } else if (blog.content) {
-      // Nếu không có sections, tạo 1 section từ content cũ
-      const sectionForm = this.fb.group({
-        title: ['', Validators.required],
-        content: [blog.content || '', Validators.required]
-      });
-      this.sections.push(sectionForm);
+      // Blog cũ chỉ có content: không để title rỗng + required (làm nút Cập nhật bị disabled)
+      this.addSection('Nội dung chính', blog.content);
     } else {
-      // Nếu không có gì, thêm 1 section trống
       this.addSection();
     }
     
@@ -254,6 +248,7 @@ export class BlogManagementComponent implements OnInit {
       tags: tagsString,
       category: blog.category || ''
     });
+    this.blogForm.updateValueAndValidity({ emitEvent: false });
     this.isModalVisible = true;
   }
 
@@ -459,12 +454,20 @@ export class BlogManagementComponent implements OnInit {
     }
     
     if (info.file.status === 'done') {
-      // Xử lý khi upload thành công từ backend
+      // Lưu link dạng /assets/blog/<filename> (file nằm trong hotelapp assets)
       if (info.file.response) {
         const response = info.file.response;
-        const imageId = response.imageId;
-        const imageUrl = response.imageUrl || `${this.apiBaseUrl}/files/${imageId}`;
-        
+        const imageUrl =
+          response.imageUrl ||
+          (response.filename ? `/assets/blog/${response.filename}` : '') ||
+          (response.imageId ? `${this.apiBaseUrl}/files/${response.imageId}` : '');
+
+        if (!imageUrl) {
+          this.message.error('Upload thành công nhưng không nhận được link ảnh');
+          this.isLoading = false;
+          return;
+        }
+
         this.imageUrl = imageUrl;
         this.blogForm.patchValue({
           imageUrl: imageUrl,
@@ -500,6 +503,10 @@ export class BlogManagementComponent implements OnInit {
     // Nếu là URL đầy đủ (http/https), trả về nguyên
     if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
       return urlOrId;
+    }
+    // Ảnh blog trong assets (hotelapp + API mirror)
+    if (urlOrId.startsWith('/assets/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
     }
     // Nếu là imageId hoặc path, thêm base URL
     if (urlOrId.startsWith('/files/')) {

@@ -580,10 +580,11 @@ export class AiAssistantService {
     const body = {
       request_id: requestId || null,
       requestId: requestId || null,
-      client_id: 'openclaw-control-ui',
-      clientId: 'openclaw-control-ui',
-      client_mode: 'webchat',
-      clientMode: 'webchat',
+      // Không filter cứng clientId — pending đôi khi thiếu/khác alias
+      client_id: null,
+      clientId: null,
+      client_mode: null,
+      clientMode: null,
       role: 'operator',
       scopes: ['operator.read', 'operator.write', 'operator.admin', 'operator.pairing'],
       tenant_id: effectiveTenantId,

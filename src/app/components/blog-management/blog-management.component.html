@@ -245,7 +245,7 @@
             </nz-form-control>
           </nz-form-item>
 
-          <button type="submit" [disabled]="blogForm.invalid" class="submit-button">
+          <button type="submit" [disabled]="blogForm.invalid || isLoading" class="submit-button">
             {{ (isEditMode ? 'BLOG_MANAGEMENT.UPDATE' : 'BLOG_MANAGEMENT.PUBLISH') | translate }}
           </button>
           <button type="button" (click)="resetForm()" class="reset-button">{{ 'COMMON.CANCEL' | translate }}</button>
