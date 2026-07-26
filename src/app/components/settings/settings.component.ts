@@ -39,6 +39,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // Loading states
   loading = false;
   saving = false;
+  testingPaymentSpeaker = false;
+  paymentSpeakerTestAmount = 100000;
+  paymentSpeakerTestMessage = 'Thanh toán thành công số tiền 100.000 đồng';
   
   // Current user
   currentUser: any = null;
@@ -1128,10 +1131,41 @@ export class SettingsComponent implements OnInit, OnDestroy {
     };
   }
 
+  onPaymentSpeakerTestAmountChange(value: number | string): void {
+    const amount = Math.round(Number(value) || 0);
+    this.paymentSpeakerTestAmount = amount > 0 ? amount : 0;
+    if (this.paymentSpeakerTestAmount > 0) {
+      const formatted = this.paymentSpeakerTestAmount.toLocaleString('vi-VN');
+      this.paymentSpeakerTestMessage = `Thanh toán thành công số tiền ${formatted} đồng`;
+    }
+  }
+
   testPaymentSpeaker(): void {
-    const amount = 100000;
-    this.paymentSpeakerService.playPaymentSuccess(amount);
-    this.message.info('Đang phát thử loa thanh toán...');
+    const message = String(this.paymentSpeakerTestMessage || '').trim();
+    if (!message) {
+      this.message.warning('Vui lòng nhập nội dung thông báo để nghe thử');
+      return;
+    }
+
+    this.testingPaymentSpeaker = true;
+    this.message.loading('Đang gọi SePay → FPT TTS...', { nzDuration: 0 });
+    this.paymentSpeakerService.testSpeakViaFptTts(message).subscribe({
+      next: () => {
+        this.testingPaymentSpeaker = false;
+        this.message.remove();
+        this.message.success('FPT TTS OK — đang phát loa thử');
+      },
+      error: (error) => {
+        this.testingPaymentSpeaker = false;
+        this.message.remove();
+        const detail =
+          error?.error?.detail ||
+          error?.error?.error ||
+          error?.message ||
+          'Không gọi được FPT TTS qua SePay';
+        this.message.error(`Nghe thử thất bại: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
+      }
+    });
   }
 
   saveHotelNotificationSettings(): void {

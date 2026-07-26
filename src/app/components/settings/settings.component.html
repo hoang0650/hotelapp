@@ -700,8 +700,50 @@
                   Khi tiền vào đúng tài khoản đó, màn `/admin/room` và các trang admin sẽ phát loa nếu tính năng này đang bật.
                   Checkbox “Thông báo khi thanh toán” bên dưới chỉ dành cho thông báo hệ thống (email/push), không bật loa.
                 </div>
-                <div style="margin-top: 8px;">
-                  <button nz-button nzType="default" type="button" (click)="testPaymentSpeaker()">Nghe thử loa thanh toán</button>
+
+                <div class="payment-speaker-test" style="margin-top: 16px; padding: 12px; border: 1px dashed var(--border-color, #d9d9d9); border-radius: 8px;">
+                  <div style="font-weight: 600; margin-bottom: 8px;">Nghe thử loa (SePay → FPT TTS)</div>
+                  <div class="settings-hint" style="margin-bottom: 8px;">
+                    Nhập nội dung rồi bấm nghe thử để gọi API `/sepay/fpt-tts` và phát file âm thanh thật từ FPT AI.
+                  </div>
+                  <nz-form-item style="margin-bottom: 8px;">
+                    <nz-form-label>Số tiền mẫu (VND)</nz-form-label>
+                    <nz-form-control>
+                      <input
+                        nz-input
+                        type="number"
+                        min="1000"
+                        step="1000"
+                        [(ngModel)]="paymentSpeakerTestAmount"
+                        [ngModelOptions]="{standalone: true}"
+                        placeholder="100000"
+                        (ngModelChange)="onPaymentSpeakerTestAmountChange($event)"
+                      />
+                    </nz-form-control>
+                  </nz-form-item>
+                  <nz-form-item style="margin-bottom: 8px;">
+                    <nz-form-label>Nội dung thông báo</nz-form-label>
+                    <nz-form-control>
+                      <textarea
+                        nz-input
+                        rows="2"
+                        [(ngModel)]="paymentSpeakerTestMessage"
+                        [ngModelOptions]="{standalone: true}"
+                        placeholder="Thanh toán thành công số tiền 100.000 đồng"
+                        maxlength="200"
+                      ></textarea>
+                    </nz-form-control>
+                  </nz-form-item>
+                  <button
+                    nz-button
+                    nzType="default"
+                    type="button"
+                    [nzLoading]="testingPaymentSpeaker"
+                    [disabled]="testingPaymentSpeaker || !paymentSpeakerTestMessage.trim()"
+                    (click)="testPaymentSpeaker()"
+                  >
+                    Nghe thử qua FPT TTS
+                  </button>
                 </div>
 
                 <div nz-row [nzGutter]="16" style="margin-top: 16px;">

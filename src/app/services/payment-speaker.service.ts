@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { Observable, throwError } from 'rxjs';
+import { switchMap, tap } from 'rxjs/operators';
 import { SePayService } from './sepay.service';
 import { HotelService } from './hotel.service';
 
@@ -88,28 +90,50 @@ export class PaymentSpeakerService {
 
     const formattedAmount = normalizedAmount.toLocaleString('vi-VN');
     const message = `Thanh toán thành công số tiền ${formattedAmount} đồng`;
+    this.speakMessage(message, { allowFallback: true }).subscribe({
+      error: (error) => console.error('[PaymentSpeakerService] Lỗi phát loa thanh toán:', error)
+    });
+  }
 
-    this.sepayService.generatePaymentSound({ message }).subscribe({
-      next: (response: any) => {
+  /**
+   * Test loa qua SePay → FPT TTS (không fallback êm; trả Observable để UI báo kết quả).
+   */
+  testSpeakViaFptTts(message: string): Observable<void> {
+    const text = String(message || '').trim();
+    if (!text) {
+      return throwError(() => new Error('Nội dung thông báo trống'));
+    }
+    return this.speakMessage(text, { allowFallback: false });
+  }
+
+  private speakMessage(
+    message: string,
+    options: { allowFallback: boolean }
+  ): Observable<void> {
+    return this.sepayService.generatePaymentSound({ message }).pipe(
+      switchMap((response: any) => {
         const asyncUrl = response?.async;
         if (!asyncUrl) {
-          this.speakFallback(message);
-          return;
-        }
-
-        this.sepayService.getTtsFile(asyncUrl).subscribe({
-          next: (audioBlob: Blob) => this.playBlob(audioBlob, message),
-          error: (error) => {
-            console.error('[PaymentSpeakerService] Lỗi tải file âm thanh:', error);
+          if (options.allowFallback) {
             this.speakFallback(message);
+            return new Observable<void>((subscriber) => {
+              subscriber.next();
+              subscriber.complete();
+            });
           }
-        });
-      },
-      error: (error) => {
-        console.error('[PaymentSpeakerService] Lỗi tạo giọng đọc:', error);
-        this.speakFallback(message);
-      }
-    });
+          return throwError(() => new Error('API FPT TTS không trả về URL âm thanh (async)'));
+        }
+        return this.sepayService.getTtsFile(asyncUrl).pipe(
+          tap((audioBlob: Blob) => {
+            this.playBlob(audioBlob, options.allowFallback ? message : '');
+          }),
+          switchMap(() => new Observable<void>((subscriber) => {
+            subscriber.next();
+            subscriber.complete();
+          }))
+        );
+      })
+    );
   }
 
   private speakFallback(message: string): void {
@@ -149,7 +173,9 @@ export class PaymentSpeakerService {
     audio.onended = cleanup;
     audio.onerror = () => {
       cleanup();
-      this.speakFallback(fallbackMessage);
+      if (fallbackMessage) {
+        this.speakFallback(fallbackMessage);
+      }
     };
 
     const playPromise = audio.play();
@@ -157,7 +183,9 @@ export class PaymentSpeakerService {
       playPromise.catch((error) => {
         console.error('[PaymentSpeakerService] Trình duyệt chặn autoplay audio:', error);
         cleanup();
-        this.speakFallback(fallbackMessage);
+        if (fallbackMessage) {
+          this.speakFallback(fallbackMessage);
+        }
       });
     }
   }
