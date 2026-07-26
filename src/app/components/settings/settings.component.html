@@ -702,9 +702,9 @@
                 </div>
 
                 <div class="payment-speaker-test" style="margin-top: 16px; padding: 12px; border: 1px dashed var(--border-color, #d9d9d9); border-radius: 8px;">
-                  <div style="font-weight: 600; margin-bottom: 8px;">Nghe thử loa (SePay → FPT TTS)</div>
+                  <div style="font-weight: 600; margin-bottom: 8px;">Nghe thử loa (Edge TTS · ai.phhotel.vn)</div>
                   <div class="settings-hint" style="margin-bottom: 8px;">
-                    Nhập nội dung rồi bấm nghe thử để gọi API `/sepay/fpt-tts` và phát file âm thanh thật từ FPT AI.
+                    Nhập nội dung rồi bấm nghe thử để gọi API <code>GET /tts</code> trên PHGroup-AI (giọng Edge Neural tiếng Việt).
                   </div>
                   <nz-form-item style="margin-bottom: 8px;">
                     <nz-form-label>Số tiền mẫu (VND)</nz-form-label>
@@ -742,7 +742,7 @@
                     [disabled]="testingPaymentSpeaker || !paymentSpeakerTestMessage.trim()"
                     (click)="testPaymentSpeaker()"
                   >
-                    Nghe thử qua FPT TTS
+                    Nghe thử qua Edge TTS
                   </button>
                 </div>
 

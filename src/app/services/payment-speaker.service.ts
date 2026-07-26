@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
-import { switchMap, tap } from 'rxjs/operators';
-import { SePayService } from './sepay.service';
+import { HttpClient } from '@angular/common/http';
+import { Observable, throwError, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { HotelService } from './hotel.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -12,9 +13,10 @@ export class PaymentSpeakerService {
   private enabledByHotelId = new Map<string, boolean>();
   private lastPlayedEventKey: string | null = null;
   private lastPlayedAt = 0;
+  private readonly ttsBaseUrl = String(environment.aiUrl || 'https://ai.phhotel.vn').replace(/\/$/, '');
 
   constructor(
-    private sepayService: SePayService,
+    private http: HttpClient,
     private hotelService: HotelService
   ) {}
 
@@ -46,9 +48,6 @@ export class PaymentSpeakerService {
     });
   }
 
-  /**
-   * Thử phát loa cho payment_received (dedupe audio theo event, không chặn toast UI).
-   */
   tryPlayForPayment(
     payload: any,
     hotelId: string | null | undefined
@@ -95,10 +94,8 @@ export class PaymentSpeakerService {
     });
   }
 
-  /**
-   * Test loa qua SePay → FPT TTS (không fallback êm; trả Observable để UI báo kết quả).
-   */
-  testSpeakViaFptTts(message: string): Observable<void> {
+  /** Test loa qua PHGroup-AI Edge TTS (`/tts`). */
+  testSpeakViaAiTts(message: string): Observable<void> {
     const text = String(message || '').trim();
     if (!text) {
       return throwError(() => new Error('Nội dung thông báo trống'));
@@ -110,28 +107,33 @@ export class PaymentSpeakerService {
     message: string,
     options: { allowFallback: boolean }
   ): Observable<void> {
-    return this.sepayService.generatePaymentSound({ message }).pipe(
-      switchMap((response: any) => {
-        const asyncUrl = response?.async;
-        if (!asyncUrl) {
-          if (options.allowFallback) {
-            this.speakFallback(message);
-            return new Observable<void>((subscriber) => {
-              subscriber.next();
-              subscriber.complete();
-            });
-          }
-          return throwError(() => new Error('API FPT TTS không trả về URL âm thanh (async)'));
+    const ttsUrl =
+      `${this.ttsBaseUrl}/tts` +
+      `?text=${encodeURIComponent(message)}` +
+      `&voice=${encodeURIComponent('vi-VN-HoaiMyNeural')}`;
+
+    return this.http.get(ttsUrl, { responseType: 'blob' }).pipe(
+      map((audioBlob: Blob) => {
+        if (!audioBlob || audioBlob.size === 0) {
+          throw new Error('TTS trả về file rỗng');
         }
-        return this.sepayService.getTtsFile(asyncUrl).pipe(
-          tap((audioBlob: Blob) => {
-            this.playBlob(audioBlob, options.allowFallback ? message : '');
-          }),
-          switchMap(() => new Observable<void>((subscriber) => {
-            subscriber.next();
-            subscriber.complete();
-          }))
-        );
+        if (audioBlob.type && audioBlob.type.includes('application/json')) {
+          throw new Error('TTS API trả về JSON lỗi thay vì audio');
+        }
+        this.playBlob(audioBlob, options.allowFallback ? message : '');
+        return undefined as void;
+      }),
+      catchError((error) => {
+        console.error('[PaymentSpeakerService] Lỗi gọi AI TTS:', error);
+        if (options.allowFallback) {
+          this.speakFallback(message);
+          return of(undefined as void);
+        }
+        const detail =
+          error?.error?.error ||
+          error?.message ||
+          `Không gọi được AI TTS (${this.ttsBaseUrl}/tts)`;
+        return throwError(() => (error?.status ? error : new Error(String(detail))));
       })
     );
   }

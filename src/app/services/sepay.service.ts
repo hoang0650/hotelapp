@@ -199,6 +199,10 @@ export class SePayService {
     });
   }
 
+  /**
+   * @deprecated Dùng trực tiếp environment.aiUrl/tts (Edge TTS).
+   * Giữ lại để tương thích: trả về URL audio Edge TTS qua proxy file.
+   */
   generatePaymentSound(payload: {
     message: string;
     speed?: number | string;
@@ -209,6 +213,7 @@ export class SePayService {
     return this.http.post<any>(`${this.apiUrl}/fpt-tts`, payload);
   }
 
+  /** @deprecated */
   getTtsFile(asyncUrl: string): Observable<Blob> {
     const proxyUrl = `${this.apiUrl}/fpt-tts-file?url=${encodeURIComponent(asyncUrl)}`;
     return this.http.get(proxyUrl, { responseType: 'blob' });

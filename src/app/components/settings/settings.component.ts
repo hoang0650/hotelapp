@@ -1148,21 +1148,21 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     this.testingPaymentSpeaker = true;
-    this.message.loading('Đang gọi SePay → FPT TTS...', { nzDuration: 0 });
-    this.paymentSpeakerService.testSpeakViaFptTts(message).subscribe({
+    this.message.loading('Đang gọi AI TTS (Edge)...', { nzDuration: 0 });
+    this.paymentSpeakerService.testSpeakViaAiTts(message).subscribe({
       next: () => {
         this.testingPaymentSpeaker = false;
         this.message.remove();
-        this.message.success('FPT TTS OK — đang phát loa thử');
+        this.message.success('Edge TTS OK — đang phát loa thử');
       },
       error: (error) => {
         this.testingPaymentSpeaker = false;
         this.message.remove();
         const detail =
-          error?.error?.detail ||
           error?.error?.error ||
+          error?.error?.detail ||
           error?.message ||
-          'Không gọi được FPT TTS qua SePay';
+          'Không gọi được AI TTS (ai.phhotel.vn/tts)';
         this.message.error(`Nghe thử thất bại: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
       }
     });
