@@ -128,16 +128,18 @@
               </span>
             </nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-input-number
-                formControlName="additionalCharges"
-                [nzMin]="0"
-                [nzStep]="10000"
-                [nzFormatter]="formatterVND"
-                [nzParser]="parserVND"
-                (nzFocus)="selectAllMoneyInput($event)"
-                [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_ADDITIONAL_CHARGES' | translate"
-                style="width: 100%">
-              </nz-input-number>
+              <nz-input-group nzAddOnAfter="đ">
+                <nz-input-number
+                  formControlName="additionalCharges"
+                  [nzMin]="0"
+                  [nzStep]="10000"
+                  [nzFormatter]="formatterVND"
+                  [nzParser]="parserVND"
+                  (nzFocus)="selectAllMoneyInput($event)"
+                  [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_ADDITIONAL_CHARGES' | translate"
+                  style="width: 100%">
+                </nz-input-number>
+              </nz-input-group>
             </nz-form-control>
           </nz-form-item>
         </div>
@@ -151,16 +153,18 @@
               </span>
             </nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-input-number
-                formControlName="discount"
-                [nzMin]="0"
-                [nzStep]="10000"
-                [nzFormatter]="formatterVND"
-                [nzParser]="parserVND"
-                (nzFocus)="selectAllMoneyInput($event)"
-                [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_DISCOUNT' | translate"
-                style="width: 100%">
-              </nz-input-number>
+              <nz-input-group nzAddOnAfter="đ">
+                <nz-input-number
+                  formControlName="discount"
+                  [nzMin]="0"
+                  [nzStep]="10000"
+                  [nzFormatter]="formatterVND"
+                  [nzParser]="parserVND"
+                  (nzFocus)="selectAllMoneyInput($event)"
+                  [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_DISCOUNT' | translate"
+                  style="width: 100%">
+                </nz-input-number>
+              </nz-input-group>
             </nz-form-control>
           </nz-form-item>
         </div>
@@ -182,16 +186,18 @@
           <nz-form-item>
             <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-input-number 
-                formControlName="advancePayment" 
-                [nzMin]="0" 
-                [nzStep]="10000" 
-                [nzFormatter]="formatterVND" 
-                [nzParser]="parserVND"
-                (nzFocus)="selectAllMoneyInput($event)"
-                [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT_PLACEHOLDER' | translate"
-                style="width: 100%">
-              </nz-input-number>
+              <nz-input-group nzAddOnAfter="đ">
+                <nz-input-number 
+                  formControlName="advancePayment" 
+                  [nzMin]="0" 
+                  [nzStep]="10000" 
+                  [nzFormatter]="formatterVND" 
+                  [nzParser]="parserVND"
+                  (nzFocus)="selectAllMoneyInput($event)"
+                  [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT_PLACEHOLDER' | translate"
+                  style="width: 100%">
+                </nz-input-number>
+              </nz-input-group>
             </nz-form-control>
           </nz-form-item>
         </div>
@@ -215,8 +221,20 @@
           <nz-form-control [nzSpan]="16" style="text-align: left;">
             <div nz-row [nzGutter]="8" class="service-selection-row">
               <div nz-col [nzSpan]="14">
-                <nz-select formControlName="serviceId" style="width: 100%; text-align: left;" class="service-select">
-                  <nz-option *ngFor="let service of services; trackBy: trackByServiceId" [nzValue]="service.id" [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'"></nz-option>
+                <nz-select
+                  formControlName="serviceIds"
+                  nzMode="multiple"
+                  nzShowSearch
+                  nzAllowClear
+                  [nzMaxTagCount]="2"
+                  [nzPlaceHolder]="'ROOM_CONTENT_MODAL.SERVICE' | translate"
+                  style="width: 100%; text-align: left;"
+                  class="service-select">
+                  <nz-option
+                    *ngFor="let service of services; trackBy: trackByServiceId"
+                    [nzValue]="service.id"
+                    [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'">
+                  </nz-option>
                 </nz-select>
               </div>
               <div nz-col [nzSpan]="6">
@@ -442,8 +460,19 @@
         <nz-form-control [nzSpan]="16">
           <div nz-row [nzGutter]="8">
             <div nz-col [nzSpan]="14">
-              <nz-select formControlName="serviceId" style="width: 100%">
-                <nz-option *ngFor="let service of services" [nzValue]="service.id" [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'"></nz-option>
+              <nz-select
+                formControlName="serviceIds"
+                nzMode="multiple"
+                nzShowSearch
+                nzAllowClear
+                [nzMaxTagCount]="2"
+                [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ADD_SERVICE' | translate"
+                style="width: 100%">
+                <nz-option
+                  *ngFor="let service of services; trackBy: trackByServiceId"
+                  [nzValue]="service.id"
+                  [nzLabel]="service.name + ' - ' + (service.price | number) + ' đ'">
+                </nz-option>
               </nz-select>
             </div>
             <div nz-col [nzSpan]="6">
@@ -628,15 +657,18 @@
               </span>
             </nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-input-number
-                formControlName="additionalCharges"
-                [nzMin]="0"
-                [nzStep]="10000"
-                [nzFormatter]="formatterVND"
-                [nzParser]="parserVND"
-                [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_ADDITIONAL_CHARGES' | translate"
-                style="width: 100%">
-              </nz-input-number>
+              <nz-input-group nzAddOnAfter="đ">
+                <nz-input-number
+                  formControlName="additionalCharges"
+                  [nzMin]="0"
+                  [nzStep]="10000"
+                  [nzFormatter]="formatterVND"
+                  [nzParser]="parserVND"
+                  (nzFocus)="selectAllMoneyInput($event)"
+                  [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_ADDITIONAL_CHARGES' | translate"
+                  style="width: 100%">
+                </nz-input-number>
+              </nz-input-group>
               <div *ngIf="initialCharges > 0" style="font-size: 12px; color: #999; margin-top: 4px;">
                 {{ 'ROOM_CONTENT_MODAL.EXISTING_CHARGES_FROM_CHECKIN' | translate }}: {{ initialCharges | number }} đ
               </div>
@@ -653,15 +685,18 @@
               </span>
             </nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-input-number
-                formControlName="discount"
-                [nzMin]="0"
-                [nzStep]="10000"
-                [nzFormatter]="formatterVND"
-                [nzParser]="parserVND"
-                [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_DISCOUNT' | translate"
-                style="width: 100%">
-              </nz-input-number>
+              <nz-input-group nzAddOnAfter="đ">
+                <nz-input-number
+                  formControlName="discount"
+                  [nzMin]="0"
+                  [nzStep]="10000"
+                  [nzFormatter]="formatterVND"
+                  [nzParser]="parserVND"
+                  (nzFocus)="selectAllMoneyInput($event)"
+                  [nzPlaceHolder]="'ROOM_CONTENT_MODAL.ENTER_DISCOUNT' | translate"
+                  style="width: 100%">
+                </nz-input-number>
+              </nz-input-group>
               <div *ngIf="initialDiscount > 0" style="font-size: 12px; color: #999; margin-top: 4px;">
                 {{ 'ROOM_CONTENT_MODAL.EXISTING_DISCOUNT_FROM_CHECKIN' | translate }}: {{ initialDiscount | number }} đ
               </div>
@@ -686,14 +721,17 @@
           <nz-form-item>
             <nz-form-label [nzSpan]="8">{{ 'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT' | translate }}</nz-form-label>
             <nz-form-control [nzSpan]="16">
-              <nz-input-number 
-                formControlName="advancePayment" 
-                [nzMin]="0" 
-                [nzStep]="10000" 
-                [nzFormatter]="formatterVND" 
-                [nzParser]="parserVND"
-                style="width: 100%">
-              </nz-input-number>
+              <nz-input-group nzAddOnAfter="đ">
+                <nz-input-number 
+                  formControlName="advancePayment" 
+                  [nzMin]="0" 
+                  [nzStep]="10000" 
+                  [nzFormatter]="formatterVND" 
+                  [nzParser]="parserVND"
+                  (nzFocus)="selectAllMoneyInput($event)"
+                  style="width: 100%">
+                </nz-input-number>
+              </nz-input-group>
             </nz-form-control>
           </nz-form-item>
         </div>
@@ -740,9 +778,9 @@
              <strong style="font-size: 18px;">{{ 'ROOM_CONTENT_MODAL.GRAND_TOTAL' | translate }}:</strong>
              <strong style="font-size: 18px; color: #1890ff; text-align: right;">{{ totalPrice | number }} đ</strong>
            </div>
-           <div *ngIf="advancePayment > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+           <div *ngIf="(checkOutForm.get('advancePayment')?.value || advancePayment) > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
              <span style="font-size: 16px;">{{ 'ROOM_CONTENT_MODAL.ADVANCE_PAYMENT_LABEL' | translate }}:</span>
-             <span style="font-size: 16px; color: #52c41a; text-align: right;">- {{ advancePayment | number }} đ</span>
+             <span style="font-size: 16px; color: #52c41a; text-align: right;">- {{ (checkOutForm.get('advancePayment')?.value || advancePayment) | number }} đ</span>
            </div>
            <div style="display: flex; justify-content: space-between; align-items: center;">
              <strong style="font-size: 20px;">{{ 'ROOM_CONTENT_MODAL.REMAINING_TO_PAY' | translate }}:</strong>

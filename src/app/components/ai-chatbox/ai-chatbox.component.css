@@ -184,7 +184,9 @@
   min-width: 40px;
   word-break: break-word;
   position: relative;
-  font-size: 17px;
+  font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
   transition: background 0.2s;
 }
 .bubble.user {
@@ -320,11 +322,20 @@
 }
 
 /* Markdown Styles */
+::ng-deep .markdown-content {
+  font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: inherit;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
 ::ng-deep .markdown-content code {
   background-color: rgba(0, 0, 0, 0.06);
   padding: 2px 4px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 ::ng-deep .bubble.user .markdown-content code {

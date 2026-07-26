@@ -26,7 +26,7 @@ import { environment } from '../../../environments/environment';
 import { debounceTime, distinctUntilChanged, takeUntil, take } from 'rxjs/operators'
 import { Subject } from 'rxjs';
 
-// Interface cho dá»¯ liá»‡u cáº­p nháº­t phÃ²ng
+// Interface cho dữ liệu cập nhật phòng
 interface RoomUpdate {
   services?: OrderedService[];
   [key: string]: any;
@@ -46,7 +46,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   checkInForm!: FormGroup;
   servicesForm!: FormGroup;
   checkOutForm!: FormGroup;
-  services: any[] = []; // Load tá»« API
+  services: any[] = []; // Load từ API
   selectedServices: OrderedService[] = [];
   paymentMethods = [
     { value: 'cash', label: 'ROOM_CONTENT_MODAL.CASH' },
@@ -76,15 +76,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
   isLoading = false;
   isSaving = false;
-  totalPrice = 0; // Tá»•ng cá»™ng = tiá»n phÃ²ng + phá»¥ thu + tiá»n dá»‹ch vá»¥
-  remainingAmount = 0; // CÃ²n láº¡i pháº£i thanh toÃ¡n = tá»•ng cá»™ng - Ä‘áº·t trÆ°á»›c - khuyáº¿n mÃ£i (cho phÃ©p sá»‘ Ã¢m)
-  private _roomPriceTotal = 0; // Tá»•ng tiá»n phÃ²ng (private Ä‘á»ƒ trÃ¡nh conflict vá»›i getter)
-  private _servicesPriceTotal = 0; // Tá»•ng tiá»n dá»‹ch vá»¥ (private Ä‘á»ƒ trÃ¡nh conflict vá»›i getter)
-  private _hasRoomPriceFromAPI = false; // Flag Ä‘á»ƒ biáº¿t Ä‘Ã£ cÃ³ giÃ¡ trá»‹ tá»« API chÆ°a
-  roomPriceDetails: any = null; // Chi tiáº¿t tÃ­nh tiá»n phÃ²ng (bao gá»“m phá»¥ thu sá»›m/trá»…)
+  totalPrice = 0; // Tổng cộng = tiền phòng + phụ thu + tiền dịch vụ
+  remainingAmount = 0; // Còn lại phải thanh toán = tổng cộng - đặt trước - khuyến mãi (cho phép số âm)
+  private _roomPriceTotal = 0; // Tổng tiền phòng (private để tránh conflict với getter)
+  private _servicesPriceTotal = 0; // Tổng tiền dịch vụ (private để tránh conflict với getter)
+  private _hasRoomPriceFromAPI = false; // Flag để biết đã có giá trị từ API chưa
+  roomPriceDetails: any = null; // Chi tiết tính tiền phòng (bao gồm phụ thu sớm/trễ)
   advancePayment = 0;
   skipValidation = false;
-  modalType: string = 'info'; // Loáº¡i modal: checkin, checkout, cleaning
+  modalType: string = 'info'; // Loại modal: checkin, checkout, cleaning
   private sessionSubscription?: Subscription;
   private saveTotalPriceTimer?: ReturnType<typeof setTimeout>;
   private roomReloadTimer?: ReturnType<typeof setTimeout>;
@@ -105,17 +105,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   
   // SePay payment
   showSePayModal = false;
-  // Bá» sepayPaymentCode - khÃ´ng cáº§n mÃ£ thanh toÃ¡n ná»¯a
+  // Bỏ sepayPaymentCode - không cần mã thanh toán nữa
   sepayAmount = 0;
   sepayQrUrl = '';
   sepayBeneficiaryName = '';
   sepayBankName = '';
   sepayAccountNumber = '';
-  sepayPaymentHistoryId: string = ''; // ID cá»§a payment history Ä‘á»ƒ kiá»ƒm tra tráº¡ng thÃ¡i
+  sepayPaymentHistoryId: string = ''; // ID của payment history để kiểm tra trạng thái
   sepayInitializing = false;
   currentUser: any = null;
-  hotelBankAccount: any = null; // ThÃ´ng tin ngÃ¢n hÃ ng cá»§a hotel
-  private paymentStatusCheckInterval: any = null; // Interval Ä‘á»ƒ kiá»ƒm tra tráº¡ng thÃ¡i thanh toÃ¡n
+  hotelBankAccount: any = null; // Thông tin ngân hàng của hotel
+  private paymentStatusCheckInterval: any = null; // Interval để kiểm tra trạng thái thanh toán
   private paymentStatusCheckInFlight = false;
   private paymentSuccessHandled = false;
   private activeSePayTransactionToken = '';
@@ -123,13 +123,53 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   private pendingCheckoutData: any = null;
   private pendingInvoiceData: any = null;
   
-  // Äá»‹nh dáº¡ng hiá»ƒn thá»‹ tiá»n Viá»‡t Nam
-  formatterVND = (value: number): string => `${value} Ä‘`;
+  // Định dạng hiển thị tiền Việt Nam (KHÔNG gắn "đ" vào formatter —
+  // suffix trong formatter khiến nz-input-number mất chữ số khi đang gõ).
+  formatterVND = (value: number | string): string => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '';
+    return new Intl.NumberFormat('vi-VN').format(num);
+  };
+
   parserVND = (value: string): string => {
     if (value === null || value === undefined) return '';
-    const cleaned = String(value).replace(/[^\d]/g, '');
-    return cleaned;
+    let raw = String(value).trim().toLowerCase().replace(/\s+/g, '');
+    raw = raw.replace(/đ|vnd|vnđ/gi, '');
+
+    let multiplier = 1;
+    if (/(k|nghìn|ngàn)$/i.test(raw)) {
+      multiplier = 1000;
+      raw = raw.replace(/(k|nghìn|ngàn)$/i, '');
+    } else if (/(tr|m|triệu)$/i.test(raw)) {
+      multiplier = 1000000;
+      raw = raw.replace(/(tr|m|triệu)$/i, '');
+    }
+
+    // vi-VN: dấu chấm = nghìn, dấu phẩy = thập phân
+    if (raw.includes(',') && raw.includes('.')) {
+      raw = raw.replace(/\./g, '').replace(/,/g, '.');
+    } else if (raw.includes(',')) {
+      raw = raw.replace(/,/g, '.');
+    } else if (/^\d{1,3}(\.\d{3})+$/.test(raw)) {
+      raw = raw.replace(/\./g, '');
+    }
+
+    const num = Number.parseFloat(raw.replace(/[^\d.]/g, ''));
+    if (!Number.isFinite(num)) return '';
+    return String(Math.round(num * multiplier));
   };
+
+  /** Đồng bộ advancePayment + tổng tiền ngay khi đổi số (không chờ blur). */
+  onMoneyFieldChange(): void {
+    const fromCheckOut = Number(this.checkOutForm?.get('advancePayment')?.value);
+    const fromCheckIn = Number(this.checkInForm?.get('advancePayment')?.value);
+    if (Number.isFinite(fromCheckOut)) {
+      this.advancePayment = fromCheckOut;
+    } else if (Number.isFinite(fromCheckIn)) {
+      this.advancePayment = fromCheckIn;
+    }
+    this.calculateTotalPrice();
+  }
   
   selectAllMoneyInput(event: FocusEvent): void {
     const target = event?.target as HTMLInputElement | null;
@@ -141,12 +181,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }, 0);
   }
   
-  // Láº¥y thá»i gian hiá»‡n táº¡i theo UTC+7 (mÃºi giá» Viá»‡t Nam)
+  // Lấy thời gian hiện tại theo UTC+7 (múi giờ Việt Nam)
   getCurrentTime(): Date {
     return this.currentTime;
   }
   
-  // Láº¥y thÃ´ng tin chuyá»ƒn phÃ²ng tá»« Booking
+  // Lấy thông tin chuyển phòng từ Booking
   getBookingTransferInfo(): {
     fromRoomId?: string;
     fromRoomNumber?: string;
@@ -172,19 +212,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     const booking = this.roomData.currentBooking as any;
     if (booking.transferredFrom || booking.transferredTo) {
-      // Láº¥y sá»‘ phÃ²ng tá»« transferHistory náº¿u cÃ³
+      // Lấy số phòng từ transferHistory nếu có
       let fromRoomNumber = 'N/A';
       let toRoomNumber = 'N/A';
       
       if (booking.transferHistory && Array.isArray(booking.transferHistory) && booking.transferHistory.length > 0) {
-        // Láº¥y tá»« láº§n chuyá»ƒn Ä‘áº§u tiÃªn trong history
+        // Lấy từ lần chuyển đầu tiên trong history
         const firstTransfer = booking.transferHistory[0];
         fromRoomNumber = firstTransfer.fromRoomNumber || 'N/A';
-        // Láº¥y tá»« láº§n chuyá»ƒn cuá»‘i cÃ¹ng
+        // Lấy từ lần chuyển cuối cùng
         const lastTransfer = booking.transferHistory[booking.transferHistory.length - 1];
         toRoomNumber = lastTransfer.toRoomNumber || this.roomData.roomNumber || 'N/A';
       } else {
-        // Fallback: láº¥y tá»« roomData náº¿u cÃ³
+        // Fallback: lấy từ roomData nếu có
         fromRoomNumber = booking.transferredFrom ? String(booking.transferredFrom) : this.translate.instant('COMMON.N_A');
         toRoomNumber = this.roomData.roomNumber || this.translate.instant('COMMON.N_A');
       }
@@ -203,7 +243,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return null;
   }
   
-  // Táº¡o mÃ´ táº£ thÃ´ng tin chuyá»ƒn phÃ²ng
+  // Tạo mô tả thông tin chuyển phòng
   getTransferInfoDescription(): string {
     return this.transferInfoDescription;
   }
@@ -265,8 +305,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.transferInfoDescription = this.buildTransferInfoDescription(this.bookingTransferInfo);
   }
   
-  // Helper function Ä‘á»ƒ lá»c cÃ¡c event check-in CHÆ¯A CHECKOUT
-  // LÆ°u Ã½: Náº¿u backend Ä‘Ã£ filter báº±ng excludeCheckedOut=true, hÃ m nÃ y váº«n hoáº¡t Ä‘á»™ng nhÆ° má»™t lá»›p báº£o vá»‡ bá»• sung
+  // Helper function để lọc các event check-in CHƯA CHECKOUT
+  // Lưu ý: Nếu backend đã filter bằng excludeCheckedOut=true, hàm này vẫn hoạt động như một lớp bảo vệ bổ sung
   private getEventCheckinTime(event: any): Date | null {
     if (!event) return null;
     const rawTime = event.checkinTime || event.checkInTime || event.checkInDate || event.checkinDate;
@@ -283,39 +323,39 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       .filter((event: any) => {
         if (event.type !== 'checkin') return false;
         
-        // Kiá»ƒm tra xem cÃ³ event checkout nÃ o tÆ°Æ¡ng á»©ng vá»›i checkin nÃ y khÃ´ng
-        // So sÃ¡nh chÃ­nh xÃ¡c báº±ng checkinTime (cÃ³ thá»ƒ lÃ  Date object hoáº·c ISO string)
+        // Kiểm tra xem có event checkout nào tương ứng với checkin này không
+        // So sánh chính xác bằng checkinTime (có thể là Date object hoặc ISO string)
         const hasCheckout = events.some((e: any) => {
           if (e.type !== 'checkout') return false;
           
-          // So sÃ¡nh checkinTime: chuyá»ƒn vá» Date object vÃ  so sÃ¡nh timestamp
+          // So sánh checkinTime: chuyển về Date object và so sánh timestamp
           const checkoutCheckinTime = this.getEventCheckinTime(e)?.getTime() || null;
           const eventCheckinTime = this.getEventCheckinTime(event)?.getTime() || null;
           
-          // Náº¿u cÃ³ checkinTime vÃ  khá»›p chÃ­nh xÃ¡c (trong vÃ²ng 1 giÃ¢y Ä‘á»ƒ trÃ¡nh lá»—i lÃ m trÃ²n)
+          // Nếu có checkinTime và khớp chính xác (trong vòng 1 giây để tránh lỗi làm tròn)
           if (checkoutCheckinTime && eventCheckinTime) {
-            return Math.abs(checkoutCheckinTime - eventCheckinTime) < 1000; // Trong vÃ²ng 1 giÃ¢y
+            return Math.abs(checkoutCheckinTime - eventCheckinTime) < 1000; // Trong vòng 1 giây
           }
           
           return false;
         });
         
-        // Chá»‰ láº¥y event check-in chÆ°a cÃ³ checkout
+        // Chỉ lấy event check-in chưa có checkout
         return !hasCheckout;
       })
       .sort((a: any, b: any) => {
         const timeA = this.getEventCheckinTime(a)?.getTime() || 0;
         const timeB = this.getEventCheckinTime(b)?.getTime() || 0;
-        return timeB - timeA; // Sáº¯p xáº¿p giáº£m dáº§n (má»›i nháº¥t trÆ°á»›c)
+        return timeB - timeA; // Sắp xếp giảm dần (mới nhất trước)
       });
   }
 
-  // Helper function Ä‘á»ƒ táº¡o Date theo timezone Ä‘Æ°á»£c chá»‰ Ä‘á»‹nh
-  // timezone: 'UTC+7', 'UTC+8', etc. (máº·c Ä‘á»‹nh UTC+7)
+  // Helper function để tạo Date theo timezone được chỉ định
+  // timezone: 'UTC+7', 'UTC+8', etc. (mặc định UTC+7)
   getTimeByTimezone(timezone: string = 'UTC+7'): Date {
     const now = new Date();
     
-    // Parse timezone offset (vÃ­ dá»¥: 'UTC+7' -> 7, 'UTC-5' -> -5)
+    // Parse timezone offset (ví dụ: 'UTC+7' -> 7, 'UTC-5' -> -5)
     const timezoneMatch = timezone.match(/UTC([+-])(\d+)/);
     if (timezoneMatch) {
       const sign = timezoneMatch[1] === '+' ? 1 : -1;
@@ -325,25 +365,25 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return new Date(now.getTime() + localOffset + offset);
     }
     
-    // Fallback: tráº£ vá» thá»i gian hiá»‡n táº¡i
+    // Fallback: trả về thời gian hiện tại
     return new Date(now);
   }
   
-  // Helper function Ä‘á»ƒ táº¡o Date theo UTC+7 (mÃºi giá» Viá»‡t Nam) - giá»¯ láº¡i Ä‘á»ƒ backward compatibility
+  // Helper function để tạo Date theo UTC+7 (múi giờ Việt Nam) - giữ lại để backward compatibility
   getUTCTimePlus7(): Date {
-    // Láº¥y timezone tá»« roomData náº¿u cÃ³
+    // Lấy timezone từ roomData nếu có
     const timezone = (this.roomData as any)?.priceSettings?.timezone || 'UTC+7';
     return this.getTimeByTimezone(timezone);
   }
 
-  // ThÃªm thuá»™c tÃ­nh businessInfo
+  // Thêm thuộc tính businessInfo
   businessInfo: any = {};
-  businessOwner: any = null; // ThÃ´ng tin chá»§ doanh nghiá»‡p (business owner)
+  businessOwner: any = null; // Thông tin chủ doanh nghiệp (business owner)
 
   initialCharges: number = 0;
   initialDiscount: number = 0;
   initialNotes: string = '';
-  initialSelectedServices: OrderedService[] = []; // LÆ°u trá»¯ dá»‹ch vá»¥ ban Ä‘áº§u
+  initialSelectedServices: OrderedService[] = []; // Lưu trữ dịch vụ ban đầu
 
   constructor(
     private modalRef: NzModalRef<RoomContentModalComponent>,
@@ -373,30 +413,30 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.skipValidation = data.skipValidation || false;
     this.modalType = data.modalType || 'info';
     
-    // Log Ä‘á»ƒ kiá»ƒm tra modalType
+    // Log để kiểm tra modalType
     console.log('Modal type set to:', this.modalType);
     
-    // Form cho check-in vá»›i validators tÃ¹y chá»n
+    // Form cho check-in với validators tùy chọn
     this.checkInForm = this.fb.group({
       guestInfo: this.fb.group({
-        name: ['KhÃ¡ch láº»'], // Máº·c Ä‘á»‹nh lÃ  "KhÃ¡ch láº»", khÃ´ng báº¯t buá»™c
+        name: ['Khách lẻ'], // Mặc định là "Khách lẻ", không bắt buộc
         idNumber: [''],
-        tax_code: [''], // MÃ£ sá»‘ thuáº¿ (cho cÃ´ng ty)
+        tax_code: [''], // Mã số thuế (cho công ty)
         phone: ['', [Validators.pattern('^[0-9]{10}$')]],
         email: ['', [Validators.email]],
         address: [''],
-        guestSource: ['walkin'] // Máº·c Ä‘á»‹nh lÃ  walkin
+        guestSource: ['walkin'] // Mặc định là walkin
       }),
       paymentMethod: ['cash', this.skipValidation ? [] : [Validators.required]],
       rateType: ['hourly', this.skipValidation ? [] : [Validators.required]],
       advancePayment: [0, [Validators.min(0)]],
-      advancePaymentMethod: ['cash', this.skipValidation ? [] : [Validators.required]], // HÃ¬nh thá»©c thanh toÃ¡n cho tráº£ trÆ°á»›c
+      advancePaymentMethod: ['cash', this.skipValidation ? [] : [Validators.required]], // Hình thức thanh toán cho trả trước
       additionalCharges: [0, [Validators.min(0)]],
       discount: [0, [Validators.min(0)]],
       notes: ['']
     });
     
-    // ThÃªm listener Ä‘á»ƒ debug guestSource changes
+    // Thêm listener để debug guestSource changes
     const checkInGuestInfoGroup = this.checkInForm.get('guestInfo') as FormGroup;
     if (checkInGuestInfoGroup) {
       checkInGuestInfoGroup.get('guestSource')?.valueChanges.subscribe(value => {
@@ -404,9 +444,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       });
     }
     
-    // Form cho dá»‹ch vá»¥
+    // Form cho dịch vụ (cho phép chọn nhiều)
     this.servicesForm = this.fb.group({
-      serviceId: [''],
+      serviceIds: [[] as string[]],
       quantity: [1, [Validators.min(1), Validators.required]]
     });
     
@@ -422,7 +462,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.calculateTotalPrice();
     }
 
-    // Load phá»¥ trá»£ sau first paint â€” khÃ´ng cháº·n má»Ÿ modal
+    // Load phụ trợ sau first paint — không chặn mở modal
     const deferSecondary = () => {
       this.loadServicesFromAPI();
       this.loadBusinessInfo();
@@ -513,7 +553,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Load thÃ´ng tin user hiá»‡n táº¡i Ä‘á»ƒ láº¥y QR code tá»« profile
+   * Load thông tin user hiện tại để lấy QR code từ profile
    */
   loadCurrentUser(): void {
     this.currentUser = this.authService.getCurrentUser();
@@ -532,7 +572,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
   }
   
-  // Load dá»‹ch vá»¥ tá»« API
+  // Load dịch vụ từ API
   loadServicesFromAPI(forceReload: boolean = false): void {
     const hotelId = this.getResolvedHotelId();
     if (!hotelId) {
@@ -570,7 +610,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.loadServicesFallback(hotelId);
       },
       error: (error) => {
-        console.error('Lá»—i khi táº£i danh sÃ¡ch dá»‹ch vá»¥:', error);
+        console.error('Lỗi khi tải danh sách dịch vụ:', error);
         this.loadServicesFallback(hotelId);
       }
     });
@@ -595,7 +635,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.services = [];
         this.servicesLoadedHotelId = hotelId;
         this.cdr.markForCheck();
-        console.error('Fallback cÅ©ng lá»—i:', err);
+        console.error('Fallback cũng lỗi:', err);
       }
     });
   }
@@ -617,7 +657,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.roomReloadTimer = undefined;
     }
     
-    // Dá»«ng polling khi component bá»‹ há»§y
+    // Dừng polling khi component bị hủy
     this.resetSePayTransactionState();
   }
 
@@ -680,7 +720,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return item?.serviceId || item?.serviceName || `selected-service-${index}`;
   }
   
-  // Cáº­p nháº­t UI tá»« dá»¯ liá»‡u phiÃªn
+  // Cập nhật UI từ dữ liệu phiên
   private updateUIFromSession(session: RoomSession): void {
     this.initialCharges = session.additionalCharges || 0;
     this.initialDiscount = session.discount || 0;
@@ -689,13 +729,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.selectedServices = session.selectedServices ? [...session.selectedServices] : [];
     this.advancePayment = session.advancePayment || 0;
 
-    // Äáº£m báº£o guestInfo cÃ³ name vÃ  guestSource
-    const guestInfo = session.guestInfo || { name: 'KhÃ¡ch láº»' };
-    if (!guestInfo.name || guestInfo.name === 'KhÃ¡ch láº»') {
-      // Thá»­ láº¥y tá»« roomData.currentBooking náº¿u cÃ³
+    // Đảm bảo guestInfo có name và guestSource
+    const guestInfo = session.guestInfo || { name: 'Khách lẻ' };
+    if (!guestInfo.name || guestInfo.name === 'Khách lẻ') {
+      // Thử lấy từ roomData.currentBooking nếu có
       if (this.roomData?.currentBooking && typeof this.roomData.currentBooking === 'object') {
         const currentBooking = this.roomData.currentBooking;
-        if (currentBooking.guestInfo?.name && currentBooking.guestInfo.name !== 'KhÃ¡ch láº»') {
+        if (currentBooking.guestInfo?.name && currentBooking.guestInfo.name !== 'Khách lẻ') {
           guestInfo.name = currentBooking.guestInfo.name;
           guestInfo.phone = currentBooking.guestInfo.phone || guestInfo.phone;
           guestInfo.email = currentBooking.guestInfo.email || guestInfo.email;
@@ -704,7 +744,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Äáº£m báº£o cÃ³ guestSource, náº¿u khÃ´ng thÃ¬ thá»­ láº¥y tá»« roomData.events (chá»‰ láº¥y event chÆ°a checkout)
+    // Đảm bảo có guestSource, nếu không thì thử lấy từ roomData.events (chỉ lấy event chưa checkout)
     if (!guestInfo.guestSource && this.roomData?.events && this.roomData.events.length > 0) {
       const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
       if (checkinEvents.length > 0 && checkinEvents[0].guestInfo?.guestSource) {
@@ -712,17 +752,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Äáº£m báº£o cÃ³ guestSource, máº·c Ä‘á»‹nh lÃ  'walkin'
+    // Đảm bảo có guestSource, mặc định là 'walkin'
     if (!guestInfo.guestSource) {
       guestInfo.guestSource = 'walkin';
     }
 
-    // Patch trá»±c tiáº¿p vÃ o nested form group Ä‘á»ƒ Ä‘áº£m báº£o guestSource Ä‘Æ°á»£c patch Ä‘Ãºng
+    // Patch trực tiếp vào nested form group để đảm bảo guestSource được patch đúng
     const checkInGuestInfoFormGroup = this.checkInForm.get('guestInfo') as FormGroup;
     if (checkInGuestInfoFormGroup) {
-      // Patch tá»«ng field riÃªng
+      // Patch từng field riêng
       checkInGuestInfoFormGroup.patchValue({
-        name: guestInfo.name || 'KhÃ¡ch láº»',
+        name: guestInfo.name || 'Khách lẻ',
         idNumber: guestInfo.idNumber || '',
         tax_code: guestInfo.tax_code || '',
         phone: guestInfo.phone || '',
@@ -730,7 +770,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         address: guestInfo.address || ''
       }, { emitEvent: false });
       
-      // Set guestSource riÃªng
+      // Set guestSource riêng
       const guestSourceControl = checkInGuestInfoFormGroup.get('guestSource');
       if (guestSourceControl) {
         const guestSourceValue = guestInfo.guestSource || 'walkin';
@@ -745,19 +785,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         paymentMethod: this.normalizePaymentMethod(session.paymentMethod),
         rateType: session.rateType || 'hourly',
         advancePayment: this.advancePayment,
-        advancePaymentMethod: session.advancePaymentMethod || 'cash', // HÃ¬nh thá»©c thanh toÃ¡n cho tráº£ trÆ°á»›c
+        advancePaymentMethod: session.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
         additionalCharges: this.initialCharges,
         discount: this.initialDiscount,
         notes: this.initialNotes
     });
     this.checkInForm.get('guestInfo')?.disable();
 
-    // Patch trá»±c tiáº¿p vÃ o nested form group Ä‘á»ƒ Ä‘áº£m báº£o guestSource Ä‘Æ°á»£c patch Ä‘Ãºng
+    // Patch trực tiếp vào nested form group để đảm bảo guestSource được patch đúng
     const checkOutGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
     if (checkOutGuestInfoFormGroup) {
-      // Patch tá»«ng field riÃªng
+      // Patch từng field riêng
       checkOutGuestInfoFormGroup.patchValue({
-        name: guestInfo.name || 'KhÃ¡ch láº»',
+        name: guestInfo.name || 'Khách lẻ',
         idNumber: guestInfo.idNumber || '',
         tax_code: guestInfo.tax_code || '',
         phone: guestInfo.phone || '',
@@ -765,7 +805,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         address: guestInfo.address || ''
       }, { emitEvent: false });
       
-      // Set guestSource riÃªng
+      // Set guestSource riêng
       const guestSourceControl = checkOutGuestInfoFormGroup.get('guestSource');
       if (guestSourceControl) {
         const guestSourceValue = guestInfo.guestSource || 'walkin';
@@ -780,9 +820,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         paymentMethod: this.normalizePaymentMethod(session.paymentMethod),
         rateType: session.rateType || 'hourly',
         advancePayment: session.advancePayment || 0,
-        advancePaymentMethod: session.advancePaymentMethod || 'cash', // HÃ¬nh thá»©c thanh toÃ¡n cho tráº£ trÆ°á»›c
-        additionalCharges: this.initialCharges, // Patch additionalCharges tá»« session
-        discount: this.initialDiscount // Patch discount tá»« session
+        advancePaymentMethod: session.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
+        additionalCharges: this.initialCharges, // Patch additionalCharges từ session
+        discount: this.initialDiscount // Patch discount từ session
     });
 
     this.listData = [{
@@ -803,7 +843,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   fetchCurrentRoom(): void {
     if (this.roomData && this.roomData.roomNumber) {
       if (this.roomData.events && this.roomData.events.length > 0) {
-        // Lá»c cÃ¡c event check-in CHÆ¯A CHECKOUT (chÆ°a cÃ³ event checkout tÆ°Æ¡ng á»©ng)
+        // Lọc các event check-in CHƯA CHECKOUT (chưa có event checkout tương ứng)
         const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
           const lastCheckinEvent = checkinEvents.length > 0 ? checkinEvents[0] : null;
           const lastCheckinTime = lastCheckinEvent ? this.getEventCheckinTime(lastCheckinEvent) : null;
@@ -817,19 +857,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           } : null
         });
         
-        // Náº¿u cÃ³ event check-in vÃ  phÃ²ng Ä‘ang cÃ³ khÃ¡ch
+        // Nếu có event check-in và phòng đang có khách
         if (lastCheckinEvent && this.roomData.status === 'occupied') {
           console.log('Loading check-in event from backend:', lastCheckinEvent);
           
-          // Láº¥y thÃ´ng tin khÃ¡ch hÃ ng tá»« nhiá»u nguá»“n
+          // Lấy thông tin khách hàng từ nhiều nguồn
           let guestInfo = lastCheckinEvent.guestInfo || {};
           
-          // Náº¿u guestInfo khÃ´ng cÃ³ name hoáº·c name lÃ  "KhÃ¡ch láº»", thá»­ láº¥y tá»« cÃ¡c nguá»“n khÃ¡c
-          if (!guestInfo.name || guestInfo.name === 'KhÃ¡ch láº»') {
-            // Thá»­ láº¥y tá»« roomData.currentBooking
+          // Nếu guestInfo không có name hoặc name là "Khách lẻ", thử lấy từ các nguồn khác
+          if (!guestInfo.name || guestInfo.name === 'Khách lẻ') {
+            // Thử lấy từ roomData.currentBooking
             if (this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object') {
               const currentBooking = this.roomData.currentBooking;
-              if (currentBooking.guestInfo?.name && currentBooking.guestInfo.name !== 'KhÃ¡ch láº»') {
+              if (currentBooking.guestInfo?.name && currentBooking.guestInfo.name !== 'Khách lẻ') {
                 guestInfo = {
                   ...guestInfo,
                   name: currentBooking.guestInfo.name,
@@ -839,54 +879,54 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               }
             }
             
-            // Thá»­ láº¥y tá»« booking náº¿u cÃ³
-            if ((!guestInfo.name || guestInfo.name === 'KhÃ¡ch láº»') && lastCheckinEvent.bookingId) {
-              // CÃ³ thá»ƒ cáº§n fetch booking Ä‘á»ƒ láº¥y thÃ´ng tin, nhÆ°ng táº¡m thá»i giá»¯ nguyÃªn
+            // Thử lấy từ booking nếu có
+            if ((!guestInfo.name || guestInfo.name === 'Khách lẻ') && lastCheckinEvent.bookingId) {
+              // Có thể cần fetch booking để lấy thông tin, nhưng tạm thời giữ nguyên
             }
           }
           
-          // Äáº£m báº£o cÃ³ name, náº¿u khÃ´ng thÃ¬ máº·c Ä‘á»‹nh "KhÃ¡ch láº»"
+          // Đảm bảo có name, nếu không thì mặc định "Khách lẻ"
           if (!guestInfo.name) {
-            guestInfo = { ...guestInfo, name: 'KhÃ¡ch láº»' };
+            guestInfo = { ...guestInfo, name: 'Khách lẻ' };
           }
           
-          // Äáº£m báº£o cÃ³ guestSource, náº¿u khÃ´ng thÃ¬ thá»­ láº¥y tá»« cÃ¡c nguá»“n khÃ¡c
+          // Đảm bảo có guestSource, nếu không thì thử lấy từ các nguồn khác
           if (!guestInfo.guestSource) {
-            // Thá»­ láº¥y tá»« currentBooking
+            // Thử lấy từ currentBooking
             if (this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object') {
               const currentBooking = this.roomData.currentBooking;
               if (currentBooking.guestInfo?.guestSource) {
                 guestInfo.guestSource = currentBooking.guestInfo.guestSource;
               }
             }
-            // Náº¿u váº«n khÃ´ng cÃ³, máº·c Ä‘á»‹nh lÃ  "walkin"
+            // Nếu vẫn không có, mặc định là "walkin"
             if (!guestInfo.guestSource) {
               guestInfo.guestSource = 'walkin';
             }
           }
           
-          // Äáº£m báº£o cÃ¡c giÃ¡ trá»‹ sá»‘ tá»« event
+          // Đảm bảo các giá trị số từ event
           const eventAdvancePayment = Number(lastCheckinEvent.advancePayment) || 0;
           const eventAdditionalCharges = Number(lastCheckinEvent.additionalCharges) || 0;
           const eventDiscount = Number(lastCheckinEvent.discount) || 0;
           
-          // KhÃ´ng lÆ°u vÃ o session ná»¯a, chá»‰ láº¥y tá»« RoomEvent
-          // Dá»¯ liá»‡u Ä‘Ã£ Ä‘Æ°á»£c lÆ°u vÃ o RoomEvent qua backend
+          // Không lưu vào session nữa, chỉ lấy từ RoomEvent
+          // Dữ liệu đã được lưu vào RoomEvent qua backend
           
-          // Cáº­p nháº­t listData vá»›i guestInfo Ä‘Ã£ Ä‘Æ°á»£c xá»­ lÃ½
+          // Cập nhật listData với guestInfo đã được xử lý
           this.listData = [{
             checkinTime: lastCheckinTime,
             rateType: lastCheckinEvent.rateType || 'hourly',
-            advancePayment: eventAdvancePayment, // Äáº£m báº£o lÃ  sá»‘
-            advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', // HÃ¬nh thá»©c thanh toÃ¡n cho tráº£ trÆ°á»›c
-            guestInfo: guestInfo, // Sá»­ dá»¥ng guestInfo Ä‘Ã£ Ä‘Æ°á»£c xá»­ lÃ½ tá»« nhiá»u nguá»“n
-            additionalCharges: eventAdditionalCharges, // Äáº£m báº£o lÃ  sá»‘
-            discount: eventDiscount, // Äáº£m báº£o lÃ  sá»‘
+            advancePayment: eventAdvancePayment, // Đảm bảo là số
+            advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', // Hình thức thanh toán cho trả trước
+            guestInfo: guestInfo, // Sử dụng guestInfo đã được xử lý từ nhiều nguồn
+            additionalCharges: eventAdditionalCharges, // Đảm bảo là số
+            discount: eventDiscount, // Đảm bảo là số
             notes: lastCheckinEvent.notes || '',
             selectedServices: lastCheckinEvent.selectedServices || []
           }];
           
-          // Cáº­p nháº­t láº¡i cÃ¡c giÃ¡ trá»‹ ban Ä‘áº§u tá»« event
+          // Cập nhật lại các giá trị ban đầu từ event
           this.initialCharges = eventAdditionalCharges;
           this.initialDiscount = eventDiscount;
           this.initialNotes = lastCheckinEvent.notes || '';
@@ -895,34 +935,34 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           this.selectedServices = this.initialSelectedServices;
           this.advancePayment = eventAdvancePayment;
           
-          // Log Ä‘á»ƒ debug
+          // Log để debug
           console.log('Loaded check-in data from backend:', {
             guestInfo: guestInfo,
-            guestSource: guestInfo.guestSource, // Log riÃªng guestSource Ä‘á»ƒ debug
+            guestSource: guestInfo.guestSource, // Log riêng guestSource để debug
             advancePayment: eventAdvancePayment,
             additionalCharges: eventAdditionalCharges,
             discount: eventDiscount
           });
 
-          // Cáº­p nháº­t form checkin Ä‘á»ƒ hiá»ƒn thá»‹ (cÃ³ thá»ƒ disable)
-          // Patch trá»±c tiáº¿p vÃ o nested form group Ä‘á»ƒ Ä‘áº£m báº£o guestSource Ä‘Æ°á»£c patch Ä‘Ãºng
+          // Cập nhật form checkin để hiển thị (có thể disable)
+          // Patch trực tiếp vào nested form group để đảm bảo guestSource được patch đúng
           const guestInfoFormGroup = this.checkInForm.get('guestInfo') as FormGroup;
           if (guestInfoFormGroup) {
-            // Enable form group trÆ°á»›c khi patchValue
+            // Enable form group trước khi patchValue
             if (guestInfoFormGroup.disabled) {
               guestInfoFormGroup.enable();
             }
             
-            // Patch tá»«ng field riÃªng Ä‘á»ƒ Ä‘áº£m báº£o guestSource Ä‘Æ°á»£c set Ä‘Ãºng
+            // Patch từng field riêng để đảm bảo guestSource được set đúng
             guestInfoFormGroup.patchValue({
-              name: guestInfo.name || 'KhÃ¡ch láº»',
+              name: guestInfo.name || 'Khách lẻ',
               idNumber: guestInfo.idNumber || '',
               phone: guestInfo.phone || '',
               email: guestInfo.email || '',
               address: guestInfo.address || ''
             }, { emitEvent: false });
             
-            // Set guestSource riÃªng Ä‘á»ƒ Ä‘áº£m báº£o Ä‘Æ°á»£c set Ä‘Ãºng
+            // Set guestSource riêng để đảm bảo được set đúng
             const guestSourceControl = guestInfoFormGroup.get('guestSource');
             if (guestSourceControl) {
               const guestSourceValue = guestInfo.guestSource || 'walkin';
@@ -946,35 +986,35 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
           this.checkInForm.disable();
 
-          // Cáº­p nháº­t checkout form vá»›i thÃ´ng tin khÃ¡ch vÃ  tiá»n Ä‘áº·t trÆ°á»›c tá»« backend
+          // Cập nhật checkout form với thông tin khách và tiền đặt trước từ backend
           const checkoutGuestInfo = {
-            name: guestInfo.name || 'KhÃ¡ch láº»',
+            name: guestInfo.name || 'Khách lẻ',
             idNumber: guestInfo.idNumber || '',
             phone: guestInfo.phone || '',
             email: guestInfo.email || '',
             address: guestInfo.address || '',
-            guestSource: guestInfo.guestSource || 'walkin' // Äáº£m báº£o cÃ³ guestSource
+            guestSource: guestInfo.guestSource || 'walkin' // Đảm bảo có guestSource
           };
           console.log('Patching checkout form with guestInfo:', checkoutGuestInfo);
           
-          // Patch trá»±c tiáº¿p vÃ o nested form group Ä‘á»ƒ Ä‘áº£m báº£o guestSource Ä‘Æ°á»£c patch Ä‘Ãºng
+          // Patch trực tiếp vào nested form group để đảm bảo guestSource được patch đúng
           const checkoutGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
           if (checkoutGuestInfoFormGroup) {
-            // Enable form group trÆ°á»›c khi patchValue
+            // Enable form group trước khi patchValue
             if (checkoutGuestInfoFormGroup.disabled) {
               checkoutGuestInfoFormGroup.enable();
             }
             
-            // Patch tá»«ng field riÃªng Ä‘á»ƒ Ä‘áº£m báº£o guestSource Ä‘Æ°á»£c set Ä‘Ãºng
+            // Patch từng field riêng để đảm bảo guestSource được set đúng
             checkoutGuestInfoFormGroup.patchValue({
-              name: checkoutGuestInfo.name || 'KhÃ¡ch láº»',
+              name: checkoutGuestInfo.name || 'Khách lẻ',
               idNumber: checkoutGuestInfo.idNumber || '',
               phone: checkoutGuestInfo.phone || '',
               email: checkoutGuestInfo.email || '',
               address: checkoutGuestInfo.address || ''
             }, { emitEvent: false });
             
-            // Set guestSource riÃªng Ä‘á»ƒ Ä‘áº£m báº£o Ä‘Æ°á»£c set Ä‘Ãºng
+            // Set guestSource riêng để đảm bảo được set đúng
             const guestSourceControl = checkoutGuestInfoFormGroup.get('guestSource');
             if (guestSourceControl) {
               const guestSourceValue = checkoutGuestInfo.guestSource || 'walkin';
@@ -994,72 +1034,72 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               advancePaymentMethod: lastCheckinEvent.advancePaymentMethod || 'cash', 
               additionalCharges: 0, 
               discount: 0 
-            }, { emitEvent: false }); // ThÃªm emitEvent: false
+            }, { emitEvent: false }); // Thêm emitEvent: false
           }
           console.log('Checkout form full value after patchValue:', this.checkOutForm.value);
           
           this.advancePayment = eventAdvancePayment;
 
-          // 3. ÄÃNH Dáº¤U LÃ€ FORM ÄÃƒ KHá»žI Táº O XONG (KHÃ”NG BAO GIá»œ GHI ÄÃˆ Ná»®A)
+          // 3. ĐÁNH DẤU LÀ FORM ĐÃ KHỞI TẠO XONG (KHÔNG BAO GIỜ GHI ĐÈ NỮA)
           this.isFormInitialized = true;
 
           console.log('Updated form with backend data:', {
-            guestInfo: guestInfo, // Log guestInfo Ä‘Ã£ Ä‘Æ°á»£c xá»­ lÃ½
+            guestInfo: guestInfo, // Log guestInfo đã được xử lý
             originalGuestInfo: lastCheckinEvent.guestInfo,
             advancePayment: lastCheckinEvent.advancePayment
           });
           
           this.calculateTotalPrice();
         } else {
-          // Náº¿u khÃ´ng tÃ¬m tháº¥y event check-in phÃ¹ há»£p, chá»‰ hiá»ƒn thá»‹ event cuá»‘i cÃ¹ng
-          // NhÆ°ng khÃ´ng tÃ­nh giÃ¡ náº¿u khÃ´ng pháº£i checkin event
+          // Nếu không tìm thấy event check-in phù hợp, chỉ hiển thị event cuối cùng
+          // Nhưng không tính giá nếu không phải checkin event
           const lastEvent = this.roomData.events[this.roomData.events.length - 1];
           if (lastEvent) {
             this.listData = [lastEvent];
-            // Chá»‰ tÃ­nh giÃ¡ náº¿u lÃ  checkout modal vÃ  cÃ³ checkin event
+            // Chỉ tính giá nếu là checkout modal và có checkin event
             if (this.modalType === 'checkout' && lastEvent.type === 'checkin') {
               this.calculateTotalPrice();
             }
           }
         }
         } else {
-        // Náº¿u khÃ´ng cÃ³ events, hiá»ƒn thá»‹ thÃ´ng bÃ¡o
+        // Nếu không có events, hiển thị thông báo
         if (this.modalType === 'checkout') {
           console.warn('No check-in events found in RoomEvent');
-          this.message.warning('KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin check-in tá»« RoomEvent');
+          this.message.warning('Không tìm thấy thông tin check-in từ RoomEvent');
         }
       }
     }
 
-    // Nháº­n phÃ²ng phÃ²ng trá»‘ng/booked: luÃ´n máº·c Ä‘á»‹nh theo giá»
+    // Nhận phòng phòng trống/booked: luôn mặc định theo giờ
     if (this.modalType === 'checkin' && this.roomData?.status !== 'occupied') {
       this.checkInForm?.patchValue({ rateType: 'hourly' }, { emitEvent: false });
     }
 
   }
 
-  // Táº£i thÃ´ng tin doanh nghiá»‡p
+  // Tải thông tin doanh nghiệp
   loadBusinessInfo(): void {
     if (!this.roomData?.hotelId) return;
     this.hotelService.getHotelById(this.roomData.hotelId, { lite: true }).subscribe(
       (data) => {
         this.businessInfo = data;
-        // LÆ°u thÃ´ng tin ngÃ¢n hÃ ng cá»§a hotel
+        // Lưu thông tin ngân hàng của hotel
         this.hotelBankAccount = data.bankAccount || null;
         
         
-        // Náº¿u hotel khÃ´ng cÃ³ bankAccount, thá»­ láº¥y tá»« manager
+        // Nếu hotel không có bankAccount, thử lấy từ manager
         if (!this.hotelBankAccount?.qrPaymentUrl && data.managerId) {
           const manager = typeof data.managerId === 'object' ? data.managerId : null;
           if (manager?.bankAccount?.qrPaymentUrl) {
-            // Sá»­ dá»¥ng QR code tá»« manager náº¿u hotel khÃ´ng cÃ³
+            // Sử dụng QR code từ manager nếu hotel không có
             this.hotelBankAccount = manager.bankAccount;
           }
         }
         
-        // Load thÃ´ng tin business owner náº¿u cÃ³ businessId
+        // Load thông tin business owner nếu có businessId
         if (data.businessId) {
-          // Äáº£m báº£o businessId lÃ  string
+          // Đảm bảo businessId là string
           const businessId = typeof data.businessId === 'string' ? data.businessId : (data.businessId._id || data.businessId.toString());
           const canLoadBusiness = this.authService.isAdmin() || this.authService.isBusiness();
           if (!canLoadBusiness) {
@@ -1071,30 +1111,30 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           if (businessId) {
             this.businessService.getBusinessById(businessId).subscribe({
               next: (business: any) => {
-                // Láº¥y thÃ´ng tin owner tá»« business (ownerId cÃ³ thá»ƒ Ä‘Ã£ Ä‘Æ°á»£c populate)
+                // Lấy thông tin owner từ business (ownerId có thể đã được populate)
                 if (business.ownerId) {
                   if (typeof business.ownerId === 'object' && business.ownerId._id) {
-                    // ÄÃ£ Ä‘Æ°á»£c populate, láº¥y trá»±c tiáº¿p
+                    // Đã được populate, lấy trực tiếp
                     this.businessOwner = business.ownerId;
-                    console.log('ThÃ´ng tin business owner (populated):', this.businessOwner);
+                    console.log('Thông tin business owner (populated):', this.businessOwner);
                   } else {
-                    // ChÆ°a Ä‘Æ°á»£c populate, lÆ°u ownerId Ä‘á»ƒ dÃ¹ng sau
+                    // Chưa được populate, lưu ownerId để dùng sau
                     this.businessOwner = { _id: business.ownerId };
-                    console.log('LÆ°u ownerId Ä‘á»ƒ dÃ¹ng sau:', this.businessOwner);
+                    console.log('Lưu ownerId để dùng sau:', this.businessOwner);
                   }
                 }
               },
               error: (err) => {
-                console.error('Lá»—i khi táº£i thÃ´ng tin business:', err);
+                console.error('Lỗi khi tải thông tin business:', err);
               }
             });
           }
         }
       },
       (error) => {
-        console.error('Lá»—i khi táº£i thÃ´ng tin doanh nghiá»‡p:', error);
-        // Xá»­ lÃ½ lá»—i náº¿u cáº§n, vÃ­ dá»¥ hiá»ƒn thá»‹ thÃ´ng tin máº·c Ä‘á»‹nh hoáº·c thÃ´ng bÃ¡o
-        this.businessInfo = { name: 'KhÃ¡ch sáº¡n Máº·c Ä‘á»‹nh', address: '', phoneNumber: '' }; // VÃ­ dá»¥
+        console.error('Lỗi khi tải thông tin doanh nghiệp:', error);
+        // Xử lý lỗi nếu cần, ví dụ hiển thị thông tin mặc định hoặc thông báo
+        this.businessInfo = { name: 'Khách sạn Mặc định', address: '', phoneNumber: '' }; // Ví dụ
         this.hotelBankAccount = null;
       }
     );
@@ -1108,9 +1148,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     quantityControl.setValue(nextValue);
   }
 
-  // ThÃªm dá»‹ch vá»¥
+  // Thêm dịch vụ (hỗ trợ chọn nhiều)
   addService(): void {
-    // Kiá»ƒm tra form há»£p lá»‡
     if (this.servicesForm.invalid) {
       Object.values(this.servicesForm.controls).forEach(control => {
         if (control.invalid) {
@@ -1120,76 +1159,87 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       });
       return;
     }
-    
-    // Láº¥y dá»¯ liá»‡u tá»« form
-    const serviceId = this.servicesForm.get('serviceId')?.value;
-    const quantity = this.servicesForm.get('quantity')?.value || 1;
-    
-    // Kiá»ƒm tra dá»‹ch vá»¥ Ä‘Ã£ chá»n
-    if (!serviceId) {
-      this.message.warning('Vui lÃ²ng chá»n dá»‹ch vá»¥!');
+
+    const rawIds = this.servicesForm.get('serviceIds')?.value;
+    const serviceIds: string[] = Array.isArray(rawIds)
+      ? rawIds.map((id: any) => String(id || '').trim()).filter(Boolean)
+      : (rawIds ? [String(rawIds).trim()] : []);
+    const quantity = Number(this.servicesForm.get('quantity')?.value) || 1;
+
+    if (!serviceIds.length) {
+      this.message.warning('Vui lòng chọn dịch vụ!');
       return;
     }
-    
-    // TÃ¬m dá»‹ch vá»¥ trong danh sÃ¡ch
-    const selectedService = this.services.find(service => service.id === serviceId);
-    if (!selectedService) {
-      this.message.error('KhÃ´ng tÃ¬m tháº¥y dá»‹ch vá»¥ Ä‘Ã£ chá»n!');
+
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    for (const serviceId of serviceIds) {
+      const selectedService = this.services.find(service => service.id === serviceId);
+      if (!selectedService) {
+        continue;
+      }
+
+      const existingIndex = this.selectedServices.findIndex(s => s.serviceId === serviceId);
+      if (existingIndex !== -1) {
+        this.selectedServices[existingIndex].quantity += quantity;
+        this.selectedServices[existingIndex].totalPrice =
+          this.selectedServices[existingIndex].price * this.selectedServices[existingIndex].quantity;
+        updatedCount += 1;
+      } else {
+        const orderedService: OrderedService = {
+          serviceId: selectedService.id,
+          serviceName: selectedService.name,
+          price: selectedService.price,
+          quantity: quantity,
+          totalPrice: selectedService.price * quantity,
+          orderTime: new Date()
+        };
+        this.selectedServices.push(orderedService);
+        addedCount += 1;
+      }
+    }
+
+    if (!addedCount && !updatedCount) {
+      this.message.error('Không tìm thấy dịch vụ đã chọn!');
       return;
     }
-    
-    // Kiá»ƒm tra xem dá»‹ch vá»¥ Ä‘Ã£ cÃ³ trong danh sÃ¡ch chÆ°a
-    const existingIndex = this.selectedServices.findIndex(s => s.serviceId === serviceId);
-    
-    if (existingIndex !== -1) {
-      // Náº¿u dá»‹ch vá»¥ Ä‘Ã£ tá»“n táº¡i, cáº­p nháº­t sá»‘ lÆ°á»£ng
-      this.selectedServices[existingIndex].quantity += quantity;
-      // Cáº­p nháº­t tá»•ng giÃ¡
-      this.selectedServices[existingIndex].totalPrice = 
-        this.selectedServices[existingIndex].price * this.selectedServices[existingIndex].quantity;
-      this.message.success(`ÄÃ£ cáº­p nháº­t sá»‘ lÆ°á»£ng ${selectedService.name}`);
+
+    if (addedCount && updatedCount) {
+      this.message.success(`Đã thêm ${addedCount} và cập nhật ${updatedCount} dịch vụ`);
+    } else if (updatedCount) {
+      this.message.success(`Đã cập nhật số lượng ${updatedCount} dịch vụ`);
     } else {
-      // ThÃªm dá»‹ch vá»¥ má»›i vÃ o danh sÃ¡ch
-      const orderedService: OrderedService = {
-        serviceId: selectedService.id,
-        serviceName: selectedService.name,
-        price: selectedService.price,
-        quantity: quantity,
-        totalPrice: selectedService.price * quantity,
-        orderTime: new Date()
-      };
-      
-      this.selectedServices.push(orderedService);
-      this.message.success(`ÄÃ£ thÃªm ${quantity} ${selectedService.name}`);
+      this.message.success(`Đã thêm ${addedCount} dịch vụ`);
     }
-    
-    // Cáº­p nháº­t vÃ o RoomEvent náº¿u phÃ²ng Ä‘ang occupied vÃ  cÃ³ event checkin
+
+    // Cập nhật vào RoomEvent nếu phòng đang occupied và có event checkin
     if (this.roomData._id && this.roomData.status === 'occupied') {
-      // Láº¥y thÃ´ng tin tá»« form checkout náº¿u cÃ³
+      // Lấy thông tin từ form checkout nếu có
       const guestInfoFormGroup = this.checkOutForm?.get('guestInfo') as FormGroup;
       const guestInfo = guestInfoFormGroup ? 
         (guestInfoFormGroup.disabled ? guestInfoFormGroup.getRawValue() : guestInfoFormGroup.value) : 
         (this.checkOutForm?.get('guestInfo')?.value || {});
       
-      // Láº¥y cÃ¡c giÃ¡ trá»‹ tá»« form hoáº·c tá»« event hiá»‡n táº¡i
+      // Lấy các giá trị từ form hoặc từ event hiện tại
       const advancePayment = Number(this.checkOutForm?.get('advancePayment')?.value) || 
                              (this.listData && this.listData.length > 0 ? this.listData[0].advancePayment : 0) || 0;
       const rateType = this.checkOutForm?.get('rateType')?.value || 
                       (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) || 
                       'hourly';
-      // Láº¥y giÃ¡ trá»‹ phá»¥ thu vÃ  khuyáº¿n mÃ£i tá»« form checkout (chá»‰ giÃ¡ trá»‹ ngÆ°á»i dÃ¹ng nháº­p thÃªm)
-      // Form checkout báº¯t Ä‘áº§u tá»« 0, khÃ´ng bao gá»“m giÃ¡ trá»‹ tá»« check-in event
+      // Lấy giá trị phụ thu và khuyến mãi từ form checkout (chỉ giá trị người dùng nhập thêm)
+      // Form checkout bắt đầu từ 0, không bao gồm giá trị từ check-in event
       const checkoutCharges = Number(this.checkOutForm?.get('additionalCharges')?.value) || 0;
       const checkoutDiscount = Number(this.checkOutForm?.get('discount')?.value) || 0;
       
-      // TÃ­nh tá»•ng phá»¥ thu vÃ  khuyáº¿n mÃ£i (cá»™ng dá»“n, khÃ´ng ghi Ä‘Ã¨)
-      // initialCharges vÃ  initialDiscount Ä‘Ã£ Ä‘Æ°á»£c set khi load dá»¯ liá»‡u tá»« check-in event
+      // Tính tổng phụ thu và khuyến mãi (cộng dồn, không ghi đè)
+      // initialCharges và initialDiscount đã được set khi load dữ liệu từ check-in event
       const additionalCharges = this.initialCharges + checkoutCharges;
       const discount = this.initialDiscount + checkoutDiscount;
       
-      // Äáº£m báº£o guestInfo Ä‘áº§y Ä‘á»§
+      // Đảm bảo guestInfo đầy đủ
       const updatedGuestInfo = {
-        name: guestInfo.name || 'KhÃ¡ch láº»',
+        name: guestInfo.name || 'Khách lẻ',
         idNumber: guestInfo.idNumber || '',
         tax_code: guestInfo.tax_code || '',
         phone: guestInfo.phone || '',
@@ -1198,7 +1248,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         guestSource: guestInfo.guestSource || 'walkin'
       };
       
-      // Cáº­p nháº­t RoomEvent vá»›i selectedServices má»›i
+      // Cập nhật RoomEvent với selectedServices mới
       this.roomsService.updateRoomCheckinInfo(
         this.roomData._id,
         updatedGuestInfo,
@@ -1206,76 +1256,76 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         rateType,
         additionalCharges,
         discount,
-        this.selectedServices // Gá»­i selectedServices Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t
+        this.selectedServices // Gửi selectedServices đã được cập nhật
       ).subscribe({
         next: (response) => {
-          console.log('Dá»‹ch vá»¥ Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t vÃ o RoomEvent', response);
+          console.log('Dịch vụ đã được cập nhật vào RoomEvent', response);
           
-          // Cáº­p nháº­t listData Ä‘á»ƒ Ä‘á»“ng bá»™
+          // Cập nhật listData để đồng bộ
           if (this.listData && this.listData.length > 0) {
             this.listData[0].selectedServices = [...this.selectedServices];
           }
         },
         error: (error) => {
-          console.error('Lá»—i khi cáº­p nháº­t dá»‹ch vá»¥ vÃ o RoomEvent:', error);
-          // KhÃ´ng hiá»ƒn thá»‹ error message Ä‘á»ƒ khÃ´ng lÃ m phiá»n user khi thÃªm dá»‹ch vá»¥
+          console.error('Lỗi khi cập nhật dịch vụ vào RoomEvent:', error);
+          // Không hiển thị error message để không làm phiền user khi thêm dịch vụ
         }
       });
     }
     
     // Reset form
     this.servicesForm.reset({
-      serviceId: '',
+      serviceIds: [],
       quantity: 1
     });
     
-    // Cáº­p nháº­t tá»•ng giÃ¡
+    // Cập nhật tổng giá
     this.calculateTotalPrice();
   }
 
-  // XÃ³a dá»‹ch vá»¥
+  // Xóa dịch vụ
   removeService(index: number): void {
     if (index < 0 || index >= this.selectedServices.length) {
       console.error('Invalid service index:', index);
       return;
     }
     
-    // XÃ³a dá»‹ch vá»¥ khá»i danh sÃ¡ch
+    // Xóa dịch vụ khỏi danh sách
     const removedService = this.selectedServices[index];
     this.selectedServices.splice(index, 1);
     
     console.log('Removed service:', removedService);
     
-    // Cáº­p nháº­t session (náº¿u cáº§n)
+    // Cập nhật session (nếu cần)
     sessionStorage.setItem('selectedServices', JSON.stringify(this.selectedServices));
     
-    // Cáº­p nháº­t vÃ o RoomEvent náº¿u phÃ²ng Ä‘ang occupied vÃ  cÃ³ event checkin
+    // Cập nhật vào RoomEvent nếu phòng đang occupied và có event checkin
     if (this.roomData._id && this.roomData.status === 'occupied') {
-      // Láº¥y thÃ´ng tin tá»« form checkout náº¿u cÃ³
+      // Lấy thông tin từ form checkout nếu có
       const guestInfoFormGroup = this.checkOutForm?.get('guestInfo') as FormGroup;
       const guestInfo = guestInfoFormGroup ? 
         (guestInfoFormGroup.disabled ? guestInfoFormGroup.getRawValue() : guestInfoFormGroup.value) : 
         (this.checkOutForm?.get('guestInfo')?.value || {});
       
-      // Láº¥y cÃ¡c giÃ¡ trá»‹ tá»« form hoáº·c tá»« event hiá»‡n táº¡i
+      // Lấy các giá trị từ form hoặc từ event hiện tại
       const advancePayment = Number(this.checkOutForm?.get('advancePayment')?.value) || 
                              (this.listData && this.listData.length > 0 ? this.listData[0].advancePayment : 0) || 0;
       const rateType = this.checkOutForm?.get('rateType')?.value || 
                       (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) || 
                       'hourly';
-      // Láº¥y giÃ¡ trá»‹ phá»¥ thu vÃ  khuyáº¿n mÃ£i tá»« form checkout (chá»‰ giÃ¡ trá»‹ ngÆ°á»i dÃ¹ng nháº­p thÃªm)
-      // Form checkout báº¯t Ä‘áº§u tá»« 0, khÃ´ng bao gá»“m giÃ¡ trá»‹ tá»« check-in event
+      // Lấy giá trị phụ thu và khuyến mãi từ form checkout (chỉ giá trị người dùng nhập thêm)
+      // Form checkout bắt đầu từ 0, không bao gồm giá trị từ check-in event
       const checkoutCharges = Number(this.checkOutForm?.get('additionalCharges')?.value) || 0;
       const checkoutDiscount = Number(this.checkOutForm?.get('discount')?.value) || 0;
       
-      // TÃ­nh tá»•ng phá»¥ thu vÃ  khuyáº¿n mÃ£i (cá»™ng dá»“n, khÃ´ng ghi Ä‘Ã¨)
-      // initialCharges vÃ  initialDiscount Ä‘Ã£ Ä‘Æ°á»£c set khi load dá»¯ liá»‡u tá»« check-in event
+      // Tính tổng phụ thu và khuyến mãi (cộng dồn, không ghi đè)
+      // initialCharges và initialDiscount đã được set khi load dữ liệu từ check-in event
       const additionalCharges = this.initialCharges + checkoutCharges;
       const discount = this.initialDiscount + checkoutDiscount;
       
-      // Äáº£m báº£o guestInfo Ä‘áº§y Ä‘á»§
+      // Đảm bảo guestInfo đầy đủ
       const updatedGuestInfo = {
-        name: guestInfo.name || 'KhÃ¡ch láº»',
+        name: guestInfo.name || 'Khách lẻ',
         idNumber: guestInfo.idNumber || '',
         tax_code: guestInfo.tax_code || '',
         phone: guestInfo.phone || '',
@@ -1284,7 +1334,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         guestSource: guestInfo.guestSource || 'walkin'
       };
       
-      // Cáº­p nháº­t RoomEvent vá»›i selectedServices má»›i
+      // Cập nhật RoomEvent với selectedServices mới
       this.roomsService.updateRoomCheckinInfo(
         this.roomData._id,
         updatedGuestInfo,
@@ -1292,60 +1342,60 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         rateType,
         additionalCharges,
         discount,
-        this.selectedServices // Gá»­i selectedServices Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t
+        this.selectedServices // Gửi selectedServices đã được cập nhật
       ).subscribe({
         next: (response) => {
-          console.log('Dá»‹ch vá»¥ Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t vÃ o RoomEvent', response);
-          this.message.success('ÄÃ£ xÃ³a dá»‹ch vá»¥');
+          console.log('Dịch vụ đã được cập nhật vào RoomEvent', response);
+          this.message.success('Đã xóa dịch vụ');
           
-          // Cáº­p nháº­t listData Ä‘á»ƒ Ä‘á»“ng bá»™
+          // Cập nhật listData để đồng bộ
           if (this.listData && this.listData.length > 0) {
             this.listData[0].selectedServices = [...this.selectedServices];
           }
         },
         error: (error) => {
-          console.error('Lá»—i khi cáº­p nháº­t dá»‹ch vá»¥ vÃ o RoomEvent:', error);
-          this.message.error('Lá»—i khi cáº­p nháº­t dá»‹ch vá»¥: ' + (error.error?.message || error.message));
+          console.error('Lỗi khi cập nhật dịch vụ vào RoomEvent:', error);
+          this.message.error('Lỗi khi cập nhật dịch vụ: ' + (error.error?.message || error.message));
         }
       });
     }
     
-    // Cáº­p nháº­t tá»•ng tiá»n
+    // Cập nhật tổng tiền
     this.calculateTotalPrice();
   }
 
-  // TÃ­nh tá»•ng tiá»n
+  // Tính tổng tiền
   calculateTotalPrice(): void {
-    // Chá»‰ tÃ­nh giÃ¡ khi modalType lÃ  'checkout' vÃ  cÃ³ checkin event há»£p lá»‡
+    // Chỉ tính giá khi modalType là 'checkout' và có checkin event hợp lệ
     if (this.modalType !== 'checkout') {
       this.totalPrice = 0;
-      this._hasRoomPriceFromAPI = false; // Reset flag khi khÃ´ng pháº£i checkout
+      this._hasRoomPriceFromAPI = false; // Reset flag khi không phải checkout
       return;
     }
     
-    // Láº¥y thÃ´ng tin check-in cuá»‘i cÃ¹ng
+    // Lấy thông tin check-in cuối cùng
     const lastCheckIn = this.listData && this.listData.length > 0 ? this.listData[0] : null;
     if (!lastCheckIn) {
       this.totalPrice = 0;
       return;
     }
     
-    // Kiá»ƒm tra xem cÃ³ pháº£i lÃ  checkin event khÃ´ng
+    // Kiểm tra xem có phải là checkin event không
     if (lastCheckIn.type && lastCheckIn.type !== 'checkin') {
-      // Náº¿u khÃ´ng pháº£i checkin event, khÃ´ng tÃ­nh giÃ¡
+      // Nếu không phải checkin event, không tính giá
       this.totalPrice = 0;
       return;
     }
     
     console.log('Calculating price based on check-in data:', lastCheckIn);
     
-    // Kiá»ƒm tra vÃ  validate checkinTime
+    // Kiểm tra và validate checkinTime
     const parsedCheckinTime = this.getEventCheckinTime(lastCheckIn);
     let checkInTime: Date = parsedCheckinTime || this.getUTCTimePlus7();
     
     const checkOutTime = this.getUTCTimePlus7();
     
-    // Kiá»ƒm tra xem checkOutTime cÃ³ há»£p lá»‡ khÃ´ng
+    // Kiểm tra xem checkOutTime có hợp lệ không
     if (isNaN(checkOutTime.getTime())) {
       console.error('[calculateTotalPrice] Invalid checkOutTime');
       this.totalPrice = 0;
@@ -1353,31 +1403,31 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Äáº£m báº£o checkInTime khÃ´ng lá»›n hÆ¡n checkOutTime
+    // Đảm bảo checkInTime không lớn hơn checkOutTime
     if (checkInTime.getTime() >= checkOutTime.getTime()) {
       console.warn('[calculateTotalPrice] Check-in time is after or equal to check-out time, using 1 hour before check-out for check-in');
-      checkInTime = new Date(checkOutTime.getTime() - 3600000); // 1 giá» trÆ°á»›c
+      checkInTime = new Date(checkOutTime.getTime() - 3600000); // 1 giờ trước
     }
     
-    // TÃ­nh thá»i gian chÃ­nh xÃ¡c theo phÃºt
+    // Tính thời gian chính xác theo phút
     const durationInMilliseconds = checkOutTime.getTime() - checkInTime.getTime();
     const durationInMinutes = Math.floor(durationInMilliseconds / (1000 * 60));
     const durationInHours = Math.floor(durationInMinutes / 60);
     const remainingMinutes = durationInMinutes % 60;
     const durationInDays = Math.ceil(durationInHours / 24);
     
-    // Äáº£m báº£o duration khÃ´ng Ã¢m
-    // KhÃ´ng Ã©p lÃªn 1 giá» á»Ÿ Ä‘Ã¢y vÃ¬ calculateRoomTotalByRateType Ä‘Ã£ xá»­ lÃ½ giÃ¡ tá»‘i thiá»ƒu lÃ  1 giá»
-    // Náº¿u Ã©p lÃªn 1 giá», khi khÃ¡ch á»Ÿ dÆ°á»›i 1 giá» (vd 45p) vÃ  cÃ³ gracePeriod (vd 15p), 
-    // logic sáº½ tÃ­nh thÃ nh 1 giá» Ä‘áº§u + 1 giá» thÃªm = 2 giá» (sai)
+    // Đảm bảo duration không âm
+    // Không ép lên 1 giờ ở đây vì calculateRoomTotalByRateType đã xử lý giá tối thiểu là 1 giờ
+    // Nếu ép lên 1 giờ, khi khách ở dưới 1 giờ (vd 45p) và có gracePeriod (vd 15p), 
+    // logic sẽ tính thành 1 giờ đầu + 1 giờ thêm = 2 giờ (sai)
     const validDurationInHours = Math.max(0, durationInHours); 
     const validDurationInDays = Math.max(1, durationInDays);
     
-    // XÃ¡c Ä‘á»‹nh loáº¡i giÃ¡ vÃ  tÃ­nh tiá»n phÃ²ng
-    // Æ¯u tiÃªn láº¥y rateType tá»« form checkout náº¿u cÃ³, náº¿u khÃ´ng thÃ¬ láº¥y tá»« lastCheckIn
+    // Xác định loại giá và tính tiền phòng
+    // Ưu tiên lấy rateType từ form checkout nếu có, nếu không thì lấy từ lastCheckIn
     const rateType = this.checkOutForm?.get('rateType')?.value || lastCheckIn.rateType || 'hourly';
     
-    // Log thÃ´ng tin tÃ­nh toÃ¡n thá»i gian (chá»‰ khi Date há»£p lá»‡)
+    // Log thông tin tính toán thời gian (chỉ khi Date hợp lệ)
     if (!isNaN(checkInTime.getTime()) && !isNaN(checkOutTime.getTime())) {
       console.log(`[calculateTotalPrice] Check-in time: ${checkInTime.toISOString()}`);
       console.log(`[calculateTotalPrice] Check-out time: ${checkOutTime.toISOString()}`);
@@ -1470,17 +1520,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
   }
 
-  // Xá»­ lÃ½ check-in
+  // Xử lý check-in
   processCheckIn(): void {
-    // Kiá»ƒm tra tráº¡ng thÃ¡i phÃ²ng
+    // Kiểm tra trạng thái phòng
     const allowPrebooked = this.isPrebookedAvailable();
     if (this.roomData.status !== 'vacant' && !allowPrebooked) {
-      this.message.error(`PhÃ²ng ${this.roomData.roomNumber} khÃ´ng sáºµn sÃ ng Ä‘á»ƒ nháº­n phÃ²ng (Tráº¡ng thÃ¡i hiá»‡n táº¡i: ${this.getStatusLabel(this.roomData.status)}).`);
+      this.message.error(`Phòng ${this.roomData.roomNumber} không sẵn sàng để nhận phòng (Trạng thái hiện tại: ${this.getStatusLabel(this.roomData.status)}).`);
       this.isLoading = false;
       return;
     }
 
-    // Náº¿u skipValidation = true, bá» qua viá»‡c kiá»ƒm tra form há»£p lá»‡
+    // Nếu skipValidation = true, bỏ qua việc kiểm tra form hợp lệ
     if (!this.skipValidation && this.checkInForm.invalid) {
       Object.values(this.checkInForm.controls).forEach(control => {
         if (control.invalid) {
@@ -1493,36 +1543,36 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     this.isLoading = true;
     
-    // Táº¡o thá»i gian checkin má»™t láº§n duy nháº¥t theo UTC+7 (mÃºi giá» Viá»‡t Nam)
+    // Tạo thời gian checkin một lần duy nhất theo UTC+7 (múi giờ Việt Nam)
     const checkinTime = this.getUTCTimePlus7();
     
-    // Láº¥y giÃ¡ trá»‹ trá»±c tiáº¿p tá»« form control Ä‘á»ƒ Ä‘áº£m báº£o láº¥y Ä‘Ãºng
+    // Lấy giá trị trực tiếp từ form control để đảm bảo lấy đúng
     const guestInfoFormGroup = this.checkInForm.get('guestInfo') as FormGroup;
     
-    // Láº¥y giÃ¡ trá»‹ tá»« form control, sá»­ dá»¥ng getRawValue() náº¿u form bá»‹ disable
+    // Lấy giá trị từ form control, sử dụng getRawValue() nếu form bị disable
     const guestInfoForm = guestInfoFormGroup ? 
       (guestInfoFormGroup.disabled ? guestInfoFormGroup.getRawValue() : guestInfoFormGroup.value) : 
       (this.checkInForm.get('guestInfo')?.value || {});
     
-    // Láº¥y guestSource trá»±c tiáº¿p tá»« form control Ä‘á»ƒ Ä‘áº£m báº£o láº¥y Ä‘Ãºng
+    // Lấy guestSource trực tiếp từ form control để đảm bảo lấy đúng
     const guestSourceControl = guestInfoFormGroup?.get('guestSource');
     const guestSourceValue = guestSourceControl ? 
       (guestSourceControl.disabled ? guestSourceControl.getRawValue() : guestSourceControl.value) : 
       (guestInfoForm.guestSource || 'walkin');
     
-    // Äáº£m báº£o tÃªn khÃ¡ch máº·c Ä‘á»‹nh lÃ  "KhÃ¡ch láº»" náº¿u khÃ´ng nháº­p
+    // Đảm bảo tên khách mặc định là "Khách lẻ" nếu không nhập
     const guestInfo = {
-      name: guestInfoForm.name || 'KhÃ¡ch láº»',
+      name: guestInfoForm.name || 'Khách lẻ',
       idNumber: guestInfoForm.idNumber || '',
       tax_code: guestInfoForm.tax_code || '',
       phone: guestInfoForm.phone || '',
       email: guestInfoForm.email || '',
       address: guestInfoForm.address || '',
-      guestSource: guestSourceValue || 'walkin' // Sá»­ dá»¥ng giÃ¡ trá»‹ tá»« form control
+      guestSource: guestSourceValue || 'walkin' // Sử dụng giá trị từ form control
     };
     
     
-    // Äáº£m báº£o advancePayment luÃ´n lÃ  sá»‘, máº·c Ä‘á»‹nh 0
+    // Đảm bảo advancePayment luôn là số, mặc định 0
     const advancePayment = Number(this.checkInForm.get('advancePayment')?.value) || 0;
     const advancePaymentMethod = this.checkInForm.get('advancePaymentMethod')?.value || 'cash';
     const additionalCharges = Number(this.checkInForm.get('additionalCharges')?.value) || 0;
@@ -1530,7 +1580,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     const checkinEventData = {
         type: 'checkin',
-        checkinTime: checkinTime, // Sá»­ dá»¥ng thá»i gian Ä‘Ã£ táº¡o
+        checkinTime: checkinTime, // Sử dụng thời gian đã tạo
         checkInTime: checkinTime,
         checkInDate: checkinTime,
         guestInfo: guestInfo,
@@ -1541,10 +1591,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         guestAddress: guestInfo.address,
         paymentMethod: this.normalizePaymentMethod(this.checkInForm.get('paymentMethod')?.value || 'cash'),
         rateType: this.checkInForm.get('rateType')?.value || 'hourly',
-        advancePayment: advancePayment, // Äáº£m báº£o lÃ  sá»‘
-        advancePaymentMethod: advancePaymentMethod, // HÃ¬nh thá»©c thanh toÃ¡n cho tráº£ trÆ°á»›c
-        additionalCharges: additionalCharges, // Äáº£m báº£o lÃ  sá»‘
-        discount: discount, // Äáº£m báº£o lÃ  sá»‘
+        advancePayment: advancePayment, // Đảm bảo là số
+        advancePaymentMethod: advancePaymentMethod, // Hình thức thanh toán cho trả trước
+        additionalCharges: additionalCharges, // Đảm bảo là số
+        discount: discount, // Đảm bảo là số
         notes: this.checkInForm.get('notes')?.value || '',
         selectedServices: this.selectedServices || []
       };
@@ -1556,12 +1606,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       ]
     };
     
-    // ÄÃ³ng modal ngay láº­p tá»©c
+    // Đóng modal ngay lập tức
     if (this.modalRef) {
       this.modalRef.close({ 
         success: true,
         checkinInfo: {
-          checkinTime: checkinTime, // Sá»­ dá»¥ng cÃ¹ng thá»i gian
+          checkinTime: checkinTime, // Sử dụng cùng thời gian
           guestInfo: this.checkInForm.get('guestInfo')?.value,
             paymentMethod: this.normalizePaymentMethod(this.checkInForm.get('paymentMethod')?.value),
           rateType: this.checkInForm.get('rateType')?.value,
@@ -1572,17 +1622,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       });
     }
     
-    // Thá»±c hiá»‡n checkin trong background
+    // Thực hiện checkin trong background
     this.roomsService.checkInRoom(this.roomData._id, newRoom)
       .subscribe(
         (room) => {
           setTimeout(() => {
-            this.message.success('Nháº­n phÃ²ng thÃ nh cÃ´ng');
+            this.message.success('Nhận phòng thành công');
             
-            // Táº¡o phiáº¿u thu cho tiá»n Ä‘áº·t trÆ°á»›c náº¿u cÃ³
+            // Tạo phiếu thu cho tiền đặt trước nếu có
             try {
               const hotelId = this.authService.getHotelId();
-              const payerName = guestInfo?.name || 'KhÃ¡ch láº»';
+              const payerName = guestInfo?.name || 'Khách lẻ';
               if (hotelId && advancePayment > 0) {
                 const normalizedMethod = this.normalizePaymentMethod(advancePaymentMethod);
                 const methodForTransaction = (normalizedMethod === 'transfer' ? 'bank_transfer' : normalizedMethod) as 'cash' | 'bank_transfer' | 'card';
@@ -1591,22 +1641,22 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                   amount: advancePayment,
                   method: methodForTransaction,
                   incomeCategory: 'deposit',
-                  description: `[Äáº·t trÆ°á»›c] PhÃ²ng ${this.roomData.roomNumber}`,
-                  notes: `Äáº·t trÆ°á»›c lÃºc nháº­n phÃ²ng ${this.roomData.roomNumber} - ${payerName}`,
+                  description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
+                  notes: `Đặt trước lúc nhận phòng ${this.roomData.roomNumber} - ${payerName}`,
                   payer: payerName
                 }).subscribe({
-                  next: () => console.log('ÄÃ£ táº¡o phiáº¿u thu Ä‘áº·t trÆ°á»›c cho phÃ²ng', this.roomData.roomNumber, 'method:', methodForTransaction),
-                  error: (err) => console.error('Lá»—i táº¡o phiáº¿u thu Ä‘áº·t trÆ°á»›c:', err)
+                  next: () => console.log('Đã tạo phiếu thu đặt trước cho phòng', this.roomData.roomNumber, 'method:', methodForTransaction),
+                  error: (err) => console.error('Lỗi tạo phiếu thu đặt trước:', err)
                 });
               }
             } catch (e) {
-              console.error('Lá»—i khi táº¡o phiáº¿u thu Ä‘áº·t trÆ°á»›c:', e);
+              console.error('Lỗi khi tạo phiếu thu đặt trước:', e);
             }
             
-            // Log Ä‘á»ƒ debug - dá»¯ liá»‡u Ä‘Ã£ Ä‘Æ°á»£c lÆ°u vÃ o RoomEvent qua backend
+            // Log để debug - dữ liệu đã được lưu vào RoomEvent qua backend
             console.log('Check-in data saved to RoomEvent:', {
               guestInfo: checkinEventData.guestInfo,
-              guestSource: checkinEventData.guestInfo?.guestSource, // Log riÃªng guestSource
+              guestSource: checkinEventData.guestInfo?.guestSource, // Log riêng guestSource
               advancePayment: advancePayment,
               additionalCharges: additionalCharges,
               discount: discount
@@ -1633,26 +1683,26 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               this.roomSessionService.startSession(this.roomData._id, sessionData);
             }
             
-            // Tá»± Ä‘á»™ng báº­t cÃ´ng táº¯c Ä‘iá»‡n khi check-in
+            // Tự động bật công tắc điện khi check-in
             this.tuyaService.autoTurnOnOnCheckIn(this.roomData._id).subscribe({
               next: (response) => {
                 if (response.data && response.data.devicesControlled > 0) {
-                  console.log(`ÄÃ£ tá»± Ä‘á»™ng báº­t ${response.data.devicesControlled} cÃ´ng táº¯c Ä‘iá»‡n`);
+                  console.log(`Đã tự động bật ${response.data.devicesControlled} công tắc điện`);
                 }
               },
               error: (error) => {
-                console.error('Lá»—i khi tá»± Ä‘á»™ng báº­t cÃ´ng táº¯c:', error);
-                // KhÃ´ng hiá»ƒn thá»‹ lá»—i Ä‘á»ƒ khÃ´ng lÃ m phiá»n user
+                console.error('Lỗi khi tự động bật công tắc:', error);
+                // Không hiển thị lỗi để không làm phiền user
               }
             });
             
-            // Notify Ä‘á»ƒ reload data - dá»¯ liá»‡u sáº½ Ä‘Æ°á»£c láº¥y tá»« RoomEvent khi reload
+            // Notify để reload data - dữ liệu sẽ được lấy từ RoomEvent khi reload
             this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, delayMs: 100 });
           }, 100);
         },
         (error) => {
           setTimeout(() => {
-            this.message.error('Lá»—i khi nháº­n phÃ²ng: ' + error.message);
+            this.message.error('Lỗi khi nhận phòng: ' + error.message);
             this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, delayMs: 100 });
           }, 100);
         }
@@ -1685,11 +1735,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  // Xá»­ lÃ½ checkout
+  // Xử lý checkout
   processCheckOut(): void {
-    // Kiá»ƒm tra tráº¡ng thÃ¡i phÃ²ng
+    // Kiểm tra trạng thái phòng
     if (this.roomData.status !== 'occupied') {
-      this.message.error(`PhÃ²ng ${this.roomData.roomNumber} hiá»‡n khÃ´ng cÃ³ khÃ¡ch Ä‘á»ƒ tráº£ phÃ²ng (Tráº¡ng thÃ¡i: ${this.getStatusLabel(this.roomData.status)}).`);
+      this.message.error(`Phòng ${this.roomData.roomNumber} hiện không có khách để trả phòng (Trạng thái: ${this.getStatusLabel(this.roomData.status)}).`);
       this.isLoading = false;
       return;
     }
@@ -1697,11 +1747,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     const currentTime = this.getUTCTimePlus7();
     
-    // Láº¥y dá»¯ liá»‡u tá»« RoomEvent (lastCheckinEvent) thay vÃ¬ session
+    // Lấy dữ liệu từ RoomEvent (lastCheckinEvent) thay vì session
     let checkInTime = this.getUTCTimePlus7();
     let lastCheckinEvent = null;
     
-    // TÃ¬m event check-in cuá»‘i cÃ¹ng CHÆ¯A CHECKOUT tá»« roomData.events
+    // Tìm event check-in cuối cùng CHƯA CHECKOUT từ roomData.events
     if (this.roomData.events && this.roomData.events.length > 0) {
       const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
       
@@ -1711,71 +1761,71 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Náº¿u khÃ´ng tÃ¬m tháº¥y event check-in, thá»­ reload láº¡i room data tá»« backend
+    // Nếu không tìm thấy event check-in, thử reload lại room data từ backend
     if (!lastCheckinEvent) {
       console.warn('No unchecked out checkin event found, attempting to reload room data');
       
-      // Thá»­ reload room data tá»« backend vá»›i excludeCheckedOut = true
+      // Thử reload room data từ backend với excludeCheckedOut = true
       if (this.roomData && this.roomData._id) {
         this.roomsService.getRoomById(this.roomData._id, { excludeCheckedOut: true }).subscribe({
           next: (reloadedRoom) => {
             if (reloadedRoom.events && reloadedRoom.events.length > 0) {
               const reloadedCheckinEvents = this.getUncheckedOutCheckinEvents(reloadedRoom.events);
               if (reloadedCheckinEvents.length > 0) {
-                // Cáº­p nháº­t roomData vá»›i dá»¯ liá»‡u má»›i
+                // Cập nhật roomData với dữ liệu mới
                 this.roomData = reloadedRoom;
                 lastCheckinEvent = reloadedCheckinEvents[0];
                 checkInTime = this.getEventCheckinTime(lastCheckinEvent) || this.getUTCTimePlus7();
-                // Tiáº¿p tá»¥c xá»­ lÃ½ checkout vá»›i event má»›i
+                // Tiếp tục xử lý checkout với event mới
                 this.processCheckOutWithEvent(lastCheckinEvent, checkInTime);
                 return;
               }
             }
-            // Náº¿u váº«n khÃ´ng tÃ¬m tháº¥y, hiá»ƒn thá»‹ warning vÃ  cho phÃ©p checkout vá»›i thÃ´ng tin máº·c Ä‘á»‹nh
-            this.message.warning('KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin check-in tá»« RoomEvent. Sá»­ dá»¥ng thÃ´ng tin máº·c Ä‘á»‹nh.');
+            // Nếu vẫn không tìm thấy, hiển thị warning và cho phép checkout với thông tin mặc định
+            this.message.warning('Không tìm thấy thông tin check-in từ RoomEvent. Sử dụng thông tin mặc định.');
             this.processCheckOutWithDefaultData();
           },
           error: (err) => {
             console.error('Error reloading room data:', err);
-            this.message.warning('KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin check-in tá»« RoomEvent. Sá»­ dá»¥ng thÃ´ng tin máº·c Ä‘á»‹nh.');
+            this.message.warning('Không tìm thấy thông tin check-in từ RoomEvent. Sử dụng thông tin mặc định.');
             this.processCheckOutWithDefaultData();
           }
         });
       } else {
-        this.message.warning('KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin check-in tá»« RoomEvent. Sá»­ dá»¥ng thÃ´ng tin máº·c Ä‘á»‹nh.');
+        this.message.warning('Không tìm thấy thông tin check-in từ RoomEvent. Sử dụng thông tin mặc định.');
         this.processCheckOutWithDefaultData();
       }
       this.isLoading = false;
       return;
     }
     
-    // Tiáº¿p tá»¥c xá»­ lÃ½ checkout vá»›i event tÃ¬m Ä‘Æ°á»£c
+    // Tiếp tục xử lý checkout với event tìm được
     this.processCheckOutWithEvent(lastCheckinEvent, checkInTime);
   }
   
-  // Xá»­ lÃ½ checkout vá»›i event check-in Ä‘Ã£ tÃ¬m Ä‘Æ°á»£c
+  // Xử lý checkout với event check-in đã tìm được
   private processCheckOutWithEvent(lastCheckinEvent: any, checkInTime: Date): void {
     const currentTime = this.getUTCTimePlus7();
     
-    // Láº¥y tÃªn khÃ¡ch vÃ  nguá»“n khÃ¡ch tá»« nhiá»u nguá»“n
-    let customerName = 'KhÃ¡ch láº»';
+    // Lấy tên khách và nguồn khách từ nhiều nguồn
+    let customerName = 'Khách lẻ';
     let customerPhone = 'N/A';
     let customerEmail = 'N/A';
     let guestSource = 'walkin';
     
-    // Æ¯u tiÃªn 1: Tá»« form checkout (náº¿u user Ä‘Ã£ chá»‰nh sá»­a)
+    // Ưu tiên 1: Từ form checkout (nếu user đã chỉnh sửa)
     const formGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
     const formGuestInfo = formGuestInfoFormGroup ? 
       (formGuestInfoFormGroup.disabled ? formGuestInfoFormGroup.getRawValue() : formGuestInfoFormGroup.value) : 
       (this.checkOutForm.get('guestInfo')?.value || {});
     
-    // Láº¥y guestSource trá»±c tiáº¿p tá»« form control
+    // Lấy guestSource trực tiếp từ form control
     const formGuestSourceControl = formGuestInfoFormGroup?.get('guestSource');
     const formGuestSourceValue = formGuestSourceControl ? 
       (formGuestSourceControl.disabled ? formGuestSourceControl.getRawValue() : formGuestSourceControl.value) : 
       (formGuestInfo.guestSource || null);
     
-    if (formGuestInfo.name && formGuestInfo.name !== 'KhÃ¡ch láº»') {
+    if (formGuestInfo.name && formGuestInfo.name !== 'Khách lẻ') {
       customerName = formGuestInfo.name;
       customerPhone = formGuestInfo.phone || customerPhone;
       customerEmail = formGuestInfo.email || customerEmail;
@@ -1791,19 +1841,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       finalGuestSource: guestSource
     });
     
-    // Æ¯u tiÃªn 2: Tá»« lastCheckinEvent.guestInfo (chá»‰ náº¿u form khÃ´ng cÃ³ giÃ¡ trá»‹)
-    if ((!customerName || customerName === 'KhÃ¡ch láº»') && lastCheckinEvent.guestInfo?.name && lastCheckinEvent.guestInfo.name !== 'KhÃ¡ch láº»') {
+    // Ưu tiên 2: Từ lastCheckinEvent.guestInfo (chỉ nếu form không có giá trị)
+    if ((!customerName || customerName === 'Khách lẻ') && lastCheckinEvent.guestInfo?.name && lastCheckinEvent.guestInfo.name !== 'Khách lẻ') {
       customerName = lastCheckinEvent.guestInfo.name;
       customerPhone = lastCheckinEvent.guestInfo.phone || customerPhone;
       customerEmail = lastCheckinEvent.guestInfo.email || customerEmail;
     }
-    // CHá»ˆ láº¥y guestSource tá»« lastCheckinEvent náº¿u form KHÃ”NG cÃ³ giÃ¡ trá»‹
+    // CHỈ lấy guestSource từ lastCheckinEvent nếu form KHÔNG có giá trị
     if (!formGuestSourceValue && lastCheckinEvent.guestInfo?.guestSource) {
       guestSource = lastCheckinEvent.guestInfo.guestSource;
     }
     
-    // Æ¯u tiÃªn 3: Tá»« roomData.currentBooking (chá»‰ náº¿u form vÃ  lastCheckinEvent khÃ´ng cÃ³ giÃ¡ trá»‹)
-    if ((!customerName || customerName === 'KhÃ¡ch láº»') && this.roomData.currentBooking) {
+    // Ưu tiên 3: Từ roomData.currentBooking (chỉ nếu form và lastCheckinEvent không có giá trị)
+    if ((!customerName || customerName === 'Khách lẻ') && this.roomData.currentBooking) {
       const currentBooking = typeof this.roomData.currentBooking === 'object' ? this.roomData.currentBooking : null;
       if (currentBooking?.guestInfo?.name) {
         customerName = currentBooking.guestInfo.name;
@@ -1811,7 +1861,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         customerEmail = currentBooking.guestInfo.email || customerEmail;
       }
     }
-    // CHá»ˆ láº¥y guestSource tá»« currentBooking náº¿u form vÃ  lastCheckinEvent KHÃ”NG cÃ³ giÃ¡ trá»‹
+    // CHỈ lấy guestSource từ currentBooking nếu form và lastCheckinEvent KHÔNG có giá trị
     if (!formGuestSourceValue && !lastCheckinEvent.guestInfo?.guestSource) {
       const currentBooking = typeof this.roomData.currentBooking === 'object' ? this.roomData.currentBooking : null;
       if (currentBooking?.guestInfo?.guestSource) {
@@ -1819,18 +1869,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Æ¯u tiÃªn 4: Tá»« roomData.events (lastCheckinEvent) - chá»‰ láº¥y event chÆ°a checkout
-    if ((!customerName || customerName === 'KhÃ¡ch láº»') && this.roomData.events && this.roomData.events.length > 0) {
+    // Ưu tiên 4: Từ roomData.events (lastCheckinEvent) - chỉ lấy event chưa checkout
+    if ((!customerName || customerName === 'Khách lẻ') && this.roomData.events && this.roomData.events.length > 0) {
       const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
       
       if (checkinEvents.length > 0) {
         const lastCheckinEvent = checkinEvents[0];
-        if (lastCheckinEvent.guestInfo?.name && lastCheckinEvent.guestInfo.name !== 'KhÃ¡ch láº»') {
+        if (lastCheckinEvent.guestInfo?.name && lastCheckinEvent.guestInfo.name !== 'Khách lẻ') {
           customerName = lastCheckinEvent.guestInfo.name;
           customerPhone = lastCheckinEvent.guestInfo.phone || customerPhone;
           customerEmail = lastCheckinEvent.guestInfo.email || customerEmail;
         }
-        // CHá»ˆ láº¥y guestSource tá»« events náº¿u form vÃ  currentBooking KHÃ”NG cÃ³ giÃ¡ trá»‹
+        // CHỈ lấy guestSource từ events nếu form và currentBooking KHÔNG có giá trị
         if (!formGuestSourceValue) {
           const currentBooking = typeof this.roomData.currentBooking === 'object' ? this.roomData.currentBooking : null;
           if (!currentBooking?.guestInfo?.guestSource && lastCheckinEvent.guestInfo?.guestSource) {
@@ -1840,15 +1890,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Æ¯u tiÃªn 5: Tá»« listData (náº¿u cÃ³) (chá»‰ náº¿u cÃ¡c nguá»“n trÃªn khÃ´ng cÃ³ giÃ¡ trá»‹)
-    if ((!customerName || customerName === 'KhÃ¡ch láº»') && this.listData && this.listData.length > 0) {
+    // Ưu tiên 5: Từ listData (nếu có) (chỉ nếu các nguồn trên không có giá trị)
+    if ((!customerName || customerName === 'Khách lẻ') && this.listData && this.listData.length > 0) {
       const firstItem = this.listData[0];
-      if (firstItem.guestInfo?.name && firstItem.guestInfo.name !== 'KhÃ¡ch láº»') {
+      if (firstItem.guestInfo?.name && firstItem.guestInfo.name !== 'Khách lẻ') {
         customerName = firstItem.guestInfo.name;
         customerPhone = firstItem.guestInfo.phone || customerPhone;
         customerEmail = firstItem.guestInfo.email || customerEmail;
       }
-      // CHá»ˆ láº¥y guestSource tá»« listData náº¿u cÃ¡c nguá»“n trÃªn KHÃ”NG cÃ³ giÃ¡ trá»‹
+      // CHỈ lấy guestSource từ listData nếu các nguồn trên KHÔNG có giá trị
       if (!formGuestSourceValue) {
         const currentBooking = typeof this.roomData.currentBooking === 'object' ? this.roomData.currentBooking : null;
         if (!currentBooking?.guestInfo?.guestSource) {
@@ -1862,39 +1912,39 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Log Ä‘á»ƒ debug
+    // Log để debug
     console.log('Checkout processCheckOut - Final guestSource:', {
       formGuestSourceValue: formGuestSourceValue,
       lastCheckinEventGuestSource: lastCheckinEvent?.guestInfo?.guestSource,
       finalGuestSource: guestSource
     });
     
-    // TÃ­nh thá»i gian lÆ°u trÃº chÃ­nh xÃ¡c theo phÃºt
+    // Tính thời gian lưu trú chính xác theo phút
     const durationInMilliseconds = currentTime.getTime() - checkInTime.getTime();
     const durationInMinutes = Math.floor(durationInMilliseconds / (1000 * 60));
     const durationInHours = Math.floor(durationInMinutes / 60);
     const remainingMinutes = durationInMinutes % 60;
     const durationInDays = Math.ceil(durationInHours / 24);
     
-    // TÃ­nh tá»•ng tiá»n phÃ²ng dá»±a trÃªn loáº¡i giÃ¡ (rateType)
-    // Æ¯u tiÃªn láº¥y rateType tá»« form checkout náº¿u cÃ³, náº¿u khÃ´ng thÃ¬ láº¥y tá»« lastCheckinEvent
+    // Tính tổng tiền phòng dựa trên loại giá (rateType)
+    // Ưu tiên lấy rateType từ form checkout nếu có, nếu không thì lấy từ lastCheckinEvent
     let rateType = this.checkOutForm?.get('rateType')?.value || lastCheckinEvent?.rateType || 'hourly';
     
-    // TÃ­nh tá»•ng tiá»n dá»‹ch vá»¥
+    // Tính tổng tiền dịch vụ
     const servicesTotal = this.calculateServicesTotal();
     
-    // Láº¥y giÃ¡ trá»‹ phá»¥ thu vÃ  giáº£m giÃ¡ tá»« form checkout, Ä‘áº£m báº£o lÃ  sá»‘
+    // Lấy giá trị phụ thu và giảm giá từ form checkout, đảm bảo là số
     const checkoutCharges = Number(this.checkOutForm.get('additionalCharges')?.value) || 0;
     const checkoutDiscount = Number(this.checkOutForm.get('discount')?.value) || 0;
     
-    // TÃ­nh tá»•ng phá»¥ thu vÃ  khuyáº¿n mÃ£i (bao gá»“m cáº£ tá»« check-in vÃ  checkout)
-    // initialCharges vÃ  initialDiscount Ä‘Ã£ Ä‘Æ°á»£c set khi load dá»¯ liá»‡u tá»« check-in event
-    // checkoutCharges vÃ  checkoutDiscount lÃ  giÃ¡ trá»‹ ngÆ°á»i dÃ¹ng nháº­p thÃªm vÃ o form checkout (form báº¯t Ä‘áº§u tá»« 0)
-    // Äá»“ng bá»™ vá»›i room.component.ts: totalAmount = roomPrice + additionalCharges + serviceAmount - discount - advancePayment
+    // Tính tổng phụ thu và khuyến mãi (bao gồm cả từ check-in và checkout)
+    // initialCharges và initialDiscount đã được set khi load dữ liệu từ check-in event
+    // checkoutCharges và checkoutDiscount là giá trị người dùng nhập thêm vào form checkout (form bắt đầu từ 0)
+    // Đồng bộ với room.component.ts: totalAmount = roomPrice + additionalCharges + serviceAmount - discount - advancePayment
     const additionalCharges = this.initialCharges + checkoutCharges;
     const discount = this.initialDiscount + checkoutDiscount;
     
-    // Trá»« tiá»n Ä‘Ã£ tráº£ trÆ°á»›c (náº¿u cÃ³) - láº¥y tá»« lastCheckinEvent hoáº·c form
+    // Trừ tiền đã trả trước (nếu có) - lấy từ lastCheckinEvent hoặc form
     const advancePayment = Number(this.checkOutForm?.get('advancePayment')?.value) || 
                            Number(lastCheckinEvent.advancePayment) || 0;
     const advancePaymentMethod = this.checkOutForm?.get('advancePaymentMethod')?.value || 
@@ -1927,44 +1977,44 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     );
   }
   
-  // Xá»­ lÃ½ checkout vá»›i thÃ´ng tin máº·c Ä‘á»‹nh khi khÃ´ng tÃ¬m tháº¥y event check-in
+  // Xử lý checkout với thông tin mặc định khi không tìm thấy event check-in
   private processCheckOutWithDefaultData(): void {
     const currentTime = this.getUTCTimePlus7();
-    // Sá»­ dá»¥ng thá»i gian hiá»‡n táº¡i trá»« 1 giá» lÃ m checkinTime máº·c Ä‘á»‹nh
+    // Sử dụng thời gian hiện tại trừ 1 giờ làm checkinTime mặc định
     const defaultCheckInTime = new Date(currentTime.getTime() - 3600000);
     
-    // Táº¡o event máº·c Ä‘á»‹nh
+    // Tạo event mặc định
     const defaultEvent = {
       checkinTime: defaultCheckInTime,
       rateType: this.checkOutForm?.get('rateType')?.value || 'hourly',
       advancePayment: Number(this.checkOutForm?.get('advancePayment')?.value) || 0,
       guestInfo: {
-        name: 'KhÃ¡ch láº»',
+        name: 'Khách lẻ',
         phone: '',
         email: '',
         guestSource: 'walkin'
       }
     };
     
-    // Láº¥y thÃ´ng tin tá»« form náº¿u cÃ³
+    // Lấy thông tin từ form nếu có
     const formGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
     const formGuestInfo = formGuestInfoFormGroup ? 
       (formGuestInfoFormGroup.disabled ? formGuestInfoFormGroup.getRawValue() : formGuestInfoFormGroup.value) : 
       (this.checkOutForm.get('guestInfo')?.value || {});
     
-    if (formGuestInfo.name && formGuestInfo.name !== 'KhÃ¡ch láº»') {
+    if (formGuestInfo.name && formGuestInfo.name !== 'Khách lẻ') {
       defaultEvent.guestInfo.name = formGuestInfo.name;
       defaultEvent.guestInfo.phone = formGuestInfo.phone || '';
       defaultEvent.guestInfo.email = formGuestInfo.email || '';
       defaultEvent.guestInfo.guestSource = formGuestInfo.guestSource || 'walkin';
     }
     
-    // Tiáº¿p tá»¥c xá»­ lÃ½ checkout vá»›i event máº·c Ä‘á»‹nh
+    // Tiếp tục xử lý checkout với event mặc định
     this.processCheckOutWithEvent(defaultEvent, defaultCheckInTime);
   }
 
   /**
-   * Xá»­ lÃ½ checkout vá»›i giÃ¡ Ä‘Ã£ Ä‘Æ°á»£c tÃ­nh tá»« backend
+   * Xử lý checkout với giá đã được tính từ backend
    */
   private processCheckoutWithPrice(
     roomTotal: number,
@@ -1987,8 +2037,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     durationInHours: number,
     durationInDays: number
   ): void {
-    // Äáº£m báº£o roomTotal cÃ³ giÃ¡ trá»‹ há»£p lá»‡
-    // Náº¿u roomTotal lÃ  0 hoáº·c undefined, sá»­ dá»¥ng _roomPriceTotal hoáº·c tÃ­nh láº¡i
+    // Đảm bảo roomTotal có giá trị hợp lệ
+    // Nếu roomTotal là 0 hoặc undefined, sử dụng _roomPriceTotal hoặc tính lại
     let validRoomTotal = roomTotal;
     if (!validRoomTotal || validRoomTotal <= 0) {
       console.warn('[processCheckoutWithPrice] roomTotal is invalid, using _roomPriceTotal:', {
@@ -1997,7 +2047,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       });
       validRoomTotal = this._roomPriceTotal || 0;
       
-      // Náº¿u váº«n khÃ´ng cÃ³ giÃ¡ trá»‹, tÃ­nh láº¡i tá»« calculateRoomTotalByRateType
+      // Nếu vẫn không có giá trị, tính lại từ calculateRoomTotalByRateType
       if (!validRoomTotal || validRoomTotal <= 0) {
         const remainingMinutes = 0;
         validRoomTotal = this.calculateRoomTotalByRateType(durationInHours, durationInDays, rateType, remainingMinutes);
@@ -2007,9 +2057,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     console.log('[processCheckoutWithPrice] Final roomTotal:', validRoomTotal);
     
-    // QUAN TRá»ŒNG: Cáº­p nháº­t check-in event vá»›i additionalCharges vÃ  discount má»›i (tá»•ng) TRÆ¯á»šC KHI checkout
-    // Äáº£m báº£o khi room.component reload, nÃ³ sáº½ láº¥y Ä‘Æ°á»£c giÃ¡ trá»‹ má»›i nháº¥t tá»« check-in event
-    // Láº¥y giÃ¡ trá»‹ phá»¥ thu vÃ  khuyáº¿n mÃ£i tá»« form checkout (chá»‰ giÃ¡ trá»‹ ngÆ°á»i dÃ¹ng nháº­p thÃªm)
+    // QUAN TRỌNG: Cập nhật check-in event với additionalCharges và discount mới (tổng) TRƯỚC KHI checkout
+    // Đảm bảo khi room.component reload, nó sẽ lấy được giá trị mới nhất từ check-in event
+    // Lấy giá trị phụ thu và khuyến mãi từ form checkout (chỉ giá trị người dùng nhập thêm)
     const checkoutCharges = Number(this.checkOutForm.get('additionalCharges')?.value) || 0;
     const checkoutDiscount = Number(this.checkOutForm.get('discount')?.value) || 0;
     
@@ -2019,7 +2069,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       (this.checkOutForm.get('guestInfo')?.value || {});
     
     const updatedGuestInfo = {
-      name: formGuestInfoValue.name || customerName || 'KhÃ¡ch láº»',
+      name: formGuestInfoValue.name || customerName || 'Khách lẻ',
       idNumber: formGuestInfoValue.idNumber || '',
       tax_code: formGuestInfoValue.tax_code || '',
       phone: formGuestInfoValue.phone || customerPhone || '',
@@ -2028,8 +2078,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestSource: formGuestInfoValue.guestSource || guestSource || 'walkin'
     };
     
-    // Cáº­p nháº­t check-in event vá»›i additionalCharges vÃ  discount má»›i (tá»•ng) trÆ°á»›c khi checkout
-    // Äáº£m báº£o room.component sáº½ láº¥y Ä‘Æ°á»£c giÃ¡ trá»‹ má»›i nháº¥t khi reload
+    // Cập nhật check-in event với additionalCharges và discount mới (tổng) trước khi checkout
+    // Đảm bảo room.component sẽ lấy được giá trị mới nhất khi reload
     this.roomsService.updateRoomCheckinInfo(
       this.roomData._id,
       updatedGuestInfo,
@@ -2052,7 +2102,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           remainingAmount: remainingAmount
         });
         
-        // Sau khi cáº­p nháº­t check-in event thÃ nh cÃ´ng, tiáº¿p tá»¥c vá»›i checkout
+        // Sau khi cập nhật check-in event thành công, tiếp tục với checkout
         this.proceedWithCheckoutAfterUpdate(
           validRoomTotal,
           rateType,
@@ -2077,7 +2127,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       },
       error: (updateError) => {
         console.error('Error updating check-in event before checkout:', updateError);
-        // Váº«n tiáº¿p tá»¥c checkout dÃ¹ cÃ³ lá»—i cáº­p nháº­t
+        // Vẫn tiếp tục checkout dù có lỗi cập nhật
         this.proceedWithCheckoutAfterUpdate(
           validRoomTotal,
           rateType,
@@ -2104,7 +2154,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
   
   /**
-   * Tiáº¿p tá»¥c xá»­ lÃ½ checkout sau khi Ä‘Ã£ cáº­p nháº­t check-in event
+   * Tiếp tục xử lý checkout sau khi đã cập nhật check-in event
    */
   private proceedWithCheckoutAfterUpdate(
     validRoomTotal: number,
@@ -2127,10 +2177,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     durationInHours: number,
     durationInDays: number
   ): void {
-    // Chuáº©n bá»‹ dá»¯ liá»‡u checkout
+    // Chuẩn bị dữ liệu checkout
     const paymentMethod = this.normalizePaymentMethod(this.checkOutForm.get('paymentMethod')?.value);
     const createDebt = this.checkOutForm.get('createDebt')?.value || false;
-    // LÆ°u paymentMethod vÃ o checkoutData Ä‘á»ƒ sá»­ dá»¥ng sau khi kiá»ƒm tra QR setting
+    // Lưu paymentMethod vào checkoutData để sử dụng sau khi kiểm tra QR setting
     const checkoutData = {
       status: 'dirty',
       paymentStatus: createDebt ? 'pending' : ((paymentMethod === 'transfer') ? 'pending' : 'paid'),
@@ -2141,9 +2191,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       skipAutoIncomeVoucher: true,
       advancePayment: advancePayment,
       advancePaymentMethod: advancePaymentMethod,
-      roomTotal: validRoomTotal, // Gá»­i validRoomTotal Ä‘Ã£ Ä‘Æ°á»£c validate
-      rateType: rateType, // Gá»­i rateType Ä‘Ã£ Ä‘Æ°á»£c tÃ­nh toÃ¡n tá»« backend
-      totalAmount: grandTotal, // Tá»•ng tiá»n (room + services + charges - discount)
+      roomTotal: validRoomTotal, // Gửi validRoomTotal đã được validate
+      rateType: rateType, // Gửi rateType đã được tính toán từ backend
+      totalAmount: grandTotal, // Tổng tiền (room + services + charges - discount)
       remainingAmount: remainingAmount,
       additionalCharges: additionalCharges,
       discount: discount,
@@ -2151,8 +2201,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       notes: this.checkOutForm.get('notes')?.value,
       reason: this.checkOutForm.get('reason')?.value,
       services: this.selectedServices,
-      createDebt: createDebt, // Flag Ä‘á»ƒ Ä‘Æ°a vÃ o cÃ´ng ná»£
-      // Gá»­i thÃ´ng tin khÃ¡ch hÃ ng Ä‘á»ƒ backend sá»­ dá»¥ng
+      createDebt: createDebt, // Flag để đưa vào công nợ
+      // Gửi thông tin khách hàng để backend sử dụng
       customerName: customerName,
       customerPhone: customerPhone && customerPhone !== 'N/A' ? customerPhone : undefined,
       customerEmail: customerEmail && customerEmail !== 'N/A' ? customerEmail : undefined,
@@ -2161,14 +2211,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestId: formGuestInfo.idNumber || '',
       guestEmail: customerEmail && customerEmail !== 'N/A' ? customerEmail : '',
       guestAddress: formGuestInfo.address || '',
-      // Gá»­i guestInfo Ä‘áº§y Ä‘á»§ Ä‘á»ƒ backend lÆ°u vÃ o event
+      // Gửi guestInfo đầy đủ để backend lưu vào event
       guestInfo: {
         name: customerName,
         phone: customerPhone && customerPhone !== 'N/A' ? customerPhone : '',
         email: customerEmail && customerEmail !== 'N/A' ? customerEmail : '',
         idNumber: formGuestInfo.idNumber || '',
         address: formGuestInfo.address || '',
-        guestSource: guestSource // Sá»­ dá»¥ng guestSource Ä‘Ã£ láº¥y tá»« nhiá»u nguá»“n (Æ°u tiÃªn tá»« form)
+        guestSource: guestSource // Sử dụng guestSource đã lấy từ nhiều nguồn (ưu tiên từ form)
       },
       events: [
         ...this.roomData.events || [],
@@ -2179,7 +2229,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           checkinTime: checkInTime,
           checkInTime: checkInTime,
           amount: grandTotal,
-          rateType: rateType, // ThÃªm rateType Ä‘Ã£ Ä‘Æ°á»£c tÃ­nh toÃ¡n tá»« backend
+          rateType: rateType, // Thêm rateType đã được tính toán từ backend
           paymentMethod: paymentMethod,
           staffId: this.currentUser?._id || this.currentUser?.id || undefined,
           guestInfo: {
@@ -2188,7 +2238,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             email: customerEmail && customerEmail !== 'N/A' ? customerEmail : '',
             idNumber: formGuestInfo.idNumber || '',
             address: formGuestInfo.address || '',
-            guestSource: guestSource // Äáº£m báº£o guestSource Ä‘Æ°á»£c gá»­i trong event
+            guestSource: guestSource // Đảm bảo guestSource được gửi trong event
           }
         }
       ]
@@ -2220,7 +2270,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     };
     this.pendingCheckoutCloseResult = closeResult;
     
-    // Log Ä‘á»ƒ debug
+    // Log để debug
     console.log('Checkout data being sent to backend:', {
       guestInfo: checkoutData.guestInfo,
       guestSource: checkoutData.guestInfo.guestSource,
@@ -2234,7 +2284,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       eventsGuestSource: checkoutData.events[checkoutData.events.length - 1]?.guestInfo?.guestSource
     });
     
-    // Táº¡o danh sÃ¡ch products cho hÃ³a Ä‘Æ¡n
+    // Tạo danh sách products cho hóa đơn
     const products: any[] = [];
     
     console.log('[processCheckoutWithPrice] Creating invoice products:', {
@@ -2243,15 +2293,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       servicesCount: this.selectedServices?.length || 0
     });
     
-    // ThÃªm tiá»n phÃ²ng vÃ o products (sá»­ dá»¥ng validRoomTotal Ä‘Ã£ Ä‘Æ°á»£c validate á»Ÿ trÃªn)
+    // Thêm tiền phòng vào products (sử dụng validRoomTotal đã được validate ở trên)
     products.push({
-      name: `Tiá»n phÃ²ng ${this.roomData.roomNumber}`,
+      name: `Tiền phòng ${this.roomData.roomNumber}`,
       price: validRoomTotal,
       quantity: 1,
-      totalPrice: validRoomTotal // ThÃªm totalPrice Ä‘á»ƒ Ä‘áº£m báº£o tÃ­nh Ä‘Ãºng
+      totalPrice: validRoomTotal // Thêm totalPrice để đảm bảo tính đúng
     });
     
-    // ThÃªm cÃ¡c dá»‹ch vá»¥ vÃ o products
+    // Thêm các dịch vụ vào products
     if (this.selectedServices && this.selectedServices.length > 0) {
       this.selectedServices.forEach(service => {
         const serviceTotal = service.price * (service.quantity || 1);
@@ -2259,14 +2309,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           name: service.serviceName,
           price: service.price,
           quantity: service.quantity || 1,
-          totalPrice: serviceTotal // ThÃªm totalPrice Ä‘á»ƒ Ä‘áº£m báº£o tÃ­nh Ä‘Ãºng
+          totalPrice: serviceTotal // Thêm totalPrice để đảm bảo tính đúng
         });
       });
     }
     
     console.log('[processCheckoutWithPrice] Products created:', products);
     
-    // Táº¡o dá»¯ liá»‡u hÃ³a Ä‘Æ¡n
+    // Tạo dữ liệu hóa đơn
     const invoiceData = {
       roomId: this.roomData._id,
       roomNumber: this.roomData.roomNumber,
@@ -2274,9 +2324,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       hotelId: this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId,
       invoiceNumber: 'INV-' + Date.now(),
       date: new Date(),
-      staffName: this.currentUser?.fullName || this.currentUser?.username || 'NhÃ¢n viÃªn',
+      staffName: this.currentUser?.fullName || this.currentUser?.username || 'Nhân viên',
       staffId: this.currentUser?._id || this.currentUser?.id || undefined,
-      customerName: customerName, // Sá»­ dá»¥ng tÃªn khÃ¡ch Ä‘Ã£ láº¥y tá»« nhiá»u nguá»“n
+      customerName: customerName, // Sử dụng tên khách đã lấy từ nhiều nguồn
       customerPhone: customerPhone !== 'N/A' ? customerPhone : '',
       customerEmail: customerEmail !== 'N/A' ? customerEmail : '',
       checkInTime: checkInTime,
@@ -2305,62 +2355,62 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                              'cash'),
       remainingAmount: remainingAmount,
       paymentMethod: paymentMethod,
-      paymentStatus: checkoutData.paymentStatus || 'paid', // ThÃªm paymentStatus tá»« checkoutData
+      paymentStatus: checkoutData.paymentStatus || 'paid', // Thêm paymentStatus từ checkoutData
       notes: this.checkOutForm.get('notes')?.value,
-      rateType: rateType, // ThÃªm rateType vÃ o invoiceData
+      rateType: rateType, // Thêm rateType vào invoiceData
       guestInfo: {
         name: customerName,
         phone: customerPhone && customerPhone !== 'N/A' ? customerPhone : '',
         email: customerEmail && customerEmail !== 'N/A' ? customerEmail : '',
         idNumber: formGuestInfo.idNumber || '',
-        tax_code: formGuestInfo.tax_code || '', // MÃ£ sá»‘ thuáº¿ (cho cÃ´ng ty)
+        tax_code: formGuestInfo.tax_code || '', // Mã số thuế (cho công ty)
         address: formGuestInfo.address || '',
-        guestSource: guestSource // ThÃªm guestSource vÃ o guestInfo
+        guestSource: guestSource // Thêm guestSource vào guestInfo
       },
-      guestSource: guestSource // ThÃªm guestSource trá»±c tiáº¿p vÃ o invoiceData Ä‘á»ƒ dá»… truy cáº­p
+      guestSource: guestSource // Thêm guestSource trực tiếp vào invoiceData để dễ truy cập
     };
     
-    // Kiá»ƒm tra náº¿u payment method lÃ  'transfer' (chuyá»ƒn khoáº£n)
+    // Kiểm tra nếu payment method là 'transfer' (chuyển khoản)
     if (paymentMethod === 'transfer') {
-      // Kiá»ƒm tra xem cÃ³ nÃªn hiá»ƒn thá»‹ QR payment khÃ´ng
+      // Kiểm tra xem có nên hiển thị QR payment không
       this.checkAndHandleTransferPayment(remainingAmount, invoiceData, checkoutData);
     } else {
-      // ÄÃ³ng modal ngay láº­p tá»©c vÃ  thá»±c hiá»‡n checkout
+      // Đóng modal ngay lập tức và thực hiện checkout
       if (this.modalRef) {
         this.modalRef.close(closeResult);
       }
       this.pendingCheckoutCloseResult = null;
       
-      // Thá»±c hiá»‡n checkout trong background
+      // Thực hiện checkout trong background
       this.roomsService.checkOutRoom(this.roomData._id, checkoutData)
         .subscribe(
           (response) => {
             setTimeout(() => {
-              // Hiá»ƒn thá»‹ thÃ´ng bÃ¡o thÃ nh cÃ´ng (mÃ u xanh)
-              this.message.success('Check-out thÃ nh cÃ´ng');
+              // Hiển thị thông báo thành công (màu xanh)
+              this.message.success('Check-out thành công');
 
               if (this.roomData && this.roomData._id) {
                 this.roomSessionService.endSession(this.roomData._id);
               }
               
-              // Tá»± Ä‘á»™ng reload danh sÃ¡ch phÃ²ng ngay láº­p tá»©c
+              // Tự động reload danh sách phòng ngay lập tức
               this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, delayMs: 120 });
               
-              // Tá»± Ä‘á»™ng táº¯t cÃ´ng táº¯c Ä‘iá»‡n khi check-out Ä‘á»ƒ tiáº¿t kiá»‡m Ä‘iá»‡n
+              // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
               this.tuyaService.autoTurnOffOnCheckOut(this.roomData._id).subscribe({
                 next: (response) => {
                   if (response.data && response.data.devicesControlled > 0) {
-                    console.log(`ÄÃ£ tá»± Ä‘á»™ng táº¯t ${response.data.devicesControlled} cÃ´ng táº¯c Ä‘iá»‡n Ä‘á»ƒ tiáº¿t kiá»‡m Ä‘iá»‡n`);
+                    console.log(`Đã tự động tắt ${response.data.devicesControlled} công tắc điện để tiết kiệm điện`);
                   }
                 },
                 error: (error) => {
-                  console.error('Lá»—i khi tá»± Ä‘á»™ng táº¯t cÃ´ng táº¯c:', error);
-                  // KhÃ´ng hiá»ƒn thá»‹ lá»—i Ä‘á»ƒ khÃ´ng lÃ m phiá»n user
+                  console.error('Lỗi khi tự động tắt công tắc:', error);
+                  // Không hiển thị lỗi để không làm phiền user
                 }
               });
               
-              // Tá»± Ä‘á»™ng reload room data sau khi checkout thÃ nh cÃ´ng
-              // TÄƒng delay Ä‘á»ƒ Ä‘áº£m báº£o backend Ä‘Ã£ lÆ°u xong checkout event vÃ  cáº­p nháº­t room status
+              // Tự động reload room data sau khi checkout thành công
+              // Tăng delay để đảm bảo backend đã lưu xong checkout event và cập nhật room status
               setTimeout(() => {
                 if (this.roomData && this.roomData._id) {
                   this.roomsService.getRoomById(this.roomData._id, { 
@@ -2369,30 +2419,30 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                   }).subscribe({
                     next: (updatedRoom) => {
                       this.roomData = updatedRoom;
-                      // Cáº­p nháº­t danh sÃ¡ch phÃ²ng vá»›i delay Ä‘á»ƒ Ä‘áº£m báº£o backend Ä‘Ã£ cáº­p nháº­t xong
-                      // QUAN TRá»ŒNG: Sau khi checkout, phÃ²ng chuyá»ƒn sang dirty, nhÆ°ng cáº§n reload events Ä‘á»ƒ hiá»ƒn thá»‹ Ä‘Ãºng giÃ¡ trá»‹ cuá»‘i cÃ¹ng
+                      // Cập nhật danh sách phòng với delay để đảm bảo backend đã cập nhật xong
+                      // QUAN TRỌNG: Sau khi checkout, phòng chuyển sang dirty, nhưng cần reload events để hiển thị đúng giá trị cuối cùng
                       setTimeout(() => {
                         this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
-                      }, 500); // TÄƒng delay lÃªn 500ms Ä‘á»ƒ Ä‘áº£m báº£o backend Ä‘Ã£ lÆ°u xong checkout event vá»›i additionalCharges vÃ  discount má»›i
+                      }, 500); // Tăng delay lên 500ms để đảm bảo backend đã lưu xong checkout event với additionalCharges và discount mới
                     },
                     error: (err) => {
                       console.error('Error reloading room data:', err);
-                      // Váº«n cáº­p nháº­t danh sÃ¡ch phÃ²ng dÃ¹ cÃ³ lá»—i
+                      // Vẫn cập nhật danh sách phòng dù có lỗi
                       setTimeout(() => {
                         this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
                       }, 500);
                     }
                   });
                 } else {
-                  // Cáº­p nháº­t danh sÃ¡ch phÃ²ng vá»›i delay
+                  // Cập nhật danh sách phòng với delay
                   setTimeout(() => {
                     this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
                   }, 500);
                 }
-              }, 300); // Delay 300ms trÆ°á»›c khi reload room data
+              }, 300); // Delay 300ms trước khi reload room data
               
-              // Chá»‰ hiá»ƒn thá»‹ hÃ³a Ä‘Æ¡n náº¿u Ä‘Ã£ thanh toÃ¡n (khÃ´ng pháº£i chuyá»ƒn khoáº£n pending)
-              // Náº¿u paymentMethod lÃ  'transfer', paymentStatus sáº½ lÃ  'pending' vÃ  khÃ´ng hiá»ƒn thá»‹ hÃ³a Ä‘Æ¡n
+              // Chỉ hiển thị hóa đơn nếu đã thanh toán (không phải chuyển khoản pending)
+              // Nếu paymentMethod là 'transfer', paymentStatus sẽ là 'pending' và không hiển thị hóa đơn
               const paymentStatus = checkoutData.paymentStatus || 'paid';
               if (paymentStatus === 'paid') {
                 setTimeout(() => {
@@ -2403,7 +2453,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           },
           (error) => {
             setTimeout(() => {
-              this.message.error('Lá»—i khi tráº£ phÃ²ng: ' + error.message);
+              this.message.error('Lỗi khi trả phòng: ' + error.message);
               this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 120 });
             }, 100);
           }
@@ -2412,7 +2462,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
   
   /**
-   * Kiá»ƒm tra vÃ  xá»­ lÃ½ thanh toÃ¡n chuyá»ƒn khoáº£n vá»›i QR (náº¿u Ä‘Æ°á»£c báº­t)
+   * Kiểm tra và xử lý thanh toán chuyển khoản với QR (nếu được bật)
    */
   checkAndHandleTransferPayment(amount: number, invoiceData: any, checkoutData: any): void {
     const normalizedAmount = Number(amount) || 0;
@@ -2425,7 +2475,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Æ¯u tiÃªn: náº¿u cÃ³ QR tá»« cÃ¡c nguá»“n business/hotel/manager/user thÃ¬ hiá»ƒn thá»‹ ngay
+    // Ưu tiên: nếu có QR từ các nguồn business/hotel/manager/user thì hiển thị ngay
     const manager = (this.businessInfo && typeof this.businessInfo.managerId === 'object') ? this.businessInfo.managerId : null;
     const isQrAvailable = !!(
       this.businessOwner?.bankAccount?.qrPaymentUrl ||
@@ -2438,7 +2488,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Náº¿u khÃ´ng cÃ³ QR sáºµn cÃ³, kiá»ƒm tra hotel settings vÃ  pricing package
+    // Nếu không có QR sẵn có, kiểm tra hotel settings và pricing package
     if (this.roomData?.hotelId) {
       this.hotelService.getHotelById(this.roomData.hotelId).subscribe({
         next: (hotel: any) => {
@@ -2459,44 +2509,44 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading hotel settings:', error);
-          // Fallback: thá»­ xá»­ lÃ½ transfer payment (sáº½ tá»± Ä‘á»™ng checkout trá»±c tiáº¿p náº¿u khÃ´ng cÃ³ QR)
+          // Fallback: thử xử lý transfer payment (sẽ tự động checkout trực tiếp nếu không có QR)
           this.handleTransferPayment(amount, invoiceData, checkoutData);
         }
       });
     } else {
-      // KhÃ´ng cÃ³ hotelId, xá»­ lÃ½ transfer payment (sáº½ tá»± Ä‘á»™ng checkout trá»±c tiáº¿p náº¿u khÃ´ng cÃ³ QR)
+      // Không có hotelId, xử lý transfer payment (sẽ tự động checkout trực tiếp nếu không có QR)
       this.handleTransferPayment(amount, invoiceData, checkoutData);
     }
   }
   
   /**
-   * Kiá»ƒm tra pricing package vÃ  xá»­ lÃ½ thanh toÃ¡n
+   * Kiểm tra pricing package và xử lý thanh toán
    */
   private checkPricingPackageAndHandlePayment(businessId: string, enableQRFromSettings: boolean, amount: number, invoiceData: any, checkoutData: any): void {
-    // Kiá»ƒm tra tá»« businessInfo náº¿u cÃ³
+    // Kiểm tra từ businessInfo nếu có
     if (this.businessInfo?.pricingPackage) {
       const pricingPackage = this.businessInfo.pricingPackage;
       const hasQRFeature = pricingPackage.qrPaymentFeature || false;
       
-      // Náº¿u pricing package cÃ³ QR feature hoáº·c hotel setting báº­t QR
+      // Nếu pricing package có QR feature hoặc hotel setting bật QR
       if (hasQRFeature || enableQRFromSettings) {
-        // Gá»i handleTransferPayment - nÃ³ sáº½ tá»± kiá»ƒm tra cÃ³ QR code khÃ´ng
-        // Náº¿u khÃ´ng cÃ³ QR code, sáº½ tá»± Ä‘á»™ng bá» qua modal vÃ  checkout trá»±c tiáº¿p
+        // Gọi handleTransferPayment - nó sẽ tự kiểm tra có QR code không
+        // Nếu không có QR code, sẽ tự động bỏ qua modal và checkout trực tiếp
         this.handleTransferPayment(amount, invoiceData, checkoutData);
       } else {
-        // KhÃ´ng cÃ³ QR feature vÃ  khÃ´ng báº­t trong settings, set paymentStatus = 'paid' vÃ  checkout vá»›i xuáº¥t hÃ³a Ä‘Æ¡n
+        // Không có QR feature và không bật trong settings, set paymentStatus = 'paid' và checkout với xuất hóa đơn
         checkoutData.paymentStatus = 'paid';
         invoiceData.paymentStatus = 'paid';
         this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
       }
     } else {
-      // KhÃ´ng cÃ³ pricing package info, chá»‰ kiá»ƒm tra hotel settings
+      // Không có pricing package info, chỉ kiểm tra hotel settings
       if (enableQRFromSettings) {
-        // Gá»i handleTransferPayment - nÃ³ sáº½ tá»± kiá»ƒm tra cÃ³ QR code khÃ´ng
-        // Náº¿u khÃ´ng cÃ³ QR code, sáº½ tá»± Ä‘á»™ng bá» qua modal vÃ  checkout trá»±c tiáº¿p
+        // Gọi handleTransferPayment - nó sẽ tự kiểm tra có QR code không
+        // Nếu không có QR code, sẽ tự động bỏ qua modal và checkout trực tiếp
         this.handleTransferPayment(amount, invoiceData, checkoutData);
       } else {
-        // KhÃ´ng báº­t QR, set paymentStatus = 'paid' vÃ  checkout vá»›i xuáº¥t hÃ³a Ä‘Æ¡n
+        // Không bật QR, set paymentStatus = 'paid' và checkout với xuất hóa đơn
         checkoutData.paymentStatus = 'paid';
         invoiceData.paymentStatus = 'paid';
         this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
@@ -2505,7 +2555,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
   
   /**
-   * Thá»±c hiá»‡n checkout trá»±c tiáº¿p khÃ´ng qua QR
+   * Thực hiện checkout trực tiếp không qua QR
    */
   private proceedWithCheckoutDirectly(checkoutData: any, invoiceData: any): void {
     if (this.modalRef) {
@@ -2517,7 +2567,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           roomNumber: this.roomData?.roomNumber,
           checkInTime: checkoutData?.checkInTime || checkoutData?.checkinTime,
           checkOutTime: checkoutData?.checkOutTime || checkoutData?.checkoutTime,
-          customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'KhÃ¡ch láº»',
+          customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'Khách lẻ',
           guestSource: checkoutData?.guestInfo?.guestSource || invoiceData?.guestSource || 'walkin',
           paymentMethod: checkoutData?.paymentMethod || 'transfer',
           paymentStatus: checkoutData?.paymentStatus || 'paid',
@@ -2539,7 +2589,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.modalRef.close(closeResult);
     }
     
-    // Kiá»ƒm tra paymentStatus - chá»‰ hiá»ƒn thá»‹ hÃ³a Ä‘Æ¡n náº¿u Ä‘Ã£ thanh toÃ¡n
+    // Kiểm tra paymentStatus - chỉ hiển thị hóa đơn nếu đã thanh toán
     const paymentStatus = checkoutData.paymentStatus || 'paid';
     const shouldShowInvoice = paymentStatus === 'paid';
     
@@ -2548,25 +2598,25 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         if (response.success) {
           setTimeout(() => {
-            // Hiá»ƒn thá»‹ thÃ´ng bÃ¡o thÃ nh cÃ´ng (mÃ u xanh)
-            this.message.success('Check-out thÃ nh cÃ´ng');
+            // Hiển thị thông báo thành công (màu xanh)
+            this.message.success('Check-out thành công');
             
-            // Tá»± Ä‘á»™ng reload danh sÃ¡ch phÃ²ng ngay láº­p tá»©c
+            // Tự động reload danh sách phòng ngay lập tức
             this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, delayMs: 120 });
             
-            // Tá»± Ä‘á»™ng táº¯t cÃ´ng táº¯c Ä‘iá»‡n khi check-out Ä‘á»ƒ tiáº¿t kiá»‡m Ä‘iá»‡n
+            // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
             this.tuyaService.autoTurnOffOnCheckOut(this.roomData._id).subscribe({
               next: (response) => {
                 if (response.data && response.data.devicesControlled > 0) {
-                  console.log(`ÄÃ£ tá»± Ä‘á»™ng táº¯t ${response.data.devicesControlled} cÃ´ng táº¯c Ä‘iá»‡n Ä‘á»ƒ tiáº¿t kiá»‡m Ä‘iá»‡n`);
+                  console.log(`Đã tự động tắt ${response.data.devicesControlled} công tắc điện để tiết kiệm điện`);
                 }
               },
               error: (error) => {
-                console.error('Lá»—i khi tá»± Ä‘á»™ng táº¯t cÃ´ng táº¯c:', error);
+                console.error('Lỗi khi tự động tắt công tắc:', error);
               }
             });
             
-            // Tá»± Ä‘á»™ng reload room data sau khi checkout thÃ nh cÃ´ng
+            // Tự động reload room data sau khi checkout thành công
             if (this.roomData && this.roomData._id) {
               this.roomsService.getRoomById(this.roomData._id, { 
                 limit: 1000,
@@ -2574,21 +2624,21 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               }).subscribe({
                 next: (updatedRoom) => {
                   this.roomData = updatedRoom;
-                  // Tá»± Ä‘á»™ng reload danh sÃ¡ch phÃ²ng láº¡i má»™t láº§n ná»¯a Ä‘á»ƒ Ä‘áº£m báº£o
+                  // Tự động reload danh sách phòng lại một lần nữa để đảm bảo
                   this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
                 },
                 error: (err) => {
                   console.error('Error reloading room data:', err);
-                  // Váº«n reload danh sÃ¡ch phÃ²ng dÃ¹ cÃ³ lá»—i
+                  // Vẫn reload danh sách phòng dù có lỗi
                   this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
                 }
               });
             } else {
-              // Tá»± Ä‘á»™ng reload danh sÃ¡ch phÃ²ng
+              // Tự động reload danh sách phòng
               this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
             }
             
-            // Hiá»ƒn thá»‹ hÃ³a Ä‘Æ¡n náº¿u paymentStatus = 'paid' (khi QR bá»‹ táº¯t vÃ  chá»n chuyá»ƒn khoáº£n)
+            // Hiển thị hóa đơn nếu paymentStatus = 'paid' (khi QR bị tắt và chọn chuyển khoản)
             if (shouldShowInvoice) {
               setTimeout(() => {
                 this.showInvoice(invoiceData);
@@ -2596,19 +2646,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             }
           }, 100);
         } else {
-          this.message.error(response.message || 'Lá»—i khi checkout');
+          this.message.error(response.message || 'Lỗi khi checkout');
         }
       },
       error: (error) => {
         this.isLoading = false;
         console.error('Error during checkout:', error);
-        this.message.error('Lá»—i khi checkout');
+        this.message.error('Lỗi khi checkout');
       }
     });
   }
 
   /**
-   * Xá»­ lÃ½ thanh toÃ¡n chuyá»ƒn khoáº£n vá»›i SePay
+   * Xử lý thanh toán chuyển khoản với SePay
    */
   handleTransferPayment(amount: number, invoiceData: any, checkoutData: any): void {
     const normalizedAmount = Number(amount) || 0;
@@ -2621,56 +2671,56 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Láº¥y userId tá»« currentUser
+    // Lấy userId từ currentUser
     const userId = this.currentUser?._id || this.currentUser?.id;
     
     if (!userId) {
-      this.message.error('KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin ngÆ°á»i dÃ¹ng');
+      this.message.error('Không tìm thấy thông tin người dùng');
       return;
     }
     
-    // Æ¯U TIÃŠN 1: Láº¥y QR code tá»« business owner (chá»§ doanh nghiá»‡p)
+    // ƯU TIÊN 1: Lấy QR code từ business owner (chủ doanh nghiệp)
     let qrPaymentUrl = '';
     let beneficiaryName = '';
     let bankName = '';
     let accountNumber = '';
     
     if (this.businessOwner?.bankAccount?.qrPaymentUrl) {
-      // Business owner cÃ³ QR code
+      // Business owner có QR code
       qrPaymentUrl = this.businessOwner.bankAccount.qrPaymentUrl;
       beneficiaryName = this.businessOwner.bankAccount.beneficiaryName || this.businessOwner.bankAccount.accountHolderName || '';
       bankName = this.businessOwner.bankAccount.bankName || '';
       accountNumber = this.businessOwner.bankAccount.accountNumber || '';
-      console.log('Sá»­ dá»¥ng QR code tá»« business owner (chá»§ doanh nghiá»‡p):', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
+      console.log('Sử dụng QR code từ business owner (chủ doanh nghiệp):', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
     } else if (this.hotelBankAccount?.qrPaymentUrl) {
-      // Æ¯U TIÃŠN 2: Láº¥y QR code tá»« hotel (doanh nghiá»‡p)
+      // ƯU TIÊN 2: Lấy QR code từ hotel (doanh nghiệp)
       qrPaymentUrl = this.hotelBankAccount.qrPaymentUrl;
       beneficiaryName = this.hotelBankAccount.beneficiaryName || this.hotelBankAccount.accountHolderName || '';
       bankName = this.hotelBankAccount.bankName || '';
       accountNumber = this.hotelBankAccount.accountNumber || '';
-      console.log('Sá»­ dá»¥ng QR code tá»« hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
+      console.log('Sử dụng QR code từ hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
     } else {
-      // Æ¯U TIÃŠN 3: Láº¥y QR code tá»« manager cá»§a hotel (náº¿u cÃ³)
+      // ƯU TIÊN 3: Lấy QR code từ manager của hotel (nếu có)
       const manager = this.businessInfo?.managerId;
       if (manager && typeof manager === 'object' && manager.bankAccount?.qrPaymentUrl) {
         qrPaymentUrl = manager.bankAccount.qrPaymentUrl;
         beneficiaryName = manager.bankAccount.beneficiaryName || manager.bankAccount.accountHolderName || '';
         bankName = manager.bankAccount.bankName || '';
         accountNumber = manager.bankAccount.accountNumber || '';
-        console.log('Sá»­ dá»¥ng QR code tá»« manager cá»§a hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
+        console.log('Sử dụng QR code từ manager của hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
       } else {
-        // Æ¯U TIÃŠN 4: Láº¥y QR code tá»« user hiá»‡n táº¡i (admin/staff cá»§a hotel)
+        // ƯU TIÊN 4: Lấy QR code từ user hiện tại (admin/staff của hotel)
         qrPaymentUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
         beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
         bankName = this.currentUser?.bankAccount?.bankName || '';
         accountNumber = this.currentUser?.bankAccount?.accountNumber || '';
-        console.log('Sá»­ dá»¥ng QR code tá»« user hiá»‡n táº¡i (admin/staff):', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
+        console.log('Sử dụng QR code từ user hiện tại (admin/staff):', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
       }
     }
     
-    // Náº¿u khÃ´ng cÃ³ QR code, bá» qua modal vÃ  checkout trá»±c tiáº¿p
+    // Nếu không có QR code, bỏ qua modal và checkout trực tiếp
     if (!qrPaymentUrl) {
-      console.log('KhÃ´ng cÃ³ QR code, bá» qua modal vÃ  checkout trá»±c tiáº¿p');
+      console.log('Không có QR code, bỏ qua modal và checkout trực tiếp');
       checkoutData.paymentStatus = 'paid';
       invoiceData.paymentStatus = 'paid';
       this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
@@ -2679,13 +2729,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
     this.prepareSePayModalState(amount, qrPaymentUrl, beneficiaryName, bankName, accountNumber, checkoutData, invoiceData);
     
-    // Táº¡o payment history SePay
-    // Gá»i trá»±c tiáº¿p API vá»›i roomId vÃ  roomNumber
+    // Tạo payment history SePay
+    // Gọi trực tiếp API với roomId và roomNumber
     const payload = {
       userId: userId,
       amount: normalizedAmount,
       currency: 'VND',
-      description: `Thanh toÃ¡n phÃ²ng ${this.roomData.roomNumber} - ${invoiceData.customerName || 'KhÃ¡ch láº»'}`,
+      description: `Thanh toán phòng ${this.roomData.roomNumber} - ${invoiceData.customerName || 'Khách lẻ'}`,
       roomId: this.roomData._id,
       roomNumber: this.roomData.roomNumber
     };
@@ -2697,7 +2747,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.sepayInitializing = false;
         if (response.success) {
-          this.sepayPaymentHistoryId = response.paymentHistoryId || ''; // LÆ°u paymentHistoryId Ä‘á»ƒ kiá»ƒm tra tráº¡ng thÃ¡i
+          this.sepayPaymentHistoryId = response.paymentHistoryId || ''; // Lưu paymentHistoryId để kiểm tra trạng thái
           if (!this.showSePayModal) {
             return;
           }
@@ -2705,8 +2755,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         } else {
           this.showSePayModal = false;
           this.resetSePayTransactionState();
-          this.message.error(response.error || 'CÃ³ lá»—i xáº£y ra khi táº¡o payment history');
-          // Váº«n tiáº¿p tá»¥c checkout
+          this.message.error(response.error || 'Có lỗi xảy ra khi tạo payment history');
+          // Vẫn tiếp tục checkout
           this.proceedWithCheckout(checkoutData, invoiceData);
         }
       },
@@ -2716,18 +2766,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         console.error('Error creating SePay payment history:', error);
         this.showSePayModal = false;
         this.resetSePayTransactionState();
-        this.message.error('CÃ³ lá»—i xáº£y ra khi táº¡o payment history. Vui lÃ²ng thá»­ láº¡i.');
-        // Váº«n tiáº¿p tá»¥c checkout
+        this.message.error('Có lỗi xảy ra khi tạo payment history. Vui lòng thử lại.');
+        // Vẫn tiếp tục checkout
         this.proceedWithCheckout(checkoutData, invoiceData);
       }
     });
   }
   
   /**
-   * Thá»±c hiá»‡n checkout sau khi Ä‘Ã£ táº¡o payment history
+   * Thực hiện checkout sau khi đã tạo payment history
    */
   proceedWithCheckout(checkoutData: any, invoiceData: any): void {
-    // ÄÃ³ng modal
+    // Đóng modal
     if (this.modalRef) {
       const closeResult = this.pendingCheckoutCloseResult || {
         success: true,
@@ -2737,7 +2787,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           roomNumber: this.roomData?.roomNumber,
           checkInTime: checkoutData?.checkInTime || checkoutData?.checkinTime,
           checkOutTime: checkoutData?.checkOutTime || checkoutData?.checkoutTime,
-          customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'KhÃ¡ch láº»',
+          customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'Khách lẻ',
           guestSource: checkoutData?.guestInfo?.guestSource || invoiceData?.guestSource || 'walkin',
           paymentMethod: checkoutData?.paymentMethod || 'transfer',
           paymentStatus: checkoutData?.paymentStatus || 'paid',
@@ -2759,35 +2809,35 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.modalRef.close(closeResult);
     }
     
-    // Kiá»ƒm tra paymentStatus - chá»‰ hiá»ƒn thá»‹ hÃ³a Ä‘Æ¡n náº¿u Ä‘Ã£ thanh toÃ¡n
+    // Kiểm tra paymentStatus - chỉ hiển thị hóa đơn nếu đã thanh toán
     const paymentStatus = checkoutData.paymentStatus || 'paid';
     const shouldShowInvoice = paymentStatus === 'paid';
     
-    // Thá»±c hiá»‡n checkout trong background
+    // Thực hiện checkout trong background
     this.roomsService.checkOutRoom(this.roomData._id, checkoutData)
       .subscribe(
         (response) => {
           setTimeout(() => {
-            // Hiá»ƒn thá»‹ thÃ´ng bÃ¡o thÃ nh cÃ´ng (mÃ u xanh)
+            // Hiển thị thông báo thành công (màu xanh)
             if (paymentStatus === 'pending') {
-              this.message.success('Check-out thÃ nh cÃ´ng. Äang chá» xÃ¡c nháº­n thanh toÃ¡n...');
+              this.message.success('Check-out thành công. Đang chờ xác nhận thanh toán...');
             } else {
-              this.message.success('Check-out thÃ nh cÃ´ng');
+              this.message.success('Check-out thành công');
             }
             
-            // Tá»± Ä‘á»™ng táº¯t cÃ´ng táº¯c Ä‘iá»‡n khi check-out Ä‘á»ƒ tiáº¿t kiá»‡m Ä‘iá»‡n
+            // Tự động tắt công tắc điện khi check-out để tiết kiệm điện
             this.tuyaService.autoTurnOffOnCheckOut(this.roomData._id).subscribe({
               next: (response) => {
                 if (response.data && response.data.devicesControlled > 0) {
-                  console.log(`ÄÃ£ tá»± Ä‘á»™ng táº¯t ${response.data.devicesControlled} cÃ´ng táº¯c Ä‘iá»‡n Ä‘á»ƒ tiáº¿t kiá»‡m Ä‘iá»‡n`);
+                  console.log(`Đã tự động tắt ${response.data.devicesControlled} công tắc điện để tiết kiệm điện`);
                 }
               },
               error: (error) => {
-                console.error('Lá»—i khi tá»± Ä‘á»™ng táº¯t cÃ´ng táº¯c:', error);
+                console.error('Lỗi khi tự động tắt công tắc:', error);
               }
             });
             
-            // Tá»± Ä‘á»™ng reload room data sau khi checkout thÃ nh cÃ´ng
+            // Tự động reload room data sau khi checkout thành công
             if (this.roomData && this.roomData._id) {
               this.roomsService.getRoomById(this.roomData._id, { 
                 limit: 1000,
@@ -2795,22 +2845,22 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               }).subscribe({
                 next: (updatedRoom) => {
                   this.roomData = updatedRoom;
-                  // Cáº­p nháº­t danh sÃ¡ch phÃ²ng
+                  // Cập nhật danh sách phòng
                   this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
                 },
                 error: (err) => {
                   console.error('Error reloading room data:', err);
-                  // Váº«n cáº­p nháº­t danh sÃ¡ch phÃ²ng dÃ¹ cÃ³ lá»—i
+                  // Vẫn cập nhật danh sách phòng dù có lỗi
                   this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
                 }
               });
             } else {
-              // Cáº­p nháº­t danh sÃ¡ch phÃ²ng
+              // Cập nhật danh sách phòng
               this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
             }
             
-            // Chá»‰ hiá»ƒn thá»‹ hÃ³a Ä‘Æ¡n náº¿u Ä‘Ã£ thanh toÃ¡n (paymentStatus = 'paid')
-            // Náº¿u chÆ°a thanh toÃ¡n (pending), hÃ³a Ä‘Æ¡n sáº½ Ä‘Æ°á»£c hiá»ƒn thá»‹ sau khi webhook xÃ¡c nháº­n
+            // Chỉ hiển thị hóa đơn nếu đã thanh toán (paymentStatus = 'paid')
+            // Nếu chưa thanh toán (pending), hóa đơn sẽ được hiển thị sau khi webhook xác nhận
             if (shouldShowInvoice) {
               setTimeout(() => {
                 this.showInvoice(invoiceData);
@@ -2820,7 +2870,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         },
         (error) => {
           setTimeout(() => {
-            this.message.error('Lá»—i khi tráº£ phÃ²ng: ' + error.message);
+            this.message.error('Lỗi khi trả phòng: ' + error.message);
             this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 120 });
           }, 100);
         }
@@ -2828,7 +2878,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
   
   /**
-   * Báº¯t Ä‘áº§u kiá»ƒm tra tráº¡ng thÃ¡i thanh toÃ¡n (polling)
+   * Bắt đầu kiểm tra trạng thái thanh toán (polling)
    */
   private startPaymentStatusPolling(): void {
     this.stopPaymentStatusPolling(false);
@@ -2845,7 +2895,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.checkPaymentStatusOnce(transactionToken, checkCount >= maxChecks);
       if (checkCount >= maxChecks) {
         this.stopPaymentStatusPolling();
-        console.log('ÄÃ£ kiá»ƒm tra tráº¡ng thÃ¡i thanh toÃ¡n tá»‘i Ä‘a, dá»«ng polling');
+        console.log('Đã kiểm tra trạng thái thanh toán tối đa, dừng polling');
       }
     };
 
@@ -2865,7 +2915,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
   
   /**
-   * Dá»«ng kiá»ƒm tra tráº¡ng thÃ¡i thanh toÃ¡n
+   * Dừng kiểm tra trạng thái thanh toán
    */
   private stopPaymentStatusPolling(resetState: boolean = true): void {
     if (this.paymentStatusCheckInterval) {
@@ -2879,7 +2929,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
   
   /**
-   * Xá»­ lÃ½ khi thanh toÃ¡n thÃ nh cÃ´ng
+   * Xử lý khi thanh toán thành công
    */
   private onPaymentSuccess(): void {
     if (this.paymentSuccessHandled) {
@@ -2887,34 +2937,34 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
 
     this.paymentSuccessHandled = true;
-    console.log('[onPaymentSuccess] Thanh toÃ¡n thÃ nh cÃ´ng, Ä‘Ã³ng modal QR vÃ  hiá»ƒn thá»‹ invoice');
+    console.log('[onPaymentSuccess] Thanh toán thành công, đóng modal QR và hiển thị invoice');
     
-    // Dá»«ng polling
+    // Dừng polling
     this.stopPaymentStatusPolling();
     
-    // ÄÃ³ng modal QR trÆ°á»›c (tá»± Ä‘á»™ng Ä‘Ã³ng)
+    // Đóng modal QR trước (tự động đóng)
     this.showSePayModal = false;
     
-    // Force change detection Ä‘á»ƒ Ä‘áº£m báº£o modal Ä‘Ã³ng ngay láº­p tá»©c
+    // Force change detection để đảm bảo modal đóng ngay lập tức
     this.cdr.detectChanges();
     
-    // Láº¥y checkoutData vÃ  invoiceData Ä‘Ã£ lÆ°u
+    // Lấy checkoutData và invoiceData đã lưu
     const checkoutData = this.pendingCheckoutData;
     const invoiceData = this.pendingInvoiceData;
     
     if (checkoutData && invoiceData) {
-      // Cáº­p nháº­t paymentStatus thÃ nh 'paid'
+      // Cập nhật paymentStatus thành 'paid'
       checkoutData.paymentStatus = 'paid';
       invoiceData.paymentStatus = 'paid';
       
       // this.loadLatestPaymentAndPlaySound();
       
-      // Hiá»ƒn thá»‹ thÃ´ng bÃ¡o thÃ nh cÃ´ng (mÃ u xanh)
-      this.message.success('Check-out thÃ nh cÃ´ng');
+      // Hiển thị thông báo thành công (màu xanh)
+      this.message.success('Check-out thành công');
       
-      // Äá»£i má»™t chÃºt Ä‘á»ƒ modal QR Ä‘Ã³ng hoÃ n toÃ n trÆ°á»›c khi Ä‘Ã³ng modal checkout
+      // Đợi một chút để modal QR đóng hoàn toàn trước khi đóng modal checkout
       setTimeout(() => {
-        // ÄÃ³ng modal checkout
+        // Đóng modal checkout
         if (this.modalRef) {
           const closeResult = this.pendingCheckoutCloseResult || {
             success: true,
@@ -2924,7 +2974,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               roomNumber: this.roomData?.roomNumber,
               checkInTime: checkoutData?.checkInTime || checkoutData?.checkinTime,
               checkOutTime: checkoutData?.checkOutTime || checkoutData?.checkoutTime,
-              customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'KhÃ¡ch láº»',
+              customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'Khách lẻ',
               guestSource: checkoutData?.guestInfo?.guestSource || invoiceData?.guestSource || 'walkin',
               paymentMethod: checkoutData?.paymentMethod || 'transfer',
               paymentStatus: checkoutData?.paymentStatus || 'paid',
@@ -2946,11 +2996,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           this.modalRef.close(closeResult);
         }
         
-        // Cáº­p nháº­t checkout vá»›i paymentStatus = 'paid' trong background
+        // Cập nhật checkout với paymentStatus = 'paid' trong background
         this.roomsService.checkOutRoom(this.roomData._id, checkoutData)
           .subscribe(
             (response) => {
-              // Tá»± Ä‘á»™ng reload room data sau khi checkout thÃ nh cÃ´ng
+              // Tự động reload room data sau khi checkout thành công
               if (this.roomData && this.roomData._id) {
                 this.roomsService.getRoomById(this.roomData._id, { 
                   limit: 1000,
@@ -2958,21 +3008,21 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                 }).subscribe({
                   next: (updatedRoom) => {
                     this.roomData = updatedRoom;
-                    // Tá»± Ä‘á»™ng reload danh sÃ¡ch phÃ²ng
+                    // Tự động reload danh sách phòng
                     this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
                   },
                   error: (err) => {
                     console.error('Error reloading room data:', err);
-                    // Váº«n reload danh sÃ¡ch phÃ²ng dÃ¹ cÃ³ lá»—i
+                    // Vẫn reload danh sách phòng dù có lỗi
                     this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
                   }
                 });
               } else {
-                // Tá»± Ä‘á»™ng reload danh sÃ¡ch phÃ²ng
+                // Tự động reload danh sách phòng
                 this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
               }
               
-              // Hiá»ƒn thá»‹ invoice sau khi checkout thÃ nh cÃ´ng
+              // Hiển thị invoice sau khi checkout thành công
               setTimeout(() => {
                 this.showInvoice(invoiceData);
               }, 500);
@@ -2980,7 +3030,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             },
             (error) => {
               console.error('Error updating checkout with payment status:', error);
-              // Váº«n reload danh sÃ¡ch phÃ²ng vÃ  hiá»ƒn thá»‹ invoice ngay cáº£ khi cÃ³ lá»—i
+              // Vẫn reload danh sách phòng và hiển thị invoice ngay cả khi có lỗi
               this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 120 });
               setTimeout(() => {
                 this.showInvoice(invoiceData);
@@ -2990,19 +3040,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           );
       }, 300);
     } else {
-      console.error('[onPaymentSuccess] KhÃ´ng tÃ¬m tháº¥y checkoutData hoáº·c invoiceData');
+      console.error('[onPaymentSuccess] Không tìm thấy checkoutData hoặc invoiceData');
       this.resetSePayTransactionState();
     }
   }
   
   /**
-   * Láº¥y lá»‹ch sá»­ chuyá»ƒn khoáº£n gáº§n nháº¥t vÃ  phÃ¡t thÃ´ng bÃ¡o Ã¢m thanh
+   * Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
    */
   private loadLatestPaymentAndPlaySound(): void {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser?._id) {
-      console.warn('[loadLatestPaymentAndPlaySound] KhÃ´ng tÃ¬m tháº¥y userId');
-      // Fallback: láº¥y tá»« invoiceData ngay láº­p tá»©c
+      console.warn('[loadLatestPaymentAndPlaySound] Không tìm thấy userId');
+      // Fallback: lấy từ invoiceData ngay lập tức
       const amount = this.pendingInvoiceData?.totalAmount || 
                     this.pendingInvoiceData?.remainingAmount || 0;
       if (amount > 0) {
@@ -3011,72 +3061,72 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Äá»£i má»™t chÃºt Ä‘á»ƒ Ä‘áº£m báº£o webhook Ä‘Ã£ cáº­p nháº­t dá»¯ liá»‡u
+    // Đợi một chút để đảm bảo webhook đã cập nhật dữ liệu
     setTimeout(() => {
-      // Láº¥y lá»‹ch sá»­ chuyá»ƒn khoáº£n SePay gáº§n nháº¥t
+      // Lấy lịch sử chuyển khoản SePay gần nhất
       this.sepayService.getPaymentHistory({ userId: currentUser._id, limit: 10 }).subscribe({
         next: (response: any) => {
           let amount = 0;
           
-          // TÃ¬m giao dá»‹ch gáº§n nháº¥t cÃ³ status 'completed' hoáº·c 'paid'
+          // Tìm giao dịch gần nhất có status 'completed' hoặc 'paid'
           const paymentHistories = Array.isArray(response) 
             ? response 
             : (response?.success && response.data ? response.data : []);
           
           if (paymentHistories && paymentHistories.length > 0) {
-            // TÃ¬m giao dá»‹ch gáº§n nháº¥t Ä‘Ã£ hoÃ n thÃ nh
+            // Tìm giao dịch gần nhất đã hoàn thành
             const completedPayment = paymentHistories.find((p: any) => 
               (p.status === 'completed' || p.status === 'paid') && 
               (p.amount > 0 || p.totalAmount > 0)
             );
             
             if (completedPayment) {
-              // Æ¯u tiÃªn láº¥y transferAmount tá»« paymentGatewayResponse (sá»‘ tiá»n thá»±c táº¿ nháº­n Ä‘Æ°á»£c)
+              // Ưu tiên lấy transferAmount từ paymentGatewayResponse (số tiền thực tế nhận được)
               amount = completedPayment.paymentGatewayResponse?.transferAmount || 
                       completedPayment.amount || 
                       completedPayment.totalAmount || 0;
             } else {
-              // Náº¿u khÃ´ng tÃ¬m tháº¥y completed, láº¥y giao dá»‹ch gáº§n nháº¥t
+              // Nếu không tìm thấy completed, lấy giao dịch gần nhất
               const latestPayment = paymentHistories[0];
               amount = latestPayment.amount || latestPayment.totalAmount || 0;
             }
           }
           
-          // Náº¿u khÃ´ng láº¥y Ä‘Æ°á»£c tá»« API, thá»­ láº¥y tá»« invoiceData
+          // Nếu không lấy được từ API, thử lấy từ invoiceData
           if (amount === 0) {
             amount = this.pendingInvoiceData?.totalAmount || 
                     this.pendingInvoiceData?.remainingAmount || 0;
           }
           
           if (amount > 0) {
-            console.log('[loadLatestPaymentAndPlaySound] Sá»‘ tiá»n thanh toÃ¡n:', amount);
-            // PhÃ¡t thÃ´ng bÃ¡o Ã¢m thanh
+            console.log('[loadLatestPaymentAndPlaySound] Số tiền thanh toán:', amount);
+            // Phát thông báo âm thanh
             this.playPaymentSuccessSound(amount);
           } else {
-            console.warn('[loadLatestPaymentAndPlaySound] KhÃ´ng tÃ¬m tháº¥y sá»‘ tiá»n thanh toÃ¡n');
+            console.warn('[loadLatestPaymentAndPlaySound] Không tìm thấy số tiền thanh toán');
           }
         },
         error: (error) => {
-          console.error('[loadLatestPaymentAndPlaySound] Lá»—i khi láº¥y lá»‹ch sá»­ thanh toÃ¡n:', error);
-          // Fallback: láº¥y tá»« invoiceData
+          console.error('[loadLatestPaymentAndPlaySound] Lỗi khi lấy lịch sử thanh toán:', error);
+          // Fallback: lấy từ invoiceData
           const amount = this.pendingInvoiceData?.totalAmount || 
                         this.pendingInvoiceData?.remainingAmount || 0;
           if (amount > 0) {
-            console.log('[loadLatestPaymentAndPlaySound] Sá»­ dá»¥ng sá»‘ tiá»n tá»« invoiceData:', amount);
+            console.log('[loadLatestPaymentAndPlaySound] Sử dụng số tiền từ invoiceData:', amount);
             this.playPaymentSuccessSound(amount);
           }
         }
       });
-    }, 1000); // Äá»£i 1 giÃ¢y Ä‘á»ƒ webhook cáº­p nháº­t dá»¯ liá»‡u
+    }, 1000); // Đợi 1 giây để webhook cập nhật dữ liệu
   }
   
   private playPaymentSuccessSound(amount: number): void {
     try {
-      console.log('[playPaymentSuccessSound] Báº¯t Ä‘áº§u phÃ¡t thÃ´ng bÃ¡o, sá»‘ tiá»n:', amount);
+      console.log('[playPaymentSuccessSound] Bắt đầu phát thông báo, số tiền:', amount);
       const roundedAmount = Math.round(amount);
       const formattedAmount = roundedAmount.toLocaleString('vi-VN');
-      const message = `Thanh toÃ¡n thÃ nh cÃ´ng sá»‘ tiá»n ${formattedAmount} Ä‘á»“ng`;
-      console.log('[playPaymentSuccessSound] Ná»™i dung thÃ´ng bÃ¡o:', message);
+      const message = `Thanh toán thành công số tiền ${formattedAmount} đồng`;
+      console.log('[playPaymentSuccessSound] Nội dung thông báo:', message);
 
       const ttsUrl = `${environment.aiUrl}/tts?text=${encodeURIComponent(message)}`;
       let attempts = 0;
@@ -3104,37 +3154,37 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               setTimeout(requestAudio, retryDelayMs);
               return;
             }
-            console.error('[playPaymentSuccessSound] Lá»—i khi gá»i TTS API:', error);
+            console.error('[playPaymentSuccessSound] Lỗi khi gọi TTS API:', error);
           }
         });
       };
       requestAudio();
     } catch (error) {
-      console.error('[playPaymentSuccessSound] Lá»—i khi phÃ¡t Ã¢m thanh:', error);
+      console.error('[playPaymentSuccessSound] Lỗi khi phát âm thanh:', error);
     }
   }
   
   /**
-   * ÄÃ³ng modal SePay (ngÆ°á»i dÃ¹ng Ä‘Ã³ng thá»§ cÃ´ng)
-   * Sau khi Ä‘Ã³ng, hiá»ƒn thá»‹ invoice ngay láº­p tá»©c
-   * Webhook sáº½ tá»± Ä‘á»™ng cáº­p nháº­t tráº¡ng thÃ¡i thanh toÃ¡n sau
+   * Đóng modal SePay (người dùng đóng thủ công)
+   * Sau khi đóng, hiển thị invoice ngay lập tức
+   * Webhook sẽ tự động cập nhật trạng thái thanh toán sau
    */
   closeSePayModal(): void {
-    // ÄÃ³ng modal QR
+    // Đóng modal QR
     this.showSePayModal = false;
     
-    // Dá»«ng polling náº¿u cÃ³
+    // Dừng polling nếu có
     this.stopPaymentStatusPolling();
     
-    // Láº¥y checkoutData vÃ  invoiceData Ä‘Ã£ lÆ°u
+    // Lấy checkoutData và invoiceData đã lưu
     const checkoutData = this.pendingCheckoutData;
     const invoiceData = this.pendingInvoiceData;
     
     if (checkoutData && invoiceData) {
-      // Hiá»ƒn thá»‹ thÃ´ng bÃ¡o
-      this.message.info('ÄÃ£ lÆ°u thÃ´ng tin thanh toÃ¡n. Há»‡ thá»‘ng sáº½ tá»± Ä‘á»™ng cáº­p nháº­t tráº¡ng thÃ¡i khi nháº­n Ä‘Æ°á»£c xÃ¡c nháº­n tá»« ngÃ¢n hÃ ng.');
+      // Hiển thị thông báo
+      this.message.info('Đã lưu thông tin thanh toán. Hệ thống sẽ tự động cập nhật trạng thái khi nhận được xác nhận từ ngân hàng.');
       
-      // ÄÃ³ng modal checkout
+      // Đóng modal checkout
       if (this.modalRef) {
         const closeResult = this.pendingCheckoutCloseResult || {
           success: true,
@@ -3144,7 +3194,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             roomNumber: this.roomData?.roomNumber,
             checkInTime: checkoutData?.checkInTime || checkoutData?.checkinTime,
             checkOutTime: checkoutData?.checkOutTime || checkoutData?.checkoutTime,
-            customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'KhÃ¡ch láº»',
+            customerName: checkoutData?.customerName || checkoutData?.guestName || checkoutData?.guestInfo?.name || 'Khách lẻ',
             guestSource: checkoutData?.guestInfo?.guestSource || invoiceData?.guestSource || 'walkin',
             paymentMethod: checkoutData?.paymentMethod || 'transfer',
             paymentStatus: checkoutData?.paymentStatus || 'paid',
@@ -3166,14 +3216,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.modalRef.close(closeResult);
       }
       
-      // Thá»±c hiá»‡n checkout vá»›i paymentStatus = 'pending' (webhook sáº½ cáº­p nháº­t sau)
+      // Thực hiện checkout với paymentStatus = 'pending' (webhook sẽ cập nhật sau)
       this.roomsService.checkOutRoom(this.roomData._id, checkoutData)
         .subscribe(
           (response) => {
-            // Cáº­p nháº­t danh sÃ¡ch phÃ²ng
+            // Cập nhật danh sách phòng
             this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 150 });
             
-            // Hiá»ƒn thá»‹ invoice ngay láº­p tá»©c
+            // Hiển thị invoice ngay lập tức
             setTimeout(() => {
               this.showInvoice(invoiceData);
             }, 300);
@@ -3181,7 +3231,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           },
           (error) => {
             console.error('Error during checkout:', error);
-            // Váº«n hiá»ƒn thá»‹ invoice ngay cáº£ khi cÃ³ lá»—i
+            // Vẫn hiển thị invoice ngay cả khi có lỗi
             setTimeout(() => {
               this.showInvoice(invoiceData);
             }, 300);
@@ -3189,45 +3239,45 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
         );
     } else {
-      console.warn('[closeSePayModal] KhÃ´ng tÃ¬m tháº¥y checkoutData hoáº·c invoiceData');
+      console.warn('[closeSePayModal] Không tìm thấy checkoutData hoặc invoiceData');
       this.resetSePayTransactionState();
     }
   }
   
   /**
-   * Copy mÃ£ thanh toÃ¡n vÃ o clipboard
+   * Copy mã thanh toán vào clipboard
    */
-  // Bá» copyPaymentCode - khÃ´ng cáº§n mÃ£ thanh toÃ¡n ná»¯a
+  // Bỏ copyPaymentCode - không cần mã thanh toán nữa
   
   calculateDuration(checkInTime: Date, checkOutTime: Date): number {
-    // TÃ­nh sá»‘ ngÃ y giá»¯a check-in vÃ  check-out
+    // Tính số ngày giữa check-in và check-out
     const diffTime = Math.abs(checkOutTime.getTime() - checkInTime.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 1; // Tá»‘i thiá»ƒu 1 ngÃ y
+    return diffDays > 0 ? diffDays : 1; // Tối thiểu 1 ngày
   }
   
   calculateDurationInHours(checkInTime: Date, checkOutTime: Date): number {
-    // TÃ­nh sá»‘ giá» giá»¯a check-in vÃ  check-out
+    // Tính số giờ giữa check-in và check-out
     const diffTime = Math.abs(checkOutTime.getTime() - checkInTime.getTime());
     const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-    return diffHours > 0 ? diffHours : 1; // Tá»‘i thiá»ƒu 1 giá»
+    return diffHours > 0 ? diffHours : 1; // Tối thiểu 1 giờ
   }
 
   calculateRoomTotal(durationInHours: number, roomPrice: number): number {
-    const hourlyRate = roomPrice / 24; // GiÃ¡ theo giá»
+    const hourlyRate = roomPrice / 24; // Giá theo giờ
     let total = 0;
     
     if (durationInHours <= 2) {
-      // Náº¿u á»Ÿ dÆ°á»›i 2 giá», tÃ­nh 30% giÃ¡ ngÃ y
+      // Nếu ở dưới 2 giờ, tính 30% giá ngày
       total = roomPrice * 0.3;
     } else if (durationInHours <= 6) {
-      // Náº¿u á»Ÿ dÆ°á»›i 6 giá», tÃ­nh 50% giÃ¡ ngÃ y
+      // Nếu ở dưới 6 giờ, tính 50% giá ngày
       total = roomPrice * 0.5;
     } else if (durationInHours < 24) {
-      // Náº¿u á»Ÿ dÆ°á»›i 24 giá» nhÆ°ng trÃªn 6 giá», tÃ­nh 1 ngÃ y
+      // Nếu ở dưới 24 giờ nhưng trên 6 giờ, tính 1 ngày
       total = roomPrice;
     } else {
-      // Náº¿u á»Ÿ tá»« 24 giá» trá»Ÿ lÃªn, tÃ­nh theo sá»‘ ngÃ y (lÃ m trÃ²n lÃªn)
+      // Nếu ở từ 24 giờ trở lên, tính theo số ngày (làm tròn lên)
       const days = Math.ceil(durationInHours / 24);
       total = roomPrice * days;
     }
@@ -3235,11 +3285,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return total;
   }
 
-  // TÃ­nh tiá»n phÃ²ng dá»±a trÃªn loáº¡i giÃ¡
+  // Tính tiền phòng dựa trên loại giá
   calculateRoomTotalByRateType(durationInHours: number, durationInDays: number, rateType: string, remainingMinutes: number = 0): number {
     if (!this.roomData) return 0;
     
-    // Láº¥y giÃ¡ tá»« roomData hoáº·c priceConfig
+    // Lấy giá từ roomData hoặc priceConfig
     const priceConfig = (this.roomData as any)?.priceConfig;
     const hourlyRate = this.roomData.pricing?.hourly || this.roomData.firstHourRate || priceConfig?.hourlyRates?.firstHourPrice || 0;
     const dailyRate = this.roomData.pricing?.daily || priceConfig?.dailyRates?.standardPrice || 0;
@@ -3248,18 +3298,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const monthlyRate = this.roomData.pricing?.monthly || priceConfig?.monthlyRates?.standardPrice || 0;
     const additionalHourRate = this.roomData.additionalHourRate || priceConfig?.hourlyRates?.additionalHourPrice || (hourlyRate * 0.8);
     
-    // Láº¥y cÃ¡c tham sá»‘ tá»« priceConfig hoáº·c giÃ¡ trá»‹ máº·c Ä‘á»‹nh
+    // Lấy các tham số từ priceConfig hoặc giá trị mặc định
     const gracePeriodMinutes = priceConfig?.hourlyRates?.gracePeriodMinutes || 15;
     const autoNightlyHours = priceConfig?.hourlyRates?.autoNightlyHours || 8;
     const maxHoursBeforeDay = priceConfig?.hourlyRates?.maxHoursBeforeDay || 6;
     const autoDailyHours = priceConfig?.nightlyRates?.autoDailyHours || 24;
     
-    // Láº¥y thá»i gian check-in vÃ  check-out Ä‘á»ƒ tÃ­nh phá»¥ thu
+    // Lấy thời gian check-in và check-out để tính phụ thu
     const lastCheckIn = this.listData && this.listData.length > 0 ? this.listData[0] : null;
     const checkInTime = lastCheckIn?.checkinTime ? new Date(lastCheckIn.checkinTime) : null;
     const checkOutTime = this.getUTCTimePlus7();
     
-    // Helper function Ä‘á»ƒ parse time string (HH:mm) thÃ nh giá» vÃ  phÃºt
+    // Helper function để parse time string (HH:mm) thành giờ và phút
     const parseTime = (timeStr: string) => {
       const parts = timeStr.split(':');
       return {
@@ -3268,7 +3318,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       };
     };
     
-    // Helper function Ä‘á»ƒ tÃ­nh sá»‘ giá» sá»›m/trá»… (lÃ m trÃ²n lÃªn)
+    // Helper function để tính số giờ sớm/trễ (làm tròn lên)
     const calculateEarlyHours = (actualTime: Date, standardTime: string): number => {
       const actual = parseTime(`${actualTime.getHours()}:${actualTime.getMinutes()}`);
       const standard = parseTime(standardTime);
@@ -3276,7 +3326,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       const standardMinutes = standard.hour * 60 + standard.minute;
       if (actualMinutes < standardMinutes) {
         const earlyMinutes = standardMinutes - actualMinutes;
-        return Math.ceil(earlyMinutes / 60); // LÃ m trÃ²n lÃªn
+        return Math.ceil(earlyMinutes / 60); // Làm tròn lên
       }
       return 0;
     };
@@ -3288,18 +3338,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       const standardMinutes = standard.hour * 60 + standard.minute;
       if (actualMinutes > standardMinutes) {
         const lateMinutes = actualMinutes - standardMinutes;
-        return Math.ceil(lateMinutes / 60); // LÃ m trÃ²n lÃªn
+        return Math.ceil(lateMinutes / 60); // Làm tròn lên
       }
       return 0;
     };
     
-    // Láº¥y giÃ¡ trá»‹ tá»« priceConfig hoáº·c giÃ¡ trá»‹ máº·c Ä‘á»‹nh
-    // Æ¯u tiÃªn láº¥y tá»« priceConfig, fallback vá» roomData.priceSettings
+    // Lấy giá trị từ priceConfig hoặc giá trị mặc định
+    // Ưu tiên lấy từ priceConfig, fallback về roomData.priceSettings
     const nightlyStartTime = priceConfig?.nightlyRates?.startTime || 
                              (this.roomData as any)?.priceSettings?.nightlyStartTime || '20:00';
     const nightlyEndTime = priceConfig?.nightlyRates?.endTime || 
                            (this.roomData as any)?.priceSettings?.nightlyEndTime || '12:00';
-    const dailyStartTime = '12:00'; // Thá»i gian báº¯t Ä‘áº§u nháº­n ngÃ y Ä‘Ãªm
+    const dailyStartTime = '12:00'; // Thời gian bắt đầu nhận ngày đêm
     const dailyCheckOutTime = priceConfig?.dailyRates?.checkOutTime || 
                               (this.roomData as any)?.priceSettings?.dailyEndTime || '12:00';
     const nightlyEarlyCheckinSurcharge = priceConfig?.nightlyRates?.earlyCheckinSurcharge || 
@@ -3358,22 +3408,22 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     let total = 0;
     let priceDetails: any = {};
     
-    // Æ¯U TIÃŠN: Sá»­ dá»¥ng rateType tá»« user (theo logic backend)
+    // ƯU TIÊN: Sử dụng rateType từ user (theo logic backend)
     switch (rateType) {
       case 'hourly':
-        // Hourly rate: KHÃ”NG tÃ­nh phá»¥ thu sá»›m/trá»…, chá»‰ tÃ­nh theo giá» Ä‘Æ¡n giáº£n
+        // Hourly rate: KHÔNG tính phụ thu sớm/trễ, chỉ tính theo giờ đơn giản
         const firstHourPrice = this.roomData.firstHourRate || priceConfig?.hourlyRates?.firstHourPrice || hourlyRate;
         const additionalHourPrice = this.roomData.additionalHourRate || priceConfig?.hourlyRates?.additionalHourPrice || additionalHourRate;
         
-        // TÃ­nh giÃ¡ giá» Ä‘áº§u
+        // Tính giá giờ đầu
         total = firstHourPrice;
         priceDetails.firstHourPrice = firstHourPrice;
         
-        // TÃ­nh giÃ¡ cho cÃ¡c giá» tiáº¿p theo
+        // Tính giá cho các giờ tiếp theo
         if (durationInHours >= 1) {
-          let billableHours = durationInHours - 1; // Sá»‘ giá» tÃ­nh phÃ­ (trá»« giá» Ä‘áº§u)
+          let billableHours = durationInHours - 1; // Số giờ tính phí (trừ giờ đầu)
           
-          // Náº¿u cÃ³ thá»i gian dÆ° sau giá» thá»© 2
+          // Nếu có thời gian dư sau giờ thứ 2
           if (durationInHours >= 2 && remainingMinutes > gracePeriodMinutes) {
             billableHours += 1;
           } else if (durationInHours === 1 && remainingMinutes > gracePeriodMinutes) {
@@ -3390,18 +3440,18 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
         }
         
-        // LÆ°u thÃªm thÃ´ng tin Ä‘á»ƒ hiá»ƒn thá»‹ chi tiáº¿t
+        // Lưu thêm thông tin để hiển thị chi tiết
         priceDetails.durationInHours = durationInHours;
         priceDetails.totalHours = durationInHours + (remainingMinutes / 60);
         
-        // KHÃ”NG tá»± Ä‘á»™ng chuyá»ƒn sang daily khi chá»n hourly - Ä‘á»ƒ user xem cÃ¡ch tÃ­nh
-        // Bá» logic tá»± Ä‘á»™ng chuyá»ƒn sang daily
+        // KHÔNG tự động chuyển sang daily khi chọn hourly - để user xem cách tính
+        // Bỏ logic tự động chuyển sang daily
         priceDetails.rateType = 'hourly';
-        priceDetails.note = 'TÃ­nh theo giá» bÃ¬nh thÆ°á»ng, khÃ´ng tÃ­nh phá»¥ thu sá»›m/trá»…';
+        priceDetails.note = 'Tính theo giờ bình thường, không tính phụ thu sớm/trễ';
         break;
         
       case 'daily':
-        // TÃ­nh sá»‘ ngÃ y dá»±a trÃªn ngÃ y thá»±c táº¿ (qua Ä‘Ãªm), khÃ´ng lÃ m trÃ²n tá»« giá»
+        // Tính số ngày dựa trên ngày thực tế (qua đêm), không làm tròn từ giờ
         // Theo logic backend trong rooms.js
         const checkInDateForDaily = checkInTime ? new Date(checkInTime) : new Date();
         checkInDateForDaily.setHours(0, 0, 0, 0);
@@ -3435,17 +3485,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           priceDetails.weekendSurchargePercent = dailyWeekendSurchargePercent;
         }
         
-        // TÃ­nh phá»¥ thu check-in sá»›m CHá»ˆ Náº¾U check-in TRÆ¯á»šC thá»i gian daily (trÆ°á»›c dailyStartTime - 12:00)
-        // Náº¿u check-in trong thá»i gian daily (sau 12:00), KHÃ”NG tÃ­nh early check-in surcharge
+        // Tính phụ thu check-in sớm CHỈ NẾU check-in TRƯỚC thời gian daily (trước dailyStartTime - 12:00)
+        // Nếu check-in trong thời gian daily (sau 12:00), KHÔNG tính early check-in surcharge
         if (checkInTime) {
           const checkInMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
           const [startHour, startMinute] = dailyStartTime.split(':').map(Number);
           const startTimeMinutes = startHour * 60 + startMinute;
           
-          // Kiá»ƒm tra xem check-in cÃ³ trong thá»i gian daily khÃ´ng (sau dailyStartTime)
+          // Kiểm tra xem check-in có trong thời gian daily không (sau dailyStartTime)
           const isInDailyTime = checkInMinutes >= startTimeMinutes;
           
-          // CHá»ˆ tÃ­nh early check-in surcharge náº¿u check-in TRÆ¯á»šC thá»i gian daily (trÆ°á»›c dailyStartTime)
+          // CHỈ tính early check-in surcharge nếu check-in TRƯỚC thời gian daily (trước dailyStartTime)
           if (!isInDailyTime) {
             const earlyCheckinHoursDaily = calculateEarlyHours(checkInTime, dailyStartTime);
             if (earlyCheckinHoursDaily > 0 && dailyEarlyCheckinSurcharge > 0) {
@@ -3456,11 +3506,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               console.log(`Daily early check-in: ${earlyCheckinHoursDaily} hours, surcharge: ${earlyCheckinSurchargeDaily}`);
             }
           } else {
-            console.log(`Daily check-in trong thá»i gian quy Ä‘á»‹nh (sau ${dailyStartTime}), khÃ´ng tÃ­nh early check-in surcharge`);
+            console.log(`Daily check-in trong thời gian quy định (sau ${dailyStartTime}), không tính early check-in surcharge`);
           }
         }
         
-        // TÃ­nh phá»¥ thu check-out trá»… (náº¿u check-out sau 12:00 ngÃ y hÃ´m sau)
+        // Tính phụ thu check-out trễ (nếu check-out sau 12:00 ngày hôm sau)
         if (checkOutTime) {
           const checkOutDateOnly = new Date(checkOutTime);
           checkOutDateOnly.setHours(0, 0, 0, 0);
@@ -3474,7 +3524,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           
           if (isNextDay && checkOutMinutes > checkOutTimeMinutes && dailyLateCheckoutFee > 0) {
             const lateMinutes = checkOutMinutes - checkOutTimeMinutes;
-            const lateCheckoutHoursDaily = Math.ceil(lateMinutes / 60); // LÃ m trÃ²n lÃªn
+            const lateCheckoutHoursDaily = Math.ceil(lateMinutes / 60); // Làm tròn lên
             const lateCheckoutFeeDaily = lateCheckoutHoursDaily * dailyLateCheckoutFee;
             total += lateCheckoutFeeDaily;
             priceDetails.lateCheckoutSurcharge = lateCheckoutFeeDaily;
@@ -3528,7 +3578,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           priceDetails.dailyBasePrice = dailyRate;
           priceDetails.autoConverted = true;
           priceDetails.originalRateType = 'nightly';
-          priceDetails.reason = `VÆ°á»£t quÃ¡ ${autoDailyHours} giá» (${durationInHours} giá»)`;
+          priceDetails.reason = `Vượt quá ${autoDailyHours} giờ (${durationInHours} giờ)`;
 
           const checkInMinutesForNight = checkInTime.getHours() * 60 + checkInTime.getMinutes();
           const endTimeMinutesForNight = (endHourForNightly || 0) * 60 + (endMinuteForNightly || 0);
@@ -3599,9 +3649,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
         }
         
-        // TÃ­nh phá»¥ thu check-in sá»›m CHá»ˆ Náº¾U check-in TRÆ¯á»šC thá»i gian nightly (trÆ°á»›c nightlyStartTime)
-        // Thá»i gian quy Ä‘á»‹nh qua Ä‘Ãªm: 20:00 - 12:00 ngÃ y hÃ´m sau
-        // Náº¿u check-in trong thá»i gian nÃ y (sau 20:00 hoáº·c trÆ°á»›c 12:00 ngÃ y hÃ´m sau), KHÃ”NG tÃ­nh early check-in surcharge
+        // Tính phụ thu check-in sớm CHỈ NẾU check-in TRƯỚC thời gian nightly (trước nightlyStartTime)
+        // Thời gian quy định qua đêm: 20:00 - 12:00 ngày hôm sau
+        // Nếu check-in trong thời gian này (sau 20:00 hoặc trước 12:00 ngày hôm sau), KHÔNG tính early check-in surcharge
         if (checkInTime) {
           const checkInMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
           const [startHour, startMinute] = nightlyStartTime.split(':').map(Number);
@@ -3609,11 +3659,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           const [endHour, endMinute] = nightlyEndTime.split(':').map(Number);
           const endTimeMinutes = endHour * 60 + endMinute;
           
-          // Kiá»ƒm tra xem check-in cÃ³ trong thá»i gian nightly khÃ´ng
-          // Thá»i gian nightly: tá»« nightlyStartTime (vÃ­ dá»¥ 20:00) Ä‘áº¿n nightlyEndTime ngÃ y hÃ´m sau (vÃ­ dá»¥ 12:00)
+          // Kiểm tra xem check-in có trong thời gian nightly không
+          // Thời gian nightly: từ nightlyStartTime (ví dụ 20:00) đến nightlyEndTime ngày hôm sau (ví dụ 12:00)
           const isInNightlyTime = checkInMinutes >= startTimeMinutes || checkInMinutes <= endTimeMinutes;
           
-          // CHá»ˆ tÃ­nh early check-in surcharge náº¿u check-in TRÆ¯á»šC thá»i gian nightly (trÆ°á»›c nightlyStartTime)
+          // CHỈ tính early check-in surcharge nếu check-in TRƯỚC thời gian nightly (trước nightlyStartTime)
           if (!isInNightlyTime) {
             const earlyCheckinHoursNightly = calculateEarlyHours(checkInTime, nightlyStartTime);
             if (earlyCheckinHoursNightly > 0 && nightlyEarlyCheckinSurcharge > 0) {
@@ -3624,7 +3674,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
               console.log(`Nightly early check-in: ${earlyCheckinHoursNightly} hours, surcharge: ${earlyCheckinSurchargeNightly}`);
             }
           } else {
-            console.log(`Nightly check-in trong thá»i gian quy Ä‘á»‹nh (${nightlyStartTime}-${nightlyEndTime}), khÃ´ng tÃ­nh early check-in surcharge`);
+            console.log(`Nightly check-in trong thời gian quy định (${nightlyStartTime}-${nightlyEndTime}), không tính early check-in surcharge`);
           }
         }
         
@@ -3687,33 +3737,33 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         break;
         
       default:
-        // Máº·c Ä‘á»‹nh tÃ­nh theo giá»
+        // Mặc định tính theo giờ
         total = hourlyRate * durationInHours;
         priceDetails.rateType = 'hourly';
         priceDetails.basePrice = hourlyRate;
     }
     
-    // LÆ°u priceDetails vÃ o this.roomPriceDetails Ä‘á»ƒ hiá»ƒn thá»‹ trong UI
+    // Lưu priceDetails vào this.roomPriceDetails để hiển thị trong UI
     this.roomPriceDetails = priceDetails;
     
     return Math.max(0, Math.round(total));
   }
 
   calculateServicesTotal(): number {
-    // TÃ­nh tá»•ng tiá»n dá»‹ch vá»¥ tá»« danh sÃ¡ch dá»‹ch vá»¥ Ä‘Ã£ chá»n
+    // Tính tổng tiền dịch vụ từ danh sách dịch vụ đã chọn
     return this.selectedServices.reduce((total, service) => {
-      // Sá»­ dá»¥ng totalPrice náº¿u cÃ³, náº¿u khÃ´ng thÃ¬ tÃ­nh tá»« price vÃ  quantity
+      // Sử dụng totalPrice nếu có, nếu không thì tính từ price và quantity
       const serviceTotal = service.totalPrice !== undefined ? 
         service.totalPrice : (service.price * service.quantity);
       return total + serviceTotal;
     }, 0);
   }
 
-  // Xá»­ lÃ½ dá»n phÃ²ng
+  // Xử lý dọn phòng
   cleanRoom(): void {
-    // Kiá»ƒm tra tráº¡ng thÃ¡i phÃ²ng
+    // Kiểm tra trạng thái phòng
     if (this.roomData.status !== 'dirty' && this.roomData.status !== 'maintenance' && this.roomData.status !== 'cleaning') {
-      this.message.error(`PhÃ²ng ${this.roomData.roomNumber} khÃ´ng á»Ÿ tráº¡ng thÃ¡i cáº§n dá»n dáº¹p hoáº·c báº£o trÃ¬ (Tráº¡ng thÃ¡i: ${this.getStatusLabel(this.roomData.status)}).`);
+      this.message.error(`Phòng ${this.roomData.roomNumber} không ở trạng thái cần dọn dẹp hoặc bảo trì (Trạng thái: ${this.getStatusLabel(this.roomData.status)}).`);
       this.isLoading = false;
       return;
     }
@@ -3725,44 +3775,44 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       events: [
         ...this.roomData.events || [],
         {
-          type: 'maintenance', // Sá»­ dá»¥ng giÃ¡ trá»‹ 'maintenance' thay vÃ¬ 'maintenance_completed'
+          type: 'maintenance', // Sử dụng giá trị 'maintenance' thay vì 'maintenance_completed'
           completedTime: new Date(),
-          notes: this.roomData.status === 'maintenance' ? 'ÄÃ£ hoÃ n thÃ nh báº£o trÃ¬' : 'ÄÃ£ dá»n dáº¹p phÃ²ng'
+          notes: this.roomData.status === 'maintenance' ? 'Đã hoàn thành bảo trì' : 'Đã dọn dẹp phòng'
         }
       ]
     };
     
-    // ÄÃ³ng modal ngay láº­p tá»©c
+    // Đóng modal ngay lập tức
     if (this.modalRef) {
       this.modalRef.close();
     }
     
-    // Thá»±c hiá»‡n clean room trong background
+    // Thực hiện clean room trong background
     this.roomsService.cleanRoom(this.roomData._id, newRoom)
       .subscribe(
         (room) => {
           setTimeout(() => {
-            let successMessage = 'ÄÃ£ cáº­p nháº­t tráº¡ng thÃ¡i phÃ²ng thÃ nh "Sáºµn sÃ ng"';
+            let successMessage = 'Đã cập nhật trạng thái phòng thành "Sẵn sàng"';
             if (this.roomData.status === 'maintenance') {
-              successMessage = 'ÄÃ£ hoÃ n thÃ nh báº£o trÃ¬ vÃ  cáº­p nháº­t tráº¡ng thÃ¡i phÃ²ng thÃ nh "Sáºµn sÃ ng"';
+              successMessage = 'Đã hoàn thành bảo trì và cập nhật trạng thái phòng thành "Sẵn sàng"';
             }
             this.message.success(successMessage);
             
-            // KhÃ´ng cÃ²n dÃ¹ng session ná»¯a, dá»¯ liá»‡u Ä‘Ã£ Ä‘Æ°á»£c lÆ°u vÃ o RoomEvent
+            // Không còn dùng session nữa, dữ liệu đã được lưu vào RoomEvent
             
             this.emitRoomDataUpdated('cleaning', { roomId: this.roomData?._id, force: false, delayMs: 100 });
           }, 100);
         },
         (error) => {
           setTimeout(() => {
-            this.message.error('Lá»—i khi cáº­p nháº­t tráº¡ng thÃ¡i phÃ²ng: ' + error.message);
+            this.message.error('Lỗi khi cập nhật trạng thái phòng: ' + error.message);
             this.emitRoomDataUpdated('cleaning', { roomId: this.roomData?._id, force: false, delayMs: 100 });
           }, 100);
         }
       );
   }
 
-  // Xá»­ lÃ½ submit form dá»±a theo loáº¡i modal
+  // Xử lý submit form dựa theo loại modal
   submitForm(): void {
     switch (this.modalType) {
       case 'checkin':
@@ -3775,69 +3825,69 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.cleanRoom();
         break;
       default:
-        console.log('KhÃ´ng cÃ³ hÃ nh Ä‘á»™ng cho loáº¡i modal:', this.modalType);
+        console.log('Không có hành động cho loại modal:', this.modalType);
     }
   }
 
-  // ThÃªm getter cho tiá»n phÃ²ng
+  // Thêm getter cho tiền phòng
   get roomPriceTotal(): number {
-    // Chá»‰ tÃ­nh giÃ¡ khi modalType lÃ  'checkout'
+    // Chỉ tính giá khi modalType là 'checkout'
     if (this.modalType !== 'checkout') {
       return 0;
     }
     
-    // Æ¯u tiÃªn tráº£ vá» giÃ¡ trá»‹ Ä‘Ã£ tÃ­nh tá»« calculateTotalPrice (tá»« backend API)
-    // Sá»­ dá»¥ng flag Ä‘á»ƒ biáº¿t Ä‘Ã£ cÃ³ giÃ¡ trá»‹ tá»« API
+    // Ưu tiên trả về giá trị đã tính từ calculateTotalPrice (từ backend API)
+    // Sử dụng flag để biết đã có giá trị từ API
     if (this._hasRoomPriceFromAPI) {
       return this._roomPriceTotal;
     }
     
-    // Náº¿u chÆ°a cÃ³ giÃ¡ trá»‹ tá»« API, tÃ­nh toÃ¡n táº¡m thá»i Ä‘á»ƒ hiá»ƒn thá»‹
-    // Fallback: tÃ­nh toÃ¡n local náº¿u chÆ°a cÃ³ giÃ¡ trá»‹ tá»« API
+    // Nếu chưa có giá trị từ API, tính toán tạm thời để hiển thị
+    // Fallback: tính toán local nếu chưa có giá trị từ API
     try {
       const lastCheckIn = this.listData && this.listData.length > 0 ? this.listData[0] : null;
       if (!lastCheckIn || !this.roomData) return 0;
       
-      // Kiá»ƒm tra xem cÃ³ pháº£i lÃ  checkin event khÃ´ng
+      // Kiểm tra xem có phải là checkin event không
       if (lastCheckIn.type && lastCheckIn.type !== 'checkin') {
         return 0;
       }
 
-      // Kiá»ƒm tra checkinTime
+      // Kiểm tra checkinTime
       if (!lastCheckIn.checkinTime) {
         return 0;
       }
 
       const checkInTime = new Date(lastCheckIn.checkinTime);
       
-      // Kiá»ƒm tra Date há»£p lá»‡
+      // Kiểm tra Date hợp lệ
       if (isNaN(checkInTime.getTime())) {
         return 0;
       }
       
       const checkOutTime = this.getUTCTimePlus7();
       
-      // Kiá»ƒm tra checkOutTime há»£p lá»‡
+      // Kiểm tra checkOutTime hợp lệ
       if (isNaN(checkOutTime.getTime())) {
         return 0;
       }
       
-      // Äáº£m báº£o checkInTime khÃ´ng lá»›n hÆ¡n checkOutTime
+      // Đảm bảo checkInTime không lớn hơn checkOutTime
       if (checkInTime.getTime() > checkOutTime.getTime()) {
         return 0;
       }
       
-      // TÃ­nh thá»i gian chÃ­nh xÃ¡c theo phÃºt
+      // Tính thời gian chính xác theo phút
       const durationInMilliseconds = checkOutTime.getTime() - checkInTime.getTime();
       const durationInMinutes = Math.floor(durationInMilliseconds / (1000 * 60));
       const durationInHours = Math.floor(durationInMinutes / 60);
       const remainingMinutes = durationInMinutes % 60;
       const durationInDays = Math.ceil(durationInHours / 24);
       
-      // Æ¯u tiÃªn láº¥y rateType tá»« form checkout náº¿u cÃ³, náº¿u khÃ´ng thÃ¬ láº¥y tá»« lastCheckIn
+      // Ưu tiên lấy rateType từ form checkout nếu có, nếu không thì lấy từ lastCheckIn
       const rateType = this.checkOutForm?.get('rateType')?.value || lastCheckIn.rateType || 'hourly';
 
-      // TÃ­nh toÃ¡n táº¡m thá»i (sáº½ Ä‘Æ°á»£c cáº­p nháº­t khi API tráº£ vá»)
+      // Tính toán tạm thời (sẽ được cập nhật khi API trả về)
       return this.calculateRoomTotalByRateType(Math.max(0, durationInHours), Math.max(1, durationInDays), rateType, remainingMinutes);
     } catch (error) {
       console.error('Error calculating room price:', error);
@@ -3845,29 +3895,29 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ThÃªm getter cho tiá»n dá»‹ch vá»¥
+  // Thêm getter cho tiền dịch vụ
   get servicesPriceTotal(): number {
-    // Æ¯u tiÃªn tráº£ vá» giÃ¡ trá»‹ Ä‘Ã£ tÃ­nh tá»« calculateTotalPrice
+    // Ưu tiên trả về giá trị đã tính từ calculateTotalPrice
     if (this._servicesPriceTotal > 0 && this.modalType === 'checkout') {
       return this._servicesPriceTotal;
     }
     
     return this.selectedServices.reduce((total, service) => {
-      // Sá»­ dá»¥ng totalPrice náº¿u cÃ³, náº¿u khÃ´ng thÃ¬ tÃ­nh tá»« price vÃ  quantity
+      // Sử dụng totalPrice nếu có, nếu không thì tính từ price và quantity
       const serviceTotal = service.totalPrice !== undefined ? 
         service.totalPrice : (service.price * service.quantity);
       return total + serviceTotal;
     }, 0);
   }
 
-  // Hiá»ƒn thá»‹ hÃ³a Ä‘Æ¡n
+  // Hiển thị hóa đơn
   showInvoice(invoiceData: any): void {
-    // Äáº£m báº£o hotelId luÃ´n cÃ³ trong invoiceData
+    // Đảm bảo hotelId luôn có trong invoiceData
     if (!invoiceData.hotelId) {
       invoiceData.hotelId = this.roomData?.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId;
     }
     
-    // Äáº£m báº£o dá»¯ liá»‡u dá»‹ch vá»¥ Ä‘Æ°á»£c chuáº©n bá»‹ Ä‘Ãºng
+    // Đảm bảo dữ liệu dịch vụ được chuẩn bị đúng
     if (invoiceData.services && invoiceData.services.length > 0) {
       invoiceData.services = invoiceData.services.map((service: any) => ({
         name: service.name || service.serviceName,
@@ -3877,7 +3927,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }));
     }
 
-    // Äáº£m báº£o Ä‘á»‹nh dáº¡ng ngÃ y vÃ  giá»
+    // Đảm bảo định dạng ngày và giờ
     if (invoiceData.checkInTime) {
       const checkInDate = new Date(invoiceData.checkInTime);
       invoiceData.formattedCheckInTime = this.datePipe.transform(checkInDate, 'dd/MM/yyyy HH:mm');
@@ -3888,7 +3938,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       invoiceData.formattedCheckOutTime = this.datePipe.transform(checkOutDate, 'dd/MM/yyyy HH:mm');
     }
 
-    // Äáº£m báº£o sá»‘ ngÃ y vÃ  sá»‘ giá» Ä‘Æ°á»£c Ä‘á»‹nh nghÄ©a
+    // Đảm bảo số ngày và số giờ được định nghĩa
     if (!invoiceData.duration) {
       invoiceData.duration = {
         days: 1,
@@ -3896,9 +3946,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       };
     }
 
-    // Sá»­ dá»¥ng NzModalService Ä‘á»ƒ táº¡o modal
+    // Sử dụng NzModalService để tạo modal
     const modal: NzModalRef = this.modalService.create({
-      nzTitle: 'HÃ³a Ä‘Æ¡n thanh toÃ¡n',
+      nzTitle: 'Hóa đơn thanh toán',
       nzContent: InvoiceComponent,
       nzWidth: '800px',
       nzData: {
@@ -3907,11 +3957,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       },
       nzFooter: [
         {
-          label: 'ÄÃ³ng',
+          label: 'Đóng',
           onClick: () => modal.destroy()
         },
         {
-          label: 'In hÃ³a Ä‘Æ¡n',
+          label: 'In hóa đơn',
           type: 'primary',
           onClick: () => {
             const instance = modal.getContentComponent();
@@ -3928,19 +3978,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     });
   }
 
-  // HÃ m public Ä‘á»ƒ Ä‘Ã³ng modal tá»« template
+  // Hàm public để đóng modal từ template
   closeModal(): void {
     this.modalRef.destroy();
   }
 
-  // Helper: Láº¥y label cho tráº¡ng thÃ¡i phÃ²ng
+  // Helper: Lấy label cho trạng thái phòng
   getStatusLabel(status: string): string {
     const labels: {[key: string]: string} = {
-      'vacant': 'Trá»‘ng',
-      'occupied': 'Äang sá»­ dá»¥ng',
-      'dirty': 'Cáº§n dá»n dáº¹p',
-      'cleaning': 'Äang dá»n dáº¹p',
-      'maintenance': 'Báº£o trÃ¬'
+      'vacant': 'Trống',
+      'occupied': 'Đang sử dụng',
+      'dirty': 'Cần dọn dẹp',
+      'cleaning': 'Đang dọn dẹp',
+      'maintenance': 'Bảo trì'
     };
     return labels[status] || status;
   }
@@ -3948,7 +3998,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   createCheckOutForm(): void {
     this.checkOutForm = this.fb.group({
       guestInfo: this.fb.group({
-        name: ['KhÃ¡ch láº»'],
+        name: ['Khách lẻ'],
         idNumber: [''],
         tax_code: [''], 
         phone: ['', [Validators.pattern('^[0-9]{10}$')]],
@@ -3967,7 +4017,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       createDebt: [false] 
     });
     
-    // THÃŠM DEBOUNCETIME CHá»NG Gá»ŒI TÃNH TIá»€N LIÃŠN Tá»¤C
+    // THÊM DEBOUNCETIME CHỐNG GỌI TÍNH TIỀN LIÊN TỤC
     this.checkOutForm.get('rateType')?.valueChanges
       .pipe(distinctUntilChanged())
       .subscribe((newRateType) => {
@@ -3978,21 +4028,21 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     });
     
     this.checkOutForm.get('additionalCharges')?.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged())
+      .pipe(distinctUntilChanged())
       .subscribe(() => {
         this.calculateTotalPrice();
     });
     
     this.checkOutForm.get('discount')?.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged())
+      .pipe(distinctUntilChanged())
       .subscribe(() => {
         this.calculateTotalPrice();
     });
     
     this.checkOutForm.get('advancePayment')?.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged())
+      .pipe(distinctUntilChanged())
       .subscribe((val) => {
-        this.advancePayment = val || 0;
+        this.advancePayment = Number(val) || 0;
         this.calculateTotalPrice();
     });
   }
@@ -4018,7 +4068,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  // Xá»­ lÃ½ khi OCR scan hoÃ n thÃ nh
+  // Xử lý khi OCR scan hoàn thành
   onOCRScanComplete(ocrData: any): void {
     if (!ocrData || !this.checkOutForm) return;
 
@@ -4026,11 +4076,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     if (!guestInfoFormGroup) return;
 
     const source = this.getOcrSourceData(ocrData);
-    const idNumber = this.getOcrValue(ocrData, ['Sá»‘ ID', 'Sá»‘ CCCD', 'idNumber', 'cccd']).replace(/\s+/g, '');
-    const fullName = this.getOcrValue(ocrData, ['Há» tÃªn', 'Há» vÃ  tÃªn', 'fullName', 'name']);
+    const idNumber = this.getOcrValue(ocrData, ['Số ID', 'Số CCCD', 'idNumber', 'cccd']).replace(/\s+/g, '');
+    const fullName = this.getOcrValue(ocrData, ['Họ tên', 'Họ và tên', 'fullName', 'name']);
     const fullNameLegacy = `${source?.['lastName'] || ocrData?.lastName || ''} ${source?.['firstName'] || ocrData?.firstName || ''}`.trim();
-    const phone = this.getOcrValue(ocrData, ['Sá»‘ Ä‘iá»‡n thoáº¡i', 'phone']);
-    const address = this.getOcrValue(ocrData, ['Äá»‹a chá»‰ thÆ°á»ng trÃº', 'Äá»‹a chá»‰', 'address', 'QuÃª quÃ¡n']);
+    const phone = this.getOcrValue(ocrData, ['Số điện thoại', 'phone']);
+    const address = this.getOcrValue(ocrData, ['Địa chỉ thường trú', 'Địa chỉ', 'address', 'Quê quán']);
 
     if (idNumber) {
       guestInfoFormGroup.patchValue({ idNumber });
@@ -4045,17 +4095,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestInfoFormGroup.patchValue({ address });
     }
 
-    this.message.success('ÄÃ£ tá»± Ä‘á»™ng Ä‘iá»n thÃ´ng tin tá»« OCR. Vui lÃ²ng kiá»ƒm tra vÃ  chá»‰nh sá»­a náº¿u cáº§n.');
+    this.message.success('Đã tự động điền thông tin từ OCR. Vui lòng kiểm tra và chỉnh sửa nếu cần.');
   }
 
-  // Má»Ÿ modal Ä‘á»ƒ lÆ°u thÃ´ng tin khÃ¡ch vÃ o guest-management
+  // Mở modal để lưu thông tin khách vào guest-management
   openGuestSaveModal(): void {
     if (!this.roomData || !this.roomData._id) {
-      this.message.error('KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin phÃ²ng.');
+      this.message.error('Không tìm thấy thông tin phòng.');
       return;
     }
     
-    // Láº¥y thÃ´ng tin khÃ¡ch tá»« form náº¿u cÃ³
+    // Lấy thông tin khách từ form nếu có
     let guestInfo: any = null;
     if (this.checkOutForm) {
       const guestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
@@ -4064,9 +4114,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
     
-    // Má»Ÿ modal GuestSaveModalComponent
+    // Mở modal GuestSaveModalComponent
     const modalRef = this.modalService.create({
-      nzTitle: 'LÆ°u thÃ´ng tin khÃ¡ch',
+      nzTitle: 'Lưu thông tin khách',
       nzContent: GuestSaveModalComponent,
       nzFooter: null,
       nzWidth: 900,
@@ -4079,20 +4129,20 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     modalRef.afterClose.subscribe((result) => {
       if (result && result.success) {
-        this.message.success('ÄÃ£ lÆ°u vÃ  assign khÃ¡ch vÃ o phÃ²ng thÃ nh cÃ´ng');
+        this.message.success('Đã lưu và assign khách vào phòng thành công');
         // Reload room data
         this.roomsService.getRoomById(this.roomData._id).subscribe({
           next: (updatedRoom) => {
             this.roomData = updatedRoom;
-            // Reload láº¡i dá»¯ liá»‡u phÃ²ng
+            // Reload lại dữ liệu phòng
             this.ngOnInit();
             
-            // ThÃ´ng bÃ¡o cho room.component Ä‘á»ƒ reload
+            // Thông báo cho room.component để reload
             this.emitRoomDataUpdated('generic', { roomId: this.roomData?._id, force: false, delayMs: 100 });
           },
           error: (error) => {
             console.error('Error reloading room:', error);
-            // Váº«n thÃ´ng bÃ¡o Ä‘á»ƒ room.component reload
+            // Vẫn thông báo để room.component reload
             this.emitRoomDataUpdated('generic', { roomId: this.roomData?._id, force: false, delayMs: 100 });
           }
         });
@@ -4100,7 +4150,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     });
   }
 
-  // LÆ°u thÃ´ng tin khÃ¡ch vÃ  tiá»n Ä‘áº·t trÆ°á»›c (giá»¯ láº¡i Ä‘á»ƒ tÆ°Æ¡ng thÃ­ch)
+  // Lưu thông tin khách và tiền đặt trước (giữ lại để tương thích)
   saveGuestInfo(): void {
     if (!this.checkOutForm) {
       console.error('checkOutForm is not initialized');
@@ -4108,27 +4158,27 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
     
     if (!this.roomData || !this.roomData._id) {
-      this.message.error('KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin phÃ²ng.');
+      this.message.error('Không tìm thấy thông tin phòng.');
       return;
     }
     
     this.isSaving = true;
     
-    // Láº¥y giÃ¡ trá»‹ trá»±c tiáº¿p tá»« form control Ä‘á»ƒ Ä‘áº£m báº£o láº¥y Ä‘Ãºng
+    // Lấy giá trị trực tiếp từ form control để đảm bảo lấy đúng
     const guestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
     
-    // Láº¥y giÃ¡ trá»‹ tá»« form control, sá»­ dá»¥ng getRawValue() náº¿u form bá»‹ disable
+    // Lấy giá trị từ form control, sử dụng getRawValue() nếu form bị disable
     const guestInfo = guestInfoFormGroup ? 
       (guestInfoFormGroup.disabled ? guestInfoFormGroup.getRawValue() : guestInfoFormGroup.value) : 
       (this.checkOutForm.get('guestInfo')?.value || {});
     
-    // Láº¥y guestSource trá»±c tiáº¿p tá»« form control Ä‘á»ƒ Ä‘áº£m báº£o láº¥y Ä‘Ãºng
+    // Lấy guestSource trực tiếp từ form control để đảm bảo lấy đúng
     const guestSourceControl = guestInfoFormGroup?.get('guestSource');
     const guestSourceValue = guestSourceControl ? 
       (guestSourceControl.disabled ? guestSourceControl.getRawValue() : guestSourceControl.value) : 
       (guestInfo.guestSource || null);
     
-    // Äáº£m báº£o advancePayment luÃ´n lÃ  sá»‘
+    // Đảm bảo advancePayment luôn là số
     const advancePayment = Number(this.checkOutForm.get('advancePayment')?.value) || 0;
     
     const advancePaymentMethodControl = this.checkOutForm.get('advancePaymentMethod');
@@ -4136,29 +4186,29 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       ? ((advancePaymentMethodControl.disabled ? advancePaymentMethodControl.getRawValue() : advancePaymentMethodControl.value) || 'cash')
       : 'cash';
     
-    // Láº¥y giÃ¡ trá»‹ phá»¥ thu vÃ  khuyáº¿n mÃ£i tá»« form checkout (chá»‰ giÃ¡ trá»‹ ngÆ°á»i dÃ¹ng nháº­p thÃªm)
-    // Form checkout báº¯t Ä‘áº§u tá»« 0, khÃ´ng bao gá»“m giÃ¡ trá»‹ tá»« check-in event
+    // Lấy giá trị phụ thu và khuyến mãi từ form checkout (chỉ giá trị người dùng nhập thêm)
+    // Form checkout bắt đầu từ 0, không bao gồm giá trị từ check-in event
     const checkoutCharges = Number(this.checkOutForm.get('additionalCharges')?.value) || 0;
     const checkoutDiscount = Number(this.checkOutForm.get('discount')?.value) || 0;
     
-    // TÃ­nh tá»•ng phá»¥ thu vÃ  khuyáº¿n mÃ£i (cá»™ng dá»“n, khÃ´ng ghi Ä‘Ã¨)
-    // initialCharges vÃ  initialDiscount Ä‘Ã£ Ä‘Æ°á»£c set khi load dá»¯ liá»‡u tá»« check-in event
-    // Khi lÆ°u, cá»™ng thÃªm giÃ¡ trá»‹ ngÆ°á»i dÃ¹ng nháº­p vÃ o form checkout
-    // Khi má»Ÿ láº¡i modal, initialCharges vÃ  initialDiscount sáº½ Ä‘Æ°á»£c load láº¡i tá»« RoomEvent (Ä‘Ã£ bao gá»“m cáº£ láº§n nháº­p trÆ°á»›c)
+    // Tính tổng phụ thu và khuyến mãi (cộng dồn, không ghi đè)
+    // initialCharges và initialDiscount đã được set khi load dữ liệu từ check-in event
+    // Khi lưu, cộng thêm giá trị người dùng nhập vào form checkout
+    // Khi mở lại modal, initialCharges và initialDiscount sẽ được load lại từ RoomEvent (đã bao gồm cả lần nhập trước)
     const additionalCharges = this.initialCharges + checkoutCharges;
     const discount = this.initialDiscount + checkoutDiscount;
     
-    // Láº¥y rateType tá»« form checkout (Æ°u tiÃªn tá»« form, náº¿u khÃ´ng cÃ³ thÃ¬ láº¥y tá»« event)
+    // Lấy rateType từ form checkout (ưu tiên từ form, nếu không có thì lấy từ event)
     const rateType = this.checkOutForm?.get('rateType')?.value || 
                      (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) || 
                      'hourly';
 
     const notes = this.checkOutForm?.get('notes')?.value || this.initialNotes || '';
     
-    // Láº¥y guestSource tá»« form, náº¿u khÃ´ng cÃ³ thÃ¬ láº¥y tá»« events
+    // Lấy guestSource từ form, nếu không có thì lấy từ events
     let guestSource = guestSourceValue || 'walkin';
     if (!guestSourceValue && this.roomData.events && this.roomData.events.length > 0) {
-      // Thá»­ láº¥y tá»« lastCheckinEvent (chá»‰ láº¥y event chÆ°a checkout)
+      // Thử lấy từ lastCheckinEvent (chỉ lấy event chưa checkout)
       const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
       if (checkinEvents.length > 0 && checkinEvents[0].guestInfo?.guestSource) {
         guestSource = checkinEvents[0].guestInfo.guestSource;
@@ -4181,9 +4231,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       roomId: this.roomData._id 
     });
     
-    // Äáº£m báº£o tÃªn khÃ¡ch máº·c Ä‘á»‹nh lÃ  "KhÃ¡ch láº»" náº¿u khÃ´ng nháº­p vÃ  Ä‘áº£m báº£o Ä‘áº§y Ä‘á»§ cÃ¡c trÆ°á»ng
+    // Đảm bảo tên khách mặc định là "Khách lẻ" nếu không nhập và đảm bảo đầy đủ các trường
     const updatedGuestInfo = {
-      name: guestInfo.name || 'KhÃ¡ch láº»',
+      name: guestInfo.name || 'Khách lẻ',
       idNumber: guestInfo.idNumber || '',
       tax_code: guestInfo.tax_code || '',
       phone: guestInfo.phone || '',
@@ -4210,7 +4260,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       selectedServices: this.selectedServices || []
     };
 
-    // LÆ°u vÃ o Redis
+    // Lưu vào Redis
     const hotelId = this.normalizeObjectId(this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
     if (hotelId) {
       this.apiService.saveCheckinData(hotelId, this.roomData._id, checkinData).subscribe({
@@ -4234,7 +4284,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         console.log('Update checkin info response:', response);
-        this.message.success('ÄÃ£ lÆ°u thÃ´ng tin khÃ¡ch vÃ  tiá»n Ä‘áº·t trÆ°á»›c.');
+        this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
 
         this.initialNotes = notes;
         this.createAdvancePaymentIncomeIfNeeded(advancePayment, previousAdvancePayment, advancePaymentMethod, updatedGuestInfo);
@@ -4306,7 +4356,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Error updating checkin info:', err);
-        this.message.warning('Lá»—i khi cáº­p nháº­t backend: ' + (err.error?.message || err.message));
+        this.message.warning('Lỗi khi cập nhật backend: ' + (err.error?.message || err.message));
         this.isSaving = false;
       }
     });
@@ -4320,7 +4370,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   ): void {
     try {
       const hotelId = this.normalizeObjectId(this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
-      const payerName = updatedGuestInfo?.name || 'KhÃ¡ch láº»';
+      const payerName = updatedGuestInfo?.name || 'Khách lẻ';
       const advanceDiff = Number(advancePayment || 0) - Number(previousAdvancePayment || 0);
       if (!hotelId || advanceDiff <= 0) return;
 
@@ -4335,8 +4385,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         amount: advanceDiff,
         method: methodForTransaction,
         incomeCategory: 'deposit',
-        description: `[Äáº·t trÆ°á»›c] PhÃ²ng ${this.roomData.roomNumber}`,
-        notes: `Äáº·t trÆ°á»›c phÃ²ng ${this.roomData.roomNumber} - ${payerName}`,
+        description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
+        notes: `Đặt trước phòng ${this.roomData.roomNumber} - ${payerName}`,
         payer: payerName,
         bookingId: bookingId,
         metadata: {
@@ -4347,14 +4397,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           payer: payerName
         }
       }).subscribe({
-        next: () => console.log('ÄÃ£ táº¡o phiáº¿u thu Ä‘áº·t trÆ°á»›c phÃ²ng', this.roomData.roomNumber, 'amount:', advanceDiff, 'method:', methodForTransaction),
+        next: () => console.log('Đã tạo phiếu thu đặt trước phòng', this.roomData.roomNumber, 'amount:', advanceDiff, 'method:', methodForTransaction),
         error: (err) => {
-          console.error('Lá»—i táº¡o phiáº¿u thu Ä‘áº·t trÆ°á»›c:', err);
-          this.message.error('KhÃ´ng táº¡o Ä‘Æ°á»£c phiáº¿u thu Ä‘áº·t trÆ°á»›c: ' + (err?.error?.message || err?.message || 'Lá»—i khÃ´ng xÃ¡c Ä‘á»‹nh'));
+          console.error('Lỗi tạo phiếu thu đặt trước:', err);
+          this.message.error('Không tạo được phiếu thu đặt trước: ' + (err?.error?.message || err?.message || 'Lỗi không xác định'));
         }
       });
     } catch (e) {
-      console.error('Lá»—i khi táº¡o phiáº¿u thu Ä‘áº·t trÆ°á»›c:', e);
+      console.error('Lỗi khi tạo phiếu thu đặt trước:', e);
     }
   }
 
@@ -4431,7 +4481,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
         if (paymentHistory.status === 'completed' || paymentHistory.status === 'paid') {
           if (amountDifference > amountTolerance) {
-            console.warn('Sá»‘ tiá»n khÃ´ng khá»›p:', {
+            console.warn('Số tiền không khớp:', {
               expected: expectedAmount,
               received: receivedAmount,
               difference: amountDifference
@@ -4444,7 +4494,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
         if (paymentHistory.status === 'failed' || paymentHistory.status === 'cancelled') {
           this.stopPaymentStatusPolling();
-          this.message.warning('Thanh toÃ¡n Ä‘Ã£ bá»‹ há»§y hoáº·c tháº¥t báº¡i. Vui lÃ²ng thá»­ láº¡i.');
+          this.message.warning('Thanh toán đã bị hủy hoặc thất bại. Vui lòng thử lại.');
         }
       },
       error: (error) => {
@@ -4487,16 +4537,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     });
   }
   
-  // Getter Ä‘á»ƒ láº¥y phá»¥ thu checkin sá»›m tá»« roomPriceDetails
+  // Getter để lấy phụ thu checkin sớm từ roomPriceDetails
   getEarlyCheckinSurcharge(): number {
     if (!this.roomPriceDetails) return 0;
     
-    // Kiá»ƒm tra breakdown trÆ°á»›c (cho hourly rate vá»›i nightly period)
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
     if (this.roomPriceDetails.breakdown?.beforeNightly?.earlyCheckinSurcharge) {
       return this.roomPriceDetails.breakdown.beforeNightly.earlyCheckinSurcharge;
     }
     
-    // Kiá»ƒm tra trá»±c tiáº¿p tá»« roomPriceDetails
+    // Kiểm tra trực tiếp từ roomPriceDetails
     if (this.roomPriceDetails.earlyCheckinSurcharge) {
       return this.roomPriceDetails.earlyCheckinSurcharge;
     }
@@ -4504,16 +4554,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return 0;
   }
   
-  // Getter Ä‘á»ƒ láº¥y sá»‘ giá» checkin sá»›m
+  // Getter để lấy số giờ checkin sớm
   getEarlyCheckinHours(): number {
     if (!this.roomPriceDetails) return 0;
     
-    // Kiá»ƒm tra breakdown trÆ°á»›c (cho hourly rate vá»›i nightly period)
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
     if (this.roomPriceDetails.breakdown?.beforeNightly?.hours) {
       return this.roomPriceDetails.breakdown.beforeNightly.hours;
     }
     
-    // Kiá»ƒm tra trá»±c tiáº¿p tá»« roomPriceDetails
+    // Kiểm tra trực tiếp từ roomPriceDetails
     if (this.roomPriceDetails.earlyCheckinHours) {
       return this.roomPriceDetails.earlyCheckinHours;
     }
@@ -4521,16 +4571,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return 0;
   }
   
-  // Getter Ä‘á»ƒ láº¥y phá»¥ thu checkout trá»… tá»« roomPriceDetails
+  // Getter để lấy phụ thu checkout trễ từ roomPriceDetails
   getLateCheckoutSurcharge(): number {
     if (!this.roomPriceDetails) return 0;
     
-    // Kiá»ƒm tra breakdown trÆ°á»›c (cho hourly rate vá»›i nightly period)
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
     if (this.roomPriceDetails.breakdown?.afterNightly?.lateCheckoutSurcharge) {
       return this.roomPriceDetails.breakdown.afterNightly.lateCheckoutSurcharge;
     }
     
-    // Kiá»ƒm tra trá»±c tiáº¿p tá»« roomPriceDetails
+    // Kiểm tra trực tiếp từ roomPriceDetails
     if (this.roomPriceDetails.lateCheckoutSurcharge) {
       return this.roomPriceDetails.lateCheckoutSurcharge;
     }
@@ -4538,16 +4588,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return 0;
   }
   
-  // Getter Ä‘á»ƒ láº¥y sá»‘ giá» checkout trá»…
+  // Getter để lấy số giờ checkout trễ
   getLateCheckoutHours(): number {
     if (!this.roomPriceDetails) return 0;
     
-    // Kiá»ƒm tra breakdown trÆ°á»›c (cho hourly rate vá»›i nightly period)
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
     if (this.roomPriceDetails.breakdown?.afterNightly?.hours) {
       return this.roomPriceDetails.breakdown.afterNightly.hours;
     }
     
-    // Kiá»ƒm tra trá»±c tiáº¿p tá»« roomPriceDetails
+    // Kiểm tra trực tiếp từ roomPriceDetails
     if (this.roomPriceDetails.lateCheckoutHours) {
       return this.roomPriceDetails.lateCheckoutHours;
     }
@@ -4555,16 +4605,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return 0;
   }
   
-  // Getter Ä‘á»ƒ láº¥y sá»‘ tiá»n qua Ä‘Ãªm (basePrice)
+  // Getter để lấy số tiền qua đêm (basePrice)
   getBaseRoomPrice(): number {
     if (!this.roomPriceDetails) return 0;
     
-    // Kiá»ƒm tra breakdown trÆ°á»›c (cho hourly rate vá»›i nightly period)
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
     if (this.roomPriceDetails.breakdown?.nightly?.price) {
       return this.roomPriceDetails.breakdown.nightly.price;
     }
     
-    // Kiá»ƒm tra trá»±c tiáº¿p tá»« roomPriceDetails
+    // Kiểm tra trực tiếp từ roomPriceDetails
     if (this.roomPriceDetails.basePrice) {
       return this.roomPriceDetails.basePrice;
     }
@@ -4572,16 +4622,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return 0;
   }
   
-  // Getter Ä‘á»ƒ láº¥y sá»‘ Ä‘Ãªm (nights)
+  // Getter để lấy số đêm (nights)
   getNights(): number {
     if (!this.roomPriceDetails) return 0;
     
-    // Kiá»ƒm tra breakdown trÆ°á»›c (cho hourly rate vá»›i nightly period)
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
     if (this.roomPriceDetails.breakdown?.nightly?.nights) {
       return this.roomPriceDetails.breakdown.nightly.nights;
     }
     
-    // Kiá»ƒm tra trá»±c tiáº¿p tá»« roomPriceDetails
+    // Kiểm tra trực tiếp từ roomPriceDetails
     if (this.roomPriceDetails.nights) {
       return this.roomPriceDetails.nights;
     }
@@ -4589,16 +4639,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return 0;
   }
   
-  // Getter Ä‘á»ƒ láº¥y sá»‘ giá» (hours) - cho hourly rate
+  // Getter để lấy số giờ (hours) - cho hourly rate
   getHours(): number {
     if (!this.roomPriceDetails) return 0;
     
-    // Kiá»ƒm tra breakdown trÆ°á»›c (cho hourly rate vá»›i nightly period)
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
     if (this.roomPriceDetails.breakdown?.hourly?.hours) {
       return this.roomPriceDetails.breakdown.hourly.hours;
     }
     
-    // Kiá»ƒm tra trá»±c tiáº¿p tá»« roomPriceDetails
+    // Kiểm tra trực tiếp từ roomPriceDetails
     if (this.roomPriceDetails.hours) {
       return this.roomPriceDetails.hours;
     }
@@ -4606,21 +4656,21 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return 0;
   }
   
-  // Getter Ä‘á»ƒ láº¥y giÃ¡ theo giá» (hourlyPrice) - cho hourly rate
+  // Getter để lấy giá theo giờ (hourlyPrice) - cho hourly rate
   getHourlyPrice(): number {
     if (!this.roomPriceDetails) return 0;
     
-    // Kiá»ƒm tra breakdown trÆ°á»›c (cho hourly rate vá»›i nightly period)
+    // Kiểm tra breakdown trước (cho hourly rate với nightly period)
     if (this.roomPriceDetails.breakdown?.hourly?.price) {
       return this.roomPriceDetails.breakdown.hourly.price;
     }
     
-    // Kiá»ƒm tra trá»±c tiáº¿p tá»« roomPriceDetails
+    // Kiểm tra trực tiếp từ roomPriceDetails
     if (this.roomPriceDetails.hourlyPrice) {
       return this.roomPriceDetails.hourlyPrice;
     }
     
-    // Náº¿u cÃ³ basePrice vÃ  rateType lÃ  hourly
+    // Nếu có basePrice và rateType là hourly
     if (this.roomPriceDetails.basePrice && this.roomPriceDetails.rateType === 'hourly') {
       return this.roomPriceDetails.basePrice;
     }
@@ -4628,7 +4678,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     return 0;
   }
   
-  // Debug method Ä‘á»ƒ kiá»ƒm tra roomPriceDetails
+  // Debug method để kiểm tra roomPriceDetails
   debugRoomPriceDetails(): void {
     console.log('roomPriceDetails:', this.roomPriceDetails);
     console.log('getEarlyCheckinSurcharge():', this.getEarlyCheckinSurcharge());
