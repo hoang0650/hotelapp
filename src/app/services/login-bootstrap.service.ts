@@ -7,10 +7,11 @@ import { RoomsService } from './rooms.service';
 import { SessionContextService } from './session-context.service';
 import { HotelService } from './hotel.service';
 import { PermissionService } from './permission.service';
+import { PricingService } from './pricing.service';
 import { User } from '../interfaces/user';
 
 /**
- * Warm cache ngay sau login để /admin/room + sidebar hiện gần như tức thì.
+ * Warm cache ngay sau login để /admin/room + sidebar + /pricing hiện gần như tức thì.
  */
 @Injectable({
   providedIn: 'root'
@@ -22,7 +23,8 @@ export class LoginBootstrapService {
     private roomsService: RoomsService,
     private sessionContext: SessionContextService,
     private hotelService: HotelService,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private pricingService: PricingService
   ) {}
 
   /**
@@ -33,6 +35,10 @@ export class LoginBootstrapService {
       this.authService.loginFromShiftHandover(token, user);
       this.authService.authResolved.next(true);
       this.permissionService.refreshPermissions();
+      this.pricingService.prefetchPackages();
+      if (user?._id) {
+        this.pricingService.getCurrentUserPackage(String(user._id)).subscribe({ next: () => {}, error: () => {} });
+      }
 
       const hotelId = this.resolveHotelId(user);
       if (hotelId) {

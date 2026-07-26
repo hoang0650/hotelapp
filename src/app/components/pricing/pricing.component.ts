@@ -416,7 +416,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       
       // Reload package sau 2 giây để kiểm tra xem đã đăng ký chưa
       setTimeout(() => {
-        this.loadCurrentPackage();
+        this.loadCurrentPackage({ force: true });
         this.loadPaymentHistory();
       }, 2000);
       
@@ -433,61 +433,28 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  loadPackages(): void {
-    this.loading = true;
-    this.pricingService.getAllPackages().subscribe({
-      next: (response) => {
-        if (response.success !== false) {
-          this.packages = response.data || response || [];
-          
-          if (this.preselectPackageId) {
-            const type: 'monthly' | 'yearly' = this.preselectBillingType || this.billingType;
-            this.performPreselect(this.preselectPackageId, type);
-            this.preselectPackageId = null;
-            this.preselectBillingType = null;
-            try {
-              window.history.replaceState({}, '', '/pricing');
-            } catch {}
-          }
-          
-          // Nếu user là guest và chưa có package, tự động map với gói free (giá = 0)
-          if (this.currentUser && this.currentUser.role === 'guest' && !this.currentPackage) {
-            const freePackage = this.packages.find((pkg: any) => 
-              (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) || 
-              (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
-            );
-            
-            if (freePackage && this.userId) {
-              // Tự động subscribe gói free cho guest
-              this.pricingService.subscribe(this.userId, freePackage._id || freePackage.id, 'monthly').subscribe({
-                next: (subscribeResponse: any) => {
-                  if (subscribeResponse.success !== false) {
-                    console.log('Auto-subscribed guest to free package');
-                    this.loadCurrentPackage();
-                  }
-                },
-                error: (subscribeError: any) => {
-                  console.error('Error auto-subscribing guest to free package:', subscribeError);
-                }
-              });
-            }
-          }
-        } else {
-          this.packages = [];
-          // Không hiển thị lỗi nếu chỉ là response format khác
-          if (response.message) {
-            this.message.error(response.message);
-          }
+  loadPackages(options?: { force?: boolean }): void {
+    const cached = !options?.force ? this.pricingService.getCachedPackages() : null;
+    if (cached?.payload) {
+      this.applyPackagesResponse(cached.payload, { fromCache: true });
+      // Refresh nền — không bật spinner lại
+      this.pricingService.getAllPackages({ force: true }).subscribe({
+        next: (response) => this.applyPackagesResponse(response, { fromCache: false }),
+        error: (error) => {
+          console.error('Error refreshing packages cache:', error);
         }
+      });
+      return;
+    }
+
+    this.loading = true;
+    this.pricingService.getAllPackages({ force: !!options?.force }).subscribe({
+      next: (response) => {
+        this.applyPackagesResponse(response, { fromCache: false });
         this.loading = false;
-        // Cập nhật scroll buttons sau khi load packages
-        setTimeout(() => {
-          this.updateScrollButtons();
-        }, 200);
       },
       error: (error) => {
         console.error('Error loading packages:', error);
-        // Chỉ hiển thị lỗi nếu không phải lỗi 401/403 (không cần đăng nhập)
         if (error.status !== 401 && error.status !== 403) {
           this.message.error(error.error?.message || this.t('PRICING_PAGE.MESSAGES.LOAD_PACKAGES_ERROR'));
         }
@@ -496,86 +463,128 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  loadCurrentPackage(): void {
-    if (!this.userId) return;
-    
-    this.pricingService.getCurrentUserPackage(this.userId).subscribe({
-      next: (response: any) => {
-        if (response && response.success !== false) {
-          this.currentPackage = response.data || response;
-          // Cập nhật billingType nếu có
-          if (response.billingType) {
-            this.billingType = response.billingType;
-          } else if (this.currentPackage?.billingType) {
-            this.billingType = this.currentPackage.billingType;
-          }
-          // Kiểm tra tính năng thanh toán
-          this.checkPaymentFeatures();
-        } else {
-          this.currentPackage = null;
-          
-          // Nếu user là guest và chưa có package, tự động map với gói free
-          if (this.currentUser && this.currentUser.role === 'guest' && this.packages.length > 0) {
-            const freePackage = this.packages.find((pkg: any) => 
-              (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) || 
-              (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
-            );
-            
-            if (freePackage) {
-              // Tự động subscribe gói free cho guest
-              this.pricingService.subscribe(this.userId, freePackage._id || freePackage.id, 'monthly').subscribe({
-                next: (subscribeResponse: any) => {
-                  if (subscribeResponse.success !== false) {
-                    console.log('Auto-subscribed guest to free package');
-                    this.loadCurrentPackage(); // Reload để lấy package mới
-                  }
-                },
-                error: (subscribeError: any) => {
-                  console.error('Error auto-subscribing guest to free package:', subscribeError);
-                }
-              });
+  private applyPackagesResponse(response: any, meta: { fromCache: boolean }): void {
+    if (response && response.success !== false) {
+      this.packages = response.data || response || [];
+
+      if (this.preselectPackageId) {
+        const type: 'monthly' | 'yearly' = this.preselectBillingType || this.billingType;
+        this.performPreselect(this.preselectPackageId, type);
+        this.preselectPackageId = null;
+        this.preselectBillingType = null;
+        try {
+          window.history.replaceState({}, '', '/pricing');
+        } catch {}
+      }
+
+      if (this.currentUser && this.currentUser.role === 'guest' && !this.currentPackage) {
+        const freePackage = this.packages.find((pkg: any) =>
+          (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) ||
+          (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
+        );
+
+        if (freePackage && this.userId) {
+          this.pricingService.subscribe(this.userId, freePackage._id || freePackage.id, 'monthly').subscribe({
+            next: (subscribeResponse: any) => {
+              if (subscribeResponse.success !== false) {
+                console.log('Auto-subscribed guest to free package');
+                this.loadCurrentPackage({ force: true });
+              }
+            },
+            error: (subscribeError: any) => {
+              console.error('Error auto-subscribing guest to free package:', subscribeError);
             }
-          }
-          
-          // Reset về mặc định nếu không có package
-          this.canUsePayPal = true;
-          this.canUseCrypto = true;
+          });
         }
-      },
+      }
+    } else if (!meta.fromCache) {
+      this.packages = [];
+      if (response?.message) {
+        this.message.error(response.message);
+      }
+    }
+
+    setTimeout(() => {
+      this.updateScrollButtons();
+    }, meta.fromCache ? 50 : 200);
+    this.cdr.markForCheck();
+  }
+
+  loadCurrentPackage(options?: { force?: boolean }): void {
+    if (!this.userId) return;
+
+    const cached = !options?.force ? this.pricingService.getCachedCurrentUserPackage(this.userId) : null;
+    if (cached?.payload) {
+      this.applyCurrentPackageResponse(cached.payload, { fromCache: true });
+      this.pricingService.getCurrentUserPackage(this.userId, { force: true }).subscribe({
+        next: (response: any) => this.applyCurrentPackageResponse(response, { fromCache: false }),
+        error: (error) => {
+          if (error.status !== 404 && error.status !== 400) {
+            console.error('Error refreshing current package cache:', error);
+          }
+        }
+      });
+      return;
+    }
+
+    this.pricingService.getCurrentUserPackage(this.userId, { force: !!options?.force }).subscribe({
+      next: (response: any) => this.applyCurrentPackageResponse(response, { fromCache: false }),
       error: (error) => {
         console.error('Error loading current package:', error);
-        // Không hiển thị lỗi nếu user chưa có gói (404 hoặc null)
         if (error.status !== 404 && error.status !== 400) {
           this.message.error(error.error?.message || this.t('PRICING_PAGE.MESSAGES.LOAD_CURRENT_PACKAGE_ERROR'));
         }
         this.currentPackage = null;
-        
-        // Nếu user là guest và chưa có package, tự động map với gói free
-        if (this.currentUser && this.currentUser.role === 'guest' && this.packages.length > 0) {
-          const freePackage = this.packages.find((pkg: any) => 
-            (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) || 
-            (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
-          );
-          
-          if (freePackage) {
-            // Tự động subscribe gói free cho guest
-            this.pricingService.subscribe(this.userId, freePackage._id || freePackage.id, 'monthly').subscribe({
-              next: (subscribeResponse: any) => {
-                if (subscribeResponse.success !== false) {
-                  console.log('Auto-subscribed guest to free package');
-                  this.loadCurrentPackage(); // Reload để lấy package mới
-                }
-              },
-              error: (subscribeError: any) => {
-                console.error('Error auto-subscribing guest to free package:', subscribeError);
-              }
-            });
-          }
-        }
-        
-        // Reset về mặc định nếu không có package
+        this.tryAutoSubscribeGuestFreePackage();
         this.canUsePayPal = true;
         this.canUseCrypto = true;
+      }
+    });
+  }
+
+  private applyCurrentPackageResponse(response: any, meta: { fromCache: boolean }): void {
+    if (response && response.success !== false) {
+      this.currentPackage = response.data || response;
+      if (response.billingType) {
+        this.billingType = response.billingType;
+      } else if (this.currentPackage?.billingType) {
+        this.billingType = this.currentPackage.billingType;
+      }
+      this.checkPaymentFeatures();
+    } else {
+      this.currentPackage = null;
+      if (!meta.fromCache) {
+        this.tryAutoSubscribeGuestFreePackage();
+      }
+      this.canUsePayPal = true;
+      this.canUseCrypto = true;
+    }
+    this.cdr.markForCheck();
+  }
+
+  private tryAutoSubscribeGuestFreePackage(): void {
+    if (!(this.currentUser && this.currentUser.role === 'guest' && this.packages.length > 0 && this.userId)) {
+      return;
+    }
+
+    const freePackage = this.packages.find((pkg: any) =>
+      (pkg.monthlyPrice === 0 && pkg.yearlyPrice === 0) ||
+      (pkg.monthlyPrice === 0 && !pkg.yearlyPrice)
+    );
+
+    if (!freePackage) {
+      return;
+    }
+
+    this.pricingService.subscribe(this.userId, freePackage._id || freePackage.id, 'monthly').subscribe({
+      next: (subscribeResponse: any) => {
+        if (subscribeResponse.success !== false) {
+          console.log('Auto-subscribed guest to free package');
+          this.loadCurrentPackage({ force: true });
+        }
+      },
+      error: (subscribeError: any) => {
+        console.error('Error auto-subscribing guest to free package:', subscribeError);
       }
     });
   }
@@ -649,7 +658,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         next: (response: any) => {
           if (response.success !== false) {
             this.message.success(response.message || this.t('PRICING_PAGE.MESSAGES.SUBSCRIBE_SUCCESS', { billingType: billingTypeText }));
-            this.loadCurrentPackage();
+            this.loadCurrentPackage({ force: true });
             this.selectedPackage = null;
             // Tạo thông báo hệ thống
             if (isUpgrade) {
@@ -691,7 +700,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
               packageName: pkg.name,
               billingType: billingTypeText
             }));
-            this.loadCurrentPackage();
+            this.loadCurrentPackage({ force: true });
             this.selectedPackage = null;
             // Tạo thông báo hệ thống (hạ gói/cập nhật)
             this.createSubscriptionAnnouncement(pkg.name, billingTypeText, 'subscribe');
@@ -920,7 +929,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     // Bỏ copy mã thanh toán - không cần mã thanh toán nữa
     this.sepayPaymentCode = '';
     this.selectedPackage = null;
-    this.loadCurrentPackage();
+    this.loadCurrentPackage({ force: true });
     this.loadPaymentHistory();
   }
 
@@ -951,7 +960,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
           next: (response) => {
             if (response.success !== false) {
               this.message.success(response.message || 'Yêu cầu hủy đã ghi nhận. Gói sẽ được hủy khi hết hạn.');
-              this.loadCurrentPackage();
+              this.loadCurrentPackage({ force: true });
               this.loadPaymentHistory();
             } else {
               this.message.error(response.message || 'Hủy gói thất bại');
@@ -1421,7 +1430,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
           if (response.success !== false) {
             const billingTypeText = event.paymentData.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
             this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công`);
-            this.loadCurrentPackage();
+            this.loadCurrentPackage({ force: true });
             // Tạo thông báo hệ thống cho thanh toán và đăng ký gói thành công
             const pkg = this.packages.find(p => (p._id || p.id) === event.paymentData.packageId);
             if (pkg) {
@@ -1474,7 +1483,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
           if (response.success !== false) {
             const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
             this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công. Đang chờ xác nhận thanh toán.`);
-            this.loadCurrentPackage();
+            this.loadCurrentPackage({ force: true });
             // Tạo thông báo hệ thống cho thanh toán và đăng ký gói thành công
             if (isUpgrade) {
               this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'upgrade');
@@ -1934,7 +1943,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Reload package sau 2 giây để kiểm tra xem đã đăng ký chưa
     setTimeout(() => {
-      this.loadCurrentPackage();
+      this.loadCurrentPackage({ force: true });
       this.loadPaymentHistory();
     }, 2000);
   }

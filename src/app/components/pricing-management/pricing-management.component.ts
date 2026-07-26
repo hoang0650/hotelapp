@@ -286,6 +286,19 @@ export class PricingManagementComponent implements OnInit {
   }
 
   loadPackages(): void {
+    const cached = this.pricingService.getCachedPackages();
+    if (cached?.payload) {
+      this.packages = (cached.payload.data || cached.payload || []).map((pkg: any) => this.normalizePackageLimits(pkg));
+      this.loading = false;
+      this.pricingService.getAllPackages({ force: true }).subscribe({
+        next: (response) => {
+          this.packages = (response.data || []).map((pkg: any) => this.normalizePackageLimits(pkg));
+        },
+        error: () => {}
+      });
+      return;
+    }
+
     this.loading = true;
     this.pricingService.getAllPackages().subscribe({
       next: (response) => {

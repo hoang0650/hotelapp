@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { tap } from 'rxjs/operators';
+import { finalize, shareReplay, tap } from 'rxjs/operators';
 
 export interface PricingPackage {
   id?: string;
@@ -31,6 +31,11 @@ export interface PackageSubscriber {
   expiryDate: Date;
 }
 
+interface CachedPayload<T> {
+  payload: T;
+  updatedAt: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -38,10 +43,88 @@ export class PricingService {
   private apiUrl = `${environment.apiUrl}/pricing-packages`;
   public subscriptionChanged$ = new Subject<void>();
 
+  /** Memory cache — hiển thị tức thì khi quay lại /pricing */
+  private packagesCache: CachedPayload<any> | null = null;
+  private packagesInFlight$: Observable<any> | null = null;
+  private currentPackageCache = new Map<string, CachedPayload<any>>();
+  private currentPackageInFlight = new Map<string, Observable<any>>();
+
   constructor(private http: HttpClient) { }
 
-  getAllPackages(): Observable<any> {
-    return this.http.get(this.apiUrl);
+  getCachedPackages(): CachedPayload<any> | null {
+    return this.packagesCache;
+  }
+
+  setCachedPackages(payload: any): void {
+    if (payload == null) {
+      return;
+    }
+    this.packagesCache = {
+      payload,
+      updatedAt: Date.now()
+    };
+  }
+
+  clearPackagesCache(): void {
+    this.packagesCache = null;
+    this.packagesInFlight$ = null;
+  }
+
+  getCachedCurrentUserPackage(userId: string): CachedPayload<any> | null {
+    if (!userId) {
+      return null;
+    }
+    return this.currentPackageCache.get(String(userId)) || null;
+  }
+
+  setCachedCurrentUserPackage(userId: string, payload: any): void {
+    if (!userId) {
+      return;
+    }
+    this.currentPackageCache.set(String(userId), {
+      payload,
+      updatedAt: Date.now()
+    });
+  }
+
+  clearCurrentUserPackageCache(userId?: string): void {
+    if (userId) {
+      this.currentPackageCache.delete(String(userId));
+      this.currentPackageInFlight.delete(String(userId));
+      return;
+    }
+    this.currentPackageCache.clear();
+    this.currentPackageInFlight.clear();
+  }
+
+  clearAllPricingCache(): void {
+    this.clearPackagesCache();
+    this.clearCurrentUserPackageCache();
+  }
+
+  /** Prefetch nền (login / app warm) để /pricing mở gần như tức thì. */
+  prefetchPackages(): void {
+    this.getAllPackages({ force: false }).subscribe({ next: () => {}, error: () => {} });
+  }
+
+  getAllPackages(options?: { force?: boolean }): Observable<any> {
+    if (!options?.force && this.packagesInFlight$) {
+      return this.packagesInFlight$;
+    }
+
+    this.packagesInFlight$ = this.http.get(this.apiUrl).pipe(
+      tap((response: any) => {
+        if (response && response.success !== false) {
+          this.setCachedPackages(response);
+        }
+      }),
+      finalize(() => {
+        this.packagesInFlight$ = null;
+      }),
+      shareReplay(1)
+    );
+
+    return this.packagesInFlight$;
   }
 
   getPackageById(id: string): Observable<any> {
@@ -54,15 +137,21 @@ export class PricingService {
       features: data.features || [],
       permissions: data.permissions || ['view']
     };
-    return this.http.post(this.apiUrl, payload);
+    return this.http.post(this.apiUrl, payload).pipe(
+      tap(() => this.clearPackagesCache())
+    );
   }
 
   updatePackage(id: string, data: Partial<PricingPackage>): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}`, data);
+    return this.http.put(`${this.apiUrl}/${id}`, data).pipe(
+      tap(() => this.clearPackagesCache())
+    );
   }
 
   deletePackage(id: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${id}`);
+    return this.http.delete(`${this.apiUrl}/${id}`).pipe(
+      tap(() => this.clearPackagesCache())
+    );
   }
 
   getAvailablePermissions(): Observable<string[]> {
@@ -77,24 +166,55 @@ export class PricingService {
     const payload: any = { userId, packageId, billingType };
     if (paymentId) {
       payload.paymentId = paymentId;
-      payload.paymentMethod = paymentMethod || 'paypal'; // Default to paypal if not specified
+      payload.paymentMethod = paymentMethod || 'paypal';
     }
     return this.http.post(`${this.apiUrl}/subscribe`, payload).pipe(
-      tap(() => this.subscriptionChanged$.next())
+      tap(() => {
+        this.clearCurrentUserPackageCache(userId);
+        this.subscriptionChanged$.next();
+      })
     );
   }
 
   cancelSubscription(userId: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/cancel`, { userId }).pipe(
-      tap(() => this.subscriptionChanged$.next())
+      tap(() => {
+        this.clearCurrentUserPackageCache(userId);
+        this.subscriptionChanged$.next();
+      })
     );
   }
 
-  getCurrentUserPackage(userId: string): Observable<PricingPackage> {
-    return this.http.get<PricingPackage>(`${this.apiUrl}/user/${userId}`);
+  getCurrentUserPackage(userId: string, options?: { force?: boolean }): Observable<any> {
+    if (!userId) {
+      return of({ success: true, data: null });
+    }
+
+    const key = String(userId);
+    if (!options?.force) {
+      const inFlight = this.currentPackageInFlight.get(key);
+      if (inFlight) {
+        return inFlight;
+      }
+    }
+
+    const request$ = this.http.get<any>(`${this.apiUrl}/user/${userId}`).pipe(
+      tap((response) => {
+        if (response && response.success !== false) {
+          this.setCachedCurrentUserPackage(key, response);
+        }
+      }),
+      finalize(() => {
+        this.currentPackageInFlight.delete(key);
+      }),
+      shareReplay(1)
+    );
+
+    this.currentPackageInFlight.set(key, request$);
+    return request$;
   }
 
   sendPaymentReminder(userId: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/send-payment-reminder`, { userId });
   }
-} 
+}
