@@ -6,6 +6,7 @@ import { Room, Event, BookingHistory, ShiftHandover } from '../interfaces/rooms'
 import { tap, catchError } from 'rxjs/operators';
 import { throwError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { SessionContextService } from './session-context.service';
 
 interface RoomHistoryCacheEntry {
   payload: {
@@ -38,7 +39,10 @@ export class RoomsService {
   private roomsCache = new Map<string, { rooms: Room[]; updatedAt: number }>();
   private roomHistoryCache = new Map<string, RoomHistoryCacheEntry>();
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private sessionContext: SessionContextService
+  ) { }
 
   getCachedRooms(hotelId: string): Room[] | null {
     if (!hotelId || !this.roomsCache.has(hotelId)) {
@@ -416,13 +420,13 @@ export class RoomsService {
 
   // Khách tạm ra ngoài
   guestOut(roomId: string, note?: string): Observable<any> {
-    const staffId = localStorage.getItem('staffId') || null;
+    const staffId = this.sessionContext.getStaffId() || null;
     return this.http.post<any>(`${this.apiUrl}/${roomId}/guest-out`, { note, staffId });
   }
 
   // Khách quay lại
   guestReturn(roomId: string): Observable<any> {
-    const staffId = localStorage.getItem('staffId') || null;
+    const staffId = this.sessionContext.getStaffId() || null;
     return this.http.post<any>(`${this.apiUrl}/${roomId}/guest-return`, { staffId });
   }
 

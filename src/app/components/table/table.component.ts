@@ -27,6 +27,8 @@ import { forkJoin } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { CurrencyService } from '../../services/currency.service';
 import { User } from '../../interfaces/user';
+import { SessionContextService } from '../../services/session-context.service';
+import { CheckinCacheService } from '../../services/checkin-cache.service';
 
 type TableScroll = 'unset' | 'scroll' | 'fixed';
 
@@ -385,7 +387,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     private businessService: BusinessService,
     private transactionService: TransactionService,
     public translate: TranslateService,
-    private currencyService: CurrencyService
+    private currencyService: CurrencyService,
+    private sessionContext: SessionContextService,
+    private checkinCache: CheckinCacheService
   ) {}
 
   ngOnInit(): void {
@@ -589,7 +593,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
                   roomId: response.room._id,
                   roomNumber: response.room.roomNumber
                 };
-                localStorage.setItem(`checkin_${response.room._id}`, JSON.stringify(checkinData));
+                this.checkinCache.set(response.room._id, checkinData);
                 console.log('Saved recheckin event data to localStorage:', checkinData);
               } catch (e) {
                 console.error('Error saving recheckin event data:', e);
@@ -701,9 +705,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     
-    // Đảm bảo item có hotelId - lấy từ item hoặc localStorage
+    // Đảm bảo item có hotelId - lấy từ item hoặc session context
     if (!item.hotelId) {
-      item.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+      item.hotelId = this.hotelService.getStoredHotelId() || '';
     }
     
     // Lấy thông tin để tìm invoice từ database
@@ -740,9 +744,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     
-    // Đảm bảo item có hotelId - lấy từ item hoặc localStorage
+    // Đảm bảo item có hotelId - lấy từ item hoặc session context
     if (!item.hotelId) {
-      item.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+      item.hotelId = this.hotelService.getStoredHotelId() || '';
     }
     
     // Lấy thông tin để tìm invoice từ database
@@ -782,8 +786,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           // Đảm bảo hotelId có trong invoiceData
           if (!invoiceData.hotelId) {
             invoiceData.hotelId = this.hotelId || 
-                                  localStorage.getItem('selectedHotelId') || 
-                                  localStorage.getItem('hotelId') || '';
+                                  this.hotelService.getStoredHotelId() || '';
           }
           this.showInvoiceModalForEdit(invoiceData);
         } else {
@@ -805,8 +808,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     // Đảm bảo fallbackItem có hotelId
     if (fallbackItem && !fallbackItem.hotelId) {
       fallbackItem.hotelId = this.hotelId || 
-                             localStorage.getItem('selectedHotelId') || 
-                             localStorage.getItem('hotelId') || '';
+                             this.hotelService.getStoredHotelId() || '';
     }
     
     // Tìm invoice theo roomId và checkOutTime
@@ -817,8 +819,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     endDate.setHours(23, 59, 59, 999);
     
     const hotelId = fallbackItem?.hotelId || this.hotelId || 
-                    localStorage.getItem('selectedHotelId') || 
-                    localStorage.getItem('hotelId');
+                    this.hotelService.getStoredHotelId();
     
     const queryParams: any = {
       roomId: roomId,
@@ -860,7 +861,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   showInvoiceModalForEdit(invoiceData: any): void {
     // Đảm bảo hotelId luôn có trong invoiceData
     if (!invoiceData.hotelId) {
-      invoiceData.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+      invoiceData.hotelId = this.hotelService.getStoredHotelId() || '';
     }
     
     const modal = this.modalService.create({
@@ -898,8 +899,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           // Đảm bảo hotelId có trong invoiceData (nếu không có từ database)
           if (!invoiceData.hotelId) {
             invoiceData.hotelId = this.hotelId || 
-                                  localStorage.getItem('selectedHotelId') || 
-                                  localStorage.getItem('hotelId') || '';
+                                  this.hotelService.getStoredHotelId() || '';
           }
           this.showInvoiceModal(invoiceData);
         } else {
@@ -921,8 +921,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     // Đảm bảo fallbackItem có hotelId
     if (fallbackItem && !fallbackItem.hotelId) {
       fallbackItem.hotelId = this.hotelId || 
-                             localStorage.getItem('selectedHotelId') || 
-                             localStorage.getItem('hotelId') || '';
+                             this.hotelService.getStoredHotelId() || '';
     }
     
     // Tìm invoice theo roomId và checkOutTime (trong khoảng thời gian gần)
@@ -934,8 +933,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     // Lấy hotelId từ fallbackItem hoặc từ component
     const hotelId = fallbackItem?.hotelId || this.hotelId || 
-                    localStorage.getItem('selectedHotelId') || 
-                    localStorage.getItem('hotelId');
+                    this.hotelService.getStoredHotelId();
     
     const queryParams: any = {
       roomId: roomId,
@@ -973,8 +971,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
             if (!invoiceData.hotelId) {
               invoiceData.hotelId = fallbackItem?.hotelId || 
                                     this.hotelId || 
-                                    localStorage.getItem('selectedHotelId') || 
-                                    localStorage.getItem('hotelId') || '';
+                                    this.hotelService.getStoredHotelId() || '';
             }
             this.showInvoiceModal(invoiceData);
           } else {
@@ -1023,9 +1020,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       }
     }
     
-    // Nếu không có hotelId từ invoice, thử lấy từ localStorage
+    // Nếu không có hotelId từ invoice, thử lấy từ session context
     if (!hotelId) {
-      hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+      hotelId = this.hotelService.getStoredHotelId() || '';
     }
     
     return {
@@ -1116,9 +1113,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       // Thử lấy hotelId từ nhiều nguồn
       let hotelId = invoiceData.hotelId || invoiceData['hotelId'];
       
-      // Nếu không có, thử lấy từ localStorage
+      // Nếu không có, thử lấy từ session context
       if (!hotelId) {
-        hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+        hotelId = this.hotelService.getStoredHotelId() || '';
         invoiceData.hotelId = hotelId; // Cập nhật lại vào invoiceData
       }
       
@@ -1168,7 +1165,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   private createInvoiceModal(invoiceData: any): void {
     // Đảm bảo hotelId luôn có trong invoiceData
     if (!invoiceData.hotelId) {
-      invoiceData.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || '';
+      invoiceData.hotelId = this.hotelService.getStoredHotelId() || '';
     }
     
     this.modalService.create({
@@ -1473,8 +1470,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         // Tìm staff ID của user hiện tại
         const currentUserId = this.authService.getUserId();
         
-        // Thử lấy từ localStorage trước
-        const savedStaffId = localStorage.getItem('staffId');
+        // Thử lấy từ session context trước
+        const savedStaffId = this.sessionContext.getStaffId();
         if (savedStaffId && savedStaffId.trim()) {
           const savedStaff = staffs.find(s => s._id === savedStaffId);
           if (savedStaff) {
@@ -1484,13 +1481,12 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           }
         }
         
-        // Nếu không có trong localStorage, tìm theo userId
+        // Nếu không có trong session, tìm theo userId
         const currentStaff = staffs.find(s => s.userId === currentUserId);
         if (currentStaff && currentStaff._id) {
           this.currentStaffId = currentStaff._id.trim();
           this.shiftHandoverForm.patchValue({ fromStaffId: this.currentStaffId });
-          // Lưu vào localStorage để dùng sau
-          localStorage.setItem('staffId', this.currentStaffId);
+          this.sessionContext.setStaffContext(this.currentStaffId);
         } else {
           console.warn('Không tìm thấy staff ID cho user hiện tại');
           this.currentStaffId = '';
@@ -2024,11 +2020,10 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         
         console.log('Đã gửi dữ liệu giao ca:', response);
         
-        // Nếu có thông tin login mới, cập nhật localStorage và services
+        // Nếu có thông tin login mới, cập nhật AuthService và session context
         if (response.login?.token) {
           
           if (response.login.user) {
-            localStorage.setItem('user', JSON.stringify(response.login.user));
             // Cập nhật AuthService
             const current = this.authService.getCurrentUser();
             const ur = response.login.user;
@@ -2049,8 +2044,14 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           }
           
           if (response.login.staff) {
-            localStorage.setItem('staff', JSON.stringify(response.login.staff));
-            localStorage.setItem('staffId', response.login.staff._id);
+            const staffInfo = response.login.staff.personalInfo;
+            const staffName = [
+              staffInfo?.firstName,
+              staffInfo?.lastName
+            ].filter(Boolean).join(' ').trim()
+              || response.login.user?.fullName
+              || null;
+            this.sessionContext.setStaffContext(response.login.staff._id, staffName);
             this.currentStaffId = response.login.staff._id;
           }
           
@@ -2202,8 +2203,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     // Đảm bảo currentStaffId đã được set và hợp lệ
     if (!this.currentStaffId || !this.currentStaffId.trim()) {
-      // Thử lấy từ localStorage
-      const savedStaffId = localStorage.getItem('staffId');
+      // Thử lấy từ session context
+      const savedStaffId = this.sessionContext.getStaffId();
       if (savedStaffId && savedStaffId.trim()) {
         // Validate xem staffId có trong danh sách staff không (nếu staffList đã có)
         if (this.staffList && this.staffList.length > 0) {
@@ -2216,7 +2217,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
             const currentStaff = this.staffList.find(s => s.userId === currentUserId);
             if (currentStaff && currentStaff._id) {
               this.currentStaffId = currentStaff._id.trim();
-              localStorage.setItem('staffId', this.currentStaffId);
+              this.sessionContext.setStaffContext(this.currentStaffId);
             }
           }
         }
@@ -2231,7 +2232,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           const currentStaff = this.staffList.find(s => s.userId === currentUserId);
           if (currentStaff && currentStaff._id) {
             this.currentStaffId = currentStaff._id.trim();
-            localStorage.setItem('staffId', this.currentStaffId);
+            this.sessionContext.setStaffContext(this.currentStaffId);
           }
         }
       }
@@ -2447,7 +2448,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     // Đảm bảo fromStaffId hợp lệ trước khi submit
     let fromStaffId = this.currentStaffId?.trim();
     if (!fromStaffId) {
-      fromStaffId = localStorage.getItem('staffId')?.trim() || '';
+      fromStaffId = this.sessionContext.getStaffId()?.trim() || '';
     }
     if (!fromStaffId) {
       fromStaffId = this.shiftHandoverForm?.get('fromStaffId')?.value?.trim() || '';
@@ -2463,7 +2464,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         if (currentStaff && currentStaff._id) {
           fromStaffId = currentStaff._id.trim();
           this.currentStaffId = fromStaffId;
-          localStorage.setItem('staffId', fromStaffId);
+          this.sessionContext.setStaffContext(fromStaffId);
           this.shiftHandoverForm.patchValue({ fromStaffId: fromStaffId });
           console.log('Đã cập nhật fromStaffId:', fromStaffId);
         } else {
@@ -2712,9 +2713,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     // Kiểm tra và lấy fromStaffId
     let fromStaffId = this.currentStaffId?.trim();
     
-    // Nếu không có currentStaffId, thử lấy từ localStorage hoặc shiftHandoverForm
+    // Nếu không có currentStaffId, thử lấy từ session context hoặc shiftHandoverForm
     if (!fromStaffId) {
-      fromStaffId = localStorage.getItem('staffId')?.trim() || '';
+      fromStaffId = this.sessionContext.getStaffId()?.trim() || '';
     }
     
     if (!fromStaffId) {
@@ -2750,7 +2751,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       if (currentStaff && currentStaff._id) {
         fromStaffId = currentStaff._id.trim();
         this.currentStaffId = fromStaffId;
-        localStorage.setItem('staffId', fromStaffId);
+        this.sessionContext.setStaffContext(fromStaffId);
         this.shiftHandoverForm.patchValue({ fromStaffId: fromStaffId });
         console.log('Đã cập nhật fromStaffId:', fromStaffId);
       } else {

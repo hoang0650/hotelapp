@@ -565,8 +565,8 @@ export class SettingsComponent implements OnInit {
       bankAccount: bankAccountData
     };
     
-    // Lấy giá trị maintenance mode hiện tại từ localStorage hoặc form
-    const previousMaintenanceMode = localStorage.getItem('maintenanceMode') === 'true' || 
+    // Lấy giá trị maintenance mode hiện tại từ in-memory hoặc form
+    const previousMaintenanceMode = this.notificationsService.isMaintenanceMode() || 
                                      this.generalForm.get('maintenanceMode')?.value === true;
     const newMaintenanceMode = settings.maintenanceMode;
     
@@ -606,9 +606,7 @@ export class SettingsComponent implements OnInit {
   }
 
   private handleMaintenanceModeDisabled(): void {
-    // Xóa maintenance mode flags từ localStorage
-    localStorage.removeItem('maintenanceMode');
-    localStorage.removeItem('maintenanceMessage');
+    this.notificationsService.clearMaintenanceMode();
     
     // Reload notifications để cập nhật trạng thái
     this.notificationsService.loadAnnouncements();
@@ -622,11 +620,7 @@ export class SettingsComponent implements OnInit {
   }
 
   private handleMaintenanceModeEnabled(maintenanceMessage?: string): void {
-    // Lưu maintenance mode flags vào localStorage
-    localStorage.setItem('maintenanceMode', 'true');
-    if (maintenanceMessage) {
-      localStorage.setItem('maintenanceMessage', maintenanceMessage);
-    }
+    this.notificationsService.setMaintenanceMode(true, maintenanceMessage || null);
     
     // Reload notifications để cập nhật trạng thái
     this.notificationsService.loadAnnouncements();

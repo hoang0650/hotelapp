@@ -5,6 +5,7 @@ import { AuthService } from '../../services/auth.service';
 import { PermissionService } from '../../services/permission.service';
 import { NzMarks } from 'ng-zorro-antd/slider';
 import { RoomsService } from '../../services/rooms.service';
+import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-admin',
@@ -41,7 +42,8 @@ export class AdminComponent implements OnInit {
     private activatedRoute: ActivatedRoute,
     private authService: AuthService,
     private roomsService: RoomsService,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private sessionContext: SessionContextService
   ) { }
 
   ngOnInit(): void {
@@ -256,12 +258,10 @@ export class AdminComponent implements OnInit {
 
   // Mở modal lọc theo tầng
   openFloorFilterModal(): void {
-    // Lấy selectedHotelId từ localStorage
-    const selectedHotelId = localStorage.getItem('selectedHotelId');
+    const selectedHotelId = this.sessionContext.getSelectedHotelId();
     this.selectedHotelIdForFilter = selectedHotelId;
     
-    // Lấy giá trị hiện tại từ localStorage
-    const savedFloor = localStorage.getItem('selectedFloor');
+    const savedFloor = this.sessionContext.getSelectedFloor();
     this.tempSelectedFloor = savedFloor || null;
     
     if (selectedHotelId) {
@@ -297,12 +297,7 @@ export class AdminComponent implements OnInit {
 
   // Áp dụng lọc tầng
   applyFloorFilter(): void {
-    // Lưu vào localStorage (room component sẽ đọc từ đây)
-    if (this.tempSelectedFloor) {
-      localStorage.setItem('selectedFloor', this.tempSelectedFloor);
-    } else {
-      localStorage.removeItem('selectedFloor');
-    }
+    this.sessionContext.setSelectedFloor(this.tempSelectedFloor);
     // Emit event để room component cập nhật ngay lập tức (trigger onFloorChange)
     window.dispatchEvent(new CustomEvent('floorFilterChanged', { detail: this.tempSelectedFloor }));
     this.isFloorFilterModalVisible = false;
@@ -310,16 +305,14 @@ export class AdminComponent implements OnInit {
 
   // Mở modal số cột
   openColumnsModal(): void {
-    // Lấy giá trị hiện tại từ localStorage
-    const savedCount = localStorage.getItem('roomColumnsCount');
-    this.tempColumnCount = savedCount ? parseInt(savedCount, 10) : 6;
+    const savedCount = this.sessionContext.getRoomColumnsCount();
+    this.tempColumnCount = savedCount ?? 6;
     this.isColumnsModalVisible = true;
   }
 
   // Áp dụng số cột
   applyColumns(): void {
-    // Lưu vào localStorage (room component sẽ đọc từ đây)
-    localStorage.setItem('roomColumnsCount', this.tempColumnCount.toString());
+    this.sessionContext.setRoomColumnsCount(this.tempColumnCount);
     // Emit event để room component cập nhật ngay lập tức (trigger reGenerateArray)
     window.dispatchEvent(new CustomEvent('columnsCountChanged', { detail: this.tempColumnCount }));
     this.isColumnsModalVisible = false;

@@ -7,6 +7,7 @@ import { RoomsService } from '../../services/rooms.service';
 import { HotelService } from '../../services/hotel.service';
 import { TranslateService } from '@ngx-translate/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-tuya-switch',
@@ -45,7 +46,8 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
     private roomsService: RoomsService,
     private hotelService: HotelService,
     private translate: TranslateService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private sessionContext: SessionContextService
   ) {
     this.deviceForm = this.fb.group({
       deviceId: ['', [Validators.required]],
@@ -83,7 +85,7 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
    * Tải tất cả phòng để chọn trong modal
    */
   loadAllRooms(): void {
-    const hotelId = this.hotelId || localStorage.getItem('selectedHotelId') || undefined;
+    const hotelId = this.hotelId || this.sessionContext.getSelectedHotelId() || undefined;
     if (!hotelId) return;
     
     this.loadRoomsByHotel(hotelId);
@@ -129,7 +131,7 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
    * Tải danh sách thiết bị
    */
   loadDevices(): void {
-    const hotelId = this.hotelId || localStorage.getItem('selectedHotelId') || undefined;
+    const hotelId = this.hotelId || this.sessionContext.getSelectedHotelId() || undefined;
     
     // Nếu có hotelId, dùng logic tải theo khách sạn để tối ưu và có thông tin phòng
     if (hotelId) {
@@ -208,7 +210,7 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
    */
   loadDevicesByHotel(): void {
     if (!this.hotelId) {
-      this.hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId') || undefined;
+      this.hotelId = this.sessionContext.getSelectedHotelId() || undefined;
     }
     
     if (!this.hotelId) {
@@ -412,7 +414,7 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
     this.loadAllHotels();
     
     // Nếu có hotelId mặc định, set vào form
-    const defaultHotelId = this.hotelId || localStorage.getItem('selectedHotelId') || undefined;
+    const defaultHotelId = this.hotelId || this.sessionContext.getSelectedHotelId() || undefined;
     if (defaultHotelId) {
       this.deviceForm.patchValue({ hotelId: defaultHotelId });
       this.loadRoomsByHotel(defaultHotelId);
@@ -430,7 +432,7 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
     this.loadAllHotels();
     
     // Lấy hotelId từ device
-    const deviceHotelId = device.hotelId || this.hotelId || localStorage.getItem('selectedHotelId') || '';
+    const deviceHotelId = device.hotelId || this.hotelId || this.sessionContext.getSelectedHotelId() || '';
     
     this.deviceForm.patchValue({
       deviceId: device.id,

@@ -4,6 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzUploadFile } from 'ng-zorro-antd/upload';
 import { AiAssistantService } from '../../services/ai-assistant.service';
+import { SessionContextService } from '../../services/session-context.service';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -70,13 +71,15 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
 
   onSelectHotel(hotelId: string): void {
     this.selectedHotelId = hotelId;
+    this.sessionContext.setSelectedHotelId(hotelId, { persist: true });
   }
 
   constructor(
     private sanitizer: DomSanitizer,
     private http: HttpClient,
     private message: NzMessageService,
-    private aiAssistantService: AiAssistantService
+    private aiAssistantService: AiAssistantService,
+    private sessionContext: SessionContextService
   ) { }
 
   ngOnInit(): void {
@@ -86,19 +89,19 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
 
   initTenantId() {
     try {
-      const storedId = localStorage.getItem('selectedHotelId');
+      const storedId = this.sessionContext.getSelectedHotelId();
       if (storedId && storedId !== 'undefined' && storedId !== 'null' && storedId.trim() !== '') {
         this.selectedHotelId = storedId.replace(/['"]+/g, '');
       }
     } catch (e) {
-      console.error('Lỗi khi đọc selectedHotelId từ localStorage:', e);
+      console.error('Lỗi khi đọc selectedHotelId từ session context:', e);
     }
   }
 
   loadHotels() {
     if (this.hotels && this.hotels.length > 0 && !this.selectedHotelId) {
       this.selectedHotelId = this.hotels[0]._id;
-      localStorage.setItem('selectedHotelId', this.selectedHotelId as string);
+      this.sessionContext.setSelectedHotelId(this.selectedHotelId as string, { persist: true });
     }
   }
 

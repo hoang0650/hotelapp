@@ -4,6 +4,7 @@ import { Observable, BehaviorSubject, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { PricingService } from './pricing.service';
+import { SessionContextService } from './session-context.service';
 
 // Interface cho sản phẩm (Dataset)
 export interface Product {
@@ -90,7 +91,8 @@ export class AiAssistantService {
   constructor(
     private http: HttpClient,
     private authService: AuthService,
-    private pricingService: PricingService
+    private pricingService: PricingService,
+    private sessionContext: SessionContextService
   ) {}
 
   private normalizeId(value: any): string | null {
@@ -147,11 +149,7 @@ export class AiAssistantService {
   }
 
   public getEffectiveTenantId(): string {
-    const currentHotelId = localStorage.getItem('current_hotel_id');
-    const selectedHotelId = localStorage.getItem('selectedHotelId');
-    const hotelId = localStorage.getItem('hotel_id');
-
-    return (currentHotelId || selectedHotelId || hotelId || '').trim();
+    return (this.sessionContext.getSelectedHotelId() || this.authService.getHotelId() || '').trim();
   }
 
   private async buildAiScopePayload(): Promise<{
@@ -534,10 +532,10 @@ export class AiAssistantService {
   }
 
   /**
-   * Lấy Bearer Token từ LocalStorage để đính kèm vào Header
+   * Lấy Bearer Token từ AuthService để đính kèm vào Header
    */
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token') || '';
+    const token = this.authService.getToken() || '';
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`,
     });
@@ -547,8 +545,8 @@ export class AiAssistantService {
    * Gọi API sinh URL Auto-Login kèm Hash Token cho OpenClaw
    */
   getOpenClawDirectUrl(userId?: string): Observable<OpenClawDirectUrlResponse> {
-    const currentHotelId = localStorage.getItem('current_hotel_id') || '';
-    const selectedHotelId = localStorage.getItem('selectedHotelId') || '';
+    const selectedHotelId = this.sessionContext.getSelectedHotelId() || '';
+    const currentHotelId = selectedHotelId;
     const effectiveTenantId = this.getEffectiveTenantId();
 
     let params = new HttpParams()
@@ -569,8 +567,8 @@ export class AiAssistantService {
    * Gọi API tự động Approve phiên đăng nhập Device Pairing
    */
  approveOpenClawPairing(requestId?: string): Observable<OpenClawApproveResponse> {
-        const currentHotelId = localStorage.getItem('current_hotel_id') || '';
-        const selectedHotelId = localStorage.getItem('selectedHotelId') || '';
+        const selectedHotelId = this.sessionContext.getSelectedHotelId() || '';
+        const currentHotelId = selectedHotelId;
         const effectiveTenantId = this.getEffectiveTenantId();
         const params = new HttpParams()
           .set('tenant_id', effectiveTenantId)
@@ -591,8 +589,8 @@ export class AiAssistantService {
 
   // Add the missing method
   getOpenClawPendingPairings(): Observable<{ success: boolean; data?: OpenClawDevicePairingItem[]; message?: string }> {
-    const currentHotelId = localStorage.getItem('current_hotel_id') || '';
-    const selectedHotelId = localStorage.getItem('selectedHotelId') || '';
+    const selectedHotelId = this.sessionContext.getSelectedHotelId() || '';
+    const currentHotelId = selectedHotelId;
     const effectiveTenantId = this.getEffectiveTenantId();
 
     const params = new HttpParams()

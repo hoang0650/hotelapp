@@ -8,6 +8,7 @@ import { ShiftHandoverService } from '../../services/shift-handover.service';
 import { StaffService } from '../../services/staff.service';
 import { AuthService } from '../../services/auth.service';
 import { TranslateService } from '@ngx-translate/core';
+import { SessionContextService } from '../../services/session-context.service';
 import { 
   ShiftHandover, 
   ShiftHandoverCreateRequest,
@@ -67,7 +68,8 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private message: NzMessageService,
     private modal: NzModalService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private sessionContext: SessionContextService
   ) {
     this.initForm();
     this.initManagerHandoverForm();
@@ -507,7 +509,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
   }
 
   private resolveCurrentStaffId(staffList: any[], currentUserId: string): string {
-    const savedStaffId = this.normalizeId(localStorage.getItem('staffId'));
+    const savedStaffId = this.normalizeId(this.sessionContext.getStaffId());
     if (savedStaffId && staffList.some(staff => this.normalizeId(staff?._id) === savedStaffId)) {
       return savedStaffId;
     }
@@ -515,7 +517,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     const matchedStaff = staffList.find(staff => this.normalizeId(staff?.userId) === currentUserId);
     const matchedStaffId = this.normalizeId(matchedStaff?._id);
     if (matchedStaffId) {
-      localStorage.setItem('staffId', matchedStaffId);
+      this.sessionContext.setStaffContext(matchedStaffId);
       return matchedStaffId;
     }
     return '';

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface Contact {
   _id?: string;
@@ -55,7 +56,16 @@ export interface ContactStats {
 export class ContactService {
   private apiUrl = `${environment.apiUrl}/contacts`;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) { }
+
+  private getAuthHeaders(): HttpHeaders {
+    return new HttpHeaders({
+      'Authorization': `Bearer ${this.authService.getToken() || ''}`
+    });
+  }
 
   // Public method - không cần authentication
   createContact(contact: {
@@ -96,59 +106,34 @@ export class ContactService {
       params = params.set('endDate', query.endDate);
     }
 
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-    });
-
-    return this.http.get<ContactResponse>(this.apiUrl, { params, headers });
+    return this.http.get<ContactResponse>(this.apiUrl, { params, headers: this.getAuthHeaders() });
   }
 
   getContactById(id: string): Observable<{ contact: Contact }> {
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-    });
-
-    return this.http.get<{ contact: Contact }>(`${this.apiUrl}/${id}`, { headers });
+    return this.http.get<{ contact: Contact }>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });
   }
 
   updateContactStatus(id: string, status: string, notes?: string): Observable<{ message: string; contact: Contact }> {
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-    });
-
     return this.http.patch<{ message: string; contact: Contact }>(
       `${this.apiUrl}/${id}/status`,
       { status, notes },
-      { headers }
+      { headers: this.getAuthHeaders() }
     );
   }
 
   replyContact(id: string, replyMessage: string): Observable<{ message: string; contact: Contact }> {
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-    });
-
     return this.http.post<{ message: string; contact: Contact }>(
       `${this.apiUrl}/${id}/reply`,
       { replyMessage },
-      { headers }
+      { headers: this.getAuthHeaders() }
     );
   }
 
   deleteContact(id: string): Observable<{ message: string }> {
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-    });
-
-    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`, { headers });
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });
   }
 
   getContactStats(): Observable<{ stats: ContactStats }> {
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-    });
-
-    return this.http.get<{ stats: ContactStats }>(`${this.apiUrl}/stats`, { headers });
+    return this.http.get<{ stats: ContactStats }>(`${this.apiUrl}/stats`, { headers: this.getAuthHeaders() });
   }
 }
-

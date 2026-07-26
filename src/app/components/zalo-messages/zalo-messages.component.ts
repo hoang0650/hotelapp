@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
+import { SessionContextService } from '../../services/session-context.service';
 
 interface ZaloMessage {
   tenant_id: string;
@@ -66,6 +67,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
   constructor(
     private aiAssistant: AiAssistantService,
     private authService: AuthService,
+    private sessionContext: SessionContextService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -73,11 +75,7 @@ export class ZaloMessagesComponent implements OnInit, OnDestroy, AfterViewChecke
     const u = this.authService.getCurrentUser();
     const direct = (u?.hotelId || '').toString();
     if (direct) return direct;
-    
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('selectedHotelId') || '';
-    }
-    return '';
+    return this.sessionContext.getSelectedHotelId() || '';
   }
 
   get botModeText(): string {

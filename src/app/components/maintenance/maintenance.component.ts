@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { SettingsService } from '../../services/settings.service';
 import { AuthService } from '../../services/auth.service';
+import { NotificationsService } from '../../services/notifications.service';
 import { interval, Subscription } from 'rxjs';
 
 @Component({
@@ -19,7 +20,8 @@ export class MaintenanceComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private settingsService: SettingsService,
-    private authService: AuthService
+    private authService: AuthService,
+    private notificationsService: NotificationsService
   ) {}
 
   ngOnInit(): void {
@@ -88,8 +90,7 @@ export class MaintenanceComponent implements OnInit, OnDestroy {
           
           if (!maintenanceMode) {
             // Maintenance mode đã được tắt
-            localStorage.removeItem('maintenanceMode');
-            localStorage.removeItem('maintenanceMessage');
+            this.notificationsService.clearMaintenanceMode();
             
             // Redirect về trang chủ
             this.router.navigate(['/admin/room']);

@@ -23,6 +23,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { CurrencyService } from '../../services/currency.service';
 import { RoomSessionService } from '../../services/room-session.service';
 import { ApiService } from '../../services/api.service';
+import { SessionContextService } from '../../services/session-context.service';
 import { PaymentSpeakerService } from '../../services/payment-speaker.service';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
@@ -87,7 +88,6 @@ type RoomWithMeta = Room & {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomComponent implements OnInit, OnDestroy {
-  private static readonly ROOM_COLUMNS_STORAGE_PREFIX = 'room_columns_count_';
   @ViewChild(TableComponent) tableComponent!: TableComponent;
   @ViewChild(CalendarComponent) calendarComponent!: CalendarComponent;
   @ViewChild('shiftHandoverContent') shiftHandoverContent!: TemplateRef<any>;
@@ -210,7 +210,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     private currencyService: CurrencyService,
     private roomSessionService: RoomSessionService,
     private apiService: ApiService,
-    private paymentSpeakerService: PaymentSpeakerService
+    private paymentSpeakerService: PaymentSpeakerService,
+    private sessionContext: SessionContextService
   ) {
     this.roomDataUpdatedSubscription = this.roomsService.getRoomDataUpdated$().subscribe((event) => {
       if (!this.selectedHotelId) {
@@ -322,17 +323,15 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     }
 
-    const cachedColumnsCount = this.getStoredRoomColumnsCount(userId);
+    const cachedColumnsCount = this.sessionContext.getRoomColumnsCount();
     if (cachedColumnsCount !== null) {
       this.count = cachedColumnsCount;
-    }
-
-    if (userId && cachedColumnsCount === null) {
+    } else if (userId) {
       this.apiService.getRoomColumnsCount(userId).subscribe({
         next: (res) => {
           if (res?.columnsCount && res.columnsCount >= 2 && res.columnsCount <= 12) {
             this.count = res.columnsCount;
-            this.storeRoomColumnsCount(userId, res.columnsCount);
+            this.sessionContext.setRoomColumnsCount(res.columnsCount, { persist: false });
           }
         },
         error: () => {}
@@ -1114,6 +1113,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     }
     this.selectedHotelId = hotelId;
+    if (hotelId) {
+      this.sessionContext.setSelectedHotelId(hotelId);
+    }
     this.isFirstLoadForHotel = true;
     this.activeFloors = [];
     this.rooms = [];
@@ -1794,15 +1796,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   reGenerateArray(count: number): void {
     this.count = count;
-    const currentUser = this.authService.getCurrentUser();
-    const userId = currentUser?._id;
-    this.storeRoomColumnsCount(userId, count);
-    if (userId) {
-      this.apiService.saveRoomColumnsCount(userId, count).subscribe({
-        next: () => console.log('[Redis] Room columns count saved'),
-        error: (err) => console.error('[Redis] Error saving room columns count:', err)
-      });
-    }
+    this.sessionContext.setRoomColumnsCount(count);
   }
 
   getRoomColSpan(): number {
@@ -1825,28 +1819,6 @@ export class RoomComponent implements OnInit, OnDestroy {
       return Math.max(1, Math.floor(24 / compactCount));
     }
     return 24 / this.count;
-  }
-
-  private getStoredRoomColumnsCount(userId?: string): number | null {
-    if (!userId || typeof window === 'undefined' || !window.localStorage) {
-      return null;
-    }
-
-    const rawValue = localStorage.getItem(`${RoomComponent.ROOM_COLUMNS_STORAGE_PREFIX}${userId}`);
-    const parsedValue = Number(rawValue);
-    if (!Number.isFinite(parsedValue) || parsedValue < 2 || parsedValue > 12) {
-      return null;
-    }
-
-    return parsedValue;
-  }
-
-  private storeRoomColumnsCount(userId: string | undefined, count: number): void {
-    if (!userId || typeof window === 'undefined' || !window.localStorage) {
-      return;
-    }
-
-    localStorage.setItem(`${RoomComponent.ROOM_COLUMNS_STORAGE_PREFIX}${userId}`, String(count));
   }
 
   // Responsive methods for different breakpoints

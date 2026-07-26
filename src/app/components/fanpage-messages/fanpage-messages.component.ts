@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
+import { SessionContextService } from '../../services/session-context.service';
 
 interface FbMessage {
   tenant_id?: string;
@@ -62,19 +63,18 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
     }
   };
 
-  constructor(private aiAssistant: AiAssistantService, private authService: AuthService, private cdr: ChangeDetectorRef) { }
+  constructor(
+    private aiAssistant: AiAssistantService,
+    private authService: AuthService,
+    private sessionContext: SessionContextService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   private getTenantId(): string {
     const u = this.authService.getCurrentUser();
-    // 1. Nếu là tài khoản nhân viên/quản lý khách sạn (có sẵn ID)
     const direct = (u?.hotelId || '').toString();
     if (direct) return direct;
-    
-    // 2. Nếu là Admin/Superadmin: Lấy ID khách sạn đang được chọn từ bộ nhớ
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('selectedHotelId') || '';
-    }
-    return '';
+    return this.sessionContext.getSelectedHotelId() || '';
   }
 
   get botModeText(): string {

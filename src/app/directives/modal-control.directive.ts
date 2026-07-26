@@ -12,6 +12,9 @@ import { GuestSaveModalComponent } from '../components/guest-save-modal/guest-sa
 import { TransferRoomModalComponent } from '../components/transfer-room-modal/transfer-room-modal.component';
 import { Room } from '../interfaces/rooms';
 import { TranslateService } from '@ngx-translate/core';
+import { HotelService } from '../services/hotel.service';
+import { SessionContextService } from '../services/session-context.service';
+import { CheckinCacheService } from '../services/checkin-cache.service';
 
 @Directive({
   selector: '[appModalControl]',
@@ -30,7 +33,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     private modalService: NzModalService,
     private roomsService: RoomsService,
     private invoiceService: InvoiceService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private hotelService: HotelService,
+    private sessionContext: SessionContextService,
+    private checkinCache: CheckinCacheService
   ) {}
 
   ngOnInit(): void {
@@ -393,7 +399,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           .subscribe({
             next: () => {
               // Xóa dữ liệu đặt phòng khỏi localStorage
-              localStorage.removeItem(`booking_${this.room._id}`);
+              /* booking cache removed — Redis roomSessions */ void this.room._id;
               
               this.modalService.success({
                 nzTitle: 'Thành công',
@@ -457,10 +463,9 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         
         // Fallback: lấy từ localStorage nếu vẫn chưa có
         if (!guestInfo.name || guestInfo.name === 'Khách lẻ') {
-          const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
-          if (savedCheckinData) {
+          const checkinData = this.checkinCache.getSync(this.room._id);
+          if (checkinData) {
             try {
-              const checkinData = JSON.parse(savedCheckinData);
               if (checkinData.guestInfo?.name && checkinData.guestInfo.name !== 'Khách lẻ') {
                 guestInfo = { ...guestInfo, ...checkinData.guestInfo };
                 if (!checkinTime) {
@@ -741,9 +746,9 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       }
     }
     
-    // Nếu không có hotelId, lấy từ localStorage
+    // Nếu không có hotelId, lấy từ session context
     if (!hotelId) {
-      hotelId = localStorage.getItem('selectedHotelId');
+      hotelId = this.hotelService.getStoredHotelId();
     }
     
     let bookingModalRef: NzModalRef | null = null;
@@ -825,7 +830,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     this.roomsService.updateRoomStatus(
       this.room._id,
       'dirty',
-      localStorage.getItem('staffId') || 'unknown',
+      this.sessionContext.getStaffId() || 'unknown',
       'Báo bẩn từ menu'
     ).pipe(take(1)).subscribe({
       next: () => {
@@ -851,7 +856,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     this.roomsService.updateRoomStatus(
       this.room._id,
       'maintenance',
-      localStorage.getItem('staffId') || 'unknown',
+      this.sessionContext.getStaffId() || 'unknown',
       'Báo sửa phòng từ menu'
     ).pipe(take(1)).subscribe({
       next: () => {
@@ -937,7 +942,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         };
         
         // Lưu thông tin vào localStorage
-        localStorage.setItem(`checkin_${this.room._id}`, JSON.stringify(checkinData));
+        this.checkinCache.set(this.room._id, checkinData);
       }
       
       // Delay notify để tránh trigger mở modal lại
@@ -1041,17 +1046,16 @@ export class ModalControlDirective implements OnInit, OnDestroy {
                   transferredAt: checkinEvent.transferredAt || new Date()
                 };
                 // Lưu vào localStorage cho phòng đích
-                localStorage.setItem(`checkin_${targetRoom._id}`, JSON.stringify(targetCheckinData));
+                this.checkinCache.set(targetRoom._id, targetCheckinData);
                 console.log('Saved checkin data from backend response:', targetCheckinData);
               } catch (e) {
                 console.error('Error saving transfer checkin data from response:', e);
               }
             } else {
               // Fallback: Lấy thông tin từ phòng nguồn (nếu có trong localStorage)
-              const sourceCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
-              if (sourceCheckinData && targetRoom?._id) {
+              const checkinData = this.checkinCache.getSync(this.room._id);
+              if (checkinData && targetRoom?._id) {
                 try {
-                  const checkinData = JSON.parse(sourceCheckinData);
                   // Cập nhật roomId và roomNumber cho phòng đích, giữ nguyên thông tin khách
                   const targetCheckinData = {
                     ...checkinData,
@@ -1062,7 +1066,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
                     transferredAt: new Date()
                   };
                   // Lưu vào localStorage cho phòng đích
-                  localStorage.setItem(`checkin_${targetRoom._id}`, JSON.stringify(targetCheckinData));
+                  this.checkinCache.set(targetRoom._id, targetCheckinData);
                   console.log('Saved checkin data from localStorage fallback:', targetCheckinData);
                 } catch (e) {
                   console.error('Error saving transfer checkin data from localStorage:', e);
@@ -1071,7 +1075,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
             }
             
             // Xóa dữ liệu cũ của phòng nguồn
-            localStorage.removeItem(`checkin_${this.room._id}`);
+            this.checkinCache.remove(this.room._id);
             
             // Tạo thông báo chi tiết
             let message = `Đã chuyển khách từ phòng ${this.room.roomNumber} sang phòng ${targetRoomNumber}`;
@@ -1220,7 +1224,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
               this.roomsService.updateRoomStatus(
                 this.room._id,
                 statusSelect.value as Room['status'],
-                localStorage.getItem('staffId') || 'unknown',
+                this.sessionContext.getStaffId() || 'unknown',
                 statusNote?.value || ''
               ).pipe(
                 take(1),
@@ -1539,10 +1543,9 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     let additionalCharge = 0;
     let discount = 0;
     
-    const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
-    if (savedCheckinData) {
+    const checkinInfo = this.checkinCache.getSync(this.room._id);
+    if (checkinInfo) {
       try {
-        const checkinInfo = JSON.parse(savedCheckinData);
         if (checkinInfo.selectedServices && Array.isArray(checkinInfo.selectedServices) && checkinInfo.selectedServices.length > 0) {
           serviceTotal = checkinInfo.selectedServices.reduce((sum: number, service: any) => {
             return sum + (service.price * (service.quantity || 1));
@@ -1584,16 +1587,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     }
     
     // Lấy thông tin lưu trữ từ localStorage nếu có
-    const savedCheckinData = localStorage.getItem(`checkin_${this.room._id}`);
-    let checkinInfo = null;
-    
-    if (savedCheckinData) {
-      try {
-        checkinInfo = JSON.parse(savedCheckinData);
-      } catch (error) {
-        console.error('Lỗi khi phân tích dữ liệu check-in:', error);
-      }
-    }
+    let checkinInfo = this.checkinCache.getSync(this.room._id);
     
     // Tính thời gian sử dụng
     const checkInTime = new Date(checkinEvent?.checkinTime || checkinInfo?.checkinTime || new Date());
@@ -1626,7 +1620,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       customerName: checkinInfo?.guestInfo?.name || 'Khách lẻ',
       customerPhone: checkinInfo?.guestInfo?.phone || '',
       customerEmail: checkinInfo?.guestInfo?.email || '',
-      staffName: localStorage.getItem('staffName') || 'Nhân viên',
+      staffName: this.sessionContext.getStaffName() || 'Nhân viên',
       roomNumber: roomNumber,
       roomType: this.room.type || 'Phòng thường',
       checkInTime: checkInTime,
@@ -1738,11 +1732,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
 
     // Lấy thông tin checkin từ localStorage nếu có
     const roomId = this.room?._id || invoiceData.roomId;
-    const savedCheckinData = localStorage.getItem(`checkin_${roomId}`);
+    const checkinInfo = this.checkinCache.getSync(roomId);
     
-    if (savedCheckinData) {
+    if (checkinInfo) {
       try {
-        const checkinInfo = JSON.parse(savedCheckinData);
         
         // Cập nhật thông tin từ checkin vào invoice
         formattedInvoiceData = {
@@ -1790,7 +1783,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         
         // Sau khi checkout thành công, xóa thông tin checkin khỏi localStorage
         if (invoiceData.checkOutTime) {
-          localStorage.removeItem(`checkin_${roomId}`);
+          this.checkinCache.remove(roomId);
         }
       } catch (error) {
         console.error('Lỗi khi phân tích dữ liệu checkin:', error);
@@ -1864,8 +1857,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     // Đảm bảo hotelId luôn có trong invoiceData
     if (!invoiceData.hotelId) {
       invoiceData.hotelId = this.room?.hotelId || 
-                            localStorage.getItem('selectedHotelId') || 
-                            localStorage.getItem('hotelId');
+                            this.hotelService.getStoredHotelId();
     }
     
     // Lưu hóa đơn vào database trước khi hiển thị
@@ -1898,8 +1890,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       // Đảm bảo hotelId vẫn có trong invoiceData khi lưu thất bại
       if (!invoiceData.hotelId) {
         invoiceData.hotelId = this.room?.hotelId || 
-                              localStorage.getItem('selectedHotelId') || 
-                              localStorage.getItem('hotelId');
+                              this.hotelService.getStoredHotelId();
       }
       // Vẫn hiển thị modal ngay cả khi lưu thất bại
       this.modalService.create({
@@ -1931,8 +1922,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         customerPhone: invoiceData.customerPhone || invoiceData.guestDetails?.phone || '',
         customerEmail: invoiceData.customerEmail || invoiceData.guestDetails?.email || '',
         guestDetails: invoiceData.guestDetails || invoiceData.guestInfo || {},
-        staffId: invoiceData.staffId || localStorage.getItem('staffId') || '',
-        staffName: invoiceData.staffName || localStorage.getItem('staffName') || 'Nhân viên',
+        staffId: invoiceData.staffId || this.sessionContext.getStaffId() || '',
+        staffName: invoiceData.staffName || this.sessionContext.getStaffName() || 'Nhân viên',
         checkInTime: invoiceData.checkInTime || invoiceData.checkInDate,
         checkOutTime: invoiceData.checkOutTime || invoiceData.checkOutDate || new Date(),
         duration: invoiceData.duration || { hours: 0, days: 0 },

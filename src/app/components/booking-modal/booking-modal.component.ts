@@ -94,9 +94,9 @@ export class BookingModalComponent implements OnInit {
       }
     }
     
-    // Nếu vẫn chưa có hotelId, thử lấy từ localStorage
+    // Nếu vẫn chưa có hotelId, thử lấy từ session context
     if (!this.hotelId) {
-      this.hotelId = localStorage.getItem('selectedHotelId') || undefined;
+      this.hotelId = this.hotelService.getStoredHotelId() || undefined;
     }
     
     // Load hotel info nếu có hotelId

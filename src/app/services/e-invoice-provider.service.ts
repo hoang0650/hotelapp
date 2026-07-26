@@ -28,14 +28,7 @@ export class EInvoiceProviderService {
   private selectedTemplateSubject = new BehaviorSubject<InvoiceTemplate | null>(null);
   public selectedTemplate$: Observable<InvoiceTemplate | null> = this.selectedTemplateSubject.asObservable();
 
-  private readonly STORAGE_KEY = 'e_invoice_selected_provider';
-  private readonly TEMPLATE_STORAGE_KEY = 'e_invoice_selected_template';
-
-  constructor() {
-    // Load từ localStorage khi service khởi tạo
-    this.loadFromStorage();
-    this.loadTemplateFromStorage();
-  }
+  constructor() {}
 
   /**
    * Lấy provider đã chọn
@@ -45,47 +38,23 @@ export class EInvoiceProviderService {
   }
 
   /**
-   * Chọn provider
+   * Chọn provider (in-memory only)
    */
   setSelectedProvider(provider: ProviderAccount | null): void {
     this.selectedProviderSubject.next(provider);
     if (provider) {
-      // Lưu vào localStorage
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(provider));
-      
-      // Kiểm tra template đã chọn có thuộc provider mới không
       const selectedTemplate = this.getSelectedTemplate();
       if (selectedTemplate && provider.templates && provider.templates.length > 0) {
         const templateExists = provider.templates.some(
           t => t.template_code === selectedTemplate.template_code && 
                t.invoice_series === selectedTemplate.invoice_series
         );
-        // Nếu template không thuộc provider mới, xóa template đã chọn
         if (!templateExists) {
           this.setSelectedTemplate(null);
         }
       }
     } else {
-      // Xóa khỏi localStorage
-      localStorage.removeItem(this.STORAGE_KEY);
-      // Xóa template đã chọn khi xóa provider
       this.setSelectedTemplate(null);
-    }
-  }
-
-  /**
-   * Load provider từ localStorage
-   */
-  private loadFromStorage(): void {
-    try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      if (stored) {
-        const provider = JSON.parse(stored);
-        this.selectedProviderSubject.next(provider);
-      }
-    } catch (error) {
-      console.error('Error loading provider from storage:', error);
-      localStorage.removeItem(this.STORAGE_KEY);
     }
   }
 
@@ -112,33 +81,9 @@ export class EInvoiceProviderService {
   }
 
   /**
-   * Chọn template
+   * Chọn template (in-memory only)
    */
   setSelectedTemplate(template: InvoiceTemplate | null): void {
     this.selectedTemplateSubject.next(template);
-    if (template) {
-      // Lưu vào localStorage
-      localStorage.setItem(this.TEMPLATE_STORAGE_KEY, JSON.stringify(template));
-    } else {
-      // Xóa khỏi localStorage
-      localStorage.removeItem(this.TEMPLATE_STORAGE_KEY);
-    }
-  }
-
-  /**
-   * Load template từ localStorage
-   */
-  private loadTemplateFromStorage(): void {
-    try {
-      const stored = localStorage.getItem(this.TEMPLATE_STORAGE_KEY);
-      if (stored) {
-        const template = JSON.parse(stored);
-        this.selectedTemplateSubject.next(template);
-      }
-    } catch (error) {
-      console.error('Error loading template from storage:', error);
-      localStorage.removeItem(this.TEMPLATE_STORAGE_KEY);
-    }
   }
 }
-

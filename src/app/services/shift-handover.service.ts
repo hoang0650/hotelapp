@@ -16,6 +16,7 @@ import {
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 import { User } from '../interfaces/user';
+import { SessionContextService } from './session-context.service';
 
 export interface PreviousShiftAmountResponse {
   message: string;
@@ -37,7 +38,8 @@ export class ShiftHandoverService {
 
   constructor(
     private http: HttpClient,
-    private authService: AuthService
+    private authService: AuthService,
+    private sessionContext: SessionContextService
   ) {}
 
   // ============ GIAO CA ============
@@ -73,13 +75,15 @@ export class ShiftHandoverService {
             hotelId: u.hotelId ?? existing?.hotelId
           };
           this.authService.loginFromShiftHandover(response.login.token, normalizedUser);
-          // Lưu thông tin user mới
-          if (response.login.user) {
-            localStorage.setItem('user', JSON.stringify(response.login.user));
-          }
           if (response.login.staff) {
-            localStorage.setItem('staff', JSON.stringify(response.login.staff));
-            localStorage.setItem('staffId', response.login.staff._id);
+            const staffInfo = response.login.staff.personalInfo;
+            const staffName = [
+              staffInfo?.firstName,
+              staffInfo?.lastName
+            ].filter(Boolean).join(' ').trim()
+              || response.login.user?.fullName
+              || null;
+            this.sessionContext.setStaffContext(response.login.staff._id, staffName);
           }
         }
       })

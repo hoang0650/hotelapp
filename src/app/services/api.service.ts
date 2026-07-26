@@ -23,7 +23,7 @@ export class ApiService {
   }
 
   private getAuthHeaders(): HttpHeaders {
-    const token = this.authService.getToken() || localStorage.getItem('authToken') || '';
+    const token = this.authService.getToken() || '';
     return new HttpHeaders().set('Authorization', `Bearer ${token}`);
   }
 
@@ -116,6 +116,19 @@ export class ApiService {
 
   saveSelectedFloor(userId: string, hotelId: string, floor: string | null): Observable<any> {
     return this.http.post(this.buildUrl('/sessions/selected-floor'), { userId, hotelId, floor }, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  getStaffContext(): Observable<{ staffId: string | null; staffName: string | null }> {
+    return this.http.get<{ staffId: string | null; staffName: string | null }>(
+      this.buildUrl('/sessions/staff-context'),
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  saveStaffContext(staffId: string | null, staffName: string | null = null): Observable<any> {
+    return this.http.post(this.buildUrl('/sessions/staff-context'), { staffId, staffName }, {
       headers: this.getAuthHeaders()
     });
   }

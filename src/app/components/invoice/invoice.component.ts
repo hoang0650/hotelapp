@@ -8,6 +8,7 @@ import { SettingsService } from '../../services/settings.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { EInvoiceProviderService } from '../../services/e-invoice-provider.service';
+import { SessionContextService } from '../../services/session-context.service';
 import { take } from 'rxjs/operators';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -202,7 +203,8 @@ export class InvoiceComponent implements OnInit {
     private modal: NzModalService,
     private providerService: EInvoiceProviderService,
     private fb: FormBuilder,
-    private modalRef: NzModalRef
+    private modalRef: NzModalRef,
+    private sessionContext: SessionContextService
   ) {
     console.log('=== InvoiceComponent Constructor ===');
     console.log('Raw data received:', this.data);
@@ -482,9 +484,9 @@ export class InvoiceComponent implements OnInit {
     // Thử lấy hotelId từ nhiều nguồn
     let hotelId = this.invoiceData['hotelId'] || (this.invoiceData as any).hotelId;
     
-    // Nếu không có trong invoiceData, thử lấy từ localStorage
+    // Nếu không có trong invoiceData, thử lấy từ session context
     if (!hotelId) {
-      hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId');
+      hotelId = this.sessionContext.getSelectedHotelId();
     }
     
     // Nếu vẫn không có, thử lấy từ roomId nếu có
@@ -1219,7 +1221,7 @@ export class InvoiceComponent implements OnInit {
     // Lấy hotelId từ nhiều nguồn
     let hotelId = this.invoiceData['hotelId'];
     if (!hotelId) {
-      hotelId = localStorage.getItem('selectedHotelId') || localStorage.getItem('hotelId');
+      hotelId = this.sessionContext.getSelectedHotelId();
     }
 
     // Lấy roomId nếu có
@@ -1263,8 +1265,8 @@ export class InvoiceComponent implements OnInit {
       customerPhone: this.invoiceData.customerPhone || this.invoiceData.guestInfo?.phone || '',
       customerEmail: this.invoiceData.customerEmail || this.invoiceData.guestInfo?.email || customerEmail || '',
       guestDetails: this.invoiceData.guestInfo || {},
-      staffId: this.invoiceData.staffId || localStorage.getItem('staffId') || '',
-      staffName: this.invoiceData.staffName || localStorage.getItem('staffName') || 'Nhân viên',
+      staffId: this.invoiceData.staffId || this.sessionContext.getStaffId() || '',
+      staffName: this.invoiceData.staffName || this.sessionContext.getStaffName() || 'Nhân viên',
       checkInTime: this.invoiceData.checkInTime || this.invoiceData['checkInDate'] || new Date(),
       checkOutTime: this.invoiceData.checkOutTime || this.invoiceData['checkOutDate'] || new Date(),
       duration: this.invoiceData.duration || { hours: 0, days: 0 },
@@ -2109,7 +2111,7 @@ export class InvoiceComponent implements OnInit {
       notes: this.invoiceData.notes || '',
       
       // Metadata
-      hotelId: this.invoiceData['hotelId'] || localStorage.getItem('selectedHotelId'),
+      hotelId: this.invoiceData['hotelId'] || this.sessionContext.getSelectedHotelId(),
       bookingId: this.invoiceData['bookingId'] || ''
     };
   }

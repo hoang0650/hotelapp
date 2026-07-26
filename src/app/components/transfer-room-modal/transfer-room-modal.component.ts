@@ -6,6 +6,9 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { Room } from '../../interfaces/rooms';
 import { Subject } from 'rxjs';
 import { take, takeUntil } from 'rxjs/operators';
+import { SessionContextService } from '../../services/session-context.service';
+import { AuthService } from '../../services/auth.service';
+import { CheckinCacheService } from '../../services/checkin-cache.service';
 
 @Component({
   selector: 'app-transfer-room-modal',
@@ -27,7 +30,10 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
     private modalRef: NzModalRef,
     private fb: FormBuilder,
     private roomsService: RoomsService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private sessionContext: SessionContextService,
+    private authService: AuthService,
+    private checkinCache: CheckinCacheService
   ) {
     this.sourceRoom = data.sourceRoom;
     this.availableRooms = data.availableRooms || [];
@@ -77,8 +83,8 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
 
     this.isLoading = true;
     
-    // Lấy staffId từ localStorage
-    const staffId = localStorage.getItem('staffId') || localStorage.getItem('userId') || 'unknown';
+    // Lấy staffId từ session context
+    const staffId = this.sessionContext.getStaffId() || this.authService.getUserId() || 'unknown';
 
     // Gọi API chuyển phòng
     this.roomsService.transferRoom(
@@ -118,17 +124,16 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
               transferredAt: checkinEvent.transferredAt || new Date()
             };
             // Lưu vào localStorage cho phòng đích
-            localStorage.setItem(`checkin_${targetRoom._id}`, JSON.stringify(targetCheckinData));
+            this.checkinCache.set(targetRoom._id, targetCheckinData);
             console.log('Saved checkin data from backend response:', targetCheckinData);
           } catch (e) {
             console.error('Error saving transfer checkin data from response:', e);
           }
         } else {
           // Fallback: Lấy thông tin từ phòng nguồn (nếu có trong localStorage)
-          const sourceCheckinData = localStorage.getItem(`checkin_${this.sourceRoom._id}`);
-          if (sourceCheckinData && targetRoom?._id) {
+          const checkinData = this.checkinCache.getSync(this.sourceRoom._id);
+          if (checkinData && targetRoom?._id) {
             try {
-              const checkinData = JSON.parse(sourceCheckinData);
               // Cập nhật roomId và roomNumber cho phòng đích
               const targetCheckinData = {
                 ...checkinData,
@@ -139,7 +144,7 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
                 transferredAt: new Date()
               };
               // Lưu vào localStorage cho phòng đích
-              localStorage.setItem(`checkin_${targetRoom._id}`, JSON.stringify(targetCheckinData));
+              this.checkinCache.set(targetRoom._id, targetCheckinData);
               console.log('Saved checkin data from localStorage fallback:', targetCheckinData);
             } catch (e) {
               console.error('Error saving transfer checkin data from localStorage:', e);
@@ -148,7 +153,7 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
         }
         
         // Xóa dữ liệu cũ của phòng nguồn
-        localStorage.removeItem(`checkin_${this.sourceRoom._id}`);
+        this.checkinCache.remove(this.sourceRoom._id);
         
         // Tạo thông báo chi tiết
         let successMessage = `Đã chuyển từ phòng ${this.sourceRoom.roomNumber} sang phòng ${targetRoom?.roomNumber || 'N/A'}`;

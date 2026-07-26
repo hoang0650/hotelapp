@@ -48,8 +48,34 @@ export class NotificationsService {
   public announcements$ = this.announcementsSubject.asObservable();
   private unreadCountSubject = new BehaviorSubject<number>(0);
   public unreadCount$ = this.unreadCountSubject.asObservable();
+  private maintenanceMode = false;
+  private maintenanceMessage: string | null = null;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
+
+  setMaintenanceMode(enabled: boolean, message?: string | null): void {
+    this.maintenanceMode = !!enabled;
+    if (enabled) {
+      if (message !== undefined && message !== null) {
+        this.maintenanceMessage = message;
+      }
+    } else {
+      this.maintenanceMessage = null;
+    }
+  }
+
+  isMaintenanceMode(): boolean {
+    return this.maintenanceMode;
+  }
+
+  getMaintenanceMessage(): string | null {
+    return this.maintenanceMessage;
+  }
+
+  clearMaintenanceMode(): void {
+    this.maintenanceMode = false;
+    this.maintenanceMessage = null;
+  }
 
   private canRequestNotifications(): boolean {
     return !!this.authService.getCurrentUser() && !!this.authService.getToken();
@@ -156,17 +182,14 @@ export class NotificationsService {
     });
   }
 
-  // Lấy thông báo maintenance mode từ settings
+  // Lấy thông báo maintenance mode từ in-memory flag
   getMaintenanceNotification(): Announcement | null {
-    const maintenanceMode = localStorage.getItem('maintenanceMode') === 'true';
-    const maintenanceMessage = localStorage.getItem('maintenanceMessage');
-    
-    if (maintenanceMode && maintenanceMessage) {
+    if (this.maintenanceMode && this.maintenanceMessage) {
       return {
         id: 'maintenance-mode',
         type: 'maintenance',
         title: 'Hệ thống đang bảo trì',
-        message: maintenanceMessage,
+        message: this.maintenanceMessage,
         priority: 'urgent',
         startDate: new Date(),
         isActive: true,

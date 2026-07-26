@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import {
   HttpRequest,
   HttpHandler,
@@ -6,18 +6,20 @@ import {
   HttpInterceptor,
   HttpErrorResponse
 } from '@angular/common/http';
-import { Observable, throwError, of } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { Router } from '@angular/router';
 import { environment } from '../environments/environment';
+import { NotificationsService } from './services/notifications.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private injector: Injector
   ) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
@@ -78,10 +80,12 @@ export class AuthInterceptor implements HttpInterceptor {
         }
 
         if (error.status === 503 && error.error?.maintenance) {
-          if (error.error.maintenanceMessage) {
-            localStorage.setItem('maintenanceMessage', error.error.maintenanceMessage);
-          }
-          localStorage.setItem('maintenanceMode', 'true');
+          // Lazy resolve to avoid HttpClient <-> interceptor circular DI
+          const notificationsService = this.injector.get(NotificationsService);
+          notificationsService.setMaintenanceMode(
+            true,
+            error.error.maintenanceMessage || null
+          );
           const isAdmin = this.authService.isSuperAdmin() || this.authService.isAdmin();
           if (!isAdmin) {
             this.router.navigate(['/maintenance']);
@@ -92,4 +96,4 @@ export class AuthInterceptor implements HttpInterceptor {
       })
     );
   }
-} 
+}

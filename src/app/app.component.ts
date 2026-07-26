@@ -99,8 +99,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private checkMaintenanceMode(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    const maintenanceMode = localStorage.getItem('maintenanceMode') === 'true';
-    const maintenanceMsg = localStorage.getItem('maintenanceMessage');
+    const maintenanceMode = this.notificationsService.isMaintenanceMode();
+    const maintenanceMsg = this.notificationsService.getMaintenanceMessage();
     
     if (maintenanceMode) {
       const currentUser = this.authService.getCurrentUser();
@@ -140,18 +140,14 @@ export class AppComponent implements OnInit, OnDestroy {
           const backendMaintenanceMode = generalSettings.maintenanceMode || false;
           const backendMaintenanceMessage = generalSettings.maintenanceMessage || '';
           
-          const localMaintenanceMode = localStorage.getItem('maintenanceMode') === 'true';
+          const localMaintenanceMode = this.notificationsService.isMaintenanceMode();
           
           // Nếu backend maintenance mode khác với local, cập nhật
           if (backendMaintenanceMode !== localMaintenanceMode) {
             if (backendMaintenanceMode) {
-              localStorage.setItem('maintenanceMode', 'true');
-              if (backendMaintenanceMessage) {
-                localStorage.setItem('maintenanceMessage', backendMaintenanceMessage);
-              }
+              this.notificationsService.setMaintenanceMode(true, backendMaintenanceMessage || null);
             } else {
-              localStorage.removeItem('maintenanceMode');
-              localStorage.removeItem('maintenanceMessage');
+              this.notificationsService.clearMaintenanceMode();
             }
             
             // Reload notifications
@@ -176,8 +172,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (detail.enabled === false) {
       // Maintenance mode đã được tắt
       this.isMaintenanceMode = false;
-      localStorage.removeItem('maintenanceMode');
-      localStorage.removeItem('maintenanceMessage');
+      this.notificationsService.clearMaintenanceMode();
       
       // Reload notifications
       this.notificationsService.loadAnnouncements();
@@ -189,9 +184,8 @@ export class AppComponent implements OnInit, OnDestroy {
     } else {
       // Maintenance mode đã được bật
       this.isMaintenanceMode = true;
-      localStorage.setItem('maintenanceMode', 'true');
+      this.notificationsService.setMaintenanceMode(true, detail.message || null);
       if (detail.message) {
-        localStorage.setItem('maintenanceMessage', detail.message);
         this.maintenanceMessage = detail.message;
       }
       

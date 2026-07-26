@@ -4,6 +4,7 @@ import { Hotel, HotelStatus } from '../interfaces/hotel';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { SessionContextService } from './session-context.service';
 
 interface RevenueData {
   labels: string[];
@@ -21,51 +22,38 @@ interface RevenueData {
 export class HotelService {
   private apiUrl = `${environment.apiUrl}/hotels`;
   private revenueByPeriodCache = new Map<string, { payload: RevenueData; updatedAt: number }>();
-  
-  // Định nghĩa key cố định trong localStorage để tránh typo
-  private readonly HOTEL_ID_KEY = 'current_hotel_id';
-  private readonly FLOOR_KEY = 'current_floor';
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private sessionContext: SessionContextService
+  ) { }
 
   /**
-   * Lưu nhanh hotelId và floor vào LocalStorage
+   * Lưu hotelId + floor vào Redis (đồng bộ web/app)
    */
   saveRoomContext(hotelId: string, floor: string): void {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem(this.HOTEL_ID_KEY, hotelId);
-      localStorage.setItem(this.FLOOR_KEY, floor);
-    }
+    this.sessionContext.saveRoomContext(hotelId, floor || '');
   }
 
   /**
-   * Lấy nhanh hotelId từ LocalStorage (Đồng bộ - Không cần qua Observable)
+   * Lấy hotelId từ Redis-backed session context (đồng bộ)
    */
   getStoredHotelId(): string | null {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem(this.HOTEL_ID_KEY);
-    }
-    return null;
+    return this.sessionContext.getSelectedHotelId();
   }
 
   /**
-   * Lấy nhanh floor từ LocalStorage (Đồng bộ - Không cần qua Observable)
+   * Lấy floor từ Redis-backed session context (đồng bộ)
    */
   getStoredFloor(): string | null {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem(this.FLOOR_KEY);
-    }
-    return null;
+    return this.sessionContext.getSelectedFloor();
   }
 
   /**
-   * Xóa sạch thông tin phòng/khách sạn khi logout
+   * Xóa context phòng/khách sạn khi logout
    */
   clearRoomContext(): void {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.removeItem(this.HOTEL_ID_KEY);
-      localStorage.removeItem(this.FLOOR_KEY);
-    }
+    this.sessionContext.clearLocal();
   }
 
   getHotels(businessId?: string, status?: HotelStatus): Observable<Hotel[]> {
