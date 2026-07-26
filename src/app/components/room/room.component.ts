@@ -173,7 +173,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   private roomsSocketConnected = false;
   private roomsSocketHotelId: string | null = null;
   private paymentSpeakerEnabled = false;
-  private lastPaymentSpeakerEventKey: string | null = null;
+  private lastPaymentToastEventKey: string | null = null;
   private roomNumberByIdMap = new Map<string, string>();
   private historyReloadQueued = false;
   private historyReloadInFlight = false;
@@ -428,6 +428,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
 
     this.paymentSpeakerEnabled = !!detail?.enabled;
+    this.paymentSpeakerService.setEnabled(hotelId, this.paymentSpeakerEnabled);
     this.cdr.markForCheck();
   };
 
@@ -1408,10 +1409,12 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.hotelService.getHotelById(hotelId, { lite: true }).subscribe({
       next: (hotel) => {
         this.paymentSpeakerEnabled = !!hotel?.settings?.notificationSettings?.enablePaymentSpeaker;
+        this.paymentSpeakerService.setEnabled(hotelId, this.paymentSpeakerEnabled);
         this.cdr.markForCheck();
       },
       error: (error) => {
         this.paymentSpeakerEnabled = false;
+        this.paymentSpeakerService.setEnabled(hotelId, false);
         console.error('Error loading payment speaker setting:', error);
       }
     });
@@ -1419,28 +1422,23 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   private handleRealtimePaymentReceived(payload: any): void {
     const hotelId = String(payload?.hotelId || '').trim();
-    if (!hotelId || !this.selectedHotelId) {
+    if (!hotelId || !this.selectedHotelId || hotelId !== String(this.selectedHotelId)) {
       return;
     }
 
-    if (hotelId !== String(this.selectedHotelId)) {
-      return;
-    }
-
+    const amount = Number(payload?.amount || 0);
     const eventKey = String(
       payload?.paymentHistoryId ||
       payload?.transactionId ||
       payload?.id ||
-      `${hotelId}_${payload?.amount || 0}_${payload?.roomId || ''}`
+      `${hotelId}_${amount}_${payload?.roomId || ''}`
     );
 
-    if (eventKey && this.lastPaymentSpeakerEventKey === eventKey) {
+    if (eventKey && this.lastPaymentToastEventKey === eventKey) {
       return;
     }
+    this.lastPaymentToastEventKey = eventKey;
 
-    this.lastPaymentSpeakerEventKey = eventKey;
-
-    const amount = Number(payload?.amount || 0);
     const amountLabel = amount > 0 ? amount.toLocaleString('vi-VN') + ' VND' : '';
     const roomLabel = payload?.roomNumber ? ` · Phòng ${payload.roomNumber}` : '';
     this.message.success(
@@ -1449,13 +1447,10 @@ export class RoomComponent implements OnInit, OnDestroy {
         : `Thanh toán SePay thành công${roomLabel}`
     );
 
-    if (!this.paymentSpeakerEnabled) {
-      return;
+    if (this.paymentSpeakerEnabled) {
+      this.paymentSpeakerService.setEnabled(this.selectedHotelId, true);
     }
-
-    if (amount > 0) {
-      this.paymentSpeakerService.playPaymentSuccess(amount);
-    }
+    this.paymentSpeakerService.tryPlayForPayment(payload, this.selectedHotelId);
   }
 
   private refreshRoomsLiteRealtime(): void {

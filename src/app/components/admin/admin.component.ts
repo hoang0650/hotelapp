@@ -12,6 +12,8 @@ import { TranslationService } from '../../services/translation.service';
 import { ThemeService } from '../../services/theme.service';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
+import { PaymentSpeakerService } from '../../services/payment-speaker.service';
+import { io, Socket } from 'socket.io-client';
 
 @Component({
   selector: 'app-admin',
@@ -48,8 +50,13 @@ export class AdminComponent implements OnInit, OnDestroy {
   private readonly apiBaseUrl = environment.apiUrl;
   private readonly openFloorFilterHandler = () => this.openFloorFilterModal();
   private readonly openColumnsHandler = () => this.openColumnsModal();
+  private readonly paymentSpeakerChangedHandler = (event: Event) =>
+    this.handlePaymentSpeakerChanged(event as CustomEvent);
   private langSub?: Subscription;
   private themeSub?: Subscription;
+  private hotelSub?: Subscription;
+  private paymentSocket: Socket | null = null;
+  private paymentSocketHotelId: string | null = null;
   
   constructor(
     private router: Router, 
@@ -61,7 +68,8 @@ export class AdminComponent implements OnInit, OnDestroy {
     private sessionContext: SessionContextService,
     private translationService: TranslationService,
     private themeService: ThemeService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private paymentSpeakerService: PaymentSpeakerService
   ) { }
 
   ngOnInit(): void {
@@ -90,16 +98,89 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.isRoomRoute = this.router.url.split('?')[0] === '/admin/room';
     window.addEventListener('openAdminFloorFilter', this.openFloorFilterHandler);
     window.addEventListener('openAdminColumnsModal', this.openColumnsHandler);
+    window.addEventListener('hotelPaymentSpeakerChanged', this.paymentSpeakerChangedHandler);
+
+    this.hotelSub = this.sessionContext.selectedHotelId$.subscribe((hotelId) => {
+      this.syncPaymentSpeakerSocket(hotelId || this.authService.getHotelId());
+    });
+    this.syncPaymentSpeakerSocket(
+      this.sessionContext.getSelectedHotelId() || this.authService.getHotelId()
+    );
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('openAdminFloorFilter', this.openFloorFilterHandler);
     window.removeEventListener('openAdminColumnsModal', this.openColumnsHandler);
+    window.removeEventListener('hotelPaymentSpeakerChanged', this.paymentSpeakerChangedHandler);
     this.langSub?.unsubscribe();
     this.themeSub?.unsubscribe();
+    this.hotelSub?.unsubscribe();
+    this.stopPaymentSpeakerSocket();
   }
 
-  
+  private handlePaymentSpeakerChanged(event: CustomEvent): void {
+    const detail = event?.detail || {};
+    const hotelId = String(detail?.hotelId || '').trim();
+    const currentHotelId = String(
+      this.paymentSocketHotelId ||
+      this.sessionContext.getSelectedHotelId() ||
+      this.authService.getHotelId() ||
+      ''
+    ).trim();
+    if (!hotelId || !currentHotelId || hotelId !== currentHotelId) {
+      return;
+    }
+    this.paymentSpeakerService.setEnabled(hotelId, !!detail?.enabled);
+  }
+
+  private syncPaymentSpeakerSocket(hotelId: string | null | undefined): void {
+    const id = String(hotelId || '').trim();
+    if (!id) {
+      this.stopPaymentSpeakerSocket();
+      return;
+    }
+
+    this.paymentSpeakerService.loadEnabled(id);
+
+    if (this.paymentSocket && this.paymentSocketHotelId === id) {
+      if (this.paymentSocket.connected) {
+        this.paymentSocket.emit('join_hotel', id);
+      }
+      return;
+    }
+
+    this.stopPaymentSpeakerSocket();
+
+    const socketUrl = String(environment.apiUrl || '').replace(/\/$/, '');
+    if (!socketUrl) return;
+
+    this.paymentSocketHotelId = id;
+    this.paymentSocket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      autoConnect: true
+    });
+
+    this.paymentSocket.on('connect', () => {
+      this.paymentSocket?.emit('join_hotel', this.paymentSocketHotelId);
+    });
+
+    this.paymentSocket.on('payment_received', (payload: any) => {
+      this.paymentSpeakerService.tryPlayForPayment(payload, this.paymentSocketHotelId);
+    });
+  }
+
+  private stopPaymentSpeakerSocket(): void {
+    if (this.paymentSocket) {
+      try {
+        this.paymentSocket.off('connect');
+        this.paymentSocket.off('payment_received');
+        this.paymentSocket.disconnect();
+      } catch (_e) {}
+    }
+    this.paymentSocket = null;
+    this.paymentSocketHotelId = null;
+  }
 
   toggleModal(show: boolean): void {
     this.showModal = show;

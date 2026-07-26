@@ -13,6 +13,7 @@ import { NotificationsService, Announcement } from '../../services/notifications
 import { HotelService } from '../../services/hotel.service';
 import { BusinessService } from '../../services/business.service';
 import { PricingService } from '../../services/pricing.service';
+import { PaymentSpeakerService } from '../../services/payment-speaker.service';
 import { TranslateService } from '@ngx-translate/core';
 
 
@@ -92,6 +93,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private hotelService: HotelService,
     private businessService: BusinessService,
     private pricingService: PricingService,
+    private paymentSpeakerService: PaymentSpeakerService,
     private translate: TranslateService,
     private aiAssistant: AiAssistantService
   ) {
@@ -885,15 +887,23 @@ export class SettingsComponent implements OnInit, OnDestroy {
           this.loadHotelFeaturesWithPackageLogic();
         });
         
-        // Load hotel notification settings
+        // Load hotel notification settings (giữ enablePaymentSpeaker tường minh)
         if (this.currentHotelSettings.notificationSettings) {
-          this.hotelNotificationForm.patchValue(this.currentHotelSettings.notificationSettings);
+          this.patchHotelNotificationForm(this.currentHotelSettings.notificationSettings);
+          this.paymentSpeakerService.setEnabled(
+            hotelId,
+            !!this.currentHotelSettings.notificationSettings.enablePaymentSpeaker
+          );
         } else {
-          // Nếu không có, sử dụng giá trị mặc định từ system notification settings
+          // Nếu không có, dùng system defaults nhưng không ghi đè enablePaymentSpeaker
+          this.paymentSpeakerService.setEnabled(hotelId, false);
           this.settingsService.getAllSettings().subscribe({
             next: (response) => {
               if (response.success && response.data?.notificationSettings) {
-                this.hotelNotificationForm.patchValue(response.data.notificationSettings);
+                this.patchHotelNotificationForm({
+                  ...response.data.notificationSettings,
+                  enablePaymentSpeaker: false
+                });
               }
             }
           });
@@ -1082,6 +1092,48 @@ export class SettingsComponent implements OnInit, OnDestroy {
     return this.packageFeatures[featureName] === true;
   }
   
+  private patchHotelNotificationForm(raw: any): void {
+    const src = raw || {};
+    this.hotelNotificationForm.patchValue({
+      enableEmailNotifications: src.enableEmailNotifications !== false,
+      enableSMSNotifications: !!src.enableSMSNotifications,
+      enablePushNotifications: src.enablePushNotifications !== false,
+      enablePaymentSpeaker: !!src.enablePaymentSpeaker,
+      notifyOnBooking: src.notifyOnBooking !== false,
+      notifyOnCheckin: src.notifyOnCheckin !== false,
+      notifyOnCheckout: src.notifyOnCheckout !== false,
+      notifyOnPayment: src.notifyOnPayment !== false,
+      notifyOnCancellation: src.notifyOnCancellation !== false,
+      notifyOnLowInventory: src.notifyOnLowInventory !== false,
+      notifyOnSystemError: src.notifyOnSystemError !== false,
+      notificationEmail: src.notificationEmail || ''
+    });
+  }
+
+  private buildHotelNotificationSettingsPayload(): Record<string, any> {
+    const formValue = this.hotelNotificationForm.getRawValue();
+    return {
+      enableEmailNotifications: !!formValue.enableEmailNotifications,
+      enableSMSNotifications: !!formValue.enableSMSNotifications,
+      enablePushNotifications: !!formValue.enablePushNotifications,
+      enablePaymentSpeaker: !!formValue.enablePaymentSpeaker,
+      notifyOnBooking: !!formValue.notifyOnBooking,
+      notifyOnCheckin: !!formValue.notifyOnCheckin,
+      notifyOnCheckout: !!formValue.notifyOnCheckout,
+      notifyOnPayment: !!formValue.notifyOnPayment,
+      notifyOnCancellation: !!formValue.notifyOnCancellation,
+      notifyOnLowInventory: !!formValue.notifyOnLowInventory,
+      notifyOnSystemError: !!formValue.notifyOnSystemError,
+      notificationEmail: String(formValue.notificationEmail || '').trim()
+    };
+  }
+
+  testPaymentSpeaker(): void {
+    const amount = 100000;
+    this.paymentSpeakerService.playPaymentSuccess(amount);
+    this.message.info('Đang phát thử loa thanh toán...');
+  }
+
   saveHotelNotificationSettings(): void {
     if (!this.selectedHotelId) {
       this.message.warning('Vui lòng chọn khách sạn');
@@ -1095,25 +1147,27 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
     
     this.saving = true;
+    const notificationSettings = this.buildHotelNotificationSettingsPayload();
     const settings = {
-      ...this.currentHotelSettings,
-      notificationSettings: this.hotelNotificationForm.value
+      ...(this.currentHotelSettings || {}),
+      notificationSettings
     };
     
     this.hotelService.updateHotelSettings(this.selectedHotelId, settings).subscribe({
       next: (response) => {
         this.saving = false;
         this.message.success(response.message || 'Đã lưu cài đặt thông báo cho khách sạn');
-        this.currentHotelSettings = response.settings || {};
-        const savedNotificationSettings = this.currentHotelSettings?.notificationSettings || this.hotelNotificationForm.value;
-        this.hotelNotificationForm.patchValue({
-          ...this.hotelNotificationForm.value,
-          ...savedNotificationSettings
-        });
+        this.currentHotelSettings = response.settings || settings;
+        const savedNotificationSettings =
+          this.currentHotelSettings?.notificationSettings || notificationSettings;
+        this.patchHotelNotificationForm(savedNotificationSettings);
+
+        const enabled = !!savedNotificationSettings.enablePaymentSpeaker;
+        this.paymentSpeakerService.setEnabled(this.selectedHotelId, enabled);
         window.dispatchEvent(new CustomEvent('hotelPaymentSpeakerChanged', {
           detail: {
             hotelId: this.selectedHotelId,
-            enabled: !!savedNotificationSettings.enablePaymentSpeaker
+            enabled
           }
         }));
       },

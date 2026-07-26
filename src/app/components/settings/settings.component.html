@@ -697,7 +697,11 @@
                 <label nz-checkbox formControlName="enablePaymentSpeaker">Bật loa thông báo khi SePay báo thanh toán thành công</label>
                 <div class="settings-hint">
                   Hệ thống sẽ đối chiếu giao dịch tiền vào theo tài khoản ngân hàng đã cấu hình trong `Hồ sơ cá nhân`.
-                  Khi tiền vào đúng tài khoản đó, màn `/admin/room` và lịch sử giao dịch sẽ phát hiện và phát loa nếu tính năng này đang bật.
+                  Khi tiền vào đúng tài khoản đó, màn `/admin/room` và các trang admin sẽ phát loa nếu tính năng này đang bật.
+                  Checkbox “Thông báo khi thanh toán” bên dưới chỉ dành cho thông báo hệ thống (email/push), không bật loa.
+                </div>
+                <div style="margin-top: 8px;">
+                  <button nz-button nzType="default" type="button" (click)="testPaymentSpeaker()">Nghe thử loa thanh toán</button>
                 </div>
 
                 <div nz-row [nzGutter]="16" style="margin-top: 16px;">
@@ -718,7 +722,7 @@
                 </nz-form-item>
 
                 <div class="settings-actions">
-                  <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelNotificationSettings()">Lưu cài đặt thông báo</button>
+                  <button nz-button nzType="primary" type="button" [nzLoading]="saving" (click)="saveHotelNotificationSettings()">Lưu cài đặt thông báo</button>
                 </div>
               </form>
             </nz-card>

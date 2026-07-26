@@ -117,6 +117,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
         this.enablePayPalPayment = hotelSettings.enablePayPalPayment || hotel.enablePayPalPayment || false;
         this.enableCryptoPayment = hotelSettings.enableCryptoPayment || hotel.enableCryptoPayment || false;
         this.enablePaymentSpeaker = !!notificationSettings.enablePaymentSpeaker;
+        this.paymentSpeakerService.setEnabled(this.hotelId, this.enablePaymentSpeaker);
         // SePay mặc định bật, có thể kiểm tra thêm nếu cần
         this.enableSePayPayment = true;
         this.refreshPaymentHistory();
@@ -166,16 +167,6 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     });
   }
 
-  private stopPaymentSocket(): void {
-    if (!this.paymentSocket) return;
-    try {
-      this.paymentSocket.off('connect');
-      this.paymentSocket.off('payment_received');
-      this.paymentSocket.disconnect();
-    } catch (_e) {}
-    this.paymentSocket = null;
-  }
-
   private handleSocketPaymentReceived(payload: any): void {
     const hotelId = String(payload?.hotelId || '').trim();
     if (!hotelId || hotelId !== String(this.hotelId)) {
@@ -186,6 +177,8 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     const amount = Number(payload?.amount || 0);
 
     if (paymentId && this.lastPlayedPaymentId === paymentId) {
+      this.loadSePayPayments();
+      this.loadAllPayments();
       return;
     }
 
@@ -199,13 +192,23 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
         : 'Thanh toán SePay thành công'
     );
 
-    if (this.enablePaymentSpeaker && amount > 0) {
-      this.paymentSpeakerService.playPaymentSuccess(amount);
+    if (this.enablePaymentSpeaker) {
+      this.paymentSpeakerService.setEnabled(this.hotelId, true);
     }
+    this.paymentSpeakerService.tryPlayForPayment(payload, this.hotelId);
 
-    // Refresh danh sách ngay để thấy giao dịch mới
     this.loadSePayPayments();
     this.loadAllPayments();
+  }
+
+  private stopPaymentSocket(): void {
+    if (!this.paymentSocket) return;
+    try {
+      this.paymentSocket.off('connect');
+      this.paymentSocket.off('payment_received');
+      this.paymentSocket.disconnect();
+    } catch (_e) {}
+    this.paymentSocket = null;
   }
 
   private loadConfiguredBankAccount(): void {
@@ -241,6 +244,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     }
 
     this.enablePaymentSpeaker = !!detail?.enabled;
+    this.paymentSpeakerService.setEnabled(hotelId, this.enablePaymentSpeaker);
   }
   /**
    * Bắt đầu auto-refresh payment history
