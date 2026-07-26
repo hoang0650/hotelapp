@@ -168,7 +168,7 @@
                       [nzShowUploadList]="false"
                       nzAccept="image/*"
                       nzName="image">
-                      <button nz-button nzType="default" [nzLoading]="isLoading">
+                      <button type="button" nz-button nzType="default" [nzLoading]="isLoading">
                         <i nz-icon nzType="upload"></i>
                         {{ 'BLOG_MANAGEMENT.SELECT_IMAGE' | translate }}
                       </button>
@@ -179,6 +179,7 @@
                   <img 
                     [src]="getImageUrl(blogForm.get('imageUrl')?.value)" 
                     alt="Ảnh đại diện" 
+                    referrerpolicy="no-referrer"
                     style="max-width: 300px; max-height: 200px; border-radius: 4px; margin-top: 8px;"
                     (error)="handleImageError($event)">
                 </div>

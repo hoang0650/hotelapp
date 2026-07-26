@@ -16,13 +16,14 @@ export interface Product {
 
 // Interface cho tin nhắn Chatbot nội bộ
 export interface ChatMessage {
-  id: string;
+  id?: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
   isTyping?: boolean;
   fileUrl?: string;
   fileType?: string;
+  fileName?: string;
 }
 
 interface ChatResponse {
@@ -151,10 +152,15 @@ export class AiAssistantService {
   }
 
   public getEffectiveTenantId(): string {
-    return (this.sessionContext.getSelectedHotelId() || this.authService.getHotelId() || '').trim();
+    return (
+      this.sessionContext.getSelectedHotelId() ||
+      this.authService.getHotelId() ||
+      this.authService.getBusinessId() ||
+      ''
+    ).trim();
   }
 
-  private async buildAiScopePayload(): Promise<{
+  private async buildAiScopePayload(overrideHotelId?: string | null): Promise<{
     selectedHotelId: string | null;
     hotelId: string | null;
     businessId: string | null;
@@ -173,7 +179,7 @@ export class AiAssistantService {
   }> {
     const currentUser = this.authService.getCurrentUser();
     const userId = this.normalizeId(currentUser?._id);
-    const selectedHotelId = this.normalizeId(await this.resolveHotelIdForAi());
+    const selectedHotelId = this.normalizeId(await this.resolveHotelIdForAi(overrideHotelId));
     const aiScope = this.authService.getAIScope();
     const packageSnapshot = await this.resolveCurrentPackageSnapshot(userId);
 
@@ -339,7 +345,12 @@ export class AiAssistantService {
     }
   }
 
-  async sendMessage(content: string, fileUrl?: string, fileType?: string): Promise<void> {
+  async sendMessage(
+    content: string,
+    fileUrl?: string,
+    fileType?: string,
+    options?: { hotelId?: string | null }
+  ): Promise<void> {
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content,
@@ -353,9 +364,19 @@ export class AiAssistantService {
     this.isTyping.next(true);
 
     try {
-      const scopePayload = await this.buildAiScopePayload();
+      const scopePayload = await this.buildAiScopePayload(options?.hotelId);
+      if (!scopePayload.hotelId && !scopePayload.businessId) {
+        this.addMessage({
+          id: (Date.now() + 1).toString(),
+          content: 'Vui lòng chọn khách sạn trước khi dùng AI.',
+          role: 'assistant',
+          timestamp: new Date()
+        });
+        return;
+      }
+
       const response = await firstValueFrom(
-        this.http.post<ChatResponse>(
+        this.http.post<ChatResponse & { answer?: string }>(
           `${this.apiUrl}/ai-assistant/chat`,
           {
             message: content,
@@ -370,19 +391,18 @@ export class AiAssistantService {
             packagePermissions: scopePayload.packagePermissions,
             maxUsers: scopePayload.maxUsers,
             maxRooms: scopePayload.maxRooms,
+            apiUrl: this.apiUrl,
             source: scopePayload.source
           }
         )
       );
 
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: response?.response || 'Xin lỗi, tôi không thể xử lý yêu cầu này.',
-        role: 'assistant',
-        timestamp: new Date()
-      };
+      const answerText =
+        response?.response ||
+        (response as any)?.answer ||
+        'Xin lỗi, tôi không thể xử lý yêu cầu này.';
 
-      this.addMessage(assistantMessage);
+      this.addMessage(this.buildToolAwareAssistantMessage(answerText));
     } catch (error: any) {
       console.error('Error sending message:', error);
       
@@ -401,6 +421,47 @@ export class AiAssistantService {
     } finally {
       this.isTyping.next(false);
     }
+  }
+
+  /** Parse link file Excel/Word/PDF từ câu trả lời /chat (giống phhotel-pms). */
+  private buildToolAwareAssistantMessage(answerText: string): ChatMessage {
+    const rawText = (answerText || '').trim();
+    const fileUrlRegex = /(?:Link tải:\s*)?(https?:\/\/[^\s]+?\.(?:xlsx|docx|pdf))/i;
+    const match = rawText.match(fileUrlRegex);
+
+    if (!match?.[1]) {
+      return {
+        id: (Date.now() + 1).toString(),
+        content: rawText || 'Xin lỗi, tôi chưa có dữ liệu để tư vấn.',
+        role: 'assistant',
+        timestamp: new Date()
+      };
+    }
+
+    const fileUrl = match[1];
+    const extension = fileUrl.split('.').pop()?.toLowerCase() || '';
+    const fileType =
+      extension === 'xlsx'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : extension === 'docx'
+          ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          : 'application/pdf';
+    const cleanedContent = rawText
+      .replace(match[0], '')
+      .replace('Đã xuất file Excel thành công.', '')
+      .replace('Đã tạo file Word thành công.', '')
+      .replace('Đã tạo file PDF thành công.', '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    return {
+      id: (Date.now() + 1).toString(),
+      content: cleanedContent || 'AI đã tạo file đính kèm.',
+      role: 'assistant',
+      timestamp: new Date(),
+      fileUrl,
+      fileType
+    };
   }
 
   async clearChatHistory(): Promise<void> {
@@ -515,19 +576,33 @@ export class AiAssistantService {
     }
   }
 
-  private async resolveHotelIdForAi(): Promise<string | null> {
-    const direct = this.authService.getHotelId();
-    if (direct) return direct;
+  private async resolveHotelIdForAi(overrideHotelId?: string | null): Promise<string | null> {
+    const fromOverride = this.normalizeId(overrideHotelId);
+    if (fromOverride) {
+      return fromOverride;
+    }
+
+    // Ưu tiên khách sạn đang chọn trên UI (đồng bộ với trang phòng / PMS)
+    const fromSession = this.normalizeId(this.sessionContext.getSelectedHotelId());
+    if (fromSession) {
+      return fromSession;
+    }
+
+    const direct = this.normalizeId(this.authService.getHotelId());
+    if (direct) {
+      return direct;
+    }
 
     const userId = this.authService.getUserId();
-    if (!userId) return null;
-    if (!this.apiUrl) return null;
+    if (!userId || !this.apiUrl) {
+      return null;
+    }
 
     try {
       const resp = await firstValueFrom(
         this.http.get<any>(`${this.apiUrl}/sessions/selected-hotel`, { params: { userId } })
       );
-      return resp?.selectedHotelId || null;
+      return this.normalizeId(resp?.selectedHotelId) || null;
     } catch (_) {
       return null;
     }

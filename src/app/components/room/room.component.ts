@@ -18,6 +18,7 @@ import { TransactionService } from '../../services/transaction.service';
 import { BookingModalComponent } from '../booking-modal/booking-modal.component';
 import { CalendarComponent } from '../calendar/calendar.component';
 import { AuthService } from '../../services/auth.service';
+import { UserService } from '../../services/user.service';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { CurrencyService } from '../../services/currency.service';
@@ -204,6 +205,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     private invoiceService: InvoiceService,
     private transactionService: TransactionService,
     public authService: AuthService,
+    private userService: UserService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private translate: TranslateService,
@@ -3940,37 +3942,73 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Kiểm tra quyền truy cập Settings
   canAccessSettings(): boolean {
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      return false;
+    }
+    return ['superadmin', 'admin', 'business', 'hotel', 'staff'].includes(user.role);
+  }
+
+  canManageSystemSettings(): boolean {
     return this.authService.isSuperAdmin() || this.authService.isAdmin();
   }
 
-  // Kiểm tra quyền truy cập Pricing Management
-  canAccessPricingManagement(): boolean {
-    return true; // Tất cả role đều có thể truy cập
+  getSettingsMenuLabel(): string {
+    return this.canManageSystemSettings() ? 'Cài đặt hệ thống' : 'Cài đặt phạm vi làm việc';
   }
 
-  // Kiểm tra quyền truy cập Electric Setting
+  getSettingsMenuDescription(): string {
+    return this.canManageSystemSettings()
+      ? 'Quản trị cấu hình chung'
+      : 'Xem hoặc chỉnh cài đặt theo quyền hiện tại';
+  }
+
+  getCurrentUserLabel(): string {
+    const user = this.authService.getCurrentUser();
+    return user?.fullName || user?.username || user?.email || 'Tài khoản';
+  }
+
+  canAccessPricingManagement(): boolean {
+    return true;
+  }
+
   canAccessElectricSetting(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness() || 
+    return this.authService.isSuperAdmin() ||
+           this.authService.isAdmin() ||
+           this.authService.isBusiness() ||
            this.authService.isHotelManager();
   }
 
-  // Navigate đến Settings
   navigateToSettings(): void {
-    this.router.navigate(['/admin/settings']);
+    if (this.canAccessSettings()) {
+      this.router.navigate(['/admin/settings']);
+    }
   }
 
-  // Navigate đến Pricing Management
   navigateToPricing(): void {
     this.router.navigate(['/admin/pricing-management']);
   }
 
-  // Navigate đến Electric Setting
   navigateToElectric(): void {
     this.router.navigate(['/admin/electric-setting']);
+  }
+
+  openFloorFilterModal(): void {
+    window.dispatchEvent(new CustomEvent('openAdminFloorFilter'));
+  }
+
+  openColumnsModal(): void {
+    window.dispatchEvent(new CustomEvent('openAdminColumnsModal'));
+  }
+
+  openProfile(): void {
+    this.router.navigate(['/admin/profile']);
+  }
+
+  logout(): void {
+    this.userService.clearCurrentUser();
+    this.authService.logout();
   }
 
   expandAllFloors(): void {

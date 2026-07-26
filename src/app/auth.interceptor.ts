@@ -62,6 +62,8 @@ export class AuthInterceptor implements HttpInterceptor {
 
         if (error.status === 401 && !isRefreshEndpoint) {
           if (isOnPublicRoute || isPublicApi) {
+            // Clear phiên chết trên trang public, không gọi logout() (tránh nhảy admin login)
+            this.authService.clearLocalSessionOnly();
             return throwError(() => error);
           }
           return this.authService.refreshAccessToken().pipe(

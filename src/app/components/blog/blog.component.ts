@@ -8,6 +8,7 @@ import { Blog } from '../blog-management/blog-management.component';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
+import { resolveBlogImageUrl } from '../../helpers/blog-image-url';
 
 @Component({
   selector: 'app-blog',
@@ -467,36 +468,7 @@ export class BlogComponent implements OnInit {
   apiBaseUrl = environment.apiUrl;
 
   getImageUrl(urlOrId: string | null | undefined): string {
-    if (!urlOrId) return '';
-
-    // 1. Kiểm tra xem có phải là link Google Drive dạng /file/d/ không
-    // Ví dụ: https://drive.google.com/file/d/1-1RqyFSOl2xlyp_VCjDUGgJecUDVYoDM/view
-    const driveRegex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
-    const match = urlOrId.match(driveRegex);
-
-    if (match && match[1]) {
-      const fileId = match[1];
-      // Trả về link trực tiếp (direct link) để thẻ <img> có thể render
-      return `https://drive.google.com/uc?export=view&id=${fileId}`;
-    }
-
-    // 2. Nếu là URL đầy đủ (http/https) khác, trả về nguyên bản
-    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
-      return urlOrId;
-    }
-
-    // 3. Ảnh blog lưu trong hotelapp assets (/assets/blog/...)
-    if (urlOrId.startsWith('/assets/')) {
-      return `${this.apiBaseUrl}${urlOrId}`;
-    }
-
-    // 4. Nếu là imageId hoặc path của hệ thống, thêm base URL
-    if (urlOrId.startsWith('/files/')) {
-      return `${this.apiBaseUrl}${urlOrId}`;
-    }
-
-    // 5. Nếu chỉ là ID, thêm /files/ prefix
-    return `${this.apiBaseUrl}/files/${urlOrId}`;
+    return resolveBlogImageUrl(urlOrId, this.apiBaseUrl);
   }
 }
 

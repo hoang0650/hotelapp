@@ -117,6 +117,27 @@
   min-width: 200px;
   max-width: 240px;
 }
+.ai-chatbox-hotel-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px 10px;
+  border-bottom: 1px solid #f5f5f5;
+  background: #fff;
+}
+.hotel-context-label {
+  font-size: 12px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+.hotel-context-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .ai-chatbox-title {
   font-size: 18px;
   font-weight: 600;

@@ -44,6 +44,8 @@ export class AuthService {
   private readonly sessionUserKey = 'phhotel_session_user';
 
   constructor(private http: HttpClient, private router: Router) {
+    // Phải chạy trước restore — iframe logout từ domain kia
+    this.consumeClearSessionRequest();
     this.restoreSessionFromStorage();
     this.refreshAccessToken().subscribe(() => {
       this.authResolved.next(true);
@@ -114,8 +116,16 @@ export class AuthService {
         }
         return this.hasValidStoredSession();
       }),
-      catchError(() => {
-        // Không xóa phiên sessionStorage nếu JWT vẫn còn hạn (cookie refresh lỗi tạm thời)
+      catchError((err) => {
+        const status = err?.status;
+        // Cookie refresh hết hạn / không còn → xóa session local (tránh JWT cũ trên phhotel.vn đẩy sang admin)
+        if (status === 401 || status === 403) {
+          this.inMemoryToken = null;
+          this.currentUserSubject.next(null);
+          this.clearSessionStorage();
+          return of(false);
+        }
+        // Lỗi mạng tạm thời: giữ phiên JWT còn hạn
         if (this.hasValidStoredSession()) {
           return of(true);
         }
@@ -164,6 +174,17 @@ export class AuthService {
     this.persistSession(token, user);
   }
 
+  /** Chỉ xóa phiên local, không redirect (dùng trên trang public khi 401). */
+  clearLocalSessionOnly(): void {
+    this.inMemoryToken = null;
+    this.currentUserSubject.next(null);
+    this.clearSessionStorage();
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('staff');
+    }
+  }
+
   logout(): void {
     if (this.isLoggingOut) return;
     this.isLoggingOut = true;
@@ -175,6 +196,7 @@ export class AuthService {
       localStorage.removeItem('staff');
     }
     this.clearSessionStorage();
+    this.clearPeerOriginSession();
 
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
@@ -186,9 +208,80 @@ export class AuthService {
     });
   }
 
+  /** Xóa sessionStorage trên domain còn lại (admin ↔ apex) — sessionStorage không chia sẻ cross-origin. */
+  private clearPeerOriginSession(): void {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return;
+
+    const protocol = window.location.protocol;
+    const port = window.location.port ? `:${window.location.port}` : '';
+
+    let peerHost: string | null = null;
+    if (hostname.startsWith('admin.')) {
+      peerHost = hostname.replace(/^admin\./, '');
+    } else if (hostname === 'phhotel.vn' || hostname === 'www.phhotel.vn') {
+      peerHost = 'admin.phhotel.vn';
+    } else {
+      return;
+    }
+
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.setAttribute('aria-hidden', 'true');
+      iframe.src = `${protocol}//${peerHost}${port}/?clear_session=1`;
+      document.body.appendChild(iframe);
+      window.setTimeout(() => {
+        try {
+          iframe.remove();
+        } catch {}
+      }, 4000);
+    } catch {}
+  }
+
+  /** Gọi sớm khi load trang với ?clear_session=1 (iframe từ logout ở domain kia). */
+  consumeClearSessionRequest(): boolean {
+    if (typeof window === 'undefined') return false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('clear_session') !== '1') {
+        return false;
+      }
+      this.inMemoryToken = null;
+      this.currentUserSubject.next(null);
+      this.clearSessionStorage();
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('user');
+        localStorage.removeItem('staff');
+      }
+      // Dọn query để không lặp lại khi user F5
+      params.delete('clear_session');
+      const nextQuery = params.toString();
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
+      window.history.replaceState({}, '', nextUrl);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private handleLogoutRedirect(): void {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
+      const pathname = window.location.pathname || '/';
+      const marketingPaths = ['/home', '/pricing', '/blog', '/contact', '/about-us', '/privacy-policy', '/terms-of-service'];
+      const isMarketingPage =
+        pathname === '/' ||
+        marketingPaths.some(p => pathname === p || pathname.startsWith(`${p}/`));
+
+      // Đang ở trang marketing công khai → chỉ clear session, không đẩy sang admin login
+      if (!hostname.startsWith('admin.') && isMarketingPage) {
+        this.isLoggingOut = false;
+        return;
+      }
+
       const protocol = window.location.protocol;
       const port = window.location.port ? `:${window.location.port}` : '';
 
@@ -298,21 +391,36 @@ clearCredentials(): void {
       window.location.href = `${protocol}//${adminSubdomain}${port}/admin/room`;
     };
 
-    // Nhận diện các trang public không yêu cầu token
-    const publicPaths = ['/login', '/signup', '/business-signup', '/forgot-password', '/unauthorized', '/notfound'];
-    const isPublicPath = publicPaths.some(p => pathname.startsWith(p)) || pathname.startsWith('/reset-password');
+    // Trang public / marketing: không ép sang admin hay /login
+    const publicPaths = [
+      '/login',
+      '/signup',
+      '/business-signup',
+      '/forgot-password',
+      '/unauthorized',
+      '/notfound',
+      '/home',
+      '/pricing',
+      '/blog',
+      '/contact',
+      '/about-us',
+      '/privacy-policy',
+      '/terms-of-service'
+    ];
+    const isPublicPath =
+      pathname === '/' ||
+      publicPaths.some(p => pathname === p || pathname.startsWith(`${p}/`)) ||
+      pathname.startsWith('/reset-password');
+
+    if (isPublicPath) {
+      return;
+    }
 
     const user = this.getCurrentUser();
     if (user) {
       if (!isAdminSubdomain) {
         redirectToAdmin();
       }
-      return;
-    }
-
-    // Nếu chưa đăng nhập và đã ở sẵn trang public (/login) thì DỪNG LẠI
-    // Không gọi API refreshAccessToken để chống vòng lặp 401
-    if (isPublicPath) {
       return;
     }
 

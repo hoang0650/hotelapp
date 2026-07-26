@@ -908,8 +908,8 @@
       <nz-alert
         *ngIf="sepayInitializing"
         nzType="warning"
-        nzMessage="Dang khoi tao giao dich thanh toan..."
-        nzDescription="Ma QR da san sang. He thong dang lien ket giao dich de tu dong xac nhan nhanh nhat."
+        nzMessage="Đang khởi tạo giao dịch thanh toán..."
+        nzDescription="Mã QR đã sẵn sàng. Hệ thống đang liên kết giao dịch để tự động xác nhận nhanh nhất."
         [nzShowIcon]="true"
         style="margin-bottom: 16px;">
       </nz-alert>
@@ -920,7 +920,22 @@
             {{ sepayAmount | number:'1.0-0' }} VNĐ
           </strong>
         </nz-descriptions-item>
-        <!-- Bỏ hiển thị mã thanh toán - webhook sẽ tự động nhận diện -->
+        <nz-descriptions-item *ngIf="sepayPaymentCode" nzTitle="Mã thanh toán / Nội dung CK">
+          <strong
+            style="font-size: 20px; letter-spacing: 1px; color: #1890ff; cursor: pointer;"
+            (click)="copySePayPaymentCode()"
+            title="Bấm để copy">
+            {{ sepayPaymentCode }}
+          </strong>
+          <button
+            nz-button
+            nzType="link"
+            nzSize="small"
+            (click)="copySePayPaymentCode()"
+            style="margin-left: 8px;">
+            Copy
+          </button>
+        </nz-descriptions-item>
         <nz-descriptions-item *ngIf="sepayBeneficiaryName" [nzTitle]="'ROOM_CONTENT_MODAL.SEPAY_BENEFICIARY_LABEL' | translate">
           <strong>{{ sepayBeneficiaryName }}</strong>
         </nz-descriptions-item>

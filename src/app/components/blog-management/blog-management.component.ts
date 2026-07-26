@@ -9,6 +9,7 @@ import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
+import { normalizeBlogImageForSave, resolveBlogImageUrl } from '../../helpers/blog-image-url';
 
 export interface BlogSection {
   title: string;
@@ -315,14 +316,16 @@ export class BlogManagementComponent implements OnInit {
     // Sử dụng content từ sections nếu có, nếu không dùng content cũ
     const finalContent = sections.length > 0 ? contentFromSections : formValue.content;
     
+    const imageForSave = normalizeBlogImageForSave(formValue.imageUrl || formValue.featuredImage);
+
     const blogData: Blog = {
       title: formValue.title,
       content: finalContent,
       sections: sections.length > 0 ? sections : undefined,
       excerpt: formValue.excerpt,
       status: formValue.status,
-      featuredImage: formValue.imageUrl || formValue.featuredImage,
-      imageUrl: formValue.imageUrl || formValue.featuredImage,
+      featuredImage: imageForSave,
+      imageUrl: imageForSave,
       tags: tagsArray,
       category: formValue.category
     };
@@ -499,21 +502,7 @@ export class BlogManagementComponent implements OnInit {
   };
 
   getImageUrl(urlOrId: string): string {
-    if (!urlOrId) return '';
-    // Nếu là URL đầy đủ (http/https), trả về nguyên
-    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
-      return urlOrId;
-    }
-    // Ảnh blog trong assets (hotelapp + API mirror)
-    if (urlOrId.startsWith('/assets/')) {
-      return `${this.apiBaseUrl}${urlOrId}`;
-    }
-    // Nếu là imageId hoặc path, thêm base URL
-    if (urlOrId.startsWith('/files/')) {
-      return `${this.apiBaseUrl}${urlOrId}`;
-    }
-    // Nếu chỉ là ID, thêm /files/ prefix
-    return `${this.apiBaseUrl}/files/${urlOrId}`;
+    return resolveBlogImageUrl(urlOrId, this.apiBaseUrl);
   }
 
   handleImageError(event: any): void {

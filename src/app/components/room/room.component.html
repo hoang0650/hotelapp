@@ -77,6 +77,60 @@
             <i nz-icon nzType="minus-circle" nzTheme="outline"></i>
             <span class="btn-text">{{ 'ROOM.EXPENSE' | translate }}</span>
           </button>
+
+          <button
+            nz-button
+            nzType="default"
+            nzSize="default"
+            class="action-btn settings-btn"
+            [nzBlock]="true"
+            nz-dropdown
+            [nzDropdownMenu]="roomSettingsMenu"
+            [nzTrigger]="'click'"
+            [nzPlacement]="'bottomRight'">
+            <i nz-icon nzType="setting" nzTheme="outline"></i>
+            <span class="btn-text">Cài đặt</span>
+          </button>
+          <nz-dropdown-menu #roomSettingsMenu="nzDropdownMenu">
+            <ul nz-menu nzSelectable class="settings-dropdown-menu">
+              <li nz-menu-item *ngIf="canAccessSettings()" (click)="navigateToSettings()">
+                <i nz-icon nzType="setting" nzTheme="outline"></i>
+                <span>{{ getSettingsMenuLabel() }}</span>
+                <small class="settings-item-note">{{ getSettingsMenuDescription() }}</small>
+              </li>
+              <li nz-menu-item *ngIf="canAccessPricingManagement()" (click)="navigateToPricing()">
+                <i nz-icon nzType="dollar" nzTheme="outline"></i>
+                <span>Quản lý gói đăng ký</span>
+              </li>
+              <li nz-menu-item *ngIf="canAccessElectricSetting()" (click)="navigateToElectric()">
+                <i nz-icon nzType="thunderbolt" nzTheme="outline"></i>
+                <span>Cài đặt điện</span>
+              </li>
+              <li nz-menu-divider></li>
+              <li nz-submenu nzTitle="Lọc phòng" nzIcon="filter">
+                <ul>
+                  <li nz-menu-item (click)="openFloorFilterModal()">
+                    <i nz-icon nzType="home" nzTheme="outline"></i>
+                    <span>Lọc theo tầng</span>
+                  </li>
+                  <li nz-menu-item (click)="openColumnsModal()">
+                    <i nz-icon nzType="appstore" nzTheme="outline"></i>
+                    <span>Số cột hiển thị</span>
+                  </li>
+                </ul>
+              </li>
+              <li nz-menu-divider></li>
+              <li nz-menu-item (click)="openProfile()">
+                <i nz-icon nzType="user" nzTheme="outline"></i>
+                <span>{{ 'NAVBAR.PROFILE' | translate }}</span>
+                <small class="settings-item-note">{{ getCurrentUserLabel() }}</small>
+              </li>
+              <li nz-menu-item class="logout-menu-item" (click)="logout()">
+                <i nz-icon nzType="logout" nzTheme="outline"></i>
+                <span>{{ 'NAVBAR.LOGOUT' | translate }}</span>
+              </li>
+            </ul>
+          </nz-dropdown-menu>
         </div>
       </div>
     </div>

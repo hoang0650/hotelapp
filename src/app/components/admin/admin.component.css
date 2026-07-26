@@ -155,6 +155,29 @@ nz-breadcrumb {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.header-settings-btn {
+  margin-left: auto;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  opacity: 0.85;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.header-settings-btn:hover {
+  opacity: 1;
+  transform: rotate(90deg);
+}
+
+.header-settings-btn i {
+  font-size: 18px;
 }
 
 /* ============ Content ============ */
@@ -221,31 +244,9 @@ nz-footer {
   color: #fff;
 }
 
-/* ============ Settings Button ============ */
+/* Settings button moved to breadcrumb / room action column — keep legacy class inert */
 .fixed-settings-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  top: auto;
-  z-index: 1000;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  opacity: 0.6;
-  transition: all 0.3s;
-}
-
-.fixed-settings-btn:hover {
-  opacity: 1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  transform: scale(1.1) rotate(90deg);
-}
-
-.fixed-settings-btn i {
-  font-size: 18px;
+  display: none !important;
 }
 
 /* ============ Settings Dropdown Menu ============ */
@@ -361,18 +362,6 @@ nz-footer {
     padding: 8px 16px;
   }
 
-  /* Adjust settings button */
-  .fixed-settings-btn {
-    bottom: 16px;
-    right: 16px;
-    width: 40px;
-    height: 40px;
-  }
-
-  .fixed-settings-btn i {
-    font-size: 16px;
-  }
-
   /* Mobile logo */
   .logo {
     height: 28px;
@@ -412,17 +401,6 @@ nz-footer {
     font-size: 11px;
   }
 
-  .fixed-settings-btn {
-    bottom: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-  }
-
-  .fixed-settings-btn i {
-    font-size: 14px;
-  }
-
   /* Sidebar becomes full width on small mobile */
   nz-sider {
     width: 85vw !important;
@@ -448,17 +426,6 @@ nz-footer {
   nz-sider {
     width: 90vw !important;
     left: -90vw;
-  }
-
-  .fixed-settings-btn {
-    bottom: 10px;
-    right: 10px;
-    width: 32px;
-    height: 32px;
-  }
-
-  .fixed-settings-btn i {
-    font-size: 13px;
   }
 }
 

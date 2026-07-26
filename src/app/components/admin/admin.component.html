@@ -145,13 +145,25 @@
       <nz-breadcrumb-item *ngFor="let breadcrumb of breadcrumbs">
         <a [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a>
       </nz-breadcrumb-item>
+
+      <!-- Settings trên header (tránh chồng AI chatbox góc dưới) -->
+      <button
+        *ngIf="!isRoomRoute"
+        class="header-settings-btn"
+        nz-button
+        nzType="default"
+        nzShape="circle"
+        nz-dropdown
+        [nzDropdownMenu]="settingsMenu"
+        [nzTrigger]="'click'"
+        [nzPlacement]="'bottomRight'"
+        title="Cài đặt">
+        <i nz-icon nzType="setting" nzTheme="outline"></i>
+      </button>
     </nz-breadcrumb>
 
-    <!-- Nút Settings cố định -->
-    <button class="fixed-settings-btn" nz-button nzType="default" nzShape="circle" nz-dropdown
-      [nzDropdownMenu]="settingsMenu" [nzTrigger]="'click'" [nzPlacement]="'bottomRight'" title="Cài đặt">
-      <i nz-icon nzType="setting" nzTheme="outline"></i>
-    </button>
+    <!-- Nút Settings dưới Phiếu chi — chỉ hiện trên /admin/room (room tự render) -->
+    <!-- Fixed bottom đã bỏ để không bị AI chatbox che -->
 
     <nz-content>
       <router-outlet></router-outlet>

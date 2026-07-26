@@ -109,6 +109,17 @@
 ::ng-deep .settings-dropdown-menu { min-width: 200px; }
 ::ng-deep .settings-dropdown-menu li { display: flex; align-items: center; gap: 8px; }
 ::ng-deep .settings-dropdown-menu i { font-size: 16px; }
+::ng-deep .settings-dropdown-menu .settings-item-note {
+  display: block;
+  width: 100%;
+  margin-left: 24px;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1.2;
+}
+::ng-deep .settings-dropdown-menu .logout-menu-item {
+  color: #cf1322 !important;
+}
 
 /* ============ Banner Stats (single-row) ============ */
 .banner-content-single-row {

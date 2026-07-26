@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router, NavigationEnd, Params } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -13,12 +13,14 @@ import { UserService } from '../../services/user.service';
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.css']
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, OnDestroy {
   // breadcrumbs: string[] = []; dành cho 1 breadcrumb
   breadcrumbs: Array<{ label: string, url: string }> = []; //dành cho route kiểu admin/hotel
   isCollapsed = false;
   isMobileMenuOpen = false;
   showModal: boolean = false;
+  /** Ẩn nút settings trên breadcrumb khi đang ở /admin/room (nút nằm dưới Phiếu chi). */
+  isRoomRoute = false;
   
   // Modal states cho lọc tầng và số cột
   isFloorFilterModalVisible = false;
@@ -37,6 +39,9 @@ export class AdminComponent implements OnInit {
     8: '8',
     12: '12'
   };
+
+  private readonly openFloorFilterHandler = () => this.openFloorFilterModal();
+  private readonly openColumnsHandler = () => this.openColumnsModal();
   
   constructor(
     private router: Router, 
@@ -76,7 +81,16 @@ export class AdminComponent implements OnInit {
       )
       .subscribe(breadcrumbs => {
         this.breadcrumbs = breadcrumbs;
+        this.isRoomRoute = this.router.url.split('?')[0] === '/admin/room';
       });
+    this.isRoomRoute = this.router.url.split('?')[0] === '/admin/room';
+    window.addEventListener('openAdminFloorFilter', this.openFloorFilterHandler);
+    window.addEventListener('openAdminColumnsModal', this.openColumnsHandler);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('openAdminFloorFilter', this.openFloorFilterHandler);
+    window.removeEventListener('openAdminColumnsModal', this.openColumnsHandler);
   }
 
   

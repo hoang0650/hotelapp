@@ -105,7 +105,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   
   // SePay payment
   showSePayModal = false;
-  // Bỏ sepayPaymentCode - không cần mã thanh toán nữa
+  sepayPaymentCode = '';
   sepayAmount = 0;
   sepayQrUrl = '';
   sepayBeneficiaryName = '';
@@ -122,6 +122,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   private pendingCheckoutCloseResult: any = null;
   private pendingCheckoutData: any = null;
   private pendingInvoiceData: any = null;
+  /** Prefetch mã CK khi user chọn chuyển khoản — checkout dùng lại ngay. */
+  private prefetchedSePay: {
+    amount: number;
+    roomId: string;
+    paymentHistoryId: string;
+    paymentCode: string;
+    createdAt: number;
+  } | null = null;
+  private prefetchSePayInFlight = false;
   
   // Định dạng hiển thị tiền Việt Nam (KHÔNG gắn "đ" vào formatter —
   // suffix trong formatter khiến nz-input-number mất chữ số khi đang gõ).
@@ -1518,6 +1527,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
     this.remainingAmount = this.totalPrice - this.advancePayment - totalDiscount;
 
+    // Prefetch mã CK nếu đang chọn chuyển khoản (không chặn UI)
+    if (
+      this.modalType === 'checkout' &&
+      this.normalizePaymentMethod(this.checkOutForm?.get('paymentMethod')?.value) === 'transfer' &&
+      this.remainingAmount > 0
+    ) {
+      this.prefetchSePayPaymentCode();
+    }
   }
 
   // Xử lý check-in
@@ -2475,7 +2492,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Ưu tiên: nếu có QR từ các nguồn business/hotel/manager/user thì hiển thị ngay
+    // Fast path: đã có QR hoặc business/pricing sẵn → hiện modal ngay, không gọi lại hotel API
     const manager = (this.businessInfo && typeof this.businessInfo.managerId === 'object') ? this.businessInfo.managerId : null;
     const isQrAvailable = !!(
       this.businessOwner?.bankAccount?.qrPaymentUrl ||
@@ -2483,39 +2500,54 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       manager?.bankAccount?.qrPaymentUrl ||
       this.currentUser?.bankAccount?.qrPaymentUrl
     );
+
     if (isQrAvailable) {
-      this.handleTransferPayment(amount, invoiceData, checkoutData);
+      this.handleTransferPayment(normalizedAmount, invoiceData, checkoutData);
       return;
     }
-    
-    // Nếu không có QR sẵn có, kiểm tra hotel settings và pricing package
+
+    // Đã có pricingPackage trong memory → quyết định ngay
+    if (this.businessInfo?.pricingPackage) {
+      const hasQRFeature = !!this.businessInfo.pricingPackage.qrPaymentFeature;
+      if (hasQRFeature) {
+        this.handleTransferPayment(normalizedAmount, invoiceData, checkoutData);
+      } else {
+        checkoutData.paymentStatus = 'paid';
+        invoiceData.paymentStatus = 'paid';
+        this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
+      }
+      return;
+    }
+
+    // Fallback: chỉ khi chưa có dữ liệu sẵn mới gọi hotel API
     if (this.roomData?.hotelId) {
       this.hotelService.getHotelById(this.roomData.hotelId).subscribe({
         next: (hotel: any) => {
           const hotelSettings = hotel.settings || {};
           const enableQRFromSettings = hotelSettings.enableQRPaymentForBankTransfer || false;
-          
+
           if (hotel.businessId) {
-            this.checkPricingPackageAndHandlePayment(hotel.businessId, enableQRFromSettings, amount, invoiceData, checkoutData);
+            this.checkPricingPackageAndHandlePayment(
+              hotel.businessId,
+              enableQRFromSettings,
+              normalizedAmount,
+              invoiceData,
+              checkoutData
+            );
+          } else if (enableQRFromSettings) {
+            this.handleTransferPayment(normalizedAmount, invoiceData, checkoutData);
           } else {
-            if (enableQRFromSettings) {
-              this.handleTransferPayment(amount, invoiceData, checkoutData);
-            } else {
-              checkoutData.paymentStatus = 'paid';
-              invoiceData.paymentStatus = 'paid';
-              this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
-            }
+            checkoutData.paymentStatus = 'paid';
+            invoiceData.paymentStatus = 'paid';
+            this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
           }
         },
-        error: (error) => {
-          console.error('Error loading hotel settings:', error);
-          // Fallback: thử xử lý transfer payment (sẽ tự động checkout trực tiếp nếu không có QR)
-          this.handleTransferPayment(amount, invoiceData, checkoutData);
+        error: () => {
+          this.handleTransferPayment(normalizedAmount, invoiceData, checkoutData);
         }
       });
     } else {
-      // Không có hotelId, xử lý transfer payment (sẽ tự động checkout trực tiếp nếu không có QR)
-      this.handleTransferPayment(amount, invoiceData, checkoutData);
+      this.handleTransferPayment(normalizedAmount, invoiceData, checkoutData);
     }
   }
   
@@ -2671,106 +2703,248 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Lấy userId từ currentUser
     const userId = this.currentUser?._id || this.currentUser?.id;
-    
     if (!userId) {
       this.message.error('Không tìm thấy thông tin người dùng');
       return;
     }
-    
-    // ƯU TIÊN 1: Lấy QR code từ business owner (chủ doanh nghiệp)
-    let qrPaymentUrl = '';
-    let beneficiaryName = '';
-    let bankName = '';
-    let accountNumber = '';
-    
-    if (this.businessOwner?.bankAccount?.qrPaymentUrl) {
-      // Business owner có QR code
-      qrPaymentUrl = this.businessOwner.bankAccount.qrPaymentUrl;
-      beneficiaryName = this.businessOwner.bankAccount.beneficiaryName || this.businessOwner.bankAccount.accountHolderName || '';
-      bankName = this.businessOwner.bankAccount.bankName || '';
-      accountNumber = this.businessOwner.bankAccount.accountNumber || '';
-      console.log('Sử dụng QR code từ business owner (chủ doanh nghiệp):', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
-    } else if (this.hotelBankAccount?.qrPaymentUrl) {
-      // ƯU TIÊN 2: Lấy QR code từ hotel (doanh nghiệp)
-      qrPaymentUrl = this.hotelBankAccount.qrPaymentUrl;
-      beneficiaryName = this.hotelBankAccount.beneficiaryName || this.hotelBankAccount.accountHolderName || '';
-      bankName = this.hotelBankAccount.bankName || '';
-      accountNumber = this.hotelBankAccount.accountNumber || '';
-      console.log('Sử dụng QR code từ hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
-    } else {
-      // ƯU TIÊN 3: Lấy QR code từ manager của hotel (nếu có)
-      const manager = this.businessInfo?.managerId;
-      if (manager && typeof manager === 'object' && manager.bankAccount?.qrPaymentUrl) {
-        qrPaymentUrl = manager.bankAccount.qrPaymentUrl;
-        beneficiaryName = manager.bankAccount.beneficiaryName || manager.bankAccount.accountHolderName || '';
-        bankName = manager.bankAccount.bankName || '';
-        accountNumber = manager.bankAccount.accountNumber || '';
-        console.log('Sử dụng QR code từ manager của hotel:', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
-      } else {
-        // ƯU TIÊN 4: Lấy QR code từ user hiện tại (admin/staff của hotel)
-        qrPaymentUrl = this.currentUser?.bankAccount?.qrPaymentUrl || '';
-        beneficiaryName = this.currentUser?.bankAccount?.beneficiaryName || this.currentUser?.bankAccount?.accountHolderName || '';
-        bankName = this.currentUser?.bankAccount?.bankName || '';
-        accountNumber = this.currentUser?.bankAccount?.accountNumber || '';
-        console.log('Sử dụng QR code từ user hiện tại (admin/staff):', { qrPaymentUrl, beneficiaryName, bankName, accountNumber });
-      }
-    }
-    
-    // Nếu không có QR code, bỏ qua modal và checkout trực tiếp
-    if (!qrPaymentUrl) {
-      console.log('Không có QR code, bỏ qua modal và checkout trực tiếp');
+
+    const bank = this.resolveBankAccountForQr();
+    if (!bank.qrPaymentUrl) {
       checkoutData.paymentStatus = 'paid';
       invoiceData.paymentStatus = 'paid';
       this.proceedWithCheckoutDirectly(checkoutData, invoiceData);
       return;
     }
 
-    this.prepareSePayModalState(amount, qrPaymentUrl, beneficiaryName, bankName, accountNumber, checkoutData, invoiceData);
-    
-    // Tạo payment history SePay
-    // Gọi trực tiếp API với roomId và roomNumber
+    // Hiện QR + mã CK ngay (dùng prefetch hoặc tạo mã local tức thì)
+    const reused = this.takePrefetchedSePay(normalizedAmount);
+    const paymentCode = reused?.paymentCode || this.generateLocalSePayPaymentCode();
+    this.sepayPaymentCode = paymentCode;
+
+    this.prepareSePayModalState(
+      normalizedAmount,
+      bank.qrPaymentUrl,
+      bank.beneficiaryName,
+      bank.bankName,
+      bank.accountNumber,
+      checkoutData,
+      invoiceData
+    );
+    this.sepayPaymentCode = paymentCode;
+
+    if (reused?.paymentHistoryId) {
+      this.sepayPaymentHistoryId = reused.paymentHistoryId;
+      this.sepayInitializing = false;
+      this.startPaymentStatusPolling();
+      return;
+    }
+
+    this.isLoading = false;
+    this.sepayInitializing = true;
+
     const payload = {
       userId: userId,
       amount: normalizedAmount,
       currency: 'VND',
+      orderInvoiceNumber: paymentCode,
       description: `Thanh toán phòng ${this.roomData.roomNumber} - ${invoiceData.customerName || 'Khách lẻ'}`,
       roomId: this.roomData._id,
       roomNumber: this.roomData.roomNumber
     };
-    
-    this.isLoading = true;
-    this.sepayInitializing = true;
+
     this.sepayService.createPaymentHistoryForRoom(payload).subscribe({
       next: (response: any) => {
-        this.isLoading = false;
         this.sepayInitializing = false;
-        if (response.success) {
-          this.sepayPaymentHistoryId = response.paymentHistoryId || ''; // Lưu paymentHistoryId để kiểm tra trạng thái
-          if (!this.showSePayModal) {
-            return;
+        if (response?.success) {
+          this.sepayPaymentHistoryId = response.paymentHistoryId || '';
+          if (response.paymentCode) {
+            this.sepayPaymentCode = response.paymentCode;
           }
-          this.startPaymentStatusPolling();
+          this.prefetchedSePay = {
+            amount: normalizedAmount,
+            roomId: String(this.roomData._id),
+            paymentHistoryId: String(this.sepayPaymentHistoryId || ''),
+            paymentCode: this.sepayPaymentCode,
+            createdAt: Date.now()
+          };
+          if (this.showSePayModal) {
+            this.startPaymentStatusPolling();
+          }
         } else {
           this.showSePayModal = false;
           this.resetSePayTransactionState();
-          this.message.error(response.error || 'Có lỗi xảy ra khi tạo payment history');
-          // Vẫn tiếp tục checkout
+          this.message.error(response?.error || 'Có lỗi xảy ra khi tạo payment history');
           this.proceedWithCheckout(checkoutData, invoiceData);
         }
       },
       error: (error: any) => {
-        this.isLoading = false;
         this.sepayInitializing = false;
         console.error('Error creating SePay payment history:', error);
         this.showSePayModal = false;
         this.resetSePayTransactionState();
         this.message.error('Có lỗi xảy ra khi tạo payment history. Vui lòng thử lại.');
-        // Vẫn tiếp tục checkout
         this.proceedWithCheckout(checkoutData, invoiceData);
       }
     });
+  }
+
+  private resolveBankAccountForQr(): {
+    qrPaymentUrl: string;
+    beneficiaryName: string;
+    bankName: string;
+    accountNumber: string;
+  } {
+    if (this.businessOwner?.bankAccount?.qrPaymentUrl) {
+      const ba = this.businessOwner.bankAccount;
+      return {
+        qrPaymentUrl: ba.qrPaymentUrl,
+        beneficiaryName: ba.beneficiaryName || ba.accountHolderName || '',
+        bankName: ba.bankName || '',
+        accountNumber: ba.accountNumber || ''
+      };
+    }
+    if (this.hotelBankAccount?.qrPaymentUrl) {
+      const ba = this.hotelBankAccount;
+      return {
+        qrPaymentUrl: ba.qrPaymentUrl,
+        beneficiaryName: ba.beneficiaryName || ba.accountHolderName || '',
+        bankName: ba.bankName || '',
+        accountNumber: ba.accountNumber || ''
+      };
+    }
+    const manager = this.businessInfo?.managerId;
+    if (manager && typeof manager === 'object' && manager.bankAccount?.qrPaymentUrl) {
+      const ba = manager.bankAccount;
+      return {
+        qrPaymentUrl: ba.qrPaymentUrl,
+        beneficiaryName: ba.beneficiaryName || ba.accountHolderName || '',
+        bankName: ba.bankName || '',
+        accountNumber: ba.accountNumber || ''
+      };
+    }
+    const ba = this.currentUser?.bankAccount || {};
+    return {
+      qrPaymentUrl: ba.qrPaymentUrl || '',
+      beneficiaryName: ba.beneficiaryName || ba.accountHolderName || '',
+      bankName: ba.bankName || '',
+      accountNumber: ba.accountNumber || ''
+    };
+  }
+
+  /** Format: PHG + 6-8 chữ số (khớp backend generateSePayPaymentCode). */
+  private generateLocalSePayPaymentCode(): string {
+    const length = 6 + Math.floor(Math.random() * 3); // 6..8
+    const min = Math.pow(10, length - 1);
+    const max = Math.pow(10, length) - 1;
+    const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+    return `PHG${randomNumber}`;
+  }
+
+  private getRemainingAmountForPrefetch(): number {
+    // Ưu tiên remainingAmount đã tính sẵn
+    if (Number.isFinite(this.remainingAmount) && this.remainingAmount > 0) {
+      return Math.max(0, Number(this.remainingAmount));
+    }
+    const total = Number(this.totalPrice) || 0;
+    const advance =
+      Number(this.checkOutForm?.get('advancePayment')?.value) ||
+      Number(this.advancePayment) ||
+      0;
+    const discount =
+      this.initialDiscount + (Number(this.checkOutForm?.get('discount')?.value) || 0);
+    return Math.max(0, total - advance - discount);
+  }
+
+  /** Khi chọn chuyển khoản: tạo mã + payment history trước, checkout chỉ hiện QR. */
+  private prefetchSePayPaymentCode(): void {
+    const amount = this.getRemainingAmountForPrefetch();
+    const roomId = String(this.roomData?._id || '');
+    const userId = this.currentUser?._id || this.currentUser?.id;
+
+    if (!roomId || !userId || amount <= 0) {
+      this.prefetchedSePay = null;
+      this.sepayPaymentCode = '';
+      return;
+    }
+
+    // Đã có prefetch còn hạn + đúng số tiền
+    if (
+      this.prefetchedSePay &&
+      this.prefetchedSePay.roomId === roomId &&
+      this.prefetchedSePay.amount === amount &&
+      Date.now() - this.prefetchedSePay.createdAt < 5 * 60 * 1000
+    ) {
+      this.sepayPaymentCode = this.prefetchedSePay.paymentCode;
+      return;
+    }
+
+    if (this.prefetchSePayInFlight) {
+      return;
+    }
+
+    const paymentCode = this.generateLocalSePayPaymentCode();
+    this.sepayPaymentCode = paymentCode; // hiện ngay trên UI nếu cần
+    this.prefetchSePayInFlight = true;
+
+    this.sepayService
+      .createPaymentHistoryForRoom({
+        userId,
+        amount,
+        currency: 'VND',
+        orderInvoiceNumber: paymentCode,
+        description: `Thanh toán phòng ${this.roomData.roomNumber}`,
+        roomId,
+        roomNumber: this.roomData.roomNumber
+      })
+      .subscribe({
+        next: (response: any) => {
+          this.prefetchSePayInFlight = false;
+          if (response?.success) {
+            this.prefetchedSePay = {
+              amount,
+              roomId,
+              paymentHistoryId: String(response.paymentHistoryId || ''),
+              paymentCode: String(response.paymentCode || paymentCode),
+              createdAt: Date.now()
+            };
+            this.sepayPaymentCode = this.prefetchedSePay.paymentCode;
+          }
+        },
+        error: () => {
+          this.prefetchSePayInFlight = false;
+          // Giữ mã local để vẫn hiện nhanh; checkout sẽ tạo lại nếu cần
+          this.prefetchedSePay = {
+            amount,
+            roomId,
+            paymentHistoryId: '',
+            paymentCode,
+            createdAt: Date.now()
+          };
+        }
+      });
+  }
+
+  private takePrefetchedSePay(amount: number): {
+    paymentHistoryId: string;
+    paymentCode: string;
+  } | null {
+    const roomId = String(this.roomData?._id || '');
+    const cached = this.prefetchedSePay;
+    if (
+      !cached ||
+      cached.roomId !== roomId ||
+      cached.amount !== amount ||
+      Date.now() - cached.createdAt > 5 * 60 * 1000
+    ) {
+      return null;
+    }
+    // Dùng 1 lần
+    this.prefetchedSePay = null;
+    return {
+      paymentHistoryId: cached.paymentHistoryId,
+      paymentCode: cached.paymentCode
+    };
   }
   
   /**
@@ -4044,7 +4218,22 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       .subscribe((val) => {
         this.advancePayment = Number(val) || 0;
         this.calculateTotalPrice();
+        // Đổi số tiền → prefetch lại mã CK nếu đang chọn chuyển khoản
+        if (this.normalizePaymentMethod(this.checkOutForm.get('paymentMethod')?.value) === 'transfer') {
+          this.prefetchSePayPaymentCode();
+        }
     });
+
+    this.checkOutForm.get('paymentMethod')?.valueChanges
+      .pipe(distinctUntilChanged())
+      .subscribe((method) => {
+        if (this.normalizePaymentMethod(method) === 'transfer') {
+          this.prefetchSePayPaymentCode();
+        } else {
+          this.prefetchedSePay = null;
+          this.sepayPaymentCode = '';
+        }
+      });
   }
   
   private getOcrSourceData(ocrData: any): Record<string, any> {
@@ -4150,88 +4339,58 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Lưu thông tin khách và tiền đặt trước (giữ lại để tương thích)
+  // Lưu thông tin khách và tiền đặt trước — optimistic (UI phản hồi ngay)
   saveGuestInfo(): void {
     if (!this.checkOutForm) {
       console.error('checkOutForm is not initialized');
       return;
     }
-    
+
     if (!this.roomData || !this.roomData._id) {
       this.message.error('Không tìm thấy thông tin phòng.');
       return;
     }
-    
+
+    if (this.isSaving) {
+      return;
+    }
+
     this.isSaving = true;
-    
-    // Lấy giá trị trực tiếp từ form control để đảm bảo lấy đúng
+
     const guestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
-    
-    // Lấy giá trị từ form control, sử dụng getRawValue() nếu form bị disable
-    const guestInfo = guestInfoFormGroup ? 
-      (guestInfoFormGroup.disabled ? guestInfoFormGroup.getRawValue() : guestInfoFormGroup.value) : 
-      (this.checkOutForm.get('guestInfo')?.value || {});
-    
-    // Lấy guestSource trực tiếp từ form control để đảm bảo lấy đúng
+    const guestInfo = guestInfoFormGroup
+      ? (guestInfoFormGroup.disabled ? guestInfoFormGroup.getRawValue() : guestInfoFormGroup.value)
+      : (this.checkOutForm.get('guestInfo')?.value || {});
+
     const guestSourceControl = guestInfoFormGroup?.get('guestSource');
-    const guestSourceValue = guestSourceControl ? 
-      (guestSourceControl.disabled ? guestSourceControl.getRawValue() : guestSourceControl.value) : 
-      (guestInfo.guestSource || null);
-    
-    // Đảm bảo advancePayment luôn là số
+    const guestSourceValue = guestSourceControl
+      ? (guestSourceControl.disabled ? guestSourceControl.getRawValue() : guestSourceControl.value)
+      : (guestInfo.guestSource || null);
+
     const advancePayment = Number(this.checkOutForm.get('advancePayment')?.value) || 0;
-    
     const advancePaymentMethodControl = this.checkOutForm.get('advancePaymentMethod');
     const advancePaymentMethod = advancePaymentMethodControl
       ? ((advancePaymentMethodControl.disabled ? advancePaymentMethodControl.getRawValue() : advancePaymentMethodControl.value) || 'cash')
       : 'cash';
-    
-    // Lấy giá trị phụ thu và khuyến mãi từ form checkout (chỉ giá trị người dùng nhập thêm)
-    // Form checkout bắt đầu từ 0, không bao gồm giá trị từ check-in event
+
     const checkoutCharges = Number(this.checkOutForm.get('additionalCharges')?.value) || 0;
     const checkoutDiscount = Number(this.checkOutForm.get('discount')?.value) || 0;
-    
-    // Tính tổng phụ thu và khuyến mãi (cộng dồn, không ghi đè)
-    // initialCharges và initialDiscount đã được set khi load dữ liệu từ check-in event
-    // Khi lưu, cộng thêm giá trị người dùng nhập vào form checkout
-    // Khi mở lại modal, initialCharges và initialDiscount sẽ được load lại từ RoomEvent (đã bao gồm cả lần nhập trước)
     const additionalCharges = this.initialCharges + checkoutCharges;
     const discount = this.initialDiscount + checkoutDiscount;
-    
-    // Lấy rateType từ form checkout (ưu tiên từ form, nếu không có thì lấy từ event)
-    const rateType = this.checkOutForm?.get('rateType')?.value || 
-                     (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) || 
-                     'hourly';
-
+    const rateType =
+      this.checkOutForm?.get('rateType')?.value ||
+      (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) ||
+      'hourly';
     const notes = this.checkOutForm?.get('notes')?.value || this.initialNotes || '';
-    
-    // Lấy guestSource từ form, nếu không có thì lấy từ events
+
     let guestSource = guestSourceValue || 'walkin';
     if (!guestSourceValue && this.roomData.events && this.roomData.events.length > 0) {
-      // Thử lấy từ lastCheckinEvent (chỉ lấy event chưa checkout)
       const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
       if (checkinEvents.length > 0 && checkinEvents[0].guestInfo?.guestSource) {
         guestSource = checkinEvents[0].guestInfo.guestSource;
       }
     }
-    
-    console.log('Saving guest info:', { 
-      guestInfoFormGroupValue: guestInfoFormGroup?.value,
-      guestInfoFormGroupRawValue: guestInfoFormGroup?.getRawValue(),
-      guestInfo: guestInfo,
-      guestSourceControl: guestSourceControl?.value,
-      guestSourceControlRaw: guestSourceControl?.getRawValue(),
-      guestSourceValue: guestSourceValue,
-      finalGuestSource: guestSource,
-      rateType: rateType, // Log rateType
-      advancePayment,
-      additionalCharges,
-      discount,
-      selectedServices: this.selectedServices, // Log selectedServices
-      roomId: this.roomData._id 
-    });
-    
-    // Đảm bảo tên khách mặc định là "Khách lẻ" nếu không nhập và đảm bảo đầy đủ các trường
+
     const updatedGuestInfo = {
       name: guestInfo.name || 'Khách lẻ',
       idNumber: guestInfo.idNumber || '',
@@ -4241,15 +4400,81 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       address: guestInfo.address || '',
       guestSource: guestSource
     };
-    
-    console.log('Updated guestInfo for save:', updatedGuestInfo);
-    
-    let checkinData: any = {
+
+    const previousAdvancePayment =
+      this.listData && this.listData.length > 0 ? Number(this.listData[0].advancePayment) || 0 : 0;
+
+    // 1) Cập nhật local ngay — UI cảm giác tức thì
+    this.initialNotes = notes;
+    this.initialCharges = additionalCharges;
+    this.initialDiscount = discount;
+    this.advancePayment = advancePayment;
+
+    if (this.listData && this.listData.length > 0) {
+      this.listData[0].guestInfo = updatedGuestInfo;
+      this.listData[0].advancePayment = advancePayment;
+      this.listData[0].advancePaymentMethod = advancePaymentMethod;
+      this.listData[0].rateType = rateType;
+      this.listData[0].additionalCharges = additionalCharges;
+      this.listData[0].discount = discount;
+      this.listData[0].notes = notes;
+      this.listData[0].selectedServices = [...(this.selectedServices || [])];
+    }
+
+    if (guestInfoFormGroup) {
+      if (guestInfoFormGroup.disabled) {
+        guestInfoFormGroup.enable({ emitEvent: false });
+      }
+      guestInfoFormGroup.patchValue(
+        {
+          name: updatedGuestInfo.name,
+          idNumber: updatedGuestInfo.idNumber,
+          tax_code: updatedGuestInfo.tax_code || '',
+          phone: updatedGuestInfo.phone,
+          email: updatedGuestInfo.email,
+          address: updatedGuestInfo.address,
+          guestSource: updatedGuestInfo.guestSource
+        },
+        { emitEvent: false }
+      );
+    }
+
+    this.checkOutForm.patchValue(
+      {
+        advancePayment: advancePayment,
+        rateType: rateType,
+        notes: notes
+      },
+      { emitEvent: false }
+    );
+
+    this.calculateTotalPrice();
+    this.message.success('Đã lưu thông tin khách.');
+    this.isSaving = false;
+
+    // Đóng modal ngay, không chờ API
+    if (this.modalRef) {
+      this.modalRef.close({
+        success: true,
+        action: 'save_guest_info',
+        roomId: this.roomData._id
+      });
+    }
+
+    // Emit sơ đồ phòng ngay (không chờ getRoomById)
+    this.emitRoomDataUpdated('checkin', { roomId: this.roomData._id, force: false, delayMs: 0 });
+
+    // 2) Persist nền: Redis + API + phiếu thu
+    const hotelId = this.normalizeObjectId(
+      this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId
+    );
+    const checkinData: any = {
       roomId: this.roomData._id,
       roomNumber: this.roomData.roomNumber,
-      checkinTime: (this.listData && this.listData.length > 0 && this.listData[0]?.checkinTime)
-        ? this.listData[0].checkinTime
-        : new Date(),
+      checkinTime:
+        this.listData && this.listData.length > 0 && this.listData[0]?.checkinTime
+          ? this.listData[0].checkinTime
+          : new Date(),
       guestInfo: updatedGuestInfo,
       advancePayment: advancePayment,
       advancePaymentMethod: advancePaymentMethod,
@@ -4260,106 +4485,58 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       selectedServices: this.selectedServices || []
     };
 
-    // Lưu vào Redis
-    const hotelId = this.normalizeObjectId(this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
     if (hotelId) {
       this.apiService.saveCheckinData(hotelId, this.roomData._id, checkinData).subscribe({
-        next: () => console.log('[Redis] Checkin data saved'),
         error: (err) => console.error('[Redis] Error saving checkin data:', err)
       });
     }
-    
-    const previousAdvancePayment = (this.listData && this.listData.length > 0) ? (Number(this.listData[0].advancePayment) || 0) : 0;
 
-    this.roomsService.updateRoomCheckinInfo(
-      this.roomData._id,
-      updatedGuestInfo,
+    this.createAdvancePaymentIncomeIfNeeded(
       advancePayment,
-      rateType,
-      additionalCharges,
-      discount,
-      this.selectedServices,
+      previousAdvancePayment,
       advancePaymentMethod,
-      notes
-    ).subscribe({
-      next: (response) => {
-        console.log('Update checkin info response:', response);
-        this.message.success('Đã lưu thông tin khách và tiền đặt trước.');
+      updatedGuestInfo
+    );
 
-        this.initialNotes = notes;
-        this.createAdvancePaymentIncomeIfNeeded(advancePayment, previousAdvancePayment, advancePaymentMethod, updatedGuestInfo);
-        this.isSaving = false;
-
-        if (this.modalRef) {
-          setTimeout(() => {
-            this.modalRef.close();
-          }, 500);
+    this.roomsService
+      .updateRoomCheckinInfo(
+        this.roomData._id,
+        updatedGuestInfo,
+        advancePayment,
+        rateType,
+        additionalCharges,
+        discount,
+        this.selectedServices,
+        advancePaymentMethod,
+        notes
+      )
+      .subscribe({
+        next: () => {
+          // Soft refresh nền — không chặn UI
+          this.roomsService
+            .getRoomById(this.roomData._id, { limit: 1000, excludeCheckedOut: true })
+            .subscribe({
+              next: (updatedRoom) => {
+                this.roomData = updatedRoom;
+                this.emitRoomDataUpdated('checkin', {
+                  roomId: this.roomData?._id,
+                  force: false,
+                  delayMs: 0
+                });
+              },
+              error: () => {
+                /* đã emit trước đó */
+              }
+            });
+        },
+        error: (err) => {
+          console.error('Error updating checkin info:', err);
+          this.message.warning(
+            'Đã lưu tạm trên máy, nhưng đồng bộ server lỗi: ' +
+              (err.error?.message || err.message || 'không xác định')
+          );
         }
-
-        if (this.listData && this.listData.length > 0) {
-          this.listData[0].guestInfo = updatedGuestInfo;
-          this.listData[0].advancePayment = advancePayment;
-          this.listData[0].advancePaymentMethod = advancePaymentMethod;
-          this.listData[0].rateType = rateType;
-          this.listData[0].additionalCharges = additionalCharges;
-          this.listData[0].discount = discount;
-          this.listData[0].notes = notes;
-          this.advancePayment = advancePayment;
-        }
-
-        this.initialCharges = additionalCharges;
-        this.initialDiscount = discount;
-
-        const updatedGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
-        if (updatedGuestInfoFormGroup) {
-          if (updatedGuestInfoFormGroup.disabled) {
-            updatedGuestInfoFormGroup.enable();
-          }
-          updatedGuestInfoFormGroup.patchValue({
-            name: updatedGuestInfo.name,
-            idNumber: updatedGuestInfo.idNumber,
-            tax_code: updatedGuestInfo.tax_code || '',
-            phone: updatedGuestInfo.phone,
-            email: updatedGuestInfo.email,
-            address: updatedGuestInfo.address
-          }, { emitEvent: false });
-          const updatedGuestSourceControl = updatedGuestInfoFormGroup.get('guestSource');
-          if (updatedGuestSourceControl) {
-            updatedGuestSourceControl.setValue(updatedGuestInfo.guestSource, { emitEvent: true });
-          }
-        }
-
-        this.checkOutForm.patchValue({
-          advancePayment: advancePayment,
-          rateType: rateType
-        }, { emitEvent: false });
-
-        setTimeout(() => {
-          this.calculateTotalPrice();
-        }, 100);
-
-        setTimeout(() => {
-          this.roomsService.getRoomById(this.roomData._id, {
-            limit: 1000,
-            excludeCheckedOut: true
-          }).subscribe({
-            next: (updatedRoom) => {
-              this.roomData = updatedRoom;
-              this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, force: false, delayMs: 100 });
-            },
-            error: (err) => {
-              console.error('Error reloading room:', err);
-              this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, force: false, delayMs: 100 });
-            }
-          });
-        }, 300);
-      },
-      error: (err) => {
-        console.error('Error updating checkin info:', err);
-        this.message.warning('Lỗi khi cập nhật backend: ' + (err.error?.message || err.message));
-        this.isSaving = false;
-      }
-    });
+      });
   }
 
   private createAdvancePaymentIncomeIfNeeded(
@@ -4516,8 +4693,20 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.paymentSuccessHandled = false;
     this.activeSePayTransactionToken = '';
     this.sepayPaymentHistoryId = '';
+    this.sepayPaymentCode = '';
     this.pendingCheckoutData = null;
     this.pendingInvoiceData = null;
+  }
+
+  copySePayPaymentCode(): void {
+    const code = String(this.sepayPaymentCode || '').trim();
+    if (!code || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      return;
+    }
+    navigator.clipboard.writeText(code).then(
+      () => this.message.success('Đã copy mã thanh toán'),
+      () => this.message.warning('Không copy được mã thanh toán')
+    );
   }
 
   private emitRoomDataUpdated(
