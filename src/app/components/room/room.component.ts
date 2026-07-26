@@ -1691,6 +1691,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       return 'cash';
     };
 
+    const selectedHotel = this.selectedHotelId
+      ? this.hotels.find(h => h._id === this.selectedHotelId)
+      : null;
     const invoiceData = {
         invoiceNumber: item._id || new Date().getTime().toString(),
         date: item.date || new Date(),
@@ -1705,7 +1708,14 @@ export class RoomComponent implements OnInit, OnDestroy {
         totalAmount: item.totalAmount || item.amount || 0,
         paymentMethod: normalizePaymentMethod(item.paymentMethod || 'cash'),
         hotelId: this.selectedHotelId ?? undefined,
-        businessName: this.selectedHotelId ? this.hotels.find(h => h._id === this.selectedHotelId)?.name : 'Khách sạn',
+        businessName: selectedHotel?.name || 'Khách sạn',
+        hotelInfo: selectedHotel || undefined,
+        business_address: selectedHotel
+          ? (typeof (selectedHotel as any).address === 'string'
+            ? (selectedHotel as any).address
+            : [(selectedHotel as any).address?.street, (selectedHotel as any).address?.city].filter(Boolean).join(', '))
+          : '',
+        phoneNumber: (selectedHotel as any)?.contactInfo?.phone || (selectedHotel as any)?.phone || ''
     };
     this.invoiceService.showInvoiceModal(invoiceData);
   }
@@ -1982,7 +1992,7 @@ export class RoomComponent implements OnInit, OnDestroy {
             if (!this.isModalOpen) {
               this.showRoomHistory(true);
             }
-          }, 900);
+          }, 200);
           return;
         }
 

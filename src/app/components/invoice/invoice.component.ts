@@ -460,6 +460,14 @@ export class InvoiceComponent implements OnInit {
   
   // Load thông tin khách sạn từ database
   loadBusinessInfo(): void {
+    // Ưu tiên businessInfo truyền từ modal checkout (đã có sẵn → mở hóa đơn tức thì)
+    if (this.businessInfo && (this.businessInfo.name || this.businessInfo.legalName)) {
+      this.hotelInfo = this.businessInfo;
+      this.updateInvoiceDataWithHotelInfo(this.businessInfo);
+      this.checkInvoicePermissions(this.businessInfo);
+      return;
+    }
+
     // Nếu đã có hotelInfo từ data, sử dụng luôn
     if (this.hotelInfo && this.hotelInfo.name) {
       this.updateInvoiceDataWithHotelInfo(this.hotelInfo);
@@ -475,34 +483,26 @@ export class InvoiceComponent implements OnInit {
       return;
     }
     
-    // Nếu đã có businessName và business_address, không cần load
+    // Nếu đã có businessName và business_address, không cần load hotel — chỉ check quyền nền
     if (this.invoiceData.businessName && this.invoiceData.businessName !== 'Khách sạn') {
+      this.checkInvoicePermissions(this.invoiceData['hotelInfo'] || null);
       return;
     }
     
     // Lấy thông tin khách sạn từ hotelId
-    // Thử lấy hotelId từ nhiều nguồn
     let hotelId = this.invoiceData['hotelId'] || (this.invoiceData as any).hotelId;
     
-    // Nếu không có trong invoiceData, thử lấy từ session context
     if (!hotelId) {
       hotelId = this.sessionContext.getSelectedHotelId();
     }
     
-    // Nếu vẫn không có, thử lấy từ roomId nếu có
-    if (!hotelId && this.invoiceData['roomId']) {
-      // Có thể gọi API để lấy hotelId từ roomId, nhưng tạm thời bỏ qua
-      console.warn('Không có hotelId, sẽ thử lấy từ roomId nếu cần');
-    }
-    
     if (!hotelId) {
       console.warn('Không có hotelId để lấy thông tin khách sạn. InvoiceData:', this.invoiceData);
-      // Không return, vẫn tiếp tục với thông tin có sẵn
       return;
     }
     
     this.isLoading = true;
-    this.hotelService.getHotelInfo(hotelId).pipe(take(1)).subscribe({
+    this.hotelService.getHotelInfo(hotelId, { lite: true }).pipe(take(1)).subscribe({
       next: (hotel: any) => {
         if (!hotel) {
           console.warn('Không tìm thấy thông tin khách sạn');
@@ -510,10 +510,7 @@ export class InvoiceComponent implements OnInit {
           return;
         }
         
-        // Lưu thông tin hotel
         this.hotelInfo = hotel;
-        
-        // Cập nhật invoiceData với thông tin khách sạn
         this.updateInvoiceDataWithHotelInfo(hotel);
         this.checkInvoicePermissions(hotel);
         this.isLoading = false;
@@ -2139,37 +2136,35 @@ export class InvoiceComponent implements OnInit {
   
   /**
    * Kiểm tra quota để ẩn nút "Xem hóa đơn nháp" nếu quota là 0/0
+   * Chạy nền sau khi render — không chặn mở hóa đơn.
    */
   checkQuotaForButtonVisibility(): void {
     const currentUser = this.authService?.getCurrentUser?.();
     const userRole = currentUser?.role;
     const isAdminOrSuperadmin = userRole === 'superadmin' || userRole === 'admin';
     
-    // Admin/Superadmin: Luôn hiển thị nút
     if (isAdminOrSuperadmin) {
       return;
     }
-    
-    // Hotel/Staff/Business: Kiểm tra quota
-    this.invoiceService.getEInvoiceUsage().subscribe({
-      next: (response: any) => {
-        if (response.success !== false && response.data) {
-          const quotaRemaining = response.data.quota_remaning || response.data.quota_remaining;
-          const allocatedQuota = response.data.allocatedQuota || 0;
-          const remaining = quotaRemaining ? parseInt(quotaRemaining, 10) : 0;
-          const allocated = parseInt(allocatedQuota, 10) || 0;
-          
-          // Nếu quota là 0/0, ẩn nút "Xem hóa đơn nháp"
-          if (allocated === 0 && remaining === 0) {
-            this.canViewDraftInvoice = false;
+
+    // Defer quota check để invoice hiện trước
+    setTimeout(() => {
+      this.invoiceService.getEInvoiceUsage().subscribe({
+        next: (response: any) => {
+          if (response.success !== false && response.data) {
+            const quotaRemaining = response.data.quota_remaning || response.data.quota_remaining;
+            const allocatedQuota = response.data.allocatedQuota || 0;
+            const remaining = quotaRemaining ? parseInt(quotaRemaining, 10) : 0;
+            const allocated = parseInt(allocatedQuota, 10) || 0;
+            
+            if (allocated === 0 && remaining === 0) {
+              this.canViewDraftInvoice = false;
+            }
           }
-        }
-      },
-      error: (error: any) => {
-        console.error('Error checking quota for button visibility:', error);
-        // Nếu không thể kiểm tra quota, giữ nguyên trạng thái hiện tại
-      }
-    });
+        },
+        error: () => {}
+      });
+    }, 0);
   }
   
   checkPricingPackagePermissions(): void {

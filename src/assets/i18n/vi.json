@@ -86,6 +86,12 @@
     "DE": "Tiếng Đức",
     "SELECT_LANGUAGE": "Chọn ngôn ngữ"
   },
+  "THEME": {
+    "LIGHT": "Sáng",
+    "DARK": "Tối",
+    "SWITCH_TO_LIGHT": "Chuyển sang giao diện sáng",
+    "SWITCH_TO_DARK": "Chuyển sang giao diện tối"
+  },
   "ROLES": {
     "SUPERADMIN": "Siêu quản trị",
     "ADMIN": "Quản trị viên",

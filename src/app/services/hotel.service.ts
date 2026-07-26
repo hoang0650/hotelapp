@@ -22,6 +22,8 @@ interface RevenueData {
 export class HotelService {
   private apiUrl = `${environment.apiUrl}/hotels`;
   private revenueByPeriodCache = new Map<string, { payload: RevenueData; updatedAt: number }>();
+  private hotelInfoCache = new Map<string, { payload: Hotel; updatedAt: number }>();
+  private readonly hotelInfoCacheTtlMs = 60_000;
 
   constructor(
     private http: HttpClient,
@@ -82,6 +84,12 @@ export class HotelService {
     if (!hotelId) {
       return of(null);
     }
+
+    const cacheKey = `${hotelId}:${options?.lite ? 'lite' : 'full'}`;
+    const cached = this.hotelInfoCache.get(cacheKey);
+    if (cached && Date.now() - cached.updatedAt < this.hotelInfoCacheTtlMs) {
+      return of(cached.payload);
+    }
     
     let params = new HttpParams();
     if (options?.lite) {
@@ -89,12 +97,29 @@ export class HotelService {
     }
 
     return this.http.get<Hotel>(`${this.apiUrl}/${hotelId}`, { params }).pipe(
-      map((hotel: Hotel) => hotel),
+      map((hotel: Hotel) => {
+        if (hotel) {
+          this.hotelInfoCache.set(cacheKey, { payload: hotel, updatedAt: Date.now() });
+        }
+        return hotel;
+      }),
       catchError((error: any) => {
         console.error('Error fetching hotel info:', error);
         return of(null);
       })
     );
+  }
+
+  clearHotelInfoCache(hotelId?: string): void {
+    if (!hotelId) {
+      this.hotelInfoCache.clear();
+      return;
+    }
+    Array.from(this.hotelInfoCache.keys()).forEach((key) => {
+      if (key.startsWith(`${hotelId}:`)) {
+        this.hotelInfoCache.delete(key);
+      }
+    });
   }
 
   extractBusinessId(hotel: any): string | null {

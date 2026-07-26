@@ -121,9 +121,45 @@
       Đang đồng bộ quyền truy cập...
     </div>
     <div class="sidebar-account">
-      <div class="sidebar-account-name" *ngIf="!isCollapsed" [title]="getCurrentUserLabel()">
-        {{ getCurrentUserLabel() }}
+      <button
+        type="button"
+        class="sidebar-profile-btn"
+        (click)="openProfile()"
+        [attr.title]="'NAVBAR.PROFILE' | translate">
+        <img
+          class="sidebar-avatar"
+          [src]="getAvatarUrl()"
+          alt="Avatar"
+          (error)="handleAvatarError($event)" />
+        <div class="sidebar-profile-meta" *ngIf="!isCollapsed">
+          <span class="sidebar-account-name" [title]="getCurrentUserLabel()">{{ getCurrentUserLabel() }}</span>
+          <small class="sidebar-account-role">{{ getCurrentUserRoleLabel() }}</small>
+        </div>
+      </button>
+
+      <div class="sidebar-toolbar" [class.collapsed]="isCollapsed">
+        <button
+          type="button"
+          class="sidebar-tool-btn"
+          nz-dropdown
+          [nzDropdownMenu]="sidebarLanguageMenu"
+          [nzTrigger]="'click'"
+          [nzPlacement]="'topRight'"
+          [attr.title]="'LANGUAGE.SELECT_LANGUAGE' | translate">
+          <i nz-icon nzType="global" nzTheme="outline"></i>
+          <span *ngIf="!isCollapsed">{{ currentLanguageLabel }}</span>
+        </button>
+
+        <button
+          type="button"
+          class="sidebar-tool-btn"
+          (click)="toggleTheme()"
+          [attr.title]="(isDarkTheme ? 'THEME.SWITCH_TO_LIGHT' : 'THEME.SWITCH_TO_DARK') | translate">
+          <i nz-icon [nzType]="isDarkTheme ? 'sun' : 'moon'" nzTheme="outline"></i>
+          <span *ngIf="!isCollapsed">{{ (isDarkTheme ? 'THEME.LIGHT' : 'THEME.DARK') | translate }}</span>
+        </button>
       </div>
+
       <button
         type="button"
         class="sidebar-logout-btn"
@@ -211,6 +247,23 @@
     <li nz-menu-item class="logout-menu-item" (click)="logout()">
       <i nz-icon nzType="logout" nzTheme="outline"></i>
       <span>{{ 'NAVBAR.LOGOUT' | translate }}</span>
+    </li>
+  </ul>
+</nz-dropdown-menu>
+
+<nz-dropdown-menu #sidebarLanguageMenu="nzDropdownMenu">
+  <ul nz-menu class="sidebar-language-menu">
+    <li nz-menu-item [class.ant-menu-item-selected]="currentLang === 'vi'" (click)="switchLanguage('vi')">
+      <span class="lang-flag">🇻🇳</span>
+      <span>{{ 'LANGUAGE.VI' | translate }}</span>
+    </li>
+    <li nz-menu-item [class.ant-menu-item-selected]="currentLang === 'en'" (click)="switchLanguage('en')">
+      <span class="lang-flag">🇬🇧</span>
+      <span>{{ 'LANGUAGE.EN' | translate }}</span>
+    </li>
+    <li nz-menu-item [class.ant-menu-item-selected]="currentLang === 'de'" (click)="switchLanguage('de')">
+      <span class="lang-flag">🇩🇪</span>
+      <span>{{ 'LANGUAGE.DE' | translate }}</span>
     </li>
   </ul>
 </nz-dropdown-menu>

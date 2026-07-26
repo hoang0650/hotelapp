@@ -62,26 +62,45 @@ export class InvoiceModalComponent implements OnInit, OnDestroy {
 
   // Tải thông tin business/hotel
   loadBusinessInfo(): void {
-    const hotelId = this.invoiceData.hotelId || this.invoiceData['hotelId'];
-    
-    if (hotelId && (!this.invoiceData.businessName || this.invoiceData.businessName === 'Khách sạn')) {
-      this.hotelService.getHotelById(hotelId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (hotel: any) => {
-            if (hotel) {
-              this.businessInfo = hotel;
-              // Cập nhật vào invoiceData
-              this.invoiceData.businessName = hotel.name || 'Khách sạn';
-              this.invoiceData.business_address = hotel.address || '';
-              this.invoiceData.phoneNumber = hotel.phone || hotel.phoneNumber || '';
-            }
-          },
-          error: (err) => {
-            console.error('Error loading hotel info:', err);
-          }
-        });
+    if (this.invoiceData.businessName && this.invoiceData.businessName !== 'Khách sạn') {
+      return;
     }
+
+    if (this.invoiceData['hotelInfo']?.name) {
+      const hotel = this.invoiceData['hotelInfo'];
+      this.businessInfo = hotel;
+      this.invoiceData.businessName = hotel.name || 'Khách sạn';
+      this.invoiceData.business_address =
+        typeof hotel.address === 'string'
+          ? hotel.address
+          : [hotel.address?.street, hotel.address?.city].filter(Boolean).join(', ');
+      this.invoiceData.phoneNumber = hotel.contactInfo?.phone || hotel.phone || hotel.phoneNumber || '';
+      return;
+    }
+
+    const hotelId = this.invoiceData.hotelId || this.invoiceData['hotelId'];
+    if (!hotelId) {
+      return;
+    }
+
+    this.hotelService.getHotelInfo(hotelId, { lite: true })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (hotel: any) => {
+          if (hotel) {
+            this.businessInfo = hotel;
+            this.invoiceData.businessName = hotel.name || 'Khách sạn';
+            this.invoiceData.business_address =
+              typeof hotel.address === 'string'
+                ? hotel.address
+                : [hotel.address?.street, hotel.address?.city].filter(Boolean).join(', ');
+            this.invoiceData.phoneNumber = hotel.contactInfo?.phone || hotel.phone || hotel.phoneNumber || '';
+          }
+        },
+        error: (err) => {
+          console.error('Error loading hotel info:', err);
+        }
+      });
   }
 
   // Tính thời gian lưu trú

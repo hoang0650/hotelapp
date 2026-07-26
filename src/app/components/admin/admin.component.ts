@@ -1,12 +1,17 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router, NavigationEnd, Params } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { PermissionService } from '../../services/permission.service';
 import { NzMarks } from 'ng-zorro-antd/slider';
 import { RoomsService } from '../../services/rooms.service';
 import { SessionContextService } from '../../services/session-context.service';
 import { UserService } from '../../services/user.service';
+import { TranslationService } from '../../services/translation.service';
+import { ThemeService } from '../../services/theme.service';
+import { TranslateService } from '@ngx-translate/core';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-admin',
@@ -14,15 +19,13 @@ import { UserService } from '../../services/user.service';
   styleUrls: ['./admin.component.css']
 })
 export class AdminComponent implements OnInit, OnDestroy {
-  // breadcrumbs: string[] = []; dành cho 1 breadcrumb
-  breadcrumbs: Array<{ label: string, url: string }> = []; //dành cho route kiểu admin/hotel
+  breadcrumbs: Array<{ label: string, url: string }> = [];
   isCollapsed = false;
   isMobileMenuOpen = false;
   showModal: boolean = false;
   /** Ẩn nút settings trên breadcrumb khi đang ở /admin/room (nút nằm dưới Phiếu chi). */
   isRoomRoute = false;
   
-  // Modal states cho lọc tầng và số cột
   isFloorFilterModalVisible = false;
   isColumnsModalVisible = false;
   tempSelectedFloor: string | null = null;
@@ -40,8 +43,13 @@ export class AdminComponent implements OnInit, OnDestroy {
     12: '12'
   };
 
+  currentLang = 'vi';
+  isDarkTheme = false;
+  private readonly apiBaseUrl = environment.apiUrl;
   private readonly openFloorFilterHandler = () => this.openFloorFilterModal();
   private readonly openColumnsHandler = () => this.openColumnsModal();
+  private langSub?: Subscription;
+  private themeSub?: Subscription;
   
   constructor(
     private router: Router, 
@@ -50,30 +58,26 @@ export class AdminComponent implements OnInit, OnDestroy {
     private userService: UserService,
     private roomsService: RoomsService,
     private permissionService: PermissionService,
-    private sessionContext: SessionContextService
+    private sessionContext: SessionContextService,
+    private translationService: TranslationService,
+    private themeService: ThemeService,
+    private translate: TranslateService
   ) { }
 
   ngOnInit(): void {
+    this.currentLang = this.translationService.getCurrentLang() || this.translate.currentLang || 'vi';
+    this.isDarkTheme = this.themeService.isDark;
+    this.langSub = this.translationService.currentLang$.subscribe(lang => {
+      this.currentLang = lang || 'vi';
+    });
+    this.themeSub = this.themeService.theme$.subscribe(theme => {
+      this.isDarkTheme = theme === 'dark';
+    });
+
     this.permissionService.ready$.subscribe(ready => {
       this.permissionsReady = ready;
     });
 
-    // this.router.events
-    //   .pipe(
-    //     filter(event => event instanceof NavigationEnd),
-    //     map(() => this.activatedRoute),
-    //     map(route => {
-    //       while (route.firstChild) {
-    //         route = route.firstChild;
-    //       }
-    //       return route;
-    //     }),
-    //     map(route => route.snapshot),
-    //     map(snapshot => snapshot.url.map(segment => segment.path))
-    //   )
-    //   .subscribe(paths => {
-    //     this.breadcrumbs = paths;
-    //   });
     this.router.events
       .pipe(
         filter(event => event instanceof NavigationEnd),
@@ -91,6 +95,8 @@ export class AdminComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('openAdminFloorFilter', this.openFloorFilterHandler);
     window.removeEventListener('openAdminColumnsModal', this.openColumnsHandler);
+    this.langSub?.unsubscribe();
+    this.themeSub?.unsubscribe();
   }
 
   
@@ -345,6 +351,68 @@ export class AdminComponent implements OnInit, OnDestroy {
   getCurrentUserLabel(): string {
     const user = this.authService.getCurrentUser();
     return user?.fullName || user?.username || user?.email || 'Tài khoản';
+  }
+
+  getCurrentUserRoleLabel(): string {
+    const role = String(this.authService.getCurrentUser()?.role || '').toUpperCase();
+    if (!role) {
+      return '';
+    }
+    const key = `ROLES.${role}`;
+    const translated = this.translate.instant(key);
+    return translated === key ? role : translated;
+  }
+
+  get currentLanguageLabel(): string {
+    if (this.currentLang === 'en') {
+      return this.translate.instant('LANGUAGE.EN');
+    }
+    if (this.currentLang === 'de') {
+      return this.translate.instant('LANGUAGE.DE');
+    }
+    return this.translate.instant('LANGUAGE.VI');
+  }
+
+  private getImageUrl(urlOrId: string | null | undefined): string {
+    if (!urlOrId) {
+      return '';
+    }
+    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
+      return urlOrId;
+    }
+    if (urlOrId.startsWith('/files/')) {
+      return `${this.apiBaseUrl}${urlOrId}`;
+    }
+    return `${this.apiBaseUrl}/files/${urlOrId}`;
+  }
+
+  getAvatarUrl(): string {
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      return 'assets/images/avatar.jpg';
+    }
+    const avatar = (user as any).avatar || (user as any).avatarId;
+    if (!avatar) {
+      return 'assets/images/avatar.jpg';
+    }
+    return this.getImageUrl(avatar);
+  }
+
+  handleAvatarError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) {
+      img.src = 'https://mdbcdn.b-cdn.net/img/new/avatars/2.webp';
+    }
+  }
+
+  switchLanguage(lang: string): void {
+    this.translationService.switchLanguage(lang);
+    this.currentLang = lang;
+    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 
   openProfile(): void {

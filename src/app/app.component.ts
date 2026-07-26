@@ -7,6 +7,7 @@ import { AuthService } from './services/auth.service';
 import { SettingsService } from './services/settings.service';
 import { NotificationsService } from './services/notifications.service';
 import { SeoService } from './services/seo.service';
+import { ThemeService } from './services/theme.service';
 import { filter, interval, Subscription, take } from 'rxjs';
 
 @Component({
@@ -32,9 +33,12 @@ export class AppComponent implements OnInit, OnDestroy {
     private settingsService: SettingsService,
     private notificationsService: NotificationsService,
     private seoService: SeoService,
+    private themeService: ThemeService,
     @Inject(PLATFORM_ID) private platformId: any
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
+    // Khởi tạo theme sớm (đọc localStorage + apply data-theme)
+    void this.themeService.currentTheme;
   }
 
   ngOnInit(): void {

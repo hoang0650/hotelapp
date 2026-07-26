@@ -82,6 +82,12 @@
     "DE": "Deutsch",
     "SELECT_LANGUAGE": "Sprache auswählen"
   },
+  "THEME": {
+    "LIGHT": "Hell",
+    "DARK": "Dunkel",
+    "SWITCH_TO_LIGHT": "Zum hellen Design wechseln",
+    "SWITCH_TO_DARK": "Zum dunklen Design wechseln"
+  },
   "ROLES": {
     "SUPERADMIN": "Super-Administrator",
     "ADMIN": "Administrator",

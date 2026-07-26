@@ -82,6 +82,12 @@
     "DE": "German",
     "SELECT_LANGUAGE": "Select Language"
   },
+  "THEME": {
+    "LIGHT": "Light",
+    "DARK": "Dark",
+    "SWITCH_TO_LIGHT": "Switch to light theme",
+    "SWITCH_TO_DARK": "Switch to dark theme"
+  },
   "ROLES": {
     "SUPERADMIN": "Super Admin",
     "ADMIN": "Admin",
