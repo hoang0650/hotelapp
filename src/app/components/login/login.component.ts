@@ -5,6 +5,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { UserService, LoginRequest } from '../../services/user.service';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../services/auth.service';
+import { LoginBootstrapService } from '../../services/login-bootstrap.service';
 
 @Component({
   selector: 'app-login',
@@ -26,7 +27,8 @@ export class LoginComponent implements OnInit {
     private router: Router,
     private message: NzMessageService,
     private translate: TranslateService,
-    private authService: AuthService
+    private authService: AuthService,
+    private loginBootstrap: LoginBootstrapService
   ) {
     this.initForm();
   }
@@ -111,7 +113,6 @@ export class LoginComponent implements OnInit {
       this.authService.clearCredentials();
     }
 
-
     this.userService.login(loginData).subscribe({
       next: (response) => {
         if (response.requireTwoFactor) {
@@ -119,20 +120,23 @@ export class LoginComponent implements OnInit {
           this.userId = response.userId || null;
           this.message.info(this.translate.instant('LOGIN.ENTER_TWO_FACTOR'));
           this.isLoading = false;
-        } else {
-          if (response.token && response.user) {
-            this.authService.loginFromShiftHandover(response.token, response.user);
-            this.authService.authResolved.next(true);
-          }
-          this.executeFastRedirect();
+          return;
         }
+
+        if (response.token && response.user) {
+          // Seed auth + warm Redis/rooms cache rồi vào /admin ngay (không đợi prefetch xong)
+          this.loginBootstrap.bootstrapAfterLogin(response.token, response.user);
+          this.isLoading = false;
+          this.executeFastRedirect();
+          return;
+        }
+
+        this.isLoading = false;
+        this.message.error(this.translate.instant('COMMON.ERROR_OCCURRED'));
       },
       error: (error) => {
         this.isLoading = false;
         this.message.error(error.error?.message || this.translate.instant('COMMON.ERROR_OCCURRED'));
-      },
-      complete: () => {
-        this.isLoading = false;
       }
     });
   }

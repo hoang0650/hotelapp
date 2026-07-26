@@ -56,13 +56,16 @@ export class HotelService {
     this.sessionContext.clearLocal();
   }
 
-  getHotels(businessId?: string, status?: HotelStatus): Observable<Hotel[]> {
+  getHotels(businessId?: string, status?: HotelStatus, options?: { lite?: boolean }): Observable<Hotel[]> {
     let params = new HttpParams();
     if (businessId) {
       params = params.set('businessId', businessId);
     }
     if (status) {
       params = params.set('status', status);
+    }
+    if (options?.lite) {
+      params = params.set('lite', '1');
     }
     return this.http.get<Hotel[]>(this.apiUrl, { params });
   }

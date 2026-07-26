@@ -60,6 +60,11 @@ export class PermissionGuard implements CanActivate {
     };
     const user = this.authService.getCurrentUser();
 
+    // Fast path: đã có user + vào /admin/room → cho vào ngay, không chờ package API
+    if (user && this.canFastTrackRoomAccess(url)) {
+      return true;
+    }
+
     const evaluateAccess = (): boolean => {
       const u = this.authService.getCurrentUser();
 
