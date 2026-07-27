@@ -17,6 +17,7 @@ import { HotelService } from '../../services/hotel.service';
 import { TranslateService } from '@ngx-translate/core';
 import {
   FEATURE_PREVIEW_LIMIT,
+  isRecommendedSellerPackage,
   sortPackagesByRecommendedOrder
 } from '../../constants/recommended-pricing-packages';
 
@@ -1013,6 +1014,10 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       return `Thời hạn: ${pkg.duration} tháng`;
     }
     return '';
+  }
+
+  isRecommendedPackage(pkg: any): boolean {
+    return isRecommendedSellerPackage(pkg);
   }
 
   // Feature values hỗ trợ map sang USER_MANAGEMENT.FEATURES.*

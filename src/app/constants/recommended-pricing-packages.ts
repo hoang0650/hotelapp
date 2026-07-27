@@ -269,16 +269,81 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
   }
 ];
 
-export function sortPackagesByRecommendedOrder<T extends { name?: string }>(packages: T[]): T[] {
-  const orderMap = new Map(RECOMMENDED_PACKAGE_ORDER.map((name, index) => [name.toLowerCase(), index]));
+/** Chuẩn hóa tên gói để so khớp order (NFC, khoảng trắng, dấu /). */
+export function normalizePricingPackageName(name: string | undefined | null): string {
+  return String(name || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*\/\s*/g, '/')
+    .trim();
+}
+
+/**
+ * Alias / keyword → thứ tự hiển thị (0-based).
+ * Khớp cả tên DB lệch khoảng trắng / không dấu / viết tắt.
+ */
+const PACKAGE_ORDER_ALIASES: Array<{ match: string | RegExp; index: number }> = [
+  { match: /dung\s*thu|trial|free\s*trial/, index: 0 },
+  { match: /khoi\s*dau|starter|basic/, index: 1 },
+  { match: /van\s*hanh|operations|operation/, index: 2 },
+  { match: /tang\s*truong|growth/, index: 3 },
+  { match: /ai\s*pro|aipro/, index: 4 },
+  { match: /chuoi|enterprise|chain/, index: 5 }
+];
+
+const NORMALIZED_PACKAGE_ORDER = RECOMMENDED_PACKAGE_ORDER.map((name) =>
+  normalizePricingPackageName(name)
+);
+
+export function resolveRecommendedPackageOrderIndex(pkg: {
+  name?: string;
+  sortOrder?: number | null;
+}): number {
+  const normalized = normalizePricingPackageName(pkg?.name);
+  const exact = NORMALIZED_PACKAGE_ORDER.indexOf(normalized);
+  if (exact >= 0) {
+    return exact;
+  }
+
+  for (const alias of PACKAGE_ORDER_ALIASES) {
+    if (typeof alias.match === 'string') {
+      if (normalized === alias.match || normalized.includes(alias.match)) {
+        return alias.index;
+      }
+    } else if (alias.match.test(normalized)) {
+      return alias.index;
+    }
+  }
+
+  if (typeof pkg?.sortOrder === 'number' && Number.isFinite(pkg.sortOrder) && pkg.sortOrder > 0) {
+    return Math.max(0, Math.floor(pkg.sortOrder) - 1);
+  }
+
+  return 999;
+}
+
+export function isRecommendedSellerPackage(pkg: { name?: string }): boolean {
+  return resolveRecommendedPackageOrderIndex(pkg) === 2; // Vận Hành
+}
+
+export function sortPackagesByRecommendedOrder<
+  T extends { name?: string; sortOrder?: number | null; monthlyPrice?: number | null }
+>(packages: T[]): T[] {
   return [...(packages || [])].sort((a, b) => {
-    const ai = orderMap.has(String(a?.name || '').toLowerCase())
-      ? (orderMap.get(String(a?.name || '').toLowerCase()) as number)
-      : 999;
-    const bi = orderMap.has(String(b?.name || '').toLowerCase())
-      ? (orderMap.get(String(b?.name || '').toLowerCase()) as number)
-      : 999;
-    if (ai !== bi) return ai - bi;
+    const ai = resolveRecommendedPackageOrderIndex(a);
+    const bi = resolveRecommendedPackageOrderIndex(b);
+    if (ai !== bi) {
+      return ai - bi;
+    }
+    const priceA = Number(a?.monthlyPrice);
+    const priceB = Number(b?.monthlyPrice);
+    if (Number.isFinite(priceA) && Number.isFinite(priceB) && priceA !== priceB) {
+      return priceA - priceB;
+    }
     return String(a?.name || '').localeCompare(String(b?.name || ''), 'vi');
   });
 }

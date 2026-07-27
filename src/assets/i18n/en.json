@@ -1947,6 +1947,7 @@
     "ONBOARDING_FEE_NOTE": "Note: onboarding usually applies once; add-ons and custom work are quoted separately.",
     "EXPAND_FEATURES": "Show {{count}} more features",
     "COLLAPSE_FEATURES": "Show less",
+    "RECOMMENDED_BADGE": "Most popular",
     "CONTACT_BAR_PREFIX": "Need a plan, add-on, or Enterprise quote? Please",
     "CONTACT_BAR_LINK": "contact us",
     "CONTACT_BAR_SUFFIX": "or call our support hotline.",

@@ -58,7 +58,12 @@
       <div class="pricing-plans" #pricingPlansContainer>
         <div *ngFor="let package of packages" class="pricing-plan" 
            [class.current-plan]="isCurrentPackage(package._id || package.id)"
-           [class.selected-plan]="selectedPackage && (selectedPackage.packageId === (package._id || package.id))">
+           [class.selected-plan]="selectedPackage && (selectedPackage.packageId === (package._id || package.id))"
+           [class.recommended-plan]="isRecommendedPackage(package)"
+           [class.contact-plan]="package.isContactOnly">
+        <div class="plan-badge" *ngIf="isRecommendedPackage(package)">
+          {{ 'PRICING_PAGE.RECOMMENDED_BADGE' | translate }}
+        </div>
         <div class="plan-header">
           <h2 nz-tooltip [nzTooltipTitle]="package.name" class="package-name">{{ package.name }}</h2>
           <div class="price">
@@ -67,7 +72,7 @@
               <span class="period">/{{ billingType === 'yearly' ? ('PRICING_PAGE.PER_YEAR' | translate) : ('PRICING_PAGE.PER_MONTH' | translate) }}</span>
             </ng-container>
             <ng-template #contactOnlyPrice>
-              <span class="amount">{{ package.contactLabel || ('PRICING_PAGE.CONTACT' | translate) }}</span>
+              <span class="amount contact-amount">{{ package.contactLabel || ('PRICING_PAGE.CONTACT' | translate) }}</span>
             </ng-template>
           </div>
           
@@ -80,13 +85,6 @@
             </p>
             <p class="original-price">
               {{ 'PRICING_PAGE.ORIGINAL_YEARLY_PRICE' | translate:{ amount: formatPrice(getOriginalYearlyPrice(package)) } }}
-            </p>
-          </div>
-          
-          <!-- Hiển thị giá tháng khi chọn tháng -->
-          <div *ngIf="!package.isContactOnly && billingType === 'monthly'" class="billing-monthly-note">
-            <p>
-              {{ 'PRICING_PAGE.MONTHLY_PAYMENT_NOTE' | translate }}
             </p>
           </div>
           
