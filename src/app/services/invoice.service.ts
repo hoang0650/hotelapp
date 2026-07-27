@@ -199,8 +199,25 @@ export class InvoiceService {
   }
   
   // Lấy chi tiết hóa đơn (API mới)
-  getInvoiceByIdNew(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/invoices/${id}`);
+  getInvoiceByIdNew(id: string, hotelId?: string | null): Observable<any> {
+    let params = new HttpParams();
+    const normalizedHotelId = this.normalizeHotelId(hotelId);
+    if (normalizedHotelId) {
+      params = params.set('hotelId', normalizedHotelId);
+    }
+    return this.http.get(`${this.apiUrl}/invoices/${id}`, { params });
+  }
+
+  private normalizeHotelId(hotelId: any): string {
+    if (!hotelId) return '';
+    if (typeof hotelId === 'object') {
+      return String(hotelId._id || hotelId.id || '').trim();
+    }
+    const value = String(hotelId).trim();
+    if (!value || value === 'undefined' || value === 'null' || value === '[object Object]') {
+      return '';
+    }
+    return value;
   }
   
   // Lấy thống kê hóa đơn (API mới)

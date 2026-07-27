@@ -1,7 +1,8 @@
 .settings-container {
   padding: 24px;
-  background: #f0f2f5;
+  background: var(--app-bg);
   min-height: calc(100vh - 64px);
+  color: var(--app-text);
 }
 
 .settings-grid {
@@ -14,7 +15,10 @@
 .settings-role-card,
 .settings-section-card {
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--app-shadow);
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
 }
 
 .settings-section-card {
@@ -22,14 +26,14 @@
 }
 
 .role-card-subtitle {
-  color: #64748b;
+  color: var(--app-text-muted);
   margin-bottom: 12px;
 }
 
 .role-capability-list {
   margin: 0;
   padding-left: 18px;
-  color: #1f2937;
+  color: var(--app-text);
 }
 
 .role-capability-list li + li {
@@ -53,7 +57,7 @@
 
 .settings-hint {
   margin-top: 8px;
-  color: #64748b;
+  color: var(--app-text-muted);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -64,17 +68,57 @@
   gap: 12px 16px;
 }
 
+.feature-list label,
+.feature-list .ant-checkbox-wrapper {
+  color: var(--app-text) !important;
+}
+
 .nested-settings-card {
   margin: 16px 0;
-  background: #fafcff;
-  border: 1px solid #e2e8f0;
+  background: var(--app-surface-secondary);
+  border: 1px solid var(--app-border-strong);
   border-radius: 10px;
   padding: 16px;
+  color: var(--app-text);
 }
 
 .settings-loading {
   text-align: center;
   padding: 32px 16px;
+  color: var(--app-text-secondary);
+}
+
+::ng-deep .settings-container .ant-page-header {
+  padding-left: 0;
+  padding-right: 0;
+  color: var(--app-text);
+}
+
+::ng-deep .settings-container .ant-page-header-heading-title,
+::ng-deep .settings-container .ant-page-header-heading-sub-title {
+  color: var(--app-text) !important;
+}
+
+::ng-deep .settings-container > .ant-card,
+::ng-deep .settings-container .settings-role-card,
+::ng-deep .settings-container .settings-section-card {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+::ng-deep .settings-container .ant-card-head {
+  background: transparent !important;
+  border-bottom-color: var(--app-border) !important;
+  color: var(--app-text) !important;
+}
+
+::ng-deep .settings-container .ant-card-head-title,
+::ng-deep .settings-container .ant-form-item-label > label,
+::ng-deep .settings-container .ant-checkbox-wrapper,
+::ng-deep .settings-container .ant-checkbox + span,
+::ng-deep .settings-container .ant-radio-wrapper {
+  color: var(--app-text) !important;
 }
 
 ::ng-deep .ant-tabs-card > .ant-tabs-content {
@@ -82,9 +126,39 @@
 }
 
 ::ng-deep .ant-tabs-card > .ant-tabs-content > .ant-tabs-tabpane {
-  background: #fff;
+  background: var(--app-surface);
+  color: var(--app-text);
   padding: 24px;
   border-radius: 4px;
+  border: 1px solid var(--app-border);
+}
+
+::ng-deep .settings-container .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
+  background: var(--app-surface-secondary);
+  border-color: var(--app-border);
+  color: var(--app-text-secondary);
+}
+
+::ng-deep .settings-container .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active {
+  background: var(--app-surface);
+  color: var(--app-text);
+  border-bottom-color: var(--app-surface);
+}
+
+::ng-deep .settings-container .ant-input,
+::ng-deep .settings-container .ant-input-affix-wrapper,
+::ng-deep .settings-container .ant-select-selector,
+::ng-deep .settings-container .ant-picker,
+::ng-deep .settings-container textarea.ant-input {
+  background: var(--app-input-bg) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+::ng-deep .settings-container .ant-btn-default {
+  background: var(--app-surface-secondary);
+  border-color: var(--app-border-strong);
+  color: var(--app-text);
 }
 
 /* Responsive */
@@ -111,4 +185,3 @@
     padding: 16px;
   }
 }
-

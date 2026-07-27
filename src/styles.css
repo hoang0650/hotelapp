@@ -4,24 +4,38 @@
   --app-bg: #f0f2f5;
   --app-surface: #ffffff;
   --app-surface-secondary: #fafafa;
+  --app-surface-elevated: #ffffff;
   --app-text: rgba(0, 0, 0, 0.88);
   --app-text-secondary: rgba(0, 0, 0, 0.45);
+  --app-text-muted: #64748b;
   --app-border: #f0f0f0;
+  --app-border-strong: #e2e8f0;
   --app-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   --app-breadcrumb-bg: #ffffff;
   --app-sider-bg: #0d6efd;
+  --app-primary: #1677ff;
+  --app-hover: rgba(0, 0, 0, 0.04);
+  --app-input-bg: #ffffff;
+  --app-disabled: rgba(0, 0, 0, 0.25);
 }
 
 [data-theme="dark"] {
   --app-bg: #0b1220;
   --app-surface: #151c2c;
   --app-surface-secondary: #1b2436;
-  --app-text: rgba(255, 255, 255, 0.88);
-  --app-text-secondary: rgba(255, 255, 255, 0.55);
+  --app-surface-elevated: #1e293b;
+  --app-text: rgba(255, 255, 255, 0.92);
+  --app-text-secondary: rgba(255, 255, 255, 0.65);
+  --app-text-muted: rgba(255, 255, 255, 0.5);
   --app-border: rgba(255, 255, 255, 0.12);
-  --app-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  --app-border-strong: rgba(255, 255, 255, 0.18);
+  --app-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   --app-breadcrumb-bg: #121926;
   --app-sider-bg: #0b3d91;
+  --app-primary: #3b82f6;
+  --app-hover: rgba(255, 255, 255, 0.06);
+  --app-input-bg: #121a2b;
+  --app-disabled: rgba(255, 255, 255, 0.3);
 }
 
 html,
@@ -44,42 +58,249 @@ app-admin nz-breadcrumb {
   color: var(--app-text);
 }
 
+/* ---- Dark: cards / tables / modals / collapse ---- */
 [data-theme="dark"] app-admin .ant-card,
+[data-theme="dark"] app-admin .ant-card-head,
+[data-theme="dark"] app-admin .ant-card-body,
 [data-theme="dark"] app-admin .ant-table,
 [data-theme="dark"] app-admin .ant-table-thead > tr > th,
+[data-theme="dark"] app-admin .ant-table-tbody > tr > td,
+[data-theme="dark"] app-admin .ant-table-placeholder,
 [data-theme="dark"] app-admin .ant-modal-content,
+[data-theme="dark"] app-admin .ant-modal-header,
+[data-theme="dark"] app-admin .ant-modal-footer,
 [data-theme="dark"] app-admin .ant-collapse,
 [data-theme="dark"] app-admin .ant-collapse-content,
 [data-theme="dark"] app-admin .ant-collapse-header,
+[data-theme="dark"] app-admin .ant-collapse-item,
 [data-theme="dark"] app-admin .room-stats-banner,
-[data-theme="dark"] app-admin .ant-empty-description {
+[data-theme="dark"] app-admin .ant-empty-description,
+[data-theme="dark"] app-admin .ant-drawer-content,
+[data-theme="dark"] app-admin .ant-drawer-header,
+[data-theme="dark"] app-admin .ant-list-item,
+[data-theme="dark"] app-admin .ant-descriptions-bordered .ant-descriptions-item-label,
+[data-theme="dark"] app-admin .ant-descriptions-bordered .ant-descriptions-item-content {
   background: var(--app-surface) !important;
   color: var(--app-text) !important;
   border-color: var(--app-border) !important;
 }
 
-[data-theme="dark"] app-admin .ant-table-tbody > tr > td,
+[data-theme="dark"] app-admin .ant-card-head-title,
+[data-theme="dark"] app-admin .ant-card-extra,
+[data-theme="dark"] app-admin .ant-modal-title,
+[data-theme="dark"] app-admin .ant-drawer-title,
+[data-theme="dark"] app-admin .ant-page-header-heading-title,
+[data-theme="dark"] app-admin .ant-page-header-heading-sub-title,
 [data-theme="dark"] app-admin .ant-form-item-label > label,
+[data-theme="dark"] app-admin .ant-checkbox-wrapper,
+[data-theme="dark"] app-admin .ant-radio-wrapper,
 [data-theme="dark"] app-admin h1,
 [data-theme="dark"] app-admin h2,
 [data-theme="dark"] app-admin h3,
 [data-theme="dark"] app-admin h4,
+[data-theme="dark"] app-admin h5,
 [data-theme="dark"] app-admin p,
+[data-theme="dark"] app-admin label,
+[data-theme="dark"] app-admin li,
 [data-theme="dark"] app-admin .ant-breadcrumb-link,
-[data-theme="dark"] app-admin .ant-breadcrumb-separator {
+[data-theme="dark"] app-admin .ant-breadcrumb-separator,
+[data-theme="dark"] app-admin .ant-typography,
+[data-theme="dark"] app-admin .ant-statistic-title,
+[data-theme="dark"] app-admin .ant-statistic-content {
   color: var(--app-text) !important;
 }
 
+[data-theme="dark"] app-admin .ant-page-header {
+  background: transparent !important;
+  color: var(--app-text) !important;
+}
+
+/* Inputs / selects / pickers */
 [data-theme="dark"] app-admin .ant-input,
+[data-theme="dark"] app-admin .ant-input-number,
+[data-theme="dark"] app-admin .ant-input-number-input,
 [data-theme="dark"] app-admin .ant-input-affix-wrapper,
 [data-theme="dark"] app-admin .ant-select-selector,
 [data-theme="dark"] app-admin .ant-picker,
-[data-theme="dark"] app-admin textarea.ant-input {
-  background: var(--app-surface-secondary) !important;
+[data-theme="dark"] app-admin .ant-picker-input > input,
+[data-theme="dark"] app-admin textarea.ant-input,
+[data-theme="dark"] app-admin .ant-input-group-addon {
+  background: var(--app-input-bg) !important;
   color: var(--app-text) !important;
   border-color: var(--app-border) !important;
 }
 
+[data-theme="dark"] app-admin .ant-input::placeholder,
+[data-theme="dark"] app-admin textarea.ant-input::placeholder,
+[data-theme="dark"] app-admin .ant-select-selection-placeholder {
+  color: var(--app-text-muted) !important;
+}
+
+[data-theme="dark"] app-admin .ant-select-arrow,
+[data-theme="dark"] app-admin .ant-picker-suffix,
+[data-theme="dark"] app-admin .ant-input-clear-icon {
+  color: var(--app-text-secondary) !important;
+}
+
+/* Dropdown overlays (portal to body) */
+[data-theme="dark"] .ant-select-dropdown,
+[data-theme="dark"] .ant-dropdown-menu,
+[data-theme="dark"] .ant-picker-dropdown .ant-picker-panel-container,
+[data-theme="dark"] .ant-cascader-menus,
+[data-theme="dark"] .ant-mention-dropdown {
+  background: var(--app-surface-elevated) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+  box-shadow: var(--app-shadow) !important;
+}
+
+[data-theme="dark"] .ant-select-item,
+[data-theme="dark"] .ant-dropdown-menu-item,
+[data-theme="dark"] .ant-select-item-option-content {
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+[data-theme="dark"] .ant-select-item-option-selected:not(.ant-select-item-option-disabled),
+[data-theme="dark"] .ant-dropdown-menu-item:hover,
+[data-theme="dark"] .ant-dropdown-menu-item-active {
+  background: var(--app-hover) !important;
+}
+
+/* Tabs */
+[data-theme="dark"] app-admin .ant-tabs,
+[data-theme="dark"] app-admin .ant-tabs-nav,
+[data-theme="dark"] app-admin .ant-tabs-content-holder,
+[data-theme="dark"] app-admin .ant-tabs-tabpane {
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] app-admin .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab,
+[data-theme="dark"] app-admin .ant-tabs-card > div > .ant-tabs-nav .ant-tabs-tab {
+  background: var(--app-surface-secondary) !important;
+  border-color: var(--app-border) !important;
+  color: var(--app-text-secondary) !important;
+}
+
+[data-theme="dark"] app-admin .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active,
+[data-theme="dark"] app-admin .ant-tabs-card > div > .ant-tabs-nav .ant-tabs-tab-active {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border-bottom-color: var(--app-surface) !important;
+}
+
+[data-theme="dark"] app-admin .ant-tabs-card > .ant-tabs-content,
+[data-theme="dark"] app-admin .ant-tabs-card > .ant-tabs-content > .ant-tabs-tabpane {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] app-admin .ant-tabs-ink-bar {
+  background: var(--app-primary) !important;
+}
+
+/* Checkbox / radio / switch */
+[data-theme="dark"] app-admin .ant-checkbox-wrapper,
+[data-theme="dark"] app-admin .ant-checkbox + span,
+[data-theme="dark"] app-admin .ant-radio-wrapper,
+[data-theme="dark"] app-admin .ant-radio + span {
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] app-admin .ant-checkbox-inner,
+[data-theme="dark"] app-admin .ant-radio-inner {
+  background: var(--app-input-bg) !important;
+  border-color: var(--app-border-strong) !important;
+}
+
+[data-theme="dark"] app-admin .ant-checkbox-checked .ant-checkbox-inner,
+[data-theme="dark"] app-admin .ant-radio-checked .ant-radio-inner {
+  background-color: var(--app-primary) !important;
+  border-color: var(--app-primary) !important;
+}
+
+/* Alerts */
+[data-theme="dark"] app-admin .ant-alert {
+  border-color: var(--app-border) !important;
+}
+
+[data-theme="dark"] app-admin .ant-alert-info {
+  background: rgba(59, 130, 246, 0.12) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] app-admin .ant-alert-success {
+  background: rgba(34, 197, 94, 0.12) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] app-admin .ant-alert-warning {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] app-admin .ant-alert-error {
+  background: rgba(239, 68, 68, 0.14) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] app-admin .ant-alert-message,
+[data-theme="dark"] app-admin .ant-alert-description {
+  color: var(--app-text) !important;
+}
+
+/* Buttons — default / dashed keep readable contrast */
+[data-theme="dark"] app-admin .ant-btn-default,
+[data-theme="dark"] app-admin .ant-btn-dashed {
+  background: var(--app-surface-secondary) !important;
+  border-color: var(--app-border-strong) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] app-admin .ant-btn-default:hover,
+[data-theme="dark"] app-admin .ant-btn-dashed:hover {
+  border-color: var(--app-primary) !important;
+  color: var(--app-primary) !important;
+}
+
+[data-theme="dark"] app-admin .ant-btn-text,
+[data-theme="dark"] app-admin .ant-btn-link {
+  color: var(--app-text) !important;
+}
+
+/* Divider / tag / badge */
+[data-theme="dark"] app-admin .ant-divider {
+  border-color: var(--app-border) !important;
+}
+
+[data-theme="dark"] app-admin .ant-tag {
+  border-color: var(--app-border) !important;
+}
+
+/* Table row hover / striped */
+[data-theme="dark"] app-admin .ant-table-tbody > tr.ant-table-row:hover > td,
+[data-theme="dark"] app-admin .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+  background: var(--app-hover) !important;
+}
+
+/* Pagination */
+[data-theme="dark"] app-admin .ant-pagination-item,
+[data-theme="dark"] app-admin .ant-pagination-prev .ant-pagination-item-link,
+[data-theme="dark"] app-admin .ant-pagination-next .ant-pagination-item-link {
+  background: var(--app-surface-secondary) !important;
+  border-color: var(--app-border) !important;
+}
+
+[data-theme="dark"] app-admin .ant-pagination-item a,
+[data-theme="dark"] app-admin .ant-pagination-item-link {
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] app-admin .ant-pagination-item-active {
+  border-color: var(--app-primary) !important;
+}
+
+/* Sider */
 [data-theme="dark"] app-admin .ant-layout-sider {
   background: var(--app-sider-bg) !important;
 }
@@ -87,4 +308,24 @@ app-admin nz-breadcrumb {
 [data-theme="dark"] app-admin .ant-menu-dark,
 [data-theme="dark"] app-admin .ant-menu-dark .ant-menu-sub {
   background: var(--app-sider-bg) !important;
+}
+
+/* Tooltip / popover portals */
+[data-theme="dark"] .ant-tooltip-inner,
+[data-theme="dark"] .ant-popover-inner {
+  background: var(--app-surface-elevated) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme="dark"] .ant-popover-arrow-content,
+[data-theme="dark"] .ant-tooltip-arrow-content {
+  background: var(--app-surface-elevated) !important;
+}
+
+/* Message / notification */
+[data-theme="dark"] .ant-message-notice-content,
+[data-theme="dark"] .ant-notification-notice {
+  background: var(--app-surface-elevated) !important;
+  color: var(--app-text) !important;
+  box-shadow: var(--app-shadow) !important;
 }

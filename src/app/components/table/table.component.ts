@@ -704,34 +704,34 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       this.message.warning('Không thể hiển thị hóa đơn: Thiếu thông tin phòng');
       return;
     }
-    
-    // Đảm bảo item có hotelId - lấy từ item hoặc session context
-    if (!item.hotelId) {
-      item.hotelId = this.hotelService.getStoredHotelId() || '';
+
+    const hotelId = this.resolveHotelId(item);
+    if (hotelId) {
+      item.hotelId = hotelId;
     }
-    
+
     // Lấy thông tin để tìm invoice từ database
     const roomId = item.roomId || item._id;
     const checkOutTime = item.checkOutTime || item.checkoutTime || item.date;
     const invoiceId = item.invoiceId || item.invoice?._id;
-    
+
     if (!roomId && !invoiceId) {
       this.message.warning('Không thể tìm hóa đơn: Thiếu thông tin phòng hoặc ID hóa đơn');
       return;
     }
-    
+
     // Nếu có invoiceId, lấy trực tiếp từ database
     if (invoiceId) {
-      this.loadInvoiceById(invoiceId);
+      this.loadInvoiceById(invoiceId, hotelId);
       return;
     }
-    
+
     // Nếu không có invoiceId, tìm invoice theo roomId và checkOutTime
     if (roomId && checkOutTime) {
       this.loadInvoiceByRoomAndDate(roomId, checkOutTime, item);
       return;
     }
-    
+
     // Fallback: sử dụng dữ liệu từ item (nếu không tìm thấy trong database)
     this.message.warning('Không tìm thấy hóa đơn trong database. Hiển thị từ dữ liệu hiện tại.');
     this.showInvoiceModal(item);
@@ -743,50 +743,77 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       this.message.warning('Không thể chỉnh sửa hóa đơn: Thiếu thông tin phòng');
       return;
     }
-    
-    // Đảm bảo item có hotelId - lấy từ item hoặc session context
-    if (!item.hotelId) {
-      item.hotelId = this.hotelService.getStoredHotelId() || '';
+
+    const hotelId = this.resolveHotelId(item);
+    if (hotelId) {
+      item.hotelId = hotelId;
     }
-    
+
     // Lấy thông tin để tìm invoice từ database
     const roomId = item.roomId || item._id;
     const checkOutTime = item.checkOutTime || item.checkoutTime || item.date;
     const invoiceId = item.invoiceId || item.invoice?._id;
-    
+
     if (!roomId && !invoiceId) {
       this.message.warning('Không thể tìm hóa đơn: Thiếu thông tin phòng hoặc ID hóa đơn');
       return;
     }
-    
+
     // Nếu có invoiceId, lấy trực tiếp từ database
     if (invoiceId) {
-      this.loadInvoiceForEdit(invoiceId);
+      this.loadInvoiceForEdit(invoiceId, hotelId);
       return;
     }
-    
+
     // Nếu không có invoiceId, tìm invoice theo roomId và checkOutTime
     if (roomId && checkOutTime) {
       this.loadInvoiceByRoomAndDateForEdit(roomId, checkOutTime, item);
       return;
     }
-    
+
     // Fallback: sử dụng dữ liệu từ item
     this.showInvoiceModalForEdit(item);
   }
 
+  /** Chuẩn hóa hotelId từ item / Input / session / auth. */
+  private resolveHotelId(source?: any): string {
+    const candidates = [
+      source?.hotelId,
+      source?.hotel?._id,
+      source?.hotel?.id,
+      this.hotelId,
+      this.hotelService.getStoredHotelId(),
+      this.sessionContext.getSelectedHotelId(),
+      this.authService.getHotelId?.()
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      if (typeof candidate === 'object') {
+        const id = String(candidate._id || candidate.id || '').trim();
+        if (id && id !== 'undefined' && id !== 'null') return id;
+        continue;
+      }
+      const id = String(candidate).trim();
+      if (id && id !== 'undefined' && id !== 'null' && id !== '[object Object]') {
+        return id;
+      }
+    }
+    return '';
+  }
+
   // Lấy hóa đơn theo ID để chỉnh sửa
-  loadInvoiceForEdit(invoiceId: string): void {
+  loadInvoiceForEdit(invoiceId: string, hotelId?: string | null): void {
     this.settingValue.loading = true;
-    this.invoiceService.getInvoiceByIdNew(invoiceId).subscribe({
+    const resolvedHotelId = this.resolveHotelId({ hotelId });
+    this.invoiceService.getInvoiceByIdNew(invoiceId, resolvedHotelId).subscribe({
       next: (response: any) => {
         this.settingValue.loading = false;
         if (response && response.data) {
           const invoiceData = this.mapInvoiceToInvoiceData(response.data);
           // Đảm bảo hotelId có trong invoiceData
           if (!invoiceData.hotelId) {
-            invoiceData.hotelId = this.hotelId || 
-                                  this.hotelService.getStoredHotelId() || '';
+            invoiceData.hotelId = resolvedHotelId || this.resolveHotelId(invoiceData);
           }
           this.showInvoiceModalForEdit(invoiceData);
         } else {
@@ -804,34 +831,36 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   // Lấy hóa đơn theo roomId và checkOutTime để chỉnh sửa
   loadInvoiceByRoomAndDateForEdit(roomId: string, checkOutTime: any, fallbackItem: any): void {
     this.settingValue.loading = true;
-    
-    // Đảm bảo fallbackItem có hotelId
-    if (fallbackItem && !fallbackItem.hotelId) {
-      fallbackItem.hotelId = this.hotelId || 
-                             this.hotelService.getStoredHotelId() || '';
+
+    const hotelId = this.resolveHotelId(fallbackItem);
+    if (fallbackItem && hotelId) {
+      fallbackItem.hotelId = hotelId;
     }
-    
+
     // Tìm invoice theo roomId và checkOutTime
     const checkOutDate = new Date(checkOutTime);
     const startDate = new Date(checkOutDate);
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(checkOutDate);
     endDate.setHours(23, 59, 59, 999);
-    
-    const hotelId = fallbackItem?.hotelId || this.hotelId || 
-                    this.hotelService.getStoredHotelId();
-    
+
+    if (!hotelId) {
+      this.settingValue.loading = false;
+      this.message.error('Lỗi khi tải hóa đơn: hotelId không được để trống.');
+      if (fallbackItem) {
+        this.showInvoiceModalForEdit(fallbackItem);
+      }
+      return;
+    }
+
     const queryParams: any = {
       roomId: roomId,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      limit: 10
+      limit: 10,
+      hotelId
     };
-    
-    if (hotelId) {
-      queryParams.hotelId = hotelId;
-    }
-    
+
     this.invoiceService.getInvoices(queryParams).subscribe({
       next: (response: any) => {
         this.settingValue.loading = false;
@@ -861,7 +890,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   showInvoiceModalForEdit(invoiceData: any): void {
     // Đảm bảo hotelId luôn có trong invoiceData
     if (!invoiceData.hotelId) {
-      invoiceData.hotelId = this.hotelService.getStoredHotelId() || '';
+      invoiceData.hotelId = this.resolveHotelId(invoiceData);
     }
     
     const modal = this.modalService.create({
@@ -889,17 +918,22 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   }
   
   // Lấy hóa đơn theo ID
-  loadInvoiceById(invoiceId: string): void {
+  loadInvoiceById(invoiceId: string, hotelId?: string | null): void {
     this.settingValue.loading = true;
-    this.invoiceService.getInvoiceByIdNew(invoiceId).subscribe({
+    const resolvedHotelId = this.resolveHotelId({ hotelId });
+    if (!resolvedHotelId) {
+      this.settingValue.loading = false;
+      this.message.error('Lỗi khi tải hóa đơn: hotelId không được để trống.');
+      return;
+    }
+    this.invoiceService.getInvoiceByIdNew(invoiceId, resolvedHotelId).subscribe({
       next: (response: any) => {
         this.settingValue.loading = false;
         if (response && response.data) {
           const invoiceData = this.mapInvoiceToInvoiceData(response.data);
           // Đảm bảo hotelId có trong invoiceData (nếu không có từ database)
           if (!invoiceData.hotelId) {
-            invoiceData.hotelId = this.hotelId || 
-                                  this.hotelService.getStoredHotelId() || '';
+            invoiceData.hotelId = resolvedHotelId;
           }
           this.showInvoiceModal(invoiceData);
         } else {
@@ -917,35 +951,35 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   // Lấy hóa đơn theo roomId và checkOutTime
   loadInvoiceByRoomAndDate(roomId: string, checkOutTime: any, fallbackItem: any): void {
     this.settingValue.loading = true;
-    
-    // Đảm bảo fallbackItem có hotelId
-    if (fallbackItem && !fallbackItem.hotelId) {
-      fallbackItem.hotelId = this.hotelId || 
-                             this.hotelService.getStoredHotelId() || '';
+
+    const hotelId = this.resolveHotelId(fallbackItem);
+    if (fallbackItem && hotelId) {
+      fallbackItem.hotelId = hotelId;
     }
-    
+
     // Tìm invoice theo roomId và checkOutTime (trong khoảng thời gian gần)
     const checkOutDate = new Date(checkOutTime);
     const startDate = new Date(checkOutDate);
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(checkOutDate);
     endDate.setHours(23, 59, 59, 999);
-    
-    // Lấy hotelId từ fallbackItem hoặc từ component
-    const hotelId = fallbackItem?.hotelId || this.hotelId || 
-                    this.hotelService.getStoredHotelId();
-    
+
+    if (!hotelId) {
+      this.settingValue.loading = false;
+      this.message.error('Lỗi khi tải hóa đơn: hotelId không được để trống.');
+      if (fallbackItem) {
+        this.showInvoiceModal(fallbackItem);
+      }
+      return;
+    }
+
     const queryParams: any = {
       roomId: roomId,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      limit: 10
+      limit: 10,
+      hotelId
     };
-    
-    // Thêm hotelId vào query nếu có
-    if (hotelId) {
-      queryParams.hotelId = hotelId;
-    }
     
     this.invoiceService.getInvoices(queryParams).subscribe({
       next: (response: any) => {
@@ -969,9 +1003,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
             const invoiceData = this.mapInvoiceToInvoiceData(matchedInvoice);
             // Đảm bảo hotelId có trong invoiceData (nếu không có từ database)
             if (!invoiceData.hotelId) {
-              invoiceData.hotelId = fallbackItem?.hotelId || 
-                                    this.hotelId || 
-                                    this.hotelService.getStoredHotelId() || '';
+              invoiceData.hotelId = this.resolveHotelId(fallbackItem) || hotelId;
             }
             this.showInvoiceModal(invoiceData);
           } else {
@@ -1022,7 +1054,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     // Nếu không có hotelId từ invoice, thử lấy từ session context
     if (!hotelId) {
-      hotelId = this.hotelService.getStoredHotelId() || '';
+      hotelId = this.resolveHotelId(invoice);
     }
     
     return {
@@ -1111,14 +1143,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   private async loadBusinessInfoForInvoice(invoiceData: any): Promise<any> {
     try {
       // Thử lấy hotelId từ nhiều nguồn
-      let hotelId = invoiceData.hotelId || invoiceData['hotelId'];
-      
-      // Nếu không có, thử lấy từ session context
-      if (!hotelId) {
-        hotelId = this.hotelService.getStoredHotelId() || '';
-        invoiceData.hotelId = hotelId; // Cập nhật lại vào invoiceData
-      }
-      
+      let hotelId = this.resolveHotelId(invoiceData);
+      invoiceData.hotelId = hotelId;
+
       if (!hotelId) {
         console.warn('Không có hotelId để load thông tin khách sạn');
         return invoiceData;
@@ -1165,7 +1192,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
   private createInvoiceModal(invoiceData: any): void {
     // Đảm bảo hotelId luôn có trong invoiceData
     if (!invoiceData.hotelId) {
-      invoiceData.hotelId = this.hotelService.getStoredHotelId() || '';
+      invoiceData.hotelId = this.resolveHotelId(invoiceData);
     }
     
     this.modalService.create({

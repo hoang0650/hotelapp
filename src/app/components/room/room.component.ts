@@ -342,9 +342,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Collapse panel change handlers
   onRevenuePanelChange(active: boolean): void {
     this.isRevenuePanelActive = active;
-    if (active && this.selectedHotelId && !this.isRoomsLoading) {
-      setTimeout(() => this.loadChartDataFromAPI(), 0);
-    }
+    // Biểu đồ tự load khi được tạo (*ngIf) — không prefetch chậm thêm lần nữa
   }
   
   onCalendarPanelChange(active: boolean): void {
@@ -373,8 +371,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.isHistoryPanelActive = true;
     if (this.selectedHotelId && !this.isRoomsLoading) {
       setTimeout(() => {
-        this.loadChartDataFromAPI();
-        // XÓA this.loadBookings() ở đây
+        // Biểu đồ tự load khi panel mở
         if (this.calendarComponent) {
           this.calendarComponent.loadBookings();
           this.calendarComponent.loadAllBookings();
@@ -1536,10 +1533,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Xử lý thay đổi khoảng thời gian biểu đồ
   onPeriodChange(period: 'day' | 'week' | 'month'): void {
     this.selectedPeriod = period;
-    // Reload dữ liệu biểu đồ khi thay đổi khoảng thời gian
-    if (this.selectedHotelId) {
-      this.loadChartDataFromAPI();
-    }
+    // revenue-chart tự load theo period — giữ sync state cha
   }
   
   // Cập nhật tổng doanh thu từ table component

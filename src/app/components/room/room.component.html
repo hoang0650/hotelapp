@@ -511,13 +511,6 @@
           <app-revenue-chart
             *ngIf="isRevenuePanelActive && !isRoomsLoading"
             [hotelId]="selectedHotelId"
-            [labels]="chartLabels"
-            [revenueData]="chartRevenueData"
-            [paymentData]="chartPaymentData"
-            [expenseData]="chartExpenseData"
-            [totalRevenue]="totalRevenue"
-            [totalPayment]="totalPayment"
-            [totalExpense]="totalExpense"
             [selectedPeriod]="selectedPeriod"
             (periodChange)="onPeriodChange($event)">
           </app-revenue-chart>
