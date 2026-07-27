@@ -95,9 +95,27 @@
 
         <div class="plan-features">
           <ul>
-            <li *ngFor="let feature of package.features">
+            <li *ngFor="let feature of getVisibleFeatures(package)">
               <i nz-icon nzType="check" nzTheme="outline"></i>
               {{ getFeatureText(feature) }}
+            </li>
+            <li
+              class="feature-toggle-row"
+              *ngIf="getFeatureCount(package) > featurePreviewLimit">
+              <button
+                type="button"
+                class="feature-toggle-btn"
+                (click)="togglePackageFeatures(package); $event.stopPropagation()">
+                <i
+                  nz-icon
+                  [nzType]="isPackageFeaturesExpanded(package) ? 'up' : 'down'"
+                  nzTheme="outline"></i>
+                {{
+                  isPackageFeaturesExpanded(package)
+                    ? ('PRICING_PAGE.COLLAPSE_FEATURES' | translate)
+                    : ('PRICING_PAGE.EXPAND_FEATURES' | translate:{ count: getFeatureCount(package) - featurePreviewLimit })
+                }}
+              </button>
             </li>
             <li *ngIf="package.maxUsers !== undefined && package.maxUsers !== null">
               <i nz-icon nzType="user" nzTheme="outline"></i>
@@ -261,28 +279,79 @@
       </button>
     </div>
 
-    <!-- Phần tính phí riêng và phí khởi tạo -->
+    <!-- Phần phí bổ sung / add-on -->
     <div class="additional-fees-section">
       <h2 class="additional-fees-title">
         <i nz-icon nzType="info-circle" nzTheme="outline"></i>
         {{ 'PRICING_PAGE.ADDITIONAL_FEES_TITLE' | translate }}
       </h2>
-      
+      <p class="additional-fees-intro">
+        {{ 'PRICING_PAGE.ADDITIONAL_FEES_INTRO' | translate }}
+      </p>
+
       <div class="additional-fees-grid">
-        <!-- Phí riêng -->
+        <!-- Add-on mở rộng -->
         <div class="fee-card">
           <div class="fee-card-header">
-            <i nz-icon nzType="dollar-circle" nzTheme="fill" class="fee-card-icon green"></i>
-            <h3>{{ 'PRICING_PAGE.CUSTOM_FEES_TITLE' | translate }}</h3>
+            <i nz-icon nzType="plus-circle" nzTheme="fill" class="fee-card-icon green"></i>
+            <h3>{{ 'PRICING_PAGE.ADDON_FEES_TITLE' | translate }}</h3>
           </div>
           <p class="fee-card-description">
-            {{ 'PRICING_PAGE.CUSTOM_FEES_DESC' | translate }}
+            {{ 'PRICING_PAGE.ADDON_FEES_DESC' | translate }}
           </p>
           <ul class="fee-list">
             <li class="fee-list-item">
               <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
-              <span>{{ 'PRICING_PAGE.CUSTOM_FEE_TRANSACTION' | translate }}</span>
+              <span>{{ 'PRICING_PAGE.ADDON_EXTRA_ROOMS' | translate }}</span>
             </li>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
+              <span>{{ 'PRICING_PAGE.ADDON_EXTRA_USERS' | translate }}</span>
+            </li>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
+              <span>{{ 'PRICING_PAGE.ADDON_ZALO' | translate }}</span>
+            </li>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
+              <span>{{ 'PRICING_PAGE.ADDON_FANPAGE' | translate }}</span>
+            </li>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
+              <span>{{ 'PRICING_PAGE.ADDON_OTA' | translate }}</span>
+            </li>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
+              <span>{{ 'PRICING_PAGE.ADDON_OPENCLAW' | translate }}</span>
+            </li>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
+              <span>{{ 'PRICING_PAGE.ADDON_TUYA' | translate }}</span>
+            </li>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
+              <span>{{ 'PRICING_PAGE.ADDON_EINVOICE_QUOTA' | translate }}</span>
+            </li>
+            <li class="fee-list-item">
+              <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
+              <span>{{ 'PRICING_PAGE.ADDON_TRAINING' | translate }}</span>
+            </li>
+          </ul>
+          <div class="fee-note green">
+            <p>{{ 'PRICING_PAGE.ADDON_FEES_CONTACT' | translate }}</p>
+          </div>
+        </div>
+
+        <!-- Phí khởi tạo & tùy biến -->
+        <div class="fee-card">
+          <div class="fee-card-header">
+            <i nz-icon nzType="rocket" nzTheme="fill" class="fee-card-icon blue"></i>
+            <h3>{{ 'PRICING_PAGE.ONBOARDING_FEE_TITLE' | translate }}</h3>
+          </div>
+          <p class="fee-card-description no-margin">
+            {{ 'PRICING_PAGE.ONBOARDING_FEE_DESC' | translate }}
+          </p>
+          <ul class="fee-list" style="margin-top: 12px;">
             <li class="fee-list-item">
               <i nz-icon nzType="check-circle" nzTheme="fill" class="fee-check-icon"></i>
               <span>{{ 'PRICING_PAGE.CUSTOM_FEE_INVOICE' | translate }}</span>
@@ -296,26 +365,8 @@
               <span>{{ 'PRICING_PAGE.CUSTOM_FEE_CUSTOM_FEATURE' | translate }}</span>
             </li>
           </ul>
-          <div class="fee-note green">
-            <p>
-              {{ 'PRICING_PAGE.CUSTOM_FEES_CONTACT' | translate }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Phí khởi tạo -->
-        <div class="fee-card">
-          <div class="fee-card-header">
-            <i nz-icon nzType="rocket" nzTheme="fill" class="fee-card-icon blue"></i>
-            <h3>{{ 'PRICING_PAGE.ONBOARDING_FEE_TITLE' | translate }}</h3>
-          </div>
-          <p class="fee-card-description no-margin">
-            {{ 'PRICING_PAGE.ONBOARDING_FEE_DESC' | translate }}
-          </p>
           <div class="fee-note blue">
-            <p>
-              {{ 'PRICING_PAGE.ONBOARDING_FEE_NOTE' | translate }}
-            </p>
+            <p>{{ 'PRICING_PAGE.ONBOARDING_FEE_NOTE' | translate }}</p>
           </div>
         </div>
       </div>

@@ -335,6 +335,38 @@
   margin-right: 10px;
 }
 
+.feature-toggle-row {
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin-top: 4px;
+}
+
+.feature-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #1890ff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.feature-toggle-btn:hover {
+  color: #096dd9;
+  text-decoration: underline;
+}
+
+.additional-fees-intro {
+  text-align: center;
+  color: #595959;
+  max-width: 720px;
+  margin: -8px auto 24px;
+  line-height: 1.6;
+}
+
 .plan-footer {
   text-align: center;
   margin-top: auto;

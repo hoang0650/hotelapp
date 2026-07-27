@@ -2,9 +2,19 @@
   <nz-card>
     <div class="header-actions">
       <h2>{{ isAdmin ? ('PRICING_MANAGEMENT.TITLE_ADMIN' | translate) : ('PRICING_MANAGEMENT.TITLE_USER' | translate) }}</h2>
-      <button *ngIf="canCreatePackage()" nz-button nzType="primary" (click)="showModal()">
-        <i nz-icon nzType="plus"></i>{{ 'PRICING_MANAGEMENT.ADD_PACKAGE' | translate }}
-      </button>
+      <div class="header-actions-buttons" *ngIf="canCreatePackage()">
+        <button
+          nz-button
+          nzType="default"
+          [nzLoading]="syncingRecommended"
+          (click)="syncRecommendedPackages()">
+          <i nz-icon nzType="sync"></i>
+          {{ 'PRICING_MANAGEMENT.SYNC_RECOMMENDED' | translate }}
+        </button>
+        <button nz-button nzType="primary" (click)="showModal()">
+          <i nz-icon nzType="plus"></i>{{ 'PRICING_MANAGEMENT.ADD_PACKAGE' | translate }}
+        </button>
+      </div>
     </div>
 
     <nz-tabset [nzAnimated]="false">
@@ -48,7 +58,7 @@
               <td>
                 <span *ngIf="pkg.monthlyDuration || pkg.yearlyDuration">
                   {{ 'PRICING_MANAGEMENT.MONTH' | translate }}: {{ pkg.monthlyDuration || pkg.duration }} {{ 'PRICING_MANAGEMENT.MONTHS' | translate }}<br>
-                  Năm: {{ pkg.yearlyDuration || pkg.duration }} {{ 'PRICING_MANAGEMENT.MONTHS' | translate }}
+                  {{ 'PRICING_MANAGEMENT.YEAR' | translate }}: {{ pkg.yearlyDuration || pkg.duration }} {{ 'PRICING_MANAGEMENT.MONTHS' | translate }}
                 </span>
                 <span *ngIf="!pkg.monthlyDuration && !pkg.yearlyDuration">
                   {{ pkg.duration }} {{ 'PRICING_MANAGEMENT.MONTHS' | translate }}
@@ -180,6 +190,24 @@
     <ng-container *nzModalContent>
       <form nz-form [formGroup]="packageForm" class="package-form">
         <!-- Tên gói -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.APPLY_PRESET' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-select
+              [(ngModel)]="selectedPresetName"
+              [ngModelOptions]="{standalone: true}"
+              [nzPlaceHolder]="'PRICING_MANAGEMENT.APPLY_PRESET_HINT' | translate"
+              (ngModelChange)="applyRecommendedPreset($event)"
+              style="width: 100%;">
+              <nz-option
+                *ngFor="let preset of recommendedPackages"
+                [nzValue]="preset.name"
+                [nzLabel]="getPresetOptionLabel(preset)">
+              </nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
         <nz-form-item>
           <nz-form-label [nzSpan]="6" nzRequired>{{ 'PRICING_MANAGEMENT.FORM.NAME' | translate }}</nz-form-label>
           <nz-form-control [nzSpan]="18" [nzErrorTip]="'PRICING_MANAGEMENT.FORM.NAME_REQUIRED' | translate">
@@ -506,7 +534,7 @@
               {{ 'PRICING_MANAGEMENT.FEATURES.AI_CHATBOX_DESC' | translate }}
             </div>
             <div style="margin-top: 6px; color: #8c8c8c; font-size: 12px;">
-              Khi bật, role `business` và `hotel` trong gói sẽ được mở AI Chatbox để dùng OpenClaw như trợ lý quản lý. Các kênh Fanpage/Zalo/Telegram nếu cũng được bật feature tương ứng sẽ dùng OpenClaw làm hotel agent theo `chat_engine.py`.
+              {{ 'PRICING_MANAGEMENT.FEATURES.AI_CHATBOX_OPENCLAW_NOTE' | translate }}
             </div>
           </nz-form-control>
         </nz-form-item>

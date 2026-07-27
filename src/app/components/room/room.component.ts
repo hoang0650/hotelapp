@@ -867,10 +867,15 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   loadHotels(): void {
     const currentUser = this.authService.getCurrentUser();
+    const userRole = String(currentUser?.role || '').trim().toLowerCase();
     const userHotelId = this.extractId(currentUser?.hotelId);
     const userBusinessId = this.extractId(currentUser?.businessId);
+    const isPlatformAdmin = userRole === 'superadmin' || userRole === 'admin';
+    const isBusinessRole = userRole === 'business';
+    const isHotelRole = userRole === 'hotel';
 
-    if ((this.authService.isHotelManager() || this.authService.isStaff()) && userHotelId) {
+    // Staff chỉ gắn 1 khách sạn
+    if (this.authService.isStaff() && userHotelId) {
       this.isLoading = true;
       this.cdr.detectChanges();
       this.hotelService.getHotelById(userHotelId, { lite: true }).subscribe({
@@ -907,53 +912,87 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.isLoading = true;
     this.cdr.detectChanges();
-    this.hotelService.getHotels(userBusinessId || undefined, undefined, { lite: true }).subscribe(data => {
-      
-      if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
-        this.hotels = data;
-      } else if (this.authService.isBusiness()) {
-        if (userBusinessId) {
-          this.hotels = data.filter(hotel => this.extractBusinessId(hotel) === userBusinessId);
+
+    // superadmin/admin: lấy tất cả KS — không truyền businessId
+    // business/hotel: để backend filter theo quyền; FE có thể kèm businessId để rõ phạm vi
+    const businessIdParam = isPlatformAdmin ? undefined : (userBusinessId || undefined);
+
+    this.hotelService.getHotels(businessIdParam, undefined, { lite: true }).subscribe({
+      next: (data) => {
+        const hotels = Array.isArray(data) ? data : [];
+
+        if (isPlatformAdmin) {
+          this.hotels = hotels;
+        } else if (isBusinessRole) {
+          this.hotels = userBusinessId
+            ? hotels.filter((hotel) => this.extractBusinessId(hotel) === userBusinessId)
+            : hotels;
+        } else if (isHotelRole) {
+          // hotel: ưu tiên danh sách theo business; fallback hotelId nếu API chỉ trả 1
+          this.hotels = hotels;
+          if ((!this.hotels || this.hotels.length === 0) && userHotelId) {
+            this.hotelService.getHotelById(userHotelId, { lite: true }).subscribe({
+              next: (hotel) => {
+                this.hotels = hotel ? [hotel] : [];
+                this.applyHotelSelectionAfterLoad();
+                this.isLoading = false;
+                this.cdr.detectChanges();
+              },
+              error: () => {
+                this.hotels = [];
+                this.applyHotelSelectionAfterLoad();
+                this.isLoading = false;
+                this.cdr.detectChanges();
+              }
+            });
+            return;
+          }
         } else {
           this.hotels = [];
         }
-      } else {
-        this.hotels = [];
-      }
-      
-      // 2. Logic ưu tiên LocalStorage cho Admin/Business
-      if (this.hotels.length > 0 && !this.authService.isStaff() && !this.authService.isHotelManager()) {
-        const preferredHotelId = this.selectedHotelId || this.hotelService.getStoredHotelId();
-        const hotelExists = preferredHotelId ? this.hotels.some(h => this.extractId(h._id) === preferredHotelId) : false;
 
-        if (hotelExists && preferredHotelId) {
-          // 👉 LẦN SAU: Có trong LocalStorage thì sử dụng ngay
-          this.selectedHotelId = preferredHotelId;
-          if (this.lastLoadedHotelId !== preferredHotelId && !this.isRoomsLoading) {
-            this.onHotelChange(this.selectedHotelId);
-          }
-        } else {
-          // 👉 LẦN ĐẦU (hoặc LocalStorage trống): Lấy mặc định cái đầu tiên từ Service
-          this.selectedHotelId = this.hotels[0]._id!;
-          if (this.lastLoadedHotelId !== this.selectedHotelId && !this.isRoomsLoading) {
-            this.onHotelChange(this.selectedHotelId);
-          }
+        this.applyHotelSelectionAfterLoad();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.message.error('Lỗi khi tải danh sách khách sạn: ' + (error.error?.message || error.message));
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private applyHotelSelectionAfterLoad(): void {
+    if (this.hotels.length > 0 && !this.authService.isStaff()) {
+      const preferredHotelId = this.selectedHotelId || this.hotelService.getStoredHotelId();
+      const hotelExists = preferredHotelId
+        ? this.hotels.some((h) => this.extractId(h._id) === preferredHotelId)
+        : false;
+
+      if (hotelExists && preferredHotelId) {
+        this.selectedHotelId = preferredHotelId;
+        if (this.lastLoadedHotelId !== preferredHotelId && !this.isRoomsLoading) {
+          this.onHotelChange(this.selectedHotelId);
         }
-      } else if (this.hotels.length === 0) {
-        if (!this.authService.isStaff() && !this.authService.isHotelManager()) {
-             this.selectedHotelId = null;
-             this.rooms = [];
-             this.floors = [];
+      } else {
+        this.selectedHotelId = this.hotels[0]._id!;
+        if (this.lastLoadedHotelId !== this.selectedHotelId && !this.isRoomsLoading) {
+          this.onHotelChange(this.selectedHotelId);
         }
       }
-      
-      this.isLoading = false;
-      this.cdr.detectChanges();
-    }, error => {
-      this.message.error('Lỗi khi tải danh sách khách sạn: ' + (error.error?.message || error.message));
-      this.isLoading = false;
-      this.cdr.detectChanges();
-    });
+
+      if (this.selectedHotelId) {
+        this.hotelService.saveRoomContext(this.selectedHotelId, this.selectedFloor || '');
+      }
+      return;
+    }
+
+    if (this.hotels.length === 0 && !this.authService.isStaff()) {
+      this.selectedHotelId = null;
+      this.rooms = [];
+      this.floors = [];
+    }
   }
 
   loadRooms(force: boolean = false): void {

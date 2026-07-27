@@ -7,6 +7,13 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { formatCurrency } from '@angular/common';
 import { PermissionFeature } from '../../services/permission.service';
 import { TranslateService } from '@ngx-translate/core';
+import {
+  RECOMMENDED_PRICING_PACKAGES,
+  RecommendedPricingPackage,
+  sortPackagesByRecommendedOrder
+} from '../../constants/recommended-pricing-packages';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 interface PricingPackage {
   id: string;
@@ -65,6 +72,9 @@ export class PricingManagementComponent implements OnInit {
   isSuperAdmin = false;
   availableFeatures: { value: PermissionFeature; label: string }[] = [];
   packageForm!: FormGroup;
+  recommendedPackages = RECOMMENDED_PRICING_PACKAGES;
+  syncingRecommended = false;
+  selectedPresetName: string | null = null;
 
   numberFormatter = (value: number): string => {
     if (!value) return '0';
@@ -129,8 +139,14 @@ export class PricingManagementComponent implements OnInit {
   }
 
   private initTranslationArrays(): void {
-    // Initialize availableFeatures
-    this.availableFeatures.push(
+    this.refreshAvailableFeatures();
+    this.translate.onLangChange.subscribe(() => {
+      this.refreshAvailableFeatures();
+    });
+  }
+
+  private refreshAvailableFeatures(): void {
+    this.availableFeatures = [
       { value: 'room_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ROOM_MANAGEMENT') },
       { value: 'hotel_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.HOTEL_MANAGEMENT') },
       { value: 'company_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.COMPANY_MANAGEMENT') },
@@ -151,7 +167,18 @@ export class PricingManagementComponent implements OnInit {
       { value: 'fanpage_messages', label: this.translate.instant('USER_MANAGEMENT.FEATURES.FANPAGE_MESSAGES') },
       { value: 'zalo_messages', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ZALO_MESSAGES') },
       { value: 'telegram_messages', label: this.translate.instant('USER_MANAGEMENT.FEATURES.TELEGRAM_MESSAGES') }
-    );
+    ];
+  }
+
+  getPresetOptionLabel(preset: RecommendedPricingPackage): string {
+    if (!preset) {
+      return '';
+    }
+    if (preset.isContactOnly) {
+      return `${preset.name} — ${this.translate.instant('PRICING_MANAGEMENT.CONTACT')}`;
+    }
+    const price = Number(preset.monthlyPrice || 0).toLocaleString('vi-VN');
+    return `${preset.name} — ${price}đ${this.translate.instant('PRICING_MANAGEMENT.PRESET_PER_MONTH')}`;
   }
 
   initForm(): void {
@@ -288,11 +315,15 @@ export class PricingManagementComponent implements OnInit {
   loadPackages(): void {
     const cached = this.pricingService.getCachedPackages();
     if (cached?.payload) {
-      this.packages = (cached.payload.data || cached.payload || []).map((pkg: any) => this.normalizePackageLimits(pkg));
+      this.packages = sortPackagesByRecommendedOrder(
+        (cached.payload.data || cached.payload || []).map((pkg: any) => this.normalizePackageLimits(pkg))
+      );
       this.loading = false;
       this.pricingService.getAllPackages({ force: true }).subscribe({
         next: (response) => {
-          this.packages = (response.data || []).map((pkg: any) => this.normalizePackageLimits(pkg));
+          this.packages = sortPackagesByRecommendedOrder(
+            (response.data || []).map((pkg: any) => this.normalizePackageLimits(pkg))
+          );
         },
         error: () => {}
       });
@@ -302,7 +333,9 @@ export class PricingManagementComponent implements OnInit {
     this.loading = true;
     this.pricingService.getAllPackages().subscribe({
       next: (response) => {
-        this.packages = (response.data || []).map((pkg: any) => this.normalizePackageLimits(pkg));
+        this.packages = sortPackagesByRecommendedOrder(
+          (response.data || []).map((pkg: any) => this.normalizePackageLimits(pkg))
+        );
         
         this.loading = false;
       },
@@ -356,6 +389,7 @@ export class PricingManagementComponent implements OnInit {
 
   showModal(packageId?: string): void {
     this.editingPackageId = packageId || null;
+    this.selectedPresetName = null;
     if (packageId) {
       const pkg = this.packages.find(p => p._id === packageId || p.id === packageId);
       if (pkg) {
@@ -746,6 +780,153 @@ export class PricingManagementComponent implements OnInit {
     return this.isAdmin;
   }
 
+  applyRecommendedPreset(presetName: string | null): void {
+    if (!presetName) {
+      return;
+    }
+    const preset = this.recommendedPackages.find((p) => p.name === presetName);
+    if (!preset) {
+      return;
+    }
+    this.selectedPresetName = presetName;
+    this.patchFormFromRecommended(preset);
+  }
+
+  private patchFormFromRecommended(preset: RecommendedPricingPackage): void {
+    const unlimitedUsers = !preset.maxUsers;
+    const unlimitedRooms = !preset.maxRooms;
+    this.packageForm.patchValue({
+      name: preset.name,
+      description: preset.description,
+      monthlyPrice: preset.monthlyPrice,
+      yearlyPrice: preset.yearlyPrice,
+      yearlyDiscount: preset.yearlyDiscount,
+      isContactOnly: !!preset.isContactOnly,
+      contactLabel: preset.contactLabel || (preset.isContactOnly ? 'Liên hệ' : ''),
+      contactPhone: '',
+      contactEmail: '',
+      contactUrl: '',
+      duration: preset.duration,
+      monthlyDuration: preset.monthlyDuration,
+      yearlyDuration: preset.yearlyDuration,
+      features: [...(preset.features || [])],
+      permissions: [...(preset.permissions || ['view'])],
+      maxUsers: unlimitedUsers ? 0 : preset.maxUsers,
+      unlimitedUsers,
+      maxRooms: unlimitedRooms ? 0 : preset.maxRooms,
+      unlimitedRooms,
+      qrPaymentFeature: !!preset.qrPaymentFeature,
+      otaManagementFeature: !!preset.otaManagementFeature,
+      emailManagementFeature: !!preset.emailManagementFeature,
+      electricManagementFeature: !!preset.electricManagementFeature,
+      paypalPaymentFeature: !!preset.paypalPaymentFeature,
+      cryptoPaymentFeature: !!preset.cryptoPaymentFeature,
+      draftInvoiceFeature: !!preset.draftInvoiceFeature,
+      exportInvoiceFeature: !!preset.exportInvoiceFeature,
+      aiChatboxFeature: !!preset.aiChatboxFeature,
+      hotelNotificationFeature: !!preset.hotelNotificationFeature,
+      isActive: preset.isActive !== false
+    });
+    this.syncMaxRoomsControls();
+  }
+
+  private buildRecommendedPayload(preset: RecommendedPricingPackage): any {
+    return {
+      name: preset.name,
+      description: preset.description,
+      monthlyPrice: preset.monthlyPrice,
+      yearlyPrice: preset.yearlyPrice,
+      yearlyDiscount: preset.yearlyDiscount,
+      isContactOnly: !!preset.isContactOnly,
+      contactLabel: preset.contactLabel || (preset.isContactOnly ? 'Liên hệ' : ''),
+      duration: preset.duration,
+      monthlyDuration: preset.monthlyDuration,
+      yearlyDuration: preset.yearlyDuration,
+      features: [...(preset.features || [])],
+      permissions: [...(preset.permissions || ['view'])],
+      maxUsers: preset.maxUsers,
+      maxRooms: preset.maxRooms,
+      qrPaymentFeature: !!preset.qrPaymentFeature,
+      otaManagementFeature: !!preset.otaManagementFeature,
+      emailManagementFeature: !!preset.emailManagementFeature,
+      electricManagementFeature: !!preset.electricManagementFeature,
+      paypalPaymentFeature: !!preset.paypalPaymentFeature,
+      cryptoPaymentFeature: !!preset.cryptoPaymentFeature,
+      draftInvoiceFeature: !!preset.draftInvoiceFeature,
+      exportInvoiceFeature: !!preset.exportInvoiceFeature,
+      aiChatboxFeature: !!preset.aiChatboxFeature,
+      hotelNotificationFeature: !!preset.hotelNotificationFeature,
+      isActive: preset.isActive !== false
+    };
+  }
+
+  syncRecommendedPackages(): void {
+    if (!this.isAdmin) {
+      return;
+    }
+    this.modal.confirm({
+      nzTitle: this.translate.instant('PRICING_MANAGEMENT.SYNC_RECOMMENDED_CONFIRM_TITLE'),
+      nzContent: this.translate.instant('PRICING_MANAGEMENT.SYNC_RECOMMENDED_CONFIRM_CONTENT'),
+      nzOkText: this.translate.instant('PRICING_MANAGEMENT.SYNC_RECOMMENDED'),
+      nzCancelText: 'Hủy',
+      nzOnOk: () =>
+        new Promise<void>((resolve) => {
+          this.syncingRecommended = true;
+          const existingByName = new Map(
+            (this.packages || []).map((pkg: any) => [String(pkg?.name || '').trim().toLowerCase(), pkg])
+          );
+
+          const requests = this.recommendedPackages.map((preset) => {
+            const payload = this.buildRecommendedPayload(preset);
+            const existing = existingByName.get(preset.name.toLowerCase());
+            const existingId = existing?._id || existing?.id;
+            if (existingId) {
+              return this.pricingService.updatePackage(String(existingId), payload).pipe(
+                map(() => ({ status: 'updated' as const })),
+                catchError(() => of({ status: 'failed' as const }))
+              );
+            }
+            return this.pricingService.createPackage(payload as any).pipe(
+              map(() => ({ status: 'created' as const })),
+              catchError(() => of({ status: 'failed' as const }))
+            );
+          });
+
+          forkJoin(requests).subscribe({
+            next: (results) => {
+              const created = results.filter((r) => r.status === 'created').length;
+              const updated = results.filter((r) => r.status === 'updated').length;
+              const failed = results.filter((r) => r.status === 'failed').length;
+              this.syncingRecommended = false;
+              this.loadPackages();
+              if (failed > 0) {
+                this.message.warning(
+                  this.translate.instant('PRICING_MANAGEMENT.SYNC_RECOMMENDED_PARTIAL', {
+                    created,
+                    updated,
+                    failed
+                  })
+                );
+              } else {
+                this.message.success(
+                  this.translate.instant('PRICING_MANAGEMENT.SYNC_RECOMMENDED_SUCCESS', {
+                    created,
+                    updated
+                  })
+                );
+              }
+              resolve();
+            },
+            error: () => {
+              this.syncingRecommended = false;
+              this.message.error(this.translate.instant('PRICING_MANAGEMENT.SYNC_RECOMMENDED_ERROR'));
+              resolve();
+            }
+          });
+        })
+    });
+  }
+
   canViewSubscribers(): boolean {
     return this.isAdmin;
   }
@@ -768,16 +949,16 @@ export class PricingManagementComponent implements OnInit {
   getAiOpenClawSummary(pkg: any): string {
     const parts: string[] = [];
     if (pkg?.aiChatboxFeature) {
-      parts.push('OpenClaw cho business/hotel qua AI Chatbox');
+      parts.push(this.translate.instant('PRICING_PAGE.OPENCLAW_HIGHLIGHTS.AI_CHATBOX'));
     }
     if (pkg?.features?.includes('fanpage_messages')) {
-      parts.push('Agent Fanpage');
+      parts.push(this.translate.instant('PRICING_PAGE.OPENCLAW_HIGHLIGHTS.FANPAGE'));
     }
     if (pkg?.features?.includes('zalo_messages')) {
-      parts.push('Agent Zalo');
+      parts.push(this.translate.instant('PRICING_PAGE.OPENCLAW_HIGHLIGHTS.ZALO'));
     }
     if (pkg?.features?.includes('telegram_messages')) {
-      parts.push('Agent Telegram');
+      parts.push(this.translate.instant('PRICING_PAGE.OPENCLAW_HIGHLIGHTS.TELEGRAM'));
     }
     return parts.join(' | ');
   }

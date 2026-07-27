@@ -156,8 +156,15 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
 
   private loadHotels(): void {
     this.hotelLoading = true;
+    const currentUser = this.authService.getCurrentUser();
+    const userRole = String(currentUser?.role || '').trim().toLowerCase();
+    const userBusinessId = String(this.authService.getBusinessId() || '').trim() || undefined;
+    // superadmin/admin: không filter businessId để lấy đủ danh sách KS
+    const businessIdParam =
+      userRole === 'superadmin' || userRole === 'admin' ? undefined : userBusinessId;
+
     this.subscriptions.push(
-      this.hotelService.getHotels(undefined, undefined, { lite: true }).subscribe({
+      this.hotelService.getHotels(businessIdParam, undefined, { lite: true }).subscribe({
         next: hotels => {
           this.hotels = (hotels || [])
             .map(hotel => ({

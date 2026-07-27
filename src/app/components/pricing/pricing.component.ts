@@ -15,6 +15,10 @@ import { NotificationsService, Announcement } from '../../services/notifications
 import { forkJoin } from 'rxjs';
 import { HotelService } from '../../services/hotel.service';
 import { TranslateService } from '@ngx-translate/core';
+import {
+  FEATURE_PREVIEW_LIMIT,
+  sortPackagesByRecommendedOrder
+} from '../../constants/recommended-pricing-packages';
 
 interface PricingPlan {
   name: string;
@@ -86,6 +90,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('pricingPlansContainer', { static: false }) pricingPlansContainer!: ElementRef<HTMLDivElement>;
   canScrollLeft = false;
   canScrollRight = false;
+  readonly featurePreviewLimit = FEATURE_PREVIEW_LIMIT;
+  private expandedFeaturePackages = new Set<string>();
 
   plans: PricingPlan[] = [
     {
@@ -465,7 +471,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private applyPackagesResponse(response: any, meta: { fromCache: boolean }): void {
     if (response && response.success !== false) {
-      this.packages = response.data || response || [];
+      const rawPackages = response.data || response || [];
+      this.packages = sortPackagesByRecommendedOrder(Array.isArray(rawPackages) ? rawPackages : []);
 
       if (this.preselectPackageId) {
         const type: 'monthly' | 'yearly' = this.preselectBillingType || this.billingType;
@@ -1008,53 +1015,69 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     return '';
   }
 
-  // Map các feature values với labels
-  private availableFeatures: { value: string; label: string }[] = [
-    { value: 'room_management', label: 'Quản lý phòng' },
-    { value: 'hotel_management', label: 'Quản lý khách sạn' },
-    { value: 'company_management', label: 'Quản lý doanh nghiệp' },
-    { value: 'staff_management', label: 'Quản lý nhân viên' },
-    { value: 'service_management', label: 'Quản lý dịch vụ' },
-    { value: 'user_management', label: 'Quản lý người dùng' },
-    { value: 'pricing_management', label: 'Quản lý gói giá' },
-    { value: 'ota_management', label: 'Quản lý OTA' },
-    { value: 'revenue_chart', label: 'Biểu đồ doanh thu' },
-    { value: 'shift_handover', label: 'Giao ca' },
-    { value: 'bank_transfer_history', label: 'Lịch sử chuyển khoản' },
-    { value: 'calendar', label: 'Lịch' },
-    { value: 'email_admin', label: 'Quản lý email' },
-    { value: 'qr_payment', label: 'Thanh toán QR' },
-    { value: 'visa_payment', label: 'Thanh toán Visa' },
-    { value: 'electric_management', label: 'Quản lý điện' },
-    { value: 'fanpage_messages', label: 'Tin nhắn Fanpage' },
-    { value: 'zalo_messages', label: 'Tin nhắn Zalo' },
-    { value: 'telegram_messages', label: 'Tin nhắn Telegram' }
-  ];
+  // Feature values hỗ trợ map sang USER_MANAGEMENT.FEATURES.*
+  private resolvePackageKey(pkg: any): string {
+    return String(pkg?._id || pkg?.id || pkg?.name || '').trim();
+  }
+
+  getPackageFeatures(pkg: any): any[] {
+    return Array.isArray(pkg?.features) ? pkg.features : [];
+  }
+
+  getFeatureCount(pkg: any): number {
+    return this.getPackageFeatures(pkg).length;
+  }
+
+  isPackageFeaturesExpanded(pkg: any): boolean {
+    const key = this.resolvePackageKey(pkg);
+    return !!key && this.expandedFeaturePackages.has(key);
+  }
+
+  togglePackageFeatures(pkg: any): void {
+    const key = this.resolvePackageKey(pkg);
+    if (!key) {
+      return;
+    }
+    if (this.expandedFeaturePackages.has(key)) {
+      this.expandedFeaturePackages.delete(key);
+    } else {
+      this.expandedFeaturePackages.add(key);
+    }
+  }
+
+  getVisibleFeatures(pkg: any): any[] {
+    const features = this.getPackageFeatures(pkg);
+    if (this.isPackageFeaturesExpanded(pkg) || features.length <= this.featurePreviewLimit) {
+      return features;
+    }
+    return features.slice(0, this.featurePreviewLimit);
+  }
+
+  private featureI18nKey(featureValue: string): string {
+    return `USER_MANAGEMENT.FEATURES.${String(featureValue || '').trim().toUpperCase()}`;
+  }
 
   getFeatureText(feature: any): string {
-    // Nếu là string (value), tìm label tương ứng
     if (typeof feature === 'string') {
-      const featureMap = this.availableFeatures.find(f => f.value === feature);
-      if (featureMap) {
-        return featureMap.label;
+      const key = this.featureI18nKey(feature);
+      const translated = this.translate.instant(key);
+      if (translated && translated !== key) {
+        return translated;
       }
-      // Nếu không tìm thấy trong map, trả về string gốc
       return feature;
     }
-    
-    // Nếu là object, ưu tiên lấy label
+
     if (feature && typeof feature === 'object') {
-      // Nếu có value, map với availableFeatures để lấy label
       if (feature.value) {
-        const featureMap = this.availableFeatures.find(f => f.value === feature.value);
-        if (featureMap) {
-          return featureMap.label;
+        const key = this.featureI18nKey(String(feature.value));
+        const translated = this.translate.instant(key);
+        if (translated && translated !== key) {
+          return translated;
         }
       }
-      // Fallback: lấy label, text, hoặc name
       return feature.label || feature.text || feature.name || String(feature);
     }
-    
+
     return String(feature || '');
   }
 
