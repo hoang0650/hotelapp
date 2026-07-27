@@ -1448,6 +1448,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.paymentSpeakerService.setEnabled(this.selectedHotelId, true);
     }
     this.paymentSpeakerService.tryPlayForPayment(payload, this.selectedHotelId);
+
+    // Báo modal chuyển khoản (room-content-modal) đóng khi thanh toán xong
+    try {
+      window.dispatchEvent(new CustomEvent('sepayPaymentReceived', { detail: payload }));
+    } catch (_e) {}
   }
 
   private refreshRoomsLiteRealtime(): void {

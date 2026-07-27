@@ -78,10 +78,10 @@ export class InvoiceModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const hotelIdRaw = this.invoiceData.hotelId || this.invoiceData['hotelId'];
+    const hotelIdRaw: any = this.invoiceData.hotelId || this.invoiceData['hotelId'];
     const hotelId =
-      typeof hotelIdRaw === 'object'
-        ? String(hotelIdRaw?._id || hotelIdRaw?.id || '').trim()
+      hotelIdRaw && typeof hotelIdRaw === 'object'
+        ? String(hotelIdRaw._id || hotelIdRaw.id || '').trim()
         : String(hotelIdRaw || '').trim();
     if (!hotelId || hotelId === 'undefined' || hotelId === 'null') {
       return;

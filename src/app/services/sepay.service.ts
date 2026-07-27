@@ -298,6 +298,25 @@ export class SePayService {
     return this.http.get(`${this.apiUrl}/payment-history${queryParams}`);
   }
 
+  /**
+   * Kiểm tra trạng thái 1 giao dịch SePay theo paymentHistoryId hoặc paymentCode
+   */
+  getPaymentStatus(params: {
+    paymentCode?: string;
+    paymentHistoryId?: string;
+    hotelId?: string;
+    roomId?: string;
+    paymentType?: string;
+  }): Observable<any> {
+    const query = new URLSearchParams();
+    if (params.paymentCode) query.append('paymentCode', params.paymentCode);
+    if (params.paymentHistoryId) query.append('paymentHistoryId', params.paymentHistoryId);
+    if (params.hotelId) query.append('hotelId', params.hotelId);
+    if (params.roomId) query.append('roomId', params.roomId);
+    if (params.paymentType) query.append('paymentType', params.paymentType);
+    return this.http.get(`${this.apiUrl}/payment-status?${query.toString()}`);
+  }
+
   updatePaymentHistoryStatus(paymentHistoryId: string, status: 'pending' | 'completed' | 'failed' | 'cancelled', note?: string): Observable<any> {
     return this.http.patch(`${this.apiUrl}/payment-history/${paymentHistoryId}/status`, {
       status,

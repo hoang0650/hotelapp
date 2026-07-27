@@ -504,6 +504,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           this.scheduleRoomDetailsReload(false, Math.max(0, Number(event?.delayMs) || 0));
         }
       });
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('sepayPaymentReceived', this.onSePayPaymentReceivedWindow);
+    }
   }
 
   private shouldHandleRoomUpdateEvent(event: any): boolean {
@@ -654,6 +658,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('sepayPaymentReceived', this.onSePayPaymentReceivedWindow);
+    }
 
     if (this.sessionSubscription) {
       this.sessionSubscription.unsubscribe();
@@ -2921,7 +2929,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   private startPaymentStatusPolling(): void {
     this.stopPaymentStatusPolling(false);
 
-    if (!this.sepayPaymentHistoryId || !this.activeSePayTransactionToken) {
+    if (
+      (!this.sepayPaymentHistoryId && !this.sepayPaymentCode) ||
+      !this.activeSePayTransactionToken
+    ) {
       return;
     }
 
@@ -2941,7 +2952,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       if (transactionToken === this.activeSePayTransactionToken) {
         runCheck();
       }
-    }, 1200);
+    }, 800);
 
     this.paymentStatusCheckInterval = setInterval(() => {
       if (transactionToken !== this.activeSePayTransactionToken) {
@@ -2950,6 +2961,37 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
       runCheck();
     }, 2000);
+  }
+
+  private onSePayPaymentReceivedWindow = (event: Event): void => {
+    const detail = (event as CustomEvent)?.detail;
+    this.handleRealtimeSePayPayment(detail);
+  };
+
+  /** Đóng modal CK khi socket báo payment_received khớp giao dịch đang chờ */
+  private handleRealtimeSePayPayment(payload: any): void {
+    if (!payload || !this.showSePayModal || this.paymentSuccessHandled) {
+      return;
+    }
+
+    const payloadHistoryId = String(payload.paymentHistoryId || payload.id || '').trim();
+    const payloadCode = String(payload.paymentCode || '').trim();
+    const payloadRoomId = this.normalizeObjectId(payload.roomId);
+    const currentRoomId = this.normalizeObjectId(this.roomData?._id);
+    const currentHistoryId = String(this.sepayPaymentHistoryId || '').trim();
+    const currentCode = String(this.sepayPaymentCode || '').trim();
+
+    const matchById = !!(currentHistoryId && payloadHistoryId && currentHistoryId === payloadHistoryId);
+    const matchByCode = !!(currentCode && payloadCode && currentCode === payloadCode);
+    const matchByRoom =
+      !!(currentRoomId && payloadRoomId && currentRoomId === payloadRoomId) &&
+      !!(currentHistoryId || currentCode);
+
+    if (!matchById && !matchByCode && !matchByRoom) {
+      return;
+    }
+
+    this.onPaymentSuccess();
   }
   
   /**
@@ -2982,8 +3024,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     // Đóng modal QR trước (tự động đóng)
     this.showSePayModal = false;
-    
-    // Force change detection để đảm bảo modal đóng ngay lập tức
+    this.cdr.markForCheck();
     this.cdr.detectChanges();
     
     // Lấy checkoutData và invoiceData đã lưu
@@ -3185,6 +3226,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   closeSePayModal(): void {
     // Đóng modal QR
     this.showSePayModal = false;
+    this.cdr.markForCheck();
     
     // Dừng polling nếu có
     this.stopPaymentStatusPolling();
@@ -4534,7 +4576,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   private checkPaymentStatusOnce(transactionToken: string, isLastAttempt: boolean = false): void {
     if (
       this.paymentStatusCheckInFlight ||
-      !this.sepayPaymentHistoryId ||
+      (!this.sepayPaymentHistoryId && !this.sepayPaymentCode) ||
       !this.showSePayModal ||
       this.paymentSuccessHandled ||
       transactionToken !== this.activeSePayTransactionToken
@@ -4543,9 +4585,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
 
     this.paymentStatusCheckInFlight = true;
-    this.sepayService.getPaymentHistory({
-      limit: 20,
-      skip: 0
+    const hotelId = this.getResolvedHotelId() || undefined;
+    const roomId = this.normalizeObjectId(this.roomData?._id) || undefined;
+
+    this.sepayService.getPaymentStatus({
+      paymentHistoryId: this.sepayPaymentHistoryId || undefined,
+      paymentCode: this.sepayPaymentHistoryId ? undefined : (this.sepayPaymentCode || undefined),
+      hotelId: hotelId || undefined,
+      roomId: roomId || undefined
     }).subscribe({
       next: (response: any) => {
         this.paymentStatusCheckInFlight = false;
@@ -4554,37 +4601,25 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           return;
         }
 
-        const paymentHistories = Array.isArray(response) ? response : (response.data || []);
-        const paymentHistory = paymentHistories.find((p: any) =>
-          this.sepayPaymentHistoryId && (p._id === this.sepayPaymentHistoryId || p.id === this.sepayPaymentHistoryId)
-        );
-
-        if (!paymentHistory) {
+        if (!response?.found) {
           if (isLastAttempt) {
             this.stopPaymentStatusPolling();
           }
           return;
         }
 
-        const expectedAmount = this.sepayAmount;
-        const receivedAmount = paymentHistory.paymentGatewayResponse?.transferAmount || paymentHistory.amount;
-        const amountDifference = Math.abs(receivedAmount - expectedAmount);
-        const amountTolerance = expectedAmount * 0.01;
+        if (response.paymentHistoryId && !this.sepayPaymentHistoryId) {
+          this.sepayPaymentHistoryId = String(response.paymentHistoryId);
+        }
 
-        if (paymentHistory.status === 'completed' || paymentHistory.status === 'paid') {
-          if (amountDifference > amountTolerance) {
-            console.warn('Số tiền không khớp:', {
-              expected: expectedAmount,
-              received: receivedAmount,
-              difference: amountDifference
-            });
-          }
+        const status = String(response.status || '').toLowerCase();
+        if (response.completed || status === 'completed' || status === 'paid') {
           this.stopPaymentStatusPolling(false);
           this.onPaymentSuccess();
           return;
         }
 
-        if (paymentHistory.status === 'failed' || paymentHistory.status === 'cancelled') {
+        if (status === 'failed' || status === 'cancelled') {
           this.stopPaymentStatusPolling();
           this.message.warning('Thanh toán đã bị hủy hoặc thất bại. Vui lòng thử lại.');
         }

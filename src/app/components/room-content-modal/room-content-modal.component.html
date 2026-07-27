@@ -890,11 +890,12 @@
 
 <!-- Modal SePay Payment (Chuyển khoản) -->
 <nz-modal
-  [(nzVisible)]="showSePayModal"
+  [nzVisible]="showSePayModal"
   [nzTitle]="'ROOM_CONTENT_MODAL.SEPAY_TITLE' | translate"
   [nzWidth]="600"
   [nzFooter]="null"
-  [nzMaskClosable]="false">
+  [nzMaskClosable]="false"
+  (nzOnCancel)="closeSePayModal()">
   <div *nzModalContent>
     <div style="padding: 20px;">
       <nz-alert
