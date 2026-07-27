@@ -2974,7 +2974,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     const monthlyRate = room.pricing?.monthly || priceConfig?.monthlyRates?.standardPrice || 0;
     const additionalHourRate = room.additionalHourRate || priceConfig?.hourlyRates?.additionalHourPrice || (hourlyRate * 0.8);
 
-    const gracePeriodMinutes = priceConfig?.hourlyRates?.gracePeriodMinutes || 15;
+    const gracePeriodMinutes = priceConfig?.hourlyRates?.gracePeriodMinutes ||
+      (room as any)?.priceSettings?.gracePeriodMinutes ||
+      15;
     const autoDailyHours = priceConfig?.nightlyRates?.autoDailyHours || 24;
     const nightlyStartTime = priceConfig?.nightlyRates?.startTime ||
       (room as any)?.priceSettings?.nightlyStartTime || '20:00';

@@ -392,6 +392,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   initialCharges: number = 0;
   initialDiscount: number = 0;
   initialNotes: string = '';
+  /** Tiền đặt trước đã lưu (baseline) — dùng để tạo phiếu thu phần chênh lệch. */
+  initialAdvancePayment: number = 0;
   initialSelectedServices: OrderedService[] = []; // Lưu trữ dịch vụ ban đầu
 
   constructor(
@@ -736,7 +738,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.initialNotes = session.notes || '';
     this.initialSelectedServices = session.selectedServices ? [...session.selectedServices] : [];
     this.selectedServices = session.selectedServices ? [...session.selectedServices] : [];
-    this.advancePayment = session.advancePayment || 0;
+    this.advancePayment = Number(session.advancePayment) || 0;
+    this.initialAdvancePayment = this.advancePayment;
 
     // Đảm bảo guestInfo có name và guestSource
     const guestInfo = session.guestInfo || { name: 'Khách lẻ' };
@@ -846,6 +849,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }];
     
     this.advancePayment = session.advancePayment || 0;
+    this.initialAdvancePayment = Number(this.advancePayment) || 0;
     this.calculateTotalPrice();
   }
 
@@ -943,6 +947,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                                           [...lastCheckinEvent.selectedServices] : [];
           this.selectedServices = this.initialSelectedServices;
           this.advancePayment = eventAdvancePayment;
+          this.initialAdvancePayment = eventAdvancePayment;
           
           // Log để debug
           console.log('Loaded check-in data from backend:', {
@@ -1048,6 +1053,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           console.log('Checkout form full value after patchValue:', this.checkOutForm.value);
           
           this.advancePayment = eventAdvancePayment;
+          this.initialAdvancePayment = eventAdvancePayment;
 
           // 3. ĐÁNH DẤU LÀ FORM ĐÃ KHỞI TẠO XONG (KHÔNG BAO GIỜ GHI ĐÈ NỮA)
           this.isFormInitialized = true;
@@ -1080,9 +1086,31 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Nhận phòng phòng trống/booked: luôn mặc định theo giờ
+    // Nhận phòng: ưu tiên rateType + tiền đặt trước từ booking (nếu có), không ép hourly
     if (this.modalType === 'checkin' && this.roomData?.status !== 'occupied') {
-      this.checkInForm?.patchValue({ rateType: 'hourly' }, { emitEvent: false });
+      const booking: any =
+        this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object'
+          ? this.roomData.currentBooking
+          : null;
+      const bookingRateType = booking?.rateType || booking?.bookingType || null;
+      const bookingAdvance =
+        Number(booking?.deposit ?? booking?.advancePayment ?? 0) || 0;
+      const bookingAdvanceMethod = booking?.advancePaymentMethod || booking?.paymentMethod || 'cash';
+
+      if (booking) {
+        this.initialAdvancePayment = bookingAdvance;
+        this.advancePayment = bookingAdvance;
+        this.checkInForm?.patchValue(
+          {
+            rateType: bookingRateType || this.checkInForm.get('rateType')?.value || 'hourly',
+            advancePayment: bookingAdvance,
+            advancePaymentMethod: this.normalizePaymentMethod(bookingAdvanceMethod)
+          },
+          { emitEvent: false }
+        );
+      } else if (!this.checkInForm?.get('rateType')?.value) {
+        this.checkInForm?.patchValue({ rateType: 'hourly' }, { emitEvent: false });
+      }
     }
 
   }
@@ -1647,22 +1675,39 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             this.message.success('Nhận phòng thành công');
             
             // Tạo phiếu thu cho tiền đặt trước nếu có
+            // Nếu nhận từ booking đã có đặt trước → chỉ tạo phần chênh lệch (tránh trùng phiếu thu booking_advance)
             try {
-              const hotelId = this.authService.getHotelId();
+              const hotelId = this.normalizeObjectId(
+                this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId
+              );
               const payerName = guestInfo?.name || 'Khách lẻ';
-              if (hotelId && advancePayment > 0) {
-                const normalizedMethod = this.normalizePaymentMethod(advancePaymentMethod);
-                const methodForTransaction = (normalizedMethod === 'transfer' ? 'bank_transfer' : normalizedMethod) as 'cash' | 'bank_transfer' | 'card';
+              const booking: any =
+                this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object'
+                  ? this.roomData.currentBooking
+                  : null;
+              const alreadyBookedAdvance =
+                Number(booking?.deposit ?? booking?.advancePayment ?? this.initialAdvancePayment) || 0;
+              const advanceDiff = Number(advancePayment || 0) - alreadyBookedAdvance;
+              if (hotelId && advanceDiff > 0) {
+                const methodForTransaction = this.mapToTransactionMethod(advancePaymentMethod);
                 this.transactionService.createIncome({
                   hotelId,
-                  amount: advancePayment,
+                  amount: advanceDiff,
                   method: methodForTransaction,
                   incomeCategory: 'deposit',
                   description: `[Đặt trước] Phòng ${this.roomData.roomNumber}`,
                   notes: `Đặt trước lúc nhận phòng ${this.roomData.roomNumber} - ${payerName}`,
-                  payer: payerName
+                  payer: payerName,
+                  metadata: {
+                    source: 'checkin_advance',
+                    roomId: String(this.roomData._id),
+                    roomNumber: String(this.roomData.roomNumber || ''),
+                    payer: payerName,
+                    previousAdvancePayment: alreadyBookedAdvance,
+                    newAdvancePayment: Number(advancePayment) || 0
+                  }
                 }).subscribe({
-                  next: () => console.log('Đã tạo phiếu thu đặt trước cho phòng', this.roomData.roomNumber, 'method:', methodForTransaction),
+                  next: () => console.log('Đã tạo phiếu thu đặt trước cho phòng', this.roomData.roomNumber, 'amount:', advanceDiff, 'method:', methodForTransaction),
                   error: (err) => console.error('Lỗi tạo phiếu thu đặt trước:', err)
                 });
               }
@@ -2155,6 +2200,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     durationInHours: number,
     durationInDays: number
   ): void {
+    // Tạo phiếu thu phần tiền đặt trước mới nhập (chênh lệch so với lúc mở modal)
+    const guestNameForAdvance =
+      (formGuestInfo?.name || lastCheckinEvent?.guestInfo?.name || customerName || 'Khách lẻ') as string;
+    this.createAdvancePaymentIncomeIfNeeded(
+      advancePayment,
+      this.initialAdvancePayment,
+      advancePaymentMethod,
+      { name: guestNameForAdvance },
+      { source: 'checkout_advance', silent: true }
+    );
+
     // Chuẩn bị dữ liệu checkout
     const paymentMethod = this.normalizePaymentMethod(this.checkOutForm.get('paymentMethod')?.value);
     const createDebt = this.checkOutForm.get('createDebt')?.value || false;
@@ -2166,7 +2222,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       checkOutTime: currentTime,
       checkinTime: checkInTime,
       checkInTime: checkInTime,
-      skipAutoIncomeVoucher: true,
+      skipAutoIncomeVoucher: createDebt || paymentMethod === 'transfer',
       advancePayment: advancePayment,
       advancePaymentMethod: advancePaymentMethod,
       roomTotal: validRoomTotal, // Gửi validRoomTotal đã được validate
@@ -3240,8 +3296,11 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   calculateRoomTotalByRateType(durationInHours: number, durationInDays: number, rateType: string, remainingMinutes: number = 0): number {
     if (!this.roomData) return 0;
     
-    // Lấy giá từ roomData hoặc priceConfig
-    const priceConfig = (this.roomData as any)?.priceConfig;
+    // Đồng bộ với room.component.ts calculateRoomPriceLocal
+    const priceConfig =
+      (this.roomData as any)?.priceConfig ||
+      (typeof (this.roomData as any)?.priceConfigId === 'object' ? (this.roomData as any).priceConfigId : null);
+    const priceSettings = (this.roomData as any)?.priceSettings || {};
     const hourlyRate = this.roomData.pricing?.hourly || this.roomData.firstHourRate || priceConfig?.hourlyRates?.firstHourPrice || 0;
     const dailyRate = this.roomData.pricing?.daily || priceConfig?.dailyRates?.standardPrice || 0;
     const nightlyRate = this.roomData.pricing?.nightly || priceConfig?.nightlyRates?.standardPrice || 0;
@@ -3249,10 +3308,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const monthlyRate = this.roomData.pricing?.monthly || priceConfig?.monthlyRates?.standardPrice || 0;
     const additionalHourRate = this.roomData.additionalHourRate || priceConfig?.hourlyRates?.additionalHourPrice || (hourlyRate * 0.8);
     
-    // Lấy các tham số từ priceConfig hoặc giá trị mặc định
-    const gracePeriodMinutes = priceConfig?.hourlyRates?.gracePeriodMinutes || 15;
-    const autoNightlyHours = priceConfig?.hourlyRates?.autoNightlyHours || 8;
-    const maxHoursBeforeDay = priceConfig?.hourlyRates?.maxHoursBeforeDay || 6;
+    // Độ trễ giá giờ: ưu tiên priceConfig → priceSettings → mặc định 15 phút (giống sơ đồ phòng)
+    const rawGrace =
+      priceConfig?.hourlyRates?.gracePeriodMinutes ??
+      priceSettings?.gracePeriodMinutes;
+    const gracePeriodMinutes =
+      rawGrace === 0 || rawGrace === '0' ? 0 : (Number(rawGrace) || 15);
     const autoDailyHours = priceConfig?.nightlyRates?.autoDailyHours || 24;
     
     // Lấy thời gian check-in và check-out để tính phụ thu
@@ -3264,8 +3325,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const parseTime = (timeStr: string) => {
       const parts = timeStr.split(':');
       return {
-        hour: parseInt(parts[0]) || 0,
-        minute: parseInt(parts[1]) || 0
+        hour: parseInt(parts[0], 10) || 0,
+        minute: parseInt(parts[1], 10) || 0
       };
     };
     
@@ -3282,35 +3343,23 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return 0;
     };
     
-    const calculateLateHours = (actualTime: Date, standardTime: string): number => {
-      const actual = parseTime(`${actualTime.getHours()}:${actualTime.getMinutes()}`);
-      const standard = parseTime(standardTime);
-      const actualMinutes = actual.hour * 60 + actual.minute;
-      const standardMinutes = standard.hour * 60 + standard.minute;
-      if (actualMinutes > standardMinutes) {
-        const lateMinutes = actualMinutes - standardMinutes;
-        return Math.ceil(lateMinutes / 60); // Làm tròn lên
-      }
-      return 0;
-    };
-    
     // Lấy giá trị từ priceConfig hoặc giá trị mặc định
     // Ưu tiên lấy từ priceConfig, fallback về roomData.priceSettings
     const nightlyStartTime = priceConfig?.nightlyRates?.startTime || 
-                             (this.roomData as any)?.priceSettings?.nightlyStartTime || '20:00';
+                             priceSettings?.nightlyStartTime || '20:00';
     const nightlyEndTime = priceConfig?.nightlyRates?.endTime || 
-                           (this.roomData as any)?.priceSettings?.nightlyEndTime || '12:00';
+                           priceSettings?.nightlyEndTime || '12:00';
     const dailyStartTime = '12:00'; // Thời gian bắt đầu nhận ngày đêm
     const dailyCheckOutTime = priceConfig?.dailyRates?.checkOutTime || 
-                              (this.roomData as any)?.priceSettings?.dailyEndTime || '12:00';
+                              priceSettings?.dailyEndTime || '12:00';
     const nightlyEarlyCheckinSurcharge = priceConfig?.nightlyRates?.earlyCheckinSurcharge || 
-                                         (this.roomData as any)?.priceSettings?.nightlyEarlyCheckinSurcharge || 0;
+                                         priceSettings?.nightlyEarlyCheckinSurcharge || 0;
     const nightlyLateCheckoutSurcharge = priceConfig?.nightlyRates?.lateCheckoutSurcharge || 
-                                         (this.roomData as any)?.priceSettings?.nightlyLateCheckoutSurcharge || 0;
+                                         priceSettings?.nightlyLateCheckoutSurcharge || 0;
     const dailyEarlyCheckinSurcharge = priceConfig?.dailyRates?.earlyCheckinSurcharge || 
-                                      (this.roomData as any)?.priceSettings?.dailyEarlyCheckinSurcharge || 0;
+                                      priceSettings?.dailyEarlyCheckinSurcharge || 0;
     const dailyLateCheckoutFee = priceConfig?.dailyRates?.latecheckOutFee || 
-                                (this.roomData as any)?.priceSettings?.dailyLateCheckoutFee || 0;
+                                priceSettings?.dailyLateCheckoutFee || 0;
     const dailyWeekendSurchargePercent = Number(priceConfig?.dailyRates?.weekendSurcharge ?? 0) || 0;
     const dailyHolidaySurchargePercent = Number(priceConfig?.dailyRates?.holidaySurcharge ?? 0) || 0;
     const nightlyWeekendSurchargePercent = Number(priceConfig?.nightlyRates?.weekendSurcharge ?? 0) || 0;
@@ -3671,25 +3720,25 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       
       case 'weekly':
         const weeks = Math.max(1, Math.ceil(durationInDays / 7));
-        total = weeks * weeklyRate;
-        priceDetails.basePrice = weeklyRate;
+        total = weeklyRate > 0 ? weeks * weeklyRate : Math.max(1, weeks * 7) * dailyRate;
+        priceDetails.basePrice = weeklyRate > 0 ? weeklyRate : dailyRate;
         priceDetails.rateType = 'weekly';
         priceDetails.weeks = weeks;
-        console.log(`Weekly rate calculation: ${weeks} weeks * ${weeklyRate} = ${total}`);
+        console.log(`Weekly rate calculation: ${weeks} weeks * ${weeklyRate || dailyRate} = ${total}`);
         break;
 
       case 'monthly':
         const months = Math.max(1, Math.ceil(durationInDays / 30));
-        total = months * monthlyRate;
-        priceDetails.basePrice = monthlyRate;
+        total = monthlyRate > 0 ? months * monthlyRate : Math.max(1, months * 30) * dailyRate;
+        priceDetails.basePrice = monthlyRate > 0 ? monthlyRate : dailyRate;
         priceDetails.rateType = 'monthly';
         priceDetails.months = months;
-        console.log(`Monthly rate calculation: ${months} months * ${monthlyRate} = ${total}`);
+        console.log(`Monthly rate calculation: ${months} months * ${monthlyRate || dailyRate} = ${total}`);
         break;
         
       default:
-        // Mặc định tính theo giờ
-        total = hourlyRate * durationInHours;
+        // Đồng bộ room.component.ts: tối thiểu 1 giờ
+        total = hourlyRate * Math.max(1, durationInHours);
         priceDetails.rateType = 'hourly';
         priceDetails.basePrice = hourlyRate;
     }
@@ -4243,8 +4292,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestSource: guestSource
     };
 
-    const previousAdvancePayment =
-      this.listData && this.listData.length > 0 ? Number(this.listData[0].advancePayment) || 0 : 0;
+    const previousAdvancePayment = Number(this.initialAdvancePayment) || 0;
 
     // 1) Cập nhật local ngay — UI cảm giác tức thì
     this.initialNotes = notes;
@@ -4337,7 +4385,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       advancePayment,
       previousAdvancePayment,
       advancePaymentMethod,
-      updatedGuestInfo
+      updatedGuestInfo,
+      { source: 'advance_payment_save' }
     );
 
     this.roomsService
@@ -4385,12 +4434,14 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     advancePayment: number,
     previousAdvancePayment: number,
     advancePaymentMethod: string,
-    updatedGuestInfo: { name?: string }
+    updatedGuestInfo: { name?: string },
+    options?: { source?: string; silent?: boolean }
   ): void {
     try {
       const hotelId = this.normalizeObjectId(this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
       const payerName = updatedGuestInfo?.name || 'Khách lẻ';
-      const advanceDiff = Number(advancePayment || 0) - Number(previousAdvancePayment || 0);
+      const baseline = Number(previousAdvancePayment ?? this.initialAdvancePayment) || 0;
+      const advanceDiff = Number(advancePayment || 0) - baseline;
       if (!hotelId || advanceDiff <= 0) return;
 
       const methodForTransaction = this.mapToTransactionMethod(advancePaymentMethod);
@@ -4399,6 +4450,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           ? this.roomData.currentBooking
           : (this.roomData.currentBooking && typeof this.roomData.currentBooking === 'object' ? (this.roomData.currentBooking as any)._id : undefined)
       ) || undefined;
+      const source = options?.source || 'advance_payment';
       this.transactionService.createIncome({
         hotelId: hotelId,
         amount: advanceDiff,
@@ -4409,14 +4461,35 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         payer: payerName,
         bookingId: bookingId,
         metadata: {
-          source: 'advance_payment',
+          source,
           roomId: String(this.roomData._id),
           roomNumber: String(this.roomData.roomNumber || ''),
           bookingId: bookingId || null,
-          payer: payerName
+          payer: payerName,
+          previousAdvancePayment: baseline,
+          newAdvancePayment: Number(advancePayment) || 0
         }
       }).subscribe({
-        next: () => console.log('Đã tạo phiếu thu đặt trước phòng', this.roomData.roomNumber, 'amount:', advanceDiff, 'method:', methodForTransaction),
+        next: () => {
+          // Đánh dấu phần đã tạo phiếu thu để tránh tạo trùng khi lưu/checkout tiếp
+          this.initialAdvancePayment = Number(advancePayment) || 0;
+          if (this.listData && this.listData.length > 0) {
+            this.listData[0].advancePayment = this.initialAdvancePayment;
+          }
+          console.log(
+            'Đã tạo phiếu thu đặt trước phòng',
+            this.roomData.roomNumber,
+            'amount:',
+            advanceDiff,
+            'method:',
+            methodForTransaction,
+            'source:',
+            source
+          );
+          if (!options?.silent) {
+            this.message.success(`Đã tạo phiếu thu đặt trước ${advanceDiff.toLocaleString('vi-VN')} đ`);
+          }
+        },
         error: (err) => {
           console.error('Lỗi tạo phiếu thu đặt trước:', err);
           this.message.error('Không tạo được phiếu thu đặt trước: ' + (err?.error?.message || err?.message || 'Lỗi không xác định'));

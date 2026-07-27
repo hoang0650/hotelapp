@@ -257,8 +257,24 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
     return this.shiftHistory.filter(record => record.status === 'pending').length;
   }
 
+  getLatestHandoverAmountSummary(): number {
+    if (!this.shiftHistory?.length) {
+      return 0;
+    }
+
+    // Lấy bản ghi có handoverTime mới nhất trên trang hiện tại (không cộng tổng)
+    const latest = this.shiftHistory.reduce((best, record) => {
+      const bestTime = new Date(best?.handoverTime || 0).getTime();
+      const recordTime = new Date(record?.handoverTime || 0).getTime();
+      return recordTime >= bestTime ? record : best;
+    }, this.shiftHistory[0]);
+
+    return Number(latest?.handoverAmount || 0);
+  }
+
+  /** @deprecated dùng getLatestHandoverAmountSummary */
   getTotalHandoverAmountSummary(): number {
-    return this.shiftHistory.reduce((sum, record) => sum + (record.handoverAmount || 0), 0);
+    return this.getLatestHandoverAmountSummary();
   }
 
   getTotalManagerHandoverSummary(): number {
