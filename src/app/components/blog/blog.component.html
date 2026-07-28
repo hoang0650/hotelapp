@@ -51,7 +51,7 @@
             <img [src]="getImageUrl(selectedBlog?.featuredImage || selectedBlog?.imageUrl)" [alt]="selectedBlog.title" referrerpolicy="no-referrer" />
           </div>
 
-         <div class="blog-content" [innerHTML]="selectedBlog.content"></div>
+         <div class="blog-content" [innerHTML]="getBlogContentHtml(selectedBlog.content)"></div>
 
           <!-- Like/Dislike Blog -->
           <div class="blog-actions mt-4 mb-4">

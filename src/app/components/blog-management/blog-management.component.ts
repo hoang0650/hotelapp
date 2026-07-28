@@ -9,7 +9,7 @@ import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
-import { normalizeBlogImageForSave, resolveBlogImageUrl } from '../../helpers/blog-image-url';
+import { normalizeBlogImageForSave, resolveBlogImageUrl, rewriteBlogHtmlImageUrls, normalizeBlogHtmlImageUrlsForSave } from '../../helpers/blog-image-url';
 
 export interface BlogSection {
   title: string;
@@ -61,6 +61,84 @@ export class BlogManagementComponent implements OnInit {
   searchValue = '';
   statusFilter: 'all' | 'draft' | 'published' = 'all';
 
+  /** TinyMCE init — upload ảnh về API + nhận link URL (Drive/absolute) đúng. */
+  editorInit: Record<string, unknown> = {
+    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+    toolbar:
+      'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+    menubar: 'file edit view insert format tools table',
+    branding: false,
+    promotion: false,
+    height: 360,
+    image_title: true,
+    image_description: true,
+    image_dimensions: true,
+    automatic_uploads: true,
+    images_reuse_filename: false,
+    images_file_types: 'jpeg,jpg,jpe,jfi,jif,jfif,png,gif,bmp,webp',
+    file_picker_types: 'image',
+    paste_data_images: true,
+    // Giữ absolute URL trong editor để ảnh preview đúng trên admin.*
+    relative_urls: false,
+    remove_script_host: false,
+    convert_urls: true,
+    urlconverter_callback: (url: string, _node: string, _onSave: boolean, name: string) => {
+      if (!url) {
+        return url;
+      }
+      // Chỉ chuẩn hóa src ảnh / data-mce-src
+      if (name === 'src' || name === 'data-mce-src' || !name) {
+        return resolveBlogImageUrl(normalizeBlogImageForSave(url), this.apiBaseUrl) || url;
+      }
+      return url;
+    },
+    images_upload_handler: (blobInfo: { blob: () => Blob; filename: () => string }) =>
+      this.uploadTinyMceImage(blobInfo),
+    file_picker_callback: (
+      callback: (url: string, meta?: { title?: string; alt?: string }) => void,
+      _value: string,
+      meta: { filetype?: string }
+    ) => {
+      if (meta?.filetype !== 'image') {
+        return;
+      }
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) {
+          return;
+        }
+        this.uploadTinyMceImage({
+          blob: () => file,
+          filename: () => file.name
+        })
+          .then((url) => callback(url, { title: file.name, alt: file.name }))
+          .catch((err) => {
+            this.message.error(err?.message || 'Upload ảnh TinyMCE thất bại');
+          });
+      };
+      input.click();
+    },
+    setup: (editor: any) => {
+      // Khi dán/chèn ảnh bằng link (Drive share, /assets/...), rewrite src ngay
+      editor.on('SetContent ObjectResized', () => {
+        const imgs = editor.getBody()?.querySelectorAll?.('img[src]') || [];
+        imgs.forEach((img: HTMLImageElement) => {
+          const raw = img.getAttribute('src') || '';
+          const next = resolveBlogImageUrl(normalizeBlogImageForSave(raw), this.apiBaseUrl);
+          if (next && next !== raw) {
+            img.setAttribute('src', next);
+          }
+          if (!img.getAttribute('referrerpolicy')) {
+            img.setAttribute('referrerpolicy', 'no-referrer');
+          }
+        });
+      });
+    }
+  };
+
   get isSuperAdmin(): boolean {
     return this.authService.isSuperAdmin();
   }
@@ -110,16 +188,70 @@ export class BlogManagementComponent implements OnInit {
   get uploadHeaders(): { [key: string]: string } {
     const token = this.authService.getToken();
     return {
-      'Authorization': token || ''
+      Authorization: token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : ''
     };
   }
 
   addSection(title = '', content = ''): void {
     const sectionForm = this.fb.group({
       title: [title || ''],
-      content: [content || '', Validators.required]
+      // Absolute URL để TinyMCE preview ảnh đúng khi edit
+      content: [rewriteBlogHtmlImageUrls(content || '', this.apiBaseUrl), Validators.required]
     });
     this.sections.push(sectionForm);
+  }
+
+  /**
+   * Upload blob/file từ TinyMCE → /files/upload-blog-asset, trả absolute URL cho editor.
+   */
+  private uploadTinyMceImage(blobInfo: {
+    blob: () => Blob;
+    filename: () => string;
+  }): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const token = this.authService.getToken();
+      if (!token) {
+        reject(new Error('Chưa đăng nhập — không upload được ảnh'));
+        return;
+      }
+
+      const formData = new FormData();
+      const blob = blobInfo.blob();
+      const filename = blobInfo.filename() || `image-${Date.now()}.jpg`;
+      formData.append('image', blob, filename);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', this.uploadUrl);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(new Error(`Upload thất bại (${xhr.status})`));
+          return;
+        }
+        try {
+          const response = JSON.parse(xhr.responseText || '{}');
+          const relative =
+            response.imageUrl ||
+            (response.filename ? `/assets/blog/${response.filename}` : '') ||
+            (response.imageId ? `/files/${response.imageId}` : '');
+          const absolute =
+            response.absoluteUrl ||
+            resolveBlogImageUrl(relative, this.apiBaseUrl);
+
+          if (!absolute) {
+            reject(new Error('Server không trả về link ảnh'));
+            return;
+          }
+          resolve(absolute);
+        } catch (e: any) {
+          reject(new Error(e?.message || 'Phản hồi upload không hợp lệ'));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Lỗi mạng khi upload ảnh'));
+      xhr.send(formData);
+    });
   }
 
   removeSection(index: number): void {
@@ -299,10 +431,13 @@ export class BlogManagementComponent implements OnInit {
       }
     }
     
-    // Lấy sections từ formArray
+    // Lấy sections từ formArray — chuẩn hóa src ảnh portable trước khi lưu
     const sections: BlogSection[] = this.sections.controls.map(control => ({
       title: control.get('title')?.value || '',
-      content: control.get('content')?.value || ''
+      content: normalizeBlogHtmlImageUrlsForSave(
+        control.get('content')?.value || '',
+        this.apiBaseUrl
+      )
     }));
     
     // Tạo content từ sections (nối tất cả sections lại)
@@ -314,7 +449,8 @@ export class BlogManagementComponent implements OnInit {
     }).join('<br><br>');
     
     // Sử dụng content từ sections nếu có, nếu không dùng content cũ
-    const finalContent = sections.length > 0 ? contentFromSections : formValue.content;
+    const rawContent = sections.length > 0 ? contentFromSections : (formValue.content || '');
+    const finalContent = normalizeBlogHtmlImageUrlsForSave(rawContent, this.apiBaseUrl);
     
     const imageForSave = normalizeBlogImageForSave(formValue.imageUrl || formValue.featuredImage);
 
@@ -461,9 +597,13 @@ export class BlogManagementComponent implements OnInit {
       if (info.file.response) {
         const response = info.file.response;
         const imageUrl =
-          response.imageUrl ||
-          (response.filename ? `/assets/blog/${response.filename}` : '') ||
-          (response.imageId ? `${this.apiBaseUrl}/files/${response.imageId}` : '');
+          response.absoluteUrl ||
+          resolveBlogImageUrl(
+            response.imageUrl ||
+              (response.filename ? `/assets/blog/${response.filename}` : '') ||
+              (response.imageId ? `/files/${response.imageId}` : ''),
+            this.apiBaseUrl
+          );
 
         if (!imageUrl) {
           this.message.error('Upload thành công nhưng không nhận được link ảnh');
@@ -471,10 +611,14 @@ export class BlogManagementComponent implements OnInit {
           return;
         }
 
+        // Lưu path portable; preview dùng absolute
+        const portable = response.imageUrl ||
+          (response.filename ? `/assets/blog/${response.filename}` : '') ||
+          imageUrl;
         this.imageUrl = imageUrl;
         this.blogForm.patchValue({
-          imageUrl: imageUrl,
-          featuredImage: imageUrl
+          imageUrl: portable,
+          featuredImage: portable
         });
         this.message.success('Tải lên hình ảnh thành công');
       }

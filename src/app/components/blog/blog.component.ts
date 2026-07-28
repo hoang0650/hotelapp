@@ -8,7 +8,7 @@ import { Blog } from '../blog-management/blog-management.component';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
-import { resolveBlogImageUrl } from '../../helpers/blog-image-url';
+import { resolveBlogImageUrl, rewriteBlogHtmlImageUrls } from '../../helpers/blog-image-url';
 
 @Component({
   selector: 'app-blog',
@@ -469,6 +469,11 @@ export class BlogComponent implements OnInit {
 
   getImageUrl(urlOrId: string | null | undefined): string {
     return resolveBlogImageUrl(urlOrId, this.apiBaseUrl);
+  }
+
+  /** HTML nội dung bài viết với src ảnh đã resolve (API absolute / Drive direct). */
+  getBlogContentHtml(html: string | null | undefined): string {
+    return rewriteBlogHtmlImageUrls(html || '', this.apiBaseUrl);
   }
 }
 
