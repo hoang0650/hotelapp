@@ -47,14 +47,16 @@ export const FEATHERLESS_PROFIT_MODEL_TIERS: FeatherlessModelTier[] = [
     note: 'Default + sales MXH: rẻ nhất trong nhóm frontier có tools (V4-Flash model-specific).'
   },
   {
-    id: 'Qwen/Qwen3.6-35B-A3B',
-    alias: 'phhotel-sales',
+    // Runtime chatbox default = DeepSeek-V4-Flash (FEATHERLESS_MODEL); Qwen chỉ là fallback.
+    id: 'deepseek-ai/DeepSeek-V4-Flash',
+    alias: 'phhotel-chatbox',
     role: 'chatbox',
-    inputPer1M: 0.1612,
-    outputPer1M: 1.0,
-    contextWindow: 131072,
-    maxTokens: 8192,
-    note: 'Chatbox / fallback tiếng Việt; class gần qwen3-5-moevl-35b.'
+    inputPer1M: 0.14,
+    outputPer1M: 0.28,
+    contextWindow: 262144,
+    maxTokens: 16384,
+    reasoning: true,
+    note: 'Chatbox nội bộ — cùng DeepSeek-V4-Flash với sales (FEATHERLESS_MODEL).'
   },
   {
     id: 'MiniMaxAI/MiniMax-M2.5',
