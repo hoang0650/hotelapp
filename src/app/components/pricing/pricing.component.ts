@@ -598,46 +598,13 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
   
   /**
-   * Kiểm tra tính năng thanh toán từ package đã chọn hoặc current package
+   * Cổng thanh toán mua/gia hạn gói trên trang Pricing.
+   * Không dùng paypalPaymentFeature / cryptoPaymentFeature của gói hay enablePayPalPayment của khách sạn —
+   * các flag đó dành cho tính năng vận hành KS sau khi đã có gói, không phải điều kiện hiện nút mua gói.
    */
   checkPaymentFeatures(): void {
-    // Kiểm tra từ selectedPackage (gói đang chọn để thanh toán)
-    if (this.selectedPackage) {
-      const pkg = this.packages.find(p => p._id === this.selectedPackage.packageId || p._id === this.selectedPackage._id);
-      if (pkg) {
-        this.canUsePayPal = (pkg.paypalPaymentFeature === true) && this.enablePayPalPayment;
-        this.canUseCrypto = (pkg.cryptoPaymentFeature === true) && this.enableCryptoPayment;
-        return;
-      }
-      // Nếu selectedPackage có trực tiếp các fields
-      if (this.selectedPackage.paypalPaymentFeature !== undefined) {
-        this.canUsePayPal = (this.selectedPackage.paypalPaymentFeature === true) && this.enablePayPalPayment;
-      }
-      if (this.selectedPackage.cryptoPaymentFeature !== undefined) {
-        this.canUseCrypto = (this.selectedPackage.cryptoPaymentFeature === true) && this.enableCryptoPayment;
-      }
-      return;
-    }
-    
-    // Nếu không có selectedPackage, kiểm tra từ currentPackage (gói đã đăng ký)
-    if (this.currentPackage) {
-      const pkg = this.packages.find(p => p._id === this.currentPackage._id || p._id === this.currentPackage.packageId);
-      if (pkg) {
-        this.canUsePayPal = (pkg.paypalPaymentFeature === true) && this.enablePayPalPayment;
-        this.canUseCrypto = (pkg.cryptoPaymentFeature === true) && this.enableCryptoPayment;
-        return;
-      }
-      // Nếu currentPackage có trực tiếp các fields
-      if (this.currentPackage.paypalPaymentFeature !== undefined) {
-        this.canUsePayPal = (this.currentPackage.paypalPaymentFeature === true) && this.enablePayPalPayment;
-      }
-      if (this.currentPackage.cryptoPaymentFeature !== undefined) {
-        this.canUseCrypto = (this.currentPackage.cryptoPaymentFeature === true) && this.enableCryptoPayment;
-      }
-    } else {
-      this.canUsePayPal = this.enablePayPalPayment;
-      this.canUseCrypto = this.enableCryptoPayment;
-    }
+    this.canUsePayPal = true;
+    this.canUseCrypto = true;
   }
 
   subscribeToPlan(packageId: string) {
