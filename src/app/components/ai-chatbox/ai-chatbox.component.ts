@@ -287,7 +287,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
 
     const newTab = window.open('about:blank', '_blank');
 
-    this.aiAssistantService.getOpenClawDirectUrl().subscribe({
+    this.aiAssistantService.getOpenClawDirectUrl(this.authService.getUserId() || undefined).subscribe({
       next: res => {
         this.openingOpenClaw = false;
         if (res && res.success && res.url) {

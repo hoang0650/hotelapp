@@ -1602,7 +1602,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.clearOpenClawApprovePoll();
     const newTab = window.open('about:blank', '_blank');
 
-    this.aiAssistant.getOpenClawDirectUrl().subscribe({
+    this.aiAssistant.getOpenClawDirectUrl(this.authService.getUserId() || undefined).subscribe({
       next: (res) => {
         this.openingOpenClaw = false;
         if (res?.success && res.url) {
