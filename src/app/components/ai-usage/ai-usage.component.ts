@@ -5,7 +5,8 @@ import {
   AiUsageService,
   AiUsageSummary,
   AiRetailRate,
-  AiHotelUsageRow
+  AiHotelUsageRow,
+  AiUsageChannelStats
 } from '../../services/ai-usage.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -51,7 +52,8 @@ export class AiUsageComponent implements OnInit {
 
   loadUsage(): void {
     this.loading = true;
-    this.aiUsageService.getMyUsage().subscribe({
+    const hotelId = this.authService.getHotelId?.() || this.currentUser?.hotelId || null;
+    this.aiUsageService.getMyUsage(hotelId).subscribe({
       next: (res) => {
         this.usage = res?.data || null;
         this.loading = false;
@@ -150,13 +152,20 @@ export class AiUsageComponent implements OnInit {
   }
 
   getChannelTurns(channel: string): number {
-    const map = this.usage?.byChannel as Record<string, { turns?: number }> | undefined;
+    const map = this.usage?.byChannel as Record<string, AiUsageChannelStats> | undefined;
     return Number(map?.[channel]?.turns) || 0;
   }
 
   getChannelCost(channel: string): number {
-    const map = this.usage?.byChannel as Record<string, { retailCostVnd?: number }> | undefined;
+    const map = this.usage?.byChannel as Record<string, AiUsageChannelStats> | undefined;
     return Number(map?.[channel]?.retailCostVnd) || 0;
+  }
+
+  getChannelTokens(channel: string): string {
+    const map = this.usage?.byChannel as Record<string, AiUsageChannelStats> | undefined;
+    const input = Number(map?.[channel]?.inputTokens) || 0;
+    const output = Number(map?.[channel]?.outputTokens) || 0;
+    return `${input.toLocaleString('vi-VN')} / ${output.toLocaleString('vi-VN')}`;
   }
 
   formatVnd(value: number | null | undefined): string {

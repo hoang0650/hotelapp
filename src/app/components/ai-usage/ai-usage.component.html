@@ -78,6 +78,7 @@
               <div class="ch-name">{{ channelLabel(ch) }}</div>
               <div class="ch-stats">
                 <span>{{ getChannelTurns(ch) | number }} {{ 'AI_USAGE.TURNS' | translate }}</span>
+                <span>{{ getChannelTokens(ch) }}</span>
                 <span>{{ formatVnd(getChannelCost(ch)) }}</span>
               </div>
             </div>
