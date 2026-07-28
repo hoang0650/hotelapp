@@ -77,6 +77,15 @@
   font-size: 0.85rem;
 }
 
+.quota-split {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
 .unlimited {
   font-size: 1.25rem;
   font-weight: 700;
@@ -198,13 +207,47 @@
   font-size: 0.9rem;
 }
 
+.admin-section {
+  margin-top: 24px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.admin-header h2 {
+  margin: 0 0 4px;
+}
+
+.admin-desc {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.admin-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.allocate-meta {
+  color: #6b7280;
+  margin-left: 4px;
+}
+
 @media (max-width: 960px) {
   .quota-hero,
   .section-grid {
     grid-template-columns: 1fr;
   }
 
-  .page-header {
+  .page-header,
+  .admin-header {
     flex-direction: column;
   }
 

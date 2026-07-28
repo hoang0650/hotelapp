@@ -4,7 +4,7 @@
       <h1>{{ 'AI_USAGE.TITLE' | translate }}</h1>
       <p class="subtitle">{{ 'AI_USAGE.SUBTITLE' | translate }}</p>
     </div>
-    <button nz-button nzType="default" [nzLoading]="loading" (click)="loadUsage()">
+    <button nz-button nzType="default" [nzLoading]="loading" (click)="loadUsage(); isAdmin && loadHotelUsages()">
       <i nz-icon nzType="reload"></i>
       {{ 'AI_USAGE.REFRESH' | translate }}
     </button>
@@ -28,6 +28,10 @@
               {{ u.aiChatboxFeature ? ('AI_USAGE.FEATURE_ON' | translate) : ('AI_USAGE.FEATURE_OFF' | translate) }}
             </nz-tag>
           </div>
+          <div class="meta-row" *ngIf="u.hotelName">
+            <span class="label">{{ 'AI_USAGE.HOTEL' | translate }}</span>
+            <strong>{{ u.hotelName }}</strong>
+          </div>
         </div>
 
         <div class="quota-ring">
@@ -49,13 +53,16 @@
             <div class="remaining" *ngIf="u.remainingTurns !== null">
               {{ 'AI_USAGE.REMAINING' | translate }}: {{ u.remainingTurns | number }}
             </div>
+            <div class="quota-split" *ngIf="!u.unlimited">
+              <span>{{ 'AI_USAGE.PACKAGE_QUOTA' | translate }}: {{ (u.packageQuota || 0) | number }}</span>
+              <span>{{ 'AI_USAGE.BONUS_QUOTA' | translate }}: {{ (u.bonusQuota || 0) | number }}</span>
+            </div>
           </div>
         </div>
 
         <div class="cost-panel">
           <div class="cost-label">{{ 'AI_USAGE.RETAIL_COST' | translate }}</div>
           <div class="cost-value">{{ formatVnd(u.retailCostVnd) }}</div>
-          <div class="cost-hint">{{ 'AI_USAGE.RETAIL_COST_HINT' | translate:{ markup: u.markupMultiplier } }}</div>
           <div class="token-row">
             <span>{{ 'AI_USAGE.INPUT_TOKENS' | translate }}: {{ u.inputTokens | number }}</span>
             <span>{{ 'AI_USAGE.OUTPUT_TOKENS' | translate }}: {{ u.outputTokens | number }}</span>
@@ -79,7 +86,6 @@
 
         <section class="section">
           <h2>{{ 'AI_USAGE.TOKEN_RATES' | translate }}</h2>
-          <p class="rate-note">{{ 'AI_USAGE.TOKEN_RATES_NOTE' | translate:{ markup: u.markupMultiplier } }}</p>
           <nz-table
             [nzData]="u.retailRates"
             [nzFrontPagination]="false"
@@ -115,6 +121,32 @@
         </section>
       </div>
 
+      <section class="section events" *ngIf="u.allocations?.length">
+        <h2>{{ 'AI_USAGE.ALLOCATION_HISTORY' | translate }}</h2>
+        <nz-table
+          [nzData]="u.allocations || []"
+          [nzFrontPagination]="false"
+          [nzShowPagination]="false"
+          nzSize="small">
+          <thead>
+            <tr>
+              <th>{{ 'AI_USAGE.COL_TIME' | translate }}</th>
+              <th>{{ 'AI_USAGE.COL_TURNS' | translate }}</th>
+              <th>{{ 'AI_USAGE.COL_NOTE' | translate }}</th>
+              <th>{{ 'AI_USAGE.COL_BY' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let a of u.allocations">
+              <td>{{ a.at | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>+{{ a.turns | number }}</td>
+              <td>{{ a.note || '—' }}</td>
+              <td>{{ a.allocatedByName || '—' }}</td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </section>
+
       <section class="section events">
         <h2>{{ 'AI_USAGE.RECENT' | translate }}</h2>
         <nz-table
@@ -147,7 +179,7 @@
         <nz-empty *ngIf="!(u.recentEvents && u.recentEvents.length)" [nzNotFoundContent]="'AI_USAGE.NO_EVENTS' | translate"></nz-empty>
       </section>
 
-      <div class="upsell" *ngIf="!u.unlimited && u.percentUsed >= 70">
+      <div class="upsell" *ngIf="!isAdmin && !u.unlimited && u.percentUsed >= 70">
         <div>
           <strong>{{ 'AI_USAGE.UPSELL_TITLE' | translate }}</strong>
           <p>{{ 'AI_USAGE.UPSELL_DESC' | translate }}</p>
@@ -160,4 +192,104 @@
       <nz-empty *ngIf="!loading" [nzNotFoundContent]="'AI_USAGE.EMPTY' | translate"></nz-empty>
     </ng-template>
   </nz-spin>
+
+  <!-- Admin: phân bổ thêm theo KS -->
+  <section class="section admin-section" *ngIf="isAdmin">
+    <div class="admin-header">
+      <div>
+        <h2>{{ 'AI_USAGE.ADMIN_TITLE' | translate }}</h2>
+        <p class="admin-desc">{{ 'AI_USAGE.ADMIN_DESC' | translate }}</p>
+      </div>
+      <div class="admin-tools">
+        <input
+          nz-input
+          [(ngModel)]="hotelSearch"
+          [placeholder]="'AI_USAGE.ADMIN_SEARCH' | translate"
+          (keyup.enter)="onHotelSearch()"
+          style="width: 220px;" />
+        <button nz-button nzType="default" (click)="onHotelSearch()" [nzLoading]="adminLoading">
+          {{ 'AI_USAGE.ADMIN_SEARCH_BTN' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <nz-spin [nzSpinning]="adminLoading">
+      <nz-table
+        [nzData]="hotelRows"
+        [nzFrontPagination]="false"
+        [nzShowPagination]="true"
+        [nzTotal]="hotelTotal"
+        [nzPageIndex]="hotelPage"
+        [nzPageSize]="hotelPageSize"
+        (nzPageIndexChange)="onHotelPageChange($event)"
+        nzSize="middle"
+        [nzScroll]="{ x: '960px' }">
+        <thead>
+          <tr>
+            <th>{{ 'AI_USAGE.HOTEL' | translate }}</th>
+            <th>{{ 'AI_USAGE.PACKAGE' | translate }}</th>
+            <th>{{ 'AI_USAGE.PACKAGE_QUOTA' | translate }}</th>
+            <th>{{ 'AI_USAGE.BONUS_QUOTA' | translate }}</th>
+            <th>{{ 'AI_USAGE.COL_USED' | translate }}</th>
+            <th>{{ 'AI_USAGE.REMAINING' | translate }}</th>
+            <th nzWidth="120px">{{ 'AI_USAGE.COL_ACTION' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of hotelRows; trackBy: trackHotel">
+            <td>
+              <strong>{{ row.hotelName }}</strong>
+              <div class="model-id">{{ row.hotelId }}</div>
+            </td>
+            <td>{{ row.packageName || '—' }}</td>
+            <td>{{ (row.packageQuota || 0) | number }}</td>
+            <td>{{ (row.bonusQuota || 0) | number }}</td>
+            <td>{{ (row.usedTurns || 0) | number }}</td>
+            <td>{{ row.remainingTurns !== null ? (row.remainingTurns | number) : ('AI_USAGE.UNLIMITED' | translate) }}</td>
+            <td>
+              <button nz-button nzType="primary" nzSize="small" (click)="openAllocate(row)">
+                {{ 'AI_USAGE.ALLOCATE_BTN' | translate }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+    </nz-spin>
+  </section>
 </div>
+
+<nz-modal
+  [(nzVisible)]="allocateVisible"
+  [nzTitle]="'AI_USAGE.ALLOCATE_TITLE' | translate"
+  [nzOkText]="'AI_USAGE.ALLOCATE_CONFIRM' | translate"
+  [nzCancelText]="'AI_USAGE.CANCEL' | translate"
+  [nzOkLoading]="allocateSubmitting"
+  (nzOnOk)="submitAllocate()"
+  (nzOnCancel)="closeAllocate()">
+  <ng-container *nzModalContent>
+    <p *ngIf="selectedHotel">
+      <strong>{{ selectedHotel.hotelName }}</strong>
+      <span class="allocate-meta">
+        — {{ 'AI_USAGE.REMAINING' | translate }}:
+        {{ selectedHotel.remainingTurns !== null ? (selectedHotel.remainingTurns | number) : ('AI_USAGE.UNLIMITED' | translate) }}
+      </span>
+    </p>
+    <nz-form-item>
+      <nz-form-label>{{ 'AI_USAGE.ALLOCATE_TURNS' | translate }}</nz-form-label>
+      <nz-form-control>
+        <nz-input-number [(ngModel)]="allocateTurns" [nzMin]="1" [nzStep]="100" style="width: 100%;"></nz-input-number>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item>
+      <nz-form-label>{{ 'AI_USAGE.ALLOCATE_NOTE' | translate }}</nz-form-label>
+      <nz-form-control>
+        <textarea
+          nz-input
+          rows="3"
+          [(ngModel)]="allocateNote"
+          [placeholder]="'AI_USAGE.ALLOCATE_NOTE_PLACEHOLDER' | translate">
+        </textarea>
+      </nz-form-control>
+    </nz-form-item>
+  </ng-container>
+</nz-modal>

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
@@ -33,10 +33,26 @@ export interface AiUsageEvent {
   retailCostVnd: number;
 }
 
+export interface AiQuotaAllocation {
+  at: string | Date;
+  turns: number;
+  note?: string;
+  hotelId?: string;
+  hotelName?: string;
+  allocatedBy?: string;
+  allocatedByName?: string;
+}
+
 export interface AiUsageSummary {
   period: string;
+  ownerKey?: string;
+  hotelId?: string | null;
+  hotelName?: string | null;
+  businessId?: string | null;
   packageName: string | null;
   aiChatboxFeature: boolean;
+  packageQuota?: number;
+  bonusQuota?: number;
   monthlyQuota: number;
   usedTurns: number;
   remainingTurns: number | null;
@@ -51,10 +67,17 @@ export interface AiUsageSummary {
     openclaw?: AiUsageChannelStats;
     fallback?: AiUsageChannelStats;
   };
+  allocations?: AiQuotaAllocation[];
   recentEvents: AiUsageEvent[];
   retailRates: AiRetailRate[];
   markupMultiplier: number;
   fxVndPerUsd: number;
+}
+
+export interface AiHotelUsageRow extends AiUsageSummary {
+  hotelId: string;
+  hotelName: string;
+  status?: string;
 }
 
 @Injectable({
@@ -65,11 +88,40 @@ export class AiUsageService {
 
   constructor(private http: HttpClient) {}
 
-  getMyUsage(): Observable<{ success: boolean; data: AiUsageSummary }> {
-    return this.http.get<{ success: boolean; data: AiUsageSummary }>(`${this.apiUrl}/me`);
+  getMyUsage(hotelId?: string | null): Observable<{ success: boolean; data: AiUsageSummary }> {
+    let params = new HttpParams();
+    if (hotelId) {
+      params = params.set('hotelId', hotelId);
+    }
+    return this.http.get<{ success: boolean; data: AiUsageSummary }>(`${this.apiUrl}/me`, { params });
   }
 
   getRates(): Observable<{ success: boolean; data: any }> {
     return this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/rates`);
+  }
+
+  listHotelUsages(options?: {
+    period?: string;
+    search?: string;
+    page?: number;
+    pageSize?: number;
+  }): Observable<{ success: boolean; data: { period: string; total: number; page: number; pageSize: number; items: AiHotelUsageRow[] } }> {
+    let params = new HttpParams();
+    if (options?.period) params = params.set('period', options.period);
+    if (options?.search) params = params.set('search', options.search);
+    if (options?.page) params = params.set('page', String(options.page));
+    if (options?.pageSize) params = params.set('pageSize', String(options.pageSize));
+    return this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/admin/hotels`, { params });
+  }
+
+  allocateBonus(payload: {
+    hotelId: string;
+    turns: number;
+    note?: string;
+  }): Observable<{ success: boolean; message?: string; data: any }> {
+    return this.http.post<{ success: boolean; message?: string; data: any }>(
+      `${this.apiUrl}/admin/allocate`,
+      payload
+    );
   }
 }
