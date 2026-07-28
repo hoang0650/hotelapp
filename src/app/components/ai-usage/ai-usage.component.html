@@ -1,0 +1,163 @@
+<div class="ai-usage-page">
+  <div class="page-header">
+    <div>
+      <h1>{{ 'AI_USAGE.TITLE' | translate }}</h1>
+      <p class="subtitle">{{ 'AI_USAGE.SUBTITLE' | translate }}</p>
+    </div>
+    <button nz-button nzType="default" [nzLoading]="loading" (click)="loadUsage()">
+      <i nz-icon nzType="reload"></i>
+      {{ 'AI_USAGE.REFRESH' | translate }}
+    </button>
+  </div>
+
+  <nz-spin [nzSpinning]="loading">
+    <ng-container *ngIf="usage as u; else emptyState">
+      <div class="quota-hero">
+        <div class="quota-meta">
+          <div class="meta-row">
+            <span class="label">{{ 'AI_USAGE.PERIOD' | translate }}</span>
+            <strong>{{ u.period }}</strong>
+          </div>
+          <div class="meta-row">
+            <span class="label">{{ 'AI_USAGE.PACKAGE' | translate }}</span>
+            <strong>{{ u.packageName || ('AI_USAGE.NO_PACKAGE' | translate) }}</strong>
+          </div>
+          <div class="meta-row">
+            <span class="label">{{ 'AI_USAGE.FEATURE' | translate }}</span>
+            <nz-tag [nzColor]="u.aiChatboxFeature ? 'green' : 'default'">
+              {{ u.aiChatboxFeature ? ('AI_USAGE.FEATURE_ON' | translate) : ('AI_USAGE.FEATURE_OFF' | translate) }}
+            </nz-tag>
+          </div>
+        </div>
+
+        <div class="quota-ring">
+          <nz-progress
+            *ngIf="!u.unlimited; else unlimitedBadge"
+            type="dashboard"
+            [nzPercent]="u.percentUsed"
+            [nzStatus]="progressStatus"
+            [nzWidth]="148">
+          </nz-progress>
+          <ng-template #unlimitedBadge>
+            <div class="unlimited">{{ 'AI_USAGE.UNLIMITED' | translate }}</div>
+          </ng-template>
+          <div class="quota-numbers">
+            <div class="used">{{ u.usedTurns | number }}</div>
+            <div class="cap" *ngIf="!u.unlimited">
+              / {{ u.monthlyQuota | number }} {{ 'AI_USAGE.TURNS' | translate }}
+            </div>
+            <div class="remaining" *ngIf="u.remainingTurns !== null">
+              {{ 'AI_USAGE.REMAINING' | translate }}: {{ u.remainingTurns | number }}
+            </div>
+          </div>
+        </div>
+
+        <div class="cost-panel">
+          <div class="cost-label">{{ 'AI_USAGE.RETAIL_COST' | translate }}</div>
+          <div class="cost-value">{{ formatVnd(u.retailCostVnd) }}</div>
+          <div class="cost-hint">{{ 'AI_USAGE.RETAIL_COST_HINT' | translate:{ markup: u.markupMultiplier } }}</div>
+          <div class="token-row">
+            <span>{{ 'AI_USAGE.INPUT_TOKENS' | translate }}: {{ u.inputTokens | number }}</span>
+            <span>{{ 'AI_USAGE.OUTPUT_TOKENS' | translate }}: {{ u.outputTokens | number }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-grid">
+        <section class="section">
+          <h2>{{ 'AI_USAGE.BY_CHANNEL' | translate }}</h2>
+          <div class="channel-list">
+            <div class="channel-item" *ngFor="let ch of ['sales', 'chatbox', 'openclaw']">
+              <div class="ch-name">{{ channelLabel(ch) }}</div>
+              <div class="ch-stats">
+                <span>{{ getChannelTurns(ch) | number }} {{ 'AI_USAGE.TURNS' | translate }}</span>
+                <span>{{ formatVnd(getChannelCost(ch)) }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>{{ 'AI_USAGE.TOKEN_RATES' | translate }}</h2>
+          <p class="rate-note">{{ 'AI_USAGE.TOKEN_RATES_NOTE' | translate:{ markup: u.markupMultiplier } }}</p>
+          <nz-table
+            [nzData]="u.retailRates"
+            [nzFrontPagination]="false"
+            [nzShowPagination]="false"
+            nzSize="middle"
+            [nzScroll]="{ x: '640px' }">
+            <thead>
+              <tr>
+                <th>{{ 'AI_USAGE.COL_ROLE' | translate }}</th>
+                <th>{{ 'AI_USAGE.COL_MODEL' | translate }}</th>
+                <th>{{ 'AI_USAGE.COL_IN' | translate }}</th>
+                <th>{{ 'AI_USAGE.COL_OUT' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let rate of u.retailRates; trackBy: trackRate">
+                <td>{{ channelLabel(rate.role) }}</td>
+                <td>
+                  <div class="model-id">{{ rate.modelId }}</div>
+                  <small>{{ rate.alias }} · ×{{ rate.markupMultiplier }}</small>
+                </td>
+                <td>
+                  <div>{{ formatVnd(rate.retailInputPer1MVnd) }}</div>
+                  <small>{{ formatUsd(rate.retailInputPer1MUsd) }} / 1M</small>
+                </td>
+                <td>
+                  <div>{{ formatVnd(rate.retailOutputPer1MVnd) }}</div>
+                  <small>{{ formatUsd(rate.retailOutputPer1MUsd) }} / 1M</small>
+                </td>
+              </tr>
+            </tbody>
+          </nz-table>
+        </section>
+      </div>
+
+      <section class="section events">
+        <h2>{{ 'AI_USAGE.RECENT' | translate }}</h2>
+        <nz-table
+          [nzData]="u.recentEvents || []"
+          [nzFrontPagination]="false"
+          [nzShowPagination]="false"
+          nzSize="small"
+          [nzScroll]="{ x: '720px' }">
+          <thead>
+            <tr>
+              <th>{{ 'AI_USAGE.COL_TIME' | translate }}</th>
+              <th>{{ 'AI_USAGE.COL_CHANNEL' | translate }}</th>
+              <th>{{ 'AI_USAGE.COL_MODEL' | translate }}</th>
+              <th>{{ 'AI_USAGE.COL_TURNS' | translate }}</th>
+              <th>{{ 'AI_USAGE.COL_TOKENS' | translate }}</th>
+              <th>{{ 'AI_USAGE.COL_COST' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let ev of u.recentEvents">
+              <td>{{ ev.at | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ channelLabel(ev.channel) }}</td>
+              <td class="model-id">{{ ev.model }}</td>
+              <td>{{ ev.turns }}</td>
+              <td>{{ ev.inputTokens | number }} / {{ ev.outputTokens | number }}</td>
+              <td>{{ formatVnd(ev.retailCostVnd) }}</td>
+            </tr>
+          </tbody>
+        </nz-table>
+        <nz-empty *ngIf="!(u.recentEvents && u.recentEvents.length)" [nzNotFoundContent]="'AI_USAGE.NO_EVENTS' | translate"></nz-empty>
+      </section>
+
+      <div class="upsell" *ngIf="!u.unlimited && u.percentUsed >= 70">
+        <div>
+          <strong>{{ 'AI_USAGE.UPSELL_TITLE' | translate }}</strong>
+          <p>{{ 'AI_USAGE.UPSELL_DESC' | translate }}</p>
+        </div>
+        <a nz-button nzType="primary" routerLink="/pricing">{{ 'AI_USAGE.UPSELL_CTA' | translate }}</a>
+      </div>
+    </ng-container>
+
+    <ng-template #emptyState>
+      <nz-empty *ngIf="!loading" [nzNotFoundContent]="'AI_USAGE.EMPTY' | translate"></nz-empty>
+    </ng-template>
+  </nz-spin>
+</div>

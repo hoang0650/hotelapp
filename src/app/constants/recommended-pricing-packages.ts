@@ -28,6 +28,8 @@ export interface RecommendedPricingPackage {
   exportInvoiceFeature?: boolean;
   aiChatboxFeature?: boolean;
   hotelNotificationFeature?: boolean;
+  /** Soft quota: tổng lượt AI / tháng (sales + chatbox + openclaw) */
+  aiMonthlyQuota?: number;
   isActive: boolean;
   sortOrder: number;
 }
@@ -71,6 +73,7 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
     maxRooms: 8,
     qrPaymentFeature: true,
     draftInvoiceFeature: true,
+    aiMonthlyQuota: 50,
     isActive: true,
     sortOrder: 1
   },
@@ -97,6 +100,7 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
     qrPaymentFeature: true,
     draftInvoiceFeature: true,
     hotelNotificationFeature: true,
+    aiMonthlyQuota: 0,
     isActive: true,
     sortOrder: 2
   },
@@ -129,13 +133,14 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
     exportInvoiceFeature: true,
     emailManagementFeature: true,
     hotelNotificationFeature: true,
+    aiMonthlyQuota: 0,
     isActive: true,
     sortOrder: 3
   },
   {
     name: 'Tăng Trưởng',
     description:
-      'Cho KS có OTA và bán phòng qua MXH: đồng bộ OTA, bot Zalo/Fanpage/Telegram, Sale Agent dẫn cọc và AI Chatbox mức nhẹ.',
+      'Cho KS có OTA và bán phòng qua MXH: đồng bộ OTA, bot Zalo/Fanpage/Telegram, Sale Agent dẫn cọc và AI Chatbox mức nhẹ (1.200 lượt AI/tháng).',
     monthlyPrice: 1490000,
     yearlyPrice: 14900000,
     yearlyDiscount: 17,
@@ -168,13 +173,14 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
     emailManagementFeature: true,
     hotelNotificationFeature: true,
     aiChatboxFeature: true,
+    aiMonthlyQuota: 1200,
     isActive: true,
     sortOrder: 4
   },
   {
     name: 'AI Pro',
     description:
-      'AI Agent vận hành đầy đủ: OpenClaw, AI Chatbox nội bộ, Tuya điện phòng, Visa/PayPal và quota AI cao cho KS ≤ 200 phòng.',
+      'AI Agent vận hành đầy đủ: OpenClaw, AI Chatbox nội bộ, Tuya điện phòng, Visa/PayPal và 5.000 lượt AI/tháng cho KS ≤ 200 phòng.',
     monthlyPrice: 2990000,
     yearlyPrice: 29900000,
     yearlyDiscount: 17,
@@ -214,13 +220,14 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
     aiChatboxFeature: true,
     electricManagementFeature: true,
     paypalPaymentFeature: true,
+    aiMonthlyQuota: 5000,
     isActive: true,
     sortOrder: 5
   },
   {
     name: 'Chuỗi / Enterprise',
     description:
-      'Đa cơ sở, không giới hạn phòng/user theo thỏa thuận, SLA riêng, training dedicated và tùy biến tích hợp. Liên hệ để nhận báo giá.',
+      'Đa cơ sở, không giới hạn phòng/user theo thỏa thuận, SLA riêng, training dedicated, quota AI theo HĐ và tùy biến tích hợp. Liên hệ để nhận báo giá.',
     monthlyPrice: 0,
     yearlyPrice: 0,
     yearlyDiscount: 0,
@@ -264,6 +271,7 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
     electricManagementFeature: true,
     paypalPaymentFeature: true,
     cryptoPaymentFeature: true,
+    aiMonthlyQuota: 0,
     isActive: true,
     sortOrder: 6
   }

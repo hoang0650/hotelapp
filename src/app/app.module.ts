@@ -126,6 +126,7 @@ import { BankTransferHistoryComponent } from './components/bank-transfer-history
 import { NlToBrPipe } from './pipes/nl-to-br.pipe';
 import { MarkdownPipe } from './pipes/markdown.pipe';
 import { AiChatboxComponent } from './components/ai-chatbox/ai-chatbox.component';
+import { AiUsageComponent } from './components/ai-usage/ai-usage.component';
 import { FanpageMessagesComponent } from './components/fanpage-messages/fanpage-messages.component';
 import { ZaloMessagesComponent } from './components/zalo-messages/zalo-messages.component';
 import { TelegramMessagesComponent } from './components/telegram-messages/telegram-messages.component';
@@ -281,6 +282,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         NlToBrPipe,
         MarkdownPipe,
         AiChatboxComponent,
+        AiUsageComponent,
         FanpageMessagesComponent,
         ZaloMessagesComponent,
         TelegramMessagesComponent,

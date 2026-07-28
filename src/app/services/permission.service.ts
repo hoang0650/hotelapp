@@ -37,6 +37,7 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/service-management': ['service_management'],
   '/admin/users-management': ['user_management'],
   '/admin/pricing-management': ['pricing_management'],
+  '/admin/ai-usage': [],
   '/admin/ota-management': ['ota_management'],
   '/admin/fanpage-messages': ['fanpage_messages'],
   '/admin/zalo-messages': ['zalo_messages'],

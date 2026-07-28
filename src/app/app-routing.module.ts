@@ -63,6 +63,7 @@ import { TelegramMessagesComponent } from './components/telegram-messages/telegr
 import { BotSettingComponent } from './components/bot-setting/bot-setting.component';
 import { CameraConfigComponent } from './components/camera-config/camera-config.component';
 import { FileExportComponent } from './components/file-export/file-export.component';
+import { AiUsageComponent } from './components/ai-usage/ai-usage.component';
 import { SubdomainGuard } from './guards/subdomain.guard';
 
 // 1. Khai báo danh sách các path hợp lệ của Admin
@@ -82,6 +83,7 @@ const adminSubdomainPaths = new Set([
   'debt-management',
   'blog-management',
   'pricing-management',
+  'ai-usage',
   'camera-config',
   'files',
   'exports', // <-- Đã thêm exports
@@ -164,6 +166,7 @@ const routes: Routes = [
       { path: 'debt-management', component: DebtManagementComponent, canActivate: [PermissionGuard] },
       { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'ai-usage', component: AiUsageComponent, canActivate: [PermissionGuard] },
       { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
       { path: 'exports/:filename', component: FileExportComponent }, // <-- Thêm vào children của Admin
       { path: 'files', component: HotelFilesComponent, canActivate: [PermissionGuard] },
@@ -211,6 +214,7 @@ const routes: Routes = [
       { path: 'debt-management', component: DebtManagementComponent, canActivate: [PermissionGuard] },
       { path: 'blog-management', component: BlogManagementComponent, canActivate: [PermissionGuard] },
       { path: 'pricing-management', component: PricingManagementComponent, canActivate: [PermissionGuard] },
+      { path: 'ai-usage', component: AiUsageComponent, canActivate: [PermissionGuard] },
       { path: 'camera-config', component: CameraConfigComponent, canActivate: [PermissionGuard] },
       { path: 'exports/:filename', component: FileExportComponent }, // <-- Thêm vào children của Admin
       { path: 'files/:filename', component: FileExportComponent, canActivate: [PermissionGuard] },

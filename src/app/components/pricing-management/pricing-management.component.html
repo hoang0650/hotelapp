@@ -539,6 +539,24 @@
           </nz-form-control>
         </nz-form-item>
 
+        <!-- Soft quota AI / tháng -->
+        <nz-form-item>
+          <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FEATURES.AI_MONTHLY_QUOTA' | translate }}</nz-form-label>
+          <nz-form-control [nzSpan]="18">
+            <nz-input-number
+              formControlName="aiMonthlyQuota"
+              [nzMin]="0"
+              [nzStep]="50"
+              [nzFormatter]="numberFormatter"
+              [nzParser]="numberParser"
+              style="width: 100%;">
+            </nz-input-number>
+            <div style="margin-top: 8px; color: #666; font-size: 12px;">
+              {{ 'PRICING_MANAGEMENT.FEATURES.AI_MONTHLY_QUOTA_DESC' | translate }}
+            </div>
+          </nz-form-control>
+        </nz-form-item>
+
         <!-- Trạng thái -->
         <nz-form-item>
           <nz-form-label [nzSpan]="6">{{ 'PRICING_MANAGEMENT.FORM.STATUS' | translate }}</nz-form-label>

@@ -39,6 +39,8 @@ interface PricingPackage {
   draftInvoiceFeature?: boolean; // Tính năng xem hóa đơn nháp
   exportInvoiceFeature?: boolean; // Tính năng xuất hóa đơn
   aiChatboxFeature?: boolean; // Tính năng AI Chatbox
+  hotelNotificationFeature?: boolean; // Tính năng thông báo khách sạn
+  aiMonthlyQuota?: number; // Soft quota AI / tháng (turns)
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -80,6 +82,8 @@ export class PricingManagementComponent implements OnInit {
     if (!value) return '0';
     return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
+
+  numberParser = (value: string): string => value.replace(/,/g, '');
 
   constructor(
     private fb: FormBuilder,
@@ -212,6 +216,7 @@ export class PricingManagementComponent implements OnInit {
       exportInvoiceFeature: [false], // Tính năng xuất hóa đơn
       aiChatboxFeature: [false], // Tính năng AI Chatbox
       hotelNotificationFeature: [false], // Tính năng thông báo khách sạn
+      aiMonthlyQuota: [0, [Validators.min(0)]],
       isActive: [true]
     });
 
@@ -429,6 +434,7 @@ export class PricingManagementComponent implements OnInit {
           exportInvoiceFeature: normalizedPkg.exportInvoiceFeature || false,
           aiChatboxFeature: normalizedPkg.aiChatboxFeature || false,
           hotelNotificationFeature: normalizedPkg.hotelNotificationFeature || false,
+          aiMonthlyQuota: Number(normalizedPkg.aiMonthlyQuota) || 0,
           isActive: normalizedPkg.isActive
         });
         // Bật checkbox cho admin (để người dùng có thể chuyển trạng thái không giới hạn)
@@ -467,6 +473,7 @@ export class PricingManagementComponent implements OnInit {
         exportInvoiceFeature: false,
         aiChatboxFeature: false,
         hotelNotificationFeature: false,
+        aiMonthlyQuota: 0,
         isActive: true
       });
       // Bật checkbox cho admin
@@ -510,6 +517,7 @@ export class PricingManagementComponent implements OnInit {
       exportInvoiceFeature: false,
       aiChatboxFeature: false,
       hotelNotificationFeature: false,
+      aiMonthlyQuota: 0,
       isActive: true
     });
     this.syncMaxRoomsControls();
@@ -825,6 +833,7 @@ export class PricingManagementComponent implements OnInit {
       exportInvoiceFeature: !!preset.exportInvoiceFeature,
       aiChatboxFeature: !!preset.aiChatboxFeature,
       hotelNotificationFeature: !!preset.hotelNotificationFeature,
+      aiMonthlyQuota: Number(preset.aiMonthlyQuota) || 0,
       isActive: preset.isActive !== false
     });
     this.syncMaxRoomsControls();
@@ -856,6 +865,7 @@ export class PricingManagementComponent implements OnInit {
       exportInvoiceFeature: !!preset.exportInvoiceFeature,
       aiChatboxFeature: !!preset.aiChatboxFeature,
       hotelNotificationFeature: !!preset.hotelNotificationFeature,
+      aiMonthlyQuota: Number(preset.aiMonthlyQuota) || 0,
       isActive: preset.isActive !== false
     };
   }

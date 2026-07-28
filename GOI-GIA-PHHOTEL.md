@@ -102,9 +102,9 @@ Tài liệu định vị gói dịch vụ cho thị trường **quản lý khác
 | AI tư vấn khách trên MXH (ưu tiên sales state machine) | channel_ai_context | — | — | — | ✅ | ✅ | ✅ |
 | Thông báo khách sạn / loa thanh toán | `hotelNotificationFeature` | — | ◐ | ✅ | ✅ | ✅ | ✅ |
 | Email vận hành | `email_management`, `emailManagementFeature` | — | — | ◐ | ✅ | ✅ | ✅ |
-| Định mức AI chat / tháng* | — | 30 | — | — | 200 | 2.000 | Theo HĐ |
+| Định mức AI chat / tháng* (`aiMonthlyQuota`) | — | 50 | — | — | 1.200 | 5.000 | Theo HĐ |
 
-\* Định mức gợi ý vận hành (quota mềm); có thể gắn billing usage sau.
+\* Soft quota theo Featherless ([request pricing](https://featherless.ai/docs/request-pricing-and-credits)): sales/MXH dùng `DeepSeek-V4-Flash` ($0.14/$0.28 / 1M) để tối đa biên; OpenClaw premium dùng `MiniMax-M2.5` ($0.295/$1.20). AI COGS mục tiêu ≤ ~8–12% giá gói khi dùng hết quota.
 
 ### 4.5. IoT & nâng cao
 
@@ -167,7 +167,7 @@ Tài liệu định vị gói dịch vụ cho thị trường **quản lý khác
 - OTA sync & quản lý kênh.
 - Bot / inbox Zalo + Facebook + Telegram.
 - Sale Agent AI: tư vấn loại phòng → xin tên/SĐT → tạo mã cọc → xác nhận booking khi thanh toán thành công.
-- AI Chatbox nội bộ mức nhẹ (quota).
+- AI Chatbox nội bộ mức nhẹ (1.200 lượt/tháng, Flash).
 
 **Chốt sale:** *“Khách nhắn Zalo lúc 1 giờ sáng, bot vẫn tư vấn đúng loại phòng và dẫn cọc.”*
 
@@ -181,7 +181,7 @@ Tài liệu định vị gói dịch vụ cho thị trường **quản lý khác
 - OpenClaw đầy đủ (pairing, Control UI, agent nội bộ).
 - AI hỏi doanh thu / phòng / ca / quyết định quản trị theo quyền.
 - Tuya / điện phòng, PayPal (nếu cần khách quốc tế).
-- Quota AI cao, hỗ trợ ưu tiên.
+- Quota AI cao (5.000 lượt/tháng), hỗ trợ ưu tiên.
 
 **Chốt sale:** *“Lễ tân bán phòng trên MXH — quản lý hỏi AI/OpenClaw để điều hành.”*
 
@@ -237,7 +237,8 @@ features: (+ so với Vận Hành)
   hotel_management
 flags:
   otaManagementFeature=true
-  aiChatboxFeature=true   # quota nhẹ
+  aiChatboxFeature=true
+  aiMonthlyQuota=1200   # sales Flash-heavy; COGS ~$0.35 @ full use
 limits:
   maxRooms=100, maxUsers=30
 price:
@@ -252,6 +253,7 @@ flags:
   aiChatboxFeature=true
   electricManagementFeature=true
   paypalPaymentFeature=true
+  aiMonthlyQuota=5000   # mix Flash sales + MiniMax OpenClaw; COGS ~$3.5
   # OpenClaw bật kèm hạ tầng AI (cấu hình gateway / pairing)
 limits:
   maxRooms=200, maxUsers=50
@@ -277,7 +279,7 @@ maxRooms=0 (unlimited), maxUsers=0 (unlimited)
 | Kênh Zalo OA (nếu chưa có) | +199.000đ | Từ Vận Hành |
 | Kênh Fanpage | +199.000đ | Từ Vận Hành |
 | OTA pack | +299.000đ | Từ Vận Hành |
-| OpenClaw / AI nâng cao | +690.000đ | Từ Tăng Trưởng |
+| OpenClaw / AI nâng cao | +690.000đ (+2.000 lượt OpenClaw) | Từ Tăng Trưởng |
 | Tuya điện phòng | +149.000đ + thiết bị | Từ Tăng Trưởng |
 | Hạn mức HĐĐT thêm | Theo số lượng | SePay / e-invoice quota |
 | Onsite training ½ ngày | 2.500.000đ / lần | Một lần |
@@ -332,7 +334,7 @@ Enterprise
 
 - [ ] Tạo 6 PricingPackage trên Admin đúng `features` / flags / limits ở mục 6  
 - [ ] Landing `/pricing` hiển thị tên + giá + CTA “Liên hệ” cho Enterprise  
-- [ ] Bật `aiChatboxFeature` + cấu hình OpenClaw gateway cho AI Pro / Enterprise  
+- [ ] Bật `aiChatboxFeature` + `aiMonthlyQuota` (50 / 1200 / 5000) + cấu hình OpenClaw gateway (Featherless: Flash default, MiniMax premium) cho AI Pro / Enterprise  
 - [ ] Bật `zalo_messages` / `fanpage_messages` / `telegram_messages` từ Tăng Trưởng  
 - [ ] Đồng bộ copy bán hàng app PMS + web (i18n `PRICING_*`)  
 - [ ] Tài liệu onboarding 1 trang cho từng gói (PDF / Notion)

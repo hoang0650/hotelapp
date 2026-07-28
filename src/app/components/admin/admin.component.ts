@@ -265,6 +265,10 @@ export class AdminComponent implements OnInit, OnDestroy {
     return this.permissionService.canAccessRoute('/admin/pricing-management');
   }
 
+  canAccessAiUsage(): boolean {
+    return this.permissionService.canAccessRoute('/admin/ai-usage');
+  }
+
   canAccessElectricSetting(): boolean {
     return this.permissionService.hasFeatureAccess('electric_management');
   }
