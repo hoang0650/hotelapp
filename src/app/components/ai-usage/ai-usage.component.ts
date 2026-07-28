@@ -77,9 +77,11 @@ export class AiUsageComponent implements OnInit {
           this.hotelTotal = res?.data?.total || 0;
           this.adminLoading = false;
         },
-        error: () => {
+        error: (err) => {
           this.adminLoading = false;
-          this.message.error(this.translate.instant('AI_USAGE.ADMIN_LOAD_ERROR'));
+          this.message.error(
+            err?.error?.message || this.translate.instant('AI_USAGE.ADMIN_LOAD_ERROR')
+          );
         }
       });
   }
