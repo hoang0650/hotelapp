@@ -206,7 +206,19 @@ export class AiUsageService {
           page: toNum(res?.data?.page, 1),
           pageSize: toNum(res?.data?.pageSize, 20),
           items: Array.isArray(res?.data?.items)
-            ? res.data.items.map((row: any) => normalizeAiUsageSummary(row) as AiHotelUsageRow)
+            ? res.data.items
+                .map((row: any) => {
+                  const normalized = normalizeAiUsageSummary(row);
+                  if (!normalized) return null;
+                  return {
+                    ...normalized,
+                    hotelId: String(row?.hotelId ?? row?.hotel_id ?? normalized.hotelId ?? ''),
+                    hotelName: String(row?.hotelName ?? row?.hotel_name ?? normalized.hotelName ?? ''),
+                    status: row?.status,
+                    businessId: row?.businessId ?? row?.business_id ?? normalized.businessId ?? null
+                  } as AiHotelUsageRow;
+                })
+                .filter((row: AiHotelUsageRow | null): row is AiHotelUsageRow => !!row?.hotelId)
             : []
         }
       }))

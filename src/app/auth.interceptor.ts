@@ -41,7 +41,8 @@ export class AuthInterceptor implements HttpInterceptor {
                           request.url.includes('/shift-handover') ||
                           request.url.includes('/services') ||
                           request.url.includes('/tuya') ||
-                          request.url.includes('/ai-assistant');
+                          request.url.includes('/ai-assistant') ||
+                          request.url.includes('/ai-usage');
       
       if (isApiRequest) {
         request = request.clone({
