@@ -42,13 +42,14 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
   private paypalLoaded = false;
   private isBrowser: boolean;
   
-  selectedCurrency: string = 'USD';
+  selectedCurrency: string = 'VND';
   originalAmount: number = 0; // Số tiền gốc
   convertedAmount: number = 0; // Số tiền đã convert sang USD
   exchangeRate: number = 1; // Tỷ giá hiện tại
   isConverting: boolean = false;
   
   availableCurrencies: CurrencyOption[] = [
+    { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
     { code: 'USD', name: 'US Dollar', symbol: '$' },
     { code: 'EUR', name: 'Euro', symbol: '€' },
     { code: 'GBP', name: 'British Pound', symbol: '£' },
@@ -59,8 +60,7 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
     { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
     { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
     { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$' },
-    { code: 'THB', name: 'Thai Baht', symbol: '฿' },
-    { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' }
+    { code: 'THB', name: 'Thai Baht', symbol: '฿' }
   ];
 
   constructor(
@@ -74,25 +74,7 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ngOnInit(): void {
     if (this.paymentData) {
-      // Sử dụng currency từ paymentData hoặc mặc định là USD
-      const requestedCurrency = this.paymentData.currency || 'USD';
-      
-      // Kiểm tra currency có được PayPal hỗ trợ không
-      if (this.currencyService.isPayPalSupported(requestedCurrency)) {
-        this.selectedCurrency = requestedCurrency;
-      } else {
-        this.selectedCurrency = 'USD';
-        this.message.warning(`Currency ${requestedCurrency} không được PayPal hỗ trợ. Đã chuyển sang USD.`);
-      }
-      
-      // Lưu số tiền gốc
-      this.originalAmount = this.paymentData.amount;
-      this.convertedAmount = this.originalAmount;
-      
-      // Nếu currency khác USD, convert sang USD
-      if (this.selectedCurrency !== 'USD') {
-        this.convertToUSD();
-      }
+      this.applyPaymentCurrency();
     }
     
     if (this.visible && this.paymentData) {
@@ -299,15 +281,32 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
     this.visibleChange.emit(false);
   }
 
+  /**
+   * Áp dụng currency từ paymentData. Gói pricing tính bằng VND;
+   * nếu currency không được PayPal hỗ trợ trực tiếp vẫn giữ để hiển thị rồi convert sang USD khi charge.
+   */
+  private applyPaymentCurrency(): void {
+    if (!this.paymentData) {
+      return;
+    }
+
+    this.selectedCurrency = this.paymentData.currency || 'VND';
+    this.originalAmount = this.paymentData.amount;
+    this.convertedAmount = this.originalAmount;
+    this.exchangeRate = 1;
+
+    if (this.selectedCurrency !== 'USD') {
+      this.convertToUSD();
+    }
+  }
+
   onVisibleChange(visible: boolean): void {
     this.visible = visible;
     this.visibleChange.emit(visible);
     
     if (visible && this.paymentData) {
-      // Reset currency khi mở modal
-      if (this.paymentData.currency) {
-        this.selectedCurrency = this.paymentData.currency;
-      }
+      // Reset currency khi mở modal — mặc định VND (gói tính bằng VND)
+      this.applyPaymentCurrency();
       
       // Đợi modal đã render xong trước khi load PayPal script
       setTimeout(() => {
@@ -431,11 +430,12 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
   formatPrice(price: number, currency?: string): string {
     if (!price && price !== 0) return '0';
     const currencyCode = currency || this.selectedCurrency;
-    return new Intl.NumberFormat('en-US', {
+    const noDecimal = ['JPY', 'VND', 'KRW'].includes(currencyCode.toUpperCase());
+    return new Intl.NumberFormat(currencyCode === 'VND' ? 'vi-VN' : 'en-US', {
       style: 'currency',
       currency: currencyCode,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      minimumFractionDigits: noDecimal ? 0 : 2,
+      maximumFractionDigits: noDecimal ? 0 : 2
     }).format(price);
   }
 

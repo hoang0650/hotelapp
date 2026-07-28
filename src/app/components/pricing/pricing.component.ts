@@ -738,7 +738,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       packageName: pkg?.name || 'N/A',
       amount: packagePrice,
       billingType: this.selectedPackage.billingType,
-      currency: 'USD' // PayPal sử dụng USD
+      currency: 'VND'
     };
 
     this.showPayPalModal = true;
