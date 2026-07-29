@@ -2247,7 +2247,11 @@
     "CANCEL": "Hủy",
     "UPSELL_TITLE": "Sắp hết hạn ngạch?",
     "UPSELL_DESC": "Nâng cấp lên AI Pro hoặc mua add-on OpenClaw để tiếp tục dùng. Hoặc liên hệ admin để được cấp thêm.",
-    "UPSELL_CTA": "Xem gói giá"
+    "UPSELL_CTA": "Xem gói giá",
+    "EXHAUSTED_TITLE": "Đã hết hạn ngạch AI",
+    "EXHAUSTED_DESC": "OpenClaw và AI Chatbox sẽ không gọi Featherless cho đến khi bạn mua thêm hạn ngạch hoặc nâng cấp gói. Liên hệ admin để được cấp thêm lượt.",
+    "EXHAUSTED_CHANNELS": "Đã dùng theo kênh",
+    "EXHAUSTED_CTA": "Mua thêm / nâng cấp gói"
   },
   "AI_CHATBOX": {
     "TITLE": "Trợ lý AI",

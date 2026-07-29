@@ -2886,7 +2886,11 @@
     "CANCEL": "Cancel",
     "UPSELL_TITLE": "Running low on quota?",
     "UPSELL_DESC": "Upgrade to AI Pro or add the OpenClaw add-on. Or contact admin for a bonus allocation.",
-    "UPSELL_CTA": "View pricing"
+    "UPSELL_CTA": "View pricing",
+    "EXHAUSTED_TITLE": "AI quota exhausted",
+    "EXHAUSTED_DESC": "OpenClaw and AI Chatbox will not call Featherless until you buy more quota or upgrade. Contact admin for a bonus allocation.",
+    "EXHAUSTED_CHANNELS": "Used by channel",
+    "EXHAUSTED_CTA": "Buy more / upgrade"
   },
   "SEO": {
     "DEFAULT_DESCRIPTION": "PHHotel is hotel management software for rooms, bookings, invoices, shift handover, revenue reports, camera integration, and messaging.",

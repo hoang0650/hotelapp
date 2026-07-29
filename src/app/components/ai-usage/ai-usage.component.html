@@ -180,7 +180,22 @@
         <nz-empty *ngIf="!(u.recentEvents && u.recentEvents.length)" [nzNotFoundContent]="'AI_USAGE.NO_EVENTS' | translate"></nz-empty>
       </section>
 
-      <div class="upsell" *ngIf="!isAdmin && !u.unlimited && u.percentUsed >= 70">
+      <div class="upsell exhausted" *ngIf="!u.unlimited && (u.remainingTurns === 0 || u.percentUsed >= 100)">
+        <div>
+          <strong>{{ 'AI_USAGE.EXHAUSTED_TITLE' | translate }}</strong>
+          <p>{{ 'AI_USAGE.EXHAUSTED_DESC' | translate }}</p>
+          <p class="exhausted-channels">
+            {{ 'AI_USAGE.EXHAUSTED_CHANNELS' | translate }}
+            — OpenClaw {{ getChannelTurns('openclaw') | number }},
+            Chatbox {{ getChannelTurns('chatbox') | number }},
+            Sales {{ getChannelTurns('sales') | number }}
+            {{ 'AI_USAGE.TURNS' | translate }}
+          </p>
+        </div>
+        <a nz-button nzType="primary" nzDanger routerLink="/pricing">{{ 'AI_USAGE.EXHAUSTED_CTA' | translate }}</a>
+      </div>
+
+      <div class="upsell" *ngIf="!isAdmin && !u.unlimited && u.percentUsed >= 70 && u.percentUsed < 100 && u.remainingTurns !== 0">
         <div>
           <strong>{{ 'AI_USAGE.UPSELL_TITLE' | translate }}</strong>
           <p>{{ 'AI_USAGE.UPSELL_DESC' | translate }}</p>
