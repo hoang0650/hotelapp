@@ -34,11 +34,14 @@ export class LoginBootstrapService {
     try {
       this.authService.loginFromShiftHandover(token, user);
       this.authService.authResolved.next(true);
-      this.permissionService.refreshPermissions();
-      this.pricingService.prefetchPackages();
-      if (user?._id) {
-        this.pricingService.getCurrentUserPackage(String(user._id)).subscribe({ next: () => {}, error: () => {} });
-      }
+      // Quyền/gói giá: trì hoãn nhẹ để nhường bandwidth cho rooms lite
+      setTimeout(() => {
+        this.permissionService.refreshPermissions();
+        this.pricingService.prefetchPackages();
+        if (user?._id) {
+          this.pricingService.getCurrentUserPackage(String(user._id)).subscribe({ next: () => {}, error: () => {} });
+        }
+      }, 800);
 
       const hotelId = this.resolveHotelId(user);
       if (hotelId) {
@@ -73,37 +76,37 @@ export class LoginBootstrapService {
   private prefetchHotelBundle(hotelId: string): void {
     if (!hotelId) return;
 
-    forkJoin({
-      rooms: this.roomsService.getRooms({ hotelId, lite: true }).pipe(
-        tap((rooms) => this.roomsService.setCachedRooms(hotelId, rooms || [])),
-        catchError(() => of([])),
-        take(1)
-      ),
-      sessions: this.apiService.getRoomSessions(hotelId).pipe(
-        catchError(() => of({})),
-        take(1)
-      ),
-      columns: this.apiService.getRoomColumnsCount().pipe(
-        tap((res) => {
-          if (res?.columnsCount) {
-            this.sessionContext.setRoomColumnsCount(res.columnsCount, { persist: false });
-          }
-        }),
-        catchError(() => of(null)),
-        take(1)
-      ),
-      floor: this.apiService.getSelectedFloor(this.authService.getUserId() || '', hotelId).pipe(
-        tap((res) => {
-          if (res?.selectedFloor != null) {
-            this.sessionContext.setSelectedFloor(String(res.selectedFloor), { persist: false, hotelId });
-          }
-        }),
-        catchError(() => of(null)),
-        take(1)
-      )
-    }).subscribe({
+    // Rooms lite trước (critical path); session/floor/columns sau để không tranh bandwidth
+    this.roomsService.getRooms({ hotelId, lite: true }).pipe(
+      tap((rooms) => this.roomsService.setCachedRooms(hotelId, rooms || [])),
+      catchError(() => of([])),
+      take(1)
+    ).subscribe({
       next: () => {
-        // RoomSessionService sẽ hydrate khi room component setHotelId
+        forkJoin({
+          sessions: this.apiService.getRoomSessions(hotelId).pipe(
+            catchError(() => of({})),
+            take(1)
+          ),
+          columns: this.apiService.getRoomColumnsCount().pipe(
+            tap((res) => {
+              if (res?.columnsCount) {
+                this.sessionContext.setRoomColumnsCount(res.columnsCount, { persist: false });
+              }
+            }),
+            catchError(() => of(null)),
+            take(1)
+          ),
+          floor: this.apiService.getSelectedFloor(this.authService.getUserId() || '', hotelId).pipe(
+            tap((res) => {
+              if (res?.selectedFloor != null) {
+                this.sessionContext.setSelectedFloor(String(res.selectedFloor), { persist: false, hotelId });
+              }
+            }),
+            catchError(() => of(null)),
+            take(1)
+          )
+        }).subscribe({ next: () => {}, error: () => {} });
       },
       error: () => {}
     });

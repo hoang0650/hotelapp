@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { Room, Event, BookingHistory, ShiftHandover } from '../interfaces/rooms';
-import { tap, catchError } from 'rxjs/operators';
+import { tap, catchError, finalize, shareReplay } from 'rxjs/operators';
 import { throwError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { SessionContextService } from './session-context.service';
@@ -37,6 +37,7 @@ export class RoomsService {
   private roomDataUpdated$ = new Subject<RoomDataUpdateEvent>();
   private apiUrl = `${environment.apiUrl}/rooms`;
   private roomsCache = new Map<string, { rooms: Room[]; updatedAt: number }>();
+  private roomsInFlight = new Map<string, Observable<Room[]>>();
   private roomHistoryCache = new Map<string, RoomHistoryCacheEntry>();
 
   constructor(
@@ -64,9 +65,11 @@ export class RoomsService {
   clearCachedRooms(hotelId?: string): void {
     if (hotelId) {
       this.roomsCache.delete(hotelId);
+      this.roomsInFlight.delete(hotelId);
       return;
     }
     this.roomsCache.clear();
+    this.roomsInFlight.clear();
   }
 
   private buildRoomHistoryCacheKey(hotelId?: string, filterType?: string, page: number = 1, limit: number = 10): string {
@@ -113,6 +116,9 @@ export class RoomsService {
 
   getRooms(params?: { hotelId?: string, floor?: number, lite?: boolean }): Observable<Room[]> {
     let httpParams = new HttpParams();
+    const hotelId = params?.hotelId || '';
+    const lite = !!params?.lite;
+    const floor = params?.floor;
     
     if (params) {
       if (params.hotelId) {
@@ -124,6 +130,24 @@ export class RoomsService {
       if (params.lite) {
         httpParams = httpParams.set('lite', '1');
       }
+    }
+
+    // Dedupe in-flight: login bootstrap + room board cùng lúc chỉ 1 GET
+    const inFlightKey = lite && hotelId && floor === undefined
+      ? `lite:${hotelId}`
+      : '';
+    if (inFlightKey) {
+      const existing = this.roomsInFlight.get(inFlightKey);
+      if (existing) {
+        return existing;
+      }
+      const request$ = this.http.get<Room[]>(this.apiUrl, { params: httpParams }).pipe(
+        tap((rooms) => this.setCachedRooms(hotelId, rooms || [])),
+        finalize(() => this.roomsInFlight.delete(inFlightKey)),
+        shareReplay(1)
+      );
+      this.roomsInFlight.set(inFlightKey, request$);
+      return request$;
     }
     
     return this.http.get<Room[]>(this.apiUrl, { params: httpParams });

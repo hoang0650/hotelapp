@@ -66,10 +66,8 @@ export class SessionContextService {
 
   setSelectedHotelId(hotelId: string | null, options?: { persist?: boolean }): void {
     const normalized = hotelId?.trim() || null;
+    // Không POST Redis lại khi hotelId không đổi — tránh storm sau login/bootstrap
     if (this.selectedHotelIdSubject.value === normalized) {
-      if (normalized && options?.persist !== false) {
-        this.persistSelectedHotel(normalized);
-      }
       return;
     }
     this.selectedHotelIdSubject.next(normalized);
@@ -80,8 +78,11 @@ export class SessionContextService {
 
   setSelectedFloor(floor: string | null, options?: { persist?: boolean; hotelId?: string }): void {
     const normalized = floor === undefined || floor === null || floor === '' ? null : String(floor);
-    this.selectedFloorSubject.next(normalized);
-    if (options?.persist === false) return;
+    const unchanged = this.selectedFloorSubject.value === normalized;
+    if (!unchanged) {
+      this.selectedFloorSubject.next(normalized);
+    }
+    if (options?.persist === false || unchanged) return;
 
     const hotelId = options?.hotelId || this.selectedHotelIdSubject.value;
     const userId = this.authService.getUserId();
@@ -148,6 +149,8 @@ export class SessionContextService {
     }
 
     this.hydrateInFlight = new Promise<void>((resolve) => {
+      const seededHotelId = this.selectedHotelIdSubject.value || this.authService.getHotelId();
+      // Hotel đã seed từ login bootstrap → bỏ GET selected-hotel; floor/columns/staff song song
       let pending = 3;
       const done = () => {
         pending -= 1;
@@ -158,17 +161,12 @@ export class SessionContextService {
         }
       };
 
-      this.apiService.getSelectedHotel(userId).pipe(
-        catchError(() => of({ selectedHotelId: null }))
-      ).subscribe((res) => {
-        const hotelId = res?.selectedHotelId || this.authService.getHotelId();
-        if (hotelId && !this.selectedHotelIdSubject.value) {
-          this.selectedHotelIdSubject.next(hotelId);
+      if (seededHotelId) {
+        if (!this.selectedHotelIdSubject.value) {
+          this.selectedHotelIdSubject.next(seededHotelId);
         }
-
-        const effectiveHotelId = this.selectedHotelIdSubject.value;
-        if (effectiveHotelId) {
-          this.apiService.getSelectedFloor(userId, effectiveHotelId).pipe(
+        if (this.selectedFloorSubject.value == null) {
+          this.apiService.getSelectedFloor(userId, seededHotelId).pipe(
             catchError(() => of({ selectedFloor: null }))
           ).subscribe((floorRes) => {
             if (floorRes?.selectedFloor != null && this.selectedFloorSubject.value == null) {
@@ -179,29 +177,60 @@ export class SessionContextService {
         } else {
           done();
         }
-      });
+      } else {
+        this.apiService.getSelectedHotel(userId).pipe(
+          catchError(() => of({ selectedHotelId: null }))
+        ).subscribe((res) => {
+          const hotelId = res?.selectedHotelId || this.authService.getHotelId();
+          if (hotelId && !this.selectedHotelIdSubject.value) {
+            this.selectedHotelIdSubject.next(hotelId);
+          }
 
-      this.apiService.getRoomColumnsCount(userId).pipe(
-        catchError(() => of({ columnsCount: null }))
-      ).subscribe((res) => {
-        const count = res?.columnsCount;
-        if (count && count >= 2 && count <= 12 && this.roomColumnsCountSubject.value == null) {
-          this.roomColumnsCountSubject.next(count);
-        }
-        done();
-      });
+          const effectiveHotelId = this.selectedHotelIdSubject.value;
+          if (effectiveHotelId && this.selectedFloorSubject.value == null) {
+            this.apiService.getSelectedFloor(userId, effectiveHotelId).pipe(
+              catchError(() => of({ selectedFloor: null }))
+            ).subscribe((floorRes) => {
+              if (floorRes?.selectedFloor != null && this.selectedFloorSubject.value == null) {
+                this.selectedFloorSubject.next(String(floorRes.selectedFloor));
+              }
+              done();
+            });
+          } else {
+            done();
+          }
+        });
+      }
 
-      this.apiService.getStaffContext().pipe(
-        catchError(() => of({ staffId: null, staffName: null }))
-      ).subscribe((res) => {
-        if (res?.staffId && !this.staffIdSubject.value) {
-          this.staffIdSubject.next(res.staffId);
-        }
-        if (res?.staffName && !this.staffNameSubject.value) {
-          this.staffNameSubject.next(res.staffName);
-        }
+      if (this.roomColumnsCountSubject.value == null) {
+        this.apiService.getRoomColumnsCount(userId).pipe(
+          catchError(() => of({ columnsCount: null }))
+        ).subscribe((res) => {
+          const count = res?.columnsCount;
+          if (count && count >= 2 && count <= 12 && this.roomColumnsCountSubject.value == null) {
+            this.roomColumnsCountSubject.next(count);
+          }
+          done();
+        });
+      } else {
         done();
-      });
+      }
+
+      if (!this.staffIdSubject.value) {
+        this.apiService.getStaffContext().pipe(
+          catchError(() => of({ staffId: null, staffName: null }))
+        ).subscribe((res) => {
+          if (res?.staffId && !this.staffIdSubject.value) {
+            this.staffIdSubject.next(res.staffId);
+          }
+          if (res?.staffName && !this.staffNameSubject.value) {
+            this.staffNameSubject.next(res.staffName);
+          }
+          done();
+        });
+      } else {
+        done();
+      }
     });
 
     return this.hydrateInFlight;

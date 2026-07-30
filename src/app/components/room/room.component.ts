@@ -1104,6 +1104,11 @@ export class RoomComponent implements OnInit, OnDestroy {
             this.shouldLoadHotelsAfterInitialRender = false;
             this.loadHotels();
           }
+          if (this.selectedHotelId === hotelId) {
+            this.syncHotelFloorsInBackground(hotelId);
+          }
+          // Chỉ seed giá local từ booking — không N+1 events/API giá sau first paint
+          this.seedLocalPricesForOccupiedRooms();
         }, 0);
         return;
       }
@@ -1137,19 +1142,8 @@ export class RoomComponent implements OnInit, OnDestroy {
             this.syncHotelFloorsInBackground(hotelId);
           }
 
-          this.prefetchAuxiliaryDataAfterRoomsLoaded(hotelId);
-
-          // Events + price: idle sau first paint để không tranh bandwidth với sơ đồ phòng
-          const deferHeavy = () => {
-            this.scheduleOccupiedEventsReload();
-            this.prefetchRoomPricesForOccupiedRooms();
-          };
-          const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout: number }) => void);
-          if (typeof ric === 'function') {
-            ric(deferHeavy, { timeout: 1200 });
-          } else {
-            setTimeout(deferHeavy, 400);
-          }
+          // Không prefetch history/chart/thu-chi — mở panel/modal mới tải (giữ bandwidth cho sơ đồ)
+          this.seedLocalPricesForOccupiedRooms();
         }, 0);
       },
       error: (err) => {
@@ -1160,31 +1154,12 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   private prefetchAuxiliaryDataAfterRoomsLoaded(hotelId: string): void {
+    // Giữ API tương thích; không còn auto-prefetch nặng sau load phòng.
+    // History/chart/thu-chi tải khi mở panel/modal tương ứng.
     if (!hotelId) {
       return;
     }
-
     this.postRoomLoadPrefetchHotelId = hotelId;
-    requestAnimationFrame(() => {
-      if (
-        !this.selectedHotelId ||
-        this.selectedHotelId !== hotelId ||
-        this.isRoomsLoading ||
-        this.postRoomLoadPrefetchHotelId !== hotelId
-      ) {
-        return;
-      }
-
-      // Tải nền sau khi sơ đồ phòng đã render xong để modal/panel mở ra dùng ngay dữ liệu có sẵn.
-      this.scheduleRoomHistoryReload(true);
-      Promise.resolve().then(() => {
-        if (this.selectedHotelId === hotelId) {
-          this.loadChartDataFromAPI(true, true);
-          this.loadIncomes(true, true);
-          this.loadExpenses(true, true);
-        }
-      });
-    });
   }
 
 
@@ -1245,7 +1220,17 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
     this.isFirstLoadForHotel = true;
     this.activeFloors = [];
-    this.rooms = [];
+    // Ưu tiên paint từ cache login-bootstrap — tránh flash trống sơ đồ phòng
+    const cachedRooms = hotelId ? this.roomsService.getCachedRooms(hotelId) : null;
+    if (cachedRooms && cachedRooms.length > 0) {
+      this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(cachedRooms);
+      this.lastLoadedHotelId = hotelId;
+      this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
+      this.isRoomsLoading = false;
+    } else {
+      this.rooms = [];
+      this.lastLoadedHotelId = null;
+    }
     this.displayRoomsByFloor = {};
     this.displayFloors = [];
     this.bookings = [];
@@ -1261,7 +1246,6 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.totalPayment = 0;
     this.totalRevenue = 0;
     this.totalExpense = 0;
-    this.lastLoadedHotelId = null;
     this.expensesLoadedHotelId = null;
     this.incomesLoadedHotelId = null;
     this.chartLoadedKey = null;
@@ -1276,7 +1260,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.roomSessionService.setHotelId(hotelId);
+    if (this.rooms.length > 0) {
+      this.updateFloorsFromRooms();
+      this.cdr.detectChanges();
+    }
+
     this.loadPaymentSpeakerSetting(hotelId);
 
     const storedFloor = this.hotelService.getStoredFloor();
@@ -1287,9 +1275,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.hotelService.saveRoomContext(hotelId!, this.selectedFloor || '');
     this.restoreCachedSecondaryData(hotelId);
 
-    // Chạy lệnh tải phòng
+    // Chạy lệnh tải phòng trước; room sessions Redis hydrate sau để không tranh bandwidth
     this.loadRooms();
     this.startRealtimeSync();
+    setTimeout(() => {
+      if (this.selectedHotelId === hotelId) {
+        this.roomSessionService.setHotelId(hotelId);
+      }
+    }, 0);
   }
 
   private syncHotelFloorsInBackground(hotelId: string): void {
@@ -1663,7 +1656,8 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.rooms = merged;
           this.lastLoadedHotelId = this.selectedHotelId;
           this.updateFloorsFromRooms();
-          this.scheduleOccupiedEventsReload();
+          // Realtime lite đã có currentBooking → synthetic events đủ cho board; không N+1 /events
+          this.seedLocalPricesForOccupiedRooms();
           this.cdr.detectChanges();
         }
         
@@ -2814,7 +2808,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     return parsed;
   }
 
-  private prefetchRoomPricesForOccupiedRooms(): void {
+  private seedLocalPricesForOccupiedRooms(): void {
     const occupiedRooms = this.rooms.filter(r => r && r._id && r.status === 'occupied');
     if (occupiedRooms.length === 0) return;
 
@@ -2825,8 +2819,24 @@ export class RoomComponent implements OnInit, OnDestroy {
       if (!checkinEvent) return;
       const checkinTime = this.getEventCheckinTime(checkinEvent);
       if (!checkinTime) return;
-      this.loadRoomPriceFromAPI(room, checkinEvent);
+
+      const rawRateType = (checkinEvent.rateType || 'hourly') as string;
+      const cacheKey = `${room._id}_${checkinTime.getTime()}_${rawRateType}`;
+      if (this.roomPriceCache.has(cacheKey)) return;
+
+      const bookingTotal = Number((room as any)?.currentBooking?.totalAmount) || 0;
+      const localPrice = bookingTotal > 0
+        ? bookingTotal
+        : this.calculateRoomPriceLocal(room, checkinTime, rawRateType);
+      this.roomPriceCache.set(cacheKey, localPrice);
+      this.roomPriceMap.set(cacheKey, localPrice);
     });
+    this.scheduleDisplayRebuild();
+  }
+
+  /** @deprecated Dùng seedLocalPricesForOccupiedRooms — giữ alias tránh break call cũ */
+  private prefetchRoomPricesForOccupiedRooms(): void {
+    this.seedLocalPricesForOccupiedRooms();
   }
 
   private normalizeMoneyValue(value: any): number {
@@ -2939,18 +2949,22 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   // Load events cho các phòng đang occupied và booked
-  // QUAN TRỌNG: Sau khi chuyển phòng, phòng đích sẽ có status = 'occupied' và có event checkin mới với transferredFrom
-  // Cần load events cho phòng này để hiển thị đúng thông tin từ phòng cũ
+  // Board dùng synthetic từ currentBooking; chỉ fetch RoomEvent khi thiếu data hoặc forceReload (modal tự load riêng)
   loadEventsForOccupiedRooms(forceReload: boolean = false): void {
-    // Nếu forceReload = true, reload events cho tất cả phòng occupied/booked
-    // Nếu false, chỉ load cho phòng chưa có events
     const occupiedRooms = this.rooms.filter(room => {
       if (!room._id) return false;
       if (room.status !== 'occupied' && room.status !== 'booked') return false;
-      if (forceReload) return true; // Reload tất cả nếu forceReload (quan trọng sau khi chuyển phòng)
+      if (forceReload) return true;
       if (!room.events || room.events.length === 0) return true;
-      // Nếu events là synthetic từ currentBooking thì vẫn phải fetch RoomEvent thật để có đủ advancePayment/charges/discount...
-      return (room.events as any[]).some((e: any) => e && e.__synthetic === true);
+      // Synthetic đủ cho card sơ đồ → bỏ GET /rooms/:id/events (N+1)
+      const hasSyntheticOnly = (room.events as any[]).every((e: any) => e && e.__synthetic === true);
+      if (hasSyntheticOnly) {
+        const checkinOrBooking = (room.events as any[]).find(
+          (e: any) => e && (e.type === 'checkin' || e.type === 'booking')
+        );
+        return !this.getEventCheckinTime(checkinOrBooking);
+      }
+      return false;
     });
     
     if (occupiedRooms.length === 0) return;
