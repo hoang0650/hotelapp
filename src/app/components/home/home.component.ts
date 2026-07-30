@@ -25,8 +25,8 @@ interface IntroduceImage {
   styleUrls: ['./home.component.css']
 })
 export class HomeComponent implements OnInit, OnDestroy {
-  // URL video YouTube (có thể thay đổi)
-  youtubeVideoId = 'dQw4w9WgXcQ'; // Thay bằng ID video YouTube thực tế
+  // Demo hướng dẫn PHHotel: https://youtu.be/LIWt7_BA1Zo
+  youtubeVideoId = 'LIWt7_BA1Zo';
   safeVideoUrl!: SafeResourceUrl;
   previewImage: IntroduceImage | null = null;
   private previewModal?: NzModalRef;
@@ -150,5 +150,15 @@ export class HomeComponent implements OnInit, OnDestroy {
       nzWidth: '92vw',
       nzBodyStyle: { padding: '12px' }
     });
+  }
+
+  /** Cuộn mượt tới section iframe demo YouTube */
+  scrollToDemo(event?: Event): void {
+    event?.preventDefault();
+    const el = document.getElementById('demo-video');
+    if (!el) {
+      return;
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
