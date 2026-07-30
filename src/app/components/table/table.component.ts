@@ -412,11 +412,9 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     this.setScrollSize();
     this.calculateTotalPayment();
 
-    // TRÌ HOÃN TẢI: Đẩy lùi việc gọi API lịch sử checkout xuống 1.5s
-    if (this.hotelId && this.listOfData.length === 0) {
-      setTimeout(() => {
-        this.loadHistory(this.currentFilterType);
-      }, 1500); 
+    // Load ngay khi mount — không chờ 1.5s / nút reload
+    if (this.hotelId) {
+      this.loadHistory(this.currentFilterType, 1, this.listOfData.length === 0);
     }
     
     // Subscribe vào roomDataUpdated$ để tự động reload khi có cập nhật
@@ -431,7 +429,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       }
 
       const delayMs = event?.delayMs ?? 200;
-      const shouldForceReload = !!event?.force || !!event?.refreshHistory;
+      const shouldForceReload = !!event?.force || !!event?.refreshHistory || !!event?.refreshRooms;
 
       setTimeout(() => {
         this.loadHistory(this.currentFilterType, 1, shouldForceReload);
@@ -458,8 +456,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     }
     
     if (changes['hotelId'] && this.hotelId && !changes['listOfData']) {
-      // Nếu hotelId thay đổi mà không có dữ liệu được truyền vào
-      this.loadHistory(this.currentFilterType);
+      // Đổi hotel → luôn force load lịch sử mới
+      this.loadHistory(this.currentFilterType, 1, true);
     }
     
     // Cập nhật expenseAmount từ totalExpense khi totalExpense thay đổi

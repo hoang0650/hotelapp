@@ -83,6 +83,10 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnInit(): void {
     this.updateChart();
+    // Mount qua *ngIf khi mở panel — load ngay, không chờ bấm reload
+    if (this.normalizeHotelId(this.hotelId)) {
+      this.loadHotelRevenue(true);
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {

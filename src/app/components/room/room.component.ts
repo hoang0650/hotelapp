@@ -17,6 +17,7 @@ import { RoomContentModalComponent } from '../room-content-modal/room-content-mo
 import { TransactionService } from '../../services/transaction.service';
 import { BookingModalComponent } from '../booking-modal/booking-modal.component';
 import { CalendarComponent } from '../calendar/calendar.component';
+import { RevenueChartComponent } from '../revenue-chart/revenue-chart.component';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { Router } from '@angular/router';
@@ -91,6 +92,7 @@ type RoomWithMeta = Room & {
 export class RoomComponent implements OnInit, OnDestroy {
   @ViewChild(TableComponent) tableComponent!: TableComponent;
   @ViewChild(CalendarComponent) calendarComponent!: CalendarComponent;
+  @ViewChild(RevenueChartComponent) revenueChartComponent?: RevenueChartComponent;
   @ViewChild('shiftHandoverContent') shiftHandoverContent!: TemplateRef<any>;
   
   // Subscription để theo dõi thay đổi totalPayment từ table
@@ -185,6 +187,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   private incomesLoadedHotelId: string | null = null;
   private chartLoadedKey: string | null = null;
   private postRoomLoadPrefetchHotelId: string | null = null;
+  private auxiliaryReloadTimer: ReturnType<typeof setTimeout> | null = null;
+  private auxiliaryReloadQueued = false;
 
   roomStatusDisplayOptions: { value: RoomStatus, label: string, color: string }[] = [
     { value: 'vacant', label: '', color: 'green' }, // Label sẽ được translate trong getRoomStatusLabelAndColor
@@ -237,8 +241,17 @@ export class RoomComponent implements OnInit, OnDestroy {
           }
         }
 
-        if (!this.isModalOpen && (this.isHistoryPanelActive || event?.refreshHistory)) {
-          this.scheduleRoomHistoryReload(!!event?.force || !!event?.refreshHistory);
+        // Checkout / giao ca / thu chi → luôn refresh phụ trợ (không chỉ khi panel history mở)
+        if (event?.refreshHistory || event?.force || event?.reason) {
+          this.scheduleAuxiliaryDataReload({
+            force: true,
+            incomes: true,
+            expenses: true,
+            chart: true,
+            history: !this.isModalOpen
+          });
+        } else if (!this.isModalOpen && this.isHistoryPanelActive) {
+          this.scheduleRoomHistoryReload(false);
         }
       };
 
@@ -342,7 +355,13 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Collapse panel change handlers
   onRevenuePanelChange(active: boolean): void {
     this.isRevenuePanelActive = active;
-    // Biểu đồ tự load khi được tạo (*ngIf) — không prefetch chậm thêm lần nữa
+    if (active && this.selectedHotelId && !this.isRoomsLoading) {
+      // Force reload khi mở panel — không chờ bấm nút reload
+      setTimeout(() => {
+        this.loadChartDataFromAPI(true);
+        this.revenueChartComponent?.reload();
+      }, 0);
+    }
   }
   
   onCalendarPanelChange(active: boolean): void {
@@ -360,7 +379,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   onHistoryPanelChange(active: boolean): void {
     this.isHistoryPanelActive = active;
     if (active && this.selectedHotelId && !this.isRoomsLoading) {
-      this.scheduleRoomHistoryReload();
+      this.scheduleRoomHistoryReload(true);
+      setTimeout(() => this.tableComponent?.reloadData(), 0);
     }
   }
   
@@ -371,12 +391,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.isHistoryPanelActive = true;
     if (this.selectedHotelId && !this.isRoomsLoading) {
       setTimeout(() => {
-        // Biểu đồ tự load khi panel mở
+        this.loadChartDataFromAPI(true);
+        this.revenueChartComponent?.reload();
         if (this.calendarComponent) {
           this.calendarComponent.loadBookings();
           this.calendarComponent.loadAllBookings();
         }
-        this.scheduleRoomHistoryReload();
+        this.scheduleRoomHistoryReload(true);
+        this.tableComponent?.reloadData();
       }, 0);
     }
   }
@@ -396,6 +418,10 @@ export class RoomComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.roomDataUpdatedSubscription) {
       this.roomDataUpdatedSubscription.unsubscribe();
+    }
+    if (this.auxiliaryReloadTimer) {
+      clearTimeout(this.auxiliaryReloadTimer);
+      this.auxiliaryReloadTimer = null;
     }
     this.stopRealtimeSync();
     window.removeEventListener('floorFilterChanged', this.__onFloorFilterChanged as EventListener);
@@ -545,6 +571,70 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.showRoomHistory(force);
       }
     });
+  }
+
+  /**
+   * Debounce reload phiếu thu/chi + biểu đồ + lịch sử phòng (socket / roomDataUpdated).
+   * Không phụ thuộc nút reload trên UI.
+   */
+  private scheduleAuxiliaryDataReload(options: {
+    force?: boolean;
+    incomes?: boolean;
+    expenses?: boolean;
+    chart?: boolean;
+    history?: boolean;
+    delayMs?: number;
+  } = {}): void {
+    if (!this.selectedHotelId) {
+      return;
+    }
+
+    const force = options.force !== false;
+    const incomes = options.incomes !== false;
+    const expenses = options.expenses !== false;
+    const chart = options.chart !== false;
+    const history = options.history !== false;
+    const delayMs = options.delayMs ?? 400;
+
+    if (this.auxiliaryReloadTimer) {
+      clearTimeout(this.auxiliaryReloadTimer);
+    }
+    this.auxiliaryReloadQueued = true;
+    this.auxiliaryReloadTimer = setTimeout(() => {
+      this.auxiliaryReloadTimer = null;
+      this.auxiliaryReloadQueued = false;
+      const hotelId = this.selectedHotelId;
+      if (!hotelId || this.isRoomsLoading) {
+        return;
+      }
+
+      if (force) {
+        this.transactionService.clearCachedIncomes(hotelId);
+        this.transactionService.clearCachedExpenses(hotelId);
+        this.hotelService.clearCachedHotelRevenueByPeriod(hotelId);
+        this.roomsService.clearCachedRoomHistory(hotelId);
+      }
+
+      if (incomes) {
+        this.loadIncomes(force, true);
+      }
+      if (expenses) {
+        this.loadExpenses(force, true);
+      }
+      if (chart) {
+        this.loadChartDataFromAPI(force, true);
+        if (this.isRevenuePanelActive) {
+          this.revenueChartComponent?.reload();
+        }
+      }
+      if (history) {
+        this.scheduleRoomHistoryReload(force);
+        if (this.isHistoryPanelActive) {
+          this.tableComponent?.reloadData();
+        }
+      }
+      this.cdr.markForCheck();
+    }, delayMs);
   }
   
   // Load danh sách phiếu chi
@@ -1355,6 +1445,32 @@ export class RoomComponent implements OnInit, OnDestroy {
       } else {
         this.refreshRoomsLiteRealtime();
       }
+
+      // Check-in/out / đổi trạng thái phòng → đồng bộ lịch sử + doanh thu
+      this.scheduleAuxiliaryDataReload({
+        force: true,
+        incomes: true,
+        expenses: false,
+        chart: true,
+        history: true,
+        delayMs: 500
+      });
+    });
+
+    this.roomsSocket.on('transactions_updated', (payload: any) => {
+      const payloadHotelId = String(payload?.hotelId || '').trim();
+      if (!payloadHotelId || !this.selectedHotelId) return;
+      if (payloadHotelId !== String(this.selectedHotelId)) return;
+
+      const type = String(payload?.type || '').toLowerCase();
+      this.scheduleAuxiliaryDataReload({
+        force: true,
+        incomes: type !== 'expense',
+        expenses: type !== 'income',
+        chart: true,
+        history: false,
+        delayMs: 300
+      });
     });
 
     this.roomsSocket.on('payment_received', (payload: any) => {
@@ -1368,6 +1484,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.roomsSocket.off('connect');
         this.roomsSocket.off('disconnect');
         this.roomsSocket.off('rooms_updated');
+        this.roomsSocket.off('transactions_updated');
         this.roomsSocket.off('payment_received');
         this.roomsSocket.disconnect();
       } catch (_e) {}
@@ -1492,6 +1609,16 @@ export class RoomComponent implements OnInit, OnDestroy {
     try {
       window.dispatchEvent(new CustomEvent('sepayPaymentReceived', { detail: payload }));
     } catch (_e) {}
+
+    // SePay thành công → tự cập nhật phiếu thu + biểu đồ + lịch sử (không cần reload tay)
+    this.scheduleAuxiliaryDataReload({
+      force: true,
+      incomes: true,
+      expenses: false,
+      chart: true,
+      history: true,
+      delayMs: 400
+    });
   }
 
   private refreshRoomsLiteRealtime(): void {
