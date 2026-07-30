@@ -239,10 +239,21 @@ export class RoomComponent implements OnInit, OnDestroy {
           } else {
             this.loadRooms(true);
           }
+        } else if (
+          event?.roomId &&
+          (event?.reason === 'dirty' ||
+            event?.reason === 'status' ||
+            event?.reason === 'cleaning' ||
+            event?.reason === 'maintenance' ||
+            event?.reason === 'transfer')
+        ) {
+          // Optimistic status đã mutate object / cache — chỉ rebuild display
+          this.scheduleDisplayRebuild();
         }
 
-        // Checkout / giao ca / thu chi → luôn refresh phụ trợ (không chỉ khi panel history mở)
-        if (event?.refreshHistory || event?.force || event?.reason) {
+        // Checkout / check-in / thu chi → refresh phụ trợ. Status-only không đụng history/chart.
+        const auxReasons = new Set(['checkout', 'checkin', 'recheckin', 'delete_checkout_history', 'generic']);
+        if (event?.refreshHistory || event?.force || (event?.reason && auxReasons.has(event.reason))) {
           this.scheduleAuxiliaryDataReload({
             force: true,
             incomes: true,
@@ -1430,7 +1441,24 @@ export class RoomComponent implements OnInit, OnDestroy {
       if (payloadHotelId !== String(this.selectedHotelId)) return;
       
       const roomId = payload?.roomId;
-      if (roomId) {
+      const reason = String(payload?.reason || '').toLowerCase();
+      const statusOnly =
+        reason === 'status' ||
+        reason === 'guest_out' ||
+        reason === 'guest_return' ||
+        reason === 'cleaning' ||
+        reason === 'transfer';
+
+      if (statusOnly && roomId && payload?.status) {
+        // Patch local từ socket payload — không GET /rooms/:id
+        this.patchLocalRoomStatusFromSocket(roomId, payload);
+        if (payload.relatedRoomId && payload.relatedStatus) {
+          this.patchLocalRoomStatusFromSocket(payload.relatedRoomId, {
+            status: payload.relatedStatus,
+            guestStatus: payload.relatedGuestStatus
+          });
+        }
+      } else if (roomId) {
         this.updateSingleRoomRealtime(roomId);
         if (payload.relatedRoomId) {
           this.updateSingleRoomRealtime(payload.relatedRoomId);
@@ -1439,15 +1467,17 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.refreshRoomsLiteRealtime();
       }
 
-      // Check-in/out / đổi trạng thái phòng → đồng bộ lịch sử + doanh thu
-      this.scheduleAuxiliaryDataReload({
-        force: true,
-        incomes: true,
-        expenses: false,
-        chart: true,
-        history: true,
-        delayMs: 500
-      });
+      // Chỉ sync history/doanh thu cho checkin/checkout — transfer đã patch local
+      if (reason === 'checkout' || reason === 'checkin' || reason === 'recheckin') {
+        this.scheduleAuxiliaryDataReload({
+          force: true,
+          incomes: true,
+          expenses: false,
+          chart: true,
+          history: true,
+          delayMs: 500
+        });
+      }
     });
 
     this.roomsSocket.on('transactions_updated', (payload: any) => {
@@ -2128,19 +2158,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       modalRef.afterClose.subscribe((result) => {
         this.isModalOpen = false;
 
+        // Checkout đã apply local dirty — không GET /rooms/:id nặng
         if (modalType === 'checkout' && result?.action === 'checkout' && result?.checkoutInfo) {
-          // Code cũ đã làm rất tốt việc cập nhật mảng local
           this.applyCheckoutCloseResult(result.checkoutInfo);
-          
-          // BỎ ĐOẠN NÀY ĐI
-          /* setTimeout(() => {
-            if (!this.isModalOpen) {
-              this.loadRooms(true);
-            }
-          }, 250); */
-
-          // THÊM DÒNG NÀY ĐỂ GỌI API LẤY ĐÚNG PHÒNG VỪA CHECKOUT XUỐNG CHO CHẮC CHẮN
-          this.updateSingleRoomRealtime(room._id!);
 
           setTimeout(() => {
             if (!this.isModalOpen) {
@@ -2152,18 +2172,17 @@ export class RoomComponent implements OnInit, OnDestroy {
 
         if (modalType === 'checkin' && result?.success && result?.checkinInfo) {
           this.applyCheckinCloseResult(room._id || '', result.checkinInfo);
-          // THÊM DÒNG NÀY ĐỂ CẬP NHẬT GIAO DIỆN PHÒNG CHECKIN
-          this.updateSingleRoomRealtime(room._id!);
         }
 
         setTimeout(() => {
           if (!this.isModalOpen) {
+            const isStatusLite = modalType === 'cleaning';
             this.roomsService.notifyRoomDataUpdated({
               hotelId: this.selectedHotelId || undefined,
               roomId: room._id!,
               reason: modalType === 'checkin' ? 'checkin' : modalType === 'checkout' ? 'checkout' : 'generic',
-              refreshRooms: modalType !== 'checkout',
-              refreshHistory: true,
+              refreshRooms: modalType === 'checkin',
+              refreshHistory: !isStatusLite && (modalType === 'checkout' || modalType === 'checkin'),
               force: false
             });
           }
@@ -4216,6 +4235,28 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   // Thêm hàm này vào class RoomComponent
+  private patchLocalRoomStatusFromSocket(roomId: string, payload: any): void {
+    const hotelId = this.selectedHotelId;
+    if (!hotelId || !roomId) return;
+    const index = this.rooms.findIndex(r => String(r._id) === String(roomId));
+    if (index === -1) return;
+
+    const nextStatus = payload?.status;
+    if (nextStatus) {
+      this.rooms[index].status = nextStatus;
+    }
+    if (payload?.guestStatus !== undefined) {
+      this.rooms[index].guestStatus = payload.guestStatus || undefined;
+    }
+    if (nextStatus && nextStatus !== 'occupied' && nextStatus !== 'booked') {
+      this.rooms[index].events = [];
+      this.rooms[index].currentBooking = undefined;
+    }
+    this.roomsService.patchCachedRoom(hotelId, this.rooms[index]);
+    this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
+    this.scheduleDisplayRebuild();
+  }
+
   private updateSingleRoomRealtime(roomId: string): void {
     const hotelId = this.selectedHotelId;
     if (!hotelId || !roomId) return;

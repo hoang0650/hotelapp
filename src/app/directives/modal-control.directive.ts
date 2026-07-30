@@ -61,17 +61,29 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   /** Cập nhật sơ đồ theo từng phòng — không force reload cả khách sạn. */
   private notifyRoomChanged(
     reason: RoomDataUpdateEvent['reason'] = 'generic',
-    options?: { relatedRoomId?: string; refreshHistory?: boolean; delayMs?: number; roomId?: string }
+    options?: {
+      relatedRoomId?: string;
+      refreshHistory?: boolean;
+      refreshRooms?: boolean;
+      delayMs?: number;
+      roomId?: string;
+    }
   ): void {
     const roomId = options?.roomId || this.room?._id;
     if (!roomId) return;
+    const statusOnly =
+      reason === 'dirty' ||
+      reason === 'status' ||
+      reason === 'cleaning' ||
+      reason === 'maintenance';
     this.roomsService.notifyRoomDataUpdated({
       hotelId: this.extractHotelId() || undefined,
       roomId,
       relatedRoomId: options?.relatedRoomId,
       reason,
-      refreshRooms: true,
-      refreshHistory: options?.refreshHistory ?? true,
+      // Status-only: đã optimistic local — không GET /rooms/:id nặng
+      refreshRooms: options?.refreshRooms ?? !statusOnly,
+      refreshHistory: options?.refreshHistory ?? !statusOnly,
       force: false,
       delayMs: options?.delayMs
     });
@@ -82,13 +94,14 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     this.room.status = status;
     if (status === 'vacant' || status === 'dirty' || status === 'maintenance' || status === 'cleaning') {
       this.room.guestStatus = undefined;
-      if (status !== 'dirty') {
-        // dirty sau checkout vẫn có thể giữ history; vacant/maintenance clear session UI
-        if (status === 'vacant' || status === 'maintenance') {
-          this.room.events = [];
-          this.room.currentBooking = undefined as any;
-        }
+      if (status === 'vacant' || status === 'maintenance') {
+        this.room.events = [];
+        this.room.currentBooking = undefined as any;
       }
+    }
+    const hotelId = this.extractHotelId();
+    if (hotelId && this.room._id) {
+      this.roomsService.patchCachedRoom(hotelId, this.room);
     }
   }
 
@@ -347,26 +360,27 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       nzOnOk: () => {
         const noteInput = document.getElementById('guestOutNote') as HTMLInputElement;
         const note = noteInput ? noteInput.value : '';
-        
+        const previousGuestStatus = this.room.guestStatus;
+        // Optimistic — cập nhật UI ngay, không chờ API
+        this.room.guestStatus = 'out';
+        this.notifyRoomChanged('status', { delayMs: 0, refreshRooms: false, refreshHistory: false });
+
         this.roomsService.guestOut(this.room._id, note)
           .pipe(take(1))
           .subscribe({
             next: (response) => {
-              // Cập nhật guestStatus ngay lập tức trong room object để UI phản hồi nhanh
-              if (response && response.room) {
-                this.room.guestStatus = response.room.guestStatus || 'out';
+              if (response?.room?.guestStatus) {
+                this.room.guestStatus = response.room.guestStatus;
               }
               this.modalService.success({
                 nzTitle: 'Thành công',
                 nzContent: `Đã ghi nhận khách phòng ${this.room.roomNumber} tạm ra ngoài.`,
                 nzOkText: 'Đóng'
               });
-              // Delay một chút để đảm bảo backend đã lưu xong
-              setTimeout(() => {
-                this.notifyRoomChanged();
-              }, 100);
             },
             error: (err) => {
+              this.room.guestStatus = previousGuestStatus;
+              this.notifyRoomChanged('status', { delayMs: 0, refreshRooms: false, refreshHistory: false });
               this.modalService.error({
                 nzTitle: 'Lỗi',
                 nzContent: err.error?.message || 'Không thể cập nhật trạng thái.',
@@ -374,6 +388,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
               });
             }
           });
+        return true;
       }
     });
   }
@@ -390,25 +405,26 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       nzOkText: 'Xác nhận',
       nzCancelText: 'Hủy',
       nzOnOk: () => {
+        const previousGuestStatus = this.room.guestStatus;
+        this.room.guestStatus = 'in';
+        this.notifyRoomChanged('status', { delayMs: 0, refreshRooms: false, refreshHistory: false });
+
         this.roomsService.guestReturn(this.room._id)
           .pipe(take(1))
           .subscribe({
             next: (response) => {
-              // Cập nhật guestStatus ngay lập tức trong room object để UI phản hồi nhanh
-              if (response && response.room) {
-                this.room.guestStatus = response.room.guestStatus || 'in';
+              if (response?.room?.guestStatus) {
+                this.room.guestStatus = response.room.guestStatus;
               }
               this.modalService.success({
                 nzTitle: 'Thành công',
                 nzContent: `Đã ghi nhận khách phòng ${this.room.roomNumber} quay lại.`,
                 nzOkText: 'Đóng'
               });
-              // Delay một chút để đảm bảo backend đã lưu xong
-              setTimeout(() => {
-                this.notifyRoomChanged();
-              }, 100);
             },
             error: (err) => {
+              this.room.guestStatus = previousGuestStatus;
+              this.notifyRoomChanged('status', { delayMs: 0, refreshRooms: false, refreshHistory: false });
               this.modalService.error({
                 nzTitle: 'Lỗi',
                 nzContent: err.error?.message || 'Không thể cập nhật trạng thái.',
@@ -416,6 +432,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
               });
             }
           });
+        return true;
       }
     });
   }
@@ -843,6 +860,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   
   // Đánh dấu phòng đã dọn xong
   markRoomAsClean(): void {
+    const previousStatus = this.room.status;
+    this.applyLocalRoomStatus('vacant');
     this.roomsService.cleanRoom(this.room._id, { status: 'vacant' })
       .pipe(take(1))
       .subscribe({
@@ -858,14 +877,14 @@ export class ModalControlDirective implements OnInit, OnDestroy {
             nzContent: `Phòng ${this.room.roomNumber} đã sẵn sàng đón khách.`,
             nzOkText: 'Đóng'
           });
-          // cleanRoom service đã notify; gọi thêm với delay ngắn để sync card
-          this.notifyRoomChanged('cleaning', { delayMs: 80 });
+          this.notifyRoomChanged('cleaning', { delayMs: 0, refreshRooms: false, refreshHistory: false });
           if (this.contextMenuModalRef) {
             this.contextMenuModalRef.close();
             this.contextMenuModalRef = null;
           }
         },
         error: (err) => {
+          this.applyLocalRoomStatus(previousStatus);
           this.modalService.error({
             nzTitle: 'Lỗi',
             nzContent: err.error?.error || 'Không thể cập nhật trạng thái phòng.',
@@ -877,6 +896,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   
   // Đánh dấu phòng bẩn
   markRoomAsDirty(): void {
+    const previousStatus = this.room.status;
+    this.applyLocalRoomStatus('dirty');
     this.roomsService.updateRoomStatus(
       this.room._id,
       'dirty',
@@ -886,7 +907,6 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       next: (updatedRoom) => {
         if (updatedRoom) {
           Object.assign(this.room, updatedRoom);
-        } else {
           this.applyLocalRoomStatus('dirty');
         }
         this.modalService.success({
@@ -894,9 +914,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           nzContent: `Đã báo phòng ${this.room.roomNumber} cần dọn dẹp.`,
           nzOkText: 'Đóng'
         });
-        this.notifyRoomChanged('dirty', { delayMs: 50 });
+        this.notifyRoomChanged('dirty', { delayMs: 0, refreshRooms: false, refreshHistory: false });
       },
       error: (err) => {
+        this.applyLocalRoomStatus(previousStatus);
         this.modalService.error({
           nzTitle: 'Lỗi',
           nzContent: err.error?.error || 'Không thể cập nhật trạng thái phòng.',
@@ -908,6 +929,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   
   // Đánh dấu phòng cần sửa
   markRoomAsMaintenance(): void {
+    const previousStatus = this.room.status;
+    this.applyLocalRoomStatus('maintenance');
     this.roomsService.updateRoomStatus(
       this.room._id,
       'maintenance',
@@ -925,9 +948,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           nzContent: `Đã báo phòng ${this.room.roomNumber} cần bảo trì.`,
           nzOkText: 'Đóng'
         });
-        this.notifyRoomChanged('maintenance', { delayMs: 50 });
+        this.notifyRoomChanged('maintenance', { delayMs: 0, refreshRooms: false, refreshHistory: false });
       },
       error: (err) => {
+        this.applyLocalRoomStatus(previousStatus);
         this.modalService.error({
           nzTitle: 'Lỗi',
           nzContent: err.error?.error || 'Không thể cập nhật trạng thái phòng.',
@@ -1038,162 +1062,61 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       });
       return;
     }
-    
-    // Lấy danh sách phòng trống (status = 'vacant')
-    this.roomsService.getAvailableRooms({ hotelId: this.room.hotelId }).pipe(
+
+    const openTransferModal = (filteredRooms: Room[]) => {
+      if (filteredRooms.length === 0) {
+        this.modalService.info({
+          nzTitle: 'Thông báo',
+          nzContent: 'Không có phòng trống nào để chuyển đến.',
+          nzOkText: 'Đóng'
+        });
+        return;
+      }
+
+      this.modalRef = this.modalService.create({
+        nzTitle: `Chuyển phòng - Từ phòng ${this.room.roomNumber}`,
+        nzContent: TransferRoomModalComponent,
+        nzWidth: 500,
+        nzData: {
+          sourceRoom: this.room,
+          availableRooms: filteredRooms
+        },
+        nzFooter: null,
+        nzMaskClosable: false
+      });
+
+      this.modalRef.afterClose.pipe(
+        take(1),
+        takeUntil(this.destroy$)
+      ).subscribe((result: any) => {
+        if (result?.success) {
+          this.applyLocalTransferResult(result.response);
+        }
+        this.modalRef = null;
+      });
+    };
+
+    // Ưu tiên phòng trống từ cache sơ đồ — không chờ GET /available
+    const hotelId = this.extractHotelId();
+    const cachedRooms = hotelId ? (this.roomsService.getCachedRooms(hotelId) || []) : [];
+    const localVacant = cachedRooms.filter(
+      (r) => r._id !== this.room._id && r.status === 'vacant'
+    );
+
+    if (localVacant.length > 0) {
+      openTransferModal(localVacant);
+      return;
+    }
+
+    this.roomsService.getAvailableRooms({ hotelId }).pipe(
       take(1),
       takeUntil(this.destroy$)
     ).subscribe(
       (availableRooms) => {
-        // Lọc bỏ phòng nguồn và chỉ lấy phòng trống
-        const filteredRooms = availableRooms.filter(r => 
-          r._id !== this.room._id && r.status === 'vacant'
+        const filteredRooms = availableRooms.filter(
+          (r) => r._id !== this.room._id && r.status === 'vacant'
         );
-        
-        if (filteredRooms.length === 0) {
-          this.modalService.info({
-            nzTitle: 'Thông báo',
-            nzContent: 'Không có phòng trống nào để chuyển đến.',
-            nzOkText: 'Đóng'
-          });
-          return;
-        }
-        
-        // Hiển thị modal chọn phòng đích sử dụng component
-        this.modalRef = this.modalService.create({
-          nzTitle: `Chuyển phòng - Từ phòng ${this.room.roomNumber}`,
-          nzContent: TransferRoomModalComponent,
-          nzWidth: 500,
-          nzData: {
-            sourceRoom: this.room,
-            availableRooms: filteredRooms
-          },
-          nzFooter: null,
-          nzMaskClosable: false
-        });
-
-        // Xử lý khi modal đóng
-        this.modalRef.afterClose.pipe(
-          take(1),
-          takeUntil(this.destroy$)
-        ).subscribe((result: any) => {
-          if (result?.success) {
-            const response = result.response;
-            const targetRoom = response?.targetRoom;
-            const targetRoomNumber = targetRoom?.roomNumber || 'N/A';
-            const booking = response?.booking;
-            const checkinEvent = response?.checkinEvent; // Thông tin check-in mới từ backend
-            
-            // Lưu thông tin checkin vào localStorage cho phòng đích
-            // Ưu tiên sử dụng thông tin từ response.checkinEvent (từ backend)
-            if (checkinEvent && targetRoom?._id) {
-              try {
-                // Sử dụng thông tin từ backend (đầy đủ và chính xác nhất)
-                const targetCheckinData = {
-                  checkinTime: checkinEvent.checkinTime,
-                  guestInfo: checkinEvent.guestInfo || {},
-                  rateType: checkinEvent.rateType || 'hourly',
-                  advancePayment: checkinEvent.advancePayment || 0,
-                  additionalCharges: checkinEvent.additionalCharges || 0,
-                  discount: checkinEvent.discount || 0,
-                  selectedServices: checkinEvent.selectedServices || [],
-                  paymentMethod: checkinEvent.paymentMethod || 'cash',
-                  expectedCheckoutTime: checkinEvent.expectedCheckoutTime,
-                  roomId: targetRoom._id,
-                  roomNumber: targetRoom.roomNumber,
-                  transferredFrom: checkinEvent.transferredFrom || this.room._id,
-                  transferredFromRoomNumber: this.room.roomNumber,
-                  transferredAt: checkinEvent.transferredAt || new Date()
-                };
-                // Lưu vào localStorage cho phòng đích
-                this.checkinCache.set(targetRoom._id, targetCheckinData);
-                console.log('Saved checkin data from backend response:', targetCheckinData);
-              } catch (e) {
-                console.error('Error saving transfer checkin data from response:', e);
-              }
-            } else {
-              // Fallback: Lấy thông tin từ phòng nguồn (nếu có trong localStorage)
-              const checkinData = this.checkinCache.getSync(this.room._id);
-              if (checkinData && targetRoom?._id) {
-                try {
-                  // Cập nhật roomId và roomNumber cho phòng đích, giữ nguyên thông tin khách
-                  const targetCheckinData = {
-                    ...checkinData,
-                    roomId: targetRoom._id,
-                    roomNumber: targetRoom.roomNumber,
-                    transferredFrom: this.room._id,
-                    transferredFromRoomNumber: this.room.roomNumber,
-                    transferredAt: new Date()
-                  };
-                  // Lưu vào localStorage cho phòng đích
-                  this.checkinCache.set(targetRoom._id, targetCheckinData);
-                  console.log('Saved checkin data from localStorage fallback:', targetCheckinData);
-                } catch (e) {
-                  console.error('Error saving transfer checkin data from localStorage:', e);
-                }
-              }
-            }
-            
-            // Xóa dữ liệu cũ của phòng nguồn
-            this.checkinCache.remove(this.room._id);
-            
-            // Tạo thông báo chi tiết
-            let message = `Đã chuyển khách từ phòng ${this.room.roomNumber} sang phòng ${targetRoomNumber}`;
-            
-            // Thêm thông tin về giá và phòng đích nếu có
-            if (targetRoom) {
-              message += `\n\nPhòng đích: ${targetRoom.roomNumber} - ${targetRoom.type || 'N/A'}`;
-              if (targetRoom.pricing) {
-                const pricingInfo = [];
-                if (targetRoom.pricing.hourly) pricingInfo.push(`Giờ: ${targetRoom.pricing.hourly.toLocaleString('vi-VN')} VNĐ`);
-                if (targetRoom.pricing.daily) pricingInfo.push(`Ngày: ${targetRoom.pricing.daily.toLocaleString('vi-VN')} VNĐ`);
-                if (targetRoom.pricing.nightly) pricingInfo.push(`Đêm: ${targetRoom.pricing.nightly.toLocaleString('vi-VN')} VNĐ`);
-                if (pricingInfo.length > 0) {
-                  message += `\n${pricingInfo.join(' | ')}`;
-                }
-              }
-            }
-            
-            // Thêm thông tin về giá nếu có booking
-            if (booking) {
-              // Thông tin về các khoản giữ nguyên
-              const hasServices = booking.services && Array.isArray(booking.services) && booking.services.length > 0;
-              const hasAdditionalCharges = booking.additionalCharges && Array.isArray(booking.additionalCharges) && booking.additionalCharges.length > 0;
-              const hasDiscounts = booking.discounts && Array.isArray(booking.discounts) && booking.discounts.length > 0;
-              
-              if (hasServices || hasAdditionalCharges || hasDiscounts) {
-                message += '\n\nĐã giữ nguyên:';
-                if (hasServices) message += '\n- Dịch vụ đã đặt';
-                if (hasAdditionalCharges) message += '\n- Phụ thu';
-                if (hasDiscounts) message += '\n- Khuyến mãi';
-              }
-              
-              // Thông tin về giá mới
-              if (booking.basePrice !== undefined && booking.basePrice !== null) {
-                message += `\n\nGiá phòng mới: ${booking.basePrice.toLocaleString('vi-VN')} VNĐ`;
-                if (booking.totalAmount !== undefined && booking.totalAmount !== null) {
-                  message += `\nTổng tiền: ${booking.totalAmount.toLocaleString('vi-VN')} VNĐ`;
-                }
-              }
-            }
-            
-            // Hiển thị thông báo thành công
-            this.modalService.success({
-              nzTitle: 'Chuyển phòng thành công',
-              nzContent: message,
-              nzOkText: 'Đóng'
-            });
-            
-            // Thông báo cập nhật dữ liệu phòng nguồn + đích
-            setTimeout(() => {
-              this.notifyRoomChanged('transfer', {
-                relatedRoomId: targetRoom?._id,
-                delayMs: 0
-              });
-            }, 500);
-          }
-          this.modalRef = null;
-        });
+        openTransferModal(filteredRooms);
       },
       (error) => {
         console.error('Error loading available rooms:', error);
@@ -1204,6 +1127,98 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         });
       }
     );
+  }
+
+  /** Optimistic board sau chuyển phòng — không GET /rooms/:id */
+  private applyLocalTransferResult(response: any): void {
+    const targetRoom = response?.targetRoom;
+    const checkinEvent = response?.checkinEvent;
+    const booking = response?.booking;
+    const targetRoomNumber = targetRoom?.roomNumber || 'N/A';
+    const hotelId = this.extractHotelId();
+    const sourceBooking = this.room.currentBooking;
+
+    if (checkinEvent && targetRoom?._id) {
+      try {
+        this.checkinCache.set(targetRoom._id, {
+          checkinTime: checkinEvent.checkinTime,
+          guestInfo: checkinEvent.guestInfo || {},
+          rateType: checkinEvent.rateType || 'hourly',
+          advancePayment: checkinEvent.advancePayment || 0,
+          additionalCharges: checkinEvent.additionalCharges || 0,
+          discount: checkinEvent.discount || 0,
+          selectedServices: checkinEvent.selectedServices || [],
+          paymentMethod: checkinEvent.paymentMethod || 'cash',
+          expectedCheckoutTime: checkinEvent.expectedCheckoutTime,
+          roomId: targetRoom._id,
+          roomNumber: targetRoom.roomNumber,
+          transferredFrom: checkinEvent.transferredFrom || this.room._id,
+          transferredFromRoomNumber: this.room.roomNumber,
+          transferredAt: checkinEvent.transferredAt || new Date()
+        });
+      } catch (e) {
+        console.error('Error saving transfer checkin data:', e);
+      }
+    }
+    this.checkinCache.remove(this.room._id);
+
+    // Phòng nguồn → dirty
+    this.room.status = 'dirty';
+    this.room.guestStatus = undefined;
+    this.room.events = [];
+    this.room.currentBooking = undefined as any;
+    if (hotelId) {
+      this.roomsService.patchCachedRoom(hotelId, this.room);
+    }
+
+    // Phòng đích → occupied + synthetic checkin
+    if (hotelId && targetRoom?._id) {
+      const rooms = this.roomsService.getCachedRooms(hotelId) || [];
+      const targetLocal = rooms.find((r) => String(r._id) === String(targetRoom._id));
+      if (targetLocal) {
+        const checkinTime =
+          checkinEvent?.checkinTime ||
+          (sourceBooking as any)?.checkinTime ||
+          (sourceBooking as any)?.checkInDate ||
+          new Date();
+        targetLocal.status = 'occupied';
+        targetLocal.guestStatus = 'in';
+        targetLocal.currentBooking = (booking as any) || sourceBooking || targetRoom.currentBooking;
+        targetLocal.events = [
+          {
+            type: 'checkin',
+            __synthetic: true,
+            checkinTime,
+            guestInfo: checkinEvent?.guestInfo || (sourceBooking as any)?.guestInfo || {},
+            rateType: checkinEvent?.rateType || 'hourly',
+            advancePayment: checkinEvent?.advancePayment || 0,
+            additionalCharges: checkinEvent?.additionalCharges || 0,
+            discount: checkinEvent?.discount || 0,
+            selectedServices: checkinEvent?.selectedServices || [],
+            transferredFrom: this.room._id,
+            transferredAt: checkinEvent?.transferredAt || new Date()
+          } as any
+        ];
+        this.roomsService.patchCachedRoom(hotelId, targetLocal);
+      }
+    }
+
+    let message = `Đã chuyển khách từ phòng ${this.room.roomNumber} sang phòng ${targetRoomNumber}`;
+    if (targetRoom) {
+      message += `\n\nPhòng đích: ${targetRoom.roomNumber} - ${targetRoom.type || 'N/A'}`;
+    }
+    this.modalService.success({
+      nzTitle: 'Chuyển phòng thành công',
+      nzContent: message,
+      nzOkText: 'Đóng'
+    });
+
+    this.notifyRoomChanged('transfer', {
+      relatedRoomId: targetRoom?._id,
+      delayMs: 0,
+      refreshRooms: false,
+      refreshHistory: false
+    });
   }
 
   // Hiển thị modal cập nhật trạng thái
@@ -1294,8 +1309,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
                 takeUntil(this.destroy$)
               ).subscribe(
                 (response) => {
-                  if (response) {
-                    Object.assign(this.room, response);
+                  const updatedRoom = (response as any)?.room || response;
+                  if (updatedRoom) {
+                    Object.assign(this.room, updatedRoom);
+                    this.applyLocalRoomStatus(statusSelect.value as Room['status']);
                   } else {
                     this.applyLocalRoomStatus(statusSelect.value as Room['status']);
                   }
@@ -1314,7 +1331,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
                     nzContent: `Đã cập nhật trạng thái phòng ${this.room.roomNumber} thành "${statusLabels[statusSelect.value] || statusSelect.value}"`,
                     nzOkText: 'Đóng'
                   });
-                  this.notifyRoomChanged('status', { delayMs: 50 });
+                  this.notifyRoomChanged('status', { delayMs: 0, refreshRooms: false, refreshHistory: false });
                 },
                 (error) => {
                   this.modalService.error({

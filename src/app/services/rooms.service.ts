@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { Room, Event, BookingHistory, ShiftHandover } from '../interfaces/rooms';
-import { tap, catchError, finalize, shareReplay } from 'rxjs/operators';
+import { tap, catchError, finalize, shareReplay, map } from 'rxjs/operators';
 import { throwError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { SessionContextService } from './session-context.service';
@@ -286,11 +286,13 @@ export class RoomsService {
 
   // Cập nhật trạng thái phòng
   updateRoomStatus(roomId: string, status: string, staffId: string, note: string): Observable<Room> {
-    return this.http.patch<Room>(`${this.apiUrl}/${roomId}/status`, { 
+    return this.http.patch<{ message?: string; room?: Room } | Room>(`${this.apiUrl}/${roomId}/status`, { 
       status, 
       staffId, 
       note 
-    });
+    }).pipe(
+      map((res: any) => (res?.room ? res.room : res) as Room)
+    );
   }
 
   // Chuyển phòng
@@ -369,8 +371,8 @@ export class RoomsService {
           hotelId,
           roomId,
           reason: 'cleaning',
-          refreshRooms: true,
-          refreshHistory: true,
+          refreshRooms: false,
+          refreshHistory: false,
           force: false
         });
       }),

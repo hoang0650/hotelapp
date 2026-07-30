@@ -2127,40 +2127,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     console.log('[processCheckoutWithPrice] Final roomTotal:', validRoomTotal);
     
-    // Checkout chạy ngay; updateRoomCheckinInfo chạy nền (không chặn RTT).
+    // Checkout chạy ngay — payload đã đủ guest/charges/services (không PATCH checkin-info).
     const formGuestInfoFormGroup = this.checkOutForm.get('guestInfo') as FormGroup;
     const formGuestInfoValue = formGuestInfoFormGroup ? 
       (formGuestInfoFormGroup.disabled ? formGuestInfoFormGroup.getRawValue() : formGuestInfoFormGroup.value) : 
       (this.checkOutForm.get('guestInfo')?.value || {});
     
-    const updatedGuestInfo = {
-      name: formGuestInfoValue.name || customerName || 'Khách lẻ',
-      idNumber: formGuestInfoValue.idNumber || '',
-      tax_code: formGuestInfoValue.tax_code || '',
-      phone: formGuestInfoValue.phone || customerPhone || '',
-      email: formGuestInfoValue.email || customerEmail || '',
-      address: formGuestInfoValue.address || '',
-      guestSource: formGuestInfoValue.guestSource || guestSource || 'walkin'
-    };
-    
-    // Không chặn checkout bằng updateRoomCheckinInfo — checkout payload đã đủ guest/charges/services.
-    // Cập nhật check-in chạy nền (best-effort) để đồng bộ nếu cần.
-    this.roomsService.updateRoomCheckinInfo(
-      this.roomData._id,
-      updatedGuestInfo,
-      advancePayment,
-      rateType,
-      additionalCharges,
-      discount,
-      this.selectedServices,
-      advancePaymentMethod
-    ).subscribe({
-      next: () => {},
-      error: (updateError) => {
-        console.warn('Background check-in update before checkout failed:', updateError);
-      }
-    });
-
     this.proceedWithCheckoutAfterUpdate(
       validRoomTotal,
       rateType,
