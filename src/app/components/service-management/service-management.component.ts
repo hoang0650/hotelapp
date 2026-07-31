@@ -12,7 +12,6 @@ import { forkJoin } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { TranslateService } from '@ngx-translate/core';
-import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-service-management',
@@ -65,8 +64,7 @@ export class ServiceManagementComponent implements OnInit {
     private hotelService: HotelService,
     public authService: AuthService,
     private message: NzMessageService,
-    private translate: TranslateService,
-    private sessionContext: SessionContextService
+    private translate: TranslateService
   ) {
     this.serviceForm = this.fb.group({
       hotelId: [null, Validators.required],
@@ -90,7 +88,6 @@ export class ServiceManagementComponent implements OnInit {
     this.permissions = this.authService.getPermissionRules();
     this.initServiceCategoryOptions();
 
-    // Ưu tiên hotelId Redis/session — load dịch vụ ngay
     const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
     if (storedHotelId) {
       this.selectedHotelId = storedHotelId;
@@ -98,7 +95,6 @@ export class ServiceManagementComponent implements OnInit {
       this.loadServices(storedHotelId);
       this.loadServiceCategories(storedHotelId);
     } else if (this.isBusiness && !this.isAdmin) {
-      // Business chưa chọn KS → load tất cả dịch vụ của business
       this.loadServices();
     }
 
@@ -233,57 +229,63 @@ export class ServiceManagementComponent implements OnInit {
   }
 
   loadHotels(): void {
-    this.hotelService.getHotels().subscribe({
-      next: (data) => {
-        if (this.isAdmin) {
-          this.hotels = data.filter(h => h.status === 'active');
-        } else if (this.isBusiness && this.currentUser?.businessId) {
-          // Business chỉ thấy hotels thuộc business mình
-          let userBusinessIdStr: string | null = null;
-          
-          if (typeof this.currentUser.businessId === 'string') {
-            userBusinessIdStr = this.currentUser.businessId;
-          } else if (typeof this.currentUser.businessId === 'object' && this.currentUser.businessId !== null) {
-            const businessIdObj = this.currentUser.businessId as any;
-            if (businessIdObj._id) {
-              userBusinessIdStr = typeof businessIdObj._id === 'string' 
-                ? businessIdObj._id 
-                : businessIdObj._id.toString();
-            } else if (typeof businessIdObj.toString === 'function') {
-              userBusinessIdStr = businessIdObj.toString();
-            }
-          }
-          
-          this.hotels = data.filter(h => {
-            const hotelBusinessId = this.extractBusinessId(h);
-            return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString() && h.status === 'active';
-          });
-        } else if (this.isHotelManager && this.currentUser?.hotelId) {
-          this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
-        } else {
-          this.hotels = [];
-        }
-        
-        // Auto-select chỉ khi chưa có hotelId từ Redis/auth
-        if (!this.selectedHotelId && this.hotels.length === 1) {
-          const hotelId = this.hotels[0]._id!;
-          this.selectedHotelId = hotelId;
-          this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
-          this.loadServices(hotelId);
-          this.loadServiceCategories(hotelId);
-        } else if (!this.selectedHotelId && this.isHotelManager && this.hotels.length > 0) {
-          const hotelId = this.hotels[0]._id!;
-          this.selectedHotelId = hotelId;
-          this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
-          this.loadServices(hotelId);
-          this.loadServiceCategories(hotelId);
-        }
-      },
+    const cached = this.hotelService.getCachedHotels();
+    if (cached.length > 0) {
+      this.applyHotelsList(cached);
+    }
+
+    this.hotelService.getHotelsCached(undefined, undefined, { lite: true }).subscribe({
+      next: (data) => this.applyHotelsList(data),
       error: (error) => {
         console.error('Lỗi khi tải danh sách khách sạn:', error);
         this.message.error(this.translate.instant('SERVICE_MANAGEMENT.LOAD_HOTELS_ERROR'));
       }
     });
+  }
+
+  private applyHotelsList(data: Hotel[]): void {
+    if (this.isAdmin) {
+      this.hotels = data.filter(h => h.status === 'active' || !(h as any).status);
+    } else if (this.isBusiness && this.currentUser?.businessId) {
+      let userBusinessIdStr: string | null = null;
+
+      if (typeof this.currentUser.businessId === 'string') {
+        userBusinessIdStr = this.currentUser.businessId;
+      } else if (typeof this.currentUser.businessId === 'object' && this.currentUser.businessId !== null) {
+        const businessIdObj = this.currentUser.businessId as any;
+        if (businessIdObj._id) {
+          userBusinessIdStr = typeof businessIdObj._id === 'string'
+            ? businessIdObj._id
+            : businessIdObj._id.toString();
+        } else if (typeof businessIdObj.toString === 'function') {
+          userBusinessIdStr = businessIdObj.toString();
+        }
+      }
+
+      this.hotels = data.filter(h => {
+        const hotelBusinessId = this.extractBusinessId(h);
+        return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString()
+          && (h.status === 'active' || !(h as any).status);
+      });
+    } else if (this.isHotelManager && this.currentUser?.hotelId) {
+      this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
+    } else {
+      this.hotels = [];
+    }
+
+    if (!this.selectedHotelId && this.hotels.length === 1) {
+      const hotelId = this.hotels[0]._id!;
+      this.selectedHotelId = hotelId;
+      this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
+      this.loadServices(hotelId);
+      this.loadServiceCategories(hotelId);
+    } else if (!this.selectedHotelId && this.isHotelManager && this.hotels.length > 0) {
+      const hotelId = this.hotels[0]._id!;
+      this.selectedHotelId = hotelId;
+      this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
+      this.loadServices(hotelId);
+      this.loadServiceCategories(hotelId);
+    }
   }
 
   loadServiceCategories(hotelId: string): void {
@@ -319,7 +321,7 @@ export class ServiceManagementComponent implements OnInit {
     }
     
     this.selectedHotelId = hotelId;
-    this.sessionContext.setSelectedHotelId(hotelId);
+    this.hotelService.setSelectedHotelId(hotelId);
     this.services = [];
     
     // Chỉ sync form nếu thay đổi từ bộ lọc

@@ -7,6 +7,7 @@ import { AiAssistantService, ChatMessage as ServiceChatMessage } from '../../ser
 import { SessionContextService } from '../../services/session-context.service';
 import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
+import { Hotel } from '../../interfaces/hotel';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -159,31 +160,19 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
     const currentUser = this.authService.getCurrentUser();
     const userRole = String(currentUser?.role || '').trim().toLowerCase();
     const userBusinessId = String(this.authService.getBusinessId() || '').trim() || undefined;
-    // superadmin/admin: không filter businessId để lấy đủ danh sách KS
     const businessIdParam =
       userRole === 'superadmin' || userRole === 'admin' ? undefined : userBusinessId;
 
+    const cached = this.hotelService.getCachedHotels();
+    if (cached.length > 0) {
+      this.applyHotels(cached);
+      this.hotelLoading = false;
+    }
+
     this.subscriptions.push(
-      this.hotelService.getHotels(businessIdParam, undefined, { lite: true }).subscribe({
+      this.hotelService.getHotelsCached(businessIdParam, undefined, { lite: true }).subscribe({
         next: hotels => {
-          this.hotels = (hotels || [])
-            .map(hotel => ({
-              _id: String((hotel as any)._id || (hotel as any).id || ''),
-              name: hotel.name || 'Khách sạn'
-            }))
-            .filter(hotel => !!hotel._id);
-
-          if (!this.selectedHotelId && this.hotels.length > 0) {
-            this.onSelectHotel(this.hotels[0]._id);
-          } else if (
-            this.selectedHotelId &&
-            this.hotels.length > 0 &&
-            !this.hotels.some(h => h._id === this.selectedHotelId)
-          ) {
-            this.onSelectHotel(this.hotels[0]._id);
-          }
-
-          this.isHotelSelectionDisabled = this.hotels.length <= 1;
+          this.applyHotels(hotels || []);
           this.hotelLoading = false;
         },
         error: () => {
@@ -191,6 +180,27 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
         }
       })
     );
+  }
+
+  private applyHotels(hotels: Array<Hotel | { _id?: string; id?: string; name?: string }>): void {
+    this.hotels = (hotels || [])
+      .map(hotel => ({
+        _id: String((hotel as any)._id || (hotel as any).id || ''),
+        name: hotel.name || 'Khách sạn'
+      }))
+      .filter(hotel => !!hotel._id);
+
+    if (!this.selectedHotelId && this.hotels.length > 0) {
+      this.onSelectHotel(this.hotels[0]._id);
+    } else if (
+      this.selectedHotelId &&
+      this.hotels.length > 0 &&
+      !this.hotels.some(h => h._id === this.selectedHotelId)
+    ) {
+      this.onSelectHotel(this.hotels[0]._id);
+    }
+
+    this.isHotelSelectionDisabled = this.hotels.length <= 1;
   }
 
   toggleMinimize(): void {

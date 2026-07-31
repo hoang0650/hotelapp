@@ -8,7 +8,6 @@ import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
-import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-debt-management',
@@ -56,8 +55,7 @@ export class DebtManagementComponent implements OnInit {
     private message: NzMessageService,
     private modal: NzModalService,
     private fb: FormBuilder,
-    private translate: TranslateService,
-    private sessionContext: SessionContextService
+    private translate: TranslateService
   ) {
     this.settleForm = this.fb.group({
       amount: [0, [Validators.required, Validators.min(0.01)]],
@@ -70,7 +68,6 @@ export class DebtManagementComponent implements OnInit {
     this.currentUser = this.authService.getCurrentUser();
     this.initTranslationArrays();
 
-    // Ưu tiên hotelId Redis — filter công nợ ngay, không chờ getHotels()
     const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
     if (storedHotelId) {
       this.selectedHotelId = storedHotelId;
@@ -79,7 +76,6 @@ export class DebtManagementComponent implements OnInit {
     this.loadHotels();
     this.loadDebts();
 
-    // Subscribe to language changes
     this.translate.onLangChange.subscribe(() => {
       this.initTranslationArrays();
     });
@@ -137,31 +133,39 @@ export class DebtManagementComponent implements OnInit {
   }
 
   loadHotels(): void {
-    this.hotelService.getHotels().subscribe({
-      next: (data) => {
-        if (this.isAdmin) {
-          this.hotels = data.filter(h => h.status === 'active');
-        } else if (this.isBusiness && this.currentUser?.businessId) {
-          this.hotels = data.filter(h => {
-            const hotelBusinessId = typeof h.businessId === 'object' ? h.businessId?._id : h.businessId;
-            const userBusinessId = this.currentUser?.businessId;
-            return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString() && h.status === 'active';
-          });
-        } else if (this.isHotelManager && this.currentUser?.hotelId) {
-          this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
-          if (!this.selectedHotelId && this.hotels.length === 1) {
-            this.selectedHotelId = this.hotels[0]._id || null;
-            this.loadDebts();
-          }
-        } else {
-          this.hotels = [];
-        }
-      },
+    const cached = this.hotelService.getCachedHotels();
+    if (cached.length > 0) {
+      this.applyHotelsList(cached);
+    }
+
+    this.hotelService.getHotelsCached(undefined, undefined, { lite: true }).subscribe({
+      next: (data) => this.applyHotelsList(data),
       error: (error) => {
         console.error('Lỗi khi tải danh sách khách sạn:', error);
         this.message.error(this.translate.instant('DEBT_MANAGEMENT.LOAD_HOTELS_ERROR'));
       }
     });
+  }
+
+  private applyHotelsList(data: Hotel[]): void {
+    if (this.isAdmin) {
+      this.hotels = data.filter(h => h.status === 'active' || !(h as any).status);
+    } else if (this.isBusiness && this.currentUser?.businessId) {
+      this.hotels = data.filter(h => {
+        const hotelBusinessId = typeof h.businessId === 'object' ? h.businessId?._id : h.businessId;
+        const userBusinessId = this.currentUser?.businessId;
+        return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString()
+          && (h.status === 'active' || !(h as any).status);
+      });
+    } else if (this.isHotelManager && this.currentUser?.hotelId) {
+      this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
+      if (!this.selectedHotelId && this.hotels.length === 1) {
+        this.selectedHotelId = this.hotels[0]._id || null;
+        this.loadDebts();
+      }
+    } else {
+      this.hotels = [];
+    }
   }
 
   loadDebts(): void {
@@ -191,7 +195,7 @@ export class DebtManagementComponent implements OnInit {
 
   onHotelChange(hotelId: string | null): void {
     this.selectedHotelId = hotelId;
-    this.sessionContext.setSelectedHotelId(hotelId);
+    this.hotelService.setSelectedHotelId(hotelId);
     this.pageIndex = 1;
     this.loadDebts();
   }

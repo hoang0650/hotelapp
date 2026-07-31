@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Hotel, HotelStatus } from '../interfaces/hotel';
-import { Observable, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { SessionContextService } from './session-context.service';
 
@@ -25,6 +25,15 @@ export class HotelService {
   private hotelInfoCache = new Map<string, { payload: Hotel; updatedAt: number }>();
   private readonly hotelInfoCacheTtlMs = 60_000;
 
+  /** Cache danh sách hotels cục bộ — dùng chung mọi màn, tránh gọi API lặp */
+  private hotelsListCache: Hotel[] | null = null;
+  private hotelsListCacheKey: string | null = null;
+  private hotelsListCacheAt = 0;
+  private hotelsListInFlight: Observable<Hotel[]> | null = null;
+  private readonly hotelsListTtlMs = 5 * 60_000;
+  private readonly hotelsListSubject = new BehaviorSubject<Hotel[]>([]);
+  readonly hotelsList$ = this.hotelsListSubject.asObservable();
+
   constructor(
     private http: HttpClient,
     private sessionContext: SessionContextService
@@ -38,17 +47,26 @@ export class HotelService {
   }
 
   /**
-   * Lấy hotelId từ Redis-backed session context (đồng bộ)
+   * Lấy hotelId từ session context cục bộ (đã warm từ login/Redis)
    */
   getStoredHotelId(): string | null {
     return this.sessionContext.getSelectedHotelId();
   }
 
   /**
-   * hotelId ưu tiên: Redis session → fallback (auth/user) — không cần chờ danh sách hotels
+   * hotelId ưu tiên: session cục bộ → fallback auth — không cần gọi API
    */
   resolvePreferredHotelId(fallbackHotelId?: string | null): string | null {
     return this.sessionContext.resolvePreferredHotelId(fallbackHotelId);
+  }
+
+  /** Stream hotelId đang chọn (cùng nguồn với sơ đồ phòng / session) */
+  get selectedHotelId$(): Observable<string | null> {
+    return this.sessionContext.selectedHotelId$;
+  }
+
+  setSelectedHotelId(hotelId: string | null, options?: { persist?: boolean }): void {
+    this.sessionContext.setSelectedHotelId(hotelId, options);
   }
 
   /**
@@ -63,6 +81,69 @@ export class HotelService {
    */
   clearRoomContext(): void {
     this.sessionContext.clearLocal();
+    this.clearHotelsListCache();
+  }
+
+  getCachedHotels(): Hotel[] {
+    return this.hotelsListCache ? [...this.hotelsListCache] : [];
+  }
+
+  clearHotelsListCache(): void {
+    this.hotelsListCache = null;
+    this.hotelsListCacheKey = null;
+    this.hotelsListCacheAt = 0;
+    this.hotelsListInFlight = null;
+    this.hotelsListSubject.next([]);
+  }
+
+  private buildHotelsCacheKey(businessId?: string, status?: HotelStatus, lite?: boolean): string {
+    return `${businessId || 'all'}|${status || 'any'}|${lite ? 'lite' : 'full'}`;
+  }
+
+  /**
+   * Lấy danh sách hotels: ưu tiên cache cục bộ, chỉ gọi API khi miss/hết hạn.
+   * Dùng chung cho staff / room / service / debt / category / floor / room board.
+   */
+  getHotelsCached(
+    businessId?: string,
+    status?: HotelStatus,
+    options?: { lite?: boolean; forceRefresh?: boolean }
+  ): Observable<Hotel[]> {
+    const lite = options?.lite !== false; // mặc định lite để nhanh
+    const key = this.buildHotelsCacheKey(businessId, status, lite);
+    const now = Date.now();
+
+    if (
+      !options?.forceRefresh &&
+      this.hotelsListCache &&
+      this.hotelsListCacheKey === key &&
+      now - this.hotelsListCacheAt < this.hotelsListTtlMs
+    ) {
+      return of(this.hotelsListCache);
+    }
+
+    if (!options?.forceRefresh && this.hotelsListInFlight && this.hotelsListCacheKey === key) {
+      return this.hotelsListInFlight;
+    }
+
+    this.hotelsListCacheKey = key;
+    this.hotelsListInFlight = this.getHotels(businessId, status, { lite }).pipe(
+      tap((hotels) => {
+        this.hotelsListCache = Array.isArray(hotels) ? hotels : [];
+        this.hotelsListCacheAt = Date.now();
+        this.hotelsListSubject.next(this.hotelsListCache);
+      }),
+      catchError((err) => {
+        this.hotelsListInFlight = null;
+        throw err;
+      }),
+      finalize(() => {
+        this.hotelsListInFlight = null;
+      }),
+      shareReplay(1)
+    );
+
+    return this.hotelsListInFlight;
   }
 
   getHotels(businessId?: string, status?: HotelStatus, options?: { lite?: boolean }): Observable<Hotel[]> {

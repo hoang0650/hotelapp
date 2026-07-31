@@ -1018,7 +1018,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     // business/hotel: để backend filter theo quyền; FE có thể kèm businessId để rõ phạm vi
     const businessIdParam = isPlatformAdmin ? undefined : (userBusinessId || undefined);
 
-    this.hotelService.getHotels(businessIdParam, undefined, { lite: true }).subscribe({
+    this.hotelService.getHotelsCached(businessIdParam, undefined, { lite: true }).subscribe({
       next: (data) => {
         const hotels = Array.isArray(data) ? data : [];
 

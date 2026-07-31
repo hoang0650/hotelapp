@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { Hotel } from '../../interfaces/hotel';
 import { HotelService } from '../../services/hotel.service';
 import { AuthService } from '../../services/auth.service';
-import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-floor-plan-page',
@@ -35,34 +34,39 @@ export class FloorPlanPageComponent implements OnInit {
 
   constructor(
     private hotelService: HotelService,
-    private authService: AuthService,
-    private sessionContext: SessionContextService
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
-    // Seed hotelId từ Redis/session ngay → render sơ đồ tầng không chờ getHotels()
     const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
     if (storedHotelId) {
       this.selectedHotelId = storedHotelId;
     }
 
-    this.hotelService.getHotels().subscribe({
-      next: (res: any) => {
-        this.hotels = res.data || res || [];
-        if (!this.selectedHotelId && this.hotels.length === 1) {
-          this.onHotelChange((this.hotels[0] as any)._id);
-        } else if (this.selectedHotelId && this.hotels.length > 0) {
-          const stillValid = this.hotels.some(h => h._id === this.selectedHotelId);
-          if (!stillValid) {
-            this.onHotelChange((this.hotels[0] as any)._id);
-          }
-        }
-      }
+    const cached = this.hotelService.getCachedHotels();
+    if (cached.length > 0) {
+      this.applyHotels(cached);
+    }
+
+    this.hotelService.getHotelsCached(undefined, undefined, { lite: true }).subscribe({
+      next: (res) => this.applyHotels(res || [])
     });
+  }
+
+  private applyHotels(list: Hotel[]): void {
+    this.hotels = list;
+    if (!this.selectedHotelId && this.hotels.length === 1) {
+      this.onHotelChange((this.hotels[0] as any)._id);
+    } else if (this.selectedHotelId && this.hotels.length > 0) {
+      const stillValid = this.hotels.some(h => h._id === this.selectedHotelId);
+      if (!stillValid) {
+        this.onHotelChange((this.hotels[0] as any)._id);
+      }
+    }
   }
 
   onHotelChange(hotelId: string | null): void {
     this.selectedHotelId = hotelId || '';
-    this.sessionContext.setSelectedHotelId(hotelId || null);
+    this.hotelService.setSelectedHotelId(hotelId || null);
   }
 }

@@ -57,11 +57,26 @@ export class LoginBootstrapService {
           }
         }).catch(() => {});
       }
+
+      // Warm danh sách hotels cục bộ 1 lần — các màn quản lý tái sử dụng, không gọi lại API
+      this.prefetchHotelsList(user);
     } catch (err) {
       console.error('[LoginBootstrap] bootstrapAfterLogin error:', err);
       this.authService.loginFromShiftHandover(token, user);
       this.authService.authResolved.next(true);
     }
+  }
+
+  private prefetchHotelsList(user: User | null): void {
+    const role = String(user?.role || '').trim().toLowerCase();
+    const businessId =
+      role === 'superadmin' || role === 'admin'
+        ? undefined
+        : (this.authService.getBusinessId() || undefined);
+    this.hotelService.getHotelsCached(businessId, undefined, { lite: true }).pipe(take(1)).subscribe({
+      next: () => {},
+      error: () => {}
+    });
   }
 
   private resolveHotelId(user: User | null): string | null {

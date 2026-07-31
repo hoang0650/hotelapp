@@ -17,7 +17,6 @@ import { TranslateService } from '@ngx-translate/core';
 import { PermissionService } from '../../services/permission.service';
 import { PricingPackage } from '../../services/pricing.service';
 import { PermissionFeature } from '../../services/permission.service';
-import { SessionContextService } from '../../services/session-context.service';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
 declare global {
@@ -75,8 +74,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     private modal: NzModalService,
     private http: HttpClient,
     private translate: TranslateService,
-    private permissionService: PermissionService,
-    private sessionContext: SessionContextService
+    private permissionService: PermissionService
   ) {
     this.initForm();
     this.initSalaryForm();
@@ -84,7 +82,6 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.initTranslationArrays();
-    this.loadHotels();
 
     this.subscriptions.add(
       this.permissionService.currentPackage$.subscribe(pkg => {
@@ -92,16 +89,17 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Ưu tiên hotelId Redis/session — load staff ngay, không chờ getHotels()
-    const hotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
-    if (hotelId) {
-      this.selectedHotelId = hotelId;
-      this.loadStaff();
-      this.refreshHotelUserCount();
-      this.loadBusinessInfo();
-    } else {
-      this.loadBusinessInfo();
-    }
+    // hotelId từ cache cục bộ (HotelService / session) — không phụ thuộc AI chatbox
+    this.applyHotelId(this.hotelService.resolvePreferredHotelId(this.authService.getHotelId()));
+    this.subscriptions.add(
+      this.hotelService.selectedHotelId$.subscribe((hotelId) => {
+        if (hotelId && hotelId !== this.selectedHotelId) {
+          this.applyHotelId(hotelId);
+        }
+      })
+    );
+
+    this.loadHotels();
 
     // Subscribe to language changes
     this.subscriptions.add(
@@ -109,6 +107,20 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
         this.initTranslationArrays();
       })
     );
+  }
+
+  private applyHotelId(hotelId: string | null): void {
+    if (!hotelId) {
+      this.loadBusinessInfo();
+      return;
+    }
+    if (this.selectedHotelId === hotelId && this.staffs.length > 0) {
+      return;
+    }
+    this.selectedHotelId = hotelId;
+    this.loadStaff();
+    this.refreshHotelUserCount();
+    this.loadBusinessInfo();
   }
 
   private initTranslationArrays(): void {
@@ -413,52 +425,56 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   }
 
   loadHotels(): void {
-    this.subscriptions.add(
-      this.hotelService.getHotels().subscribe(
-        (hotels) => {
-          const currentUser = this.authService.getCurrentUser();
-          
-          // Filter hotels theo role
-          if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
-            // Admin/Superadmin thấy tất cả
-            this.hotels = hotels;
-          } else if (this.authService.isBusiness() && currentUser?.businessId) {
-            // Business chỉ thấy hotels thuộc business của mình
-            let userBusinessIdStr: string | null = null;
-            
-            if (typeof currentUser.businessId === 'string') {
-              userBusinessIdStr = currentUser.businessId;
-            } else if (typeof currentUser.businessId === 'object' && currentUser.businessId !== null) {
-              const businessIdObj = currentUser.businessId as any;
-              if (businessIdObj._id) {
-                userBusinessIdStr = typeof businessIdObj._id === 'string' 
-                  ? businessIdObj._id 
-                  : businessIdObj._id.toString();
-              } else if (typeof businessIdObj.toString === 'function') {
-                userBusinessIdStr = businessIdObj.toString();
-              }
-            }
-            
-            this.hotels = hotels.filter((hotel: any) => {
-              const hotelBusinessId = this.extractBusinessId(hotel);
-              return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString();
-            });
-          } else if (this.authService.isHotelManager() && currentUser?.hotelId) {
-            // Hotel manager chỉ thấy hotel của mình
-            this.hotels = hotels.filter((hotel: any) => hotel._id === currentUser.hotelId);
-          } else {
-            this.hotels = hotels; // Fallback: giữ nguyên nếu không match
-          }
+    // Ưu tiên cache cục bộ; chỉ gọi API khi miss
+    const cached = this.hotelService.getCachedHotels();
+    if (cached.length > 0) {
+      this.applyHotelsList(cached);
+    }
 
-          if (!this.selectedHotelId && this.hotels.length === 1 && this.hotels[0]?._id) {
-            this.onHotelChange(this.hotels[0]._id);
-          }
-        },
+    this.subscriptions.add(
+      this.hotelService.getHotelsCached(undefined, undefined, { lite: true }).subscribe(
+        (hotels) => this.applyHotelsList(hotels),
         (error) => {
           console.error('Error loading hotels:', error);
         }
       )
     );
+  }
+
+  private applyHotelsList(hotels: any[]): void {
+    const currentUser = this.authService.getCurrentUser();
+
+    if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
+      this.hotels = hotels;
+    } else if (this.authService.isBusiness() && currentUser?.businessId) {
+      let userBusinessIdStr: string | null = null;
+
+      if (typeof currentUser.businessId === 'string') {
+        userBusinessIdStr = currentUser.businessId;
+      } else if (typeof currentUser.businessId === 'object' && currentUser.businessId !== null) {
+        const businessIdObj = currentUser.businessId as any;
+        if (businessIdObj._id) {
+          userBusinessIdStr = typeof businessIdObj._id === 'string'
+            ? businessIdObj._id
+            : businessIdObj._id.toString();
+        } else if (typeof businessIdObj.toString === 'function') {
+          userBusinessIdStr = businessIdObj.toString();
+        }
+      }
+
+      this.hotels = hotels.filter((hotel: any) => {
+        const hotelBusinessId = this.extractBusinessId(hotel);
+        return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString();
+      });
+    } else if (this.authService.isHotelManager() && currentUser?.hotelId) {
+      this.hotels = hotels.filter((hotel: any) => hotel._id === currentUser.hotelId);
+    } else {
+      this.hotels = hotels;
+    }
+
+    if (!this.selectedHotelId && this.hotels.length === 1 && this.hotels[0]?._id) {
+      this.onHotelChange(this.hotels[0]._id);
+    }
   }
 
   loadStaff(): void {
@@ -486,7 +502,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   onHotelChange(hotelId: string): void {
     this.selectedHotelId = hotelId;
-    this.sessionContext.setSelectedHotelId(hotelId || null);
+    this.hotelService.setSelectedHotelId(hotelId || null);
     this.staffForm.patchValue({ hotelId: hotelId });
     this.loadStaff();
     this.loadUsers();
