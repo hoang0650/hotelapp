@@ -17,6 +17,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { PermissionService } from '../../services/permission.service';
 import { PricingPackage } from '../../services/pricing.service';
 import { PermissionFeature } from '../../services/permission.service';
+import { SessionContextService } from '../../services/session-context.service';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
 declare global {
@@ -74,7 +75,8 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     private modal: NzModalService,
     private http: HttpClient,
     private translate: TranslateService,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private sessionContext: SessionContextService
   ) {
     this.initForm();
     this.initSalaryForm();
@@ -83,20 +85,22 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.initTranslationArrays();
     this.loadHotels();
-    this.loadBusinessInfo();
 
     this.subscriptions.add(
       this.permissionService.currentPackage$.subscribe(pkg => {
         this.currentPackage = pkg;
       })
     );
-    
-    // Auto-select hotel nếu user là hotel manager
-    const hotelId = this.authService.getHotelId();
+
+    // Ưu tiên hotelId Redis/session — load staff ngay, không chờ getHotels()
+    const hotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
     if (hotelId) {
       this.selectedHotelId = hotelId;
-      this.loadStaff(); // loadUsers sẽ được gọi sau khi loadStaff xong
+      this.loadStaff();
       this.refreshHotelUserCount();
+      this.loadBusinessInfo();
+    } else {
+      this.loadBusinessInfo();
     }
 
     // Subscribe to language changes
@@ -445,6 +449,10 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
           } else {
             this.hotels = hotels; // Fallback: giữ nguyên nếu không match
           }
+
+          if (!this.selectedHotelId && this.hotels.length === 1 && this.hotels[0]?._id) {
+            this.onHotelChange(this.hotels[0]._id);
+          }
         },
         (error) => {
           console.error('Error loading hotels:', error);
@@ -478,6 +486,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   onHotelChange(hotelId: string): void {
     this.selectedHotelId = hotelId;
+    this.sessionContext.setSelectedHotelId(hotelId || null);
     this.staffForm.patchValue({ hotelId: hotelId });
     this.loadStaff();
     this.loadUsers();

@@ -136,7 +136,9 @@
     "FANPAGE_MESSAGES": "Fanpageverwaltung",
     "DEBT_MANAGEMENT": "Schuldenverwaltung",
     "CONTACT_MANAGEMENT": "Kontaktverwaltung",
-    "BLOG_MANAGEMENT": "Blog-Verwaltung"
+    "BLOG_MANAGEMENT": "Blog-Verwaltung",
+    "BLOG": "Blog",
+    "PRICING": "Preise"
   },
   "TUYA": {
     "TITLE": "Tuya Smart Switch Steuerung",

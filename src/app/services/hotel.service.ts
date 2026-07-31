@@ -45,6 +45,13 @@ export class HotelService {
   }
 
   /**
+   * hotelId ưu tiên: Redis session → fallback (auth/user) — không cần chờ danh sách hotels
+   */
+  resolvePreferredHotelId(fallbackHotelId?: string | null): string | null {
+    return this.sessionContext.resolvePreferredHotelId(fallbackHotelId);
+  }
+
+  /**
    * Lấy floor từ Redis-backed session context (đồng bộ)
    */
   getStoredFloor(): string | null {

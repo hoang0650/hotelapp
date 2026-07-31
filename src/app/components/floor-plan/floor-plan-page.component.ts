@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Hotel } from '../../interfaces/hotel';
 import { HotelService } from '../../services/hotel.service';
 import { AuthService } from '../../services/auth.service';
+import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-floor-plan-page',
@@ -12,8 +13,13 @@ import { AuthService } from '../../services/auth.service';
         <nz-form-item>
           <nz-form-label>{{ 'ROOM_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
           <nz-form-control>
-            <nz-select [(ngModel)]="selectedHotelId" nzAllowClear nzShowSearch
-              [nzPlaceHolder]="'ROOM_MANAGEMENT.SELECT_HOTEL' | translate" style="width: 300px;">
+            <nz-select
+              [ngModel]="selectedHotelId"
+              (ngModelChange)="onHotelChange($event)"
+              nzAllowClear
+              nzShowSearch
+              [nzPlaceHolder]="'ROOM_MANAGEMENT.SELECT_HOTEL' | translate"
+              style="width: 300px;">
               <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
             </nz-select>
           </nz-form-control>
@@ -29,21 +35,34 @@ export class FloorPlanPageComponent implements OnInit {
 
   constructor(
     private hotelService: HotelService,
-    private authService: AuthService
+    private authService: AuthService,
+    private sessionContext: SessionContextService
   ) {}
 
   ngOnInit(): void {
-    const user = this.authService.getCurrentUser();
-    if (user?.hotelId) {
-      this.selectedHotelId = user.hotelId;
+    // Seed hotelId từ Redis/session ngay → render sơ đồ tầng không chờ getHotels()
+    const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+    if (storedHotelId) {
+      this.selectedHotelId = storedHotelId;
     }
+
     this.hotelService.getHotels().subscribe({
       next: (res: any) => {
         this.hotels = res.data || res || [];
         if (!this.selectedHotelId && this.hotels.length === 1) {
-          this.selectedHotelId = (this.hotels[0] as any)._id;
+          this.onHotelChange((this.hotels[0] as any)._id);
+        } else if (this.selectedHotelId && this.hotels.length > 0) {
+          const stillValid = this.hotels.some(h => h._id === this.selectedHotelId);
+          if (!stillValid) {
+            this.onHotelChange((this.hotels[0] as any)._id);
+          }
         }
       }
     });
+  }
+
+  onHotelChange(hotelId: string | null): void {
+    this.selectedHotelId = hotelId || '';
+    this.sessionContext.setSelectedHotelId(hotelId || null);
   }
 }

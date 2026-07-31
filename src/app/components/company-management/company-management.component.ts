@@ -83,6 +83,7 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
     this.initStatusOptions();
     this.currentUser = this.authService.getCurrentUser();
     this.permissions = this.authService.getPermissionRules();
+    // Business list là nội dung chính; hotels chỉ phục vụ form — song song, không chặn nhau
     this.loadBusinesses();
     this.loadHotels();
     
@@ -204,7 +205,7 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
   }
 
   loadHotels(): void {
-    this.isLoading = true;
+    // Không toggle isLoading — tránh race với loadBusinesses làm spinner treo
     this.hotelService.getHotels().subscribe({
       next: (data) => {
         if (this.isAdmin) {
@@ -233,12 +234,10 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
         } else {
           this.availableHotels = [];
         }
-        this.isLoading = false;
       },
       error: (error) => {
         console.error('Error fetching hotels:', error);
         this.message.error(this.translate.instant('COMPANY_MANAGEMENT.LOAD_HOTELS_ERROR'));
-        this.isLoading = false;
       }
     });
   }
@@ -268,10 +267,6 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
           this.businesses = [];
         }
         
-        // Reload hotels sau khi load businesses (để filter đúng)
-        if (!this.isAdmin) {
-          this.loadHotels();
-        }
         this.isLoading = false;
       },
       error: (error) => {

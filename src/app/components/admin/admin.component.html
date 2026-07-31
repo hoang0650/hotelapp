@@ -118,6 +118,16 @@
           </li>
         </ul>
       </li>
+
+      <!-- Trang công khai -->
+      <li nz-menu-item routerLink="/blog">
+        <span nz-icon nzType="read" nzTheme="outline"></span>
+        <span>{{ 'ADMIN_SIDEBAR.BLOG' | translate }}</span>
+      </li>
+      <li nz-menu-item routerLink="/pricing">
+        <span nz-icon nzType="tags" nzTheme="outline"></span>
+        <span>{{ 'ADMIN_SIDEBAR.PRICING' | translate }}</span>
+      </li>
     </ul>
     <div *ngIf="!permissionsReady" style="padding: 10px 12px; color: rgba(255,255,255,0.75); font-size: 12px;">
       Đang đồng bộ quyền truy cập...

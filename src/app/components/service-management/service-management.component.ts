@@ -12,6 +12,7 @@ import { forkJoin } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { TranslateService } from '@ngx-translate/core';
+import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-service-management',
@@ -64,7 +65,8 @@ export class ServiceManagementComponent implements OnInit {
     private hotelService: HotelService,
     public authService: AuthService,
     private message: NzMessageService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private sessionContext: SessionContextService
   ) {
     this.serviceForm = this.fb.group({
       hotelId: [null, Validators.required],
@@ -87,12 +89,20 @@ export class ServiceManagementComponent implements OnInit {
     this.currentUser = this.authService.getCurrentUser();
     this.permissions = this.authService.getPermissionRules();
     this.initServiceCategoryOptions();
-    this.loadHotels();
-    
-    // Nếu là business và không có hotel được chọn, load tất cả dịch vụ của business
-    if (this.isBusiness && !this.isAdmin && !this.selectedHotelId) {
-      this.loadServices(); // Load tất cả dịch vụ của business (không truyền hotelId)
+
+    // Ưu tiên hotelId Redis/session — load dịch vụ ngay
+    const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+    if (storedHotelId) {
+      this.selectedHotelId = storedHotelId;
+      this.serviceForm.patchValue({ hotelId: storedHotelId }, { emitEvent: false });
+      this.loadServices(storedHotelId);
+      this.loadServiceCategories(storedHotelId);
+    } else if (this.isBusiness && !this.isAdmin) {
+      // Business chưa chọn KS → load tất cả dịch vụ của business
+      this.loadServices();
     }
+
+    this.loadHotels();
   }
 
   private initServiceCategoryOptions(): void {
@@ -254,8 +264,14 @@ export class ServiceManagementComponent implements OnInit {
           this.hotels = [];
         }
         
-        // Auto-select hotel for hotel manager (chỉ có 1 hotel)
-        if (this.isHotelManager && this.hotels.length === 1 && !this.selectedHotelId) {
+        // Auto-select chỉ khi chưa có hotelId từ Redis/auth
+        if (!this.selectedHotelId && this.hotels.length === 1) {
+          const hotelId = this.hotels[0]._id!;
+          this.selectedHotelId = hotelId;
+          this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
+          this.loadServices(hotelId);
+          this.loadServiceCategories(hotelId);
+        } else if (!this.selectedHotelId && this.isHotelManager && this.hotels.length > 0) {
           const hotelId = this.hotels[0]._id!;
           this.selectedHotelId = hotelId;
           this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
@@ -303,6 +319,7 @@ export class ServiceManagementComponent implements OnInit {
     }
     
     this.selectedHotelId = hotelId;
+    this.sessionContext.setSelectedHotelId(hotelId);
     this.services = [];
     
     // Chỉ sync form nếu thay đổi từ bộ lọc

@@ -43,6 +43,18 @@ export class SessionContextService {
     return this.selectedHotelIdSubject.value;
   }
 
+  /**
+   * Ưu tiên hotelId đã warm từ Redis / login bootstrap, rồi fallback profile user.
+   * Dùng để các màn quản lý load data ngay, không chờ getHotels().
+   */
+  resolvePreferredHotelId(fallbackHotelId?: string | null): string | null {
+    const fromSession = this.selectedHotelIdSubject.value?.trim() || null;
+    if (fromSession) return fromSession;
+    const fromFallback = fallbackHotelId ? String(fallbackHotelId).trim() : '';
+    if (fromFallback) return fromFallback;
+    return this.authService.getHotelId();
+  }
+
   getSelectedFloor(): string | null {
     return this.selectedFloorSubject.value;
   }

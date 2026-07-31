@@ -13,6 +13,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { CurrencyService } from '../../services/currency.service';
 import { RoomCategoryService } from '../../services/room-category.service';
+import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-room-management',
@@ -107,7 +108,8 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
     private message: NzMessageService,
     private translate: TranslateService,
     public currencyService: CurrencyService,
-    private roomCategoryService: RoomCategoryService
+    private roomCategoryService: RoomCategoryService,
+    private sessionContext: SessionContextService
   ) {
     this.initStatusOptions();
     this.initTimezoneOptions();
@@ -224,8 +226,15 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
+
+    // Ưu tiên hotelId đã warm từ Redis / login bootstrap — load phòng ngay, không chờ getHotels()
+    const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+    if (storedHotelId) {
+      this.selectedHotelId = storedHotelId;
+      this.onHotelChange(storedHotelId, { persist: false });
+    }
     this.loadHotels();
-    
+
     // Subscribe to language changes to update statusOptions and timezoneOptions
     this.subscriptions.add(
       this.translate.onLangChange.subscribe(() => {
@@ -442,12 +451,15 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
           this.hotels = [];
         }
         
-        // Auto-select hotel nếu chỉ có 1
-        if (this.hotels.length === 1 && !this.selectedHotelId) {
-          this.selectedHotelId = this.hotels[0]._id!;
-          this.onHotelChange(this.selectedHotelId);
-        } else if (this.hotels.length > 0 && !this.selectedHotelId) {
-          this.selectedHotelId = this.hotels[0]._id!;
+        // Chỉ auto-select khi chưa có hotelId từ Redis/auth
+        if (!this.selectedHotelId && this.hotels.length > 0) {
+          const hotelId = this.hotels[0]._id!;
+          this.onHotelChange(hotelId);
+        } else if (this.selectedHotelId && this.hotels.length > 0) {
+          const stillValid = this.hotels.some(h => h._id === this.selectedHotelId);
+          if (!stillValid) {
+            this.onHotelChange(this.hotels[0]._id!);
+          }
         }
       },
       error => {
@@ -457,8 +469,11 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
     );
   }
 
-  onHotelChange(hotelId: string | null): void {
+  onHotelChange(hotelId: string | null, options?: { persist?: boolean }): void {
     this.selectedHotelId = hotelId;
+    if (options?.persist !== false) {
+      this.sessionContext.setSelectedHotelId(hotelId);
+    }
     this.floors = [];
     this.rooms = [];
     this.roomForm.get('floor')?.reset(1);

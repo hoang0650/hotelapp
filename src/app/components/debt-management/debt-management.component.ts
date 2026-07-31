@@ -8,6 +8,7 @@ import { User } from '../../interfaces/user';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { TranslateService } from '@ngx-translate/core';
+import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-debt-management',
@@ -55,7 +56,8 @@ export class DebtManagementComponent implements OnInit {
     private message: NzMessageService,
     private modal: NzModalService,
     private fb: FormBuilder,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private sessionContext: SessionContextService
   ) {
     this.settleForm = this.fb.group({
       amount: [0, [Validators.required, Validators.min(0.01)]],
@@ -67,6 +69,13 @@ export class DebtManagementComponent implements OnInit {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.initTranslationArrays();
+
+    // Ưu tiên hotelId Redis — filter công nợ ngay, không chờ getHotels()
+    const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+    if (storedHotelId) {
+      this.selectedHotelId = storedHotelId;
+    }
+
     this.loadHotels();
     this.loadDebts();
 
@@ -140,8 +149,9 @@ export class DebtManagementComponent implements OnInit {
           });
         } else if (this.isHotelManager && this.currentUser?.hotelId) {
           this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
-          if (this.hotels.length === 1) {
+          if (!this.selectedHotelId && this.hotels.length === 1) {
             this.selectedHotelId = this.hotels[0]._id || null;
+            this.loadDebts();
           }
         } else {
           this.hotels = [];
@@ -181,6 +191,7 @@ export class DebtManagementComponent implements OnInit {
 
   onHotelChange(hotelId: string | null): void {
     this.selectedHotelId = hotelId;
+    this.sessionContext.setSelectedHotelId(hotelId);
     this.pageIndex = 1;
     this.loadDebts();
   }
