@@ -47,6 +47,61 @@ export class RoomSessionService {
     this.loadFromRedis();
   }
 
+  /** Áp session từ socket/API (realtime) — không ghi ngược Redis */
+  applyRemoteSession(roomId: string, sessionData: RoomSession | null): void {
+    if (!roomId) return;
+    const rid = String(roomId);
+    if (!this.activeSessionsMap.has(rid)) {
+      this.activeSessionsMap.set(rid, new BehaviorSubject<RoomSession | null>(null));
+    }
+    if (sessionData && sessionData.checkinTime) {
+      sessionData = {
+        ...sessionData,
+        checkinTime: new Date(sessionData.checkinTime as any)
+      };
+    }
+    this.activeSessionsMap.get(rid)?.next(sessionData);
+  }
+
+  /** Hydrate cả map từ GET /sessions/rooms */
+  applySessionsMap(sessions: Record<string, any> | null | undefined): void {
+    const roomsFromRedis = new Set<string>();
+    if (sessions && typeof sessions === 'object') {
+      Object.entries(sessions).forEach(([roomId, session]: [string, any]) => {
+        roomsFromRedis.add(String(roomId));
+        if (session?.checkinTime) {
+          session.checkinTime = new Date(session.checkinTime);
+        }
+        if (!this.activeSessionsMap.has(roomId)) {
+          this.activeSessionsMap.set(roomId, new BehaviorSubject<RoomSession | null>(null));
+        }
+        this.activeSessionsMap.get(roomId)?.next(session || null);
+      });
+    }
+    this.activeSessionsMap.forEach((subject, roomId) => {
+      if (!roomsFromRedis.has(roomId)) {
+        subject.next(null);
+      }
+    });
+  }
+
+  /** Force reload từ Redis (sau rooms_updated / room_session_updated) */
+  refreshFromRemote(): void {
+    this.loadFromRedis();
+  }
+
+  refreshRoomFromRemote(roomId: string): void {
+    const hotelId = this.getHotelId();
+    if (!hotelId || !roomId) return;
+    this.apiService.getRoomSessions(hotelId).subscribe({
+      next: (sessions) => {
+        const session = sessions?.[roomId] ?? sessions?.[String(roomId)] ?? null;
+        this.applyRemoteSession(String(roomId), session);
+      },
+      error: (err) => console.error('[Redis] Error refreshing room session:', err)
+    });
+  }
+
   private getHotelId(): string {
     return this.hotelId || '';
   }
@@ -167,26 +222,8 @@ export class RoomSessionService {
       this.loadSubscription?.unsubscribe();
       this.loadSubscription = this.apiService.getRoomSessions(hotelId).subscribe({
         next: (sessions) => {
-          const roomsFromRedis = new Set<string>();
-          if (sessions && Object.keys(sessions).length > 0) {
-            Object.entries(sessions).forEach(([roomId, session]: [string, any]) => {
-              roomsFromRedis.add(roomId);
-              if (session.checkinTime) {
-                session.checkinTime = new Date(session.checkinTime);
-              }
-              if (!this.activeSessionsMap.has(roomId)) {
-                this.activeSessionsMap.set(roomId, new BehaviorSubject<RoomSession | null>(null));
-              }
-              this.activeSessionsMap.get(roomId)?.next(session);
-            });
-            console.log('[Redis] Room sessions loaded from Redis:', sessions);
-          }
-
-          this.activeSessionsMap.forEach((subject, roomId) => {
-            if (!roomsFromRedis.has(roomId)) {
-              subject.next(null);
-            }
-          });
+          this.applySessionsMap(sessions);
+          console.log('[Redis] Room sessions loaded from Redis:', sessions);
         },
         error: (err) => console.error('[Redis] Error loading room sessions:', err)
       });

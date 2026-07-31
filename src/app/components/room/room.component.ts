@@ -1449,6 +1449,20 @@ export class RoomComponent implements OnInit, OnDestroy {
         reason === 'cleaning' ||
         reason === 'transfer';
 
+      // Đồng bộ session Redis (RoomEvent → roomSessions) realtime
+      if (payload?.session !== undefined && roomId) {
+        this.roomSessionService.applyRemoteSession(String(roomId), payload.session);
+      } else if (roomId) {
+        this.roomSessionService.refreshRoomFromRemote(String(roomId));
+      } else if (
+        reason.includes('session') ||
+        reason === 'checkin' ||
+        reason === 'checkout' ||
+        reason === 'transfer'
+      ) {
+        this.roomSessionService.refreshFromRemote();
+      }
+
       if (statusOnly && roomId && payload?.status) {
         // Patch local từ socket payload — không GET /rooms/:id
         this.patchLocalRoomStatusFromSocket(roomId, payload);
@@ -1480,6 +1494,23 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     });
 
+    this.roomsSocket.on('room_session_updated', (payload: any) => {
+      const payloadHotelId = String(payload?.hotelId || '').trim();
+      if (!payloadHotelId || !this.selectedHotelId) return;
+      if (payloadHotelId !== String(this.selectedHotelId)) return;
+
+      const roomId = payload?.roomId;
+      if (payload?.session !== undefined && roomId) {
+        this.roomSessionService.applyRemoteSession(String(roomId), payload.session);
+      } else if (roomId) {
+        this.roomSessionService.refreshRoomFromRemote(String(roomId));
+      } else {
+        this.roomSessionService.refreshFromRemote();
+      }
+      this.scheduleDisplayRebuild();
+      this.cdr.markForCheck();
+    });
+
     this.roomsSocket.on('transactions_updated', (payload: any) => {
       const payloadHotelId = String(payload?.hotelId || '').trim();
       if (!payloadHotelId || !this.selectedHotelId) return;
@@ -1507,6 +1538,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.roomsSocket.off('connect');
         this.roomsSocket.off('disconnect');
         this.roomsSocket.off('rooms_updated');
+        this.roomsSocket.off('room_session_updated');
         this.roomsSocket.off('transactions_updated');
         this.roomsSocket.off('payment_received');
         this.roomsSocket.disconnect();
