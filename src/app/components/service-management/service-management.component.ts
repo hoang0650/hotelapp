@@ -98,6 +98,13 @@ export class ServiceManagementComponent implements OnInit {
       this.loadServices();
     }
 
+    this.hotelService.selectedHotelId$.subscribe((hotelId) => {
+      const normalized = this.hotelService.normalizeHotelId(hotelId);
+      if (normalized && !this.hotelService.sameHotelId(normalized, this.selectedHotelId)) {
+        this.onHotelChange(normalized, true);
+      }
+    });
+
     this.loadHotels();
   }
 

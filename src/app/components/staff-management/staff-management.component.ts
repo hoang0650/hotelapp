@@ -89,12 +89,13 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       })
     );
 
-    // hotelId từ cache cục bộ (HotelService / session) — không phụ thuộc AI chatbox
-    this.applyHotelId(this.hotelService.resolvePreferredHotelId(this.authService.getHotelId()));
+    // hotelId từ cache cục bộ — load staff ngay khi có id
+    this.applyHotelId(this.hotelService.resolvePreferredHotelId(this.authService.getHotelId()), true);
     this.subscriptions.add(
       this.hotelService.selectedHotelId$.subscribe((hotelId) => {
-        if (hotelId && hotelId !== this.selectedHotelId) {
-          this.applyHotelId(hotelId);
+        const normalized = this.hotelService.normalizeHotelId(hotelId);
+        if (normalized && !this.hotelService.sameHotelId(normalized, this.selectedHotelId)) {
+          this.applyHotelId(normalized, true);
         }
       })
     );
@@ -109,15 +110,16 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     );
   }
 
-  private applyHotelId(hotelId: string | null): void {
-    if (!hotelId) {
+  private applyHotelId(hotelId: string | null, force = false): void {
+    const normalized = this.hotelService.normalizeHotelId(hotelId);
+    if (!normalized) {
       this.loadBusinessInfo();
       return;
     }
-    if (this.selectedHotelId === hotelId && this.staffs.length > 0) {
+    if (!force && this.hotelService.sameHotelId(this.selectedHotelId, normalized) && this.staffs.length > 0) {
       return;
     }
-    this.selectedHotelId = hotelId;
+    this.selectedHotelId = normalized;
     this.loadStaff();
     this.refreshHotelUserCount();
     this.loadBusinessInfo();

@@ -28,6 +28,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   floors: string[] = [];
   selectedHotelId: string | null = null;
   roomCategories: RoomCategory[] = [];
+  private loadedHotelId: string | null = null;
 
   // Phân trang
   pageIndex: number = 1;
@@ -225,22 +226,21 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
 
-    // hotelId từ cache cục bộ — load data ngay
+    // hotelId từ cache cục bộ — load rooms/categories/floors ngay, không chờ getHotels
     const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
     if (storedHotelId) {
-      this.selectedHotelId = storedHotelId;
-      this.onHotelChange(storedHotelId, { persist: false });
+      this.onHotelChange(storedHotelId, { persist: false, force: true });
     }
     this.subscriptions.add(
       this.hotelService.selectedHotelId$.subscribe((hotelId) => {
-        if (hotelId && hotelId !== this.selectedHotelId) {
-          this.onHotelChange(hotelId, { persist: false });
+        const normalized = this.hotelService.normalizeHotelId(hotelId);
+        if (normalized && !this.hotelService.sameHotelId(normalized, this.selectedHotelId)) {
+          this.onHotelChange(normalized, { persist: false, force: true });
         }
       })
     );
     this.loadHotels();
 
-    // Subscribe to language changes to update statusOptions and timezoneOptions
     this.subscriptions.add(
       this.translate.onLangChange.subscribe(() => {
         this.initStatusOptions();
@@ -437,69 +437,85 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   }
 
   private applyHotelsList(data: Hotel[]): void {
+    const normalize = (id: unknown) => this.hotelService.normalizeHotelId(id);
+
     if (this.isAdmin) {
       this.hotels = data;
     } else if (this.isBusiness && this.currentUser?.businessId) {
-      let userBusinessIdStr: string | null = null;
-
-      if (typeof this.currentUser.businessId === 'string') {
-        userBusinessIdStr = this.currentUser.businessId;
-      } else if (typeof this.currentUser.businessId === 'object' && this.currentUser.businessId !== null) {
-        const businessIdObj = this.currentUser.businessId as any;
-        if (businessIdObj._id) {
-          userBusinessIdStr = typeof businessIdObj._id === 'string'
-            ? businessIdObj._id
-            : businessIdObj._id.toString();
-        } else if (typeof businessIdObj.toString === 'function') {
-          userBusinessIdStr = businessIdObj.toString();
-        }
-      }
-
+      const userBusinessIdStr = normalize(this.currentUser.businessId);
       this.hotels = data.filter(hotel => {
-        const hotelBusinessId = this.extractBusinessId(hotel);
-        return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString();
+        const hotelBusinessId = normalize(this.extractBusinessId(hotel));
+        return !!hotelBusinessId && !!userBusinessIdStr && hotelBusinessId === userBusinessIdStr;
       });
     } else if (this.isHotelManager && this.currentUser?.hotelId) {
-      this.hotels = data.filter(hotel => hotel._id === this.currentUser?.hotelId);
+      const userHotelId = normalize(this.currentUser.hotelId);
+      this.hotels = data.filter(hotel => normalize(hotel._id) === userHotelId);
     } else {
-      this.hotels = [];
+      // Staff / khác: giữ list từ cache (đã scoped phía API)
+      this.hotels = data;
     }
 
-    if (!this.selectedHotelId && this.hotels.length > 0) {
-      this.onHotelChange(this.hotels[0]._id!);
-    } else if (this.selectedHotelId && this.hotels.length > 0) {
-      const stillValid = this.hotels.some(h => h._id === this.selectedHotelId);
+    const selected = normalize(this.selectedHotelId);
+    if (!selected && this.hotels.length > 0) {
+      this.onHotelChange(normalize(this.hotels[0]._id), { force: true });
+      return;
+    }
+
+    if (selected && this.hotels.length > 0) {
+      const stillValid = this.hotels.some(h => normalize(h._id) === selected);
       if (!stillValid) {
-        this.onHotelChange(this.hotels[0]._id!);
+        this.onHotelChange(normalize(this.hotels[0]._id), { force: true });
+        return;
+      }
+      // Hotel đã chọn hợp lệ — đảm bảo đã load API dữ liệu
+      if (this.loadedHotelId !== selected) {
+        this.onHotelChange(selected, { persist: false, force: true });
       }
     }
   }
 
-  onHotelChange(hotelId: string | null, options?: { persist?: boolean }): void {
-    this.selectedHotelId = hotelId;
+  onHotelChange(hotelId: string | null, options?: { persist?: boolean; force?: boolean }): void {
+    const normalized = this.hotelService.normalizeHotelId(hotelId);
+    const same = this.hotelService.sameHotelId(normalized, this.selectedHotelId)
+      && this.loadedHotelId === normalized;
+
+    this.selectedHotelId = normalized;
     if (options?.persist !== false) {
-      this.hotelService.setSelectedHotelId(hotelId);
+      this.hotelService.setSelectedHotelId(normalized);
     }
+
+    if (!normalized) {
+      this.floors = [];
+      this.rooms = [];
+      this.roomCategories = [];
+      this.loadedHotelId = null;
+      this.pageIndex = 1;
+      this.total = 0;
+      return;
+    }
+
+    // Tránh clear + gọi lại API khi cùng hotel và đã load
+    if (same && !options?.force) {
+      return;
+    }
+
     this.floors = [];
     this.rooms = [];
     this.roomForm.get('floor')?.reset(1);
-    // Reset phân trang về trang 1
     this.pageIndex = 1;
     this.total = 0;
+    this.loadedHotelId = normalized;
 
-    if (hotelId) {
-      this.loadRooms(hotelId);
-      this.loadRoomCategories();
-      this.roomService.getHotelFloors(hotelId).subscribe(
-        data => {
-          this.floors = data.floors.map(f => String(f));
-        },
-        error => {
-          console.error('Lỗi khi tải danh sách tầng:', error);
-          // Không cần báo lỗi vì người dùng có thể nhập tầng mới
-        }
-      );
-    }
+    this.loadRooms(normalized);
+    this.loadRoomCategories();
+    this.roomService.getHotelFloors(normalized).subscribe(
+      data => {
+        this.floors = data.floors.map(f => String(f));
+      },
+      error => {
+        console.error('Lỗi khi tải danh sách tầng:', error);
+      }
+    );
   }
 
   loadRoomCategories(): void {

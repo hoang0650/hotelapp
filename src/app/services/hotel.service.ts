@@ -57,7 +57,25 @@ export class HotelService {
    * hotelId ưu tiên: session cục bộ → fallback auth — không cần gọi API
    */
   resolvePreferredHotelId(fallbackHotelId?: string | null): string | null {
-    return this.sessionContext.resolvePreferredHotelId(fallbackHotelId);
+    return this.normalizeHotelId(
+      this.sessionContext.resolvePreferredHotelId(fallbackHotelId)
+    );
+  }
+
+  /** Chuẩn hóa hotelId (ObjectId / object / string) về string */
+  normalizeHotelId(hotelId: unknown): string | null {
+    if (hotelId == null || hotelId === '') return null;
+    if (typeof hotelId === 'object' && (hotelId as any)._id) {
+      return String((hotelId as any)._id).trim() || null;
+    }
+    const s = String(hotelId).trim();
+    return s || null;
+  }
+
+  sameHotelId(a: unknown, b: unknown): boolean {
+    const left = this.normalizeHotelId(a);
+    const right = this.normalizeHotelId(b);
+    return !!left && !!right && left === right;
   }
 
   /** Stream hotelId đang chọn (cùng nguồn với sơ đồ phòng / session) */
@@ -66,7 +84,7 @@ export class HotelService {
   }
 
   setSelectedHotelId(hotelId: string | null, options?: { persist?: boolean }): void {
-    this.sessionContext.setSelectedHotelId(hotelId, options);
+    this.sessionContext.setSelectedHotelId(this.normalizeHotelId(hotelId), options);
   }
 
   /**
@@ -113,6 +131,7 @@ export class HotelService {
     const key = this.buildHotelsCacheKey(businessId, status, lite);
     const now = Date.now();
 
+    // Hit đúng key
     if (
       !options?.forceRefresh &&
       this.hotelsListCache &&
@@ -122,7 +141,17 @@ export class HotelService {
       return of(this.hotelsListCache);
     }
 
-    if (!options?.forceRefresh && this.hotelsListInFlight && this.hotelsListCacheKey === key) {
+    // Có cache khác key (login warm) → trả ngay, caller tự filter theo role
+    if (
+      !options?.forceRefresh &&
+      this.hotelsListCache &&
+      this.hotelsListCache.length > 0 &&
+      now - this.hotelsListCacheAt < this.hotelsListTtlMs
+    ) {
+      return of(this.hotelsListCache);
+    }
+
+    if (!options?.forceRefresh && this.hotelsListInFlight) {
       return this.hotelsListInFlight;
     }
 

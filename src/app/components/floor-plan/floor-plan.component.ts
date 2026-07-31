@@ -1,16 +1,18 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { Room, RoomCategory } from '../../interfaces/rooms';
 import { RoomsService } from '../../services/rooms.service';
 import { RoomCategoryService } from '../../services/room-category.service';
+import { HotelService } from '../../services/hotel.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-floor-plan',
   templateUrl: './floor-plan.component.html',
   styleUrls: ['./floor-plan.component.css']
 })
-export class FloorPlanComponent implements OnInit, OnChanges {
+export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
   @Input() hotelId: string = '';
 
   rooms: Room[] = [];
@@ -19,24 +21,47 @@ export class FloorPlanComponent implements OnInit, OnChanges {
 
   newFloorNumber: number | null = null;
   newRoomData: { [floor: string]: { roomNumber: string; categoryId: string } } = {};
+  private subscriptions = new Subscription();
 
   constructor(
     private roomService: RoomsService,
     private categoryService: RoomCategoryService,
+    private hotelService: HotelService,
     private message: NzMessageService,
     private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
-    if (this.hotelId) {
+    const resolved =
+      this.hotelService.normalizeHotelId(this.hotelId) ||
+      this.hotelService.resolvePreferredHotelId();
+    if (resolved) {
+      this.hotelId = resolved;
       this.loadData();
     }
+    this.subscriptions.add(
+      this.hotelService.selectedHotelId$.subscribe((hotelId) => {
+        const normalized = this.hotelService.normalizeHotelId(hotelId);
+        if (normalized && !this.hotelService.sameHotelId(normalized, this.hotelId)) {
+          this.hotelId = normalized;
+          this.loadData();
+        }
+      })
+    );
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['hotelId'] && this.hotelId) {
-      this.loadData();
+    if (changes['hotelId']) {
+      const normalized = this.hotelService.normalizeHotelId(this.hotelId);
+      if (normalized) {
+        this.hotelId = normalized;
+        this.loadData();
+      }
     }
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
   }
 
   loadData(): void {

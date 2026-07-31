@@ -73,6 +73,13 @@ export class DebtManagementComponent implements OnInit {
       this.selectedHotelId = storedHotelId;
     }
 
+    this.hotelService.selectedHotelId$.subscribe((hotelId) => {
+      const normalized = this.hotelService.normalizeHotelId(hotelId);
+      if (normalized && !this.hotelService.sameHotelId(normalized, this.selectedHotelId)) {
+        this.onHotelChange(normalized);
+      }
+    });
+
     this.loadHotels();
     this.loadDebts();
 

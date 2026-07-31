@@ -1,26 +1,30 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RoomCategory } from '../../interfaces/rooms';
 import { RoomCategoryService } from '../../services/room-category.service';
+import { HotelService } from '../../services/hotel.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-room-category',
   templateUrl: './room-category.component.html',
   styleUrls: ['./room-category.component.css']
 })
-export class RoomCategoryComponent implements OnInit, OnChanges {
+export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
   @Input() hotelId: string = '';
 
   categories: RoomCategory[] = [];
   categoryForm!: FormGroup;
   editingCategory: RoomCategory | null = null;
   priceConfigId: string | null = null;
+  private subscriptions = new Subscription();
 
   constructor(
     private fb: FormBuilder,
     private categoryService: RoomCategoryService,
+    private hotelService: HotelService,
     private message: NzMessageService,
     private translate: TranslateService
   ) {
@@ -70,23 +74,44 @@ export class RoomCategoryComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-    if (this.hotelId) {
+    const resolved =
+      this.hotelService.normalizeHotelId(this.hotelId) ||
+      this.hotelService.resolvePreferredHotelId();
+    if (resolved) {
+      this.hotelId = resolved;
       this.loadCategories();
     }
+    this.subscriptions.add(
+      this.hotelService.selectedHotelId$.subscribe((hotelId) => {
+        const normalized = this.hotelService.normalizeHotelId(hotelId);
+        if (normalized && !this.hotelService.sameHotelId(normalized, this.hotelId)) {
+          this.hotelId = normalized;
+          this.loadCategories();
+        }
+      })
+    );
     this.patchHolidayDatesToForm();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['hotelId'] && this.hotelId) {
-      this.loadCategories();
-    }
     if (changes['hotelId']) {
+      const normalized = this.hotelService.normalizeHotelId(this.hotelId);
+      if (normalized) {
+        this.hotelId = normalized;
+        this.loadCategories();
+      }
       this.patchHolidayDatesToForm();
     }
   }
 
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
   loadCategories(): void {
-    this.categoryService.getCategories(this.hotelId).subscribe(
+    const id = this.hotelService.normalizeHotelId(this.hotelId);
+    if (!id) return;
+    this.categoryService.getCategories(id).subscribe(
       (res: any) => {
         this.categories = res.data || res || [];
       },
