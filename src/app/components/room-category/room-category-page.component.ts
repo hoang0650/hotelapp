@@ -41,6 +41,13 @@ export class RoomCategoryPageComponent implements OnInit {
     const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
     if (storedHotelId) {
       this.selectedHotelId = storedHotelId;
+      // Seed option ngay — không chờ API
+      this.hotels = this.hotelService.ensureSelectedHotelOption(
+        this.hotelService.getCachedHotels(),
+        storedHotelId,
+        this.hotelService.getCachedHotelName(storedHotelId)
+      );
+      this.hydrateSelectedHotelLabel(storedHotelId);
     }
 
     const cached = this.hotelService.getCachedHotels();
@@ -49,7 +56,13 @@ export class RoomCategoryPageComponent implements OnInit {
     }
 
     this.hotelService.getHotelsCached(undefined, undefined, { lite: true }).subscribe({
-      next: (res) => this.applyHotels(res || [])
+      next: (res) => this.applyHotels(res || []),
+      error: () => {
+        if (storedHotelId) {
+          this.hotels = this.hotelService.ensureSelectedHotelOption([], storedHotelId);
+          this.hydrateSelectedHotelLabel(storedHotelId);
+        }
+      }
     });
   }
 
@@ -57,7 +70,11 @@ export class RoomCategoryPageComponent implements OnInit {
     const selected = this.hotelService.normalizeHotelId(this.selectedHotelId)
       || this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
 
-    this.hotels = this.hotelService.ensureSelectedHotelOption(list, selected);
+    this.hotels = this.hotelService.ensureSelectedHotelOption(
+      list,
+      selected,
+      this.hotelService.getCachedHotelName(selected)
+    );
     if (selected) {
       this.selectedHotelId = selected;
     } else if (!this.selectedHotelId && this.hotels.length === 1) {
@@ -70,13 +87,15 @@ export class RoomCategoryPageComponent implements OnInit {
   private hydrateSelectedHotelLabel(hotelId: string | null): void {
     if (!hotelId) return;
     const current = this.hotels.find((h) => this.hotelService.sameHotelId(h._id, hotelId));
-    if (current?.name && current.name !== 'Khách sạn đang chọn') return;
+    if (current?.name && current.name !== 'Khách sạn đang chọn') {
+      this.hotelService.rememberHotelName(hotelId, current.name);
+      return;
+    }
 
-    this.hotelService.getHotelInfo(hotelId, { lite: true }).subscribe((hotel) => {
-      if (!hotel) return;
-      const id = this.hotelService.normalizeHotelId(hotel._id) || hotelId;
+    this.hotelService.resolveHotelDisplayName(hotelId).subscribe((name) => {
+      const id = this.hotelService.normalizeHotelId(hotelId) || hotelId;
       const rest = this.hotels.filter((h) => !this.hotelService.sameHotelId(h._id, id));
-      this.hotels = [{ ...hotel, _id: id, name: hotel.name || 'Khách sạn' } as Hotel, ...rest];
+      this.hotels = [{ _id: id, name } as Hotel, ...rest];
       this.selectedHotelId = id;
     });
   }
@@ -84,6 +103,13 @@ export class RoomCategoryPageComponent implements OnInit {
   onHotelChange(hotelId: string | null): void {
     const id = this.hotelService.normalizeHotelId(hotelId) || '';
     this.selectedHotelId = id;
+    if (id) {
+      this.hotels = this.hotelService.ensureSelectedHotelOption(
+        this.hotels,
+        id,
+        this.hotelService.getCachedHotelName(id)
+      );
+    }
     this.hotelService.setSelectedHotelId(id || null);
   }
 }

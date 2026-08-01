@@ -226,11 +226,19 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
 
-    // hotelId từ cache cục bộ — load rooms/categories/floors ngay, không chờ getHotels
+    // Seed hotelId + option dropdown ngay — không chờ getHotels (tránh "Chọn khách sạn")
     const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
     if (storedHotelId) {
+      this.selectedHotelId = storedHotelId;
+      this.hotels = this.hotelService.ensureSelectedHotelOption(
+        this.hotelService.getCachedHotels(),
+        storedHotelId,
+        this.hotelService.getCachedHotelName(storedHotelId)
+      );
+      this.hydrateSelectedHotelLabel(storedHotelId);
       this.onHotelChange(storedHotelId, { persist: false, force: true });
     }
+
     this.subscriptions.add(
       this.hotelService.selectedHotelId$.subscribe((hotelId) => {
         const normalized = this.hotelService.normalizeHotelId(hotelId);
@@ -423,6 +431,19 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   }
 
   loadHotels(): void {
+    const preferred =
+      this.hotelService.normalizeHotelId(this.selectedHotelId) ||
+      this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+
+    if (preferred && this.hotels.length === 0) {
+      this.hotels = this.hotelService.ensureSelectedHotelOption(
+        this.hotelService.getCachedHotels(),
+        preferred,
+        this.hotelService.getCachedHotelName(preferred)
+      );
+      this.selectedHotelId = preferred;
+    }
+
     const cached = this.hotelService.getCachedHotels();
     if (cached.length > 0) {
       this.applyHotelsList(cached);
@@ -432,7 +453,12 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       data => this.applyHotelsList(data),
       error => {
         console.error('Lỗi khi tải danh sách khách sạn:', error);
-        this.message.error(this.translate.instant('ROOM_MANAGEMENT.LOAD_HOTELS_ERROR'));
+        if (preferred) {
+          this.hotels = this.hotelService.ensureSelectedHotelOption([], preferred);
+          this.hydrateSelectedHotelLabel(preferred);
+        } else {
+          this.message.error(this.translate.instant('ROOM_MANAGEMENT.LOAD_HOTELS_ERROR'));
+        }
       }
     );
   }
@@ -481,14 +507,16 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   private hydrateSelectedHotelLabel(hotelId: string | null): void {
     if (!hotelId) return;
     const current = this.hotels.find((h) => this.hotelService.sameHotelId(h._id, hotelId));
-    if (current?.name && current.name !== 'Khách sạn đang chọn') return;
+    if (current?.name && current.name !== 'Khách sạn đang chọn') {
+      this.hotelService.rememberHotelName(hotelId, current.name);
+      return;
+    }
 
     this.subscriptions.add(
-      this.hotelService.getHotelInfo(hotelId, { lite: true }).subscribe((hotel) => {
-        if (!hotel) return;
-        const id = this.hotelService.normalizeHotelId(hotel._id) || hotelId;
+      this.hotelService.resolveHotelDisplayName(hotelId).subscribe((name) => {
+        const id = this.hotelService.normalizeHotelId(hotelId)!;
         const rest = this.hotels.filter((h) => !this.hotelService.sameHotelId(h._id, id));
-        this.hotels = [{ ...hotel, _id: id, name: hotel.name || 'Khách sạn' } as Hotel, ...rest];
+        this.hotels = [{ _id: id, name } as Hotel, ...rest];
         this.selectedHotelId = id;
       })
     );
@@ -500,6 +528,13 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       && this.loadedHotelId === normalized;
 
     this.selectedHotelId = normalized;
+    if (normalized) {
+      this.hotels = this.hotelService.ensureSelectedHotelOption(
+        this.hotels,
+        normalized,
+        this.hotelService.getCachedHotelName(normalized)
+      );
+    }
     if (options?.persist !== false) {
       this.hotelService.setSelectedHotelId(normalized);
     }
@@ -519,12 +554,16 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.floors = [];
-    this.rooms = [];
-    this.roomForm.get('floor')?.reset(1);
+    // Không clear UI trước khi data mới về — tránh nhấp nháy / cảm giác delay
     this.pageIndex = 1;
-    this.total = 0;
     this.loadedHotelId = normalized;
+
+    // Ưu tiên rooms cache để hiện list ngay
+    const cachedRooms = this.roomService.getCachedRooms(normalized);
+    if (cachedRooms?.length) {
+      this.rooms = cachedRooms;
+      this.total = this.rooms.length;
+    }
 
     this.loadRooms(normalized);
     this.loadRoomCategories();
@@ -540,9 +579,14 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
 
   loadRoomCategories(): void {
     if (!this.selectedHotelId) return;
-    this.roomCategoryService.getCategories(this.selectedHotelId).subscribe({
+    const id = this.selectedHotelId;
+    const cached = this.roomCategoryService.getCachedCategories(id);
+    if (cached?.length) {
+      this.roomCategories = cached;
+    }
+    this.roomCategoryService.getCategories(id).subscribe({
       next: (res: any) => {
-        this.roomCategories = res.data || res || [];
+        this.roomCategories = Array.isArray(res) ? res : (res?.data || []);
       },
       error: (err: any) => {
         console.error('Error loading room categories:', err);
@@ -959,8 +1003,10 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   }
 
   getHotelName(hotelId: string): string {
-    const hotel = this.hotels.find((h: Hotel) => h._id === hotelId);
-    return hotel ? hotel.name : this.translate.instant('COMMON.UNKNOWN');
+    const cached = this.hotelService.getCachedHotelName(hotelId);
+    if (cached) return cached;
+    const hotel = this.hotels.find((h: Hotel) => this.hotelService.sameHotelId(h._id, hotelId));
+    return hotel?.name || this.translate.instant('COMMON.UNKNOWN');
   }
 
   getRoomStatusLabel(statusValue: Room['status'] | undefined): string {

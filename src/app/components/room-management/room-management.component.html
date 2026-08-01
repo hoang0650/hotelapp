@@ -142,7 +142,7 @@
             <nz-form-label nzRequired>{{ 'ROOM_MANAGEMENT.HOTEL' | translate }}</nz-form-label>
             <nz-form-control [nzErrorTip]="'ROOM_MANAGEMENT.HOTEL_REQUIRED' | translate">
               <nz-select formControlName="hotelId" (ngModelChange)="onHotelChange($event)" [nzPlaceHolder]="'ROOM_MANAGEMENT.SELECT_HOTEL' | translate">
-                <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="getHotelName(hotel._id!)"></nz-option>
+                <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id!" [nzLabel]="getHotelName(hotel._id!)"></nz-option>
               </nz-select>
             </nz-form-control>
           </nz-form-item>

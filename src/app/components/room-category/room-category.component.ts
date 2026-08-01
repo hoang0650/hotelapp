@@ -86,6 +86,7 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
         const normalized = this.hotelService.normalizeHotelId(hotelId);
         if (normalized && !this.hotelService.sameHotelId(normalized, this.hotelId)) {
           this.hotelId = normalized;
+          this.loadedHotelId = null;
           this.loadCategories();
         }
       })
@@ -94,9 +95,9 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['hotelId']) {
+    if (changes['hotelId'] && !changes['hotelId'].firstChange) {
       const normalized = this.hotelService.normalizeHotelId(this.hotelId);
-      if (normalized) {
+      if (normalized && !this.hotelService.sameHotelId(normalized, this.loadedHotelId)) {
         this.hotelId = normalized;
         this.loadCategories();
       }
@@ -108,12 +109,22 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
+  private loadedHotelId: string | null = null;
+
   loadCategories(): void {
     const id = this.hotelService.normalizeHotelId(this.hotelId);
     if (!id) return;
+
+    const cached = this.categoryService.getCachedCategories(id);
+    if (cached?.length) {
+      this.categories = cached;
+      this.loadedHotelId = id;
+    }
+
     this.categoryService.getCategories(id).subscribe(
       (res: any) => {
-        this.categories = res.data || res || [];
+        this.categories = Array.isArray(res) ? res : (res?.data || []);
+        this.loadedHotelId = id;
       },
       (error) => {
         console.error('Error loading categories:', error);

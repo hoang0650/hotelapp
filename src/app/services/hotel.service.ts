@@ -112,6 +112,10 @@ export class HotelService {
       .map((hotel) => {
         const id = this.normalizeHotelId((hotel as any)?._id ?? (hotel as any)?.id);
         if (!id) return null;
+        const name = String((hotel as any)?.name || '').trim();
+        if (name) {
+          this.rememberHotelName(id, name);
+        }
         return { ...hotel, _id: id } as Hotel;
       })
       .filter((hotel): hotel is Hotel => !!hotel);
@@ -137,13 +141,64 @@ export class HotelService {
       return [fromCache, ...list];
     }
 
+    const cachedName = this.getCachedHotelName(selected);
     return [
       {
         _id: selected,
-        name: (fallbackName || '').trim() || 'Khách sạn đang chọn'
+        name: (fallbackName || cachedName || '').trim() || 'Khách sạn đang chọn'
       } as Hotel,
       ...list
     ];
+  }
+
+  /** Cache tên KS theo id — dùng chung room board / AI / dropdown quản lý */
+  private hotelNameById = new Map<string, string>();
+
+  rememberHotelName(hotelId: unknown, name?: string | null): void {
+    const id = this.normalizeHotelId(hotelId);
+    const n = String(name || '').trim();
+    if (!id || !n) return;
+    if (/^[a-f0-9]{24}$/i.test(n)) return; // không cache raw ObjectId làm tên
+    if (n === 'Khách sạn đang chọn') return;
+    this.hotelNameById.set(id, n);
+  }
+
+  getCachedHotelName(hotelId: unknown): string | null {
+    const id = this.normalizeHotelId(hotelId);
+    if (!id) return null;
+    return this.hotelNameById.get(id) || null;
+  }
+
+  /**
+   * Resolve tên hiển thị: memory → list cache → GET /hotels/:id?lite=1
+   * Không bao giờ trả về raw ObjectId.
+   */
+  resolveHotelDisplayName(hotelId: unknown): Observable<string> {
+    const id = this.normalizeHotelId(hotelId);
+    if (!id) {
+      return of('Chưa chọn khách sạn');
+    }
+
+    const remembered = this.getCachedHotelName(id);
+    if (remembered) {
+      return of(remembered);
+    }
+
+    const fromList = this.normalizeHotelsList(this.getCachedHotels())
+      .find((h) => this.sameHotelId(h._id, id));
+    if (fromList?.name && String(fromList.name).trim()) {
+      this.rememberHotelName(id, fromList.name);
+      return of(String(fromList.name).trim());
+    }
+
+    return this.getHotelInfo(id, { lite: true }).pipe(
+      map((hotel) => {
+        const name = String(hotel?.name || '').trim() || 'Khách sạn';
+        this.rememberHotelName(id, name);
+        return name;
+      }),
+      catchError(() => of('Khách sạn'))
+    );
   }
 
   clearHotelsListCache(): void {
@@ -199,7 +254,7 @@ export class HotelService {
     this.hotelsListInFlight = this.getHotels(businessId, status, { lite }).pipe(
       timeout(8000),
       tap((hotels) => {
-        this.hotelsListCache = Array.isArray(hotels) ? hotels : [];
+        this.hotelsListCache = this.normalizeHotelsList(Array.isArray(hotels) ? hotels : []);
         this.hotelsListCacheAt = Date.now();
         this.hotelsListSubject.next(this.hotelsListCache);
       }),
@@ -248,6 +303,7 @@ export class HotelService {
     const cacheKey = `${hotelId}:${options?.lite ? 'lite' : 'full'}`;
     const cached = this.hotelInfoCache.get(cacheKey);
     if (cached && Date.now() - cached.updatedAt < this.hotelInfoCacheTtlMs) {
+      this.rememberHotelName(hotelId, cached.payload?.name);
       return of(cached.payload);
     }
     
@@ -260,6 +316,7 @@ export class HotelService {
       map((hotel: Hotel) => {
         if (hotel) {
           this.hotelInfoCache.set(cacheKey, { payload: hotel, updatedAt: Date.now() });
+          this.rememberHotelName(hotelId, hotel.name);
         }
         return hotel;
       }),

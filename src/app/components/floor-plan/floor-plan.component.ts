@@ -18,10 +18,13 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
   rooms: Room[] = [];
   categories: RoomCategory[] = [];
   floors: string[] = [];
+  isLoading = false;
 
   newFloorNumber: number | null = null;
   newRoomData: { [floor: string]: { roomNumber: string; categoryId: string } } = {};
   private subscriptions = new Subscription();
+  private loadedHotelId: string | null = null;
+  private loadGen = 0;
 
   constructor(
     private roomService: RoomsService,
@@ -51,9 +54,9 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['hotelId']) {
+    if (changes['hotelId'] && !changes['hotelId'].firstChange) {
       const normalized = this.hotelService.normalizeHotelId(this.hotelId);
-      if (normalized) {
+      if (normalized && !this.hotelService.sameHotelId(normalized, this.loadedHotelId)) {
         this.hotelId = normalized;
         this.loadData();
       }
@@ -65,27 +68,63 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   loadData(): void {
-    this.loadRooms();
-    this.loadCategories();
-    this.loadFloors();
+    const id = this.hotelService.normalizeHotelId(this.hotelId);
+    if (!id) return;
+    if (this.hotelService.sameHotelId(id, this.loadedHotelId) && this.rooms.length > 0) {
+      return;
+    }
+
+    this.hotelId = id;
+    this.loadedHotelId = id;
+    const gen = ++this.loadGen;
+
+    // Hiện cache ngay nếu có
+    const cachedRooms = this.roomService.getCachedRooms(id);
+    if (cachedRooms?.length) {
+      this.rooms = cachedRooms;
+      this.deriveFloorsFromRooms();
+    }
+    const cachedCats = this.categoryService.getCachedCategories(id);
+    if (cachedCats?.length) {
+      this.categories = cachedCats;
+    }
+
+    this.isLoading = !cachedRooms?.length;
+    this.loadRooms(id, gen);
+    this.loadCategories(id, gen);
+    this.loadFloors(id, gen);
   }
 
-  loadRooms(): void {
-    this.roomService.getRooms({ hotelId: this.hotelId }).subscribe(
+  loadRooms(hotelId: string = this.hotelId, gen: number = this.loadGen): void {
+    const id = this.hotelService.normalizeHotelId(hotelId);
+    if (!id) return;
+
+    this.roomService.getRooms({ hotelId: id, lite: true }).subscribe(
       (data) => {
-        this.rooms = data;
+        if (gen !== this.loadGen) return;
+        this.rooms = data || [];
+        this.isLoading = false;
+        if (!this.floors.length) {
+          this.deriveFloorsFromRooms();
+        }
       },
       (error) => {
+        if (gen !== this.loadGen) return;
+        this.isLoading = false;
         console.error('Error loading rooms:', error);
         this.message.error('Lỗi khi tải danh sách phòng');
       }
     );
   }
 
-  loadCategories(): void {
-    this.categoryService.getCategories(this.hotelId).subscribe(
+  loadCategories(hotelId: string = this.hotelId, gen: number = this.loadGen): void {
+    const id = this.hotelService.normalizeHotelId(hotelId);
+    if (!id) return;
+
+    this.categoryService.getCategories(id).subscribe(
       (res: any) => {
-        this.categories = res.data || res || [];
+        if (gen !== this.loadGen) return;
+        this.categories = Array.isArray(res) ? res : (res?.data || []);
       },
       (error) => {
         console.error('Error loading categories:', error);
@@ -93,11 +132,14 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
     );
   }
 
-  loadFloors(): void {
-    this.roomService.getHotelFloors(this.hotelId).subscribe(
+  loadFloors(hotelId: string = this.hotelId, gen: number = this.loadGen): void {
+    const id = this.hotelService.normalizeHotelId(hotelId);
+    if (!id) return;
+
+    this.roomService.getHotelFloors(id).subscribe(
       (data) => {
-        this.floors = data.floors.map(f => String(f)).sort((a, b) => Number(a) - Number(b));
-        // Initialize newRoomData for each floor
+        if (gen !== this.loadGen) return;
+        this.floors = (data?.floors || []).map((f: any) => String(f)).sort((a, b) => Number(a) - Number(b));
         this.floors.forEach(floor => {
           if (!this.newRoomData[floor]) {
             this.newRoomData[floor] = { roomNumber: '', categoryId: '' };
@@ -106,8 +148,26 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
       },
       (error) => {
         console.error('Error loading floors:', error);
+        this.deriveFloorsFromRooms();
       }
     );
+  }
+
+  private deriveFloorsFromRooms(): void {
+    const set = new Set<string>();
+    (this.rooms || []).forEach((r) => {
+      if (r?.floor !== undefined && r?.floor !== null) {
+        set.add(String(r.floor));
+      }
+    });
+    if (set.size > 0 && this.floors.length === 0) {
+      this.floors = Array.from(set).sort((a, b) => Number(a) - Number(b));
+      this.floors.forEach(floor => {
+        if (!this.newRoomData[floor]) {
+          this.newRoomData[floor] = { roomNumber: '', categoryId: '' };
+        }
+      });
+    }
   }
 
   getRoomsByFloor(floor: string): Room[] {
@@ -118,7 +178,7 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
     if (!categoryIdOrType) return '';
     const cat = this.categories.find(c => c._id === categoryIdOrType);
     if (cat) return cat.name;
-    return categoryIdOrType; // Fallback to type string
+    return categoryIdOrType;
   }
 
   getStatusColor(status: string): string {
@@ -168,7 +228,6 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
-    // Find selected category to copy pricing data
     const selectedCategory = this.categories.find(c => c._id === roomData.categoryId);
 
     const newRoom: any = {
@@ -193,9 +252,7 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
         this.rooms.push(created);
         this.rooms = [...this.rooms];
         this.message.success(`Đã thêm phòng ${roomData.roomNumber} vào tầng ${floor}`);
-        // Reset form
         this.newRoomData[floor] = { roomNumber: '', categoryId: roomData.categoryId };
-        // Reload floors in case it's a new floor
         this.loadFloors();
       },
       (error) => {

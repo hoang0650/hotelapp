@@ -23,7 +23,7 @@ export interface RoomDataUpdateEvent {
   hotelId?: string;
   roomId?: string;
   relatedRoomId?: string;
-  reason?: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'generic';
+  reason?: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'guest_out' | 'guest_return' | 'generic';
   refreshRooms?: boolean;
   refreshHistory?: boolean;
   force?: boolean;
