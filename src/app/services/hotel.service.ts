@@ -106,6 +106,46 @@ export class HotelService {
     return this.hotelsListCache ? [...this.hotelsListCache] : [];
   }
 
+  /** Chuẩn hóa _id hotels về string — tránh nz-select không khớp hotelId */
+  normalizeHotelsList(hotels: Hotel[] | null | undefined): Hotel[] {
+    return (hotels || [])
+      .map((hotel) => {
+        const id = this.normalizeHotelId((hotel as any)?._id ?? (hotel as any)?.id);
+        if (!id) return null;
+        return { ...hotel, _id: id } as Hotel;
+      })
+      .filter((hotel): hotel is Hotel => !!hotel);
+  }
+
+  /**
+   * Đảm bảo hotelId đang chọn luôn có trong options dropdown.
+   * Nếu list lọc theo role làm mất KS đang chọn → giữ lại từ raw/cache.
+   */
+  ensureSelectedHotelOption(
+    hotels: Hotel[] | null | undefined,
+    selectedHotelId?: string | null,
+    fallbackName?: string | null
+  ): Hotel[] {
+    const list = this.normalizeHotelsList(hotels);
+    const selected = this.normalizeHotelId(selectedHotelId);
+    if (!selected) return list;
+    if (list.some((h) => this.sameHotelId(h._id, selected))) return list;
+
+    const fromCache = this.normalizeHotelsList(this.getCachedHotels())
+      .find((h) => this.sameHotelId(h._id, selected));
+    if (fromCache) {
+      return [fromCache, ...list];
+    }
+
+    return [
+      {
+        _id: selected,
+        name: (fallbackName || '').trim() || 'Khách sạn đang chọn'
+      } as Hotel,
+      ...list
+    ];
+  }
+
   clearHotelsListCache(): void {
     this.hotelsListCache = null;
     this.hotelsListCacheKey = null;

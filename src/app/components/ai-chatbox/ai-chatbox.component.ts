@@ -47,7 +47,10 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
 
   hotels: Array<{ _id: string; name: string }> = [];
   selectedHotelId: string | null = null;
+  /** Tên KS đã resolve (tránh hiện raw hotelId khi list chưa có) */
+  resolvedHotelName: string | null = null;
   isHotelSelectionDisabled = false;
+  private hotelLabelHydrating = false;
   hotelLoading = false;
 
   messages: ChatMessage[] = [];
@@ -139,17 +142,22 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
   }
 
   private syncSelectedHotel(): void {
-    const storedId = this.sessionContext.getSelectedHotelId() || this.authService.getHotelId();
+    const storedId = this.hotelService.normalizeHotelId(
+      this.sessionContext.getSelectedHotelId() || this.authService.getHotelId()
+    );
     if (storedId) {
       this.selectedHotelId = storedId;
       this.tenantId = storedId;
+      this.hydrateSelectedHotelLabel(storedId);
     }
 
     this.subscriptions.push(
       this.sessionContext.selectedHotelId$.subscribe(hotelId => {
-        if (hotelId) {
-          this.selectedHotelId = hotelId;
-          this.tenantId = hotelId;
+        const id = this.hotelService.normalizeHotelId(hotelId);
+        if (id) {
+          this.selectedHotelId = id;
+          this.tenantId = id;
+          this.hydrateSelectedHotelLabel(id);
         }
       })
     );
@@ -177,30 +185,91 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.hotelLoading = false;
+          this.hydrateSelectedHotelLabel(this.selectedHotelId);
         }
       })
     );
   }
 
   private applyHotels(hotels: Array<Hotel | { _id?: string; id?: string; name?: string }>): void {
-    this.hotels = (hotels || [])
+    const selected =
+      this.hotelService.normalizeHotelId(this.selectedHotelId) ||
+      this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+
+    const normalized = this.hotelService.normalizeHotelsList((hotels || []) as Hotel[]);
+    const ensured = this.hotelService.ensureSelectedHotelOption(normalized, selected, this.resolvedHotelName);
+
+    this.hotels = ensured
       .map(hotel => ({
-        _id: String((hotel as any)._id || (hotel as any).id || ''),
+        _id: String(hotel._id || ''),
         name: hotel.name || 'Khách sạn'
       }))
       .filter(hotel => !!hotel._id);
 
-    if (!this.selectedHotelId && this.hotels.length > 0) {
-      this.onSelectHotel(this.hotels[0]._id);
-    } else if (
-      this.selectedHotelId &&
-      this.hotels.length > 0 &&
-      !this.hotels.some(h => h._id === this.selectedHotelId)
-    ) {
+    if (selected) {
+      this.selectedHotelId = selected;
+      this.tenantId = selected;
+      const matched = this.hotels.find(h => this.hotelService.sameHotelId(h._id, selected));
+      if (matched?.name && matched.name !== 'Khách sạn đang chọn') {
+        this.resolvedHotelName = matched.name;
+      }
+    } else if (!this.selectedHotelId && this.hotels.length > 0) {
       this.onSelectHotel(this.hotels[0]._id);
     }
 
     this.isHotelSelectionDisabled = this.hotels.length <= 1;
+    this.hydrateSelectedHotelLabel(this.selectedHotelId);
+  }
+
+  /** Lấy tên KS khi list trống / chỉ có stub — không hiện hotelId thô */
+  private hydrateSelectedHotelLabel(hotelId: string | null): void {
+    const id = this.hotelService.normalizeHotelId(hotelId);
+    if (!id) return;
+
+    const current = this.hotels.find(h => this.hotelService.sameHotelId(h._id, id));
+    if (current?.name && current.name !== 'Khách sạn đang chọn' && !this.looksLikeObjectId(current.name)) {
+      this.resolvedHotelName = current.name;
+      return;
+    }
+    if (
+      this.resolvedHotelName &&
+      !this.looksLikeObjectId(this.resolvedHotelName) &&
+      this.hotelService.sameHotelId(this.selectedHotelId, id)
+    ) {
+      return;
+    }
+    if (this.hotelLabelHydrating) return;
+
+    this.hotelLabelHydrating = true;
+    this.subscriptions.push(
+      this.hotelService.getHotelInfo(id, { lite: true }).subscribe({
+        next: (hotel) => {
+          this.hotelLabelHydrating = false;
+          if (!hotel) {
+            if (!this.resolvedHotelName || this.looksLikeObjectId(this.resolvedHotelName)) {
+              this.resolvedHotelName = 'Khách sạn';
+            }
+            return;
+          }
+          const hid = this.hotelService.normalizeHotelId(hotel._id) || id;
+          const name = (hotel.name || '').trim() || 'Khách sạn';
+          this.resolvedHotelName = name;
+          const rest = this.hotels.filter(h => !this.hotelService.sameHotelId(h._id, hid));
+          this.hotels = [{ _id: hid, name }, ...rest];
+          this.selectedHotelId = hid;
+        },
+        error: () => {
+          this.hotelLabelHydrating = false;
+          if (!this.resolvedHotelName || this.looksLikeObjectId(this.resolvedHotelName)) {
+            this.resolvedHotelName = 'Khách sạn';
+          }
+        }
+      })
+    );
+  }
+
+  private looksLikeObjectId(value: string): boolean {
+    return /^[a-f0-9]{24}$/i.test(String(value || '').trim());
   }
 
   toggleMinimize(): void {
@@ -211,20 +280,35 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
   }
 
   onSelectHotel(hotelId: string): void {
-    if (!hotelId) {
+    const id = this.hotelService.normalizeHotelId(hotelId);
+    if (!id) {
       return;
     }
-    this.selectedHotelId = hotelId;
-    this.tenantId = hotelId;
-    this.sessionContext.setSelectedHotelId(hotelId, { persist: true });
+    this.selectedHotelId = id;
+    this.tenantId = id;
+    const found = this.hotels.find(h => this.hotelService.sameHotelId(h._id, id));
+    if (found?.name && found.name !== 'Khách sạn đang chọn') {
+      this.resolvedHotelName = found.name;
+    } else {
+      this.resolvedHotelName = null;
+      this.hydrateSelectedHotelLabel(id);
+    }
+    this.sessionContext.setSelectedHotelId(id, { persist: true });
   }
 
   get selectedHotelName(): string {
-    if (this.hotelLoading) {
+    if (this.hotelLoading && !this.resolvedHotelName) {
       return 'Đang tải khách sạn...';
     }
-    const found = this.hotels.find(h => h._id === this.selectedHotelId);
-    return found?.name || this.selectedHotelId || 'Chưa chọn khách sạn';
+    const found = this.hotels.find(h => this.hotelService.sameHotelId(h._id, this.selectedHotelId));
+    const name = (found?.name || this.resolvedHotelName || '').trim();
+    if (name && name !== 'Khách sạn đang chọn' && !this.looksLikeObjectId(name)) {
+      return name;
+    }
+    if (this.selectedHotelId) {
+      return 'Đang tải tên khách sạn...';
+    }
+    return 'Chưa chọn khách sạn';
   }
 
   private getEffectiveHotelId(): string {

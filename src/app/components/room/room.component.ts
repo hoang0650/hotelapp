@@ -230,38 +230,51 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
 
       const runUpdate = () => {
+        const reason = String(event?.reason || '');
+        const statusOnly =
+          reason === 'dirty' ||
+          reason === 'status' ||
+          reason === 'cleaning' ||
+          reason === 'maintenance' ||
+          reason === 'guest_out' ||
+          reason === 'guest_return';
+
         if (event?.refreshRooms) {
-          if (event.roomId && !event.force && event.reason !== 'recheckin' && event.reason !== 'delete_checkout_history') {
+          // Đã patch local (nhận/trả/status) → bỏ GET /rooms/:id nặng (trừ khi force rollback)
+          if (event.roomId && this.wasRecentlyPatchedLocally(event.roomId) && !event.force) {
+            this.scheduleDisplayRebuild();
+          } else if (event.roomId && !event.force && reason !== 'recheckin' && reason !== 'delete_checkout_history') {
             this.updateSingleRoomRealtime(event.roomId);
             if (event.relatedRoomId) {
               this.updateSingleRoomRealtime(event.relatedRoomId);
             }
-          } else {
+          } else if (event.force || !event.roomId) {
             this.loadRooms(true);
+          } else {
+            this.scheduleDisplayRebuild();
           }
-        } else if (
-          event?.roomId &&
-          (event?.reason === 'dirty' ||
-            event?.reason === 'status' ||
-            event?.reason === 'cleaning' ||
-            event?.reason === 'maintenance' ||
-            event?.reason === 'transfer')
-        ) {
-          // Optimistic status đã mutate object / cache — chỉ rebuild display
+        } else if (event?.roomId && (statusOnly || reason === 'transfer' || reason === 'checkin' || reason === 'checkout')) {
+          // Optimistic / local patch — chỉ rebuild badge + class
           this.scheduleDisplayRebuild();
         }
 
-        // Checkout / check-in / thu chi → refresh phụ trợ. Status-only không đụng history/chart.
-        const auxReasons = new Set(['checkout', 'checkin', 'recheckin', 'delete_checkout_history', 'generic']);
-        if (event?.refreshHistory || event?.force || (event?.reason && auxReasons.has(event.reason))) {
+        // Chỉ sync thu/chi/history khi panel đang mở hoặc caller yêu cầu — không chặn UI sơ đồ
+        const needsAux =
+          !!event?.force ||
+          !!event?.refreshHistory ||
+          ((reason === 'checkout' || reason === 'checkin' || reason === 'recheckin' || reason === 'delete_checkout_history') &&
+            (this.isHistoryPanelActive || this.isRevenuePanelActive));
+
+        if (needsAux && !statusOnly) {
           this.scheduleAuxiliaryDataReload({
             force: true,
-            incomes: true,
-            expenses: true,
-            chart: true,
-            history: !this.isModalOpen
+            incomes: this.isRevenuePanelActive || reason === 'checkout' || reason === 'checkin',
+            expenses: !!event?.force,
+            chart: this.isRevenuePanelActive,
+            history: !this.isModalOpen && this.isHistoryPanelActive,
+            delayMs: 200
           });
-        } else if (!this.isModalOpen && this.isHistoryPanelActive) {
+        } else if (!this.isModalOpen && this.isHistoryPanelActive && event?.refreshHistory) {
           this.scheduleRoomHistoryReload(false);
         }
       };
@@ -1447,24 +1460,26 @@ export class RoomComponent implements OnInit, OnDestroy {
         reason === 'guest_out' ||
         reason === 'guest_return' ||
         reason === 'cleaning' ||
+        reason === 'clean' ||
+        reason === 'dirty' ||
+        reason === 'maintenance' ||
         reason === 'transfer';
+      const localJustPatched = roomId && this.wasRecentlyPatchedLocally(String(roomId));
 
-      // Đồng bộ session Redis (RoomEvent → roomSessions) realtime
+      // Session Redis: chỉ sync khi payload có session hoặc checkin/checkout (không phải status-only)
       if (payload?.session !== undefined && roomId) {
         this.roomSessionService.applyRemoteSession(String(roomId), payload.session);
-      } else if (roomId) {
+      } else if (roomId && !statusOnly && !localJustPatched && (reason === 'checkin' || reason === 'checkout' || reason === 'transfer')) {
         this.roomSessionService.refreshRoomFromRemote(String(roomId));
       } else if (
-        reason.includes('session') ||
-        reason === 'checkin' ||
-        reason === 'checkout' ||
-        reason === 'transfer'
+        !roomId &&
+        (reason.includes('session') || reason === 'checkin' || reason === 'checkout' || reason === 'transfer')
       ) {
         this.roomSessionService.refreshFromRemote();
       }
 
-      if (statusOnly && roomId && payload?.status) {
-        // Patch local từ socket payload — không GET /rooms/:id
+      if ((statusOnly || reason === 'checkin' || reason === 'checkout') && roomId && (payload?.status || payload?.guestStatus !== undefined)) {
+        // Patch local từ socket — không GET /rooms/:id
         this.patchLocalRoomStatusFromSocket(roomId, payload);
         if (payload.relatedRoomId && payload.relatedStatus) {
           this.patchLocalRoomStatusFromSocket(payload.relatedRoomId, {
@@ -1472,24 +1487,30 @@ export class RoomComponent implements OnInit, OnDestroy {
             guestStatus: payload.relatedGuestStatus
           });
         }
-      } else if (roomId) {
+        // Client khác (chưa có events local) mới soft-sync 1 phòng sau checkin
+        if (reason === 'checkin' && !localJustPatched) {
+          this.updateSingleRoomRealtime(String(roomId), { soft: true });
+        }
+      } else if (roomId && !localJustPatched) {
         this.updateSingleRoomRealtime(roomId);
         if (payload.relatedRoomId) {
           this.updateSingleRoomRealtime(payload.relatedRoomId);
         }
-      } else {
+      } else if (!roomId) {
         this.refreshRoomsLiteRealtime();
+      } else {
+        this.scheduleDisplayRebuild();
       }
 
-      // Chỉ sync history/doanh thu cho checkin/checkout — transfer đã patch local
-      if (reason === 'checkout' || reason === 'checkin' || reason === 'recheckin') {
+      // Aux nhẹ, chỉ khi panel đang mở — tránh delay sau nhận/trả phòng
+      if ((reason === 'checkout' || reason === 'checkin' || reason === 'recheckin') && !localJustPatched) {
         this.scheduleAuxiliaryDataReload({
           force: true,
-          incomes: true,
+          incomes: this.isIncomeModalVisible || this.isRevenuePanelActive,
           expenses: false,
-          chart: true,
-          history: true,
-          delayMs: 500
+          chart: this.isRevenuePanelActive,
+          history: this.isHistoryPanelActive,
+          delayMs: 250
         });
       }
     });
@@ -2193,32 +2214,59 @@ export class RoomComponent implements OnInit, OnDestroy {
         // Checkout đã apply local dirty — không GET /rooms/:id nặng
         if (modalType === 'checkout' && result?.action === 'checkout' && result?.checkoutInfo) {
           this.applyCheckoutCloseResult(result.checkoutInfo);
-
-          setTimeout(() => {
-            if (!this.isModalOpen) {
-              this.showRoomHistory(true);
-            }
-          }, 200);
+          if (this.isHistoryPanelActive) {
+            this.scheduleRoomHistoryReload(true);
+          }
           return;
         }
 
+        // Nhận phòng: đã có checkinInfo → patch local ngay, bỏ refreshRooms
         if (modalType === 'checkin' && result?.success && result?.checkinInfo) {
           this.applyCheckinCloseResult(room._id || '', result.checkinInfo);
+          this.roomsService.notifyRoomDataUpdated({
+            hotelId: this.selectedHotelId || undefined,
+            roomId: room._id!,
+            reason: 'checkin',
+            refreshRooms: false,
+            refreshHistory: this.isHistoryPanelActive,
+            force: false,
+            delayMs: 0
+          });
+          return;
         }
 
-        setTimeout(() => {
-          if (!this.isModalOpen) {
-            const isStatusLite = modalType === 'cleaning';
-            this.roomsService.notifyRoomDataUpdated({
-              hotelId: this.selectedHotelId || undefined,
-              roomId: room._id!,
-              reason: modalType === 'checkin' ? 'checkin' : modalType === 'checkout' ? 'checkout' : 'generic',
-              refreshRooms: modalType === 'checkin',
-              refreshHistory: !isStatusLite && (modalType === 'checkout' || modalType === 'checkin'),
-              force: false
+        // Dọn / bảo trì / báo bẩn từ modal cleaning
+        if (modalType === 'cleaning') {
+          if (result?.status) {
+            this.patchLocalRoomStatusFromSocket(room._id!, {
+              status: result.status,
+              guestStatus: result.guestStatus
             });
+            this.markRoomLocallyPatched(room._id!);
+          } else {
+            // Modal đóng sớm trước API — optimistic vacant nếu đang dirty/cleaning/maintenance
+            const prev = room.status;
+            if (prev === 'dirty' || prev === 'cleaning' || prev === 'maintenance') {
+              this.patchLocalRoomStatusFromSocket(room._id!, { status: 'vacant', guestStatus: null });
+              this.markRoomLocallyPatched(room._id!);
+            }
           }
-        }, 300);
+          this.roomsService.notifyRoomDataUpdated({
+            hotelId: this.selectedHotelId || undefined,
+            roomId: room._id!,
+            reason: 'cleaning',
+            refreshRooms: false,
+            refreshHistory: false,
+            force: false,
+            delayMs: 0
+          });
+          return;
+        }
+
+        // Các case còn lại — không kích hoạt aux reload vì generic
+        if (result?.success !== false && room._id) {
+          this.scheduleDisplayRebuild();
+        }
       });
     } catch (error) {
       console.error('Error creating modal:', error);
@@ -2231,6 +2279,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     const roomId = checkoutInfo?.roomId;
     if (!roomId) return;
 
+    this.markRoomLocallyPatched(roomId);
     const roomIndex = this.rooms.findIndex(r => r && r._id === roomId);
     if (roomIndex !== -1) {
       const existing = this.rooms[roomIndex] as any;
@@ -2238,9 +2287,12 @@ export class RoomComponent implements OnInit, OnDestroy {
         ...existing,
         status: 'dirty',
         guestStatus: undefined,
-        currentBooking: null
+        currentBooking: null,
+        events: []
       };
+      this.roomsService.patchCachedRoom(this.selectedHotelId!, this.rooms[roomIndex]);
       this.updateFloorsFromRooms();
+      this.scheduleDisplayRebuild();
     }
 
     const checkOutTime = checkoutInfo.checkOutTime ? new Date(checkoutInfo.checkOutTime) : new Date();
@@ -2287,6 +2339,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   private applyCheckinCloseResult(roomId: string, checkinInfo: any): void {
     if (!roomId) return;
+    this.markRoomLocallyPatched(roomId);
     const roomIndex = this.rooms.findIndex(r => r && r._id === roomId);
     if (roomIndex === -1) return;
 
@@ -2295,6 +2348,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.rooms[roomIndex] = {
       ...existing,
       status: 'occupied',
+      guestStatus: undefined,
       events: [
         {
           type: 'checkin',
@@ -2312,7 +2366,11 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       ]
     };
+    if (this.selectedHotelId) {
+      this.roomsService.patchCachedRoom(this.selectedHotelId, this.rooms[roomIndex]);
+    }
     this.updateFloorsFromRooms();
+    this.scheduleDisplayRebuild();
   }
 
   // Tính tổng tiền đặt trước từ tất cả các phòng đang có khách
@@ -4267,6 +4325,20 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   // Thêm hàm này vào class RoomComponent
+  private recentlyPatchedRoomAt = new Map<string, number>();
+  private readonly localPatchTtlMs = 3000;
+
+  private markRoomLocallyPatched(roomId: string | null | undefined): void {
+    if (!roomId) return;
+    this.recentlyPatchedRoomAt.set(String(roomId), Date.now());
+  }
+
+  private wasRecentlyPatchedLocally(roomId: string | null | undefined, withinMs = this.localPatchTtlMs): boolean {
+    if (!roomId) return false;
+    const at = this.recentlyPatchedRoomAt.get(String(roomId));
+    return !!at && Date.now() - at < withinMs;
+  }
+
   private patchLocalRoomStatusFromSocket(roomId: string, payload: any): void {
     const hotelId = this.selectedHotelId;
     if (!hotelId || !roomId) return;
@@ -4289,24 +4361,36 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.scheduleDisplayRebuild();
   }
 
-  private updateSingleRoomRealtime(roomId: string): void {
+  private updateSingleRoomRealtime(roomId: string, options?: { soft?: boolean }): void {
     const hotelId = this.selectedHotelId;
     if (!hotelId || !roomId) return;
+
+    if (this.wasRecentlyPatchedLocally(roomId) && !options?.soft) {
+      this.scheduleDisplayRebuild();
+      return;
+    }
     
     // Chỉ lấy data chi tiết của ĐÚNG 1 phòng bị thay đổi
     this.roomsService.getRoomById(roomId, { limit: 10, excludeCheckedOut: true }).subscribe({
       next: (updatedRoom) => {
+        // Client vừa patch local — bỏ qua ghi đè muộn từ GET
+        if (this.wasRecentlyPatchedLocally(roomId) && !options?.soft) {
+          return;
+        }
         const index = this.rooms.findIndex(r => r._id === roomId);
         if (index !== -1) {
           const hydratedRoom = this.hydrateSyntheticEventsFromCurrentBooking([updatedRoom])[0] || updatedRoom;
-          // 1. GHI ĐÈ THUỘC TÍNH (Mutation) thay vì gán mới toàn bộ object
-          // Kỹ thuật này giúp Angular không render lại toàn bộ thẻ HTML gây chớp
           Object.assign(this.rooms[index], hydratedRoom);
           this.lastLoadedHotelId = hotelId;
           this.roomsService.patchCachedRoom(hotelId, this.rooms[index]);
           
-          // 2. Xử lý logic riêng cho phòng đang có khách (Cập nhật thời gian, giá tiền, phụ thu, KM)
           if (this.rooms[index].status === 'occupied' || this.rooms[index].status === 'booked') {
+            // Soft: chỉ dùng events đã có trên room payload, không N+1 getRoomEvents + price API
+            if (options?.soft) {
+              this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
+              this.scheduleDisplayRebuild();
+              return;
+            }
             const eventType = this.rooms[index].status === 'occupied' ? 'checkin' : 'booking';
             this.roomsService.getRoomEvents(roomId, {
               limit: 10,
@@ -4314,7 +4398,10 @@ export class RoomComponent implements OnInit, OnDestroy {
               excludeCheckedOut: this.rooms[index].status === 'occupied'
             })
               .subscribe(events => {
-                // Lọc và gán đúng event của phòng này
+                if (this.wasRecentlyPatchedLocally(roomId)) {
+                  this.scheduleDisplayRebuild();
+                  return;
+                }
                 const filteredEvents = events.filter(e => !e.roomId || e.roomId.toString() === roomId);
                 this.rooms[index].events = filteredEvents.map(e => ({
                   ...e,
@@ -4323,7 +4410,6 @@ export class RoomComponent implements OnInit, OnDestroy {
                   advancePayment: Number(e.advancePayment) || 0
                 }));
                 
-                // Tính lại giá phòng & cập nhật thời gian real-time
                 const checkinEvent = filteredEvents.find(e => e.type === 'checkin');
                 if (checkinEvent) {
                   this.loadRoomPriceFromAPI(this.rooms[index], checkinEvent, true);
@@ -4333,7 +4419,6 @@ export class RoomComponent implements OnInit, OnDestroy {
                 this.scheduleDisplayRebuild();
               });
           } else {
-            // Xóa sạch event cũ nếu phòng đã trả/đang dọn / bảo trì
             this.rooms[index].events = [];
             this.rooms[index].currentBooking = undefined;
             this.rooms[index].guestStatus = undefined;

@@ -8,7 +8,7 @@
         (ngModelChange)="onHotelChange($event)"
         [nzPlaceHolder]="'STAFF_MANAGEMENT.SELECT_HOTEL' | translate"
         style="width: 250px; margin-right: 16px;">
-        <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+        <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id!" [nzLabel]="hotel.name"></nz-option>
       </nz-select>
       
       <button nz-button nzType="primary" (click)="showAddForm()" [disabled]="!selectedHotelId">

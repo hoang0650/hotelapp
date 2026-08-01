@@ -447,38 +447,58 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   private applyHotelsList(hotels: any[]): void {
     const currentUser = this.authService.getCurrentUser();
+    const normalized = this.hotelService.normalizeHotelsList(hotels || []);
+    let filtered: any[] = normalized;
 
     if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
-      this.hotels = hotels;
+      filtered = normalized;
     } else if (this.authService.isBusiness() && currentUser?.businessId) {
-      let userBusinessIdStr: string | null = null;
-
-      if (typeof currentUser.businessId === 'string') {
-        userBusinessIdStr = currentUser.businessId;
-      } else if (typeof currentUser.businessId === 'object' && currentUser.businessId !== null) {
-        const businessIdObj = currentUser.businessId as any;
-        if (businessIdObj._id) {
-          userBusinessIdStr = typeof businessIdObj._id === 'string'
-            ? businessIdObj._id
-            : businessIdObj._id.toString();
-        } else if (typeof businessIdObj.toString === 'function') {
-          userBusinessIdStr = businessIdObj.toString();
-        }
-      }
-
-      this.hotels = hotels.filter((hotel: any) => {
-        const hotelBusinessId = this.extractBusinessId(hotel);
-        return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString();
+      const userBusinessIdStr = this.hotelService.normalizeHotelId(currentUser.businessId)
+        || (typeof currentUser.businessId === 'string' ? currentUser.businessId : null);
+      filtered = normalized.filter((hotel: any) => {
+        const hotelBusinessId = this.hotelService.normalizeHotelId(this.extractBusinessId(hotel));
+        return !!hotelBusinessId && !!userBusinessIdStr && hotelBusinessId === String(userBusinessIdStr);
       });
-    } else if (this.authService.isHotelManager() && currentUser?.hotelId) {
-      this.hotels = hotels.filter((hotel: any) => hotel._id === currentUser.hotelId);
-    } else {
-      this.hotels = hotels;
+    } else if (this.authService.isHotelManager()) {
+      const userHotelId = this.hotelService.normalizeHotelId(currentUser?.hotelId)
+        || this.hotelService.resolvePreferredHotelId();
+      filtered = userHotelId
+        ? normalized.filter((hotel: any) => this.hotelService.sameHotelId(hotel._id, userHotelId))
+        : normalized;
+    }
+
+    const selected =
+      this.hotelService.normalizeHotelId(this.selectedHotelId) ||
+      this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+
+    this.hotels = this.hotelService.ensureSelectedHotelOption(filtered, selected, null);
+    if (selected) {
+      this.selectedHotelId = selected;
     }
 
     if (!this.selectedHotelId && this.hotels.length === 1 && this.hotels[0]?._id) {
-      this.onHotelChange(this.hotels[0]._id);
+      this.onHotelChange(String(this.hotels[0]._id));
     }
+
+    // Nếu chỉ có stub (chưa có tên) → lấy tên KS lite để dropdown hiện đúng
+    this.hydrateSelectedHotelLabel(selected);
+  }
+
+  private hydrateSelectedHotelLabel(hotelId: string | null): void {
+    if (!hotelId) return;
+    const current = this.hotels.find((h) => this.hotelService.sameHotelId(h._id, hotelId));
+    if (current?.name && current.name !== 'Khách sạn đang chọn') return;
+
+    this.subscriptions.add(
+      this.hotelService.getHotelInfo(hotelId, { lite: true }).subscribe((hotel) => {
+        if (!hotel) return;
+        const id = this.hotelService.normalizeHotelId(hotel._id) || hotelId;
+        const name = hotel.name || current?.name || 'Khách sạn';
+        const rest = this.hotels.filter((h) => !this.hotelService.sameHotelId(h._id, id));
+        this.hotels = [{ ...hotel, _id: id, name } as any, ...rest];
+        this.selectedHotelId = id;
+      })
+    );
   }
 
   loadStaff(): void {

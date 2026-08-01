@@ -1767,14 +1767,25 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             });
             
             // Notify để reload data - dữ liệu sẽ được lấy từ RoomEvent khi reload
-            this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, delayMs: 100 });
-          }, 100);
+            this.emitRoomDataUpdated('checkin', {
+              roomId: this.roomData?._id,
+              delayMs: 0,
+              refreshRooms: false,
+              refreshHistory: false
+            });
+          }, 0);
         },
         (error) => {
           setTimeout(() => {
             this.message.error('Lỗi khi nhận phòng: ' + error.message);
-            this.emitRoomDataUpdated('checkin', { roomId: this.roomData?._id, delayMs: 100 });
-          }, 100);
+            this.emitRoomDataUpdated('checkin', {
+              roomId: this.roomData?._id,
+              delayMs: 0,
+              refreshRooms: true,
+              refreshHistory: false,
+              force: true
+            });
+          }, 0);
         }
       );
   }
@@ -3796,32 +3807,37 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       ]
     };
     
-    // Đóng modal ngay lập tức
+    // Đóng modal ngay — sơ đồ patch vacant optimistic qua afterClose
     if (this.modalRef) {
-      this.modalRef.close();
+      this.modalRef.close({ success: true, status: 'vacant', action: 'clean' });
     }
     
     // Thực hiện clean room trong background
     this.roomsService.cleanRoom(this.roomData._id, newRoom)
       .subscribe(
         (room) => {
-          setTimeout(() => {
-            let successMessage = 'Đã cập nhật trạng thái phòng thành "Sẵn sàng"';
-            if (this.roomData.status === 'maintenance') {
-              successMessage = 'Đã hoàn thành bảo trì và cập nhật trạng thái phòng thành "Sẵn sàng"';
-            }
-            this.message.success(successMessage);
-            
-            // Không còn dùng session nữa, dữ liệu đã được lưu vào RoomEvent
-            
-            this.emitRoomDataUpdated('cleaning', { roomId: this.roomData?._id, force: false, delayMs: 100 });
-          }, 100);
+          let successMessage = 'Đã cập nhật trạng thái phòng thành "Sẵn sàng"';
+          if (this.roomData.status === 'maintenance') {
+            successMessage = 'Đã hoàn thành bảo trì và cập nhật trạng thái phòng thành "Sẵn sàng"';
+          }
+          this.message.success(successMessage);
+          this.emitRoomDataUpdated('cleaning', {
+            roomId: this.roomData?._id,
+            force: false,
+            delayMs: 0,
+            refreshRooms: false,
+            refreshHistory: false
+          });
         },
         (error) => {
-          setTimeout(() => {
-            this.message.error('Lỗi khi cập nhật trạng thái phòng: ' + error.message);
-            this.emitRoomDataUpdated('cleaning', { roomId: this.roomData?._id, force: false, delayMs: 100 });
-          }, 100);
+          this.message.error('Lỗi khi cập nhật trạng thái phòng: ' + error.message);
+          this.emitRoomDataUpdated('cleaning', {
+            roomId: this.roomData?._id,
+            force: false,
+            delayMs: 0,
+            refreshRooms: true,
+            refreshHistory: false
+          });
         }
       );
   }
@@ -4426,7 +4442,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
                 this.emitRoomDataUpdated('checkin', {
                   roomId: this.roomData?._id,
                   force: false,
-                  delayMs: 0
+                  delayMs: 0,
+                  refreshRooms: false,
+                  refreshHistory: false
                 });
               },
               error: () => {
@@ -4633,18 +4651,24 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
   private emitRoomDataUpdated(
     reason: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'generic',
-    options?: { roomId?: string; relatedRoomId?: string; force?: boolean; delayMs?: number }
+    options?: { roomId?: string; relatedRoomId?: string; force?: boolean; delayMs?: number; refreshRooms?: boolean; refreshHistory?: boolean }
   ): void {
     const hotelId = this.normalizeObjectId(this.roomData?.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
+    const statusOnly =
+      reason === 'cleaning' ||
+      reason === 'dirty' ||
+      reason === 'maintenance' ||
+      reason === 'status';
     this.roomsService.notifyRoomDataUpdated({
       hotelId: hotelId || undefined,
       roomId: options?.roomId,
       relatedRoomId: options?.relatedRoomId,
       reason,
-      refreshRooms: true,
-      refreshHistory: true,
+      // Status / local checkin-checkout đã patch — không GET lại cả phòng
+      refreshRooms: options?.refreshRooms ?? (!statusOnly && reason !== 'checkin' && reason !== 'checkout'),
+      refreshHistory: options?.refreshHistory ?? (reason === 'checkout' || reason === 'recheckin' || reason === 'delete_checkout_history'),
       force: options?.force ?? false,
-      delayMs: options?.delayMs
+      delayMs: options?.delayMs ?? 0
     });
   }
   

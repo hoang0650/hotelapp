@@ -251,48 +251,59 @@ export class ServiceManagementComponent implements OnInit {
   }
 
   private applyHotelsList(data: Hotel[]): void {
+    const normalized = this.hotelService.normalizeHotelsList(data || []);
+    let filtered: Hotel[] = normalized;
+
     if (this.isAdmin) {
-      this.hotels = data.filter(h => h.status === 'active' || !(h as any).status);
+      filtered = normalized.filter(h => h.status === 'active' || !(h as any).status);
     } else if (this.isBusiness && this.currentUser?.businessId) {
-      let userBusinessIdStr: string | null = null;
-
-      if (typeof this.currentUser.businessId === 'string') {
-        userBusinessIdStr = this.currentUser.businessId;
-      } else if (typeof this.currentUser.businessId === 'object' && this.currentUser.businessId !== null) {
-        const businessIdObj = this.currentUser.businessId as any;
-        if (businessIdObj._id) {
-          userBusinessIdStr = typeof businessIdObj._id === 'string'
-            ? businessIdObj._id
-            : businessIdObj._id.toString();
-        } else if (typeof businessIdObj.toString === 'function') {
-          userBusinessIdStr = businessIdObj.toString();
-        }
-      }
-
-      this.hotels = data.filter(h => {
-        const hotelBusinessId = this.extractBusinessId(h);
-        return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString()
+      const userBusinessIdStr = this.hotelService.normalizeHotelId(this.currentUser.businessId);
+      filtered = normalized.filter(h => {
+        const hotelBusinessId = this.hotelService.normalizeHotelId(this.extractBusinessId(h));
+        return !!hotelBusinessId && !!userBusinessIdStr && hotelBusinessId === userBusinessIdStr
           && (h.status === 'active' || !(h as any).status);
       });
-    } else if (this.isHotelManager && this.currentUser?.hotelId) {
-      this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
+    } else if (this.isHotelManager) {
+      const userHotelId = this.hotelService.normalizeHotelId(this.currentUser?.hotelId)
+        || this.hotelService.resolvePreferredHotelId();
+      filtered = userHotelId
+        ? normalized.filter(h => this.hotelService.sameHotelId(h._id, userHotelId))
+        : normalized;
     } else {
-      this.hotels = [];
+      filtered = [];
     }
 
-    if (!this.selectedHotelId && this.hotels.length === 1) {
-      const hotelId = this.hotels[0]._id!;
-      this.selectedHotelId = hotelId;
-      this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
-      this.loadServices(hotelId);
-      this.loadServiceCategories(hotelId);
-    } else if (!this.selectedHotelId && this.isHotelManager && this.hotels.length > 0) {
+    const selected = this.hotelService.normalizeHotelId(this.selectedHotelId)
+      || this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+
+    this.hotels = this.hotelService.ensureSelectedHotelOption(filtered, selected);
+
+    if (selected) {
+      this.selectedHotelId = selected;
+      this.serviceForm.patchValue({ hotelId: selected }, { emitEvent: false });
+    } else if (!this.selectedHotelId && this.hotels.length === 1) {
       const hotelId = this.hotels[0]._id!;
       this.selectedHotelId = hotelId;
       this.serviceForm.patchValue({ hotelId }, { emitEvent: false });
       this.loadServices(hotelId);
       this.loadServiceCategories(hotelId);
     }
+
+    this.hydrateSelectedHotelLabel(selected);
+  }
+
+  private hydrateSelectedHotelLabel(hotelId: string | null): void {
+    if (!hotelId) return;
+    const current = this.hotels.find((h) => this.hotelService.sameHotelId(h._id, hotelId));
+    if (current?.name && current.name !== 'Khách sạn đang chọn') return;
+
+    this.hotelService.getHotelInfo(hotelId, { lite: true }).subscribe((hotel) => {
+      if (!hotel) return;
+      const id = this.hotelService.normalizeHotelId(hotel._id) || hotelId;
+      const rest = this.hotels.filter((h) => !this.hotelService.sameHotelId(h._id, id));
+      this.hotels = [{ ...hotel, _id: id, name: hotel.name || 'Khách sạn' } as Hotel, ...rest];
+      this.selectedHotelId = id;
+    });
   }
 
   loadServiceCategories(hotelId: string): void {

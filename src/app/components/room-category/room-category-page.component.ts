@@ -19,7 +19,7 @@ import { AuthService } from '../../services/auth.service';
               nzShowSearch
               [nzPlaceHolder]="'ROOM_MANAGEMENT.SELECT_HOTEL' | translate"
               style="width: 300px;">
-              <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+              <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id!" [nzLabel]="hotel.name"></nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
@@ -54,19 +54,36 @@ export class RoomCategoryPageComponent implements OnInit {
   }
 
   private applyHotels(list: Hotel[]): void {
-    this.hotels = list;
-    if (!this.selectedHotelId && this.hotels.length === 1) {
-      this.onHotelChange((this.hotels[0] as any)._id);
-    } else if (this.selectedHotelId && this.hotels.length > 0) {
-      const stillValid = this.hotels.some(h => h._id === this.selectedHotelId);
-      if (!stillValid) {
-        this.onHotelChange((this.hotels[0] as any)._id);
-      }
+    const selected = this.hotelService.normalizeHotelId(this.selectedHotelId)
+      || this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+
+    this.hotels = this.hotelService.ensureSelectedHotelOption(list, selected);
+    if (selected) {
+      this.selectedHotelId = selected;
+    } else if (!this.selectedHotelId && this.hotels.length === 1) {
+      this.onHotelChange(this.hotels[0]._id || null);
     }
+
+    this.hydrateSelectedHotelLabel(selected);
+  }
+
+  private hydrateSelectedHotelLabel(hotelId: string | null): void {
+    if (!hotelId) return;
+    const current = this.hotels.find((h) => this.hotelService.sameHotelId(h._id, hotelId));
+    if (current?.name && current.name !== 'Khách sạn đang chọn') return;
+
+    this.hotelService.getHotelInfo(hotelId, { lite: true }).subscribe((hotel) => {
+      if (!hotel) return;
+      const id = this.hotelService.normalizeHotelId(hotel._id) || hotelId;
+      const rest = this.hotels.filter((h) => !this.hotelService.sameHotelId(h._id, id));
+      this.hotels = [{ ...hotel, _id: id, name: hotel.name || 'Khách sạn' } as Hotel, ...rest];
+      this.selectedHotelId = id;
+    });
   }
 
   onHotelChange(hotelId: string | null): void {
-    this.selectedHotelId = hotelId || '';
-    this.hotelService.setSelectedHotelId(hotelId || null);
+    const id = this.hotelService.normalizeHotelId(hotelId) || '';
+    this.selectedHotelId = id;
+    this.hotelService.setSelectedHotelId(id || null);
   }
 }

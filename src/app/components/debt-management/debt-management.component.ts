@@ -155,24 +155,56 @@ export class DebtManagementComponent implements OnInit {
   }
 
   private applyHotelsList(data: Hotel[]): void {
+    const normalized = this.hotelService.normalizeHotelsList(data || []);
+    let filtered: Hotel[] = normalized;
+
     if (this.isAdmin) {
-      this.hotels = data.filter(h => h.status === 'active' || !(h as any).status);
+      filtered = normalized.filter(h => h.status === 'active' || !(h as any).status);
     } else if (this.isBusiness && this.currentUser?.businessId) {
-      this.hotels = data.filter(h => {
-        const hotelBusinessId = typeof h.businessId === 'object' ? h.businessId?._id : h.businessId;
-        const userBusinessId = this.currentUser?.businessId;
-        return hotelBusinessId && userBusinessId && hotelBusinessId.toString() === userBusinessId.toString()
+      const userBusinessId = this.hotelService.normalizeHotelId(this.currentUser.businessId);
+      filtered = normalized.filter(h => {
+        const hotelBusinessId = this.hotelService.normalizeHotelId(
+          typeof h.businessId === 'object' ? (h.businessId as any)?._id : h.businessId
+        );
+        return !!hotelBusinessId && !!userBusinessId && hotelBusinessId === userBusinessId
           && (h.status === 'active' || !(h as any).status);
       });
-    } else if (this.isHotelManager && this.currentUser?.hotelId) {
-      this.hotels = data.filter(h => h._id === this.currentUser?.hotelId);
-      if (!this.selectedHotelId && this.hotels.length === 1) {
-        this.selectedHotelId = this.hotels[0]._id || null;
-        this.loadDebts();
-      }
+    } else if (this.isHotelManager) {
+      const userHotelId = this.hotelService.normalizeHotelId(this.currentUser?.hotelId)
+        || this.hotelService.resolvePreferredHotelId();
+      filtered = userHotelId
+        ? normalized.filter(h => this.hotelService.sameHotelId(h._id, userHotelId))
+        : normalized;
     } else {
-      this.hotels = [];
+      filtered = [];
     }
+
+    const selected = this.hotelService.normalizeHotelId(this.selectedHotelId)
+      || this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+
+    this.hotels = this.hotelService.ensureSelectedHotelOption(filtered, selected);
+    if (selected) {
+      this.selectedHotelId = selected;
+    } else if (!this.selectedHotelId && this.hotels.length === 1) {
+      this.selectedHotelId = this.hotels[0]._id || null;
+      this.loadDebts();
+    }
+
+    this.hydrateSelectedHotelLabel(selected);
+  }
+
+  private hydrateSelectedHotelLabel(hotelId: string | null): void {
+    if (!hotelId) return;
+    const current = this.hotels.find((h) => this.hotelService.sameHotelId(h._id, hotelId));
+    if (current?.name && current.name !== 'Khách sạn đang chọn') return;
+
+    this.hotelService.getHotelInfo(hotelId, { lite: true }).subscribe((hotel) => {
+      if (!hotel) return;
+      const id = this.hotelService.normalizeHotelId(hotel._id) || hotelId;
+      const rest = this.hotels.filter((h) => !this.hotelService.sameHotelId(h._id, id));
+      this.hotels = [{ ...hotel, _id: id, name: hotel.name || 'Khách sạn' } as Hotel, ...rest];
+      this.selectedHotelId = id;
+    });
   }
 
   loadDebts(): void {

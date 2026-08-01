@@ -75,7 +75,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       reason === 'dirty' ||
       reason === 'status' ||
       reason === 'cleaning' ||
-      reason === 'maintenance';
+      reason === 'maintenance' ||
+      reason === 'guest_out' ||
+      reason === 'guest_return' ||
+      reason === 'transfer';
     this.roomsService.notifyRoomDataUpdated({
       hotelId: this.extractHotelId() || undefined,
       roomId,
@@ -85,7 +88,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       refreshRooms: options?.refreshRooms ?? !statusOnly,
       refreshHistory: options?.refreshHistory ?? !statusOnly,
       force: false,
-      delayMs: options?.delayMs
+      delayMs: options?.delayMs ?? 0
     });
   }
 
@@ -372,11 +375,6 @@ export class ModalControlDirective implements OnInit, OnDestroy {
               if (response?.room?.guestStatus) {
                 this.room.guestStatus = response.room.guestStatus;
               }
-              this.modalService.success({
-                nzTitle: 'Thành công',
-                nzContent: `Đã ghi nhận khách phòng ${this.room.roomNumber} tạm ra ngoài.`,
-                nzOkText: 'Đóng'
-              });
             },
             error: (err) => {
               this.room.guestStatus = previousGuestStatus;
@@ -415,12 +413,9 @@ export class ModalControlDirective implements OnInit, OnDestroy {
             next: (response) => {
               if (response?.room?.guestStatus) {
                 this.room.guestStatus = response.room.guestStatus;
+              } else {
+                this.room.guestStatus = 'in';
               }
-              this.modalService.success({
-                nzTitle: 'Thành công',
-                nzContent: `Đã ghi nhận khách phòng ${this.room.roomNumber} quay lại.`,
-                nzOkText: 'Đóng'
-              });
             },
             error: (err) => {
               this.room.guestStatus = previousGuestStatus;
@@ -862,6 +857,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   markRoomAsClean(): void {
     const previousStatus = this.room.status;
     this.applyLocalRoomStatus('vacant');
+    this.notifyRoomChanged('cleaning', { delayMs: 0, refreshRooms: false, refreshHistory: false });
     this.roomsService.cleanRoom(this.room._id, { status: 'vacant' })
       .pipe(take(1))
       .subscribe({
@@ -872,12 +868,6 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           } else {
             this.applyLocalRoomStatus('vacant');
           }
-          this.modalService.success({
-            nzTitle: 'Thành công',
-            nzContent: `Phòng ${this.room.roomNumber} đã sẵn sàng đón khách.`,
-            nzOkText: 'Đóng'
-          });
-          this.notifyRoomChanged('cleaning', { delayMs: 0, refreshRooms: false, refreshHistory: false });
           if (this.contextMenuModalRef) {
             this.contextMenuModalRef.close();
             this.contextMenuModalRef = null;
@@ -885,6 +875,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.applyLocalRoomStatus(previousStatus);
+          this.notifyRoomChanged('cleaning', { delayMs: 0, refreshRooms: false, refreshHistory: false });
           this.modalService.error({
             nzTitle: 'Lỗi',
             nzContent: err.error?.error || 'Không thể cập nhật trạng thái phòng.',
@@ -898,6 +889,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   markRoomAsDirty(): void {
     const previousStatus = this.room.status;
     this.applyLocalRoomStatus('dirty');
+    this.notifyRoomChanged('dirty', { delayMs: 0, refreshRooms: false, refreshHistory: false });
     this.roomsService.updateRoomStatus(
       this.room._id,
       'dirty',
@@ -909,15 +901,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           Object.assign(this.room, updatedRoom);
           this.applyLocalRoomStatus('dirty');
         }
-        this.modalService.success({
-          nzTitle: 'Thành công',
-          nzContent: `Đã báo phòng ${this.room.roomNumber} cần dọn dẹp.`,
-          nzOkText: 'Đóng'
-        });
-        this.notifyRoomChanged('dirty', { delayMs: 0, refreshRooms: false, refreshHistory: false });
       },
       error: (err) => {
         this.applyLocalRoomStatus(previousStatus);
+        this.notifyRoomChanged('dirty', { delayMs: 0, refreshRooms: false, refreshHistory: false });
         this.modalService.error({
           nzTitle: 'Lỗi',
           nzContent: err.error?.error || 'Không thể cập nhật trạng thái phòng.',
@@ -931,6 +918,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
   markRoomAsMaintenance(): void {
     const previousStatus = this.room.status;
     this.applyLocalRoomStatus('maintenance');
+    this.notifyRoomChanged('maintenance', { delayMs: 0, refreshRooms: false, refreshHistory: false });
     this.roomsService.updateRoomStatus(
       this.room._id,
       'maintenance',
@@ -943,15 +931,10 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         } else {
           this.applyLocalRoomStatus('maintenance');
         }
-        this.modalService.success({
-          nzTitle: 'Thành công',
-          nzContent: `Đã báo phòng ${this.room.roomNumber} cần bảo trì.`,
-          nzOkText: 'Đóng'
-        });
-        this.notifyRoomChanged('maintenance', { delayMs: 0, refreshRooms: false, refreshHistory: false });
       },
       error: (err) => {
         this.applyLocalRoomStatus(previousStatus);
+        this.notifyRoomChanged('maintenance', { delayMs: 0, refreshRooms: false, refreshHistory: false });
         this.modalService.error({
           nzTitle: 'Lỗi',
           nzContent: err.error?.error || 'Không thể cập nhật trạng thái phòng.',
