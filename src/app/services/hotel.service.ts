@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Hotel, HotelStatus } from '../interfaces/hotel';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
+import { catchError, finalize, map, shareReplay, tap, timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { SessionContextService } from './session-context.service';
 
@@ -157,6 +157,7 @@ export class HotelService {
 
     this.hotelsListCacheKey = key;
     this.hotelsListInFlight = this.getHotels(businessId, status, { lite }).pipe(
+      timeout(8000),
       tap((hotels) => {
         this.hotelsListCache = Array.isArray(hotels) ? hotels : [];
         this.hotelsListCacheAt = Date.now();
@@ -164,7 +165,9 @@ export class HotelService {
       }),
       catchError((err) => {
         this.hotelsListInFlight = null;
-        throw err;
+        console.warn('[HotelService] getHotelsCached failed/timeout:', err?.message || err);
+        // Trả cache cũ hoặc [] — không treo UI 15s
+        return of(this.hotelsListCache || []);
       }),
       finalize(() => {
         this.hotelsListInFlight = null;

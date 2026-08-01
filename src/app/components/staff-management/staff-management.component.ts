@@ -113,7 +113,6 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
   private applyHotelId(hotelId: string | null, force = false): void {
     const normalized = this.hotelService.normalizeHotelId(hotelId);
     if (!normalized) {
-      this.loadBusinessInfo();
       return;
     }
     if (!force && this.hotelService.sameHotelId(this.selectedHotelId, normalized) && this.staffs.length > 0) {
@@ -122,7 +121,10 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     this.selectedHotelId = normalized;
     this.loadStaff();
     this.refreshHotelUserCount();
-    this.loadBusinessInfo();
+    // Hotel manager không cần load business đầy đủ — tránh API chậm/403
+    if (this.authService.isAdmin() || this.authService.isBusiness()) {
+      this.loadBusinessInfo();
+    }
   }
 
   private initTranslationArrays(): void {

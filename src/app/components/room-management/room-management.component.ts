@@ -348,16 +348,17 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   }
 
   loadRooms(hotelId?: string): void {
-    const params = hotelId ? { hotelId: hotelId } : {};
+    const params = hotelId ? { hotelId: hotelId, lite: true } : { lite: true };
     this.roomService.getRooms(params).subscribe(
       data => {
-        this.rooms = data;
-        this.total = data.length;
-        // Reset về trang 1 khi load lại
+        this.rooms = data || [];
+        this.total = this.rooms.length;
         this.pageIndex = 1;
       },
       error => {
         console.error('Lỗi khi tải danh sách phòng:', error);
+        this.rooms = [];
+        this.total = 0;
         this.message.error(this.translate.instant('ROOM_MANAGEMENT.LOAD_ROOMS_ERROR'));
       }
     );
