@@ -400,20 +400,6 @@ export class HotelService {
     });
   }
 
-  extractBusinessId(hotel: any): string | null {
-    if (!hotel || !hotel.businessId) {
-      return null;
-    }
-    
-    if (typeof hotel.businessId === 'object' && hotel.businessId._id) {
-      return hotel.businessId._id;
-    } else if (typeof hotel.businessId === 'string') {
-      return hotel.businessId;
-    }
-    
-    return null;
-  }
-
   createHotel(hotel: Partial<Hotel>): Observable<Hotel> {
     return this.http.post<Hotel>(this.apiUrl, hotel);
   }
