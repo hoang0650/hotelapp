@@ -208,30 +208,6 @@
                       SePay
                     </button>
                   </div>
-                  <div class="crypto-section" *ngIf="canUseCrypto">
-                    <nz-form-item class="crypto-form-item">
-                      <nz-form-label class="crypto-label">{{ 'PRICING_PAGE.CRYPTO_NETWORK_LABEL' | translate }}</nz-form-label>
-                      <nz-form-control>
-                        <nz-select 
-                          [(ngModel)]="selectedCryptoNetwork" 
-                          [nzSize]="'default'">
-                          <nz-option *ngFor="let network of cryptoNetworks" [nzValue]="network.value" [nzLabel]="network.label">
-                            <span>{{ network.icon }} {{ network.label }}</span>
-                          </nz-option>
-                        </nz-select>
-                      </nz-form-control>
-                    </nz-form-item>
-                    <button
-                      nz-button
-                      nzType="primary"
-                      [nzSize]="'large'"
-                      [disabled]="loading"
-                      (click)="payWithCrypto()"
-                      class="payment-btn-crypto">
-                      <i nz-icon nzType="dollar-circle" nzTheme="fill" class="payment-btn-icon"></i>
-                      Crypto USDT ({{ selectedCryptoNetwork }})
-                    </button>
-                  </div>
                   <button
                     nz-button
                     nzType="default"
@@ -422,7 +398,7 @@
                     <i 
                       nz-icon 
                       [nzType]="item.paymentMethodIcon || 'credit-card'" 
-                      [nzTheme]="item.paymentMethod === 'crypto_usdt' ? 'fill' : 'outline'"
+                      [nzTheme]="item.paymentMethod === 'paypal' ? 'fill' : 'outline'"
                       [style.color]="getPaymentMethodColor(item.paymentMethod)">
                     </i>
                   </div>
@@ -461,9 +437,6 @@
                       <span *ngIf="item.currency !== 'USD'">
                         {{ item.amount | number:'1.0-0' }} {{ item.currency || 'VND' }}
                       </span>
-                      <span *ngIf="item.cryptoAmount" class="crypto-amount">
-                        ({{ item.cryptoAmount }} USDT)
-                      </span>
                     </span>
                   </div>
                 </div>
@@ -493,15 +466,6 @@
     (paymentSuccess)="onPayPalPaymentSuccess($event)"
     (paymentCancel)="onPayPalPaymentCancel()">
   </app-paypal-payment>
-
-  <!-- Crypto Payment Modal -->
-  <app-crypto-payment
-    *ngIf="cryptoPaymentData"
-    [(visible)]="showCryptoModal"
-    [paymentData]="cryptoPaymentData"
-    (paymentSuccess)="onCryptoPaymentSuccess($event)"
-    (paymentCancel)="onCryptoPaymentCancel()">
-  </app-crypto-payment>
 
   <!-- SePay QR Payment Modal -->
   <nz-modal

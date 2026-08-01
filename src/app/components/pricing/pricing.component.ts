@@ -8,7 +8,6 @@ import { AuthService } from '../../services/auth.service';
 import { PayPalPaymentData } from '../paypal-payment/paypal-payment.component';
 import { SePayService, SePayPaymentData } from '../../services/sepay.service';
 import { PayPalService } from '../../services/paypal.service';
-import { CryptoService, CryptoPaymentData } from '../../services/crypto.service';
 import { UserService } from '../../services/user.service';
 import { SettingsService } from '../../services/settings.service';
 import { NotificationsService, Announcement } from '../../services/notifications.service';
@@ -51,25 +50,14 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   private preselectBillingType: 'monthly' | 'yearly' | null = null;
   showPayPalModal = false;
   payPalPaymentData: PayPalPaymentData | null = null;
-  showCryptoModal = false;
-  cryptoPaymentData: CryptoPaymentData | null = null;
   selectedPackage: any = null; // Gói đã chọn để thanh toán
   paymentHistory: any[] = []; // Lịch sử thanh toán
   showPaymentHistory = false; // Hiển thị lịch sử thanh toán
   paymentHistoryLoading = false;
-  selectedCryptoNetwork: 'TRC20' | 'ERC20' | 'BEP20' = 'TRC20'; // Mạng crypto đã chọn
-  
-  cryptoNetworks = [
-    { value: 'TRC20', label: 'TRC20 (Tron)', icon: '🌐' },
-    { value: 'ERC20', label: 'ERC20 (Ethereum)', icon: '⛽' },
-    { value: 'BEP20', label: 'BEP20 (BSC)', icon: '🔷' }
-  ];
   
   // Kiểm tra tính năng thanh toán từ package
   canUsePayPal: boolean = true; // Mặc định cho phép
-  canUseCrypto: boolean = true; // Mặc định cho phép
   enablePayPalPayment: boolean = true;
-  enableCryptoPayment: boolean = true;
 
   // SePay QR code
   showSePayModal = false;
@@ -187,7 +175,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     private cdr: ChangeDetectorRef,
     private sepayService: SePayService,
     private paypalService: PayPalService,
-    private cryptoService: CryptoService,
     private userService: UserService,
     private settingsService: SettingsService,
     private notificationsService: NotificationsService,
@@ -205,20 +192,17 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     const hotelId = this.authService.getHotelId?.() || null;
     if (!hotelId) {
       this.enablePayPalPayment = true;
-      this.enableCryptoPayment = true;
       this.checkPaymentFeatures();
       return;
     }
     this.hotelService.getHotelById(hotelId).subscribe({
       next: (hotel: any) => {
         this.enablePayPalPayment = hotel.enablePayPalPayment || false;
-        this.enableCryptoPayment = hotel.enableCryptoPayment || false;
         this.checkPaymentFeatures();
         this.cdr.detectChanges();
       },
       error: () => {
         this.enablePayPalPayment = true;
-        this.enableCryptoPayment = true;
         this.checkPaymentFeatures();
       }
     });
@@ -227,7 +211,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   private onPaymentSettingsChanged = (event: any) => {
     const detail = event?.detail || {};
     this.enablePayPalPayment = !!detail.enablePayPalPayment;
-    this.enableCryptoPayment = !!detail.enableCryptoPayment;
     this.checkPaymentFeatures();
     this.cdr.detectChanges();
   };
@@ -545,7 +528,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         this.currentPackage = null;
         this.tryAutoSubscribeGuestFreePackage();
         this.canUsePayPal = true;
-        this.canUseCrypto = true;
       }
     });
   }
@@ -565,7 +547,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         this.tryAutoSubscribeGuestFreePackage();
       }
       this.canUsePayPal = true;
-      this.canUseCrypto = true;
     }
     this.cdr.markForCheck();
   }
@@ -599,12 +580,11 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   
   /**
    * Cổng thanh toán mua/gia hạn gói trên trang Pricing.
-   * Không dùng paypalPaymentFeature / cryptoPaymentFeature của gói hay enablePayPalPayment của khách sạn —
+   * Không dùng paypalPaymentFeature của gói hay enablePayPalPayment của khách sạn —
    * các flag đó dành cho tính năng vận hành KS sau khi đã có gói, không phải điều kiện hiện nút mua gói.
    */
   checkPaymentFeatures(): void {
     this.canUsePayPal = true;
-    this.canUseCrypto = true;
   }
 
   subscribeToPlan(packageId: string) {
@@ -742,40 +722,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     };
 
     this.showPayPalModal = true;
-  }
-
-  /**
-   * Thanh toán qua Crypto USDT
-   */
-  payWithCrypto(): void {
-    if (!this.selectedPackage || !this.userId) {
-      this.message.warning(this.t('PRICING_PAGE.MESSAGES.SELECT_PLAN_BEFORE_PAYMENT'));
-      return;
-    }
-    
-    // Kiểm tra tính năng Crypto
-    if (!this.canUseCrypto) {
-      this.message.warning(this.t('PRICING_PAGE.MESSAGES.CRYPTO_NOT_SUPPORTED'));
-      return;
-    }
-
-    const packageId = this.selectedPackage.packageId;
-    const pkg = this.selectedPackage;
-    const packagePrice = (this.selectedPackage.netAmount !== undefined) 
-      ? this.selectedPackage.netAmount 
-      : this.getPackagePrice(pkg);
-
-    this.cryptoPaymentData = {
-      packageId: packageId,
-      packageName: pkg?.name || 'N/A',
-      amount: packagePrice,
-      billingType: this.selectedPackage.billingType,
-      currency: 'VND',
-      userId: this.userId,
-      network: this.selectedCryptoNetwork // Thêm network đã chọn
-    };
-
-    this.showCryptoModal = true;
   }
 
   /**
@@ -1457,57 +1403,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.payPalPaymentData = null;
   }
 
-  onCryptoPaymentSuccess(event: any): void {
-    console.log('Crypto payment success:', event);
-    
-    if (event.success && this.selectedPackage) {
-      this.loading = true;
-      // Gọi subscribe với paymentMethod='crypto_usdt'
-      // Kiểm tra xem có phải nâng cấp/cập nhật gói không
-      const isUpgrade = this.currentPackage && this.currentPackage.packageId && this.currentPackage.packageId !== this.selectedPackage.packageId;
-      const isUpdate = this.currentPackage && this.currentPackage.packageId === this.selectedPackage.packageId && this.currentPackage.billingType !== this.selectedPackage.billingType;
-      
-      this.pricingService.subscribe(
-        this.userId,
-        this.selectedPackage.packageId,
-        this.selectedPackage.billingType,
-        event.transactionId,
-        'crypto_usdt'
-      ).subscribe({
-        next: (response: any) => {
-          if (response.success !== false) {
-            const billingTypeText = this.selectedPackage.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
-            this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công. Đang chờ xác nhận thanh toán.`);
-            this.loadCurrentPackage({ force: true });
-            // Tạo thông báo hệ thống cho thanh toán và đăng ký gói thành công
-            if (isUpgrade) {
-              this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'upgrade');
-            } else if (isUpdate) {
-              this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'update');
-            } else {
-              this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'payment');
-            }
-            this.selectedPackage = null;
-          } else {
-            this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
-          }
-          this.loading = false;
-        },
-        error: (error: any) => {
-          console.error('Subscribe error after crypto payment:', error);
-          this.message.error(error.error?.message || 'Có lỗi xảy ra khi đăng ký gói dịch vụ sau thanh toán');
-          this.loading = false;
-        }
-      });
-    }
-  }
-
-  onCryptoPaymentCancel(): void {
-    console.log('Crypto payment cancelled');
-    this.showCryptoModal = false;
-    this.cryptoPaymentData = null;
-  }
-
   /**
    * Load lịch sử thanh toán của user
    */
@@ -1516,17 +1411,13 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.paymentHistoryLoading = true;
     
-    // Load từ tất cả các phương thức thanh toán
     const paypalHistory$ = this.paypalService.getPaymentHistory({ userId: this.userId, limit: 10 });
-    const cryptoHistory$ = this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 10 });
     const sepayHistory$ = this.sepayService.getPaymentHistory({ userId: this.userId, limit: 10 });
 
-    // Combine tất cả payment history
-    forkJoin([paypalHistory$, cryptoHistory$, sepayHistory$]).subscribe({
-        next: ([paypalData, cryptoData, sepayData]) => {
+    forkJoin([paypalHistory$, sepayHistory$]).subscribe({
+        next: ([paypalData, sepayData]) => {
           const allPayments: any[] = [];
           
-          // Thêm PayPal payments
           if (paypalData?.data) {
             paypalData.data.forEach((payment: any) => {
               allPayments.push({
@@ -1538,19 +1429,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
             });
           }
 
-          // Thêm Crypto payments
-          if (cryptoData?.data) {
-            cryptoData.data.forEach((payment: any) => {
-              allPayments.push({
-                ...payment,
-                paymentMethod: 'crypto_usdt',
-                paymentMethodLabel: `Crypto USDT (${payment.cryptoNetwork || 'N/A'})`,
-                paymentMethodIcon: 'dollar-circle'
-              });
-            });
-          }
-
-          // Thêm SePay payments
           if (sepayData?.data) {
             sepayData.data.forEach((payment: any) => {
               allPayments.push({
@@ -1562,7 +1440,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
             });
           }
 
-          // Sắp xếp theo ngày tạo (mới nhất trước)
           this.paymentHistory = allPayments.sort((a, b) => {
             const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
             const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
@@ -1574,7 +1451,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         error: (error) => {
           console.error('Error loading payment history:', error);
           this.paymentHistoryLoading = false;
-          // Không hiển thị lỗi để không làm phiền user
         }
       });
   }
@@ -1598,8 +1474,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         return '#0070ba';
       case 'sepay':
         return '#667eea';
-      case 'crypto_usdt':
-        return '#26a17b';
       default:
         return '#999';
     }
@@ -1611,8 +1485,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         return 'rgba(0, 112, 186, 0.1)';
       case 'sepay':
         return 'rgba(102, 126, 234, 0.1)';
-      case 'crypto_usdt':
-        return 'rgba(38, 161, 123, 0.1)';
       default:
         return 'rgba(153, 153, 153, 0.1)';
     }
