@@ -239,10 +239,30 @@ export class RoomComponent implements OnInit, OnDestroy {
           reason === 'guest_out' ||
           reason === 'guest_return';
 
+        // Checkout / status payload → patch tức thì (không rAF / không delay)
+        if (event?.roomId && (event.status || reason === 'checkout' || statusOnly || reason === 'checkin')) {
+          const status =
+            event.status ||
+            (reason === 'checkout' ? 'dirty' : reason === 'checkin' ? 'occupied' : undefined);
+          this.applyRoomStatusInstant(event.roomId, {
+            status,
+            guestStatus:
+              event.guestStatus !== undefined
+                ? event.guestStatus
+                : reason === 'checkout'
+                  ? null
+                  : reason === 'guest_out'
+                    ? 'out'
+                    : reason === 'guest_return'
+                      ? 'in'
+                      : undefined
+          });
+        }
+
         if (event?.refreshRooms) {
-          // Đã patch local (nhận/trả/status) → bỏ GET /rooms/:id nặng (trừ khi force rollback)
           if (event.roomId && this.wasRecentlyPatchedLocally(event.roomId) && !event.force) {
-            this.scheduleDisplayRebuild();
+            // Đã patch instant ở trên
+            return;
           } else if (event.roomId && !event.force && reason !== 'recheckin' && reason !== 'delete_checkout_history') {
             this.updateSingleRoomRealtime(event.roomId);
             if (event.relatedRoomId) {
@@ -250,15 +270,10 @@ export class RoomComponent implements OnInit, OnDestroy {
             }
           } else if (event.force || !event.roomId) {
             this.loadRooms(true);
-          } else {
-            this.scheduleDisplayRebuild();
           }
-        } else if (event?.roomId && (statusOnly || reason === 'transfer' || reason === 'checkin' || reason === 'checkout')) {
-          // Optimistic / local patch — chỉ rebuild badge + class
-          this.scheduleDisplayRebuild();
         }
 
-        // Chỉ sync thu/chi/history khi panel đang mở hoặc caller yêu cầu — không chặn UI sơ đồ
+        // Aux chỉ khi panel mở — không làm chậm đổi màu phòng
         const needsAux =
           !!event?.force ||
           !!event?.refreshHistory ||
@@ -279,7 +294,19 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       };
 
-      const delayMs = event?.delayMs ?? 0;
+      // Status / checkin / checkout: luôn chạy sync — bỏ delayMs
+      const reasonHint = String(event?.reason || '');
+      const instantReason =
+        reasonHint === 'checkout' ||
+        reasonHint === 'checkin' ||
+        reasonHint === 'dirty' ||
+        reasonHint === 'status' ||
+        reasonHint === 'cleaning' ||
+        reasonHint === 'maintenance' ||
+        reasonHint === 'guest_out' ||
+        reasonHint === 'guest_return' ||
+        !!event?.status;
+      const delayMs = instantReason ? 0 : (event?.delayMs ?? 0);
       if (delayMs > 0) {
         setTimeout(runUpdate, delayMs);
       } else {
@@ -2276,23 +2303,26 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   private applyCheckoutCloseResult(checkoutInfo: any): void {
-    const roomId = checkoutInfo?.roomId;
+    const roomId = this.hotelService.normalizeHotelId(checkoutInfo?.roomId)
+      || String(checkoutInfo?.roomId || '').trim();
     if (!roomId) return;
 
-    this.markRoomLocallyPatched(roomId);
-    const roomIndex = this.rooms.findIndex(r => r && r._id === roomId);
-    if (roomIndex !== -1) {
-      const existing = this.rooms[roomIndex] as any;
-      this.rooms[roomIndex] = {
-        ...existing,
+    const applied = this.applyRoomStatusInstant(roomId, {
+      status: 'dirty',
+      guestStatus: null
+    });
+    if (!applied) {
+      this.roomsService.notifyRoomDataUpdated({
+        hotelId: this.selectedHotelId || undefined,
+        roomId,
+        reason: 'checkout',
         status: 'dirty',
-        guestStatus: undefined,
-        currentBooking: null,
-        events: []
-      };
-      this.roomsService.patchCachedRoom(this.selectedHotelId!, this.rooms[roomIndex]);
-      this.updateFloorsFromRooms();
-      this.scheduleDisplayRebuild();
+        guestStatus: null,
+        refreshRooms: false,
+        refreshHistory: false,
+        force: false,
+        delayMs: 0
+      });
     }
 
     const checkOutTime = checkoutInfo.checkOutTime ? new Date(checkoutInfo.checkOutTime) : new Date();
@@ -2339,38 +2369,38 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   private applyCheckinCloseResult(roomId: string, checkinInfo: any): void {
     if (!roomId) return;
-    this.markRoomLocallyPatched(roomId);
-    const roomIndex = this.rooms.findIndex(r => r && r._id === roomId);
+    const id = this.hotelService.normalizeHotelId(roomId) || roomId;
+    const roomIndex = this.rooms.findIndex((r) => r && this.hotelService.sameHotelId(r._id, id));
     if (roomIndex === -1) return;
 
-    const existing = this.rooms[roomIndex] as any;
+    // Mutate cùng ref đang bind — không spread object mới
+    const room = this.rooms[roomIndex] as RoomWithMeta;
     const checkinTime = checkinInfo?.checkinTime || checkinInfo?.checkInTime || null;
-    this.rooms[roomIndex] = {
-      ...existing,
-      status: 'occupied',
-      guestStatus: undefined,
-      events: [
-        {
-          type: 'checkin',
-          roomId: roomId,
-          checkinTime: checkinTime,
-          checkInTime: checkinTime,
-          guestInfo: checkinInfo?.guestInfo,
-          rateType: checkinInfo?.rateType || 'hourly',
-          advancePayment: Number(checkinInfo?.advancePayment) || 0,
-          additionalCharges: Number(checkinInfo?.additionalCharges) || 0,
-          discount: Number(checkinInfo?.discount) || 0,
-          paymentMethod: checkinInfo?.paymentMethod,
-          notes: checkinInfo?.notes,
-          selectedServices: checkinInfo?.selectedServices || []
-        }
-      ]
-    };
+    room.status = 'occupied';
+    room.guestStatus = undefined;
+    room.events = [
+      {
+        type: 'checkin',
+        roomId: id,
+        checkinTime: checkinTime,
+        checkInTime: checkinTime,
+        guestInfo: checkinInfo?.guestInfo,
+        rateType: checkinInfo?.rateType || 'hourly',
+        advancePayment: Number(checkinInfo?.advancePayment) || 0,
+        additionalCharges: Number(checkinInfo?.additionalCharges) || 0,
+        discount: Number(checkinInfo?.discount) || 0,
+        paymentMethod: checkinInfo?.paymentMethod,
+        notes: checkinInfo?.notes,
+        selectedServices: checkinInfo?.selectedServices || []
+      }
+    ] as any;
+    room.__viewMeta = this.buildRoomCardMeta(room);
+    this.recomputeStatusCountsOnly();
+    this.markRoomLocallyPatched(id);
     if (this.selectedHotelId) {
-      this.roomsService.patchCachedRoom(this.selectedHotelId, this.rooms[roomIndex]);
+      this.roomsService.patchCachedRoom(this.selectedHotelId, room);
     }
-    this.updateFloorsFromRooms();
-    this.scheduleDisplayRebuild();
+    this.cdr.detectChanges();
   }
 
   // Tính tổng tiền đặt trước từ tất cả các phòng đang có khách
@@ -2554,6 +2584,13 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.recomputeRoomDerivedState();
   }
 
+  /** Rebuild đồng bộ — dùng khi đổi trạng thái phòng (không chờ rAF) */
+  private flushDisplayNow(): void {
+    this.displayRebuildQueued = false;
+    this.recomputeRoomDerivedState();
+    this.cdr.detectChanges();
+  }
+
   private scheduleDisplayRebuild(): void {
     if (this.displayRebuildQueued) {
       return;
@@ -2565,6 +2602,82 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.rebuildDisplayRooms();
       this.cdr.detectChanges();
     });
+  }
+
+  /**
+   * Đổi status tức thì trên đúng object đang bind template (cùng ref với displayRoomsByFloor).
+   * Không tạo object mới — tránh mất ref → UI không đổi màu đến khi rAF.
+   */
+  private applyRoomStatusInstant(
+    roomId: string | null | undefined,
+    payload: { status?: string | null; guestStatus?: string | null }
+  ): boolean {
+    const id = this.hotelService.normalizeHotelId(roomId) || String(roomId || '').trim();
+    if (!id) return false;
+
+    const index = this.rooms.findIndex((r) => this.hotelService.sameHotelId(r._id, id));
+    if (index === -1) return false;
+
+    const room = this.rooms[index] as RoomWithMeta;
+    if (payload.status) {
+      room.status = payload.status as Room['status'];
+    }
+    if (payload.guestStatus !== undefined) {
+      room.guestStatus = (payload.guestStatus || undefined) as any;
+    }
+    if (payload.status && payload.status !== 'occupied' && payload.status !== 'booked') {
+      room.events = [];
+      room.currentBooking = undefined as any;
+    }
+
+    // Meta màu/nhãn/icon đổi ngay — template đọc __viewMeta.statusClass
+    room.__viewMeta = this.buildRoomCardMeta(room);
+
+    // Cập nhật badge đếm tức thì
+    this.recomputeStatusCountsOnly();
+
+    if (this.selectedHotelId) {
+      this.roomsService.patchCachedRoom(this.selectedHotelId, room);
+    }
+    this.markRoomLocallyPatched(id);
+    this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
+    this.cdr.detectChanges();
+    return true;
+  }
+
+  private recomputeStatusCountsOnly(): void {
+    let vacantCount = 0;
+    let occupiedCount = 0;
+    let dirtyCount = 0;
+    let maintenanceCount = 0;
+    let bookedCount = 0;
+    let guestOutCount = 0;
+    for (const room of this.rooms) {
+      switch (room.status) {
+        case 'vacant':
+          vacantCount += 1;
+          break;
+        case 'occupied':
+          occupiedCount += 1;
+          if (room.guestStatus === 'out') guestOutCount += 1;
+          break;
+        case 'dirty':
+          dirtyCount += 1;
+          break;
+        case 'maintenance':
+          maintenanceCount += 1;
+          break;
+        case 'booked':
+          bookedCount += 1;
+          break;
+      }
+    }
+    this.cachedVacantCount = vacantCount;
+    this.cachedOccupiedCount = occupiedCount;
+    this.cachedDirtyCount = dirtyCount;
+    this.cachedMaintenanceCount = maintenanceCount;
+    this.cachedBookedCount = bookedCount;
+    this.cachedGuestOutCount = guestOutCount;
   }
 
   private scheduleOccupiedEventsReload(forceReload: boolean = false): void {
@@ -4340,25 +4453,10 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   private patchLocalRoomStatusFromSocket(roomId: string, payload: any): void {
-    const hotelId = this.selectedHotelId;
-    if (!hotelId || !roomId) return;
-    const index = this.rooms.findIndex(r => String(r._id) === String(roomId));
-    if (index === -1) return;
-
-    const nextStatus = payload?.status;
-    if (nextStatus) {
-      this.rooms[index].status = nextStatus;
-    }
-    if (payload?.guestStatus !== undefined) {
-      this.rooms[index].guestStatus = payload.guestStatus || undefined;
-    }
-    if (nextStatus && nextStatus !== 'occupied' && nextStatus !== 'booked') {
-      this.rooms[index].events = [];
-      this.rooms[index].currentBooking = undefined;
-    }
-    this.roomsService.patchCachedRoom(hotelId, this.rooms[index]);
-    this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
-    this.scheduleDisplayRebuild();
+    this.applyRoomStatusInstant(roomId, {
+      status: payload?.status,
+      guestStatus: payload?.guestStatus
+    });
   }
 
   private updateSingleRoomRealtime(roomId: string, options?: { soft?: boolean }): void {

@@ -1380,13 +1380,44 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     ).subscribe((result: any) => {
       this.isModalOpening = false;
       this.modalRef = null;
+
+      // Checkout: patch dirty ngay trên object phòng (cùng ref với sơ đồ)
+      if (type === 'checkout' && result?.action === 'checkout' && this.room) {
+        this.room.status = 'dirty';
+        this.room.guestStatus = undefined;
+        (this.room as any).currentBooking = null;
+        this.room.events = [];
+        const hotelId = this.extractHotelId();
+        if (hotelId && this.room._id) {
+          this.roomsService.patchCachedRoom(hotelId, this.room);
+        }
+      }
+
       const reason: RoomDataUpdateEvent['reason'] =
         type === 'checkin' ? 'checkin' :
         type === 'checkout' ? 'checkout' :
         type === 'cleaning' ? 'cleaning' : 'generic';
       Promise.resolve().then(() => {
         if (!this.modalRef) {
-          this.notifyRoomChanged(reason, { delayMs: result?.success === false ? 0 : 80 });
+          this.notifyRoomChanged(reason, {
+            delayMs: 0,
+            refreshRooms: false,
+            refreshHistory: type === 'checkout' || type === 'checkin'
+          });
+          // Đảm bảo board nhận status dirty kèm emit
+          if (type === 'checkout' && this.room?._id) {
+            this.roomsService.notifyRoomDataUpdated({
+              hotelId: this.extractHotelId() || undefined,
+              roomId: this.room._id,
+              reason: 'checkout',
+              status: 'dirty',
+              guestStatus: null,
+              refreshRooms: false,
+              refreshHistory: false,
+              force: false,
+              delayMs: 0
+            });
+          }
         }
       });
     });

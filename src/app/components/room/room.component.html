@@ -235,10 +235,13 @@
                   [ngClass]="{'compact-mode': isCompactMode}">
                   <div 
                     class="room-item" 
-                    [ngClass]="[room.__viewMeta?.statusClass || '', room.__viewMeta?.isPrebookedAvailable ? 'prebooked-available' : '']"
+                    [ngClass]="[
+                      room.__viewMeta?.statusClass || getRoomStatusClass(room.status, room.guestStatus),
+                      room.__viewMeta?.isPrebookedAvailable ? 'prebooked-available' : ''
+                    ]"
                     appModalControl 
                     [room]="room"
-                    [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.__viewMeta?.ariaStatusLabel || '')"
+                    [attr.aria-label]="('ROOM.ROOM' | translate) + ' ' + room.roomNumber + ' - ' + (room.__viewMeta?.ariaStatusLabel || room.status || '')"
                     role="button"
                     tabindex="0">
                   
@@ -274,8 +277,8 @@
                   
                   <!-- Trạng thái phòng (hiển thị khi không phải occupied) -->
                   <ng-container *ngIf="room.status !== 'occupied'">
-                    <nz-tag [nzColor]="room.__viewMeta?.statusColor || 'default'" class="room-badge">
-                      {{ room.__viewMeta?.statusLabel }}
+                    <nz-tag [nzColor]="room.__viewMeta?.statusColor || getRoomStatusLabelAndColor(room.status).color" class="room-badge">
+                      {{ room.__viewMeta?.statusLabel || getRoomStatusLabelAndColor(room.status).label }}
                     </nz-tag>
                   </ng-container>
                   

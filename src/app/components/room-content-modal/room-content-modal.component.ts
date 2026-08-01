@@ -2400,11 +2400,22 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       // Kiểm tra xem có nên hiển thị QR payment không
       this.checkAndHandleTransferPayment(remainingAmount, invoiceData, checkoutData);
     } else {
-      // Đóng modal ngay lập tức và thực hiện checkout
+      // Đóng modal ngay — sơ đồ nhận dirty qua afterClose + emit trước khi mở hóa đơn
       if (this.modalRef) {
         this.modalRef.close(closeResult);
       }
       this.pendingCheckoutCloseResult = null;
+
+      // Emit dirty ngay (không chờ API) để board cập nhật trước hóa đơn
+      this.emitRoomDataUpdated('checkout', {
+        roomId: this.roomData?._id,
+        status: 'dirty',
+        guestStatus: null,
+        force: false,
+        delayMs: 0,
+        refreshRooms: false,
+        refreshHistory: false
+      });
       
       // Thực hiện checkout trong background
       this.roomsService.checkOutRoom(this.roomData._id, checkoutData)
@@ -2417,7 +2428,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           },
           (error) => {
             this.message.error('Lỗi khi trả phòng: ' + error.message);
-            this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 0 });
+            this.emitRoomDataUpdated('checkout', {
+              roomId: this.roomData?._id,
+              force: true,
+              refreshRooms: true,
+              delayMs: 0
+            });
           }
         );
     }
@@ -2565,6 +2581,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.pendingCheckoutCloseResult = null;
       this.modalRef.close(closeResult);
     }
+
+    this.emitRoomDataUpdated('checkout', {
+      roomId: this.roomData?._id,
+      status: 'dirty',
+      guestStatus: null,
+      force: false,
+      delayMs: 0,
+      refreshRooms: false,
+      refreshHistory: false
+    });
     
     // Kiểm tra paymentStatus - chỉ hiển thị hóa đơn nếu đã thanh toán
     const paymentStatus = checkoutData.paymentStatus || 'paid';
@@ -3961,11 +3987,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Parent room list đã optimistic update — chỉ emit 1 lần, không getRoomById(limit:1000)
+    // Patch sơ đồ → dirty TRƯỚC khi mở hóa đơn (tránh board vẫn occupied)
     this.emitRoomDataUpdated('checkout', {
       roomId: this.roomData?._id || response?.room?._id,
+      status: 'dirty',
+      guestStatus: null,
       force: false,
-      delayMs: 0
+      delayMs: 0,
+      refreshRooms: false,
+      refreshHistory: false
     });
 
     if (!shouldShowInvoice) {
@@ -3982,7 +4012,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         response?.invoiceNumber ||
         invoiceData?.invoiceNumber
     };
-    this.showInvoice(mergedInvoice);
+    // Mở hóa đơn sau 1 tick để CD kịp vẽ status dirty trên sơ đồ
+    setTimeout(() => this.showInvoice(mergedInvoice), 0);
   }
 
   // Hiển thị hóa đơn
@@ -4651,7 +4682,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
   private emitRoomDataUpdated(
     reason: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'generic',
-    options?: { roomId?: string; relatedRoomId?: string; force?: boolean; delayMs?: number; refreshRooms?: boolean; refreshHistory?: boolean }
+    options?: {
+      roomId?: string;
+      relatedRoomId?: string;
+      force?: boolean;
+      delayMs?: number;
+      refreshRooms?: boolean;
+      refreshHistory?: boolean;
+      status?: string;
+      guestStatus?: string | null;
+    }
   ): void {
     const hotelId = this.normalizeObjectId(this.roomData?.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
     const statusOnly =
@@ -4659,11 +4699,26 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       reason === 'dirty' ||
       reason === 'maintenance' ||
       reason === 'status';
+    const checkoutStatus =
+      reason === 'checkout'
+        ? { status: options?.status || 'dirty', guestStatus: options?.guestStatus ?? null }
+        : { status: options?.status, guestStatus: options?.guestStatus };
+
+    // Optimistic trên roomData trong modal — parent đọc qua emit
+    if (reason === 'checkout' && this.roomData) {
+      (this.roomData as any).status = checkoutStatus.status || 'dirty';
+      (this.roomData as any).guestStatus = undefined;
+      (this.roomData as any).currentBooking = null;
+      (this.roomData as any).events = [];
+    }
+
     this.roomsService.notifyRoomDataUpdated({
       hotelId: hotelId || undefined,
       roomId: options?.roomId,
       relatedRoomId: options?.relatedRoomId,
       reason,
+      status: checkoutStatus.status,
+      guestStatus: checkoutStatus.guestStatus,
       // Status / local checkin-checkout đã patch — không GET lại cả phòng
       refreshRooms: options?.refreshRooms ?? (!statusOnly && reason !== 'checkin' && reason !== 'checkout'),
       refreshHistory: options?.refreshHistory ?? (reason === 'checkout' || reason === 'recheckin' || reason === 'delete_checkout_history'),

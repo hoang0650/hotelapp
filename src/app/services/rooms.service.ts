@@ -24,6 +24,9 @@ export interface RoomDataUpdateEvent {
   roomId?: string;
   relatedRoomId?: string;
   reason?: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'guest_out' | 'guest_return' | 'generic';
+  /** Patch trạng thái local ngay (checkout → dirty) — không cần GET */
+  status?: string;
+  guestStatus?: string | null;
   refreshRooms?: boolean;
   refreshHistory?: boolean;
   force?: boolean;
