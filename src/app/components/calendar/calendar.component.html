@@ -14,7 +14,7 @@
     <div class="day-header" *ngFor="let day of daysOfWeek">{{ day }}</div>
     <div
       class="calendar-day"
-      *ngFor="let date of calendarCells"
+      *ngFor="let date of calendarCells; trackBy: trackByDate"
       [class.empty]="!date"
       [class.today]="date && isToday(date)"
       [class.selected]="date && isSelected(date)"
@@ -22,20 +22,22 @@
     >
       <ng-container *ngIf="date">
         <div class="date">{{ date.getDate() }}</div>
-        <div class="booking-info" *ngFor="let booking of getBookingsForDate(date)">
-          <div class="booking-timeline" [title]="booking.roomNumber ? (('CALENDAR.ROOM' | translate) + ' ' + booking.roomNumber) : ''">
-            {{ booking.startTime }} - {{ booking.endTime }}
+        <ng-container *ngIf="getBookingsForDate(date) as dayBookings">
+          <div class="booking-info" *ngFor="let booking of dayBookings; trackBy: trackByBookingId">
+            <div class="booking-timeline" [title]="booking.roomNumber ? (('CALENDAR.ROOM' | translate) + ' ' + booking.roomNumber) : ''">
+              {{ booking.startTime }} - {{ booking.endTime }}
+            </div>
+            <div class="booking-user" [title]="booking.guestInfo?.phone || ''">
+              {{ booking.userName || booking.guestInfo?.name || ('CALENDAR.GUEST_PRE_BOOKED' | translate) }}
+            </div>
+            <div class="booking-room" *ngIf="booking.roomNumber">
+              {{ 'CALENDAR.ROOM' | translate }} {{ booking.roomNumber }}
+            </div>
           </div>
-          <div class="booking-user" [title]="booking.guestInfo?.phone || ''">
-            {{ booking.userName || booking.guestInfo?.name || ('CALENDAR.GUEST_PRE_BOOKED' | translate) }}
+          <div class="add-booking-btn" *ngIf="!dayBookings.length" (click)="selectDate(date); $event.stopPropagation()" [title]="'CALENDAR.ADD_BOOKING' | translate">
+            <i nz-icon nzType="plus" nzTheme="outline"></i>
           </div>
-          <div class="booking-room" *ngIf="booking.roomNumber">
-            {{ 'CALENDAR.ROOM' | translate }} {{ booking.roomNumber }}
-          </div>
-        </div>
-        <div class="add-booking-btn" *ngIf="!getBookingsForDate(date).length" (click)="selectDate(date); $event.stopPropagation()" [title]="'CALENDAR.ADD_BOOKING' | translate">
-          <i nz-icon nzType="plus" nzTheme="outline"></i>
-        </div>
+        </ng-container>
       </ng-container>
     </div>
   </div>

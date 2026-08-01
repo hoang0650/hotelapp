@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, OnChanges, SimpleChanges, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { CaliendarModalComponent } from '../caliendar-modal/caliendar-modal.component';
 import { NzModalService, NzModalRef } from 'ng-zorro-antd/modal';
 import { RoomsService } from '../../services/rooms.service';
@@ -8,7 +8,7 @@ import { Subscription } from 'rxjs';
 
 interface Booking {
   _id?: string;
-  bookingId?: string; // ID từ Booking collection
+  bookingId?: string;
   roomId?: string;
   roomNumber?: string;
   hotelId?: string;
@@ -25,7 +25,6 @@ interface Booking {
   createdAt?: Date | string;
   advancePayment?: number;
   notes?: string;
-  // Legacy fields for compatibility
   userName?: string;
   startTime?: string;
   endTime?: string;
@@ -37,11 +36,11 @@ interface Booking {
   templateUrl: './calendar.component.html',
   styleUrls: ['./calendar.component.css']
 })
-export class CalendarComponent implements OnInit, OnDestroy {
+export class CalendarComponent implements OnInit, OnDestroy, OnChanges {
   @Input() hotelId: string | null = null;
   @Input() roomId: string | null = null;
   @Output() bookingSelected = new EventEmitter<{ date: Date, roomId?: string }>();
-  
+
   currentMonth!: number;
   currentYear!: number;
   daysOfWeek: string[] = [];
@@ -51,29 +50,29 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private modalRef: NzModalRef | null = null;
   isLoading = false;
 
-  // Bookings từ backend
   bookings: Booking[] = [];
-  allBookings: Booking[] = []; // Tất cả bookings để hiển thị bên dưới
-  isCheckingIn = false; // Flag để hiển thị loading khi check-in
+  allBookings: Booking[] = [];
+  /** Index theo yyyy-mm-dd để tránh filter lại mỗi CD cycle */
+  private bookingsByDay = new Map<string, Booking[]>();
+  isCheckingIn = false;
   private translateSubscription?: Subscription;
+  private loadSub?: Subscription;
+  private loadedRange: { start: number; end: number; hotelKey: string } | null = null;
 
   constructor(
     private modalService: NzModalService,
     private roomsService: RoomsService,
     private message: NzMessageService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private cdr: ChangeDetectorRef
   ) {
-    // Khởi tạo lần đầu
     this.initDaysOfWeek();
-    
-    // Subscribe để cập nhật khi ngôn ngữ thay đổi
     this.translateSubscription = this.translate.onLangChange.subscribe(() => {
       this.initDaysOfWeek();
     });
   }
 
   private initDaysOfWeek(): void {
-    // Khởi tạo ngay với instant() để có giá trị ngay lập tức
     this.daysOfWeek = [
       this.translate.instant('CALENDAR.DAYS_OF_WEEK.SUN'),
       this.translate.instant('CALENDAR.DAYS_OF_WEEK.MON'),
@@ -83,82 +82,137 @@ export class CalendarComponent implements OnInit, OnDestroy {
       this.translate.instant('CALENDAR.DAYS_OF_WEEK.FRI'),
       this.translate.instant('CALENDAR.DAYS_OF_WEEK.SAT')
     ];
-    
-    // Sau đó cập nhật bằng get() để đảm bảo translation được load đầy đủ
-    this.translate.get([
-      'CALENDAR.DAYS_OF_WEEK.SUN',
-      'CALENDAR.DAYS_OF_WEEK.MON',
-      'CALENDAR.DAYS_OF_WEEK.TUE',
-      'CALENDAR.DAYS_OF_WEEK.WED',
-      'CALENDAR.DAYS_OF_WEEK.THU',
-      'CALENDAR.DAYS_OF_WEEK.FRI',
-      'CALENDAR.DAYS_OF_WEEK.SAT'
-    ]).subscribe(translations => {
-      this.daysOfWeek = [
-        translations['CALENDAR.DAYS_OF_WEEK.SUN'],
-        translations['CALENDAR.DAYS_OF_WEEK.MON'],
-        translations['CALENDAR.DAYS_OF_WEEK.TUE'],
-        translations['CALENDAR.DAYS_OF_WEEK.WED'],
-        translations['CALENDAR.DAYS_OF_WEEK.THU'],
-        translations['CALENDAR.DAYS_OF_WEEK.FRI'],
-        translations['CALENDAR.DAYS_OF_WEEK.SAT']
-      ];
-    });
   }
 
   ngOnDestroy(): void {
-    if (this.translateSubscription) {
-      this.translateSubscription.unsubscribe();
-    }
+    this.translateSubscription?.unsubscribe();
+    this.loadSub?.unsubscribe();
   }
 
   ngOnInit(): void {
-    // Đảm bảo daysOfWeek được load trước khi render
-    this.initDaysOfWeek();
     this.initializeCalendar();
-    this.loadBookings();
-    this.loadAllBookings(); // Load tất cả bookings để hiển thị bên dưới
+    this.refresh(false);
   }
 
-  // Load bookings từ backend
+  ngOnChanges(changes: SimpleChanges): void {
+    if ((changes['hotelId'] || changes['roomId']) && !changes['hotelId']?.firstChange) {
+      this.loadedRange = null;
+      this.refresh(true);
+    }
+  }
+
+  /** API public — room board gọi khi cần reload */
   loadBookings(): void {
+    this.refresh(true);
+  }
+
+  loadAllBookings(): void {
+    this.refresh(true);
+  }
+
+  /**
+   * Một request duy nhất cho cả lưới tháng + bảng lịch sử.
+   * Lấy cửa sổ rộng (±1 tháng quanh tháng đang xem) rồi tách client-side.
+   */
+  refresh(force: boolean = false): void {
     if (!this.hotelId && !this.roomId) return;
-    
+    if (this.currentMonth == null || this.currentYear == null) {
+      this.initializeCalendar();
+    }
+
+    const rangeStart = new Date(this.currentYear, this.currentMonth - 1, 1);
+    const rangeEnd = new Date(this.currentYear, this.currentMonth + 2, 0, 23, 59, 59, 999);
+    const hotelKey = `${this.hotelId || ''}|${this.roomId || ''}`;
+
+    // Đổi tháng trong cửa sổ đã load → chỉ refilter, không gọi API
+    if (
+      !force &&
+      this.loadedRange &&
+      this.loadedRange.hotelKey === hotelKey &&
+      rangeStart.getTime() >= this.loadedRange.start &&
+      rangeEnd.getTime() <= this.loadedRange.end &&
+      this.allBookings.length > 0
+    ) {
+      this.applyMonthFilter();
+      return;
+    }
+
     this.isLoading = true;
-    const params: any = {};
+    this.loadSub?.unsubscribe();
+
+    const params: any = {
+      limit: 150,
+      startDate: rangeStart.toISOString(),
+      endDate: rangeEnd.toISOString(),
+      forceRefresh: force
+    };
     if (this.hotelId) params.hotelId = this.hotelId;
     if (this.roomId) params.roomId = this.roomId;
-    
-    // Tính toán startDate và endDate cho tháng hiện tại
-    const startDate = new Date(this.currentYear, this.currentMonth, 1);
-    const endDate = new Date(this.currentYear, this.currentMonth + 1, 0);
-    params.startDate = startDate.toISOString();
-    params.endDate = endDate.toISOString();
-    
-    this.roomsService.getBookings(params).subscribe(
-      (data) => {
-        this.bookings = (data.bookings || []).map((booking: any) => {
-          // Map booking từ backend sang format hiển thị
-          const checkInDate = booking.checkInDate ? new Date(booking.checkInDate) : null;
-          return {
-            ...booking,
-            userName: booking.guestInfo?.name || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED'),
-            startTime: checkInDate ? this.formatTime(checkInDate) : '',
-            endTime: booking.checkOutDate ? this.formatTime(new Date(booking.checkOutDate)) : '',
-            date: checkInDate || new Date(booking.createdAt || Date.now()),
-            status: booking.status || 'Booked'
-          };
-        });
+
+    this.loadSub = this.roomsService.getBookings(params).subscribe({
+      next: (data) => {
+        const mapped = (data.bookings || []).map((booking: any) => this.mapBooking(booking));
+        this.allBookings = mapped;
+        this.loadedRange = {
+          start: rangeStart.getTime(),
+          end: rangeEnd.getTime(),
+          hotelKey
+        };
+        this.applyMonthFilter();
         this.isLoading = false;
+        this.cdr.markForCheck();
       },
-      (error) => {
+      error: (error) => {
         console.error('Error loading bookings:', error);
         this.isLoading = false;
+        this.cdr.markForCheck();
       }
-    );
+    });
   }
 
-  // Format thời gian để hiển thị
+  private mapBooking(booking: any): Booking {
+    const checkInDate = booking.checkInDate ? new Date(booking.checkInDate) : null;
+    const status = booking.status || 'booked';
+    return {
+      ...booking,
+      userName: booking.guestInfo?.name || booking.guestDetails?.name || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED'),
+      startTime: checkInDate ? this.formatTime(checkInDate) : '',
+      endTime: booking.checkOutDate ? this.formatTime(new Date(booking.checkOutDate)) : '',
+      date: checkInDate || new Date(booking.createdAt || Date.now()),
+      status
+    };
+  }
+
+  private applyMonthFilter(): void {
+    const monthStart = new Date(this.currentYear, this.currentMonth, 1).getTime();
+    const monthEnd = new Date(this.currentYear, this.currentMonth + 1, 0, 23, 59, 59, 999).getTime();
+
+    this.bookings = this.allBookings.filter((booking) => {
+      const t = booking.date ? new Date(booking.date).getTime() : NaN;
+      return !isNaN(t) && t >= monthStart && t <= monthEnd;
+    });
+
+    this.rebuildBookingsByDay();
+  }
+
+  private dayKey(date: Date): string {
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  }
+
+  private rebuildBookingsByDay(): void {
+    const map = new Map<string, Booking[]>();
+    for (const booking of this.bookings) {
+      if (!booking.date) continue;
+      const d = new Date(booking.date);
+      if (isNaN(d.getTime())) continue;
+      const key = this.dayKey(d);
+      const list = map.get(key);
+      if (list) list.push(booking);
+      else map.set(key, [booking]);
+    }
+    this.bookingsByDay = map;
+  }
+
   formatTime(date: Date): string {
     const hours = date.getHours();
     const minutes = date.getMinutes();
@@ -169,8 +223,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   initializeCalendar() {
     const today = new Date();
-    this.currentMonth = today.getMonth(); // Tháng hiện tại (0-11)
-    this.currentYear = today.getFullYear(); // Năm hiện tại
+    this.currentMonth = today.getMonth();
+    this.currentYear = today.getFullYear();
     this.generateDates(this.currentMonth, this.currentYear);
   }
 
@@ -196,41 +250,34 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   getBookingsForDate(date: Date | null): Booking[] {
     if (!date) return [];
-    return this.bookings.filter(
-      booking => {
-        const bookingDate = booking.date || (booking.checkInDate ? new Date(booking.checkInDate) : null);
-        if (!bookingDate) return false;
-        return (
-          bookingDate.getDate() === date.getDate() &&
-          bookingDate.getMonth() === date.getMonth() &&
-          bookingDate.getFullYear() === date.getFullYear()
-        );
-      }
-    );
+    return this.bookingsByDay.get(this.dayKey(date)) || [];
   }
+
+  trackByDate = (_: number, date: Date | null): string => {
+    return date ? this.dayKey(date) : 'empty';
+  };
+
+  trackByBookingId = (_: number, booking: Booking): string => {
+    return String(booking._id || booking.bookingId || booking.roomId || _);
+  };
 
   isToday(date: Date): boolean {
     const today = new Date();
-    return (
-      date.getDate() === today.getDate() &&
+    return date.getDate() === today.getDate() &&
       date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
+      date.getFullYear() === today.getFullYear();
   }
 
-  isSelected(date: Date) {
-    return (
-      this.selectedDate &&
+  isSelected(date: Date): boolean {
+    return !!this.selectedDate &&
       date.getDate() === this.selectedDate.getDate() &&
       date.getMonth() === this.selectedDate.getMonth() &&
-      date.getFullYear() === this.selectedDate.getFullYear()
-    );
+      date.getFullYear() === this.selectedDate.getFullYear();
   }
 
   selectDate(date: Date | null) {
     if (!date) return;
     this.selectedDate = date;
-    // Emit event để room component có thể xử lý đặt phòng
     this.bookingSelected.emit({ date, roomId: this.roomId || undefined });
   }
 
@@ -242,7 +289,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       this.currentMonth--;
     }
     this.generateDates(this.currentMonth, this.currentYear);
-    this.loadBookings(); // Reload bookings khi đổi tháng
+    this.refresh(false);
   }
 
   nextMonth(): void {
@@ -253,17 +300,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
       this.currentMonth++;
     }
     this.generateDates(this.currentMonth, this.currentYear);
-    this.loadBookings(); // Reload bookings khi đổi tháng
+    this.refresh(false);
   }
 
   getDisplayMonth(): string {
-    const monthNumber = this.currentMonth + 1; // Cộng 1 để hiển thị đúng tháng (1-12)
+    const monthNumber = this.currentMonth + 1;
     return this.translate.instant(`CALENDAR.MONTHS.${monthNumber}`);
   }
 
-  confirmBooking() {
-    // Implement booking confirmation logic
-  }
+  confirmBooking() {}
 
   showModal(): void {
     this.modalRef = this.modalService.create({
@@ -284,15 +329,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
           onClick: () => this.modalRef?.close(),
         }
       ],
-      // Add more modal options as needed
     });
   }
 
   handleLabel() {}
-
   handleCheck() {}
 
-  // Hủy đặt phòng
   cancelBooking(booking: Booking): void {
     if (!booking.roomId) {
       this.message.error('Không tìm thấy thông tin phòng.');
@@ -307,7 +349,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
           <p><strong>${this.translate.instant('CALENDAR.GUEST')}:</strong> ${booking.userName || booking.guestInfo?.name || 'N/A'}</p>
           <p><strong>${this.translate.instant('CALENDAR.ROOM')}:</strong> ${booking.roomNumber || 'N/A'}</p>
           <p><strong>${this.translate.instant('CALENDAR.CHECKIN_DATE')}:</strong> ${booking.checkInDate ? new Date(booking.checkInDate).toLocaleString('vi-VN') : 'N/A'}</p>
-          <input type="text" id="cancelReason" placeholder="${this.translate.instant('CALENDAR.CANCEL_REASON')}" 
+          <input type="text" id="cancelReason" placeholder="${this.translate.instant('CALENDAR.CANCEL_REASON')}"
             style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; margin-top: 8px;" />
         </div>
       `,
@@ -317,69 +359,30 @@ export class CalendarComponent implements OnInit, OnDestroy {
       nzOnOk: () => {
         const reasonInput = document.getElementById('cancelReason') as HTMLInputElement;
         const reason = reasonInput ? reasonInput.value : this.translate.instant('CALENDAR.CANCEL_BOOKING');
-        
+
         this.isLoading = true;
-        // Lấy bookingId từ booking (có thể là bookingId hoặc _id)
         const bookingId = booking.bookingId || booking._id;
         this.roomsService.cancelBooking(
-          booking.roomId!, 
-          reason, 
-          bookingId, 
+          booking.roomId!,
+          reason,
+          bookingId,
           booking.checkInDate ? new Date(booking.checkInDate) : undefined
-        ).subscribe(
-          () => {
+        ).subscribe({
+          next: () => {
             this.message.success(this.translate.instant('CALENDAR.CANCEL_SUCCESS'));
-            this.isLoading = false;
-            
-            // Đợi một chút để backend cập nhật xong
-            setTimeout(() => {
-              // Reload bookings để cập nhật trạng thái thành 'cancelled'
-              this.loadBookings(); // Reload bookings cho calendar
-              this.loadAllBookings(); // Reload tất cả bookings cho bảng
-            }, 300);
-            
-            // Notify để reload rooms (phòng sẽ chuyển sang vacant và có thể đặt lại)
+            this.roomsService.clearBookingsCache();
+            this.refresh(true);
             this.roomsService.notifyRoomDataUpdated();
           },
-          (error) => {
+          error: (error) => {
             this.message.error(error.error?.message || this.translate.instant('CALENDAR.CANCEL_ERROR'));
             this.isLoading = false;
           }
-        );
+        });
       }
     });
   }
 
-  // Load tất cả bookings để hiển thị bên dưới (Giới hạn 100 cái mới nhất để chống giật)
-  loadAllBookings(): void {
-    if (!this.hotelId && !this.roomId) return;
-    
-    const params: any = {
-      limit: 100 // TỐI ƯU: Chỉ lấy 100 booking gần nhất để chống treo máy
-    };
-    if (this.hotelId) params.hotelId = this.hotelId;
-    if (this.roomId) params.roomId = this.roomId;
-    
-    this.roomsService.getBookings(params).subscribe(
-      (data) => {
-        this.allBookings = (data.bookings || []).map((booking: any) => {
-          const checkInDate = booking.checkInDate ? new Date(booking.checkInDate) : null;
-          const status = booking.status || 'booked';
-          return {
-            ...booking,
-            userName: booking.guestInfo?.name || booking.guestDetails?.name || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED'),
-            startTime: checkInDate ? this.formatTime(checkInDate) : '',
-            endTime: booking.checkOutDate ? this.formatTime(new Date(booking.checkOutDate)) : '',
-            date: checkInDate || new Date(booking.createdAt || Date.now()),
-            status: status
-          };
-        });
-      },
-      (error) => console.error('Error loading all bookings:', error)
-    );
-  }
-
-  // Format ngày giờ để hiển thị trong bảng
   formatDateTime(date: Date | string | undefined): string {
     if (!date) return 'N/A';
     const d = new Date(date);
@@ -395,114 +398,56 @@ export class CalendarComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Xem lịch sử đặt phòng (giữ lại để tương thích)
   viewBookingHistory(): void {
-    this.loadAllBookings();
+    this.refresh(true);
   }
 
-  // Kiểm tra xem booking có thể check-in không
   canCheckin(booking: Booking): boolean {
     if (!booking.roomId || !booking.checkInDate) {
       return false;
     }
-    
-    // Chỉ cho phép check-in nếu:
-    // 1. Status là 'booked' hoặc 'confirmed'
-    // 2. CheckInDate là hôm nay hoặc đã qua
-    const status = booking.status || 'booked';
-    if (status !== 'booked' && status !== 'confirmed') {
+    const status = String(booking.status || '').toLowerCase();
+    if (status === 'cancelled' || status === 'checked_in' || status === 'checked-in' || status === 'completed') {
       return false;
     }
-    
-    const checkInDate = new Date(booking.checkInDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    checkInDate.setHours(0, 0, 0, 0);
-    
-    // Cho phép check-in nếu ngày check-in là hôm nay hoặc đã qua
-    return checkInDate <= today;
+    return true;
   }
 
-  // Nhận phòng từ booking
   checkinBooking(booking: Booking): void {
-    if (!booking.roomId || !booking._id) {
-      this.message.error(this.translate.instant('CALENDAR.ROOM_NOT_FOUND'));
-      return;
-    }
+    if (!booking.roomId || this.isCheckingIn) return;
+    this.isCheckingIn = true;
 
-    // Bỏ check canCheckin - cho phép nhận phòng bất cứ lúc nào (có thể nhận sớm)
-    // if (!this.canCheckin(booking)) {
-    //   this.message.warning('Không thể nhận phòng cho booking này.');
-    //   return;
-    // }
+    const checkinData: any = {
+      status: 'occupied',
+      events: [{
+        type: 'checkin',
+        checkinTime: booking.checkInDate ? new Date(booking.checkInDate) : new Date(),
+        guestInfo: booking.guestInfo || {},
+        rateType: booking.rateType || 'hourly',
+        advancePayment: booking.advancePayment || 0,
+        notes: booking.notes || '',
+        bookingId: booking.bookingId || booking._id
+      }]
+    };
 
-    // Đảm bảo roomId là string (không phải undefined)
-    const roomId = booking.roomId;
-    if (!roomId) {
-      this.message.error(this.translate.instant('CALENDAR.ROOM_ID_NOT_FOUND'));
-      return;
-    }
-
-    this.modalService.confirm({
-      nzTitle: this.translate.instant('CALENDAR.CONFIRM_CHECKIN_TITLE'),
-      nzContent: `
-        <div style="margin-bottom: 16px;">
-          <p><strong>${this.translate.instant('CALENDAR.ROOM')}:</strong> ${booking.roomNumber || 'N/A'}</p>
-          <p><strong>${this.translate.instant('CALENDAR.GUEST')}:</strong> ${booking.guestInfo?.name || booking.userName || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED')}</p>
-          <p><strong>${this.translate.instant('CALENDAR.CHECKIN_DATE')}:</strong> ${this.formatDateTime(booking.checkInDate)}</p>
-          <p><strong>${this.translate.instant('CALENDAR.CHECKOUT_DATE')}:</strong> ${this.formatDateTime(booking.checkOutDate)}</p>
-          <p>${this.translate.instant('CALENDAR.CONFIRM_CHECKIN_MESSAGE')}</p>
-        </div>
-      `,
-      nzOkText: this.translate.instant('COMMON.CONFIRM'),
-      nzCancelText: this.translate.instant('CALENDAR.CANCEL'),
-      nzOnOk: () => {
-        this.isCheckingIn = true;
-        
-        // Lấy thông tin từ booking để check-in
-        const checkInTime = booking.checkInDate ? new Date(booking.checkInDate) : new Date();
-        const guestInfo = booking.guestInfo || { name: booking.userName || this.translate.instant('CALENDAR.GUEST_PRE_BOOKED') };
-        
-        // Lấy bookingId từ booking (có thể là _id hoặc bookingId)
-        const bookingId = booking.bookingId || booking._id;
-        
-        const checkinData = {
+    this.roomsService.checkInRoom(booking.roomId, checkinData).subscribe({
+      next: () => {
+        this.message.success(this.translate.instant('CALENDAR.CHECKIN_SUCCESS') || 'Nhận phòng thành công');
+        this.isCheckingIn = false;
+        this.roomsService.clearBookingsCache();
+        this.refresh(true);
+        this.roomsService.notifyRoomDataUpdated({
+          hotelId: this.hotelId || undefined,
+          roomId: booking.roomId,
+          reason: 'checkin',
           status: 'occupied',
-          events: [{
-            type: 'checkin',
-            checkinTime: checkInTime,
-            guestInfo: guestInfo,
-            paymentMethod: 'cash', // Mặc định
-            rateType: booking.rateType || 'hourly',
-            advancePayment: booking.advancePayment || 0,
-            additionalCharges: 0,
-            discount: 0,
-            notes: booking.notes || `${this.translate.instant('CALENDAR.CHECKIN')} từ booking ${bookingId}`,
-            selectedServices: []
-          }],
-          bookingId: bookingId // Đánh dấu booking này đã được check-in
-        };
-
-        this.roomsService.checkInRoom(roomId, checkinData).subscribe(
-          (response) => {
-            this.message.success(this.translate.instant('CALENDAR.CHECKIN_SUCCESS'));
-            this.isCheckingIn = false;
-            
-            // Đợi một chút để backend cập nhật booking status thành 'checked_in'
-            setTimeout(() => {
-              // Reload bookings để cập nhật trạng thái thành 'checked_in'
-              this.loadBookings();
-              this.loadAllBookings();
-            }, 500); // Tăng delay lên 500ms để đảm bảo backend đã cập nhật xong
-            
-            // Notify để reload rooms
-            this.roomsService.notifyRoomDataUpdated();
-          },
-          (error) => {
-            this.message.error(error.error?.message || this.translate.instant('CALENDAR.CHECKIN_ERROR'));
-            this.isCheckingIn = false;
-          }
-        );
+          refreshRooms: true,
+          delayMs: 0
+        });
+      },
+      error: (error) => {
+        this.message.error(error.error?.message || this.translate.instant('CALENDAR.CHECKIN_ERROR') || 'Không thể nhận phòng');
+        this.isCheckingIn = false;
       }
     });
   }

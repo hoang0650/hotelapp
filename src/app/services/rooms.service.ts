@@ -454,21 +454,67 @@ export class RoomsService {
     return this.http.post<any>(`${this.apiUrl}/booking/cancel/${roomId}`, body);
   }
 
-  // Lấy danh sách bookings
+  // Lấy danh sách bookings (có cache ngắn để calendar mở nhanh)
+  private bookingsCache = new Map<string, { at: number; data: any }>();
+  private bookingsInFlight = new Map<string, Observable<any>>();
+  private readonly bookingsCacheTtlMs = 30_000;
+
   getBookings(params?: {
     roomId?: string;
     hotelId?: string;
     startDate?: string;
     endDate?: string;
+    limit?: number;
+    forceRefresh?: boolean;
   }): Observable<any> {
     let httpParams = new HttpParams();
+    const keyParts: string[] = [];
     if (params) {
-      if (params.roomId) httpParams = httpParams.set('roomId', params.roomId);
-      if (params.hotelId) httpParams = httpParams.set('hotelId', params.hotelId);
-      if (params.startDate) httpParams = httpParams.set('startDate', params.startDate);
-      if (params.endDate) httpParams = httpParams.set('endDate', params.endDate);
+      if (params.roomId) {
+        httpParams = httpParams.set('roomId', params.roomId);
+        keyParts.push(`r:${params.roomId}`);
+      }
+      if (params.hotelId) {
+        httpParams = httpParams.set('hotelId', params.hotelId);
+        keyParts.push(`h:${params.hotelId}`);
+      }
+      if (params.startDate) {
+        httpParams = httpParams.set('startDate', params.startDate);
+        keyParts.push(`s:${params.startDate}`);
+      }
+      if (params.endDate) {
+        httpParams = httpParams.set('endDate', params.endDate);
+        keyParts.push(`e:${params.endDate}`);
+      }
+      if (params.limit) {
+        httpParams = httpParams.set('limit', String(params.limit));
+        keyParts.push(`l:${params.limit}`);
+      }
     }
-    return this.http.get<any>(`${this.apiUrl}/bookings`, { params: httpParams });
+    const cacheKey = keyParts.join('|') || 'all';
+    const now = Date.now();
+    const cached = this.bookingsCache.get(cacheKey);
+    if (!params?.forceRefresh && cached && now - cached.at < this.bookingsCacheTtlMs) {
+      return of(cached.data);
+    }
+    if (!params?.forceRefresh && this.bookingsInFlight.has(cacheKey)) {
+      return this.bookingsInFlight.get(cacheKey)!;
+    }
+
+    const req$ = this.http.get<any>(`${this.apiUrl}/bookings`, { params: httpParams }).pipe(
+      tap((data) => {
+        this.bookingsCache.set(cacheKey, { at: Date.now(), data });
+      }),
+      finalize(() => this.bookingsInFlight.delete(cacheKey)),
+      shareReplay(1)
+    );
+    this.bookingsInFlight.set(cacheKey, req$);
+    return req$;
+  }
+
+  clearBookingsCache(): void {
+    this.bookingsCache.clear();
+    this.bookingsInFlight.clear();
   }
 
   // Khách tạm ra ngoài

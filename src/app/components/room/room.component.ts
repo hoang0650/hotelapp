@@ -428,14 +428,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   
   onCalendarPanelChange(active: boolean): void {
     this.isCalendarPanelActive = active;
-    if (active && this.selectedHotelId && !this.isRoomsLoading) {
-      setTimeout(() => {
-        if (this.calendarComponent) {
-          this.calendarComponent.loadBookings();
-          this.calendarComponent.loadAllBookings();
-        }
-      }, 0);
-    }
+    // *ngIf tạo mới app-calendar → ngOnInit tự load 1 lần — không gọi API trùng
   }
   
   onHistoryPanelChange(active: boolean): void {
@@ -455,10 +448,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       setTimeout(() => {
         this.loadChartDataFromAPI(true);
         this.revenueChartComponent?.reload();
-        if (this.calendarComponent) {
-          this.calendarComponent.loadBookings();
-          this.calendarComponent.loadAllBookings();
-        }
+        // Calendar tự load qua ngOnInit khi panel mở
         this.scheduleRoomHistoryReload(true);
         this.tableComponent?.reloadData();
       }, 0);
@@ -4297,10 +4287,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       if (result?.success) {
         this.loadRooms(true);
         if (this.isCalendarPanelActive) {
-          this.loadBookings();
-          if (this.calendarComponent) {
-            this.calendarComponent.loadBookings();
-          }
+          this.roomsService.clearBookingsCache();
+          this.calendarComponent?.loadBookings();
         }
       }
     });
@@ -4350,10 +4338,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       if (result?.success) {
         this.loadRooms(true);
         if (this.isCalendarPanelActive) {
-          this.loadBookings();
-          if (this.calendarComponent) {
-            this.calendarComponent.loadBookings();
-          }
+          this.roomsService.clearBookingsCache();
+          this.calendarComponent?.loadBookings();
         }
       }
     });
