@@ -196,8 +196,11 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
       this.hotelService.normalizeHotelId(this.selectedHotelId) ||
       this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
 
-    const normalized = this.hotelService.normalizeHotelsList((hotels || []) as Hotel[]);
-    const ensured = this.hotelService.ensureSelectedHotelOption(normalized, selected, this.resolvedHotelName);
+    const filtered = this.hotelService.filterHotelsForUser(
+      hotels as Hotel[],
+      this.authService.getCurrentUser()
+    );
+    const ensured = this.hotelService.ensureSelectedHotelOption(filtered, selected, this.resolvedHotelName);
 
     this.hotels = ensured
       .map(hotel => ({

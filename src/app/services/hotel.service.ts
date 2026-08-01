@@ -69,6 +69,7 @@ export class HotelService {
       return String((hotelId as any)._id).trim() || null;
     }
     const s = String(hotelId).trim();
+    if (!s || s === '[object Object]') return null;
     return s || null;
   }
 
@@ -76,6 +77,71 @@ export class HotelService {
     const left = this.normalizeHotelId(a);
     const right = this.normalizeHotelId(b);
     return !!left && !!right && left === right;
+  }
+
+  /** Lấy businessId từ hotel (string / ObjectId / populated object) */
+  extractBusinessId(hotel: Hotel | null | undefined): string | null {
+    if (!hotel) return null;
+    return this.normalizeHotelId((hotel as any).businessId);
+  }
+
+  /**
+   * Lọc danh sách KS theo quyền sở hữu/role hiện tại.
+   * - superadmin/admin: tất cả
+   * - business: KS cùng businessId
+   * - hotel: KS cùng businessId (đa cơ sở), fallback hotelId / managerId
+   * - staff: chỉ hotelId của mình
+   */
+  filterHotelsForUser(
+    hotels: Hotel[] | null | undefined,
+    user: { role?: string; businessId?: unknown; hotelId?: unknown; _id?: unknown } | null | undefined,
+    options?: { activeOnly?: boolean }
+  ): Hotel[] {
+    const list = this.normalizeHotelsList(hotels);
+    const role = String(user?.role || '').trim().toLowerCase();
+    const activeOnly = !!options?.activeOnly;
+    const matchActive = (h: Hotel) =>
+      !activeOnly || !(h as any).status || (h as any).status === 'active';
+
+    if (role === 'superadmin' || role === 'admin') {
+      return list.filter(matchActive);
+    }
+
+    if (role === 'business') {
+      const businessId = this.normalizeHotelId(user?.businessId);
+      if (!businessId) return [];
+      return list.filter(
+        (h) => this.sameHotelId(this.extractBusinessId(h), businessId) && matchActive(h)
+      );
+    }
+
+    if (role === 'hotel') {
+      const businessId = this.normalizeHotelId(user?.businessId);
+      const hotelId = this.normalizeHotelId(user?.hotelId);
+      const userId = this.normalizeHotelId(user?._id);
+
+      if (businessId) {
+        const byBusiness = list.filter(
+          (h) => this.sameHotelId(this.extractBusinessId(h), businessId) && matchActive(h)
+        );
+        if (byBusiness.length > 0) return byBusiness;
+      }
+
+      return list.filter((h) => {
+        if (!matchActive(h)) return false;
+        if (hotelId && this.sameHotelId(h._id, hotelId)) return true;
+        if (userId && this.sameHotelId((h as any).managerId, userId)) return true;
+        return false;
+      });
+    }
+
+    if (role === 'staff') {
+      const hotelId = this.normalizeHotelId(user?.hotelId);
+      if (!hotelId) return [];
+      return list.filter((h) => this.sameHotelId(h._id, hotelId) && matchActive(h));
+    }
+
+    return [];
   }
 
   /** Stream hotelId đang chọn (cùng nguồn với sơ đồ phòng / session) */
@@ -236,17 +302,9 @@ export class HotelService {
       return of(this.hotelsListCache);
     }
 
-    // Có cache khác key (login warm) → trả ngay, caller tự filter theo role
-    if (
-      !options?.forceRefresh &&
-      this.hotelsListCache &&
-      this.hotelsListCache.length > 0 &&
-      now - this.hotelsListCacheAt < this.hotelsListTtlMs
-    ) {
-      return of(this.hotelsListCache);
-    }
+    // Không tái dùng cache sai key (tránh admin/business/hotel lẫn danh sách)
 
-    if (!options?.forceRefresh && this.hotelsListInFlight) {
+    if (!options?.forceRefresh && this.hotelsListInFlight && this.hotelsListCacheKey === key) {
       return this.hotelsListInFlight;
     }
 
@@ -261,8 +319,11 @@ export class HotelService {
       catchError((err) => {
         this.hotelsListInFlight = null;
         console.warn('[HotelService] getHotelsCached failed/timeout:', err?.message || err);
-        // Trả cache cũ hoặc [] — không treo UI 15s
-        return of(this.hotelsListCache || []);
+        // Chỉ trả cache nếu đúng key — tránh lẫn danh sách theo role
+        if (this.hotelsListCache && this.hotelsListCacheKey === key) {
+          return of(this.hotelsListCache);
+        }
+        return of([]);
       }),
       finalize(() => {
         this.hotelsListInFlight = null;

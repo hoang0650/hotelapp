@@ -221,31 +221,8 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
   }
 
   private applyHotelsList(data: Hotel[]): void {
-    if (this.isAdmin) {
-      this.availableHotels = data;
-    } else if (this.isBusiness && this.currentUser?.businessId) {
-      let userBusinessIdStr: string | null = null;
-
-      if (typeof this.currentUser.businessId === 'string') {
-        userBusinessIdStr = this.currentUser.businessId;
-      } else if (typeof this.currentUser.businessId === 'object' && this.currentUser.businessId !== null) {
-        const businessIdObj = this.currentUser.businessId as any;
-        if (businessIdObj._id) {
-          userBusinessIdStr = typeof businessIdObj._id === 'string'
-            ? businessIdObj._id
-            : businessIdObj._id.toString();
-        } else if (typeof businessIdObj.toString === 'function') {
-          userBusinessIdStr = businessIdObj.toString();
-        }
-      }
-
-      this.availableHotels = data.filter(hotel => {
-        const hotelBusinessId = this.extractBusinessId(hotel);
-        return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString();
-      });
-    } else {
-      this.availableHotels = [];
-    }
+    const user = this.currentUser || this.authService.getCurrentUser();
+    this.availableHotels = this.hotelService.filterHotelsForUser(data, user);
   }
 
   private getBusinessHotelIds(): string[] {

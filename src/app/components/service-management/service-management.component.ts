@@ -251,27 +251,11 @@ export class ServiceManagementComponent implements OnInit {
   }
 
   private applyHotelsList(data: Hotel[]): void {
-    const normalized = this.hotelService.normalizeHotelsList(data || []);
-    let filtered: Hotel[] = normalized;
-
-    if (this.isAdmin) {
-      filtered = normalized.filter(h => h.status === 'active' || !(h as any).status);
-    } else if (this.isBusiness && this.currentUser?.businessId) {
-      const userBusinessIdStr = this.hotelService.normalizeHotelId(this.currentUser.businessId);
-      filtered = normalized.filter(h => {
-        const hotelBusinessId = this.hotelService.normalizeHotelId(this.extractBusinessId(h));
-        return !!hotelBusinessId && !!userBusinessIdStr && hotelBusinessId === userBusinessIdStr
-          && (h.status === 'active' || !(h as any).status);
-      });
-    } else if (this.isHotelManager) {
-      const userHotelId = this.hotelService.normalizeHotelId(this.currentUser?.hotelId)
-        || this.hotelService.resolvePreferredHotelId();
-      filtered = userHotelId
-        ? normalized.filter(h => this.hotelService.sameHotelId(h._id, userHotelId))
-        : normalized;
-    } else {
-      filtered = [];
-    }
+    const filtered = this.hotelService.filterHotelsForUser(
+      data,
+      this.currentUser || this.authService.getCurrentUser(),
+      { activeOnly: true }
+    );
 
     const selected = this.hotelService.normalizeHotelId(this.selectedHotelId)
       || this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());

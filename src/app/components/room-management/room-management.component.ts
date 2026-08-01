@@ -464,27 +464,10 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
   }
 
   private applyHotelsList(data: Hotel[]): void {
-    const normalize = (id: unknown) => this.hotelService.normalizeHotelId(id);
-    const normalized = this.hotelService.normalizeHotelsList(data || []);
-    let filtered: Hotel[] = normalized;
+    const user = this.currentUser || this.authService.getCurrentUser();
+    const filtered = this.hotelService.filterHotelsForUser(data, user);
 
-    if (this.isAdmin) {
-      filtered = normalized;
-    } else if (this.isBusiness && this.currentUser?.businessId) {
-      const userBusinessIdStr = normalize(this.currentUser.businessId);
-      filtered = normalized.filter(hotel => {
-        const hotelBusinessId = normalize(this.extractBusinessId(hotel));
-        return !!hotelBusinessId && !!userBusinessIdStr && hotelBusinessId === userBusinessIdStr;
-      });
-    } else if (this.isHotelManager) {
-      const userHotelId = normalize(this.currentUser?.hotelId)
-        || this.hotelService.resolvePreferredHotelId();
-      filtered = userHotelId
-        ? normalized.filter(hotel => this.hotelService.sameHotelId(hotel._id, userHotelId))
-        : normalized;
-    }
-
-    const selected = normalize(this.selectedHotelId)
+    const selected = this.hotelService.normalizeHotelId(this.selectedHotelId)
       || this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
 
     this.hotels = this.hotelService.ensureSelectedHotelOption(filtered, selected);
@@ -493,7 +476,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
     }
 
     if (!selected && this.hotels.length > 0) {
-      this.onHotelChange(normalize(this.hotels[0]._id), { force: true });
+      this.onHotelChange(this.hotelService.normalizeHotelId(this.hotels[0]._id), { force: true });
       return;
     }
 

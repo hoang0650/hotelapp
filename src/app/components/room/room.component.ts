@@ -239,8 +239,11 @@ export class RoomComponent implements OnInit, OnDestroy {
           reason === 'guest_out' ||
           reason === 'guest_return';
 
-        // Checkout / status payload → patch tức thì (không rAF / không delay)
-        if (event?.roomId && (event.status || reason === 'checkout' || statusOnly || reason === 'checkin')) {
+        // Checkout / status / checkin → patch tức thì (không rAF / không delay)
+        if (event?.roomId && reason === 'checkin' && event.checkinInfo) {
+          // Có đủ dữ liệu nhận phòng → gắn event + __viewMeta đầy đủ (tránh card bị co)
+          this.applyCheckinCloseResult(event.roomId, event.checkinInfo);
+        } else if (event?.roomId && (event.status || reason === 'checkout' || statusOnly || reason === 'checkin')) {
           const status =
             event.status ||
             (reason === 'checkout' ? 'dirty' : reason === 'checkin' ? 'occupied' : undefined);
@@ -257,6 +260,14 @@ export class RoomComponent implements OnInit, OnDestroy {
                       ? 'in'
                       : undefined
           });
+          // Checkin không có checkinInfo và chưa có events → tải events để hiện chi tiết
+          if (reason === 'checkin') {
+            const idx = this.rooms.findIndex((r) => this.hotelService.sameHotelId(r._id, event.roomId));
+            const hasEvents = idx !== -1 && Array.isArray(this.rooms[idx].events) && this.rooms[idx].events!.length > 0;
+            if (!hasEvents) {
+              this.scheduleOccupiedEventsReload(true);
+            }
+          }
         }
 
         if (event?.refreshRooms) {
@@ -1008,12 +1019,11 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   loadHotels(): void {
     const currentUser = this.authService.getCurrentUser();
-    const userRole = String(currentUser?.role || '').trim().toLowerCase();
     const userHotelId = this.extractId(currentUser?.hotelId);
-    const userBusinessId = this.extractId(currentUser?.businessId);
+    const userBusinessId = this.hotelService.normalizeHotelId(currentUser?.businessId)
+      || this.authService.getBusinessId();
+    const userRole = String(currentUser?.role || '').trim().toLowerCase();
     const isPlatformAdmin = userRole === 'superadmin' || userRole === 'admin';
-    const isBusinessRole = userRole === 'business';
-    const isHotelRole = userRole === 'hotel';
 
     // Staff chỉ gắn 1 khách sạn
     if (this.authService.isStaff() && userHotelId) {
@@ -1055,41 +1065,28 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
 
     // superadmin/admin: lấy tất cả KS — không truyền businessId
-    // business/hotel: để backend filter theo quyền; FE có thể kèm businessId để rõ phạm vi
+    // business/hotel: kèm businessId để backend filter đúng phạm vi sở hữu
     const businessIdParam = isPlatformAdmin ? undefined : (userBusinessId || undefined);
 
     this.hotelService.getHotelsCached(businessIdParam, undefined, { lite: true }).subscribe({
       next: (data) => {
-        const hotels = Array.isArray(data) ? data : [];
-
-        if (isPlatformAdmin) {
-          this.hotels = hotels;
-        } else if (isBusinessRole) {
-          this.hotels = userBusinessId
-            ? hotels.filter((hotel) => this.extractBusinessId(hotel) === userBusinessId)
-            : hotels;
-        } else if (isHotelRole) {
-          // hotel: ưu tiên danh sách theo business; fallback hotelId nếu API chỉ trả 1
-          this.hotels = hotels;
-          if ((!this.hotels || this.hotels.length === 0) && userHotelId) {
-            this.hotelService.getHotelById(userHotelId, { lite: true }).subscribe({
-              next: (hotel) => {
-                this.hotels = hotel ? [hotel] : [];
-                this.applyHotelSelectionAfterLoad();
-                this.isLoading = false;
-                this.cdr.detectChanges();
-              },
-              error: () => {
-                this.hotels = [];
-                this.applyHotelSelectionAfterLoad();
-                this.isLoading = false;
-                this.cdr.detectChanges();
-              }
-            });
-            return;
-          }
-        } else {
-          this.hotels = [];
+        this.hotels = this.hotelService.filterHotelsForUser(data, currentUser);
+        if ((!this.hotels || this.hotels.length === 0) && userHotelId && userRole === 'hotel') {
+          this.hotelService.getHotelById(userHotelId, { lite: true }).subscribe({
+            next: (hotel) => {
+              this.hotels = hotel ? [hotel] : [];
+              this.applyHotelSelectionAfterLoad();
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            },
+            error: () => {
+              this.hotels = [];
+              this.applyHotelSelectionAfterLoad();
+              this.isLoading = false;
+              this.cdr.detectChanges();
+            }
+          });
+          return;
         }
 
         this.applyHotelSelectionAfterLoad();
@@ -2254,6 +2251,8 @@ export class RoomComponent implements OnInit, OnDestroy {
             hotelId: this.selectedHotelId || undefined,
             roomId: room._id!,
             reason: 'checkin',
+            status: 'occupied',
+            checkinInfo: result.checkinInfo,
             refreshRooms: false,
             refreshHistory: this.isHistoryPanelActive,
             force: false,
@@ -2375,7 +2374,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     // Mutate cùng ref đang bind — không spread object mới
     const room = this.rooms[roomIndex] as RoomWithMeta;
-    const checkinTime = checkinInfo?.checkinTime || checkinInfo?.checkInTime || null;
+    const checkinTime = checkinInfo?.checkinTime || checkinInfo?.checkInTime || new Date();
     room.status = 'occupied';
     room.guestStatus = undefined;
     room.events = [
@@ -2384,16 +2383,19 @@ export class RoomComponent implements OnInit, OnDestroy {
         roomId: id,
         checkinTime: checkinTime,
         checkInTime: checkinTime,
-        guestInfo: checkinInfo?.guestInfo,
+        guestInfo: checkinInfo?.guestInfo || {},
         rateType: checkinInfo?.rateType || 'hourly',
         advancePayment: Number(checkinInfo?.advancePayment) || 0,
         additionalCharges: Number(checkinInfo?.additionalCharges) || 0,
         discount: Number(checkinInfo?.discount) || 0,
         paymentMethod: checkinInfo?.paymentMethod,
         notes: checkinInfo?.notes,
-        selectedServices: checkinInfo?.selectedServices || []
+        selectedServices: checkinInfo?.selectedServices || [],
+        __synthetic: true
       }
     ] as any;
+    // Seed giá local để totalAmount hiện ngay trên card
+    this.seedLocalPricesForOccupiedRooms();
     room.__viewMeta = this.buildRoomCardMeta(room);
     this.recomputeStatusCountsOnly();
     this.markRoomLocallyPatched(id);
@@ -3236,6 +3238,13 @@ export class RoomComponent implements OnInit, OnDestroy {
             });
             
             // Đảm bảo events có đầy đủ thông tin, bao gồm transferredFrom, transferredAt, additionalCharges, discount
+            // Nếu API chưa có event (checkin vừa xong, backend chưa kịp) → giữ synthetic local
+            if ((!filteredEvents || filteredEvents.length === 0) &&
+                Array.isArray(this.rooms[roomIndex].events) &&
+                this.rooms[roomIndex].events!.length > 0) {
+              return;
+            }
+
             this.rooms[roomIndex].events = filteredEvents.map(event => {
               // Đảm bảo additionalCharges và discount được giữ nguyên từ RoomEvent
               const mappedEvent = {

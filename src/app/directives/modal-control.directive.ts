@@ -1010,13 +1010,47 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         
         // Lưu thông tin vào localStorage
         this.checkinCache.set(this.room._id, checkinData);
+
+        // Patch local ngay trên object đang bind sơ đồ
+        const checkinTime = checkinData.checkinTime;
+        this.room.status = 'occupied';
+        this.room.guestStatus = undefined;
+        this.room.events = [
+          {
+            type: 'checkin',
+            roomId: this.room._id,
+            checkinTime,
+            checkInTime: checkinTime,
+            guestInfo: checkinData.guestInfo,
+            rateType: checkinData.rateType,
+            advancePayment: Number(checkinData.advancePayment) || 0,
+            selectedServices: checkinData.selectedServices,
+            notes: checkinData.notes,
+            paymentMethod: checkinData.paymentMethod,
+            __synthetic: true
+          }
+        ] as any;
+        const hotelId = this.extractHotelId();
+        if (hotelId && this.room._id) {
+          this.roomsService.patchCachedRoom(hotelId, this.room);
+        }
       }
       
       // Delay notify để tránh trigger mở modal lại
       setTimeout(() => {
         // Chỉ notify nếu modal đã thực sự đóng và không có modal mới được mở
         if (!this.modalRef && closedModalRef) {
-          this.notifyRoomChanged('checkin', { delayMs: 0 });
+          this.roomsService.notifyRoomDataUpdated({
+            hotelId: this.extractHotelId() || undefined,
+            roomId: this.room._id,
+            reason: 'checkin',
+            status: 'occupied',
+            checkinInfo: result?.checkinInfo || undefined,
+            refreshRooms: false,
+            refreshHistory: true,
+            force: false,
+            delayMs: 0
+          });
         }
       }, 200);
     });
@@ -1381,6 +1415,28 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       this.isModalOpening = false;
       this.modalRef = null;
 
+      // Lưu thông tin khách (không trả phòng) — giữ occupied, tuyệt đối không gắn dirty
+      if (result?.action === 'save_guest_info' && this.room?._id) {
+        if (this.room.status !== 'occupied') {
+          this.room.status = 'occupied';
+        }
+        const hotelId = this.extractHotelId();
+        if (hotelId) {
+          this.roomsService.patchCachedRoom(hotelId, this.room);
+        }
+        this.roomsService.notifyRoomDataUpdated({
+          hotelId: hotelId || undefined,
+          roomId: this.room._id,
+          reason: 'status',
+          status: 'occupied',
+          refreshRooms: false,
+          refreshHistory: false,
+          force: false,
+          delayMs: 0
+        });
+        return;
+      }
+
       // Checkout: patch dirty ngay trên object phòng (cùng ref với sơ đồ)
       if (type === 'checkout' && result?.action === 'checkout' && this.room) {
         this.room.status = 'dirty';
@@ -1391,6 +1447,52 @@ export class ModalControlDirective implements OnInit, OnDestroy {
         if (hotelId && this.room._id) {
           this.roomsService.patchCachedRoom(hotelId, this.room);
         }
+      }
+
+      // Checkin: gắn event synthetic ngay trên cùng object ref — tránh card occupied bị co (thiếu displayInfo)
+      if (type === 'checkin' && result?.success && result?.checkinInfo && this.room) {
+        const info = result.checkinInfo;
+        const checkinTime = info.checkinTime || info.checkInTime || new Date();
+        this.room.status = 'occupied';
+        this.room.guestStatus = undefined;
+        this.room.events = [
+          {
+            type: 'checkin',
+            roomId: this.room._id,
+            checkinTime,
+            checkInTime: checkinTime,
+            guestInfo: info.guestInfo || {},
+            rateType: info.rateType || 'hourly',
+            advancePayment: Number(info.advancePayment) || 0,
+            additionalCharges: Number(info.additionalCharges) || 0,
+            discount: Number(info.discount) || 0,
+            paymentMethod: info.paymentMethod,
+            notes: info.notes,
+            selectedServices: info.selectedServices || [],
+            __synthetic: true
+          }
+        ] as any;
+        const hotelId = this.extractHotelId();
+        if (hotelId && this.room._id) {
+          this.roomsService.patchCachedRoom(hotelId, this.room);
+        }
+        this.roomsService.notifyRoomDataUpdated({
+          hotelId: hotelId || undefined,
+          roomId: this.room._id,
+          reason: 'checkin',
+          status: 'occupied',
+          checkinInfo: info,
+          refreshRooms: false,
+          refreshHistory: true,
+          force: false,
+          delayMs: 0
+        });
+        return;
+      }
+
+      // Đóng modal checkout mà không trả phòng (Cancel / X) — không đổi status
+      if (type === 'checkout' && result?.action !== 'checkout') {
+        return;
       }
 
       const reason: RoomDataUpdateEvent['reason'] =
@@ -1404,8 +1506,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
             refreshRooms: false,
             refreshHistory: type === 'checkout' || type === 'checkin'
           });
-          // Đảm bảo board nhận status dirty kèm emit
-          if (type === 'checkout' && this.room?._id) {
+          // Chỉ gắn dirty khi thực sự trả phòng
+          if (type === 'checkout' && result?.action === 'checkout' && this.room?._id) {
             this.roomsService.notifyRoomDataUpdated({
               hotelId: this.extractHotelId() || undefined,
               roomId: this.room._id,

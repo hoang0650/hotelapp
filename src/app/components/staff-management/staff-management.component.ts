@@ -447,25 +447,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   private applyHotelsList(hotels: any[]): void {
     const currentUser = this.authService.getCurrentUser();
-    const normalized = this.hotelService.normalizeHotelsList(hotels || []);
-    let filtered: any[] = normalized;
-
-    if (this.authService.isAdmin() || this.authService.isSuperAdmin()) {
-      filtered = normalized;
-    } else if (this.authService.isBusiness() && currentUser?.businessId) {
-      const userBusinessIdStr = this.hotelService.normalizeHotelId(currentUser.businessId)
-        || (typeof currentUser.businessId === 'string' ? currentUser.businessId : null);
-      filtered = normalized.filter((hotel: any) => {
-        const hotelBusinessId = this.hotelService.normalizeHotelId(this.extractBusinessId(hotel));
-        return !!hotelBusinessId && !!userBusinessIdStr && hotelBusinessId === String(userBusinessIdStr);
-      });
-    } else if (this.authService.isHotelManager()) {
-      const userHotelId = this.hotelService.normalizeHotelId(currentUser?.hotelId)
-        || this.hotelService.resolvePreferredHotelId();
-      filtered = userHotelId
-        ? normalized.filter((hotel: any) => this.hotelService.sameHotelId(hotel._id, userHotelId))
-        : normalized;
-    }
+    const filtered = this.hotelService.filterHotelsForUser(hotels, currentUser);
 
     const selected =
       this.hotelService.normalizeHotelId(this.selectedHotelId) ||
@@ -480,7 +462,6 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
       this.onHotelChange(String(this.hotels[0]._id));
     }
 
-    // Nếu chỉ có stub (chưa có tên) → lấy tên KS lite để dropdown hiện đúng
     this.hydrateSelectedHotelLabel(selected);
   }
 

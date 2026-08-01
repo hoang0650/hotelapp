@@ -202,25 +202,11 @@ export class GuestManagementComponent implements OnInit {
   loadHotels(): void {
     this.isLoading = true;
     const apply = (data: Hotel[]) => {
-      const normalized = this.hotelService.normalizeHotelsList(data || []);
-      let filtered: Hotel[] = [];
-
-      if (this.isAdmin || this.isSuperAdmin) {
-        filtered = normalized;
-      } else if (this.isBusiness && this.currentUser?.businessId) {
-        const userBusinessId = this.hotelService.normalizeHotelId(this.currentUser.businessId);
-        filtered = normalized.filter(h => {
-          const hotelBusinessId = this.hotelService.normalizeHotelId(this.extractBusinessId(h));
-          return !!hotelBusinessId && !!userBusinessId && hotelBusinessId === userBusinessId
-            && h.status === 'active';
-        });
-      } else if ((this.isHotelManager || this.isStaff)) {
-        const userHotelId = this.hotelService.normalizeHotelId(this.currentUser?.hotelId)
-          || this.hotelService.resolvePreferredHotelId();
-        filtered = userHotelId
-          ? normalized.filter(h => this.hotelService.sameHotelId(h._id, userHotelId) && h.status === 'active')
-          : [];
-      }
+      const filtered = this.hotelService.filterHotelsForUser(
+        data,
+        this.currentUser || this.authService.getCurrentUser(),
+        { activeOnly: true }
+      );
 
       const selected = this.hotelService.normalizeHotelId(this.selectedHotelId)
         || this.hotelService.resolvePreferredHotelId(this.authService.getHotelId())

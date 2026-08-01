@@ -442,7 +442,12 @@ clearCredentials(): void {
 
   getBusinessId(): string | null {
     const user = this.getCurrentUser();
-    return user?.businessId || null;
+    const raw = user?.businessId as any;
+    if (!raw) return null;
+    if (typeof raw === 'object' && raw._id) return String(raw._id);
+    const s = String(raw).trim();
+    if (!s || s === '[object Object]') return null;
+    return s;
   }
 
   getUserId(): string | null {

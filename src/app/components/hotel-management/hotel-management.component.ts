@@ -180,14 +180,25 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
     if (this.isAdmin) return true;
     
     if (this.isBusiness) {
-      const hotel = this.hotels?.find(h => h._id === hotelId);
-      const hotelBusinessId = hotel ? this.extractBusinessId(hotel) : null;
-      return !!this.currentUser?.businessId && !!hotelBusinessId && this.currentUser.businessId === hotelBusinessId;
+      const hotel = this.hotels?.find(h => this.hotelService.sameHotelId(h._id, hotelId));
+      const hotelBusinessId = hotel ? this.hotelService.extractBusinessId(hotel) : null;
+      const userBusinessId = this.hotelService.normalizeHotelId(this.currentUser?.businessId);
+      return !!userBusinessId && !!hotelBusinessId && this.hotelService.sameHotelId(hotelBusinessId, userBusinessId);
     }
     
-    // Hotel manager chỉ quản lý được hotel của mình
+    // Hotel manager: KS của mình / cùng business / mình là manager
     if (this.isHotelManager) {
-      return this.currentUser.hotelId === hotelId;
+      const hotel = this.hotels?.find(h => this.hotelService.sameHotelId(h._id, hotelId));
+      if (!hotel) return false;
+      const userHotelId = this.hotelService.normalizeHotelId(this.currentUser.hotelId);
+      const userBusinessId = this.hotelService.normalizeHotelId(this.currentUser.businessId);
+      const userId = this.hotelService.normalizeHotelId(this.currentUser._id);
+      if (userHotelId && this.hotelService.sameHotelId(hotel._id, userHotelId)) return true;
+      if (userId && this.hotelService.sameHotelId((hotel as any).managerId, userId)) return true;
+      if (userBusinessId && this.hotelService.sameHotelId(this.hotelService.extractBusinessId(hotel), userBusinessId)) {
+        return true;
+      }
+      return false;
     }
     
     return false;
@@ -268,34 +279,8 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
   }
 
   private applyHotelsList(data: Hotel[]): void {
-    if (this.isAdmin) {
-      this.hotels = data;
-    } else if (this.isBusiness && this.currentUser?.businessId) {
-      let userBusinessIdStr: string | null = null;
-
-      if (typeof this.currentUser.businessId === 'string') {
-        userBusinessIdStr = this.currentUser.businessId;
-      } else if (typeof this.currentUser.businessId === 'object' && this.currentUser.businessId !== null) {
-        const businessIdObj = this.currentUser.businessId as any;
-        if (businessIdObj._id) {
-          userBusinessIdStr = typeof businessIdObj._id === 'string'
-            ? businessIdObj._id
-            : businessIdObj._id.toString();
-        } else if (typeof businessIdObj.toString === 'function') {
-          userBusinessIdStr = businessIdObj.toString();
-        }
-      }
-
-      this.hotels = data.filter(hotel => {
-        const hotelBusinessId = this.extractBusinessId(hotel);
-        return hotelBusinessId && userBusinessIdStr && hotelBusinessId.toString() === userBusinessIdStr.toString();
-      });
-    } else if (this.isHotelManager && this.currentUser?.hotelId) {
-      const userHotelId = this.hotelService.normalizeHotelId(this.currentUser.hotelId);
-      this.hotels = data.filter(hotel => this.hotelService.sameHotelId(hotel._id, userHotelId));
-    } else {
-      this.hotels = [];
-    }
+    const user = this.currentUser || this.authService.getCurrentUser();
+    this.hotels = this.hotelService.filterHotelsForUser(data, user);
   }
 
   loadBusinesses(): void {

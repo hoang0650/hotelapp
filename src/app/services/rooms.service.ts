@@ -27,6 +27,8 @@ export interface RoomDataUpdateEvent {
   /** Patch trạng thái local ngay (checkout → dirty) — không cần GET */
   status?: string;
   guestStatus?: string | null;
+  /** Dữ liệu nhận phòng để sơ đồ hiện đủ chi tiết ngay (tránh card bị co) */
+  checkinInfo?: any;
   refreshRooms?: boolean;
   refreshHistory?: boolean;
   force?: boolean;

@@ -4412,8 +4412,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Emit sơ đồ phòng ngay (không chờ getRoomById)
-    this.emitRoomDataUpdated('checkin', { roomId: this.roomData._id, force: false, delayMs: 0 });
+    // Emit sơ đồ phòng ngay — giữ occupied (không phải trả phòng)
+    this.emitRoomDataUpdated('status', {
+      roomId: this.roomData._id,
+      status: 'occupied',
+      force: false,
+      delayMs: 0,
+      refreshRooms: false,
+      refreshHistory: false
+    });
 
     // 2) Persist nền: Redis + API + phiếu thu
     const hotelId = this.normalizeObjectId(
@@ -4470,8 +4477,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             .subscribe({
               next: (updatedRoom) => {
                 this.roomData = updatedRoom;
-                this.emitRoomDataUpdated('checkin', {
+                this.emitRoomDataUpdated('status', {
                   roomId: this.roomData?._id,
+                  status: 'occupied',
                   force: false,
                   delayMs: 0,
                   refreshRooms: false,

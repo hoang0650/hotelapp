@@ -155,29 +155,11 @@ export class DebtManagementComponent implements OnInit {
   }
 
   private applyHotelsList(data: Hotel[]): void {
-    const normalized = this.hotelService.normalizeHotelsList(data || []);
-    let filtered: Hotel[] = normalized;
-
-    if (this.isAdmin) {
-      filtered = normalized.filter(h => h.status === 'active' || !(h as any).status);
-    } else if (this.isBusiness && this.currentUser?.businessId) {
-      const userBusinessId = this.hotelService.normalizeHotelId(this.currentUser.businessId);
-      filtered = normalized.filter(h => {
-        const hotelBusinessId = this.hotelService.normalizeHotelId(
-          typeof h.businessId === 'object' ? (h.businessId as any)?._id : h.businessId
-        );
-        return !!hotelBusinessId && !!userBusinessId && hotelBusinessId === userBusinessId
-          && (h.status === 'active' || !(h as any).status);
-      });
-    } else if (this.isHotelManager) {
-      const userHotelId = this.hotelService.normalizeHotelId(this.currentUser?.hotelId)
-        || this.hotelService.resolvePreferredHotelId();
-      filtered = userHotelId
-        ? normalized.filter(h => this.hotelService.sameHotelId(h._id, userHotelId))
-        : normalized;
-    } else {
-      filtered = [];
-    }
+    const filtered = this.hotelService.filterHotelsForUser(
+      data,
+      this.currentUser || this.authService.getCurrentUser(),
+      { activeOnly: true }
+    );
 
     const selected = this.hotelService.normalizeHotelId(this.selectedHotelId)
       || this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());

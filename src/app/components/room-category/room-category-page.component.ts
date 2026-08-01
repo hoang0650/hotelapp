@@ -70,8 +70,13 @@ export class RoomCategoryPageComponent implements OnInit {
     const selected = this.hotelService.normalizeHotelId(this.selectedHotelId)
       || this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
 
-    this.hotels = this.hotelService.ensureSelectedHotelOption(
+    const filtered = this.hotelService.filterHotelsForUser(
       list,
+      this.authService.getCurrentUser()
+    );
+
+    this.hotels = this.hotelService.ensureSelectedHotelOption(
+      filtered,
       selected,
       this.hotelService.getCachedHotelName(selected)
     );
