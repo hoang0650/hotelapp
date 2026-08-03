@@ -6,6 +6,7 @@ import { HotelService } from '../../services/hotel.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
+import { getCookie, setCookie } from '../../utils/cookie-storage';
 
 @Component({
   selector: 'app-room-category',
@@ -222,7 +223,7 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
   private loadHolidayDates(): string {
     try {
       if (typeof window === 'undefined') return '';
-      return localStorage.getItem(this.getHolidayStorageKey()) || '';
+      return getCookie(this.getHolidayStorageKey()) || '';
     } catch {
       return '';
     }
@@ -232,7 +233,7 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
     try {
       if (typeof window === 'undefined') return;
       const v = String(value || '').trim();
-      localStorage.setItem(this.getHolidayStorageKey(), v);
+      setCookie(this.getHolidayStorageKey(), v);
     } catch {}
   }
 

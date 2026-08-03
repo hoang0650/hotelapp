@@ -1,6 +1,7 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { getCookie, setCookie } from '../utils/cookie-storage';
 
 export type AppTheme = 'light' | 'dark';
 
@@ -46,7 +47,7 @@ export class ThemeService {
       return 'light';
     }
     try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      const stored = getCookie(THEME_STORAGE_KEY);
       if (stored === 'dark' || stored === 'light') {
         return stored;
       }
@@ -58,9 +59,7 @@ export class ThemeService {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch {}
+    setCookie(THEME_STORAGE_KEY, theme);
   }
 
   private applyTheme(theme: AppTheme): void {

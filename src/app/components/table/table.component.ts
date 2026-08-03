@@ -572,7 +572,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           (response) => {
             this.message.success('Check-in lại thành công');
             
-            // Lưu thông tin checkin event vào localStorage nếu có trong response
+            // Lưu thông tin checkin event vào checkin cache nếu có trong response
             if (response.checkinEvent && response.room?._id) {
               try {
                 const checkinEvent = response.checkinEvent;
@@ -592,7 +592,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
                   roomNumber: response.room.roomNumber
                 };
                 this.checkinCache.set(response.room._id, checkinData);
-                console.log('Saved recheckin event data to localStorage:', checkinData);
+                console.log('Saved recheckin event data to checkin cache:', checkinData);
               } catch (e) {
                 console.error('Error saving recheckin event data:', e);
               }

@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
+import { getCookie, setCookie } from '../utils/cookie-storage';
 
 /**
  * Service để quản lý translation toàn hệ thống
@@ -144,7 +145,7 @@ export class TranslationService {
   private getStoredLanguage(): string | null {
     if (!isPlatformBrowser(this.platformId)) return null;
     try {
-      return localStorage.getItem('language');
+      return getCookie('language');
     } catch {
       return null;
     }
@@ -152,9 +153,7 @@ export class TranslationService {
 
   private setStoredLanguage(lang: string): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    try {
-      localStorage.setItem('language', lang);
-    } catch {}
+    setCookie('language', lang);
   }
 }
 

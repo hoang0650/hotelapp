@@ -454,7 +454,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           .pipe(take(1))
           .subscribe({
             next: () => {
-              // Xóa dữ liệu đặt phòng khỏi localStorage
+              // Xóa dữ liệu đặt phòng khỏi checkin cache
               /* booking cache removed — Redis roomSessions */ void this.room._id;
               
               this.modalService.success({
@@ -517,7 +517,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           }
         }
         
-        // Fallback: lấy từ localStorage nếu vẫn chưa có
+        // Fallback: lấy từ checkin cache nếu vẫn chưa có
         if (!guestInfo.name || guestInfo.name === 'Khách lẻ') {
           const checkinData = this.checkinCache.getSync(this.room._id);
           if (checkinData) {
@@ -995,7 +995,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       
       // Lưu thông tin checkin để sử dụng khi checkout nếu có kết quả trả về
       if (result && result.checkinInfo) {
-        // Lưu thông tin vào localStorage hoặc service
+        // Lưu thông tin vào checkin cache / Redis
         const checkinData = {
           roomId: this.room._id,
           roomNumber: this.room.roomNumber,
@@ -1008,7 +1008,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           notes: result.checkinInfo.notes || ''
         };
         
-        // Lưu thông tin vào localStorage
+        // Lưu thông tin vào checkin cache
         this.checkinCache.set(this.room._id, checkinData);
 
         // Patch local ngay trên object đang bind sơ đồ
@@ -1790,7 +1790,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       checkoutEvent = this.room.events.find((event: any) => event.type === 'checkout');
     }
     
-    // Lấy thông tin lưu trữ từ localStorage nếu có
+    // Lấy thông tin lưu trữ từ checkin cache nếu có
     let checkinInfo = this.checkinCache.getSync(this.room._id);
     
     // Tính thời gian sử dụng
@@ -1934,7 +1934,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       rateType: invoiceData.rateType || 'hourly'
     };
 
-    // Lấy thông tin checkin từ localStorage nếu có
+    // Lấy thông tin checkin từ checkin cache nếu có
     const roomId = this.room?._id || invoiceData.roomId;
     const checkinInfo = this.checkinCache.getSync(roomId);
     
@@ -1985,7 +1985,7 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           ];
         }
         
-        // Sau khi checkout thành công, xóa thông tin checkin khỏi localStorage
+        // Sau khi checkout thành công, xóa thông tin checkin khỏi cache
         if (invoiceData.checkOutTime) {
           this.checkinCache.remove(roomId);
         }

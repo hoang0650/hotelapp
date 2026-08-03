@@ -23,6 +23,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { TransactionService } from '../../services/transaction.service';
 import { environment } from '../../../environments/environment';
+import { getCookie } from '../../utils/cookie-storage';
 import { debounceTime, distinctUntilChanged, takeUntil, take } from 'rxjs/operators'
 import { Subject } from 'rxjs';
 
@@ -1340,9 +1341,6 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.selectedServices.splice(index, 1);
     
     console.log('Removed service:', removedService);
-    
-    // Cập nhật session (nếu cần)
-    sessionStorage.setItem('selectedServices', JSON.stringify(this.selectedServices));
     
     // Cập nhật vào RoomEvent nếu phòng đang occupied và có event checkin
     if (this.roomData._id && this.roomData.status === 'occupied') {
@@ -3421,7 +3419,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       const fallback = ['01-01', '04-30', '05-01', '09-02'];
       try {
         if (typeof window === 'undefined') return new Set(fallback);
-        const raw = localStorage.getItem(holidayKey) || '';
+        const raw = getCookie(holidayKey) || '';
         const values = raw
           .split(/[\n,;]+/g)
           .map((v) => String(v || '').trim())

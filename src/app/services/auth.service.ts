@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { User } from '../interfaces/user';
 import { jwtDecode } from 'jwt-decode';
 import { environment } from '../../environments/environment';
+import { getCookie, removeCookie, setCookie } from '../utils/cookie-storage';
 
 interface AuthResponse {
   token: string;
@@ -40,49 +41,14 @@ export class AuthService {
   private refreshRequest$: Observable<boolean> | null = null;
   public authResolved = new BehaviorSubject<boolean>(false);
   public authResolved$ = this.authResolved.asObservable();
-  private readonly sessionTokenKey = 'phhotel_session_token';
-  private readonly sessionUserKey = 'phhotel_session_user';
 
   constructor(private http: HttpClient, private router: Router) {
-    // Phải chạy trước restore — iframe logout từ domain kia
+    // Phải chạy trước refresh — iframe logout từ domain kia
     this.consumeClearSessionRequest();
-    this.restoreSessionFromStorage();
+    // Session từ httpOnly refresh cookie + memory — không dùng sessionStorage/localStorage
     this.refreshAccessToken().subscribe(() => {
       this.authResolved.next(true);
     });
-  }
-
-  private restoreSessionFromStorage(): void {
-    if (typeof sessionStorage === 'undefined') return;
-    try {
-      const token = sessionStorage.getItem(this.sessionTokenKey);
-      const rawUser = sessionStorage.getItem(this.sessionUserKey);
-      if (!token || !rawUser) return;
-      if (!this.isJwtStillValid(token)) {
-        this.clearSessionStorage();
-        return;
-      }
-      this.inMemoryToken = token;
-      this.currentUserSubject.next(JSON.parse(rawUser));
-    } catch {
-      this.clearSessionStorage();
-    }
-  }
-
-  private persistSession(token: string, user: User): void {
-    if (typeof sessionStorage === 'undefined') return;
-    try {
-      sessionStorage.setItem(this.sessionTokenKey, token);
-      sessionStorage.setItem(this.sessionUserKey, JSON.stringify(user));
-    } catch {}
-  }
-
-  private clearSessionStorage(): void {
-    if (typeof sessionStorage === 'undefined') return;
-    try {
-      sessionStorage.removeItem(this.sessionTokenKey);
-      sessionStorage.removeItem(this.sessionUserKey);
-    } catch {}
   }
 
   private isJwtStillValid(token: string): boolean {
@@ -111,27 +77,24 @@ export class AuthService {
         if (response && response.token) {
           this.inMemoryToken = response.token;
           this.currentUserSubject.next(response.user);
-          this.persistSession(response.token, response.user);
           return true;
         }
         return this.hasValidStoredSession();
       }),
       catchError((err) => {
         const status = err?.status;
-        // Cookie refresh hết hạn / không còn → xóa session local (tránh JWT cũ trên phhotel.vn đẩy sang admin)
+        // Cookie refresh hết hạn / không còn → xóa session memory
         if (status === 401 || status === 403) {
           this.inMemoryToken = null;
           this.currentUserSubject.next(null);
-          this.clearSessionStorage();
           return of(false);
         }
-        // Lỗi mạng tạm thời: giữ phiên JWT còn hạn
+        // Lỗi mạng tạm thời: giữ phiên JWT còn hạn trong memory
         if (this.hasValidStoredSession()) {
           return of(true);
         }
         this.inMemoryToken = null;
         this.currentUserSubject.next(null);
-        this.clearSessionStorage();
         return of(false);
       }),
       finalize(() => {
@@ -159,7 +122,6 @@ export class AuthService {
           if (response && response.token) {
             this.inMemoryToken = response.token;
             this.currentUserSubject.next(response.user);
-            this.persistSession(response.token, response.user);
             return true;
           }
           return false;
@@ -171,32 +133,17 @@ export class AuthService {
   loginFromShiftHandover(token: string, user: User): void {
     this.inMemoryToken = token;
     this.currentUserSubject.next(user);
-    this.persistSession(token, user);
   }
 
   /** Chỉ xóa phiên local, không redirect (dùng trên trang public khi 401). */
   clearLocalSessionOnly(): void {
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
-    this.clearSessionStorage();
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('user');
-      localStorage.removeItem('staff');
-    }
   }
 
   logout(): void {
     if (this.isLoggingOut) return;
     this.isLoggingOut = true;
-
-    // Giữ lại việc dọn dẹp các ID cấu hình lặt vặt nếu cần, 
-    // nhưng tuyệt đối không còn dữ liệu 'user' nào trong localStorage nữa
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('user');
-      localStorage.removeItem('staff');
-    }
-    this.clearSessionStorage();
-    this.clearPeerOriginSession();
 
     this.inMemoryToken = null;
     this.currentUserSubject.next(null);
@@ -208,40 +155,7 @@ export class AuthService {
     });
   }
 
-  /** Xóa sessionStorage trên domain còn lại (admin ↔ apex) — sessionStorage không chia sẻ cross-origin. */
-  private clearPeerOriginSession(): void {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') return;
-
-    const protocol = window.location.protocol;
-    const port = window.location.port ? `:${window.location.port}` : '';
-
-    let peerHost: string | null = null;
-    if (hostname.startsWith('admin.')) {
-      peerHost = hostname.replace(/^admin\./, '');
-    } else if (hostname === 'phhotel.vn' || hostname === 'www.phhotel.vn') {
-      peerHost = 'admin.phhotel.vn';
-    } else {
-      return;
-    }
-
-    try {
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.setAttribute('aria-hidden', 'true');
-      iframe.src = `${protocol}//${peerHost}${port}/?clear_session=1`;
-      document.body.appendChild(iframe);
-      window.setTimeout(() => {
-        try {
-          iframe.remove();
-        } catch {}
-      }, 4000);
-    } catch {}
-  }
-
-  /** Gọi sớm khi load trang với ?clear_session=1 (iframe từ logout ở domain kia). */
+  /** Gọi sớm khi load trang với ?clear_session=1 (iframe từ logout ở domain kia — legacy). */
   consumeClearSessionRequest(): boolean {
     if (typeof window === 'undefined') return false;
     try {
@@ -251,11 +165,6 @@ export class AuthService {
       }
       this.inMemoryToken = null;
       this.currentUserSubject.next(null);
-      this.clearSessionStorage();
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('user');
-        localStorage.removeItem('staff');
-      }
       // Dọn query để không lặp lại khi user F5
       params.delete('clear_session');
       const nextQuery = params.toString();
@@ -312,33 +221,24 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
-  // Lưu thông tin đăng nhập vào LocalStorage
-saveCredentials(username: string, password: string): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('remember_me_user', username);
-    localStorage.setItem('remember_me_pass', btoa(password)); // Mã hóa Base64 đơn giản để tránh lưu plain-text
+  /** Remember-me: chỉ lưu username vào cookie (không lưu mật khẩu). */
+  saveCredentials(username: string, _password?: string): void {
+    setCookie('remember_me_user', username, { maxAgeSec: 30 * 24 * 60 * 60 });
+    removeCookie('remember_me_pass');
   }
-}
 
-// Lấy thông tin đã lưu
-getSavedCredentials(): { username: string, password: string } | null {
-  if (typeof window !== 'undefined') {
-    const user = localStorage.getItem('remember_me_user');
-    const pass = localStorage.getItem('remember_me_pass');
-    if (user && pass) {
-      return { username: user, password: atob(pass) };
+  getSavedCredentials(): { username: string, password: string } | null {
+    const user = getCookie('remember_me_user');
+    if (user) {
+      return { username: user, password: '' };
     }
+    return null;
   }
-  return null;
-}
 
-// Xóa thông tin khi đăng xuất
-clearCredentials(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('remember_me_user');
-    localStorage.removeItem('remember_me_pass');
+  clearCredentials(): void {
+    removeCookie('remember_me_user');
+    removeCookie('remember_me_pass');
   }
-}
 
   // ============ KIỂM TRA VAI TRÒ ============
 

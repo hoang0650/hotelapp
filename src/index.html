@@ -45,7 +45,9 @@
   <script>
     (function () {
       try {
-        var theme = localStorage.getItem('phhotel_theme');
+        var theme = null;
+        var match = document.cookie.match(/(?:^|;\s*)phhotel_theme=([^;]*)/);
+        if (match) theme = decodeURIComponent(match[1]);
         if (theme === 'dark' || theme === 'light') {
           document.documentElement.setAttribute('data-theme', theme);
         } else {

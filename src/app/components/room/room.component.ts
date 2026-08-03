@@ -23,6 +23,7 @@ import { UserService } from '../../services/user.service';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { CurrencyService } from '../../services/currency.service';
+import { getCookie } from '../../utils/cookie-storage';
 import { RoomSessionService } from '../../services/room-session.service';
 import { ApiService } from '../../services/api.service';
 import { SessionContextService } from '../../services/session-context.service';
@@ -3403,7 +3404,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       const fallback = ['01-01', '04-30', '05-01', '09-02'];
       try {
         if (typeof window === 'undefined') return new Set(fallback);
-        const raw = localStorage.getItem(holidayKey) || '';
+        const raw = getCookie(holidayKey) || '';
         const values = raw
           .split(/[\n,;]+/g)
           .map((value) => String(value || '').trim())

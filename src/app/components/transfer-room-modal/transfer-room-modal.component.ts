@@ -102,7 +102,7 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
         const booking = response.booking;
         const checkinEvent = response.checkinEvent; // Thông tin check-in mới từ backend
         
-        // Lưu thông tin checkin vào localStorage cho phòng đích
+        // Lưu thông tin checkin vào checkin cache cho phòng đích
         // Ưu tiên sử dụng thông tin từ response.checkinEvent (từ backend)
         if (checkinEvent && targetRoom?._id) {
           try {
@@ -123,14 +123,14 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
               transferredFromRoomNumber: this.sourceRoom.roomNumber,
               transferredAt: checkinEvent.transferredAt || new Date()
             };
-            // Lưu vào localStorage cho phòng đích
+            // Lưu vào checkin cache cho phòng đích
             this.checkinCache.set(targetRoom._id, targetCheckinData);
             console.log('Saved checkin data from backend response:', targetCheckinData);
           } catch (e) {
             console.error('Error saving transfer checkin data from response:', e);
           }
         } else {
-          // Fallback: Lấy thông tin từ phòng nguồn (nếu có trong localStorage)
+          // Fallback: Lấy thông tin từ phòng nguồn (nếu có trong checkin cache)
           const checkinData = this.checkinCache.getSync(this.sourceRoom._id);
           if (checkinData && targetRoom?._id) {
             try {
@@ -143,11 +143,11 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
                 transferredFromRoomNumber: this.sourceRoom.roomNumber,
                 transferredAt: new Date()
               };
-              // Lưu vào localStorage cho phòng đích
+              // Lưu vào checkin cache cho phòng đích
               this.checkinCache.set(targetRoom._id, targetCheckinData);
-              console.log('Saved checkin data from localStorage fallback:', targetCheckinData);
+              console.log('Saved checkin data from checkin cache fallback:', targetCheckinData);
             } catch (e) {
-              console.error('Error saving transfer checkin data from localStorage:', e);
+              console.error('Error saving transfer checkin data from checkin cache:', e);
             }
           }
         }

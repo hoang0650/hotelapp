@@ -37,7 +37,7 @@ export class AppComponent implements OnInit, OnDestroy {
     @Inject(PLATFORM_ID) private platformId: any
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
-    // Khởi tạo theme sớm (đọc localStorage + apply data-theme)
+    // Khởi tạo theme sớm (đọc cookie + apply data-theme)
     void this.themeService.currentTheme;
   }
 
