@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -63,7 +64,10 @@ export class ApiService {
   getSelectedHotel(_userId?: string): Observable<any> {
     return this.http.get(this.buildUrl('/sessions/selected-hotel'), {
       headers: this.getAuthHeaders()
-    });
+    }).pipe(
+      timeout(2500),
+      catchError(() => of({ selectedHotelId: null }))
+    );
   }
 
   saveSelectedHotel(_userId: string | undefined, hotelId: string): Observable<any> {
@@ -111,7 +115,10 @@ export class ApiService {
   getSelectedFloor(userId: string, hotelId: string): Observable<any> {
     return this.http.get(this.buildUrl(`/sessions/selected-floor?userId=${userId}&hotelId=${hotelId}`), {
       headers: this.getAuthHeaders()
-    });
+    }).pipe(
+      timeout(2000),
+      catchError(() => of({ selectedFloor: null }))
+    );
   }
 
   saveSelectedFloor(userId: string, hotelId: string, floor: string | null): Observable<any> {

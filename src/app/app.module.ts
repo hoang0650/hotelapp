@@ -37,6 +37,7 @@ import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { APP_ICONS } from './icons';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
@@ -321,7 +322,7 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         NzMenuModule,
         NzToolTipModule,
         NzButtonModule,
-        NzIconModule,
+        NzIconModule.forRoot(APP_ICONS),
         NzCollapseModule,
         NzLayoutModule,
         NzBreadCrumbModule,

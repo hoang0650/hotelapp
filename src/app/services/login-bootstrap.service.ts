@@ -38,9 +38,9 @@ export class LoginBootstrapService {
       this.authService.loginFromShiftHandover(token, user);
       this.authService.authResolved.next(true);
 
-      // Quyền/gói giá: trì hoãn để nhường bandwidth cho rooms lite
+      // Quyền sidebar: refresh ngay — không chờ 1.5s (tránh menu thiếu/sai sau login)
+      this.permissionService.refreshPermissions();
       setTimeout(() => {
-        this.permissionService.refreshPermissions();
         this.pricingService.prefetchPackages();
         if (user?._id) {
           this.pricingService.getCurrentUserPackage(String(user._id)).subscribe({ next: () => {}, error: () => {} });

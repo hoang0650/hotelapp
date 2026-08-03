@@ -3,8 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { Room, Event, BookingHistory, ShiftHandover } from '../interfaces/rooms';
-import { tap, catchError, finalize, shareReplay, map } from 'rxjs/operators';
-import { throwError, of } from 'rxjs';
+import { tap, catchError, finalize, shareReplay, map, timeout } from 'rxjs/operators';
+import { throwError, of, TimeoutError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { SessionContextService } from './session-context.service';
 
@@ -43,6 +43,11 @@ export class RoomsService {
   private apiUrl = `${environment.apiUrl}/rooms`;
   private roomsCache = new Map<string, { rooms: Room[]; updatedAt: number }>();
   private roomsInFlight = new Map<string, Observable<Room[]>>();
+  /** Cache FE còn fresh bao lâu trước khi gọi lại API lite */
+  private readonly roomsLiteClientTtlMs = 45000;
+  /** Hard limit: sơ đồ phòng phải resolve trong ≤ 3s */
+  static readonly BOARD_LOAD_MAX_MS = 3000;
+  private readonly roomsLiteHttpTimeoutMs = 2800;
   private roomHistoryCache = new Map<string, RoomHistoryCacheEntry>();
 
   constructor(
@@ -54,7 +59,15 @@ export class RoomsService {
     if (!hotelId || !this.roomsCache.has(hotelId)) {
       return null;
     }
-    return this.roomsCache.get(hotelId)?.rooms || null;
+    return this.roomsCache.get(hotelId)?.rooms ?? null;
+  }
+
+  /** Cache còn trong TTL client (dùng để bỏ qua HTTP) */
+  hasFreshRoomsCache(hotelId: string, ttlMs: number = this.roomsLiteClientTtlMs): boolean {
+    if (!hotelId || !this.roomsCache.has(hotelId)) return false;
+    const entry = this.roomsCache.get(hotelId);
+    if (!entry) return false;
+    return Date.now() - entry.updatedAt < ttlMs;
   }
 
   setCachedRooms(hotelId: string, rooms: Room[]): void {
@@ -70,6 +83,7 @@ export class RoomsService {
   clearCachedRooms(hotelId?: string): void {
     if (hotelId) {
       this.roomsCache.delete(hotelId);
+      this.roomsInFlight.delete(`lite:${hotelId}`);
       this.roomsInFlight.delete(hotelId);
       return;
     }
@@ -119,11 +133,12 @@ export class RoomsService {
     });
   }
 
-  getRooms(params?: { hotelId?: string, floor?: number, lite?: boolean }): Observable<Room[]> {
+  getRooms(params?: { hotelId?: string, floor?: number, lite?: boolean; forceRefresh?: boolean }): Observable<Room[]> {
     let httpParams = new HttpParams();
     const hotelId = params?.hotelId || '';
     const lite = !!params?.lite;
     const floor = params?.floor;
+    const forceRefresh = !!params?.forceRefresh;
     
     if (params) {
       if (params.hotelId) {
@@ -137,6 +152,19 @@ export class RoomsService {
       }
     }
 
+    // Cache-first: bootstrap / board tái dùng ngay, không HTTP nếu còn fresh
+    if (lite && hotelId && floor === undefined && !forceRefresh && this.hasFreshRoomsCache(hotelId)) {
+      const cached = this.getCachedRooms(hotelId);
+      if (cached !== null) {
+        return of(cached);
+      }
+    }
+
+    const fallbackRooms = (): Room[] => {
+      const cached = hotelId ? this.getCachedRooms(hotelId) : null;
+      return cached !== null ? cached : [];
+    };
+
     // Dedupe in-flight: login bootstrap + room board cùng lúc chỉ 1 GET
     const inFlightKey = lite && hotelId && floor === undefined
       ? `lite:${hotelId}`
@@ -147,12 +175,32 @@ export class RoomsService {
         return existing;
       }
       const request$ = this.http.get<Room[]>(this.apiUrl, { params: httpParams }).pipe(
+        timeout(this.roomsLiteHttpTimeoutMs),
         tap((rooms) => this.setCachedRooms(hotelId, rooms || [])),
+        catchError((err) => {
+          // Timeout / lỗi mạng: trả cache hoặc [] trong hạn 3s — không treo loading
+          if (err instanceof TimeoutError || err?.name === 'TimeoutError') {
+            console.warn(`[RoomsService] rooms lite timeout >${this.roomsLiteHttpTimeoutMs}ms hotel=${hotelId}`);
+          } else {
+            console.warn('[RoomsService] rooms lite failed:', err?.message || err);
+          }
+          return of(fallbackRooms());
+        }),
         finalize(() => this.roomsInFlight.delete(inFlightKey)),
         shareReplay(1)
       );
       this.roomsInFlight.set(inFlightKey, request$);
       return request$;
+    }
+
+    if (lite) {
+      return this.http.get<Room[]>(this.apiUrl, { params: httpParams }).pipe(
+        timeout(this.roomsLiteHttpTimeoutMs),
+        catchError((err) => {
+          console.warn('[RoomsService] rooms lite failed:', err?.message || err);
+          return of(fallbackRooms());
+        })
+      );
     }
     
     return this.http.get<Room[]>(this.apiUrl, { params: httpParams });

@@ -110,6 +110,9 @@ export class RoomComponent implements OnInit, OnDestroy {
   selectedFloor: string | null = null;
   private shouldLoadHotelsAfterInitialRender = false;
   private hotelContextSub: Subscription | null = null;
+  /** Hard deadline: tắt loading sơ đồ phòng ≤ 3s */
+  private roomsBoardDeadlineTimer: ReturnType<typeof setTimeout> | null = null;
+  private roomsLoadSub: Subscription | null = null;
   isLoading = false;
   isRoomsLoading = false;
   private isModalOpen = false; // Flag để tránh mở nhiều modal cùng lúc
@@ -502,6 +505,11 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearRoomsBoardDeadline();
+    if (this.roomsLoadSub) {
+      this.roomsLoadSub.unsubscribe();
+      this.roomsLoadSub = null;
+    }
     if (this.hotelContextSub) {
       this.hotelContextSub.unsubscribe();
       this.hotelContextSub = null;
@@ -1258,73 +1266,97 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (!this.selectedHotelId) return;
     const hotelId = this.selectedHotelId;
 
+    if (this.roomsLoadSub) {
+      this.roomsLoadSub.unsubscribe();
+      this.roomsLoadSub = null;
+    }
+
     if (!force) {
       const cachedRooms = this.roomsService.getCachedRooms(hotelId);
       if (cachedRooms !== null) {
-        this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(cachedRooms);
-        this.lastLoadedHotelId = hotelId;
-        this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
-        this.updateFloorsFromRooms();
-        this.isRoomsLoading = false;
-        this.cdr.detectChanges();
+        this.applyRoomsToBoard(hotelId, cachedRooms);
+        this.clearRoomsBoardDeadline();
 
-        setTimeout(() => {
-          if (this.shouldLoadHotelsAfterInitialRender) {
-            this.shouldLoadHotelsAfterInitialRender = false;
-            this.loadHotels();
-          }
-          if (this.selectedHotelId === hotelId) {
-            this.syncHotelFloorsInBackground(hotelId);
-          }
-          // Chỉ seed giá local từ booking — không N+1 events/API giá sau first paint
-          this.seedLocalPricesForOccupiedRooms();
-        }, 0);
+        // Cache còn fresh → không gọi lại API; chỉ sync nền
+        if (this.roomsService.hasFreshRoomsCache(hotelId)) {
+          setTimeout(() => {
+            if (this.selectedHotelId === hotelId) {
+              this.seedLocalPricesForOccupiedRooms();
+            }
+          }, 0);
+          return;
+        }
+        // Cache cũ: paint ngay rồi refresh nền (vẫn ≤ 3s)
+        this.roomsLoadSub = this.roomsService.getRooms({ hotelId, lite: true, forceRefresh: true }).subscribe({
+          next: (data) => {
+            if (this.selectedHotelId !== hotelId) return;
+            this.applyRoomsToBoard(hotelId, data || []);
+            this.seedLocalPricesForOccupiedRooms();
+          },
+          error: () => {}
+        });
         return;
       }
     }
 
     this.isRoomsLoading = true;
-    // Gọi hàm ép chạy Change Detection trước khi load để hiện trạng thái loading nếu cần
-    this.cdr.detectChanges(); 
-    const params: any = { hotelId: hotelId, lite: true };
+    this.cdr.detectChanges();
+    this.armRoomsBoardDeadline(hotelId);
 
-    this.roomsService.getRooms(params).subscribe({
+    this.roomsLoadSub = this.roomsService.getRooms({
+      hotelId,
+      lite: true,
+      forceRefresh: force
+    }).subscribe({
       next: (data) => {
-        this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(data || []);
-        this.roomsService.setCachedRooms(hotelId, this.rooms);
-        this.lastLoadedHotelId = hotelId;
-        this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
-        this.updateFloorsFromRooms();
-        
-        this.isRoomsLoading = false;
-        
-        // 🔥 CHÍ MẠNG: Ép Angular vẽ ngay sơ đồ phòng lên màn hình, không đợi click!
-        this.cdr.detectChanges();
-
+        if (this.selectedHotelId !== hotelId) return;
+        this.clearRoomsBoardDeadline();
+        this.applyRoomsToBoard(hotelId, data || []);
         setTimeout(() => {
-          if (this.shouldLoadHotelsAfterInitialRender) {
-            this.shouldLoadHotelsAfterInitialRender = false;
-            this.loadHotels();
-          }
-
           if (this.selectedHotelId === hotelId) {
-            this.syncHotelFloorsInBackground(hotelId);
+            this.seedLocalPricesForOccupiedRooms();
           }
-
-          // Không prefetch history/chart/thu-chi — mở panel/modal mới tải (giữ bandwidth cho sơ đồ)
-          this.seedLocalPricesForOccupiedRooms();
         }, 0);
       },
-      error: (err) => {
-        this.isRoomsLoading = false;
-        // Vẫn load danh sách KS khi rooms lỗi — tránh select kẹt "Trống" (superadmin/admin)
-        if (this.shouldLoadHotelsAfterInitialRender || this.hotels.length === 0) {
-          this.shouldLoadHotelsAfterInitialRender = false;
+      error: () => {
+        if (this.selectedHotelId !== hotelId) return;
+        this.clearRoomsBoardDeadline();
+        const fallback = this.roomsService.getCachedRooms(hotelId) || [];
+        this.applyRoomsToBoard(hotelId, fallback);
+        if (this.hotels.length === 0) {
           this.loadHotels();
         }
-        this.cdr.detectChanges();
       }
     });
+  }
+
+  /** Paint board + tắt loading — luôn gọi trong hạn 3s */
+  private applyRoomsToBoard(hotelId: string, data: Room[]): void {
+    this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(data || []);
+    this.roomsService.setCachedRooms(hotelId, this.rooms);
+    this.lastLoadedHotelId = hotelId;
+    this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
+    this.updateFloorsFromRooms();
+    this.isRoomsLoading = false;
+    this.cdr.detectChanges();
+  }
+
+  private armRoomsBoardDeadline(hotelId: string): void {
+    this.clearRoomsBoardDeadline();
+    this.roomsBoardDeadlineTimer = setTimeout(() => {
+      this.roomsBoardDeadlineTimer = null;
+      if (this.selectedHotelId !== hotelId || !this.isRoomsLoading) return;
+      console.warn(`[RoomBoard] force paint within ${RoomsService.BOARD_LOAD_MAX_MS}ms hotel=${hotelId}`);
+      const fallback = this.roomsService.getCachedRooms(hotelId) || this.rooms || [];
+      this.applyRoomsToBoard(hotelId, fallback);
+    }, RoomsService.BOARD_LOAD_MAX_MS);
+  }
+
+  private clearRoomsBoardDeadline(): void {
+    if (this.roomsBoardDeadlineTimer) {
+      clearTimeout(this.roomsBoardDeadlineTimer);
+      this.roomsBoardDeadlineTimer = null;
+    }
   }
 
   private prefetchAuxiliaryDataAfterRoomsLoaded(hotelId: string): void {
