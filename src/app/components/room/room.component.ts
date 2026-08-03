@@ -109,6 +109,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   floors: string[] = [];
   selectedFloor: string | null = null;
   private shouldLoadHotelsAfterInitialRender = false;
+  private hotelContextSub: Subscription | null = null;
   isLoading = false;
   isRoomsLoading = false;
   private isModalOpen = false; // Flag để tránh mở nhiều modal cùng lúc
@@ -356,81 +357,95 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Ưu tiên hotelId đã warm từ login bootstrap / Redis / user profile
-    const storedHotelId =
-      this.sessionContext.getSelectedHotelId() ||
-      this.hotelService.getStoredHotelId() ||
-      this.authService.getHotelId();
-
     const currentUser = this.authService.getCurrentUser();
     const userId = currentUser?._id;
-    const userRole = String(currentUser?.role || '').trim().toLowerCase();
-    const isPlatformAdmin = userRole === 'superadmin' || userRole === 'admin';
 
-    // superadmin/admin thường không có hotelId — luôn load danh sách KS ngay
-    // (tránh nz-select hiện "Trống" vì selectedHotelId có mà hotels[] còn rỗng)
-    if (!this.authService.isStaff()) {
-      this.loadHotels();
+    // Seed hotel + paint rooms NGAY — critical path sơ đồ phòng
+    const earlyHotelId = this.sessionContext.resolvePreferredHotelId(this.authService.getHotelId());
+    if (earlyHotelId) {
+      this.selectedHotelId = earlyHotelId;
+      this.hotels = this.hotelService.ensureSelectedHotelOption(this.hotels, earlyHotelId);
+      this.roomSessionService.setHotelId(earlyHotelId);
+      this.onHotelChange(earlyHotelId);
     }
 
-    if (storedHotelId) {
-      this.selectedHotelId = storedHotelId;
-      this.roomSessionService.setHotelId(storedHotelId);
-      this.onHotelChange(storedHotelId);
-      // Staff vẫn có thể cần sync list sau first paint; admin đã loadHotels ở trên
-      if (this.authService.isStaff()) {
-        this.shouldLoadHotelsAfterInitialRender = true;
+    // Sync KS khi Redis/AI đổi (bỏ qua nếu cùng KS đang load/đã paint)
+    this.hotelContextSub = this.sessionContext.selectedHotelId$.subscribe((hotelId) => {
+      const id = this.hotelService.normalizeHotelId(hotelId);
+      if (!id) return;
+      if (this.extractId(this.selectedHotelId) === id) {
+        if (this.lastLoadedHotelId === id || this.isRoomsLoading) {
+          this.hotels = this.hotelService.ensureSelectedHotelOption(this.hotels, id);
+          return;
+        }
       }
-    } else if (this.authService.isStaff()) {
-      this.loadHotels();
-    }
+      this.selectedHotelId = id;
+      this.hotels = this.hotelService.ensureSelectedHotelOption(this.hotels, id);
+      this.roomSessionService.setHotelId(id);
+      this.onHotelChange(id);
+      this.cdr.detectChanges();
+    });
 
-    // Chỉ gọi Redis selected-hotel khi chưa có hotelId (không chặn render)
-    // Platform admin: vẫn hỏi Redis nếu loadHotels chưa chọn được KS
-    if (userId && !this.selectedHotelId) {
-      this.apiService.getSelectedHotel(userId).subscribe({
-        next: (res) => {
-          if (res?.selectedHotelId) {
-            const resolvedHotelId = res.selectedHotelId;
-            this.selectedHotelId = resolvedHotelId;
-            this.sessionContext.setSelectedHotelId(resolvedHotelId, { persist: false });
-            this.roomSessionService.setHotelId(resolvedHotelId);
-            this.onHotelChange(resolvedHotelId);
-            if (isPlatformAdmin && this.hotels.length === 0) {
-              this.loadHotels();
-            }
-          }
-        },
-        error: () => {}
-      });
-    }
+    // Dropdown KS: sau tick đầu — không tranh bandwidth với rooms lite
+    setTimeout(() => {
+      this.loadHotels();
+      if (this.selectedHotelId) {
+        this.hydrateHotelOptionById(this.selectedHotelId, false);
+      }
+    }, 0);
+
+    // Redis hydrate: chỉ đổi KS khi khác; không loadHotels lần 2 nếu đã có list/stub
+    void this.sessionContext.ensureHydrated().then(() => {
+      const resolved = this.hotelService.normalizeHotelId(
+        this.sessionContext.getSelectedHotelId() ||
+        this.hotelService.getStoredHotelId() ||
+        this.authService.getHotelId()
+      );
+      if (!resolved) return;
+
+      this.hotels = this.hotelService.ensureSelectedHotelOption(this.hotels, resolved);
+      if (this.extractId(this.selectedHotelId) === resolved) {
+        if (this.lastLoadedHotelId !== resolved && !this.isRoomsLoading) {
+          this.onHotelChange(resolved);
+        }
+        this.cdr.detectChanges();
+        return;
+      }
+
+      this.selectedHotelId = resolved;
+      this.onHotelChange(resolved);
+      this.cdr.detectChanges();
+    });
 
     const cachedColumnsCount = this.sessionContext.getRoomColumnsCount();
     if (cachedColumnsCount !== null) {
       this.count = cachedColumnsCount;
     } else if (userId) {
-      this.apiService.getRoomColumnsCount(userId).subscribe({
-        next: (res) => {
-          if (res?.columnsCount && res.columnsCount >= 2 && res.columnsCount <= 12) {
-            this.count = res.columnsCount;
-            this.sessionContext.setRoomColumnsCount(res.columnsCount, { persist: false });
-          }
-        },
-        error: () => {}
-      });
+      // Columns không critical — trì hoãn
+      setTimeout(() => {
+        this.apiService.getRoomColumnsCount(userId).subscribe({
+          next: (res) => {
+            if (res?.columnsCount && res.columnsCount >= 2 && res.columnsCount <= 12) {
+              this.count = res.columnsCount;
+              this.sessionContext.setRoomColumnsCount(res.columnsCount, { persist: false });
+              this.cdr.detectChanges();
+            }
+          },
+          error: () => {}
+        });
+      }, 800);
     }
     
     window.addEventListener('floorFilterChanged', this.__onFloorFilterChanged as EventListener);
     window.addEventListener('columnsCountChanged', this.__onColumnsCountChanged as EventListener);
     window.addEventListener('hotelPaymentSpeakerChanged', this.__onHotelPaymentSpeakerChanged as EventListener);
     
-    // Tỷ giá VND -> USD — không chặn first paint sơ đồ phòng
     setTimeout(() => {
       this.currencyService.getExchangeRate('VND', 'USD').subscribe({
         next: (rate) => { this.usdRate = rate || 0; },
         error: () => { this.usdRate = 0; }
       });
-    }, 1500);
+    }, 2000);
   }
 
   // Collapse panel change handlers
@@ -487,6 +502,10 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.hotelContextSub) {
+      this.hotelContextSub.unsubscribe();
+      this.hotelContextSub = null;
+    }
     if (this.roomDataUpdatedSubscription) {
       this.roomDataUpdatedSubscription.unsubscribe();
     }
@@ -1357,35 +1376,48 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   onHotelChange(hotelId: string | null): void {
-    if (hotelId && this.lastLoadedHotelId === hotelId && this.rooms.length > 0 && !this.isRoomsLoading) {
+    const normalizedId = this.hotelService.normalizeHotelId(hotelId);
+
+    // Cùng KS đang load hoặc đã paint → bỏ qua (tránh wipe rooms / API trùng)
+    if (
+      normalizedId &&
+      this.extractId(this.selectedHotelId) === normalizedId &&
+      (this.isRoomsLoading || (this.lastLoadedHotelId === normalizedId && this.rooms.length > 0))
+    ) {
       return;
     }
+
     if (this.authService.isStaff()) {
       const currentUser = this.authService.getCurrentUser();
       const staffHotelId = this.extractId(currentUser?.hotelId);
-      if (staffHotelId && hotelId !== staffHotelId) {
+      if (staffHotelId && normalizedId !== staffHotelId) {
         this.message.warning(this.translate.instant('ROOM.STAFF_ONLY_HOTEL'));
         this.selectedHotelId = staffHotelId;
         return;
       }
     }
-    this.selectedHotelId = hotelId;
-    if (hotelId) {
-      this.sessionContext.setSelectedHotelId(hotelId);
+
+    this.selectedHotelId = normalizedId;
+    if (normalizedId) {
+      this.hotels = this.hotelService.ensureSelectedHotelOption(this.hotels, normalizedId);
+      this.sessionContext.setSelectedHotelId(normalizedId);
     }
+
     this.isFirstLoadForHotel = true;
     this.activeFloors = [];
-    // Ưu tiên paint từ cache login-bootstrap — tránh flash trống sơ đồ phòng
-    const cachedRooms = hotelId ? this.roomsService.getCachedRooms(hotelId) : null;
-    if (cachedRooms && cachedRooms.length > 0) {
+
+    // Ưu tiên paint từ cache login-bootstrap
+    const cachedRooms = normalizedId ? this.roomsService.getCachedRooms(normalizedId) : null;
+    if (cachedRooms !== null) {
       this.rooms = this.hydrateSyntheticEventsFromCurrentBooking(cachedRooms);
-      this.lastLoadedHotelId = hotelId;
+      this.lastLoadedHotelId = normalizedId;
       this.realtimeLastSnapshotKey = this.buildRoomsSnapshotKey(this.rooms);
       this.isRoomsLoading = false;
     } else {
       this.rooms = [];
       this.lastLoadedHotelId = null;
     }
+
     this.displayRoomsByFloor = {};
     this.displayFloors = [];
     this.bookings = [];
@@ -1410,7 +1442,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.historyReloadInFlight = false;
     this.lastHistoryLoadedAt = 0;
 
-    if (!hotelId) {
+    if (!normalizedId) {
       this.isRoomsLoading = false;
       return;
     }
@@ -1420,23 +1452,23 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     }
 
-    this.loadPaymentSpeakerSetting(hotelId);
-
     const storedFloor = this.hotelService.getStoredFloor();
     if (storedFloor) {
       this.selectedFloor = storedFloor;
     }
 
-    this.hotelService.saveRoomContext(hotelId!, this.selectedFloor || '');
-    this.restoreCachedSecondaryData(hotelId);
+    // Persist context nền — không chặn paint
+    this.hotelService.saveRoomContext(normalizedId, this.selectedFloor || '');
+    this.restoreCachedSecondaryData(normalizedId);
 
-    // Chạy lệnh tải phòng trước; room sessions Redis hydrate sau để không tranh bandwidth
     this.loadRooms();
-    this.startRealtimeSync();
+
+    // Secondary: speaker + socket sau first paint
     setTimeout(() => {
-      if (this.selectedHotelId === hotelId) {
-        this.roomSessionService.setHotelId(hotelId);
-      }
+      if (this.selectedHotelId !== normalizedId) return;
+      this.loadPaymentSpeakerSetting(normalizedId);
+      this.startRealtimeSync();
+      this.roomSessionService.setHotelId(normalizedId);
     }, 0);
   }
 
@@ -1774,16 +1806,16 @@ export class RoomComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.hotelService.getHotelById(hotelId, { lite: true }).subscribe({
+    // Dùng getHotelInfo (có cache) — tránh GET /hotels/:id trùng với hydrateHotelOptionById
+    this.hotelService.getHotelInfo(hotelId, { lite: true }).subscribe({
       next: (hotel) => {
         this.paymentSpeakerEnabled = !!hotel?.settings?.notificationSettings?.enablePaymentSpeaker;
         this.paymentSpeakerService.setEnabled(hotelId, this.paymentSpeakerEnabled);
         this.cdr.markForCheck();
       },
-      error: (error) => {
+      error: () => {
         this.paymentSpeakerEnabled = false;
         this.paymentSpeakerService.setEnabled(hotelId, false);
-        console.error('Error loading payment speaker setting:', error);
       }
     });
   }

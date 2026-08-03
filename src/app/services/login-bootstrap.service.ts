@@ -11,12 +11,15 @@ import { PricingService } from './pricing.service';
 import { User } from '../interfaces/user';
 
 /**
- * Warm cache ngay sau login để /admin/room + sidebar + /pricing hiện gần như tức thì.
+ * Warm cache ngay sau login để /admin/room + sidebar hiện gần như tức thì.
+ * Critical path: seed auth → seed hotelId → GET rooms?lite=1 (song song với navigate).
  */
 @Injectable({
   providedIn: 'root'
 })
 export class LoginBootstrapService {
+  private prefetchedHotelId: string | null = null;
+
   constructor(
     private authService: AuthService,
     private apiService: ApiService,
@@ -34,22 +37,37 @@ export class LoginBootstrapService {
     try {
       this.authService.loginFromShiftHandover(token, user);
       this.authService.authResolved.next(true);
-      // Quyền/gói giá: trì hoãn nhẹ để nhường bandwidth cho rooms lite
+
+      // Quyền/gói giá: trì hoãn để nhường bandwidth cho rooms lite
       setTimeout(() => {
         this.permissionService.refreshPermissions();
         this.pricingService.prefetchPackages();
         if (user?._id) {
           this.pricingService.getCurrentUserPackage(String(user._id)).subscribe({ next: () => {}, error: () => {} });
         }
-      }, 800);
+      }, 1500);
 
       const hotelId = this.resolveHotelId(user);
+      const role = String(user?.role || '').trim().toLowerCase();
+      const isPlatformAdmin = role === 'superadmin' || role === 'admin';
+
       if (hotelId) {
-        // Seed local ngay; persist Redis chạy nền (không chặn UI)
-        this.sessionContext.setSelectedHotelId(hotelId, { persist: true });
-        this.hotelService.saveRoomContext(hotelId, this.sessionContext.getSelectedFloor() || '');
-        this.prefetchHotelBundle(hotelId);
-      } else {
+        this.seedHotelAndPrefetch(hotelId, true);
+      } else if (isPlatformAdmin || !hotelId) {
+        // Không có hotelId trên profile: lấy selected-hotel Redis SONG SONG với hotels list
+        // → rooms lite warm sớm (không chờ getHotels xong)
+        const userId = user?._id ? String(user._id) : '';
+        if (userId) {
+          this.apiService.getSelectedHotel(userId).pipe(
+            take(1),
+            catchError(() => of(null))
+          ).subscribe((res) => {
+            const resolved = this.hotelService.normalizeHotelId(res?.selectedHotelId);
+            if (resolved && !this.sessionContext.getSelectedHotelId()) {
+              this.seedHotelAndPrefetch(resolved, false);
+            }
+          });
+        }
         void this.sessionContext.ensureHydrated().then(() => {
           const resolved = this.sessionContext.getSelectedHotelId();
           if (resolved) {
@@ -58,13 +76,21 @@ export class LoginBootstrapService {
         }).catch(() => {});
       }
 
-      // Warm danh sách hotels cục bộ 1 lần — các màn quản lý tái sử dụng, không gọi lại API
+      // Warm danh sách hotels — nền; admin seed KS đầu nếu Redis chưa có
       this.prefetchHotelsList(user);
     } catch (err) {
       console.error('[LoginBootstrap] bootstrapAfterLogin error:', err);
       this.authService.loginFromShiftHandover(token, user);
       this.authService.authResolved.next(true);
     }
+  }
+
+  private seedHotelAndPrefetch(hotelId: string, persist: boolean): void {
+    const id = this.hotelService.normalizeHotelId(hotelId);
+    if (!id) return;
+    this.sessionContext.setSelectedHotelId(id, { persist });
+    this.hotelService.saveRoomContext(id, this.sessionContext.getSelectedFloor() || '');
+    this.prefetchHotelBundle(id);
   }
 
   private prefetchHotelsList(user: User | null): void {
@@ -75,7 +101,6 @@ export class LoginBootstrapService {
       : (this.authService.getBusinessId() || undefined);
     this.hotelService.getHotelsCached(businessId, undefined, { lite: true }).pipe(take(1)).subscribe({
       next: (hotels) => {
-        // superadmin/admin không có hotelId — seed KS đầu tiên để /admin/room không kẹt "Trống"
         if (!isPlatformAdmin) return;
         if (this.sessionContext.getSelectedHotelId()) return;
         const filtered = this.hotelService.filterHotelsForUser(hotels, user);
@@ -83,9 +108,7 @@ export class LoginBootstrapService {
           ? this.hotelService.normalizeHotelId(filtered[0]._id)
           : null;
         if (firstId) {
-          this.sessionContext.setSelectedHotelId(firstId, { persist: true });
-          this.hotelService.saveRoomContext(firstId, this.sessionContext.getSelectedFloor() || '');
-          this.prefetchHotelBundle(firstId);
+          this.seedHotelAndPrefetch(firstId, true);
         }
       },
       error: () => {}
@@ -96,47 +119,57 @@ export class LoginBootstrapService {
     if (!user) return null;
     const raw = (user as any).hotelId;
     if (!raw) return null;
-    if (typeof raw === 'string') return raw;
-    if (typeof raw === 'object' && raw._id) return String(raw._id);
-    return String(raw);
+    if (typeof raw === 'string') return raw.trim() || null;
+    if (typeof raw === 'object' && raw._id) return String(raw._id).trim() || null;
+    const s = String(raw).trim();
+    return s && s !== '[object Object]' ? s : null;
   }
 
+  /** Prefetch rooms lite — critical path; secondary APIs sau khi rooms về */
   private prefetchHotelBundle(hotelId: string): void {
-    if (!hotelId) return;
+    const id = this.hotelService.normalizeHotelId(hotelId);
+    if (!id) return;
+    if (this.prefetchedHotelId === id) return;
+    this.prefetchedHotelId = id;
 
     // Rooms lite trước (critical path); session/floor/columns sau để không tranh bandwidth
-    this.roomsService.getRooms({ hotelId, lite: true }).pipe(
-      tap((rooms) => this.roomsService.setCachedRooms(hotelId, rooms || [])),
+    this.roomsService.getRooms({ hotelId: id, lite: true }).pipe(
+      tap((rooms) => this.roomsService.setCachedRooms(id, rooms || [])),
       catchError(() => of([])),
       take(1)
     ).subscribe({
       next: () => {
-        forkJoin({
-          sessions: this.apiService.getRoomSessions(hotelId).pipe(
-            catchError(() => of({})),
-            take(1)
-          ),
-          columns: this.apiService.getRoomColumnsCount().pipe(
-            tap((res) => {
-              if (res?.columnsCount) {
-                this.sessionContext.setRoomColumnsCount(res.columnsCount, { persist: false });
-              }
-            }),
-            catchError(() => of(null)),
-            take(1)
-          ),
-          floor: this.apiService.getSelectedFloor(this.authService.getUserId() || '', hotelId).pipe(
-            tap((res) => {
-              if (res?.selectedFloor != null) {
-                this.sessionContext.setSelectedFloor(String(res.selectedFloor), { persist: false, hotelId });
-              }
-            }),
-            catchError(() => of(null)),
-            take(1)
-          )
-        }).subscribe({ next: () => {}, error: () => {} });
+        // Secondary: trì hoãn nhẹ để first paint sơ đồ phòng ưu tiên
+        setTimeout(() => {
+          forkJoin({
+            sessions: this.apiService.getRoomSessions(id).pipe(
+              catchError(() => of({})),
+              take(1)
+            ),
+            columns: this.apiService.getRoomColumnsCount().pipe(
+              tap((res) => {
+                if (res?.columnsCount) {
+                  this.sessionContext.setRoomColumnsCount(res.columnsCount, { persist: false });
+                }
+              }),
+              catchError(() => of(null)),
+              take(1)
+            ),
+            floor: this.apiService.getSelectedFloor(this.authService.getUserId() || '', id).pipe(
+              tap((res) => {
+                if (res?.selectedFloor != null) {
+                  this.sessionContext.setSelectedFloor(String(res.selectedFloor), { persist: false, hotelId: id });
+                }
+              }),
+              catchError(() => of(null)),
+              take(1)
+            )
+          }).subscribe({ next: () => {}, error: () => {} });
+        }, 200);
       },
-      error: () => {}
+      error: () => {
+        this.prefetchedHotelId = null;
+      }
     });
   }
 }
