@@ -11,7 +11,7 @@ export interface RoomSession {
   checkinTime: Date;
   guestInfo?: GuestInfo;
   paymentMethod?: string;
-  rateType?: 'hourly' | 'daily' | 'nightly';
+  rateType?: 'hourly' | 'daily' | 'nightly' | 'weekly' | 'monthly';
   advancePayment?: number;
   additionalCharges?: number;
   totalPrice?: number;

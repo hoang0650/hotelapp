@@ -4364,8 +4364,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const checkoutDiscount = Number(this.checkOutForm.get('discount')?.value) || 0;
     const additionalCharges = this.initialCharges + checkoutCharges;
     const discount = this.initialDiscount + checkoutDiscount;
+    const rateTypeControl = this.checkOutForm?.get('rateType');
+    const rateTypeRaw = rateTypeControl
+      ? (rateTypeControl.disabled ? rateTypeControl.getRawValue() : rateTypeControl.value)
+      : null;
     const rateType =
-      this.checkOutForm?.get('rateType')?.value ||
+      rateTypeRaw ||
       (this.listData && this.listData.length > 0 ? this.listData[0].rateType : null) ||
       'hourly';
     const notes = this.checkOutForm?.get('notes')?.value || this.initialNotes || '';
@@ -4389,6 +4393,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     };
 
     const previousAdvancePayment = Number(this.initialAdvancePayment) || 0;
+    const checkinTime =
+      this.listData && this.listData.length > 0 && this.listData[0]?.checkinTime
+        ? this.listData[0].checkinTime
+        : new Date();
 
     // 1) Cập nhật local ngay — UI cảm giác tức thì
     this.initialNotes = notes;
@@ -4405,6 +4413,20 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       this.listData[0].discount = discount;
       this.listData[0].notes = notes;
       this.listData[0].selectedServices = [...(this.selectedServices || [])];
+    }
+
+    if (this.roomData.events && Array.isArray(this.roomData.events)) {
+      const checkinEvents = this.getUncheckedOutCheckinEvents(this.roomData.events);
+      if (checkinEvents.length > 0) {
+        checkinEvents[0].rateType = rateType;
+        checkinEvents[0].guestInfo = updatedGuestInfo;
+        checkinEvents[0].advancePayment = advancePayment;
+        checkinEvents[0].advancePaymentMethod = advancePaymentMethod;
+        checkinEvents[0].additionalCharges = additionalCharges;
+        checkinEvents[0].discount = discount;
+        checkinEvents[0].notes = notes;
+        checkinEvents[0].selectedServices = [...(this.selectedServices || [])];
+      }
     }
 
     if (guestInfoFormGroup) {
@@ -4438,48 +4460,83 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.message.success('Đã lưu thông tin khách.');
     this.isSaving = false;
 
-    // Đóng modal ngay, không chờ API
+    const hotelId = this.normalizeObjectId(
+      this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId
+    );
+    const checkinInfo = {
+      roomId: this.roomData._id,
+      roomNumber: this.roomData.roomNumber,
+      checkinTime,
+      guestInfo: updatedGuestInfo,
+      advancePayment,
+      advancePaymentMethod,
+      rateType,
+      notes,
+      additionalCharges,
+      discount,
+      selectedServices: this.selectedServices || [],
+      paymentMethod:
+        this.checkOutForm?.get('paymentMethod')?.value ||
+        (this.listData && this.listData.length > 0 ? this.listData[0].paymentMethod : null) ||
+        'cash'
+    };
+
+    // Đồng bộ RoomSession (roomSessions:v2) ngay — nguồn sự thật cho sơ đồ phòng
+    const roomId = String(this.roomData._id);
+    const existingSession = this.roomSessionService.getSession(roomId);
+    if (existingSession) {
+      this.roomSessionService.updateSession(roomId, {
+        guestInfo: updatedGuestInfo,
+        advancePayment,
+        advancePaymentMethod,
+        rateType,
+        notes,
+        additionalCharges,
+        discount,
+        selectedServices: this.selectedServices || []
+      });
+    } else if (hotelId) {
+      this.roomSessionService.startSession(roomId, {
+        roomId,
+        roomNumber: this.roomData.roomNumber,
+        roomType: this.roomData.type,
+        hotelId: String(hotelId),
+        checkinTime: new Date(checkinTime),
+        guestInfo: updatedGuestInfo,
+        paymentMethod: checkinInfo.paymentMethod,
+        rateType,
+        advancePayment,
+        advancePaymentMethod,
+        additionalCharges,
+        discount,
+        notes,
+        selectedServices: this.selectedServices || []
+      });
+    }
+
+    // Đóng modal ngay kèm checkinInfo để sơ đồ patch rateType tức thì
     if (this.modalRef) {
       this.modalRef.close({
         success: true,
         action: 'save_guest_info',
-        roomId: this.roomData._id
+        roomId: this.roomData._id,
+        checkinInfo
       });
     }
 
-    // Emit sơ đồ phòng ngay — giữ occupied (không phải trả phòng)
-    this.emitRoomDataUpdated('status', {
+    this.emitRoomDataUpdated('checkin_info', {
       roomId: this.roomData._id,
       status: 'occupied',
       force: false,
       delayMs: 0,
       refreshRooms: false,
-      refreshHistory: false
+      refreshHistory: false,
+      checkinInfo
     });
 
-    // 2) Persist nền: Redis + API + phiếu thu
-    const hotelId = this.normalizeObjectId(
-      this.roomData.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId
-    );
-    const checkinData: any = {
-      roomId: this.roomData._id,
-      roomNumber: this.roomData.roomNumber,
-      checkinTime:
-        this.listData && this.listData.length > 0 && this.listData[0]?.checkinTime
-          ? this.listData[0].checkinTime
-          : new Date(),
-      guestInfo: updatedGuestInfo,
-      advancePayment: advancePayment,
-      advancePaymentMethod: advancePaymentMethod,
-      rateType: rateType,
-      notes: notes,
-      additionalCharges: additionalCharges,
-      discount: discount,
-      selectedServices: this.selectedServices || []
-    };
-
+    // 2) Persist nền: Redis checkin_* + API + phiếu thu
     if (hotelId) {
-      this.apiService.saveCheckinData(hotelId, this.roomData._id, checkinData).subscribe({
+      this.apiService.saveCheckinData(hotelId, this.roomData._id, checkinInfo).subscribe({
         error: (err) => console.error('[Redis] Error saving checkin data:', err)
       });
     }
@@ -4506,19 +4563,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          // Soft refresh nền — không chặn UI
           this.roomsService
             .getRoomById(this.roomData._id, { limit: 1000, excludeCheckedOut: true })
             .subscribe({
               next: (updatedRoom) => {
                 this.roomData = updatedRoom;
-                this.emitRoomDataUpdated('status', {
+                this.emitRoomDataUpdated('checkin_info', {
                   roomId: this.roomData?._id,
                   status: 'occupied',
                   force: false,
                   delayMs: 0,
                   refreshRooms: false,
-                  refreshHistory: false
+                  refreshHistory: false,
+                  checkinInfo
                 });
               },
               error: () => {
@@ -4724,7 +4781,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   }
 
   private emitRoomDataUpdated(
-    reason: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'generic',
+    reason: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'generic' | 'checkin_info',
     options?: {
       roomId?: string;
       relatedRoomId?: string;
@@ -4734,6 +4791,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       refreshHistory?: boolean;
       status?: string;
       guestStatus?: string | null;
+      checkinInfo?: any;
     }
   ): void {
     const hotelId = this.normalizeObjectId(this.roomData?.hotelId || this.authService.getHotelId() || this.currentUser?.hotelId);
@@ -4762,8 +4820,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       reason,
       status: checkoutStatus.status,
       guestStatus: checkoutStatus.guestStatus,
+      checkinInfo: options?.checkinInfo,
       // Status / local checkin-checkout đã patch — không GET lại cả phòng
-      refreshRooms: options?.refreshRooms ?? (!statusOnly && reason !== 'checkin' && reason !== 'checkout'),
+      refreshRooms: options?.refreshRooms ?? (!statusOnly && reason !== 'checkin' && reason !== 'checkout' && reason !== 'checkin_info'),
       refreshHistory: options?.refreshHistory ?? (reason === 'checkout' || reason === 'recheckin' || reason === 'delete_checkout_history'),
       force: options?.force ?? false,
       delayMs: options?.delayMs ?? 0

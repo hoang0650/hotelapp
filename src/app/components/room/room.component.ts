@@ -244,6 +244,9 @@ export class RoomComponent implements OnInit, OnDestroy {
         if (event?.roomId && reason === 'checkin' && event.checkinInfo) {
           // Có đủ dữ liệu nhận phòng → gắn event + __viewMeta đầy đủ (tránh card bị co)
           this.applyCheckinCloseResult(event.roomId, event.checkinInfo);
+        } else if (event?.roomId && reason === 'checkin_info' && event.checkinInfo) {
+          // Đổi rateType / lưu thông tin khách — patch event + Redis session
+          this.applyGuestInfoCloseResult(event.roomId, event.checkinInfo);
         } else if (event?.roomId && (event.status || reason === 'checkout' || statusOnly || reason === 'checkin')) {
           const status =
             event.status ||
@@ -1484,11 +1487,19 @@ export class RoomComponent implements OnInit, OnDestroy {
       // Session Redis: chỉ sync khi payload có session hoặc checkin/checkout (không phải status-only)
       if (payload?.session !== undefined && roomId) {
         this.roomSessionService.applyRemoteSession(String(roomId), payload.session);
-      } else if (roomId && !statusOnly && !localJustPatched && (reason === 'checkin' || reason === 'checkout' || reason === 'transfer')) {
+        if (reason === 'checkin_info' && payload.session) {
+          this.applyGuestInfoCloseResult(String(roomId), payload.session);
+        }
+      } else if (
+        roomId &&
+        !statusOnly &&
+        !localJustPatched &&
+        (reason === 'checkin' || reason === 'checkout' || reason === 'transfer' || reason === 'checkin_info')
+      ) {
         this.roomSessionService.refreshRoomFromRemote(String(roomId));
       } else if (
         !roomId &&
-        (reason.includes('session') || reason === 'checkin' || reason === 'checkout' || reason === 'transfer')
+        (reason.includes('session') || reason === 'checkin' || reason === 'checkout' || reason === 'transfer' || reason === 'checkin_info')
       ) {
         this.roomSessionService.refreshFromRemote();
       }
@@ -2252,6 +2263,12 @@ export class RoomComponent implements OnInit, OnDestroy {
           return;
         }
 
+        // Lưu thông tin khách / đổi rateType khi đang ở — patch local ngay
+        if (result?.action === 'save_guest_info' && result?.checkinInfo) {
+          this.applyGuestInfoCloseResult(room._id || '', result.checkinInfo);
+          return;
+        }
+
         // Dọn / bảo trì / báo bẩn từ modal cleaning
         if (modalType === 'cleaning') {
           if (result?.status) {
@@ -2386,6 +2403,64 @@ export class RoomComponent implements OnInit, OnDestroy {
       }
     ] as any;
     // Seed giá local để totalAmount hiện ngay trên card
+    this.seedLocalPricesForOccupiedRooms();
+    room.__viewMeta = this.buildRoomCardMeta(room);
+    this.recomputeStatusCountsOnly();
+    this.markRoomLocallyPatched(id);
+    if (this.selectedHotelId) {
+      this.roomsService.patchCachedRoom(this.selectedHotelId, room);
+    }
+    this.cdr.detectChanges();
+  }
+
+  /** Cập nhật rateType / guest trên card khi lưu thông tin khách (không thay cả events) */
+  private applyGuestInfoCloseResult(roomId: string, checkinInfo: any): void {
+    if (!roomId || !checkinInfo) return;
+    const id = this.hotelService.normalizeHotelId(roomId) || roomId;
+    const roomIndex = this.rooms.findIndex((r) => r && this.hotelService.sameHotelId(r._id, id));
+    if (roomIndex === -1) return;
+
+    const room = this.rooms[roomIndex] as RoomWithMeta;
+    const rateType = checkinInfo.rateType || 'hourly';
+    const guestInfo = checkinInfo.guestInfo || {};
+    const advancePayment = Number(checkinInfo.advancePayment) || 0;
+    const additionalCharges = Number(checkinInfo.additionalCharges) || 0;
+    const discount = Number(checkinInfo.discount) || 0;
+    const notes = checkinInfo.notes || '';
+    const selectedServices = Array.isArray(checkinInfo.selectedServices)
+      ? checkinInfo.selectedServices
+      : [];
+
+    if (Array.isArray(room.events) && room.events.length > 0) {
+      for (const ev of room.events as any[]) {
+        if (ev?.type !== 'checkin') continue;
+        ev.rateType = rateType;
+        ev.guestInfo = { ...(ev.guestInfo || {}), ...guestInfo };
+        ev.advancePayment = advancePayment;
+        ev.additionalCharges = additionalCharges;
+        ev.discount = discount;
+        ev.notes = notes;
+        if (selectedServices.length) {
+          ev.selectedServices = selectedServices;
+        }
+        if (checkinInfo.advancePaymentMethod) {
+          ev.advancePaymentMethod = checkinInfo.advancePaymentMethod;
+        }
+      }
+    }
+
+    this.roomSessionService.updateSession(id, {
+      rateType,
+      guestInfo,
+      advancePayment,
+      advancePaymentMethod: checkinInfo.advancePaymentMethod,
+      additionalCharges,
+      discount,
+      notes,
+      ...(selectedServices.length ? { selectedServices } : {})
+    });
+
+    room.status = 'occupied';
     this.seedLocalPricesForOccupiedRooms();
     room.__viewMeta = this.buildRoomCardMeta(room);
     this.recomputeStatusCountsOnly();
@@ -3778,7 +3853,15 @@ export class RoomComponent implements OnInit, OnDestroy {
     const lastCheckin = checkinEvents[0]; // Lấy event mới nhất chưa checkout
     const checkinTime = this.getEventCheckinTime(lastCheckin);
     const currentBooking = this.getCurrentBookingObject(room);
-    const rateType = lastCheckin.rateType || currentBooking?.rateType || currentBooking?.bookingType || 'hourly';
+    const roomId = room._id?.toString() || '';
+    const session = roomId ? this.roomSessionService.getSession(roomId) : null;
+    // Ưu tiên rateType từ Redis session (vừa lưu) rồi mới tới event / booking
+    const rateType =
+      session?.rateType ||
+      lastCheckin.rateType ||
+      currentBooking?.rateType ||
+      currentBooking?.bookingType ||
+      'hourly';
     
     // Lấy label cho loại giá
     const rateTypeLabel = this.getRateTypeLabel(rateType);

@@ -23,7 +23,7 @@ export interface RoomDataUpdateEvent {
   hotelId?: string;
   roomId?: string;
   relatedRoomId?: string;
-  reason?: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'guest_out' | 'guest_return' | 'generic';
+  reason?: 'checkin' | 'checkout' | 'recheckin' | 'delete_checkout_history' | 'cleaning' | 'dirty' | 'maintenance' | 'status' | 'transfer' | 'guest_out' | 'guest_return' | 'checkin_info' | 'generic';
   /** Patch trạng thái local ngay (checkout → dirty) — không cần GET */
   status?: string;
   guestStatus?: string | null;
@@ -556,8 +556,8 @@ export class RoomsService {
     if (notes !== undefined && notes !== null) {
       body.notes = notes;
     }
-    // Thêm rateType nếu có
-    if (rateType) {
+    // Thêm rateType nếu có (kể cả hourly — luôn gửi để Redis/DB đồng bộ)
+    if (rateType !== undefined && rateType !== null && String(rateType).trim() !== '') {
       body.rateType = rateType;
     }
     // Thêm additionalCharges và discount nếu có
