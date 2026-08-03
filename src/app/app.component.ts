@@ -89,6 +89,34 @@ export class AppComponent implements OnInit, OnDestroy {
         this.checkMaintenanceModeFromBackend();
       });
     }
+
+    // SPA giữ bundle JS cũ sau deploy (logout/login không reload trang)
+    // → so hash main-*.js với index.html mới, lệch thì reload 1 lần
+    if (isPlatformBrowser(this.platformId)) {
+      setTimeout(() => this.reloadIfStaleBundle(), 3000);
+    }
+  }
+
+  /** Reload 1 lần nếu bundle đang chạy khác bundle trên server (sau deploy) */
+  private reloadIfStaleBundle(): void {
+    try {
+      const currentMain = Array.from(document.scripts)
+        .map(s => (s.src.match(/main-[A-Z0-9]+\.js/i) || [])[0])
+        .find(Boolean);
+      if (!currentMain) return; // dev mode / SSR
+      if (sessionStorage.getItem('bundleReloadedFor') === currentMain) return;
+
+      fetch(`/index.html?ts=${Date.now()}`, { cache: 'no-store' })
+        .then(res => (res.ok ? res.text() : ''))
+        .then(html => {
+          const latestMain = (html.match(/main-[A-Z0-9]+\.js/i) || [])[0];
+          if (latestMain && latestMain !== currentMain) {
+            sessionStorage.setItem('bundleReloadedFor', currentMain);
+            window.location.reload();
+          }
+        })
+        .catch(() => {});
+    } catch (_e) {}
   }
 
   ngOnDestroy(): void {

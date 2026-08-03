@@ -195,18 +195,28 @@ nz-sider {
   box-shadow: none !important;
 }
 
-/* Guard: CSS này nằm trong JS bundle nên luôn có mặt — kể cả khi global
-   ng-zorro css (styles-*.css ~1MB) load chậm, sidebar vẫn đúng giao diện:
-   không bullet, submenu nền xanh, chữ trắng (không panel trắng). */
+/* Guard: style menu sidebar theo CẤU TRÚC, không phụ thuộc class theme
+   (ant-menu-dark/light) — từng bị item đang chọn nền sáng + chữ trắng (vô hình)
+   khi menu render theme light. CSS này nằm trong JS bundle nên luôn có mặt
+   kể cả khi global styles-*.css (~1MB) load chậm. */
+::ng-deep nz-sider {
+  overflow-x: hidden;
+}
+
 ::ng-deep nz-sider ul[nz-menu],
 ::ng-deep nz-sider ul[nz-menu] ul {
   list-style: none;
   margin: 0;
-  padding-left: 0;
 }
 
 ::ng-deep nz-sider ul[nz-menu] li {
   list-style: none;
+}
+
+::ng-deep nz-sider ul[nz-menu] {
+  background: transparent !important;
+  border-right: none !important;
+  width: 100%;
 }
 
 ::ng-deep nz-sider ul[nz-menu] .ant-menu-sub,
@@ -218,7 +228,37 @@ nz-sider {
 
 ::ng-deep nz-sider ul[nz-menu] .ant-menu-item,
 ::ng-deep nz-sider ul[nz-menu] .ant-menu-submenu-title {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.88) !important;
+  background: transparent;
+}
+
+::ng-deep nz-sider ul[nz-menu] .ant-menu-item .anticon,
+::ng-deep nz-sider ul[nz-menu] .ant-menu-submenu-title .anticon {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Mũi tên submenu của antd vẽ bằng background của ::before/::after */
+::ng-deep nz-sider ul[nz-menu] .ant-menu-submenu-arrow::before,
+::ng-deep nz-sider ul[nz-menu] .ant-menu-submenu-arrow::after {
+  background: rgba(255, 255, 255, 0.88) !important;
+}
+
+::ng-deep nz-sider ul[nz-menu] .ant-menu-item:hover,
+::ng-deep nz-sider ul[nz-menu] .ant-menu-submenu-title:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+::ng-deep nz-sider ul[nz-menu] .ant-menu-item-selected,
+::ng-deep nz-sider ul[nz-menu] .ant-menu-item-selected:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #fff !important;
+  border-radius: 0 20px 20px 0;
+  margin-right: 12px;
+}
+
+::ng-deep nz-sider ul[nz-menu] .ant-menu-item::after {
+  border-right: none !important;
 }
 
 /* ============ Layout ============ */
