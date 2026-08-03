@@ -102,7 +102,8 @@ export class LoginBootstrapService {
       : (this.authService.getBusinessId() || undefined);
     this.hotelService.getHotelsCached(businessId, undefined, { lite: true }).pipe(take(1)).subscribe({
       next: (hotels) => {
-        if (!isPlatformAdmin) return;
+        // Mọi role (không riêng admin): chưa có KS chọn → seed KS đầu
+        // (quản lý KS không gắn user.hotelId từng bị board trống vì không ai seed)
         if (this.sessionContext.getSelectedHotelId()) return;
         const filtered = this.hotelService.filterHotelsForUser(hotels, user);
         const firstId = filtered.length

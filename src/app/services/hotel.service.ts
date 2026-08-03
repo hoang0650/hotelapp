@@ -107,12 +107,18 @@ export class HotelService {
       return list.filter(matchActive);
     }
 
+    // Backend ĐÃ lọc theo quyền của token — FE chỉ lọc "tinh chỉnh".
+    // Nếu lọc cục bộ ra rỗng (user thiếu hotelId/businessId, role chưa hydrate...)
+    // thì fail-open về list backend trả — không để dropdown/board trống oan.
+    const failOpen = (result: Hotel[]): Hotel[] =>
+      result.length > 0 ? result : list.filter(matchActive);
+
     if (role === 'business') {
       const businessId = this.normalizeHotelId(user?.businessId);
-      if (!businessId) return [];
-      return list.filter(
+      if (!businessId) return failOpen([]);
+      return failOpen(list.filter(
         (h) => this.sameHotelId(this.extractBusinessId(h), businessId) && matchActive(h)
-      );
+      ));
     }
 
     if (role === 'hotel') {
@@ -127,21 +133,22 @@ export class HotelService {
         if (byBusiness.length > 0) return byBusiness;
       }
 
-      return list.filter((h) => {
+      return failOpen(list.filter((h) => {
         if (!matchActive(h)) return false;
         if (hotelId && this.sameHotelId(h._id, hotelId)) return true;
         if (userId && this.sameHotelId((h as any).managerId, userId)) return true;
         return false;
-      });
+      }));
     }
 
     if (role === 'staff') {
       const hotelId = this.normalizeHotelId(user?.hotelId);
-      if (!hotelId) return [];
-      return list.filter((h) => this.sameHotelId(h._id, hotelId) && matchActive(h));
+      if (!hotelId) return failOpen([]);
+      return failOpen(list.filter((h) => this.sameHotelId(h._id, hotelId) && matchActive(h)));
     }
 
-    return [];
+    // Role rỗng/chưa hydrate: tin backend
+    return list.filter(matchActive);
   }
 
   /** Stream hotelId đang chọn (cùng nguồn với sơ đồ phòng / session) */
