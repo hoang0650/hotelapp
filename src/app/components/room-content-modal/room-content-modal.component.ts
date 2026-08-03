@@ -2642,14 +2642,15 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Hiện QR + mã CK ngay (dùng prefetch hoặc tạo mã local tức thì)
+    // Hiện QR ngay — bỏ qua check/bắt buộc Mã thanh toán / Nội dung CK trên QR
     const reused = this.takePrefetchedSePay(normalizedAmount);
     const paymentCode = reused?.paymentCode || this.generateLocalSePayPaymentCode();
+    // Giữ mã nội bộ để polling/history; không gắn vào QR (des) và không bắt khách nhập CK
     this.sepayPaymentCode = paymentCode;
 
     this.prepareSePayModalState(
       normalizedAmount,
-      bank.qrPaymentUrl,
+      this.buildRoomCheckoutQrUrl(bank.qrPaymentUrl, normalizedAmount),
       bank.beneficiaryName,
       bank.bankName,
       bank.accountNumber,
@@ -2697,21 +2698,46 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             this.startPaymentStatusPolling();
           }
         } else {
-          this.showSePayModal = false;
-          this.resetSePayTransactionState();
-          this.message.error(response?.error || 'Có lỗi xảy ra khi tạo payment history');
-          this.proceedWithCheckout(checkoutData, invoiceData);
+          // Vẫn giữ QR — không chặn thanh toán vì lỗi liên kết mã CK
+          console.warn('SePay payment history create failed:', response?.error);
+          if (this.showSePayModal) {
+            this.startPaymentStatusPolling();
+          }
         }
       },
       error: (error: any) => {
         this.sepayInitializing = false;
         console.error('Error creating SePay payment history:', error);
-        this.showSePayModal = false;
-        this.resetSePayTransactionState();
-        this.message.error('Có lỗi xảy ra khi tạo payment history. Vui lòng thử lại.');
-        this.proceedWithCheckout(checkoutData, invoiceData);
+        // Bỏ qua check mã CK: vẫn giữ modal QR để khách quét thanh toán
+        if (this.showSePayModal) {
+          this.startPaymentStatusPolling();
+        }
       }
     });
+  }
+
+  /**
+   * QR checkout: gắn số tiền, không gắn nội dung CK (des / payment code).
+   * Webhook tự khớp theo số tiền + tài khoản / payment history.
+   */
+  private buildRoomCheckoutQrUrl(baseUrl: string, amount: number): string {
+    const raw = String(baseUrl || '').trim();
+    if (!raw) {
+      return '';
+    }
+    try {
+      const url = new URL(raw);
+      const normalizedAmount = Math.round(Number(amount) || 0);
+      if (normalizedAmount > 0) {
+        url.searchParams.set('amount', String(normalizedAmount));
+      }
+      url.searchParams.delete('des');
+      url.searchParams.delete('description');
+      url.searchParams.delete('content');
+      return url.toString();
+    } catch {
+      return raw;
+    }
   }
 
   private resolveBankAccountForQr(): {
@@ -2987,12 +3013,23 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     const currentRoomId = this.normalizeObjectId(this.roomData?._id);
     const currentHistoryId = String(this.sepayPaymentHistoryId || '').trim();
     const currentCode = String(this.sepayPaymentCode || '').trim();
+    const payloadAmount = Number(payload.amount);
+    const currentAmount = Number(this.sepayAmount);
+    const payloadType = String(payload.paymentType || '').trim();
 
     const matchById = !!(currentHistoryId && payloadHistoryId && currentHistoryId === payloadHistoryId);
+    // Không bắt buộc khớp mã CK — chỉ nhận nếu có sẵn và trùng
     const matchByCode = !!(currentCode && payloadCode && currentCode === payloadCode);
+    const sameRoom = !!(currentRoomId && payloadRoomId && currentRoomId === payloadRoomId);
+    const amountClose =
+      Number.isFinite(payloadAmount) &&
+      Number.isFinite(currentAmount) &&
+      currentAmount > 0 &&
+      Math.abs(payloadAmount - currentAmount) <= Math.max(currentAmount * 0.01, 1000);
+    // Bỏ qua check nội dung CK: khớp phòng + (checkout type hoặc đúng số tiền)
     const matchByRoom =
-      !!(currentRoomId && payloadRoomId && currentRoomId === payloadRoomId) &&
-      !!(currentHistoryId || currentCode);
+      sameRoom &&
+      (payloadType === 'room_checkout' || payloadType === '' || amountClose);
 
     if (!matchById && !matchByCode && !matchByRoom) {
       return;
