@@ -7,17 +7,15 @@
     <div class="sidebar-logo-wrapper">
       <img src="assets/phgroup_logo_circle.PNG" alt="PHHotel Logo" />
     </div>
-    <ul nz-menu nzTheme="dark" nzMode="inline" [nzInlineCollapsed]="isCollapsed" (click)="closeMobileMenu($event)">
+    <ul nz-menu nzTheme="dark" nzMode="inline" (click)="closeMobileMenu($event)">
       <!-- Vận hành khách sạn -->
-      <li nz-submenu *ngIf="canAccessHotelMenu()"
-          [(nzOpen)]="openHotelOps"
-          [nzTitle]="'ADMIN_SIDEBAR.HOTEL_OPERATIONS' | translate"
-          nzIcon="home">
+      <li nz-submenu *ngIf="canAccessHotelMenu()" [nzTitle]="'ADMIN_SIDEBAR.HOTEL_OPERATIONS' | translate"
+        nzIcon="home">
         <ul>
-          <li nz-menu-item routerLink="/admin/room" routerLinkActive="ant-menu-item-selected">{{ 'ADMIN_SIDEBAR.ROOM' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/room-category" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item routerLink="/admin/room">{{ 'ADMIN_SIDEBAR.ROOM' | translate }}</li>
+          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/room-category">{{
             'ADMIN_SIDEBAR.ROOM_CATEGORY' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/floor-plan" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/floor-plan">{{
             'ADMIN_SIDEBAR.FLOOR_PLAN' | translate }}</li>
         </ul>
       </li>
@@ -25,114 +23,108 @@
       <!-- Quản lý dữ liệu -->
       <li nz-submenu
         *ngIf="canAccessBusinessManagement() || canAccessHotelManagement() || canAccessRoomManagement() || canAccessStaffManagement() || canAccessUserManagement() || canAccessServiceManagement() || canAccessGuestManagement() || canAccessDebtManagement() || canAccessContactManagement() || canAccessBlogManagement()"
-        [(nzOpen)]="openDataMgmt"
         [nzTitle]="'ADMIN_SIDEBAR.DATA_MANAGEMENT' | translate" nzIcon="database">
         <ul>
-          <li nz-menu-item *ngIf="canAccessBusinessManagement()" routerLink="/admin/company" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessBusinessManagement()" routerLink="/admin/company">{{
             'ADMIN_SIDEBAR.BUSINESS_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessHotelManagement()" routerLink="/admin/hotel" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessHotelManagement()" routerLink="/admin/hotel">{{
             'ADMIN_SIDEBAR.HOTEL_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/room-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessRoomManagement()" routerLink="/admin/room-management">{{
             'ADMIN_SIDEBAR.ROOM_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessStaffManagement()" routerLink="/admin/staff" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessStaffManagement()" routerLink="/admin/staff">{{
             'ADMIN_SIDEBAR.STAFF_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessUserManagement()" routerLink="/admin/users-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessUserManagement()" routerLink="/admin/users-management">{{
             'ADMIN_SIDEBAR.USER_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessServiceManagement()" routerLink="/admin/service-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessServiceManagement()" routerLink="/admin/service-management">{{
             'ADMIN_SIDEBAR.SERVICE_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessGuestManagement()" routerLink="/admin/guest-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessGuestManagement()" routerLink="/admin/guest-management">{{
             'ADMIN_SIDEBAR.GUEST_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessDebtManagement()" routerLink="/admin/debt-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessDebtManagement()" routerLink="/admin/debt-management">{{
             'ADMIN_SIDEBAR.DEBT_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessContactManagement()" routerLink="/admin/contact-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessContactManagement()" routerLink="/admin/contact-management">{{
             'ADMIN_SIDEBAR.CONTACT_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessBlogManagement()" routerLink="/admin/blog-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessBlogManagement()" routerLink="/admin/blog-management">{{
             'ADMIN_SIDEBAR.BLOG_MANAGEMENT' | translate }}</li>
         </ul>
       </li>
 
       <!-- Thanh toán & Tài chính -->
       <li nz-submenu *ngIf="canAccessPaymentMenu() || canAccessHotelMenu() || canAccessFinancialSummary()"
-        [(nzOpen)]="openPayment"
         [nzTitle]="'ADMIN_SIDEBAR.PAYMENT_FINANCE' | translate" nzIcon="dollar">
         <ul>
-          <li nz-menu-item *ngIf="canAccessFinancialSummary()" routerLink="/admin/financial-summary-report" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessFinancialSummary()" routerLink="/admin/financial-summary-report">{{
             'ADMIN_SIDEBAR.FINANCIAL_SUMMARY_REPORT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessHotelMenu()" routerLink="/admin/bank-transfer-history" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessHotelMenu()" routerLink="/admin/bank-transfer-history">{{
             'ADMIN_SIDEBAR.BANK_TRANSFER_HISTORY' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/qr-payment" routerLinkActive="ant-menu-item-selected">{{ 'ADMIN_SIDEBAR.QR_CODE' |
+          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/qr-payment">{{ 'ADMIN_SIDEBAR.QR_CODE' |
             translate }}</li>
-          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/visa-payment" routerLinkActive="ant-menu-item-selected">{{ 'ADMIN_SIDEBAR.VISA' |
+          <li nz-menu-item *ngIf="canAccessPaymentMenu()" routerLink="/admin/visa-payment">{{ 'ADMIN_SIDEBAR.VISA' |
             translate }}</li>
         </ul>
       </li>
 
       <!-- Tích hợp & Cấu hình -->
       <li nz-submenu *ngIf="canAccessOTAManagement() || canAccessPricingManagement() || canAccessElectricSetting() || canAccessAiUsage()"
-        [(nzOpen)]="openIntegration"
         [nzTitle]="'ADMIN_SIDEBAR.INTEGRATION_CONFIG' | translate" nzIcon="tool">
         <ul>
-          <li nz-menu-item *ngIf="canAccessOTAManagement()" routerLink="/admin/ota-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessOTAManagement()" routerLink="/admin/ota-management">{{
             'ADMIN_SIDEBAR.OTAS_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessPricingManagement()" routerLink="/admin/pricing-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessPricingManagement()" routerLink="/admin/pricing-management">{{
             'ADMIN_SIDEBAR.PRICING_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessAiUsage()" routerLink="/admin/ai-usage" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessAiUsage()" routerLink="/admin/ai-usage">{{
             'ADMIN_SIDEBAR.AI_USAGE' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/fanpage-messages" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/fanpage-messages">{{
             'ADMIN_SIDEBAR.FANPAGE_MESSAGES' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/zalo-messages" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/zalo-messages">{{
             'SIDEBAR.ZALO_MESSAGES' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/telegram-messages" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessFanpageMessages()" routerLink="/admin/telegram-messages">{{
             'SIDEBAR.TELEGRAM_MESSAGES' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessElectricSetting()" routerLink="/admin/electric-setting" routerLinkActive="ant-menu-item-selected">
+          <li nz-menu-item *ngIf="canAccessElectricSetting()" routerLink="/admin/electric-setting">
             <span>{{ 'ADMIN_SIDEBAR.ELECTRIC_SETTING' | translate }}</span>
           </li>
         </ul>
       </li>
 
       <!-- Hóa đơn điện tử -->
-      <li nz-submenu *ngIf="canAccessEInvoice()"
-          [(nzOpen)]="openEInvoice"
-          [nzTitle]="'ADMIN_SIDEBAR.E_INVOICE' | translate" nzIcon="file-text">
+      <li nz-submenu *ngIf="canAccessEInvoice()" [nzTitle]="'ADMIN_SIDEBAR.E_INVOICE' | translate" nzIcon="file-text">
         <ul>
-          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-registration" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-registration">{{
             'ADMIN_SIDEBAR.E_INVOICE_REGISTRATION' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-management" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-management">{{
             'ADMIN_SIDEBAR.E_INVOICE_MANAGEMENT' | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-template" routerLinkActive="ant-menu-item-selected">{{
+          <li nz-menu-item *ngIf="canAccessEInvoice()" routerLink="/admin/e-invoice-template">{{
             'ADMIN_SIDEBAR.E_INVOICE_TEMPLATE' | translate }}</li>
         </ul>
       </li>
 
       <!-- Cài đặt hệ thống -->
       <li nz-submenu *ngIf="canAccessSettings() || canAccessEmailAdmin() || canAccessFile() || canAccessBotSetting()"
-        [(nzOpen)]="openSystem"
         [nzTitle]="'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate" nzIcon="setting">
         <ul>
-          <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/settings" routerLinkActive="ant-menu-item-selected">
+          <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/settings">
             <span>{{ 'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate }}</span>
           </li>
-          <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/bot-setting" routerLinkActive="ant-menu-item-selected">
+          <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/bot-setting">
             <span>{{ 'ADMIN_SIDEBAR.BOT_SETTING' | translate }}</span>
           </li>
 
-          <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/camera-config" routerLinkActive="ant-menu-item-selected">
+          <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/camera-config">
             <span>{{ 'ADMIN_SIDEBAR.CAMERA_CONFIG' | translate }}</span>
           </li>
-          <li nz-menu-item *ngIf="canAccessEmailAdmin()" routerLink="/admin/email-admin" routerLinkActive="ant-menu-item-selected">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN'
+          <li nz-menu-item *ngIf="canAccessEmailAdmin()" routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN'
             | translate }}</li>
-          <li nz-menu-item *ngIf="canAccessFile()" routerLink="/admin/files" routerLinkActive="ant-menu-item-selected">
+          <li nz-menu-item *ngIf="canAccessFile()" routerLink="/admin/files">
             <span>{{ 'ADMIN_SIDEBAR.FILE' | translate }}</span>
           </li>
         </ul>
       </li>
 
       <!-- Trang công khai -->
-      <li nz-menu-item routerLink="/blog" routerLinkActive="ant-menu-item-selected">
+      <li nz-menu-item routerLink="/blog">
         <span nz-icon nzType="read" nzTheme="outline"></span>
         <span>{{ 'ADMIN_SIDEBAR.BLOG' | translate }}</span>
       </li>
-      <li nz-menu-item routerLink="/pricing" routerLinkActive="ant-menu-item-selected">
+      <li nz-menu-item routerLink="/pricing">
         <span nz-icon nzType="tags" nzTheme="outline"></span>
         <span>{{ 'ADMIN_SIDEBAR.PRICING' | translate }}</span>
       </li>

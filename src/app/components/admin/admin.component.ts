@@ -36,13 +36,6 @@ export class AdminComponent implements OnInit, OnDestroy {
   selectedHotelIdForFilter: string | null = null;
   isLoadingFloors = false;
   permissionsReady = true;
-  /** Mở submenu theo route hiện tại sau login */
-  openHotelOps = false;
-  openDataMgmt = false;
-  openPayment = false;
-  openIntegration = false;
-  openEInvoice = false;
-  openSystem = false;
   columnMarks: NzMarks = {
     2: '2',
     3: '3',
@@ -89,8 +82,6 @@ export class AdminComponent implements OnInit, OnDestroy {
       this.isDarkTheme = theme === 'dark';
     });
 
-    // Đồng bộ quyền ngay khi vào admin (không chờ bootstrap delay) — sidebar hiện đúng sau login
-    this.permissionService.refreshPermissions();
     this.permissionService.ready$.subscribe(ready => {
       this.permissionsReady = ready;
     });
@@ -103,11 +94,8 @@ export class AdminComponent implements OnInit, OnDestroy {
       .subscribe(breadcrumbs => {
         this.breadcrumbs = breadcrumbs;
         this.isRoomRoute = this.router.url.split('?')[0] === '/admin/room';
-        this.syncSidebarOpenKeys(this.router.url);
       });
     this.isRoomRoute = this.router.url.split('?')[0] === '/admin/room';
-    this.syncSidebarOpenKeys(this.router.url);
-
     window.addEventListener('openAdminFloorFilter', this.openFloorFilterHandler);
     window.addEventListener('openAdminColumnsModal', this.openColumnsHandler);
     window.addEventListener('hotelPaymentSpeakerChanged', this.paymentSpeakerChangedHandler);
@@ -118,47 +106,6 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.syncPaymentSpeakerSocket(
       this.sessionContext.getSelectedHotelId() || this.authService.getHotelId()
     );
-  }
-
-  /** Mở đúng nhóm menu chứa route sau login / navigate */
-  private syncSidebarOpenKeys(url: string): void {
-    const path = (url || '').split('?')[0];
-    this.openHotelOps =
-      path === '/admin/room' ||
-      path.startsWith('/admin/room-category') ||
-      path.startsWith('/admin/floor-plan');
-    this.openDataMgmt =
-      path.startsWith('/admin/company') ||
-      path === '/admin/hotel' ||
-      path.startsWith('/admin/hotel/') ||
-      path.startsWith('/admin/room-management') ||
-      path.startsWith('/admin/staff') ||
-      path.startsWith('/admin/users-management') ||
-      path.startsWith('/admin/service-management') ||
-      path.startsWith('/admin/guest-management') ||
-      path.startsWith('/admin/debt-management') ||
-      path.startsWith('/admin/contact-management') ||
-      path.startsWith('/admin/blog-management');
-    this.openPayment =
-      path.startsWith('/admin/financial-summary') ||
-      path.startsWith('/admin/bank-transfer') ||
-      path.startsWith('/admin/qr-payment') ||
-      path.startsWith('/admin/visa-payment');
-    this.openIntegration =
-      path.startsWith('/admin/ota-management') ||
-      path.startsWith('/admin/pricing-management') ||
-      path.startsWith('/admin/ai-usage') ||
-      path.startsWith('/admin/fanpage-messages') ||
-      path.startsWith('/admin/zalo-messages') ||
-      path.startsWith('/admin/telegram-messages') ||
-      path.startsWith('/admin/electric-setting');
-    this.openEInvoice = path.startsWith('/admin/e-invoice');
-    this.openSystem =
-      path.startsWith('/admin/settings') ||
-      path.startsWith('/admin/bot-setting') ||
-      path.startsWith('/admin/camera-config') ||
-      path.startsWith('/admin/email-admin') ||
-      path.startsWith('/admin/files');
   }
 
   ngOnDestroy(): void {
