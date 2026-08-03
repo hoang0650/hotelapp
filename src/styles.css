@@ -329,3 +329,22 @@ app-admin nz-breadcrumb {
   color: var(--app-text) !important;
   box-shadow: var(--app-shadow) !important;
 }
+
+/* Submenu popup (portal ra body khi sider collapsed) — khớp màu sider, không trắng */
+.ant-menu-submenu-popup.ant-menu-dark,
+.ant-menu-dark.ant-menu-submenu-popup > .ant-menu,
+.ant-menu-submenu.ant-menu-submenu-popup > .ant-menu {
+  background: var(--app-sider-bg, #0d6efd) !important;
+}
+
+.ant-menu-submenu-popup .ant-menu-item,
+.ant-menu-submenu-popup .ant-menu-submenu-title {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.ant-menu-submenu-popup .ant-menu-item:hover,
+.ant-menu-submenu-popup .ant-menu-item-active,
+.ant-menu-submenu-popup .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}

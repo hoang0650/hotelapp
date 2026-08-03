@@ -189,6 +189,16 @@ nz-sider {
   background-color: rgba(0, 0, 0, 0.1);
 }
 
+/* Inline submenu (expanded sider) — luôn nền sider, không card trắng */
+::ng-deep .ant-menu-dark.ant-menu-inline .ant-menu-sub.ant-menu-inline {
+  background: var(--app-sider-bg, #0d6efd) !important;
+  box-shadow: none !important;
+}
+
+::ng-deep .ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-submenu-popup {
+  display: none !important;
+}
+
 /* ============ Layout ============ */
 nz-layout {
   min-height: 100vh;

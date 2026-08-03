@@ -162,8 +162,8 @@ export class SessionContextService {
 
     this.hydrateInFlight = new Promise<void>((resolve) => {
       const seededHotelId = this.selectedHotelIdSubject.value || this.authService.getHotelId();
-      // Hotel đã seed từ login bootstrap → bỏ GET selected-hotel; floor/columns/staff song song
-      let pending = 3;
+      // Critical: hotel + floor. Columns/staff không chặn hydrate (tránh 8s Redis timeout).
+      let pending = 1;
       const done = () => {
         pending -= 1;
         if (pending <= 0) {
@@ -171,6 +171,33 @@ export class SessionContextService {
           this.hydrateInFlight = null;
           resolve();
         }
+      };
+
+      const loadSecondaryPrefs = () => {
+        setTimeout(() => {
+          if (this.roomColumnsCountSubject.value == null) {
+            this.apiService.getRoomColumnsCount(userId).pipe(
+              catchError(() => of({ columnsCount: null }))
+            ).subscribe((res) => {
+              const count = res?.columnsCount;
+              if (count && count >= 2 && count <= 12 && this.roomColumnsCountSubject.value == null) {
+                this.roomColumnsCountSubject.next(count);
+              }
+            });
+          }
+          if (!this.staffIdSubject.value) {
+            this.apiService.getStaffContext().pipe(
+              catchError(() => of({ staffId: null, staffName: null }))
+            ).subscribe((res) => {
+              if (res?.staffId && !this.staffIdSubject.value) {
+                this.staffIdSubject.next(res.staffId);
+              }
+              if (res?.staffName && !this.staffNameSubject.value) {
+                this.staffNameSubject.next(res.staffName);
+              }
+            });
+          }
+        }, 1200);
       };
 
       if (seededHotelId) {
@@ -184,9 +211,11 @@ export class SessionContextService {
             if (floorRes?.selectedFloor != null && this.selectedFloorSubject.value == null) {
               this.selectedFloorSubject.next(String(floorRes.selectedFloor));
             }
+            loadSecondaryPrefs();
             done();
           });
         } else {
+          loadSecondaryPrefs();
           done();
         }
       } else {
@@ -206,42 +235,14 @@ export class SessionContextService {
               if (floorRes?.selectedFloor != null && this.selectedFloorSubject.value == null) {
                 this.selectedFloorSubject.next(String(floorRes.selectedFloor));
               }
+              loadSecondaryPrefs();
               done();
             });
           } else {
+            loadSecondaryPrefs();
             done();
           }
         });
-      }
-
-      if (this.roomColumnsCountSubject.value == null) {
-        this.apiService.getRoomColumnsCount(userId).pipe(
-          catchError(() => of({ columnsCount: null }))
-        ).subscribe((res) => {
-          const count = res?.columnsCount;
-          if (count && count >= 2 && count <= 12 && this.roomColumnsCountSubject.value == null) {
-            this.roomColumnsCountSubject.next(count);
-          }
-          done();
-        });
-      } else {
-        done();
-      }
-
-      if (!this.staffIdSubject.value) {
-        this.apiService.getStaffContext().pipe(
-          catchError(() => of({ staffId: null, staffName: null }))
-        ).subscribe((res) => {
-          if (res?.staffId && !this.staffIdSubject.value) {
-            this.staffIdSubject.next(res.staffId);
-          }
-          if (res?.staffName && !this.staffNameSubject.value) {
-            this.staffNameSubject.next(res.staffName);
-          }
-          done();
-        });
-      } else {
-        done();
       }
     });
 

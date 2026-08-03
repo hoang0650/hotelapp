@@ -7,7 +7,7 @@
     <div class="sidebar-logo-wrapper">
       <img src="assets/phgroup_logo_circle.PNG" alt="PHHotel Logo" />
     </div>
-    <ul nz-menu nzTheme="dark" nzMode="inline" (click)="closeMobileMenu($event)">
+    <ul nz-menu nzTheme="dark" nzMode="inline" [nzInlineCollapsed]="isCollapsed" (click)="closeMobileMenu($event)">
       <!-- Vận hành khách sạn -->
       <li nz-submenu *ngIf="canAccessHotelMenu()"
           [(nzOpen)]="openHotelOps"

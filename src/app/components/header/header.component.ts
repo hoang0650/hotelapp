@@ -132,9 +132,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
 
     this.lastNotificationUserId = userId;
-    this.loadNotificationSettings();
-    this.notificationsService.loadAnnouncements();
-    this.startNotificationRefresh();
+    // Không tranh bandwidth với board sau login — Redis/Mongo đang chậm
+    setTimeout(() => {
+      if (this.lastNotificationUserId !== userId || !this.authService.getToken()) return;
+      this.loadNotificationSettings();
+      this.notificationsService.loadAnnouncements();
+      this.startNotificationRefresh();
+    }, 3500);
   }
 
   private startNotificationRefresh(): void {

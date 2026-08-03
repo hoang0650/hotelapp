@@ -40,12 +40,13 @@ export class LoginBootstrapService {
 
       // Quyền sidebar: refresh ngay — không chờ 1.5s (tránh menu thiếu/sai sau login)
       this.permissionService.refreshPermissions();
+      // Pricing / package không chặn board — trì hoãn mạnh khi Redis chậm
       setTimeout(() => {
         this.pricingService.prefetchPackages();
         if (user?._id) {
           this.pricingService.getCurrentUserPackage(String(user._id)).subscribe({ next: () => {}, error: () => {} });
         }
-      }, 1500);
+      }, 4000);
 
       const hotelId = this.resolveHotelId(user);
       const role = String(user?.role || '').trim().toLowerCase();
