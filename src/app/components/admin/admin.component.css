@@ -195,8 +195,30 @@ nz-sider {
   box-shadow: none !important;
 }
 
-::ng-deep .ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-submenu-popup {
-  display: none !important;
+/* Guard: CSS này nằm trong JS bundle nên luôn có mặt — kể cả khi global
+   ng-zorro css (styles-*.css ~1MB) load chậm, sidebar vẫn đúng giao diện:
+   không bullet, submenu nền xanh, chữ trắng (không panel trắng). */
+::ng-deep nz-sider ul[nz-menu],
+::ng-deep nz-sider ul[nz-menu] ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+::ng-deep nz-sider ul[nz-menu] li {
+  list-style: none;
+}
+
+::ng-deep nz-sider ul[nz-menu] .ant-menu-sub,
+::ng-deep nz-sider ul[nz-menu] li > ul {
+  background: var(--app-sider-bg, #0d6efd) !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+::ng-deep nz-sider ul[nz-menu] .ant-menu-item,
+::ng-deep nz-sider ul[nz-menu] .ant-menu-submenu-title {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* ============ Layout ============ */
