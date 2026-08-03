@@ -1040,8 +1040,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
       this.hotelService.getHotelById(userHotelId, { lite: true }).subscribe({
         next: (hotel) => {
-          this.hotels = hotel ? [hotel] : [];
-          this.selectedHotelId = hotel?._id || userHotelId;
+          const id = this.extractId(hotel?._id) || userHotelId;
+          this.hotels = hotel ? [{ ...hotel, _id: id } as Hotel] : [];
+          this.selectedHotelId = id;
 
           if (this.selectedHotelId) {
             this.hotelService.saveRoomContext(this.selectedHotelId, this.selectedFloor || '');
@@ -1073,34 +1074,47 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.cdr.detectChanges();
 
+    // Seed từ cache ngay — tránh dropdown "Trống" trong lúc chờ API (superadmin/admin)
+    const preferredNow =
+      this.extractId(this.selectedHotelId) ||
+      this.hotelService.getStoredHotelId() ||
+      this.extractId(this.authService.getHotelId());
+    const cached = this.hotelService.getCachedHotels();
+    if (cached.length > 0 || preferredNow) {
+      this.applyHotelsFromApi(cached, currentUser, preferredNow);
+    }
+
     // superadmin/admin: lấy tất cả KS — không truyền businessId
-    // business/hotel: kèm businessId để backend filter đúng phạm vi sở hữu
     const businessIdParam = isPlatformAdmin ? undefined : (userBusinessId || undefined);
 
     this.hotelService.getHotelsCached(businessIdParam, undefined, { lite: true }).subscribe({
       next: (data) => {
-        // Chuẩn hóa _id → string để nz-select khớp selectedHotelId (tránh hiện "Trống")
-        this.hotels = this.hotelService.filterHotelsForUser(data, currentUser).map((h) => {
-          const id = this.extractId(h?._id);
-          return id ? ({ ...h, _id: id } as Hotel) : h;
-        });
-        if ((!this.hotels || this.hotels.length === 0) && userHotelId && userRole === 'hotel') {
-          this.hotelService.getHotelById(userHotelId, { lite: true }).subscribe({
-            next: (hotel) => {
-              const id = this.extractId(hotel?._id) || userHotelId;
-              this.hotels = hotel ? [{ ...hotel, _id: id } as Hotel] : [];
-              this.isLoading = false;
-              this.applyHotelSelectionAfterLoad();
-              this.cdr.detectChanges();
-            },
-            error: () => {
-              this.hotels = [];
-              this.isLoading = false;
-              this.applyHotelSelectionAfterLoad();
-              this.cdr.detectChanges();
-            }
-          });
+        const preferred =
+          this.extractId(this.selectedHotelId) ||
+          this.hotelService.getStoredHotelId() ||
+          this.extractId(this.authService.getHotelId()) ||
+          userHotelId;
+
+        this.applyHotelsFromApi(data || [], currentUser, preferred);
+
+        // hotel role: fallback GET 1 KS nếu list trống
+        if (this.hotels.length === 0 && userHotelId && userRole === 'hotel') {
+          this.hydrateHotelOptionById(userHotelId);
           return;
+        }
+
+        // platform admin: list rỗng/timeout nhưng đã có KS trong session (AI đã biết "Thanh Vy")
+        if (this.hotels.length === 0 && preferred && isPlatformAdmin) {
+          this.hydrateHotelOptionById(preferred);
+          return;
+        }
+
+        // Chỉ có stub "Khách sạn đang chọn" → hydrate tên thật
+        if (preferred && this.hotels.length > 0) {
+          const matched = this.hotels.find((h) => this.extractId(h._id) === preferred);
+          if (!matched?.name || matched.name === 'Khách sạn đang chọn') {
+            this.hydrateHotelOptionById(preferred, false);
+          }
         }
 
         this.isLoading = false;
@@ -1108,9 +1122,79 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (error) => {
-        this.message.error('Lỗi khi tải danh sách khách sạn: ' + (error.error?.message || error.message));
+        console.error('Error loading hotels:', error);
+        const preferred =
+          this.extractId(this.selectedHotelId) ||
+          this.hotelService.getStoredHotelId() ||
+          this.extractId(this.authService.getHotelId());
+        if (preferred) {
+          this.hydrateHotelOptionById(preferred);
+        } else {
+          this.message.error('Lỗi khi tải danh sách khách sạn: ' + (error.error?.message || error.message));
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
+      }
+    });
+  }
+
+  /** Áp list KS + đảm bảo option khớp selectedHotelId (không để nz-select hiện "Trống") */
+  private applyHotelsFromApi(
+    data: Hotel[],
+    currentUser: any,
+    preferredHotelId?: string | null
+  ): void {
+    const preferred =
+      this.hotelService.normalizeHotelId(preferredHotelId) ||
+      this.extractId(this.selectedHotelId) ||
+      this.hotelService.getStoredHotelId();
+    const filtered = this.hotelService.filterHotelsForUser(data, currentUser);
+    this.hotels = this.hotelService.ensureSelectedHotelOption(filtered, preferred);
+  }
+
+  /** Lấy 1 KS theo id khi list all fail/timeout — giữ board dùng được cho superadmin/admin */
+  private hydrateHotelOptionById(hotelId: string, finishLoading = true): void {
+    const id = this.hotelService.normalizeHotelId(hotelId);
+    if (!id) {
+      if (finishLoading) {
         this.isLoading = false;
+        this.applyHotelSelectionAfterLoad();
         this.cdr.detectChanges();
+      }
+      return;
+    }
+
+    this.hotelService.getHotelInfo(id, { lite: true }).subscribe({
+      next: (hotel) => {
+        if (hotel) {
+          const hid = this.extractId(hotel._id) || id;
+          const normalized = { ...hotel, _id: hid } as Hotel;
+          this.hotelService.rememberHotelName(hid, hotel.name);
+          const others = this.hotels.filter((h) => this.extractId(h._id) !== hid);
+          this.hotels = this.hotelService.ensureSelectedHotelOption(
+            [normalized, ...others],
+            hid,
+            hotel.name
+          );
+          this.selectedHotelId = hid;
+        } else {
+          this.hotels = this.hotelService.ensureSelectedHotelOption(this.hotels, id);
+        }
+        if (finishLoading) {
+          this.isLoading = false;
+          this.applyHotelSelectionAfterLoad();
+          this.cdr.detectChanges();
+        } else {
+          this.cdr.detectChanges();
+        }
+      },
+      error: () => {
+        this.hotels = this.hotelService.ensureSelectedHotelOption(this.hotels, id);
+        if (finishLoading) {
+          this.isLoading = false;
+          this.applyHotelSelectionAfterLoad();
+          this.cdr.detectChanges();
+        }
       }
     });
   }
@@ -1144,8 +1228,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.hotels.length === 0 && !this.authService.isStaff()) {
-      this.selectedHotelId = null;
+    // Không xóa selectedHotelId khi list tạm trống — tránh kẹt "Trống" / mất session KS
+    if (this.hotels.length === 0 && !this.authService.isStaff() && !this.selectedHotelId) {
       this.rooms = [];
       this.floors = [];
     }
@@ -2611,7 +2695,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Lấy danh sách tầng đã sắp xếp (có filter theo selectedFloor nếu có)
   // TrackBy functions để tối ưu performance
   trackByHotelId(index: number, hotel: Hotel): string {
-    return hotel._id || index.toString();
+    return this.extractId(hotel?._id) || hotel?._id || index.toString();
   }
 
   trackByFloor(index: number, floor: string): string {

@@ -14,7 +14,11 @@
               nzShowSearch
               nzAllowClear
               [nzFilterOption]="filterHotelOption">
-              <nz-option *ngFor="let hotel of hotels; trackBy: trackByHotelId" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
+              <nz-option
+                *ngFor="let hotel of hotels; trackBy: trackByHotelId"
+                [nzValue]="hotel._id!"
+                [nzLabel]="hotel.name || ('ROOM.SELECT_HOTEL' | translate)">
+              </nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
