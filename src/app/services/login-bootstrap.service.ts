@@ -69,12 +69,25 @@ export class LoginBootstrapService {
 
   private prefetchHotelsList(user: User | null): void {
     const role = String(user?.role || '').trim().toLowerCase();
-    const businessId =
-      role === 'superadmin' || role === 'admin'
-        ? undefined
-        : (this.authService.getBusinessId() || undefined);
+    const isPlatformAdmin = role === 'superadmin' || role === 'admin';
+    const businessId = isPlatformAdmin
+      ? undefined
+      : (this.authService.getBusinessId() || undefined);
     this.hotelService.getHotelsCached(businessId, undefined, { lite: true }).pipe(take(1)).subscribe({
-      next: () => {},
+      next: (hotels) => {
+        // superadmin/admin không có hotelId — seed KS đầu tiên để /admin/room không kẹt "Trống"
+        if (!isPlatformAdmin) return;
+        if (this.sessionContext.getSelectedHotelId()) return;
+        const filtered = this.hotelService.filterHotelsForUser(hotels, user);
+        const firstId = filtered.length
+          ? this.hotelService.normalizeHotelId(filtered[0]._id)
+          : null;
+        if (firstId) {
+          this.sessionContext.setSelectedHotelId(firstId, { persist: true });
+          this.hotelService.saveRoomContext(firstId, this.sessionContext.getSelectedFloor() || '');
+          this.prefetchHotelBundle(firstId);
+        }
+      },
       error: () => {}
     });
   }

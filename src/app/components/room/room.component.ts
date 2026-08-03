@@ -362,19 +362,31 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.hotelService.getStoredHotelId() ||
       this.authService.getHotelId();
 
+    const currentUser = this.authService.getCurrentUser();
+    const userId = currentUser?._id;
+    const userRole = String(currentUser?.role || '').trim().toLowerCase();
+    const isPlatformAdmin = userRole === 'superadmin' || userRole === 'admin';
+
+    // superadmin/admin thường không có hotelId — luôn load danh sách KS ngay
+    // (tránh nz-select hiện "Trống" vì selectedHotelId có mà hotels[] còn rỗng)
+    if (!this.authService.isStaff()) {
+      this.loadHotels();
+    }
+
     if (storedHotelId) {
       this.selectedHotelId = storedHotelId;
       this.roomSessionService.setHotelId(storedHotelId);
       this.onHotelChange(storedHotelId);
-      this.shouldLoadHotelsAfterInitialRender = true;
-    } else {
+      // Staff vẫn có thể cần sync list sau first paint; admin đã loadHotels ở trên
+      if (this.authService.isStaff()) {
+        this.shouldLoadHotelsAfterInitialRender = true;
+      }
+    } else if (this.authService.isStaff()) {
       this.loadHotels();
     }
 
-    const currentUser = this.authService.getCurrentUser();
-    const userId = currentUser?._id;
-
     // Chỉ gọi Redis selected-hotel khi chưa có hotelId (không chặn render)
+    // Platform admin: vẫn hỏi Redis nếu loadHotels chưa chọn được KS
     if (userId && !this.selectedHotelId) {
       this.apiService.getSelectedHotel(userId).subscribe({
         next: (res) => {
@@ -384,6 +396,9 @@ export class RoomComponent implements OnInit, OnDestroy {
             this.sessionContext.setSelectedHotelId(resolvedHotelId, { persist: false });
             this.roomSessionService.setHotelId(resolvedHotelId);
             this.onHotelChange(resolvedHotelId);
+            if (isPlatformAdmin && this.hotels.length === 0) {
+              this.loadHotels();
+            }
           }
         },
         error: () => {}
@@ -1064,27 +1079,32 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.hotelService.getHotelsCached(businessIdParam, undefined, { lite: true }).subscribe({
       next: (data) => {
-        this.hotels = this.hotelService.filterHotelsForUser(data, currentUser);
+        // Chuẩn hóa _id → string để nz-select khớp selectedHotelId (tránh hiện "Trống")
+        this.hotels = this.hotelService.filterHotelsForUser(data, currentUser).map((h) => {
+          const id = this.extractId(h?._id);
+          return id ? ({ ...h, _id: id } as Hotel) : h;
+        });
         if ((!this.hotels || this.hotels.length === 0) && userHotelId && userRole === 'hotel') {
           this.hotelService.getHotelById(userHotelId, { lite: true }).subscribe({
             next: (hotel) => {
-              this.hotels = hotel ? [hotel] : [];
-              this.applyHotelSelectionAfterLoad();
+              const id = this.extractId(hotel?._id) || userHotelId;
+              this.hotels = hotel ? [{ ...hotel, _id: id } as Hotel] : [];
               this.isLoading = false;
+              this.applyHotelSelectionAfterLoad();
               this.cdr.detectChanges();
             },
             error: () => {
               this.hotels = [];
-              this.applyHotelSelectionAfterLoad();
               this.isLoading = false;
+              this.applyHotelSelectionAfterLoad();
               this.cdr.detectChanges();
             }
           });
           return;
         }
 
-        this.applyHotelSelectionAfterLoad();
         this.isLoading = false;
+        this.applyHotelSelectionAfterLoad();
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -1097,7 +1117,10 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   private applyHotelSelectionAfterLoad(): void {
     if (this.hotels.length > 0 && !this.authService.isStaff()) {
-      const preferredHotelId = this.selectedHotelId || this.hotelService.getStoredHotelId();
+      const preferredHotelId =
+        this.extractId(this.selectedHotelId) ||
+        this.hotelService.getStoredHotelId() ||
+        this.extractId(this.authService.getHotelId());
       const hotelExists = preferredHotelId
         ? this.hotels.some((h) => this.extractId(h._id) === preferredHotelId)
         : false;
@@ -1108,8 +1131,9 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.onHotelChange(this.selectedHotelId);
         }
       } else {
-        this.selectedHotelId = this.hotels[0]._id!;
-        if (this.lastLoadedHotelId !== this.selectedHotelId && !this.isRoomsLoading) {
+        // superadmin/admin: chọn KS đầu danh sách khi chưa có / KS cũ không còn
+        this.selectedHotelId = this.extractId(this.hotels[0]._id) || this.hotels[0]._id || null;
+        if (this.selectedHotelId && this.lastLoadedHotelId !== this.selectedHotelId && !this.isRoomsLoading) {
           this.onHotelChange(this.selectedHotelId);
         }
       }
@@ -1190,6 +1214,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isRoomsLoading = false;
+        // Vẫn load danh sách KS khi rooms lỗi — tránh select kẹt "Trống" (superadmin/admin)
+        if (this.shouldLoadHotelsAfterInitialRender || this.hotels.length === 0) {
+          this.shouldLoadHotelsAfterInitialRender = false;
+          this.loadHotels();
+        }
         this.cdr.detectChanges();
       }
     });
