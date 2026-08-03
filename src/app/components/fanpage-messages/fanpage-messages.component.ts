@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef,
 import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 import { SessionContextService } from '../../services/session-context.service';
+import { NzMessageService } from 'ng-zorro-antd/message';
 
 interface FbMessage {
   tenant_id?: string;
@@ -53,21 +54,30 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
 
   private onPopupMessage = async (event: MessageEvent) => {
     if (event.data === 'facebook_connected') {
-      await this.refreshFacebookPages();
-      if (this.pages && this.pages.length > 0 && !this.selectedPageId) {
-        this.selectedPageId = this.pages[0].id;
-        await this.loadMessages();
-        await this.loadBotStatus();
-      }
-      this.cdr.detectChanges();
+      this.message.success('Đã kết nối Fanpage thành công');
+    } else if (event.data === 'facebook_connect_failed') {
+      this.message.error(
+        'Kết nối Fanpage thất bại. Thường do App chưa duyệt Advanced Access (pages_show_list / pages_messaging) hoặc tài khoản không phải Admin Page.'
+      );
+    } else {
+      return;
     }
+
+    await this.refreshFacebookPages();
+    if (this.pages && this.pages.length > 0 && !this.selectedPageId) {
+      this.selectedPageId = this.pages[0].id;
+      await this.loadMessages();
+      await this.loadBotStatus();
+    }
+    this.cdr.detectChanges();
   };
 
   constructor(
     private aiAssistant: AiAssistantService,
     private authService: AuthService,
     private sessionContext: SessionContextService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private message: NzMessageService
   ) { }
 
   private getTenantId(): string {
