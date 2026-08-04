@@ -135,27 +135,43 @@
   <nz-modal
     [(nzVisible)]="showManualConnect"
     nzTitle="Kết nối Fanpage bằng Access Token"
-    [nzOkLoading]="connectingManual"
+    [nzOkLoading]="connectingManual || checkingToken"
     [nzOkDisabled]="!manualToken.trim()"
-    nzOkText="Kết nối"
+    [nzOkText]="manualPages.length === 0 ? 'Kiểm tra token' : 'Kết nối ' + selectedManualPageCount + ' Fanpage'"
     nzCancelText="Đóng"
-    (nzOnOk)="connectManualToken()"
+    (nzOnOk)="onManualOk()"
     (nzOnCancel)="showManualConnect = false">
     <ng-container *nzModalContent>
       <nz-alert
         nzType="info"
         nzShowIcon
         nzMessage="Dùng khi popup đăng nhập Facebook báo 'Hiện không dùng được tính năng này'"
-        nzDescription="Nguyên nhân: App Facebook đang ở chế độ Development nên chỉ tài khoản có vai trò trong App (Admin/Developer/Tester) mới đăng nhập được. Cách lấy token: (1) Thêm tài khoản khách làm Tester của App tại developers.facebook.com → App roles, hoặc (2) Admin dùng Graph API Explorer (developers.facebook.com/tools/explorer) chọn App PHHotel, cấp quyền pages_show_list, pages_messaging, pages_manage_metadata, pages_read_engagement rồi copy User Access Token dán vào đây — hệ thống sẽ tự lấy toàn bộ Fanpage. Cũng có thể dán trực tiếp Page Access Token của 1 Fanpage."
+        nzDescription="Cách B: khách cấp quyền quản lý Fanpage cho tài khoản admin của bạn (Trang → Cài đặt → Quyền truy cập Trang). Bạn vào Graph API Explorer, chọn App PHHotel, cấp pages_show_list / pages_messaging / pages_manage_metadata / pages_read_engagement, Generate Access Token, dán vào đây → Kiểm tra token → tick đúng Fanpage của khách sạn này."
         style="margin-bottom: 16px;">
       </nz-alert>
       <textarea
         nz-input
         [(ngModel)]="manualToken"
+        (ngModelChange)="onManualTokenChange()"
         placeholder="Dán User Access Token hoặc Page Access Token vào đây (EAAxxxx...)"
         [nzAutosize]="{ minRows: 3, maxRows: 6 }"
-        [disabled]="connectingManual">
+        [disabled]="connectingManual || checkingToken">
       </textarea>
+
+      <div *ngIf="manualPages.length > 0" style="margin-top: 16px;">
+        <div style="font-weight: 600; margin-bottom: 8px;">
+          Token quản lý {{ manualPages.length }} Fanpage — tick chọn Fanpage cần liên kết:
+        </div>
+        <div style="max-height: 220px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 6px; padding: 8px 12px;">
+          <label nz-checkbox
+                 *ngFor="let p of manualPages"
+                 [(ngModel)]="p.selected"
+                 [disabled]="connectingManual"
+                 style="display: block; margin: 6px 0;">
+            {{ p.name }} <span style="color: #9ca3af; font-size: 12px;">({{ p.id }})</span>
+          </label>
+        </div>
+      </div>
     </ng-container>
   </nz-modal>
 </div>

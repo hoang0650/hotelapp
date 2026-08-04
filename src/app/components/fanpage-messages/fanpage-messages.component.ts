@@ -44,6 +44,8 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
   showManualConnect = false;
   manualToken = '';
   connectingManual = false;
+  checkingToken = false;
+  manualPages: { id: string; name: string; selected: boolean }[] = [];
   isMobile = false;
   showSidebar = true;
   private wsSubscription: any;
@@ -331,7 +333,50 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
 
   openManualConnect(): void {
     this.manualToken = '';
+    this.manualPages = [];
     this.showManualConnect = true;
+  }
+
+  onManualTokenChange(): void {
+    this.manualPages = [];
+  }
+
+  get selectedManualPageCount(): number {
+    return this.manualPages.filter(p => p.selected).length;
+  }
+
+  async previewManualToken(): Promise<void> {
+    const token = this.manualToken.trim();
+    if (!token) return;
+    this.checkingToken = true;
+    try {
+      const resp = await this.aiAssistant.previewFacebookToken(token);
+      this.manualPages = (resp?.pages || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        selected: false,
+      }));
+      if (!this.manualPages.length) {
+        this.message.warning('Token hợp lệ nhưng không quản lý Fanpage nào.');
+      } else if (this.manualPages.length === 1) {
+        this.manualPages[0].selected = true;
+      }
+    } catch (error: any) {
+      const detail = error?.error?.error || error?.message || 'Lỗi không xác định';
+      this.message.error(`Token không hợp lệ: ${detail}`);
+      this.manualPages = [];
+    } finally {
+      this.checkingToken = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async onManualOk(): Promise<void> {
+    if (!this.manualPages.length) {
+      await this.previewManualToken();
+    } else {
+      await this.connectManualToken();
+    }
   }
 
   async connectManualToken(): Promise<void> {
@@ -339,9 +384,15 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
     const tenantId = this.getTenantId();
     if (!token || !tenantId) return;
 
+    const pageIds = this.manualPages.filter(p => p.selected).map(p => p.id);
+    if (this.manualPages.length && !pageIds.length) {
+      this.message.warning('Hãy tick chọn ít nhất 1 Fanpage cần liên kết.');
+      return;
+    }
+
     this.connectingManual = true;
     try {
-      const resp = await this.aiAssistant.connectFacebookManual(tenantId, token);
+      const resp = await this.aiAssistant.connectFacebookManual(tenantId, token, pageIds);
       if (resp?.success) {
         const names = (resp.pages || []).map((p: any) => p.name).join(', ');
         this.message.success(`Đã liên kết ${resp.linked} Fanpage: ${names}`);
@@ -352,6 +403,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
         }
         this.showManualConnect = false;
         this.manualToken = '';
+        this.manualPages = [];
         await this.refreshFacebookPages();
         if (this.pages.length > 0 && !this.selectedPageId) {
           this.selectedPageId = this.pages[0].id;

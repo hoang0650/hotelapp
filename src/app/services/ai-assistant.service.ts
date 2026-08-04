@@ -713,12 +713,18 @@ export class AiAssistantService {
    * Dùng khi App Facebook chưa được duyệt Advanced Access nên popup OAuth
    * báo "Hiện không dùng được tính năng này" với tài khoản ngoài Roles.
    */
-  async connectFacebookManual(tenantId: string, token: string): Promise<any> {
+  async connectFacebookManual(tenantId: string, token: string, pageIds?: string[]): Promise<any> {
+    const body: any = { tenant_id: tenantId, token };
+    if (pageIds?.length) body.page_ids = pageIds;
     return await firstValueFrom(
-      this.http.post<any>(`${this.aiUrl}/facebook/connect-manual`, {
-        tenant_id: tenantId,
-        token
-      })
+      this.http.post<any>(`${this.aiUrl}/facebook/connect-manual`, body)
+    );
+  }
+
+  /** Xem trước Fanpage mà token quản lý (không lưu). */
+  async previewFacebookToken(token: string): Promise<any> {
+    return await firstValueFrom(
+      this.http.post<any>(`${this.aiUrl}/facebook/token-pages`, { token })
     );
   }
 
