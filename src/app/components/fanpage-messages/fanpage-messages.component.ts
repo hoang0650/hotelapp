@@ -315,6 +315,11 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
   async connectFanpage(): Promise<void> {
     const tenantId = this.getTenantId();
     const url = await this.aiAssistant.getFacebookOAuthUrl(tenantId);
+    // DEBUG: soi URL OAuth server sinh ra
+    console.log('[FB Connect] tenant:', tenantId, '| OAuth URL:', url);
+    if (url && !url.includes('config_id=')) {
+      console.warn('[FB Connect] URL đang ở dạng cũ (scope=) — server AI chưa đặt FACEBOOK_LOGIN_CONFIG_ID, app Business sẽ bị Facebook chặn dialog.');
+    }
     if (url) {
       // Mở popup để login Facebook
       const width = 600, height = 700;
