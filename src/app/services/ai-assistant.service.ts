@@ -709,6 +709,20 @@ export class AiAssistantService {
   }
 
   /**
+   * Kết nối Fanpage bằng token thủ công (User token hoặc Page token).
+   * Dùng khi App Facebook chưa được duyệt Advanced Access nên popup OAuth
+   * báo "Hiện không dùng được tính năng này" với tài khoản ngoài Roles.
+   */
+  async connectFacebookManual(tenantId: string, token: string): Promise<any> {
+    return await firstValueFrom(
+      this.http.post<any>(`${this.aiUrl}/facebook/connect-manual`, {
+        tenant_id: tenantId,
+        token
+      })
+    );
+  }
+
+  /**
    * Lấy danh sách Fanpage đã kết nối
    */
   async getFacebookPages(tenantId: string): Promise<any[]> {

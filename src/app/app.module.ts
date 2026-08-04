@@ -1,13 +1,14 @@
-import { NgModule } from '@angular/core';
+import { NgModule, APP_INITIALIZER } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgxEchartsModule } from 'ngx-echarts'; // Import NgxEchartsModule
 import { HighchartsChartModule } from 'highcharts-angular';
 import { DatePipe, registerLocaleData } from '@angular/common'; // Import DatePipe
 import { SafeHtmlPipe } from './pipes/safe-html.pipe';
 import { CommonModule } from '@angular/common'; // Đảm bảo CommonModule được import
-import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
+import { TranslateModule, TranslateLoader, TranslateService } from '@ngx-translate/core';
+import { TranslationService } from './services/translation.service';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { EditorModule } from '@tinymce/tinymce-angular';
 
@@ -216,6 +217,19 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
   return new CustomTranslateLoader(http);
 }
 
+// Nạp file dịch TRƯỚC khi app render lần đầu — tránh hiển thị key thô
+// (NAVBAR.HOME, HOME.HERO.TITLE_LINE_1...) với crawler/lần tải đầu tiên.
+export function preloadTranslationsFactory(
+  translate: TranslateService,
+  translationService: TranslationService
+): () => Promise<unknown> {
+  return () => {
+    translate.setDefaultLang('vi');
+    return firstValueFrom(translate.use(translationService.getCurrentLang()))
+      .catch(() => undefined); // Lỗi mạng thì vẫn cho app khởi động
+  };
+}
+
 @NgModule({
     declarations: [
         AppComponent,
@@ -379,6 +393,12 @@ export function HttpLoaderFactory(http: HttpClient): CustomTranslateLoader {
         })
     ],
     providers: [
+        {
+          provide: APP_INITIALIZER,
+          useFactory: preloadTranslationsFactory,
+          deps: [TranslateService, TranslationService],
+          multi: true
+        },
         { provide: NZ_I18N, useValue: vi_VN },
         provideAnimationsAsync(),
         { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },

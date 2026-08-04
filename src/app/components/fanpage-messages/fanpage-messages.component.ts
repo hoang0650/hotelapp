@@ -40,6 +40,10 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
   loading: boolean = false;
   sending: boolean = false;
   isBotActive: boolean = false;
+  // Kết nối bằng token thủ công (khi App FB chưa được duyệt Advanced Access)
+  showManualConnect = false;
+  manualToken = '';
+  connectingManual = false;
   isMobile = false;
   showSidebar = true;
   private wsSubscription: any;
@@ -317,6 +321,47 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
       const left = (window.innerWidth - width) / 2;
       const top = (window.innerHeight - height) / 2;
       window.open(url, 'FacebookLogin', `width=${width},height=${height},left=${left},top=${top}`);
+    }
+  }
+
+  openManualConnect(): void {
+    this.manualToken = '';
+    this.showManualConnect = true;
+  }
+
+  async connectManualToken(): Promise<void> {
+    const token = this.manualToken.trim();
+    const tenantId = this.getTenantId();
+    if (!token || !tenantId) return;
+
+    this.connectingManual = true;
+    try {
+      const resp = await this.aiAssistant.connectFacebookManual(tenantId, token);
+      if (resp?.success) {
+        const names = (resp.pages || []).map((p: any) => p.name).join(', ');
+        this.message.success(`Đã liên kết ${resp.linked} Fanpage: ${names}`);
+        if (resp.subscribe_errors?.length) {
+          this.message.warning(
+            `${resp.subscribe_errors.length} page chưa subscribe webhook (kiểm tra quyền pages_manage_metadata).`
+          );
+        }
+        this.showManualConnect = false;
+        this.manualToken = '';
+        await this.refreshFacebookPages();
+        if (this.pages.length > 0 && !this.selectedPageId) {
+          this.selectedPageId = this.pages[0].id;
+          await this.loadMessages();
+          await this.loadBotStatus();
+        }
+      } else {
+        this.message.error(resp?.error || 'Kết nối thất bại');
+      }
+    } catch (error: any) {
+      const detail = error?.error?.error || error?.message || 'Lỗi không xác định';
+      this.message.error(`Kết nối thất bại: ${detail}`);
+    } finally {
+      this.connectingManual = false;
+      this.cdr.detectChanges();
     }
   }
 
