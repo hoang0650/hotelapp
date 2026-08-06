@@ -54,6 +54,7 @@ export class BlogManagementComponent implements OnInit {
   imageUrl: string | ArrayBuffer | null = '';
   fileList: any[] = [];
   apiBaseUrl = environment.apiUrl;
+  cdnBaseUrl = (environment as { cdnUrl?: string }).cdnUrl || 'https://cdn.phhotel.vn';
   uploadUrl = `${this.apiBaseUrl}/files/upload-blog-asset`;
   pageIndex = 1;
   pageSize = 10;
@@ -61,7 +62,7 @@ export class BlogManagementComponent implements OnInit {
   searchValue = '';
   statusFilter: 'all' | 'draft' | 'published' = 'all';
 
-  /** TinyMCE init — upload ảnh về API + nhận link URL (Drive/absolute) đúng. */
+  /** TinyMCE init — upload API → MinIO CDN (cdn.phhotel.vn). */
   editorInit: Record<string, unknown> = {
     plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
     toolbar:
@@ -78,7 +79,7 @@ export class BlogManagementComponent implements OnInit {
     images_file_types: 'jpeg,jpg,jpe,jfi,jif,jfif,png,gif,bmp,webp',
     file_picker_types: 'image',
     paste_data_images: true,
-    // Giữ absolute URL trong editor để ảnh preview đúng trên admin.*
+    // Giữ absolute CDN URL trong editor
     relative_urls: false,
     remove_script_host: false,
     convert_urls: true,
@@ -88,7 +89,13 @@ export class BlogManagementComponent implements OnInit {
       }
       // Chỉ chuẩn hóa src ảnh / data-mce-src
       if (name === 'src' || name === 'data-mce-src' || !name) {
-        return resolveBlogImageUrl(normalizeBlogImageForSave(url), this.apiBaseUrl) || url;
+        return (
+          resolveBlogImageUrl(
+            normalizeBlogImageForSave(url, this.cdnBaseUrl),
+            this.apiBaseUrl,
+            this.cdnBaseUrl
+          ) || url
+        );
       }
       return url;
     },
@@ -122,12 +129,16 @@ export class BlogManagementComponent implements OnInit {
       input.click();
     },
     setup: (editor: any) => {
-      // Khi dán/chèn ảnh bằng link (Drive share, /assets/...), rewrite src ngay
+      // Khi dán/chèn ảnh: rewrite sang CDN / absolute URL
       editor.on('SetContent ObjectResized', () => {
         const imgs = editor.getBody()?.querySelectorAll?.('img[src]') || [];
         imgs.forEach((img: HTMLImageElement) => {
           const raw = img.getAttribute('src') || '';
-          const next = resolveBlogImageUrl(normalizeBlogImageForSave(raw), this.apiBaseUrl);
+          const next = resolveBlogImageUrl(
+            normalizeBlogImageForSave(raw, this.cdnBaseUrl),
+            this.apiBaseUrl,
+            this.cdnBaseUrl
+          );
           if (next && next !== raw) {
             img.setAttribute('src', next);
           }
@@ -195,14 +206,17 @@ export class BlogManagementComponent implements OnInit {
   addSection(title = '', content = ''): void {
     const sectionForm = this.fb.group({
       title: [title || ''],
-      // Absolute URL để TinyMCE preview ảnh đúng khi edit
-      content: [rewriteBlogHtmlImageUrls(content || '', this.apiBaseUrl), Validators.required]
+      // Absolute CDN/API URL để TinyMCE preview ảnh đúng khi edit
+      content: [
+        rewriteBlogHtmlImageUrls(content || '', this.apiBaseUrl, this.cdnBaseUrl),
+        Validators.required
+      ]
     });
     this.sections.push(sectionForm);
   }
 
   /**
-   * Upload blob/file từ TinyMCE → /files/upload-blog-asset, trả absolute URL cho editor.
+   * Upload blob/file từ TinyMCE → /files/upload-blog-asset → MinIO CDN URL.
    */
   private uploadTinyMceImage(blobInfo: {
     blob: () => Blob;
@@ -231,18 +245,21 @@ export class BlogManagementComponent implements OnInit {
         }
         try {
           const response = JSON.parse(xhr.responseText || '{}');
-          const relative =
-            response.imageUrl ||
-            (response.filename ? `/assets/blog/${response.filename}` : '') ||
-            (response.imageId ? `/files/${response.imageId}` : '');
           const absolute =
             response.absoluteUrl ||
-            resolveBlogImageUrl(relative, this.apiBaseUrl);
+            resolveBlogImageUrl(
+              response.imageUrl ||
+                (response.filename ? `/assets/blog/${response.filename}` : '') ||
+                (response.imageId ? `/files/${response.imageId}` : ''),
+              this.apiBaseUrl,
+              this.cdnBaseUrl
+            );
 
           if (!absolute) {
-            reject(new Error('Server không trả về link ảnh'));
+            reject(new Error('Server không trả về link ảnh CDN'));
             return;
           }
+          // TinyMCE chèn thẳng https://cdn.phhotel.vn/...
           resolve(absolute);
         } catch (e: any) {
           reject(new Error(e?.message || 'Phản hồi upload không hợp lệ'));
@@ -431,12 +448,13 @@ export class BlogManagementComponent implements OnInit {
       }
     }
     
-    // Lấy sections từ formArray — chuẩn hóa src ảnh portable trước khi lưu
+    // Lấy sections từ formArray — giữ CDN absolute URL khi lưu
     const sections: BlogSection[] = this.sections.controls.map(control => ({
       title: control.get('title')?.value || '',
       content: normalizeBlogHtmlImageUrlsForSave(
         control.get('content')?.value || '',
-        this.apiBaseUrl
+        this.apiBaseUrl,
+        this.cdnBaseUrl
       )
     }));
     
@@ -450,9 +468,16 @@ export class BlogManagementComponent implements OnInit {
     
     // Sử dụng content từ sections nếu có, nếu không dùng content cũ
     const rawContent = sections.length > 0 ? contentFromSections : (formValue.content || '');
-    const finalContent = normalizeBlogHtmlImageUrlsForSave(rawContent, this.apiBaseUrl);
+    const finalContent = normalizeBlogHtmlImageUrlsForSave(
+      rawContent,
+      this.apiBaseUrl,
+      this.cdnBaseUrl
+    );
     
-    const imageForSave = normalizeBlogImageForSave(formValue.imageUrl || formValue.featuredImage);
+    const imageForSave = normalizeBlogImageForSave(
+      formValue.imageUrl || formValue.featuredImage,
+      this.cdnBaseUrl
+    );
 
     const blogData: Blog = {
       title: formValue.title,
@@ -593,7 +618,7 @@ export class BlogManagementComponent implements OnInit {
     }
     
     if (info.file.status === 'done') {
-      // Lưu link dạng /assets/blog/<filename> (file nằm trong hotelapp assets)
+      // Ưu tiên absolute CDN (https://cdn.phhotel.vn/...)
       if (info.file.response) {
         const response = info.file.response;
         const imageUrl =
@@ -602,23 +627,21 @@ export class BlogManagementComponent implements OnInit {
             response.imageUrl ||
               (response.filename ? `/assets/blog/${response.filename}` : '') ||
               (response.imageId ? `/files/${response.imageId}` : ''),
-            this.apiBaseUrl
+            this.apiBaseUrl,
+            this.cdnBaseUrl
           );
 
         if (!imageUrl) {
-          this.message.error('Upload thành công nhưng không nhận được link ảnh');
+          this.message.error('Upload thành công nhưng không nhận được link ảnh CDN');
           this.isLoading = false;
           return;
         }
 
-        // Lưu path portable; preview dùng absolute
-        const portable = response.imageUrl ||
-          (response.filename ? `/assets/blog/${response.filename}` : '') ||
-          imageUrl;
+        const forSave = normalizeBlogImageForSave(imageUrl, this.cdnBaseUrl) || imageUrl;
         this.imageUrl = imageUrl;
         this.blogForm.patchValue({
-          imageUrl: portable,
-          featuredImage: portable
+          imageUrl: forSave,
+          featuredImage: forSave
         });
         this.message.success('Tải lên hình ảnh thành công');
       }
@@ -646,7 +669,7 @@ export class BlogManagementComponent implements OnInit {
   };
 
   getImageUrl(urlOrId: string): string {
-    return resolveBlogImageUrl(urlOrId, this.apiBaseUrl);
+    return resolveBlogImageUrl(urlOrId, this.apiBaseUrl, this.cdnBaseUrl);
   }
 
   handleImageError(event: any): void {

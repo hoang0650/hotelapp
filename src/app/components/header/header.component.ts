@@ -12,6 +12,7 @@ import { TranslationService } from '../../services/translation.service';
 import { Announcement } from '../../services/notifications.service';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { resolveBlogImageUrl } from '../../helpers/blog-image-url';
 
 @Component({
   selector: 'app-header',
@@ -496,16 +497,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   apiBaseUrl = environment.apiUrl;
+  cdnBaseUrl = (environment as { cdnUrl?: string }).cdnUrl || 'https://cdn.phhotel.vn';
 
   getImageUrl(urlOrId: string | null | undefined): string {
-    if (!urlOrId) return '';
-    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
-      return urlOrId;
-    }
-    if (urlOrId.startsWith('/files/')) {
-      return `${this.apiBaseUrl}${urlOrId}`;
-    }
-    return `${this.apiBaseUrl}/files/${urlOrId}`;
+    return resolveBlogImageUrl(urlOrId, this.apiBaseUrl, this.cdnBaseUrl);
   }
 
   getAvatarUrl(): string {

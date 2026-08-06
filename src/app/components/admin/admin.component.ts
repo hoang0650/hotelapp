@@ -14,6 +14,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 import { PaymentSpeakerService } from '../../services/payment-speaker.service';
 import { io, Socket } from 'socket.io-client';
+import { resolveBlogImageUrl } from '../../helpers/blog-image-url';
 
 @Component({
   selector: 'app-admin',
@@ -458,17 +459,11 @@ export class AdminComponent implements OnInit, OnDestroy {
     return this.translate.instant('LANGUAGE.VI');
   }
 
+  private readonly cdnBaseUrl =
+    (environment as { cdnUrl?: string }).cdnUrl || 'https://cdn.phhotel.vn';
+
   private getImageUrl(urlOrId: string | null | undefined): string {
-    if (!urlOrId) {
-      return '';
-    }
-    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
-      return urlOrId;
-    }
-    if (urlOrId.startsWith('/files/')) {
-      return `${this.apiBaseUrl}${urlOrId}`;
-    }
-    return `${this.apiBaseUrl}/files/${urlOrId}`;
+    return resolveBlogImageUrl(urlOrId, this.apiBaseUrl, this.cdnBaseUrl);
   }
 
   getAvatarUrl(): string {

@@ -9,6 +9,7 @@ import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 import { ActivatedRoute } from '@angular/router';
+import { normalizeBlogImageForSave, resolveBlogImageUrl } from '../../helpers/blog-image-url';
 
 @Component({
   selector: 'app-profile',
@@ -26,6 +27,7 @@ export class ProfileComponent implements OnInit {
   showQrPreview: boolean = false; // Hiển thị preview QR code
   qrBeneficiaryName: string = ''; // Tên người thụ hưởng cho QR code
   apiBaseUrl = environment.apiUrl;
+  cdnBaseUrl = (environment as { cdnUrl?: string }).cdnUrl || 'https://cdn.phhotel.vn';
   uploadUrl = `${this.apiBaseUrl}/files/upload`;
   fileList: any[] = [];
   avatarId: string | null = null;
@@ -195,15 +197,22 @@ export class ProfileComponent implements OnInit {
 
     this.saving = true;
 
-    // Xử lý avatar: nếu có avatarId thì dùng, nếu không dùng avatar (URL)
-    const avatarValue = this.profileForm.get('avatar')?.value;
+    // Avatar: ưu tiên CDN absolute (MinIO); legacy /files/:id + avatarId
+    const avatarValue = String(this.profileForm.get('avatar')?.value || '').trim();
     const avatarData: any = {};
-    if (this.avatarId) {
+    const isCdnAvatar =
+      /^https?:\/\/cdn\.phhotel\.vn\//i.test(avatarValue) ||
+      (this.cdnBaseUrl && avatarValue.startsWith(this.cdnBaseUrl));
+
+    if (avatarValue && isCdnAvatar) {
+      avatarData.avatar = normalizeBlogImageForSave(avatarValue, this.cdnBaseUrl) || avatarValue;
+      avatarData.avatarId = null;
+      this.avatarId = null;
+    } else if (this.avatarId && !isCdnAvatar) {
       avatarData.avatarId = this.avatarId;
       avatarData.avatar = `${this.apiBaseUrl}/files/${this.avatarId}`;
     } else if (avatarValue) {
-      avatarData.avatar = avatarValue;
-      // Nếu là URL từ /files/, extract imageId
+      avatarData.avatar = normalizeBlogImageForSave(avatarValue, this.cdnBaseUrl) || avatarValue;
       if (avatarValue.includes('/files/')) {
         const imageId = avatarValue.split('/files/')[1]?.split('?')[0];
         if (imageId) {
@@ -346,12 +355,25 @@ export class ProfileComponent implements OnInit {
     if (info.file.status === 'done') {
       if (info.file.response) {
         const response = info.file.response;
-        const imageId = response.imageId;
-        const imageUrl = response.imageUrl || `${this.apiBaseUrl}/files/${imageId}`;
-        
-        this.avatarId = imageId;
+        const imageUrl =
+          response.absoluteUrl ||
+          resolveBlogImageUrl(
+            response.imageUrl ||
+              (response.imageId ? `/files/${response.imageId}` : ''),
+            this.apiBaseUrl,
+            this.cdnBaseUrl
+          );
+
+        if (!imageUrl) {
+          this.message.error(this.translate.instant('PROFILE.UPLOAD_AVATAR_ERROR'));
+          this.isLoadingUpload = false;
+          return;
+        }
+
+        // CDN upload → không dùng avatarId Mongo
+        this.avatarId = response.storage === 'minio' ? null : response.imageId || null;
         this.profileForm.patchValue({
-          avatar: imageUrl
+          avatar: normalizeBlogImageForSave(imageUrl, this.cdnBaseUrl) || imageUrl
         });
         this.message.success(this.translate.instant('PROFILE.UPLOAD_AVATAR_SUCCESS'));
       }
@@ -379,17 +401,7 @@ export class ProfileComponent implements OnInit {
   };
 
   getImageUrl(urlOrId: string | null | undefined): string {
-    if (!urlOrId) return '';
-    // Nếu là URL đầy đủ (http/https), trả về nguyên
-    if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
-      return urlOrId;
-    }
-    // Nếu là imageId hoặc path, thêm base URL
-    if (urlOrId.startsWith('/files/')) {
-      return `${this.apiBaseUrl}${urlOrId}`;
-    }
-    // Nếu chỉ là ID, thêm /files/ prefix
-    return `${this.apiBaseUrl}/files/${urlOrId}`;
+    return resolveBlogImageUrl(urlOrId, this.apiBaseUrl, this.cdnBaseUrl);
   }
 }
 

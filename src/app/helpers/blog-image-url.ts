@@ -1,6 +1,13 @@
 /**
- * Chuẩn hóa URL ảnh blog (Google Drive share link → URL dùng được cho thẻ <img>).
+ * Chuẩn hóa URL ảnh blog (Google Drive / MinIO CDN / path nội bộ).
  */
+
+const DEFAULT_CDN_BASE = 'https://cdn.phhotel.vn';
+
+export function getBlogCdnBaseUrl(cdnBaseUrl?: string): string {
+  return String(cdnBaseUrl || DEFAULT_CDN_BASE).trim().replace(/\/$/, '') || DEFAULT_CDN_BASE;
+}
+
 export function extractGoogleDriveFileId(url: string): string | null {
   if (!url || !/drive\.google\.com|docs\.google\.com/i.test(url)) {
     return null;
@@ -31,7 +38,55 @@ export function toGoogleDriveDirectImageUrl(url: string): string | null {
   return `https://lh3.googleusercontent.com/d/${fileId}=w2000`;
 }
 
-export function resolveBlogImageUrl(urlOrId: string | null | undefined, apiBaseUrl: string): string {
+function isCdnHost(host: string, cdnBaseUrl: string): boolean {
+  try {
+    const cdnHost = new URL(cdnBaseUrl).host.toLowerCase();
+    return host.toLowerCase() === cdnHost;
+  } catch {
+    return /^cdn\.phhotel\.vn$/i.test(host);
+  }
+}
+
+/** Path kiểu /phhotel/blog/x.jpg hoặc blog/x.jpg → absolute CDN URL. */
+export function resolveMinioCdnUrl(urlOrPath: string, cdnBaseUrl?: string): string | null {
+  const trimmed = String(urlOrPath || '').trim();
+  if (!trimmed) {
+    return null;
+  }
+  const cdn = getBlogCdnBaseUrl(cdnBaseUrl);
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      if (isCdnHost(parsed.host, cdn)) {
+        return trimmed;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  // /phhotel/blog|avatars/... hoặc blog/... | avatars/...
+  if (
+    /^\/?phhotel\//i.test(trimmed) ||
+    /^\/?blog\//i.test(trimmed) ||
+    /^\/?avatars\//i.test(trimmed)
+  ) {
+    const path = trimmed.replace(/^\/+/, '');
+    const withBucket =
+      path.startsWith('blog/') || path.startsWith('avatars/') ? `phhotel/${path}` : path;
+    return `${cdn}/${withBucket}`;
+  }
+
+  return null;
+}
+
+export function resolveBlogImageUrl(
+  urlOrId: string | null | undefined,
+  apiBaseUrl: string,
+  cdnBaseUrl?: string
+): string {
   if (!urlOrId) {
     return '';
   }
@@ -46,6 +101,11 @@ export function resolveBlogImageUrl(urlOrId: string | null | undefined, apiBaseU
     return driveDirect;
   }
 
+  const cdnUrl = resolveMinioCdnUrl(trimmed, cdnBaseUrl);
+  if (cdnUrl) {
+    return cdnUrl;
+  }
+
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
     return trimmed;
   }
@@ -58,25 +118,45 @@ export function resolveBlogImageUrl(urlOrId: string | null | undefined, apiBaseU
   return `${base}/files/${trimmed}`;
 }
 
-/** Khi lưu bài viết: giữ path nội bộ; chỉ đổi link Drive share sang direct. */
-export function normalizeBlogImageForSave(url: string | null | undefined): string {
+/** Khi lưu bài viết: giữ CDN absolute; Drive share → direct; path nội bộ giữ portable. */
+export function normalizeBlogImageForSave(
+  url: string | null | undefined,
+  cdnBaseUrl?: string
+): string {
   if (!url) {
     return '';
   }
-  return toGoogleDriveDirectImageUrl(url) || String(url).trim();
+  const drive = toGoogleDriveDirectImageUrl(url);
+  if (drive) {
+    return drive;
+  }
+  const cdn = resolveMinioCdnUrl(url, cdnBaseUrl);
+  if (cdn) {
+    return cdn;
+  }
+  return String(url).trim();
 }
 
 /**
  * Đưa URL tuyệt đối của API về path portable (/assets/... hoặc /files/...).
- * Giữ nguyên URL ngoài (CDN, Drive direct, data:).
+ * Giữ nguyên URL CDN MinIO / Drive / data:.
  */
-export function toPortableBlogImageUrl(url: string | null | undefined, apiBaseUrl: string): string {
+export function toPortableBlogImageUrl(
+  url: string | null | undefined,
+  apiBaseUrl: string,
+  cdnBaseUrl?: string
+): string {
   if (!url) {
     return '';
   }
-  let next = normalizeBlogImageForSave(url);
+  let next = normalizeBlogImageForSave(url, cdnBaseUrl);
   if (!next) {
     return '';
+  }
+
+  // CDN absolute — giữ nguyên để public site load từ cdn.phhotel.vn
+  if (resolveMinioCdnUrl(next, cdnBaseUrl)) {
+    return resolveMinioCdnUrl(next, cdnBaseUrl) || next;
   }
 
   const base = String(apiBaseUrl || '').replace(/\/$/, '');
@@ -103,26 +183,31 @@ export function toPortableBlogImageUrl(url: string | null | undefined, apiBaseUr
 }
 
 /** Rewrite mọi src ảnh trong HTML sang URL tuyệt đối (editor preview / public view). */
-export function rewriteBlogHtmlImageUrls(html: string | null | undefined, apiBaseUrl: string): string {
-  if (!html) {
-    return '';
-  }
-  return html.replace(/\bsrc\s*=\s*(["'])([^"']+)\1/gi, (_match, quote: string, src: string) => {
-    const resolved = resolveBlogImageUrl(src, apiBaseUrl);
-    return `src=${quote}${resolved || src}${quote}`;
-  });
-}
-
-/** Chuẩn hóa src ảnh trong HTML trước khi lưu DB (portable path + Drive direct). */
-export function normalizeBlogHtmlImageUrlsForSave(
+export function rewriteBlogHtmlImageUrls(
   html: string | null | undefined,
-  apiBaseUrl: string
+  apiBaseUrl: string,
+  cdnBaseUrl?: string
 ): string {
   if (!html) {
     return '';
   }
   return html.replace(/\bsrc\s*=\s*(["'])([^"']+)\1/gi, (_match, quote: string, src: string) => {
-    const portable = toPortableBlogImageUrl(src, apiBaseUrl);
+    const resolved = resolveBlogImageUrl(src, apiBaseUrl, cdnBaseUrl);
+    return `src=${quote}${resolved || src}${quote}`;
+  });
+}
+
+/** Chuẩn hóa src ảnh trong HTML trước khi lưu DB (CDN absolute + portable path + Drive). */
+export function normalizeBlogHtmlImageUrlsForSave(
+  html: string | null | undefined,
+  apiBaseUrl: string,
+  cdnBaseUrl?: string
+): string {
+  if (!html) {
+    return '';
+  }
+  return html.replace(/\bsrc\s*=\s*(["'])([^"']+)\1/gi, (_match, quote: string, src: string) => {
+    const portable = toPortableBlogImageUrl(src, apiBaseUrl, cdnBaseUrl);
     return `src=${quote}${portable || src}${quote}`;
   });
 }

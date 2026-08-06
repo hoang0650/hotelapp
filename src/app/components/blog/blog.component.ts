@@ -466,14 +466,15 @@ export class BlogComponent implements OnInit {
   }
 
   apiBaseUrl = environment.apiUrl;
+  cdnBaseUrl = (environment as { cdnUrl?: string }).cdnUrl || 'https://cdn.phhotel.vn';
 
   getImageUrl(urlOrId: string | null | undefined): string {
-    return resolveBlogImageUrl(urlOrId, this.apiBaseUrl);
+    return resolveBlogImageUrl(urlOrId, this.apiBaseUrl, this.cdnBaseUrl);
   }
 
-  /** HTML nội dung bài viết với src ảnh đã resolve (API absolute / Drive direct). */
+  /** HTML nội dung bài viết với src ảnh đã resolve (CDN / API / Drive). */
   getBlogContentHtml(html: string | null | undefined): string {
-    return rewriteBlogHtmlImageUrls(html || '', this.apiBaseUrl);
+    return rewriteBlogHtmlImageUrls(html || '', this.apiBaseUrl, this.cdnBaseUrl);
   }
 }
 
