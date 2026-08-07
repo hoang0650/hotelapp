@@ -3,9 +3,24 @@
 
 <head>
   <meta charset="utf-8">
+  <script>
+    // Ép HTTPS ngay từ HTML (trước khi Angular load) — tránh badge "Không bảo mật" do HTTP
+    (function () {
+      try {
+        var h = location.hostname || '';
+        if (
+          location.protocol === 'http:' &&
+          (h === 'admin.phhotel.vn' || h === 'phhotel.vn' || h === 'www.phhotel.vn')
+        ) {
+          location.replace('https://' + h + location.pathname + location.search + location.hash);
+        }
+      } catch (e) {}
+    })();
+  </script>
   <title>PHHotel | Trang chủ</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   <meta name="description" content="PHHotel là phần mềm quản lý khách sạn: quản lý phòng, đặt phòng, hóa đơn, giao ca, báo cáo doanh thu, tích hợp AI chatbot hỗ trợ và tư vấn khách đặt phòng đa kênh (facebook, zalo, telegram)." />
   <meta name="robots" content="index,follow" />
   <link rel="canonical" href="/" />
