@@ -103,20 +103,32 @@
           <nz-form-item>
             <nz-form-label nzRequired>Agent URL</nz-form-label>
             <nz-form-control nzErrorTip="Vui lòng nhập Agent URL">
-              <input nz-input formControlName="agentBaseUrl" placeholder="VD: http://192.168.1.50:8787" />
+              <input nz-input formControlName="agentBaseUrl" placeholder="VD: https://abc123.tunnel.phgrouptechs.com (ProxVN)" />
             </nz-form-control>
           </nz-form-item>
+          <nz-alert
+            *ngIf="agentPublicUrl"
+            nzType="success"
+            nzShowIcon
+            style="margin-bottom: 8px;"
+            [nzMessage]="'ProxVN public URL: ' + agentPublicUrl"
+            [nzAction]="proxvnAction">
+          </nz-alert>
+          <ng-template #proxvnAction>
+            <button nz-button nzType="primary" nzSize="small" (click)="useProxvnPublicUrl()">Dùng URL này</button>
+          </ng-template>
           <div class="agent-test-row" style="margin-bottom: 8px;">
             <input nz-input [(ngModel)]="agentHostInput" [ngModelOptions]="{standalone: true}" placeholder="IP/hostname máy chạy agent (VD: 192.168.1.50)" style="max-width: 360px; margin-right: 8px;" />
             <button nz-button nzType="default" (click)="applyAgentHost()">Tạo URL</button>
             <button nz-button nzType="default" (click)="useLocalhostAgent()" style="margin-left: 8px;">Dùng localhost</button>
+            <button nz-button nzType="default" (click)="detectLocalAgent()" style="margin-left: 8px;">Quét lại agent</button>
             <button nz-button nzType="default" (click)="openAgentHealth()" style="margin-left: 8px;">Mở /health</button>
           </div>
           <div class="agent-test-row" *ngIf="agentSuggestedUrls.length > 0" style="margin-bottom: 8px;">
             <span style="margin-right: 8px;">Gợi ý:</span>
             <nz-tag
               *ngFor="let u of agentSuggestedUrls"
-              nzColor="blue"
+              [nzColor]="(agentPublicUrl && u === agentPublicUrl) ? 'green' : 'blue'"
               style="cursor: pointer; margin-bottom: 6px;"
               (click)="cameraForm.patchValue({ agentBaseUrl: u }); cameraForm.get('agentBaseUrl')?.markAsDirty();">
               {{ u }}

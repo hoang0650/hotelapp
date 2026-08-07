@@ -59,6 +59,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   agentPort = 8787;
   agentHostInput = 'localhost';
   agentSuggestedUrls: string[] = [];
+  agentPublicUrl: string | null = null;
   agentDetectError: string | null = null;
   private previewSub: Subscription | null = null;
   private lastObjectUrl: string | null = null;
@@ -276,21 +277,61 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   async detectLocalAgent(): Promise<void> {
     this.agentDetectError = null;
     this.agentSuggestedUrls = [];
+    this.agentPublicUrl = null;
     try {
-      const resp = await fetch(`http://localhost:${this.agentPort}/info`, { method: 'GET' });
+      const token = String(this.cameraForm?.value?.agentToken || '').trim();
+      const headers: Record<string, string> = {};
+      if (token) headers['x-agent-token'] = token;
+
+      // /health không cần token — lấy publicUrl ProxVN nếu agent đã auto-tunnel
+      const healthResp = await fetch(`http://localhost:${this.agentPort}/health`, { method: 'GET' });
+      if (healthResp.ok) {
+        const health: any = await healthResp.json().catch(() => ({}));
+        if (health?.publicUrl) {
+          this.agentPublicUrl = String(health.publicUrl).replace(/\/+$/, '');
+        }
+      }
+
+      const resp = await fetch(`http://localhost:${this.agentPort}/info`, { method: 'GET', headers });
       if (!resp.ok) {
+        // Không có token thì /info 401 — vẫn dùng publicUrl từ /health
+        if (this.agentPublicUrl) {
+          this.agentSuggestedUrls = [this.agentPublicUrl];
+          if (!this.cameraForm.value.agentBaseUrl) {
+            this.cameraForm.patchValue({ agentBaseUrl: this.agentPublicUrl });
+            this.cameraForm.get('agentBaseUrl')?.markAsDirty();
+          }
+          return;
+        }
         this.agentDetectError = `Agent /info HTTP ${resp.status}`;
         return;
       }
       const data: any = await resp.json();
-      const urls: string[] = Array.isArray(data?.urls) ? data.urls : [];
-      this.agentSuggestedUrls = urls.filter(Boolean);
-      if (!this.cameraForm.value.agentBaseUrl && this.agentSuggestedUrls.length > 0) {
-        this.cameraForm.patchValue({ agentBaseUrl: this.agentSuggestedUrls[0] });
+      const publicUrl = String(data?.publicUrl || data?.proxvn?.publicUrl || this.agentPublicUrl || '').replace(/\/+$/, '');
+      this.agentPublicUrl = publicUrl || null;
+      const urls: string[] = Array.isArray(data?.urls) ? data.urls.filter(Boolean) : [];
+      // Ưu tiên URL ProxVN HTTPS công khai lên đầu danh sách gợi ý
+      this.agentSuggestedUrls = publicUrl
+        ? [publicUrl, ...urls.filter((u) => u !== publicUrl)]
+        : urls;
+      const preferred = this.agentSuggestedUrls[0];
+      if (preferred && !this.cameraForm.value.agentBaseUrl) {
+        this.cameraForm.patchValue({ agentBaseUrl: preferred });
+        this.cameraForm.get('agentBaseUrl')?.markAsDirty();
       }
     } catch (e: any) {
       this.agentDetectError = e?.message || 'Không thể kết nối agent local';
     }
+  }
+
+  useProxvnPublicUrl(): void {
+    if (!this.agentPublicUrl) {
+      this.message.warning('Chưa có ProxVN public URL. Hãy chạy start-agent (có PROXVN_SERVER).');
+      return;
+    }
+    this.cameraForm.patchValue({ agentBaseUrl: this.agentPublicUrl });
+    this.cameraForm.get('agentBaseUrl')?.markAsDirty();
+    this.testAgent();
   }
 
   testAgent(): void {
