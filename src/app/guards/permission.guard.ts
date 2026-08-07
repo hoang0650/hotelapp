@@ -51,9 +51,7 @@ export class PermissionGuard implements CanActivate {
     const unauthorizedUrl = isAdminSubdomain ? '/unauthorized' : '/admin/unauthorized';
     const redirectToLogin = () => {
       if (!isAdminSubdomain && typeof window !== 'undefined') {
-        const protocol = window.location.protocol;
-        const port = window.location.port ? `:${window.location.port}` : '';
-        window.location.href = `${protocol}//admin.phhotel.vn${port}/login`;
+        window.location.href = 'https://admin.phhotel.vn/login';
       } else {
         this.router.navigate(['/login']);
       }

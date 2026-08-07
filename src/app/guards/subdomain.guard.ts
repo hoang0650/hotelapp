@@ -15,15 +15,10 @@ export class SubdomainGuard implements CanActivate {
         return true; 
       }
 
-      // Nếu đang KHÔNG ở admin.phhotel.vn thì ép chuyển hướng
+      // Nếu đang KHÔNG ở admin.phhotel.vn thì ép chuyển hướng (luôn HTTPS)
       if (!isAdminSubdomain) {
-        const protocol = window.location.protocol;
-        const port = window.location.port ? `:${window.location.port}` : '';
-        
-        // state.url chứa đúng path mà người dùng muốn vào (vd: /login hoặc /reset-password/abc)
-        window.location.href = `${protocol}//admin.phhotel.vn${port}${state.url}`;
-        
-        return false; // Chặn Angular load component ở domain hiện tại
+        window.location.href = `https://admin.phhotel.vn${state.url}`;
+        return false;
       }
     }
     

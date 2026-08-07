@@ -191,11 +191,8 @@ export class AuthService {
         return;
       }
 
-      const protocol = window.location.protocol;
-      const port = window.location.port ? `:${window.location.port}` : '';
-
       if (!hostname.startsWith('admin.')) {
-        window.location.href = `${protocol}//admin.phhotel.vn${port}/login`;
+        window.location.href = 'https://admin.phhotel.vn/login';
       } else {
         // Ép tải lại trang bằng đường dẫn login để xóa sạch bộ nhớ Layout Admin
         window.location.href = '/login';
@@ -276,8 +273,6 @@ export class AuthService {
     if (typeof window === 'undefined') return;
 
     const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    const port = window.location.port ? `:${window.location.port}` : '';
     const pathname = window.location.pathname;
 
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -288,7 +283,7 @@ export class AuthService {
     const adminSubdomain = 'admin.phhotel.vn';
 
     const redirectToAdmin = () => {
-      window.location.href = `${protocol}//${adminSubdomain}${port}/admin/room`;
+      window.location.href = `https://${adminSubdomain}/admin/room`;
     };
 
     // Trang public / marketing: không ép sang admin hay /login

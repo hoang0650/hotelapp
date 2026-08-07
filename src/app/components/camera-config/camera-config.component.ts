@@ -49,6 +49,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   testBackImage: string | null = null;
   isTestingPipeline = false;
   pipelineResult: any = null;
+  pipelineStages: Array<{ name: string; detail: string; ok: boolean; warn: boolean; err: boolean }> = [];
 
   previewImageUrl: string | null = null;
   liveStreamUrl: string | null = null;
@@ -496,18 +497,40 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   private startLiveStream(): void {
     const token = this.authService.getToken();
     if (!token || !this.selectedCameraId) {
-      this.previewError = 'Thiếu token hoặc camera — fallback snapshot.';
-      this.useLiveStream = false;
-      this.fetchSnapshotOnce(false);
-      this.previewSub = interval(800).subscribe(() => this.fetchSnapshotOnce(false));
+      this.previewError = 'Thiếu token hoặc camera — fallback snapshot nhanh.';
+      this.startFastSnapshotLive();
       return;
     }
-    // Bust cache mỗi lần start; MJPEG qua API (đã proxy agent, bỏ self-signed)
+
+    // Agent + ProxVN: multipart MJPEG hay vỡ → chỉ poll JPEG từ frame-buffer (~2–3 fps)
+    if (this.cameraForm.value.accessMode === 'agent') {
+      this.liveStreamUrl = null;
+      this.startFastSnapshotLive();
+      this.message.success('Đang xem trực tuyến (low-latency)');
+      return;
+    }
+
     const ts = Date.now();
     this.liveStreamUrl =
       `${environment.apiUrl}/cameras/${this.selectedCameraId}/stream?access_token=${encodeURIComponent(token)}&t=${ts}`;
     this.previewImageUrl = null;
     this.message.success('Đang mở luồng realtime (MJPEG)');
+  }
+
+  private startFastSnapshotLive(): void {
+    this.previewSub?.unsubscribe();
+    this.fetchSnapshotOnce(false);
+    // Frame buffer trên agent → mỗi request ~ nhanh; 350ms cho cảm giác realtime
+    this.previewSub = interval(350).subscribe(() => this.fetchSnapshotOnce(false));
+  }
+
+  onLiveStreamError(): void {
+    // MJPEG fail → giữ snapshot live
+    this.liveStreamUrl = null;
+    if (this.isPreviewRunning && !this.previewSub) {
+      this.startFastSnapshotLive();
+    }
+    this.previewError = null;
   }
 
   stopPreview(): void {
@@ -680,6 +703,33 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.testFrontImage = null;
     this.testBackImage = null;
     this.pipelineResult = null;
+    this.pipelineStages = [];
+  }
+
+  private buildPipelineStages(res: any): Array<{ name: string; detail: string; ok: boolean; warn: boolean; err: boolean }> {
+    const st = res?.stages || {};
+    const detectCount = st.detect?.count ?? res?.persons?.length ?? 0;
+    const trackCount = Array.isArray(st.track?.tracks) ? st.track.tracks.length : detectCount;
+    const faceMatched = (res?.faces || []).filter((f: any) => f?.matched).length;
+    const faceStatus = String(st.face?.status || '');
+    const ocrOk = !!(res?.ocrRawData?.idNumber || st.ocr?.data?.idNumber);
+    const pmsOk = !!res?.guestInfo || !!res?.label?.guestId || !!res?.label?.personType;
+    const mk = (name: string, detail: string, status: string, forceOk?: boolean) => {
+      const s = String(status || '').toLowerCase();
+      const err = s.includes('error') || s === 'fail';
+      const warn = !err && (s.includes('skip') || s.includes('empty') || s.includes('no_') || s === 'pending');
+      const ok = forceOk === true || (!err && !warn && (s === 'ok' || s === 'success' || !!forceOk));
+      return { name, detail, ok, warn: warn && !ok, err };
+    };
+    return [
+      mk('1. Camera', 'Frame đã nhận', 'ok', true),
+      mk('2. YOLO người', detectCount ? `${detectCount} người` : (st.detect?.error || 'không phát hiện'), st.detect?.status || (detectCount ? 'ok' : 'empty'), detectCount > 0),
+      mk('3. ByteTrack', trackCount ? `${trackCount} track` : 'chưa track', st.track?.status || (trackCount ? 'ok' : 'empty'), trackCount > 0),
+      mk('4. Face', faceMatched ? `${faceMatched} khớp` : (faceStatus || 'chưa khớp'), faceStatus || (faceMatched ? 'ok' : 'empty'), faceMatched > 0),
+      mk('5. OCR CCCD', ocrOk ? (res?.ocrRawData?.idNumber || st.ocr?.data?.idNumber) : (st.ocr?.status || 'chưa đọc'), st.ocr?.status || (ocrOk ? 'ok' : 'empty'), ocrOk),
+      mk('6. PMS', pmsOk ? (res?.label?.labelVi || 'đã ghi') : 'chưa ghi guest', pmsOk ? 'ok' : 'empty', pmsOk),
+      mk('7. Dashboard', 'Hiển thị kết quả', 'ok', true)
+    ];
   }
 
   testAiPipeline(): void {
@@ -698,20 +748,29 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
 
     this.isTestingPipeline = true;
     this.pipelineResult = null;
+    this.pipelineStages = [];
     this.http.post<any>(`${environment.apiUrl}/cameras/process-frame`, {
       cameraId: this.selectedCameraId,
       imageFrontBase64: this.testFrontImage,
-      imageBackBase64: this.testBackImage
+      imageBackBase64: this.testBackImage,
+      documentMode: true
     }).subscribe({
       next: (res) => {
         this.pipelineResult = res;
+        this.pipelineStages = this.buildPipelineStages(res);
         this.isTestingPipeline = false;
-        this.message.success('Test AI Pipeline thành công');
+        if (res?.ocrError && !res?.ocrRawData?.idNumber) {
+          this.message.warning(res.message || res.ocrError);
+        } else {
+          this.message.success(res?.message || 'Test AI Pipeline thành công');
+        }
         this.refreshStats();
       },
       error: (err) => {
         this.isTestingPipeline = false;
-        this.message.error(err?.error?.message || 'Test AI Pipeline thất bại');
+        const details = err?.error?.details;
+        const detailMsg = details?.error || details?.message || '';
+        this.message.error(err?.error?.message || detailMsg || 'Test AI Pipeline thất bại');
       }
     });
   }
@@ -775,6 +834,16 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.http.get<any>(`${environment.apiUrl}/guests/camera-dashboard`, { params: { hotelId: this.selectedHotelId, period: this.statsPeriod } }).subscribe({
       next: (res) => {
         this.stats = res;
+        // Hiển thị stages gần nhất từ agent loop nếu chưa có kết quả test thủ công
+        if (!this.pipelineResult && res?.lastPipeline?.stages) {
+          this.pipelineStages = this.buildPipelineStages({
+            stages: res.lastPipeline.stages,
+            label: res.lastPipeline.label,
+            persons: res.lastPipeline.stages?.detect?.persons,
+            faces: res.lastPipeline.stages?.face?.faces,
+            ocrRawData: res.lastPipeline.stages?.ocr?.data
+          });
+        }
         this.isLoadingStats = false;
       },
       error: () => {

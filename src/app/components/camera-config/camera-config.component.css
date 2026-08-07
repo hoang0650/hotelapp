@@ -123,6 +123,7 @@
 
 /* Video placeholder */
 .video-preview-box {
+  position: relative;
   background: #f5f5f5;
   border: 1px dashed #d9d9d9;
   border-radius: 8px;
@@ -137,6 +138,15 @@
 .snapshot-preview.live-stream {
   object-fit: contain;
   background: #000;
+  position: relative;
+  z-index: 2;
+}
+
+.snapshot-preview.behind {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 1;
 }
 
 .snapshot-preview {
@@ -317,6 +327,49 @@
   border-top: 1px solid #f0f0f0;
   display: grid;
   gap: 10px;
+}
+
+.pipeline-flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.pipeline-stage {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fafafa;
+  min-height: 64px;
+}
+
+.pipeline-stage.ok {
+  border-color: #b7eb8f;
+  background: #f6ffed;
+}
+
+.pipeline-stage.warn {
+  border-color: #ffe58f;
+  background: #fffbe6;
+}
+
+.pipeline-stage.err {
+  border-color: #ffa39e;
+  background: #fff2f0;
+}
+
+.pipeline-stage .stage-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 4px;
+}
+
+.pipeline-stage .stage-detail {
+  font-size: 11px;
+  color: #595959;
+  word-break: break-word;
 }
 
 .pipeline-kv {

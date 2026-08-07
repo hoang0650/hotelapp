@@ -219,8 +219,13 @@
               <p>Luồng RTSP realtime sẽ hiển thị tại đây</p>
             </div>
             <nz-spin *ngIf="isTestingConnection" nzSimple nzTip="Đang kết nối camera..."></nz-spin>
-            <img *ngIf="liveStreamUrl" class="snapshot-preview live-stream" [src]="liveStreamUrl" alt="Camera live stream" />
-            <img *ngIf="!liveStreamUrl && previewImageUrl" class="snapshot-preview" [src]="previewImageUrl" alt="Camera snapshot" />
+            <img
+              *ngIf="liveStreamUrl"
+              class="snapshot-preview live-stream"
+              [src]="liveStreamUrl"
+              alt="Camera live stream"
+              (error)="onLiveStreamError()" />
+            <img *ngIf="previewImageUrl" class="snapshot-preview" [class.behind]="!!liveStreamUrl" [src]="previewImageUrl" alt="Camera snapshot" />
           </div>
           <div class="preview-hint" *ngIf="isPrivateCameraIp()">
             IP camera là nội bộ (LAN). Nếu backend chạy trên cloud (Railway) thì thường không truy cập được RTSP.
@@ -240,12 +245,12 @@
               Dừng
             </button>
             <nz-tag *ngIf="isPreviewRunning && liveStreamUrl" nzColor="green">MJPEG live</nz-tag>
-            <nz-tag *ngIf="isPreviewRunning && !liveStreamUrl" nzColor="orange">Snapshot poll</nz-tag>
+            <nz-tag *ngIf="isPreviewRunning && !liveStreamUrl" nzColor="green">Live (low-latency)</nz-tag>
           </div>
 
           <div class="pipeline-card">
             <div class="pipeline-header">
-              <div class="pipeline-title">Test AI Pipeline (OCR/Face)</div>
+              <div class="pipeline-title">Test AI Pipeline (YOLO → Track → Face → OCR → PMS)</div>
               <button nz-button nzType="default" nzSize="small" (click)="clearTestImages()">Xóa</button>
             </div>
 
@@ -274,9 +279,20 @@
             </button>
 
             <div class="pipeline-result" *ngIf="pipelineResult">
+              <div class="pipeline-flow" *ngIf="pipelineStages.length">
+                <div
+                  class="pipeline-stage"
+                  *ngFor="let s of pipelineStages"
+                  [class.ok]="s.ok"
+                  [class.warn]="s.warn"
+                  [class.err]="s.err">
+                  <div class="stage-name">{{ s.name }}</div>
+                  <div class="stage-detail">{{ s.detail }}</div>
+                </div>
+              </div>
               <div class="pipeline-kv">
                 <div class="k">Trạng thái</div>
-                <div class="v">{{ pipelineResult.status || '-' }}</div>
+                <div class="v">{{ pipelineResult.status || '-' }} — {{ pipelineResult.message || '' }}</div>
               </div>
               <div class="pipeline-kv">
                 <div class="k">Người</div>
@@ -393,6 +409,15 @@
             </div>
             <div class="stats-empty" *ngIf="!stats?.points?.length && !isLoadingStats">
               Chưa có dữ liệu thống kê.
+            </div>
+            <div class="pipeline-kv" *ngIf="stats?.lastPipeline?.label?.labelVi" style="margin-top: 12px;">
+              <div class="k">Pipeline gần nhất</div>
+              <div class="v">
+                <nz-tag [nzColor]="stats.lastPipeline.label?.badgeColor || 'blue'">
+                  {{ stats.lastPipeline.label.labelVi }}
+                </nz-tag>
+                <span style="margin-left: 8px; color: #8c8c8c; font-size: 12px;">{{ stats.lastPipeline.at | date:'short' }}</span>
+              </div>
             </div>
           </div>
         </div>

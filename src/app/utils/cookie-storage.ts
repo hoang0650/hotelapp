@@ -45,7 +45,12 @@ export function setCookie(
     const sameSite = options?.sameSite || 'Lax';
     const domain = cookieDomain();
     let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=${path}; Max-Age=${maxAge}; SameSite=${sameSite}`;
-    if (typeof location !== 'undefined' && location.protocol === 'https:') {
+    // Production *.phhotel.vn luôn Secure; localhost giữ HTTP để dev
+    const host = typeof location !== 'undefined' ? location.hostname : '';
+    const mustSecure =
+      (typeof location !== 'undefined' && location.protocol === 'https:') ||
+      (!!host && host.endsWith('phhotel.vn'));
+    if (mustSecure) {
       cookie += '; Secure';
     }
     if (domain) {
