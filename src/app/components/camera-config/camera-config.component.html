@@ -214,12 +214,13 @@
         <div nz-col [nzSpan]="12">
           <h3 class="step-title" style="text-align: left;">Kiểm tra luồng Video</h3>
           <div class="video-preview-box">
-            <div *ngIf="!previewImageUrl && !isTestingConnection" class="preview-placeholder">
+            <div *ngIf="!previewImageUrl && !liveStreamUrl && !isTestingConnection" class="preview-placeholder">
               <i nz-icon nzType="video-camera" nzTheme="outline"></i>
-              <p>Luồng RTSP sẽ hiển thị tại đây</p>
+              <p>Luồng RTSP realtime sẽ hiển thị tại đây</p>
             </div>
             <nz-spin *ngIf="isTestingConnection" nzSimple nzTip="Đang kết nối camera..."></nz-spin>
-            <img *ngIf="previewImageUrl" class="snapshot-preview" [src]="previewImageUrl" alt="Camera snapshot" />
+            <img *ngIf="liveStreamUrl" class="snapshot-preview live-stream" [src]="liveStreamUrl" alt="Camera live stream" />
+            <img *ngIf="!liveStreamUrl && previewImageUrl" class="snapshot-preview" [src]="previewImageUrl" alt="Camera snapshot" />
           </div>
           <div class="preview-hint" *ngIf="isPrivateCameraIp()">
             IP camera là nội bộ (LAN). Nếu backend chạy trên cloud (Railway) thì thường không truy cập được RTSP.
@@ -232,12 +233,14 @@
           </button>
 
           <div class="preview-actions">
-            <button nz-button nzType="default" (click)="startPreview()" [disabled]="isPreviewRunning || !selectedCameraId">
-              Xem Preview
+            <button nz-button nzType="primary" (click)="startPreview()" [disabled]="isPreviewRunning || !selectedCameraId">
+              Xem trực tuyến
             </button>
             <button nz-button nzType="default" (click)="stopPreview()" [disabled]="!isPreviewRunning">
               Dừng
             </button>
+            <nz-tag *ngIf="isPreviewRunning && liveStreamUrl" nzColor="green">MJPEG live</nz-tag>
+            <nz-tag *ngIf="isPreviewRunning && !liveStreamUrl" nzColor="orange">Snapshot poll</nz-tag>
           </div>
 
           <div class="pipeline-card">
@@ -276,16 +279,31 @@
                 <div class="v">{{ pipelineResult.status || '-' }}</div>
               </div>
               <div class="pipeline-kv">
-                <div class="k">Khách</div>
-                <div class="v">{{ pipelineResult.guestInfo?.personalInfo?.fullName || pipelineResult.ocrRawData?.fullName || '-' }}</div>
+                <div class="k">Người</div>
+                <div class="v">{{ pipelineResult.label?.fullName || pipelineResult.guestInfo?.personalInfo?.fullName || pipelineResult.ocrRawData?.fullName || '-' }}</div>
               </div>
               <div class="pipeline-kv">
-                <div class="k">Loại khách</div>
-                <div class="v">{{ pipelineResult.label?.isReturning ? 'Khách quen' : 'Khách vãng lai' }}</div>
+                <div class="k">Nhãn AI</div>
+                <div class="v">
+                  <nz-tag [nzColor]="pipelineResult.label?.badgeColor || (pipelineResult.label?.isEmployee ? 'purple' : pipelineResult.label?.isReturning ? 'blue' : 'green')">
+                    {{ pipelineResult.label?.labelVi || (pipelineResult.label?.isReturning ? 'Khách quen' : 'Khách vãng lai') }}
+                  </nz-tag>
+                </div>
+              </div>
+              <div class="pipeline-kv" *ngIf="pipelineResult.label?.summary">
+                <div class="k">Tóm tắt</div>
+                <div class="v">{{ pipelineResult.label.summary }}</div>
+              </div>
+              <div class="pipeline-kv" *ngIf="pipelineResult.label?.estimatedStayHours && !pipelineResult.label?.isEmployee">
+                <div class="k">Ước tính lưu trú</div>
+                <div class="v">~{{ pipelineResult.label.estimatedStayHours }} giờ</div>
               </div>
               <div class="pipeline-kv" *ngIf="pipelineResult.label?.currentStay?.durationSeconds">
-                <div class="k">Lưu trú</div>
-                <div class="v">{{ (pipelineResult.label.currentStay.durationSeconds / 3600) | number:'1.0-0' }} giờ</div>
+                <div class="k">Đang ở</div>
+                <div class="v">
+                  Phòng {{ pipelineResult.label.currentStay.roomNumber || '-' }}
+                  · {{ (pipelineResult.label.currentStay.durationSeconds / 3600) | number:'1.0-1' }} giờ
+                </div>
               </div>
             </div>
           </div>
@@ -304,8 +322,24 @@
 
             <div class="ai-feature-item">
               <div>
-                <h4><i nz-icon nzType="user-switch" nzTheme="outline"></i> Nhận diện Khách cũ</h4>
-                <p>Nhận diện khuôn mặt khách quen để chào mừng.</p>
+                <h4><i nz-icon nzType="tags" nzTheme="outline"></i> Nhãn nhận diện</h4>
+                <p>Gán nhãn Nhân viên / Khách quen / Khách mới / Khách vãng lai từ CCCD.</p>
+              </div>
+              <nz-switch formControlName="enableGuestLabels"></nz-switch>
+            </div>
+
+            <div class="ai-feature-item">
+              <div>
+                <h4><i nz-icon nzType="clock-circle" nzTheme="outline"></i> Ước tính thời lượng lưu trú</h4>
+                <p>Ước tính giờ ở dựa trên lịch sử lưu trú hoặc mặc định 24 giờ.</p>
+              </div>
+              <nz-switch formControlName="enableStayEstimate"></nz-switch>
+            </div>
+
+            <div class="ai-feature-item">
+              <div>
+                <h4><i nz-icon nzType="user-switch" nzTheme="outline"></i> Nhận diện khuôn mặt khách quen</h4>
+                <p>So khớp face embedding (nếu đã đồng bộ Redis).</p>
               </div>
               <nz-switch formControlName="enableFaceRecognition"></nz-switch>
             </div>

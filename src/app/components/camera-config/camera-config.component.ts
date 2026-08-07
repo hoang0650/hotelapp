@@ -51,9 +51,11 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   pipelineResult: any = null;
 
   previewImageUrl: string | null = null;
+  liveStreamUrl: string | null = null;
   isPreviewLoading = false;
   isPreviewRunning = false;
   previewError: string | null = null;
+  useLiveStream = true;
   agentOnline: boolean | null = null;
   agentError: string | null = null;
   agentPort = 8787;
@@ -107,6 +109,8 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       aiConfig: this.fb.group({
         enableOcr: [true],
         enableFaceRecognition: [false],
+        enableGuestLabels: [true],
+        enableStayEstimate: [true],
         autoCheckin: [false]
       })
     });
@@ -417,8 +421,10 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       status: cam?.status || 'active'
     });
     this.aiConfigForm.patchValue({
-      enableOcr: !!cam?.aiConfig?.enableOcr,
+      enableOcr: cam?.aiConfig?.enableOcr !== false,
       enableFaceRecognition: !!cam?.aiConfig?.enableFaceRecognition,
+      enableGuestLabels: cam?.aiConfig?.enableGuestLabels !== false,
+      enableStayEstimate: cam?.aiConfig?.enableStayEstimate !== false,
       autoCheckin: !!cam?.aiConfig?.autoCheckin
     });
   }
@@ -477,14 +483,38 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (this.isPreviewRunning) return;
     this.isPreviewRunning = true;
     this.previewError = null;
+
+    if (this.useLiveStream) {
+      this.startLiveStream();
+      return;
+    }
+
     this.fetchSnapshotOnce(false);
-    this.previewSub = interval(2000).subscribe(() => this.fetchSnapshotOnce(false));
+    this.previewSub = interval(800).subscribe(() => this.fetchSnapshotOnce(false));
+  }
+
+  private startLiveStream(): void {
+    const token = this.authService.getToken();
+    if (!token || !this.selectedCameraId) {
+      this.previewError = 'Thiếu token hoặc camera — fallback snapshot.';
+      this.useLiveStream = false;
+      this.fetchSnapshotOnce(false);
+      this.previewSub = interval(800).subscribe(() => this.fetchSnapshotOnce(false));
+      return;
+    }
+    // Bust cache mỗi lần start; MJPEG qua API (đã proxy agent, bỏ self-signed)
+    const ts = Date.now();
+    this.liveStreamUrl =
+      `${environment.apiUrl}/cameras/${this.selectedCameraId}/stream?access_token=${encodeURIComponent(token)}&t=${ts}`;
+    this.previewImageUrl = null;
+    this.message.success('Đang mở luồng realtime (MJPEG)');
   }
 
   stopPreview(): void {
     this.isPreviewRunning = false;
     this.previewSub?.unsubscribe();
     this.previewSub = null;
+    this.liveStreamUrl = null;
   }
 
   private revokePreviewUrl(): void {
