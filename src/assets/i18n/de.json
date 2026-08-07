@@ -748,7 +748,7 @@
     "EXPENSE_AMOUNT": "Ausgabenbeleg",
     "INCOME_AMOUNT": "Einnahmebeleg",
     "TOTAL_REVENUE_CALCULATION": "Gesamtumsatz:",
-    "TOTAL_REVENUE_FORMULA": "(= Bargeld + Überweisung + Kartenzahlung - Ausgabenbeleg)",
+    "TOTAL_REVENUE_FORMULA": "(= Bargeld + Überweisung + Kartenzahlung + Einnahmebeleg - Ausgabenbeleg)",
     "NOTES": "Notizen",
     "ENTER_NOTES": "Notizen, zu übergebende Probleme eingeben...",
     "SUBMIT": "Schichtübergabe bestätigen",

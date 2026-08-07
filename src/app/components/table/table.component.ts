@@ -2987,8 +2987,8 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     const card = this.toSafeNumber(values?.cardPaymentAmount);
     const income = this.toSafeNumber(values?.incomeAmount);
     const expense = this.toSafeNumber(values?.expenseAmount);
-    const cashInShift = this.toSafeNumber(values?.cashInShift);
-    return cash + bankTransfer + card + income + cashInShift - expense;
+    // Tổng doanh thu = TM + CK + thẻ + phiếu thu - phiếu chi (không cộng tiền mặt trong ca)
+    return cash + bankTransfer + card + income - expense;
   }
 
   private toSafeNumber(value: any): number {

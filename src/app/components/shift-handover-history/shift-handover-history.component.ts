@@ -361,12 +361,31 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
   }
 
   getTotalRevenue(record: ShiftHandover): number {
+    // Ưu tiên số liệu đã lưu trên record (đồng bộ với form giao ca)
+    const cashAmount = this.toAmount(record.cashAmount);
+    const bankTransferAmount = this.toAmount(record.bankTransferAmount);
+    const cardPaymentAmount = this.toAmount(record.cardPaymentAmount);
+    const incomeAmount = this.toAmount(record.incomeAmount);
+    const expenseAmount = this.toAmount(record.expenseAmount);
+    const hasStoredBreakdown =
+      cashAmount > 0 ||
+      bankTransferAmount > 0 ||
+      cardPaymentAmount > 0 ||
+      incomeAmount > 0 ||
+      expenseAmount > 0 ||
+      record.cashAmount != null ||
+      record.bankTransferAmount != null ||
+      record.cardPaymentAmount != null;
+
+    if (hasStoredBreakdown) {
+      // Tổng doanh thu = TM + CK + thẻ + phiếu thu - phiếu chi (không cộng tiền mặt trong ca)
+      return cashAmount + bankTransferAmount + cardPaymentAmount + incomeAmount - expenseAmount;
+    }
+
     const customerPayments = this.getCustomerPaymentSummary(record).total;
     const incomes = this.getIncomeSummary(record).total;
     const expenses = this.getExpenseSummary(record).total;
-    const cashInShift = this.toAmount(record.cashInShift);
-
-    return customerPayments + incomes + cashInShift - expenses;
+    return customerPayments + incomes - expenses;
   }
 
   // Helper methods để lấy các giá trị từ room history

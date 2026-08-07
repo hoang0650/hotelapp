@@ -696,7 +696,7 @@
     "EXPENSE_AMOUNT": "Expense Voucher",
     "INCOME_AMOUNT": "Income Voucher",
     "TOTAL_REVENUE_CALCULATION": "Total Revenue:",
-    "TOTAL_REVENUE_FORMULA": "(= Cash + Bank Transfer + Card Payment - Expense Voucher)",
+    "TOTAL_REVENUE_FORMULA": "(= Cash + Bank Transfer + Card Payment + Income Voucher - Expense Voucher)",
     "NOTES": "Notes",
     "ENTER_NOTES": "Enter notes, issues to hand over...",
     "SUBMIT": "Confirm Handover",

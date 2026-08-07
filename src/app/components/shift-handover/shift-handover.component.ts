@@ -479,15 +479,13 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
     const cardPaymentAmount = this.toNumber(values?.cardPaymentAmount);
     const expenseAmount = this.toNumber(values?.expenseAmount);
     const incomeAmount = this.toNumber(values?.incomeAmount);
-    const cashInShift = this.toNumber(values?.cashInShift);
 
     return this.shiftHandoverService.calculateTotalRevenue(
       cashAmount,
       bankTransferAmount,
       cardPaymentAmount,
       expenseAmount,
-      incomeAmount,
-      cashInShift
+      incomeAmount
     );
   }
 
