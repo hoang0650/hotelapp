@@ -340,30 +340,33 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       this.message.warning('Vui lòng nhập Agent URL');
       return;
     }
-    if (/api\.phgrouptechs\.com$/i.test(baseUrl)) {
+    if (/api\.phgrouptechs\.com$/i.test(baseUrl) || /api\.phhotel\.vn$/i.test(baseUrl)) {
       this.agentOnline = false;
-      this.agentError = 'Agent URL không được trỏ vào API production. Hãy dùng URL tunnel/agent riêng (VD: https://agent.phgrouptechs.com).';
+      this.agentError = 'Agent URL không được trỏ vào API production. Hãy dùng URL ProxVN (VD: https://xxxxxx.tunnel.phgrouptechs.com).';
       return;
     }
     this.agentOnline = null;
     this.agentError = null;
-    const url = this.getAgentHealthUrl(baseUrl);
     const token = String(this.cameraForm.value.agentToken || '').trim();
-    const headers: Record<string, string> = {};
-    if (token) headers['x-agent-token'] = token;
-    fetch(url, { method: 'GET', headers })
-      .then(async r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const data: any = await r.json().catch(() => ({}));
-        this.agentOnline = !!data?.ok;
+    // Test qua backend (bỏ qua self-signed Traefik DEFAULT CERT trên trình duyệt)
+    this.http.post<any>(`${environment.apiUrl}/cameras/agent-health`, {
+      agentBaseUrl: this.normalizeAgentBaseUrl(baseUrl),
+      agentToken: token || undefined
+    }).subscribe({
+      next: (res) => {
+        this.agentOnline = !!res?.ok;
         if (!this.agentOnline) {
-          this.agentError = 'Agent trả phản hồi không hợp lệ';
+          this.agentError = res?.message || 'Agent offline / không hợp lệ';
+        } else {
+          this.agentError = null;
+          this.message.success('Agent online');
         }
-      })
-      .catch((err: any) => {
+      },
+      error: (err) => {
         this.agentOnline = false;
-        this.agentError = err?.message || 'Không thể kết nối agent';
-      });
+        this.agentError = err?.error?.message || err?.message || 'Không thể kết nối agent';
+      }
+    });
   }
 
   onSelectCamera(cameraId: string): void {

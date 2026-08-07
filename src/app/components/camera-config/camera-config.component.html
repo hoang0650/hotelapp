@@ -103,9 +103,15 @@
           <nz-form-item>
             <nz-form-label nzRequired>Agent URL</nz-form-label>
             <nz-form-control nzErrorTip="Vui lòng nhập Agent URL">
-              <input nz-input formControlName="agentBaseUrl" placeholder="VD: https://abc123.tunnel.phgrouptechs.com (ProxVN)" />
+              <input nz-input formControlName="agentBaseUrl" placeholder="VD: https://456823.tunnel.phgrouptechs.com (copy đúng từ start-agent)" />
             </nz-form-control>
           </nz-form-item>
+          <nz-alert
+            nzType="warning"
+            nzShowIcon
+            style="margin-bottom: 8px;"
+            nzMessage="Agent URL phải khớp đúng Public URL in ra bởi start-agent.bat (sai 1 số là Tunnel not found)."
+          ></nz-alert>
           <nz-alert
             *ngIf="agentPublicUrl"
             nzType="success"
