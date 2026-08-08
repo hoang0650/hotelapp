@@ -6,6 +6,15 @@
   </div>
 
   <div *ngIf="!loading" class="main-content">
+
+    <nz-alert
+      nzType="warning"
+      nzShowIcon
+      nzCloseable
+      style="margin-bottom: 12px;"
+      nzMessage="Chỉ tài khoản Admin Meta App đăng nhập được?"
+      nzDescription="Đây là giới hạn phía Meta, không phải lỗi nút Kết nối. App PHHotel (Business) cần: (1) App Mode = Live, (2) Advanced Access cho pages_show_list / pages_messaging / pages_manage_metadata, (3) Business Verification nếu Meta yêu cầu. Tài khoản trong Roles (Admin/Developer/Tester) luôn dùng được khi App còn Development — khách sạn khác thì không. Tạm thời dùng nút «Nhập token».">
+    </nz-alert>
     
     <div class="toolbar">
       <div class="toolbar-left">

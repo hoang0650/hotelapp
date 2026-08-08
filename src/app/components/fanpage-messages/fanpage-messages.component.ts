@@ -316,19 +316,24 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
 
   async connectFanpage(): Promise<void> {
     const tenantId = this.getTenantId();
-    const url = await this.aiAssistant.getFacebookOAuthUrl(tenantId);
-    // DEBUG: soi URL OAuth server sinh ra
+    let url = await this.aiAssistant.getFacebookOAuthUrl(tenantId);
+    // Ép Graph API ≥ v26.0 (tránh env cũ v24 trên AI server)
+    if (url) {
+      url = url.replace(/facebook\.com\/v\d+(?:\.\d+)?\//i, 'facebook.com/v26.0/');
+    }
     console.log('[FB Connect] tenant:', tenantId, '| OAuth URL:', url);
     if (url && !url.includes('config_id=')) {
       console.warn('[FB Connect] URL đang ở dạng cũ (scope=) — server AI chưa đặt FACEBOOK_LOGIN_CONFIG_ID, app Business sẽ bị Facebook chặn dialog.');
+      this.message.warning('Cấu hình Facebook Login for Business thiếu config_id — có thể bị Meta chặn.');
     }
-    if (url) {
-      // Mở popup để login Facebook
-      const width = 600, height = 700;
-      const left = (window.innerWidth - width) / 2;
-      const top = (window.innerHeight - height) / 2;
-      window.open(url, 'FacebookLogin', `width=${width},height=${height},left=${left},top=${top}`);
+    if (!url) {
+      this.message.error('Không lấy được URL kết nối Facebook. Kiểm tra AI server / FACEBOOK_APP_ID.');
+      return;
     }
+    const width = 600, height = 700;
+    const left = (window.innerWidth - width) / 2;
+    const top = (window.innerHeight - height) / 2;
+    window.open(url, 'FacebookLogin', `width=${width},height=${height},left=${left},top=${top}`);
   }
 
   openManualConnect(): void {
