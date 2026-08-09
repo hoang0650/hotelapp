@@ -260,50 +260,6 @@
     </div>
   </section>
 
-  <section class="site-explore" aria-labelledby="site-explore-title">
-    <div class="container">
-      <h2 id="site-explore-title" class="site-explore__title">{{ 'HOME.EXPLORE.TITLE' | translate }}</h2>
-      <p class="site-explore__subtitle">{{ 'HOME.EXPLORE.SUBTITLE' | translate }}</p>
-      <nav class="site-explore__list" aria-label="PHHotel site links">
-        <a class="site-explore__item" [routerLink]="['/pricing']">
-          <div class="site-explore__text">
-            <div class="site-explore__name">{{ 'HOME.EXPLORE.PRICING_TITLE' | translate }}</div>
-            <div class="site-explore__desc">{{ 'HOME.EXPLORE.PRICING_DESC' | translate }}</div>
-          </div>
-          <span class="site-explore__chevron" aria-hidden="true">›</span>
-        </a>
-        <a class="site-explore__item" [routerLink]="['/blog']">
-          <div class="site-explore__text">
-            <div class="site-explore__name">{{ 'HOME.EXPLORE.BLOG_TITLE' | translate }}</div>
-            <div class="site-explore__desc">{{ 'HOME.EXPLORE.BLOG_DESC' | translate }}</div>
-          </div>
-          <span class="site-explore__chevron" aria-hidden="true">›</span>
-        </a>
-        <a class="site-explore__item" [routerLink]="['/contact']">
-          <div class="site-explore__text">
-            <div class="site-explore__name">{{ 'HOME.EXPLORE.CONTACT_TITLE' | translate }}</div>
-            <div class="site-explore__desc">{{ 'HOME.EXPLORE.CONTACT_DESC' | translate }}</div>
-          </div>
-          <span class="site-explore__chevron" aria-hidden="true">›</span>
-        </a>
-        <a class="site-explore__item" [routerLink]="['/about-us']">
-          <div class="site-explore__text">
-            <div class="site-explore__name">{{ 'HOME.EXPLORE.ABOUT_TITLE' | translate }}</div>
-            <div class="site-explore__desc">{{ 'HOME.EXPLORE.ABOUT_DESC' | translate }}</div>
-          </div>
-          <span class="site-explore__chevron" aria-hidden="true">›</span>
-        </a>
-        <a class="site-explore__item" [routerLink]="['/login']">
-          <div class="site-explore__text">
-            <div class="site-explore__name">{{ 'HOME.EXPLORE.LOGIN_TITLE' | translate }}</div>
-            <div class="site-explore__desc">{{ 'HOME.EXPLORE.LOGIN_DESC' | translate }}</div>
-          </div>
-          <span class="site-explore__chevron" aria-hidden="true">›</span>
-        </a>
-      </nav>
-    </div>
-  </section>
-
   <footer class="footer bg-primary text-light pt-5 pb-3">
     <div class="container">
       <div class="row">
@@ -333,6 +289,8 @@
             <li class="mb-2"><a [routerLink]="['/blog']" class="text-white text-decoration-none hover-white">{{ 'FOOTER.BLOG' | translate }}</a></li>
             <li class="mb-2"><a [routerLink]="['/contact']" class="text-white text-decoration-none hover-white">{{ 'FOOTER.CONTACT_US' | translate }}</a></li>
             <li class="mb-2"><a [routerLink]="['/about-us']" class="text-white text-decoration-none hover-white">{{ 'NAVBAR.ABOUT_US' | translate }}</a></li>
+            <li class="mb-2"><a [routerLink]="['/privacy-policy']" class="text-white text-decoration-none hover-white">{{ 'FOOTER.PRIVACY_POLICY' | translate }}</a></li>
+            <li class="mb-2"><a [routerLink]="['/terms-of-service']" class="text-white text-decoration-none hover-white">{{ 'FOOTER.TERMS_OF_SERVICE' | translate }}</a></li>
           </ul>
         </div>
         <div class="col-lg-4 col-md-12 mb-4">
