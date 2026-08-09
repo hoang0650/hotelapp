@@ -20,7 +20,11 @@
       </li>
       <li class="nav-item" *ngIf="!isAdminSubdomain">
         <a class="nav-link" [routerLink]="['/blog']" aria-current="page" data-bs-toggle="toggle"
-          data-bs-target="#navbarNav">Blog</a>
+          data-bs-target="#navbarNav">{{ 'NAVBAR.BLOG' | translate }}</a>
+      </li>
+      <li class="nav-item" *ngIf="!isAdminSubdomain">
+        <a class="nav-link" [routerLink]="['/contact']" aria-current="page" data-bs-toggle="toggle"
+          data-bs-target="#navbarNav">{{ 'NAVBAR.CONTACT' | translate }}</a>
       </li>
       <li class="nav-item" *ngIf="isLoggedIn && !isAdminSubdomain">
         <a class="nav-link" [routerLink]="['/admin/room']" aria-current="page" data-bs-toggle="toggle"

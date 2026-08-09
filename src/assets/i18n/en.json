@@ -3,6 +3,8 @@
     "HOME": "Home",
     "ABOUT_US": "About us",
     "PRICING": "Pricing",
+    "CONTACT": "Contact",
+    "BLOG": "Blog",
     "ADMIN": "Admin",
     "SIGN_UP": "Sign up",
     "LOG_IN": "Log in",
@@ -2641,6 +2643,20 @@
       "BULLET_4": "Fast invoicing, deposit tracking and income/expense reconciliation.",
       "BULLET_5": "Summary and detailed reports over time for faster decisions.",
       "IMAGE_CAPTION": "An intuitive operations dashboard for quick front-desk actions"
+    },
+    "EXPLORE": {
+      "TITLE": "Explore PHHotel",
+      "SUBTITLE": "Useful pages to get started quickly with hotel management software.",
+      "PRICING_TITLE": "Pricing",
+      "PRICING_DESC": "See pricing and plans that fit your hotel’s scale.",
+      "BLOG_TITLE": "Blog",
+      "BLOG_DESC": "News and insights on hotel operations, management, and technology.",
+      "CONTACT_TITLE": "Contact",
+      "CONTACT_DESC": "Contact PHHotel for advice on hotel management solutions.",
+      "ABOUT_TITLE": "About us",
+      "ABOUT_DESC": "Learn about PHHotel and the team behind the product.",
+      "LOGIN_TITLE": "Log in",
+      "LOGIN_DESC": "Sign in to access the PHHotel hotel operations system."
     },
     "SCREENSHOTS": {
       "TITLE": "Screenshots",

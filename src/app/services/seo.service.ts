@@ -14,6 +14,8 @@ type SeoData = {
   ogType?: string;
 };
 
+type NavItem = { name: string; description: string; path: string };
+
 @Injectable({ providedIn: 'root' })
 export class SeoService {
   private readonly brand = 'PHHotel';
@@ -81,6 +83,7 @@ export class SeoService {
     this.setMetaTag('property', 'og:type', ogType);
     this.setMetaTag('property', 'og:url', url);
     this.setMetaTag('property', 'og:site_name', this.brand);
+    this.setMetaTag('property', 'og:image', `${this.getBaseUrl()}/assets/phgroup_logo_circle.PNG`);
 
     this.setMetaTag('name', 'twitter:card', 'summary');
     this.setMetaTag('name', 'twitter:title', title);
@@ -106,15 +109,20 @@ export class SeoService {
     return String(v).trim();
   }
 
-  private getCanonicalUrl(): string {
-    const origin = (typeof window !== 'undefined' && window.location?.origin)
-      ? window.location.origin
-      : String((environment as any)?.siteUrl || '').replace(/\/+$/, '');
+  private getBaseUrl(): string {
+    const site = String((environment as any)?.siteUrl || '').replace(/\/+$/, '');
+    if (site) return site;
+    if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
+    return 'https://phhotel.vn';
+  }
 
+  private getCanonicalUrl(): string {
+    const origin = this.getBaseUrl();
     const rawPath = String(this.router.url || '/');
     const pathOnly = rawPath.split('#')[0].split('?')[0] || '/';
-    const full = `${origin}${pathOnly}`.replace(/\/+$/, '') || origin || '/';
-    return full;
+    // Prefer /home over bare / for marketing home
+    const normalized = pathOnly === '/' ? '/home' : pathOnly;
+    return `${origin}${normalized}`.replace(/\/+$/, '') || origin;
   }
 
   private setCanonicalLink(url: string): void {
@@ -132,6 +140,31 @@ export class SeoService {
     this.meta.updateTag({ [attrName]: attrValue, content });
   }
 
+  private getSiteNavItems(): NavItem[] {
+    return [
+      {
+        name: this.getTranslatedValue('SEO.PRICING.TITLE') || 'Bảng giá',
+        description: this.getTranslatedValue('SEO.PRICING.DESCRIPTION') || '',
+        path: '/pricing'
+      },
+      {
+        name: this.getTranslatedValue('SEO.BLOG.TITLE') || 'Blog',
+        description: this.getTranslatedValue('SEO.BLOG.DESCRIPTION') || '',
+        path: '/blog'
+      },
+      {
+        name: this.getTranslatedValue('SEO.CONTACT.TITLE') || 'Liên hệ',
+        description: this.getTranslatedValue('SEO.CONTACT.DESCRIPTION') || '',
+        path: '/contact'
+      },
+      {
+        name: this.getTranslatedValue('SEO.ABOUT_US.TITLE') || 'Về chúng tôi',
+        description: this.getTranslatedValue('SEO.ABOUT_US.DESCRIPTION') || '',
+        path: '/about-us'
+      }
+    ];
+  }
+
   private setPageJsonLd(url: string, title: string, description: string): void {
     if (typeof document === 'undefined') return;
 
@@ -139,7 +172,7 @@ export class SeoService {
     const isHome = pathOnly === '/' || pathOnly === '/home';
 
     const homeName = this.getTranslatedValue('SEO.HOME.TITLE') || 'Trang chủ';
-    const baseUrl = String((environment as any)?.siteUrl || '').replace(/\/+$/, '') || (typeof window !== 'undefined' ? window.location.origin : '');
+    const baseUrl = this.getBaseUrl();
 
     const toUrl = (p: string) => {
       const normalized = String(p || '/').startsWith('/') ? String(p || '/') : `/${p}`;
@@ -150,9 +183,26 @@ export class SeoService {
       ? [{ name: homeName, url: toUrl('/home') }]
       : [{ name: homeName, url: toUrl('/home') }, { name: title, url }];
 
+    const navItems = this.getSiteNavItems();
+
     const schema = {
       '@context': 'https://schema.org',
       '@graph': [
+        {
+          '@type': 'WebSite',
+          '@id': `${baseUrl}#website`,
+          name: this.brand,
+          url: baseUrl,
+          inLanguage: this.translate.currentLang || 'vi',
+          publisher: { '@id': `${baseUrl}#organization` }
+        },
+        {
+          '@type': 'Organization',
+          '@id': `${baseUrl}#organization`,
+          name: this.brand,
+          url: baseUrl,
+          logo: `${baseUrl}/assets/favicon.png`
+        },
         {
           '@type': 'WebPage',
           '@id': `${url}#webpage`,
@@ -171,6 +221,18 @@ export class SeoService {
             name: c.name,
             item: c.url
           }))
+        },
+        {
+          '@type': 'ItemList',
+          '@id': `${baseUrl}#sitelinks`,
+          name: 'PHHotel site navigation',
+          itemListElement: navItems.map((item, idx) => ({
+            '@type': 'SiteNavigationElement',
+            position: idx + 1,
+            name: item.name,
+            description: item.description,
+            url: toUrl(item.path)
+          }))
         }
       ]
     };
@@ -186,7 +248,6 @@ export class SeoService {
     el.text = JSON.stringify(schema);
   }
 
-  // Phương thức public để cập nhật SEO data từ component
   updateSeoData(data: SeoData): void {
     this.apply(data);
   }

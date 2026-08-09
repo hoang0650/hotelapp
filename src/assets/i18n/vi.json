@@ -3,6 +3,8 @@
     "HOME": "Trang chủ",
     "ABOUT_US": "Về chúng tôi",
     "PRICING": "Bảng giá",
+    "CONTACT": "Liên hệ",
+    "BLOG": "Blog",
     "ADMIN": "Quản trị",
     "SIGN_UP": "Đăng ký",
     "LOG_IN": "Đăng nhập",
@@ -3111,6 +3113,20 @@
       "BULLET_4": "Xuất hóa đơn nhanh, ghi nhận cọc/thu chi; đối soát doanh thu rõ ràng.",
       "BULLET_5": "Báo cáo tổng hợp và chi tiết theo thời gian để ra quyết định nhanh.",
       "IMAGE_CAPTION": "Giao diện quản lý vận hành trực quan, thao tác nhanh"
+    },
+    "EXPLORE": {
+      "TITLE": "Khám phá PHHotel",
+      "SUBTITLE": "Các trang hữu ích để bắt đầu nhanh với phần mềm quản lý khách sạn.",
+      "PRICING_TITLE": "Bảng giá",
+      "PRICING_DESC": "Xem bảng giá và gói dịch vụ phù hợp quy mô khách sạn của bạn.",
+      "BLOG_TITLE": "Blog",
+      "BLOG_DESC": "Tin tức và kiến thức vận hành khách sạn, quản lý và công nghệ.",
+      "CONTACT_TITLE": "Liên hệ",
+      "CONTACT_DESC": "Liên hệ PHHotel để nhận tư vấn giải pháp quản lý khách sạn.",
+      "ABOUT_TITLE": "Về chúng tôi",
+      "ABOUT_DESC": "Tìm hiểu về PHHotel và đội ngũ phát triển sản phẩm.",
+      "LOGIN_TITLE": "Đăng nhập",
+      "LOGIN_DESC": "Đăng nhập để vào hệ thống vận hành khách sạn PHHotel."
     },
     "SCREENSHOTS": {
       "TITLE": "Hình ảnh thực tế",

@@ -3,6 +3,8 @@
     "HOME": "Startseite",
     "ABOUT_US": "Über uns",
     "PRICING": "Preise",
+    "CONTACT": "Kontakt",
+    "BLOG": "Blog",
     "ADMIN": "Administrator",
     "SIGN_UP": "Registrieren",
     "LOG_IN": "Anmelden",
@@ -2591,6 +2593,20 @@
       "BULLET_4": "Schnelle Rechnungsstellung, Anzahlungen sowie Einnahmen/Ausgaben-Abgleich.",
       "BULLET_5": "Übersichts- und Detailberichte über Zeiträume für schnellere Entscheidungen.",
       "IMAGE_CAPTION": "Ein intuitives Dashboard für schnelle Front-Desk-Aktionen"
+    },
+    "EXPLORE": {
+      "TITLE": "PHHotel entdecken",
+      "SUBTITLE": "Nützliche Seiten, um schnell mit der Hotelverwaltungssoftware zu starten.",
+      "PRICING_TITLE": "Preise",
+      "PRICING_DESC": "Preise und Pakete passend zur Größe Ihres Hotels ansehen.",
+      "BLOG_TITLE": "Blog",
+      "BLOG_DESC": "News und Wissen zu Hotelbetrieb, Management und Technologie.",
+      "CONTACT_TITLE": "Kontakt",
+      "CONTACT_DESC": "Kontaktieren Sie PHHotel für Beratung zu Hotelverwaltungslösungen.",
+      "ABOUT_TITLE": "Über uns",
+      "ABOUT_DESC": "Erfahren Sie mehr über PHHotel und das Produktteam.",
+      "LOGIN_TITLE": "Anmelden",
+      "LOGIN_DESC": "Melden Sie sich an, um das PHHotel-Betriebssystem zu nutzen."
     },
     "SCREENSHOTS": {
       "TITLE": "Screenshots",

@@ -23,35 +23,77 @@
   <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   <meta name="description" content="PHHotel là phần mềm quản lý khách sạn: quản lý phòng, đặt phòng, hóa đơn, giao ca, báo cáo doanh thu, tích hợp AI chatbot hỗ trợ và tư vấn khách đặt phòng đa kênh (facebook, zalo, telegram)." />
   <meta name="robots" content="index,follow" />
-  <link rel="canonical" href="/" />
+  <link rel="canonical" href="https://phhotel.vn/home" />
   <meta name="theme-color" content="#1677ff" />
 
   <meta property="og:site_name" content="PHHotel" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="PHHotel | Trang chủ" />
   <meta property="og:description" content="PHHotel là phần mềm quản lý khách sạn: quản lý phòng, đặt phòng, hóa đơn, giao ca, báo cáo doanh thu, tích hợp AI chatbot hỗ trợ và tư vấn khách đặt phòng đa kênh (facebook, zalo, telegram)." />
-  <meta property="og:url" content="/" />
+  <meta property="og:url" content="https://phhotel.vn/home" />
+  <meta property="og:image" content="https://phhotel.vn/assets/phgroup_logo_circle.PNG" />
   <meta name="twitter:card" content="summary" />
   <script defer src="https://analytics.phgrouptechs.com/script.js" data-website-id="66939f47-a837-466c-8fa0-ba8dc2d26565"></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "PHHotel",
-    "url": "https://phhotel.vn",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "https://phhotel.vn/search?q={search_term_string}",
-      "query-input": "required name=search_term_string"
-    }
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "PHHotel",
-    "url": "https://phhotel.vn"
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://phhotel.vn/#website",
+        "name": "PHHotel",
+        "url": "https://phhotel.vn",
+        "inLanguage": "vi",
+        "publisher": { "@id": "https://phhotel.vn/#organization" },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://phhotel.vn/blog?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://phhotel.vn/#organization",
+        "name": "PHHotel",
+        "url": "https://phhotel.vn",
+        "logo": "https://phhotel.vn/assets/favicon.png"
+      },
+      {
+        "@type": "ItemList",
+        "@id": "https://phhotel.vn/#sitelinks",
+        "name": "Điều hướng PHHotel",
+        "itemListElement": [
+          {
+            "@type": "SiteNavigationElement",
+            "position": 1,
+            "name": "Bảng giá",
+            "description": "Xem bảng giá và gói dịch vụ phần mềm quản lý khách sạn PHHotel.",
+            "url": "https://phhotel.vn/pricing"
+          },
+          {
+            "@type": "SiteNavigationElement",
+            "position": 2,
+            "name": "Blog",
+            "description": "Tin tức và kiến thức về vận hành khách sạn, quản lý và công nghệ.",
+            "url": "https://phhotel.vn/blog"
+          },
+          {
+            "@type": "SiteNavigationElement",
+            "position": 3,
+            "name": "Liên hệ",
+            "description": "Liên hệ PHHotel để nhận tư vấn giải pháp quản lý khách sạn.",
+            "url": "https://phhotel.vn/contact"
+          },
+          {
+            "@type": "SiteNavigationElement",
+            "position": 4,
+            "name": "Về chúng tôi",
+            "description": "Tìm hiểu về PHHotel và đội ngũ phát triển sản phẩm.",
+            "url": "https://phhotel.vn/about-us"
+          }
+        ]
+      }
+    ]
   }
   </script>
 

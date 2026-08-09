@@ -1,16 +1,18 @@
 <footer class="footer">
   <div class="container">
-    <div class="row">
-      <div class="col-md-6">
+    <div class="row align-items-center gy-2">
+      <div class="col-md-4">
         <p class="mb-0">{{ 'FOOTER.COPYRIGHT' | translate }}</p>
       </div>
-      <div class="col-md-6 text-end">
-        <a [routerLink]="['/privacy-policy']" class="footer-link me-3">{{ 'FOOTER.PRIVACY_POLICY' | translate }}</a>
-        <a [routerLink]="['/terms-of-service']" class="footer-link me-3">{{ 'FOOTER.TERMS_OF_SERVICE' | translate }}</a>
-        <a [routerLink]="['/contact']" class="footer-link me-3">{{ 'FOOTER.CONTACT_US' | translate }}</a>
+      <div class="col-md-8 text-md-end footer-links">
+        <a [routerLink]="['/home']" class="footer-link">{{ 'NAVBAR.HOME' | translate }}</a>
+        <a [routerLink]="['/pricing']" class="footer-link">{{ 'NAVBAR.PRICING' | translate }}</a>
+        <a [routerLink]="['/blog']" class="footer-link">{{ 'FOOTER.BLOG' | translate }}</a>
+        <a [routerLink]="['/contact']" class="footer-link">{{ 'FOOTER.CONTACT_US' | translate }}</a>
         <a [routerLink]="['/about-us']" class="footer-link">{{ 'FOOTER.ABOUT' | translate }}</a>
+        <a [routerLink]="['/privacy-policy']" class="footer-link">{{ 'FOOTER.PRIVACY_POLICY' | translate }}</a>
+        <a [routerLink]="['/terms-of-service']" class="footer-link">{{ 'FOOTER.TERMS_OF_SERVICE' | translate }}</a>
       </div>
     </div>
   </div>
 </footer>
-

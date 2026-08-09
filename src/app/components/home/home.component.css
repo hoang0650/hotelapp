@@ -226,6 +226,85 @@
   color: #ffffff !important;
 }
 
+/* Khối điều hướng kiểu sitelinks (list + chevron) */
+.site-explore {
+  padding: 48px 0 40px;
+  background: linear-gradient(180deg, #f7fafc 0%, #ffffff 55%);
+}
+
+.site-explore__title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a2b3c;
+  margin: 0 0 8px;
+}
+
+.site-explore__subtitle {
+  font-size: 15px;
+  color: #5a6b7c;
+  margin: 0 0 20px;
+  max-width: 640px;
+}
+
+.site-explore__list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #e6ebf0;
+}
+
+.site-explore__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 4px;
+  border-bottom: 1px solid #e6ebf0;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s ease, padding-left 0.15s ease;
+}
+
+.site-explore__item:hover {
+  background: rgba(47, 111, 152, 0.06);
+  padding-left: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.site-explore__name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a2b3c;
+  margin-bottom: 4px;
+}
+
+.site-explore__desc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #6b7c8d;
+}
+
+.site-explore__chevron {
+  flex: 0 0 auto;
+  font-size: 22px;
+  line-height: 1;
+  color: #9aa8b5;
+}
+
+@media (max-width: 576px) {
+  .site-explore {
+    padding: 36px 0 28px;
+  }
+
+  .site-explore__title {
+    font-size: 24px;
+  }
+
+  .site-explore__item {
+    padding: 14px 0;
+  }
+}
+
 /* Fix CSS cho carousel của NG-ZORRO để không bị đè chữ */
 ::ng-deep .ant-carousel .slick-dots li button {
   background: #1890ff; /* Chỉnh màu dot tùy ý */
