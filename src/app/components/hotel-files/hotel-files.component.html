@@ -1,5 +1,49 @@
 <div class="hotel-files">
   <h2>Kho tài liệu khách sạn</h2>
+
+  <section class="camera-pack" aria-labelledby="camera-pack-title">
+    <div class="camera-pack__head">
+      <div>
+        <h3 id="camera-pack-title">Camera Agent — chạy trên máy khách sạn</h3>
+        <p class="camera-pack__lead">
+          Tải về, giải nén, bấm đúp <strong>BAT_DAU.bat</strong>. Không cần biết lập trình.
+        </p>
+      </div>
+      <button
+        nz-button
+        nzType="primary"
+        nzSize="large"
+        [nzLoading]="cameraZipLoading"
+        (click)="downloadCameraAgentZip()"
+      >
+        Tải gói Camera Agent (ZIP)
+      </button>
+    </div>
+
+    <ol class="camera-pack__steps">
+      <li>Tải ZIP → giải nén vào máy tính Windows trong khách sạn.</li>
+      <li>Bấm đúp <code>BAT_DAU.bat</code> (lần đầu chờ cài vài phút, để cửa sổ mở).</li>
+      <li>Copy dòng <code>https://...</code> hiện ra → dán vào <strong>Cấu hình Camera → Agent URL</strong>.</li>
+    </ol>
+
+    <p class="camera-pack__hint">
+      Chi tiết xem file <code>HUONG_DAN.txt</code> trong gói.
+      Có thể tải từng file bên dưới nếu không dùng được ZIP.
+    </p>
+
+    <div class="camera-pack__files">
+      <button
+        nz-button
+        nzType="default"
+        nzSize="small"
+        *ngFor="let f of cameraAgentFiles"
+        (click)="download(f)"
+      >
+        {{ shortName(f) }}
+      </button>
+    </div>
+  </section>
+
   <div class="toolbar">
     <input nz-input [(ngModel)]="searchText" placeholder="Tìm kiếm file..." />
   </div>

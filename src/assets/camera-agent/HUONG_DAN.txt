@@ -1,0 +1,41 @@
+========================================
+  PHHotel Camera Agent — Hướng dẫn nhanh
+  (Dành cho người không rành máy tính)
+========================================
+
+MỤC ĐÍCH
+  Phần mềm này chạy trên máy tính trong khách sạn để kết nối
+  camera (qua mạng nội bộ) với hệ thống PHHotel trên internet.
+
+BẠN CẦN
+  1) Một máy tính Windows bật suốt khi muốn xem camera từ xa
+  2) Internet ổn định
+  3) Node.js (miễn phí) — nếu chưa có, BAT_DAU sẽ hướng dẫn cài
+
+CÁCH CHẠY (3 BƯỚC)
+  Bước 1: Giải nén file ZIP vừa tải vào thư mục dễ nhớ
+          (ví dụ: Desktop\PHHotel-Camera-Agent)
+
+  Bước 2: Bấm đúp file   BAT_DAU.bat
+          - Lần đầu có thể chờ vài phút (tự cài thư viện)
+          - Để cửa sổ đen mở — ĐỪNG đóng cửa sổ này
+
+  Bước 3: Khi thấy dòng có chữ:
+            camera-agent ProxVN public URL: https://....
+          → Copy nguyên dòng https://...
+          → Vào PHHotel → Cấu hình Camera → Agent (On-Prem)
+          → Dán vào ô Agent URL → Lưu / Test Agent
+
+NẾU KHÔNG THẤY DÒNG https://
+  - Kiểm tra internet
+  - Đóng BAT, mở lại BAT_DAU.bat
+  - Hoặc dùng nút "Quét lại agent" trong PHHotel (cùng máy / mạng)
+
+DỪNG CHẠY
+  Trong cửa sổ đen: bấm Ctrl + C, rồi Enter nếu được hỏi.
+  Hoặc đóng cửa sổ.
+
+LƯU Ý
+  - Máy chạy BAT phải cùng mạng với camera (hoặc truy cập được RTSP)
+  - Không gửi file .env cho người lạ nếu bạn đã đặt mật khẩu token
+  - Cần hỗ trợ: liên hệ kỹ thuật PHHotel / hotro@phhotel.vn
