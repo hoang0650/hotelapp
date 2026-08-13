@@ -25,6 +25,7 @@ const CAMERA_AGENT_FILES: Array<{ name: string; path: string }> = [
   { name: 'frame-pump.js', path: 'assets/camera-agent/frame-pump.js' },
   { name: 'proxvn-tunnel.js', path: 'assets/camera-agent/proxvn-tunnel.js' },
   { name: 'ai-pipeline-loop.js', path: 'assets/camera-agent/ai-pipeline-loop.js' },
+  { name: 'bin/proxvn-windows-amd64.exe', path: 'assets/camera-agent/bin/proxvn-windows-amd64.exe' },
 ];
 
 @Component({

@@ -232,21 +232,125 @@ const aiLoop = createAiPipelineLoop({
   getRtspUrl: () => String(process.env.AI_RTSP_URL || '').trim()
 });
 
-const server = app.listen(PORT, () => {
-  const ips = getLocalIpv4s();
-  const urls = [`http://localhost:${PORT}`].concat(ips.map(ip => `http://${ip}:${PORT}`));
-  console.log(`camera-agent listening on :${PORT}`);
-  console.log(`camera-agent urls: ${urls.join(' | ')}`);
-  proxvn.start();
-  aiLoop.start();
-});
+function probeExistingAgent(port) {
+  return new Promise((resolve) => {
+    const http = require('http');
+    const req = http.get(
+      { host: '127.0.0.1', port, path: '/health', timeout: 1200 },
+      (res) => {
+        let body = '';
+        res.on('data', (c) => { body += c; });
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(body || '{}');
+            resolve(res.statusCode === 200 && json && json.ok ? json : null);
+          } catch (_) {
+            resolve(null);
+          }
+        });
+      }
+    );
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => {
+      try { req.destroy(); } catch (_) {}
+      resolve(null);
+    });
+  });
+}
+
+function freePortWindows(port) {
+  if (process.platform !== 'win32') return false;
+  try {
+    const { execSync } = require('child_process');
+    const out = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf8' });
+    const pids = new Set();
+    for (const line of String(out || '').split(/\r?\n/)) {
+      if (!/LISTENING/i.test(line)) continue;
+      const parts = line.trim().split(/\s+/);
+      const pid = parts[parts.length - 1];
+      if (pid && /^\d+$/.test(pid) && pid !== '0') pids.add(pid);
+    }
+    if (!pids.size) return false;
+    for (const pid of pids) {
+      try {
+        execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' });
+        console.log(`[OK] Da dung tien trinh cu tren cong ${port} (PID ${pid})`);
+      } catch (_) {}
+    }
+    return pids.size > 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+let server = null;
+
+async function startListening() {
+  const existing = await probeExistingAgent(PORT);
+  if (existing) {
+    console.log(`[OK] Camera Agent da dang chay tren cong ${PORT}.`);
+    if (existing.publicUrl) {
+      console.log(`camera-agent ProxVN public URL: ${existing.publicUrl}`);
+      console.log('→ Dán URL này vào hotelapp Camera Config → Agent URL');
+    } else {
+      console.log(`Mo health: http://localhost:${PORT}/health`);
+    }
+    console.log('Khong can mo them cua so BAT_DAU. De cua so cu mo, hoac dong cua so cu roi chay lai.');
+    process.exit(0);
+  }
+
+  server = app.listen(PORT, () => {
+    const ips = getLocalIpv4s();
+    const urls = [`http://localhost:${PORT}`].concat(ips.map(ip => `http://${ip}:${PORT}`));
+    console.log(`camera-agent listening on :${PORT}`);
+    console.log(`camera-agent urls: ${urls.join(' | ')}`);
+    proxvn.start();
+    aiLoop.start();
+  });
+
+  server.on('error', (err) => {
+    if (err && err.code === 'EADDRINUSE') {
+      console.log('');
+      console.log(`[CANH BAO] Cong ${PORT} dang bi chiem (thuong la Camera Agent cu con mo).`);
+      if (freePortWindows(PORT)) {
+        console.log('Dang thu khoi dong lai...');
+        setTimeout(() => {
+          server = app.listen(PORT, () => {
+            const ips = getLocalIpv4s();
+            const urls = [`http://localhost:${PORT}`].concat(ips.map(ip => `http://${ip}:${PORT}`));
+            console.log(`camera-agent listening on :${PORT}`);
+            console.log(`camera-agent urls: ${urls.join(' | ')}`);
+            proxvn.start();
+            aiLoop.start();
+          });
+          server.on('error', (err2) => {
+            console.error(`[LOI] Van khong mo duoc cong ${PORT}:`, err2 && err2.message ? err2.message : err2);
+            console.error('Hay dong cua so Camera Agent cu, hoac doi PORT trong file .env roi chay lai.');
+            process.exit(1);
+          });
+        }, 800);
+        return;
+      }
+      console.error('Hay dong cua so Camera Agent dang mo, roi bam dup BAT_DAU.bat lai.');
+      console.error(`Hoac mo Task Manager → End task "Node.js", roi chay lai.`);
+      process.exit(1);
+    }
+    console.error('[LOI] Khong khoi dong duoc agent:', err && err.message ? err.message : err);
+    process.exit(1);
+  });
+}
 
 function shutdown() {
   try { aiLoop.stop(); } catch (_) {}
   try { proxvn.stop(); } catch (_) {}
-  try { server.close(); } catch (_) {}
+  try { if (server) server.close(); } catch (_) {}
   process.exit(0);
 }
 
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+startListening().catch((e) => {
+  console.error('[LOI] Khoi dong that bai:', e && e.message ? e.message : e);
+  process.exit(1);
+});

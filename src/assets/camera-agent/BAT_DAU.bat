@@ -74,6 +74,46 @@ echo.
 :START_AGENT
 if not exist "bin" mkdir bin
 
+if not exist "bin\proxvn-windows-amd64.exe" (
+  echo  [CANH BAO] Thieu ProxVN client: bin\proxvn-windows-amd64.exe
+  echo  Agent van chay LOCAL, nhung KHONG co URL https://... de dan vao PHHotel.
+  echo  Hay tai lai goi ZIP tu Kho tai lieu ^(co file ProxVN^), roi giai nen de ghi de.
+  echo.
+) else (
+  echo  [OK] Da co ProxVN client trong bin\
+)
+
+REM Neu agent cu con chay tren 8787 thi thong bao / giai port truoc khi start
+set "AGENT_PORT=8787"
+if exist ".env" (
+  for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
+    if /i "%%A"=="PORT" set "AGENT_PORT=%%B"
+  )
+)
+
+echo  Dang kiem tra cong !AGENT_PORT! ...
+set "P=!AGENT_PORT!"
+"%NODE_EXE%" -e "const http=require('http');const p=Number(process.env.P||8787);const r=http.get({host:'127.0.0.1',port:p,path:'/health',timeout:1200},res=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>{try{const j=JSON.parse(b||'{}');if(j&&j.ok){if(j.publicUrl)console.log(j.publicUrl);process.exit(0);}process.exit(2);}catch(e){process.exit(2);}});});r.on('error',()=>process.exit(2));r.on('timeout',()=>{try{r.destroy();}catch(e){}process.exit(2);});"
+set "PROBE=!ERRORLEVEL!"
+if "!PROBE!"=="0" (
+  echo.
+  echo  [OK] Camera Agent DA DANG CHAY - khong can mo them.
+  echo  De cua so Camera Agent cu mo.
+  echo  Neu can khoi dong lai: dong cua so cu roi bam dup BAT_DAU.bat.
+  echo.
+  pause
+  exit /b 0
+)
+
+REM Cong bi chiem nhung khong phai agent healthy → giai roi start lai
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:":!AGENT_PORT! .*LISTENING"') do (
+  if not "%%P"=="0" (
+    echo  [OK] Dang dong tien trinh cu tren cong !AGENT_PORT! ^(PID %%P^)...
+    taskkill /PID %%P /F >nul 2>&1
+  )
+)
+timeout /t 1 /nobreak >nul
+
 echo  Dang khoi dong...
 echo  Khi thay dong:  camera-agent ProxVN public URL: https://...
 echo  ^> Copy URL do va dan vao PHHotel ^> Cau hinh Camera ^> Agent URL
@@ -90,6 +130,7 @@ if "!ERR!"=="0" (
   echo  Da dung Camera Agent.
 ) else (
   echo  [LOI] Chuong trinh dung bat thuong ^(ma !ERR!^).
+  echo  Neu bao EADDRINUSE / cong 8787: dong cua so Camera Agent cu roi chay lai.
   echo  Gui anh man hinh nay cho ky thuat PHHotel neu can ho tro.
 )
 echo.

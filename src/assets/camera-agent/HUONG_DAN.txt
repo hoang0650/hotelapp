@@ -36,6 +36,18 @@ DỪNG CHẠY
   Trong cửa sổ đen: bấm Ctrl + C, rồi Enter nếu được hỏi.
   Hoặc đóng cửa sổ.
 
+NẾU BÁO LỖI "EADDRINUSE" / CỔNG 8787
+  Nghĩa là Camera Agent đang chạy sẵn (cửa sổ cũ còn mở).
+  → Không cần mở thêm: dùng cửa sổ cũ.
+  → Muốn chạy lại: đóng cửa sổ Camera Agent cũ, rồi bấm lại BAT_DAU.bat.
+  Bản BAT_DAU mới sẽ tự báo "đã đang chạy" hoặc tự đóng tiến trình cũ.
+
+NẾU THẤY "[proxvn] Không tìm thấy ProxVN client binary"
+  Cần file:  bin\proxvn-windows-amd64.exe  (trong thư mục vừa giải nén).
+  → Tải lại ZIP từ Kho tài liệu (bản có ProxVN), giải nén đè lên.
+  → Đóng cửa sổ BAT cũ, bấm lại BAT_DAU.bat.
+  Khi OK sẽ thấy: camera-agent ProxVN public URL: https://....
+
 LƯU Ý
   - Máy chạy BAT phải cùng mạng với camera (hoặc truy cập được RTSP)
   - Không gửi file .env cho người lạ nếu bạn đã đặt mật khẩu token
