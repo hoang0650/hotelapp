@@ -329,9 +329,34 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Nhãn dán AI — khớp PHGroup-AI / guestsController */
+  getLabelVi(label: any): string {
+    if (!label) return 'Chưa xác định';
+    const raw = String(label.labelVi || '').trim();
+    if (raw) return raw;
+    const t = String(label.personType || '').trim();
+    if (label.isEmployee || t === 'employee') return 'Nhân viên';
+    if (label.isReturning || t === 'returning_guest') return 'Khách quen';
+    if (label.isNewGuest || t === 'new_guest') return 'Khách mới';
+    if (label.isWalkIn || t === 'walk_in') return 'Khách vãng lai';
+    return 'Chưa xác định';
+  }
+
+  getLabelBadgeColor(label: any): string {
+    if (!label) return 'default';
+    const c = String(label.badgeColor || '').trim();
+    if (c) return c;
+    const t = String(label.personType || '').trim();
+    if (label.isEmployee || t === 'employee') return 'purple';
+    if (label.isReturning || t === 'returning_guest') return 'blue';
+    if (label.isNewGuest || t === 'new_guest') return 'green';
+    if (label.isWalkIn || t === 'walk_in') return 'orange';
+    return 'default';
+  }
+
   useProxvnPublicUrl(): void {
     if (!this.agentPublicUrl) {
-      this.message.warning('Chưa có ProxVN public URL. Hãy chạy start-agent (có PROXVN_SERVER).');
+      this.message.warning('Chưa có URL công khai. Hãy chạy BAT_DAU.bat trên máy khách sạn (có ProxVN).');
       return;
     }
     this.cameraForm.patchValue({ agentBaseUrl: this.agentPublicUrl });
@@ -342,12 +367,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   testAgent(): void {
     const baseUrl = String(this.cameraForm.value.agentBaseUrl || '').trim();
     if (!baseUrl) {
-      this.message.warning('Vui lòng nhập Agent URL');
+      this.message.warning('Vui lòng nhập địa chỉ Agent (URL công khai)');
       return;
     }
     if (/api\.phgrouptechs\.com$/i.test(baseUrl) || /api\.phhotel\.vn$/i.test(baseUrl)) {
       this.agentOnline = false;
-      this.agentError = 'Agent URL không được trỏ vào API production. Hãy dùng URL ProxVN (VD: https://xxxxxx.tunnel.phgrouptechs.com).';
+      this.agentError = 'Không dùng URL API production. Hãy dán URL https://….tunnel… mà BAT_DAU.bat in ra.';
       return;
     }
     this.agentOnline = null;
@@ -599,7 +624,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (accessMode === 'agent') {
       const baseUrl = this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || '');
       if (!baseUrl) {
-        this.previewError = 'Vui lòng nhập Agent URL trước khi xem snapshot.';
+        this.previewError = 'Vui lòng nhập địa chỉ Agent (URL công khai) trước khi xem snapshot.';
         if (showToast) this.message.error(this.previewError);
         throw new Error(this.previewError);
       }

@@ -94,30 +94,30 @@
           <nz-form-control>
             <nz-radio-group formControlName="accessMode" nzSize="small">
               <label nz-radio-button nzValue="cloud">Cloud</label>
-              <label nz-radio-button nzValue="agent">Agent (On-Prem)</label>
+              <label nz-radio-button nzValue="agent">Máy khách sạn (Camera Agent)</label>
             </nz-radio-group>
           </nz-form-control>
         </nz-form-item>
 
         <div *ngIf="cameraForm.value.accessMode === 'agent'">
           <nz-form-item>
-            <nz-form-label nzRequired>Agent URL</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập Agent URL">
-              <input nz-input formControlName="agentBaseUrl" placeholder="VD: https://456823.tunnel.phgrouptechs.com (copy đúng từ start-agent)" />
+            <nz-form-label nzRequired>Địa chỉ Agent (URL công khai)</nz-form-label>
+            <nz-form-control nzErrorTip="Vui lòng nhập URL Agent">
+              <input nz-input formControlName="agentBaseUrl" placeholder="VD: https://xxxxxx.tunnel.phgrouptechs.com (copy từ BAT_DAU.bat)" />
             </nz-form-control>
           </nz-form-item>
           <nz-alert
             nzType="warning"
             nzShowIcon
             style="margin-bottom: 8px;"
-            nzMessage="Agent URL phải khớp đúng Public URL in ra bởi start-agent.bat (sai 1 số là Tunnel not found)."
+            nzMessage="URL phải khớp đúng dòng https://... mà BAT_DAU.bat in ra (sai 1 ký tự sẽ báo Tunnel not found). Tải gói tại Kho tài liệu → Camera Agent."
           ></nz-alert>
           <nz-alert
             *ngIf="agentPublicUrl"
             nzType="success"
             nzShowIcon
             style="margin-bottom: 8px;"
-            [nzMessage]="'ProxVN public URL: ' + agentPublicUrl"
+            [nzMessage]="'URL công khai từ agent: ' + agentPublicUrl"
             [nzAction]="proxvnAction">
           </nz-alert>
           <ng-template #proxvnAction>
@@ -144,13 +144,13 @@
             {{ agentDetectError }}
           </div>
           <nz-form-item>
-            <nz-form-label>Agent Token</nz-form-label>
+            <nz-form-label>Mã bảo vệ Agent (tuỳ chọn)</nz-form-label>
             <nz-form-control>
-              <input nz-input formControlName="agentToken" placeholder="(tuỳ chọn) token bảo vệ agent" />
+              <input nz-input formControlName="agentToken" placeholder="Để trống nếu chưa đặt CAMERA_AGENT_TOKEN" />
             </nz-form-control>
           </nz-form-item>
           <div class="agent-test-row">
-            <button nz-button nzType="default" (click)="testAgent()">Test Agent</button>
+            <button nz-button nzType="default" (click)="testAgent()">Kiểm tra Agent</button>
             <nz-tag *ngIf="agentOnline === true" nzColor="green">Online</nz-tag>
             <nz-tag *ngIf="agentOnline === false" nzColor="red">Offline</nz-tag>
             <span *ngIf="agentError" class="agent-error">{{ agentError }}</span>
@@ -299,10 +299,10 @@
                 <div class="v">{{ pipelineResult.label?.fullName || pipelineResult.guestInfo?.personalInfo?.fullName || pipelineResult.ocrRawData?.fullName || '-' }}</div>
               </div>
               <div class="pipeline-kv">
-                <div class="k">Nhãn AI</div>
+                <div class="k">Nhãn dán</div>
                 <div class="v">
-                  <nz-tag [nzColor]="pipelineResult.label?.badgeColor || (pipelineResult.label?.isEmployee ? 'purple' : pipelineResult.label?.isReturning ? 'blue' : 'green')">
-                    {{ pipelineResult.label?.labelVi || (pipelineResult.label?.isReturning ? 'Khách quen' : 'Khách vãng lai') }}
+                  <nz-tag [nzColor]="getLabelBadgeColor(pipelineResult.label)">
+                    {{ getLabelVi(pipelineResult.label) }}
                   </nz-tag>
                 </div>
               </div>
@@ -338,8 +338,14 @@
 
             <div class="ai-feature-item">
               <div>
-                <h4><i nz-icon nzType="tags" nzTheme="outline"></i> Nhãn nhận diện</h4>
-                <p>Gán nhãn Nhân viên / Khách quen / Khách mới / Khách vãng lai từ CCCD.</p>
+                <h4><i nz-icon nzType="tags" nzTheme="outline"></i> Nhãn dán nhận diện</h4>
+                <p>Gắn nhãn từ CCCD / khuôn mặt theo đúng loại người.</p>
+                <div class="label-legend">
+                  <nz-tag nzColor="purple">Nhân viên</nz-tag>
+                  <nz-tag nzColor="blue">Khách quen</nz-tag>
+                  <nz-tag nzColor="green">Khách mới</nz-tag>
+                  <nz-tag nzColor="orange">Khách vãng lai</nz-tag>
+                </div>
               </div>
               <nz-switch formControlName="enableGuestLabels"></nz-switch>
             </div>
@@ -410,11 +416,11 @@
             <div class="stats-empty" *ngIf="!stats?.points?.length && !isLoadingStats">
               Chưa có dữ liệu thống kê.
             </div>
-            <div class="pipeline-kv" *ngIf="stats?.lastPipeline?.label?.labelVi" style="margin-top: 12px;">
-              <div class="k">Pipeline gần nhất</div>
+            <div class="pipeline-kv" *ngIf="stats?.lastPipeline?.label" style="margin-top: 12px;">
+              <div class="k">Nhãn dán gần nhất</div>
               <div class="v">
-                <nz-tag [nzColor]="stats.lastPipeline.label?.badgeColor || 'blue'">
-                  {{ stats.lastPipeline.label.labelVi }}
+                <nz-tag [nzColor]="getLabelBadgeColor(stats.lastPipeline.label)">
+                  {{ getLabelVi(stats.lastPipeline.label) }}
                 </nz-tag>
                 <span style="margin-left: 8px; color: #8c8c8c; font-size: 12px;">{{ stats.lastPipeline.at | date:'short' }}</span>
               </div>

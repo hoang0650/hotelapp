@@ -39,6 +39,13 @@
   color: #cf1322;
 }
 
+.label-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .step-container {
   padding: 24px 0;
   min-height: 300px;
