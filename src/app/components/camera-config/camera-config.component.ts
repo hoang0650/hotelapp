@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -15,6 +15,16 @@ interface CameraProviderOption {
   icon: string;
   color: string;
 }
+
+type FrameOverlay = {
+  id: string;
+  label: string;
+  color: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
 
 @Component({
   selector: 'app-camera-config',
@@ -64,8 +74,14 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   agentSuggestedUrls: string[] = [];
   agentPublicUrl: string | null = null;
   agentDetectError: string | null = null;
+  frameOverlays: FrameOverlay[] = [];
+  liveLabel: any = null;
   private previewSub: Subscription | null = null;
+  private overlaySub: Subscription | null = null;
+  private overlayBusy = false;
   private lastObjectUrl: string | null = null;
+  @ViewChild('previewImg') previewImg?: ElementRef<HTMLImageElement>;
+  @ViewChild('previewBox') previewBox?: ElementRef<HTMLDivElement>;
 
   providers: CameraProviderOption[] = [
     { id: 'hikvision', name: 'Hikvision', icon: 'video-camera', color: '#ff4d4f' },
@@ -90,8 +106,13 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.statsSub?.unsubscribe();
     this.userSub?.unsubscribe();
+    this.overlaySub?.unsubscribe();
     this.stopPreview();
     this.revokePreviewUrl();
+  }
+
+  get aiConfigForm(): FormGroup {
+    return this.cameraForm.get('aiConfig') as FormGroup;
   }
 
   private initForm(): void {
@@ -114,6 +135,17 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         enableStayEstimate: [true],
         autoCheckin: [false]
       })
+    });
+
+    this.cameraForm.get('aiConfig.enableGuestLabels')?.valueChanges.subscribe((on: boolean) => {
+      if (!this.isPreviewRunning) return;
+      if (on) this.startOverlayPolling();
+      else {
+        this.overlaySub?.unsubscribe();
+        this.overlaySub = null;
+        this.frameOverlays = [];
+        this.liveLabel = null;
+      }
     });
 
     this.cameraForm.get('accessMode')?.valueChanges.subscribe((mode: CameraAccessMode) => {
@@ -200,10 +232,6 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         this.isLoadingHotels = false;
       }
     });
-  }
-
-  get aiConfigForm(): FormGroup {
-    return this.cameraForm.get('aiConfig') as FormGroup;
   }
 
   // Chọn nhà cung cấp
@@ -531,7 +559,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (this.cameraForm.value.accessMode === 'agent') {
       this.liveStreamUrl = null;
       this.startFastSnapshotLive();
-      this.message.success('Đang xem trực tuyến (low-latency)');
+      this.message.success('Đang xem trực tuyến + nhãn dán');
       return;
     }
 
@@ -539,13 +567,18 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.liveStreamUrl =
       `${environment.apiUrl}/cameras/${this.selectedCameraId}/stream?access_token=${encodeURIComponent(token)}&t=${ts}`;
     this.previewImageUrl = null;
-    this.message.success('Đang mở luồng realtime (MJPEG)');
+    this.startOverlayPolling();
+    this.message.success('Đang mở luồng realtime + nhãn dán');
   }
 
   private startFastSnapshotLive(): void {
     this.previewSub?.unsubscribe();
+    // Overlay poll đã cập nhật snapshot; giảm poll JPEG trùng
+    if (this.aiConfigForm?.value?.enableGuestLabels) {
+      this.startOverlayPolling();
+      return;
+    }
     this.fetchSnapshotOnce(false);
-    // Frame buffer trên agent → mỗi request ~ nhanh; 350ms cho cảm giác realtime
     this.previewSub = interval(350).subscribe(() => this.fetchSnapshotOnce(false));
   }
 
@@ -562,7 +595,168 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.isPreviewRunning = false;
     this.previewSub?.unsubscribe();
     this.previewSub = null;
+    this.overlaySub?.unsubscribe();
+    this.overlaySub = null;
     this.liveStreamUrl = null;
+    this.frameOverlays = [];
+  }
+
+  private startOverlayPolling(): void {
+    this.overlaySub?.unsubscribe();
+    if (!this.aiConfigForm?.value?.enableGuestLabels) {
+      this.frameOverlays = [];
+      return;
+    }
+    void this.refreshLiveOverlays();
+    // Live sticker: nhẹ hơn OCR full pipeline
+    this.overlaySub = interval(2500).subscribe(() => void this.refreshLiveOverlays());
+  }
+
+  private async blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private async refreshLiveOverlays(): Promise<void> {
+    if (!this.isPreviewRunning || !this.selectedCameraId) return;
+    if (!this.aiConfigForm?.value?.enableGuestLabels) {
+      this.frameOverlays = [];
+      this.liveLabel = null;
+      return;
+    }
+    if (this.overlayBusy) return;
+    this.overlayBusy = true;
+    try {
+      const blob = await firstValueFrom(
+        this.http.get(`${environment.apiUrl}/cameras/${this.selectedCameraId}/snapshot`, {
+          responseType: 'blob' as const,
+        }),
+      );
+      if (!blob || !blob.size) return;
+      const dataUrl = await this.blobToDataUrl(blob);
+      if (!dataUrl) return;
+
+      // Đồng bộ khung hình với frame vừa phân tích
+      this.revokePreviewUrl();
+      const url = URL.createObjectURL(blob);
+      this.lastObjectUrl = url;
+      this.previewImageUrl = url;
+
+      const res = await firstValueFrom(
+        this.http.post<any>(`${environment.apiUrl}/cameras/process-frame`, {
+          cameraId: this.selectedCameraId,
+          imageFrontBase64: dataUrl,
+          liveMode: true,
+        }),
+      );
+      this.liveLabel = res?.label || null;
+      this.frameOverlays = this.buildFrameOverlays(res);
+      // Cho ảnh render xong rồi map lại % (object-fit: contain)
+      setTimeout(() => {
+        this.frameOverlays = this.buildFrameOverlays(res);
+      }, 40);
+    } catch (_) {
+      // Giữ overlay cũ nếu một nhịp lỗi
+    } finally {
+      this.overlayBusy = false;
+    }
+  }
+
+  private buildFrameOverlays(res: any): FrameOverlay[] {
+    const persons: any[] = Array.isArray(res?.persons) ? res.persons : [];
+    const faces: any[] = Array.isArray(res?.faces) ? res.faces : [];
+    const frameW = Number(res?.frameWidth) || this.previewImg?.nativeElement?.naturalWidth || 0;
+    const frameH = Number(res?.frameHeight) || this.previewImg?.nativeElement?.naturalHeight || 0;
+    if (!frameW || !frameH) return [];
+
+    const box = this.previewBox?.nativeElement;
+    const img = this.previewImg?.nativeElement;
+    if (!box || !img) return [];
+
+    const boxW = box.clientWidth || 1;
+    const boxH = box.clientHeight || 1;
+    const scale = Math.min(boxW / frameW, boxH / frameH);
+    const dispW = frameW * scale;
+    const dispH = frameH * scale;
+    const offsetX = (boxW - dispW) / 2;
+    const offsetY = (boxH - dispH) / 2;
+
+    const overlays: FrameOverlay[] = [];
+    persons.forEach((p, idx) => {
+      const bbox = Array.isArray(p?.bbox) ? p.bbox.map(Number) : null;
+      if (!bbox || bbox.length < 4) return;
+      const [x1, y1, x2, y2] = bbox;
+      const face = faces.find((f) => f?.trackId != null && f.trackId === p?.trackId) || faces[idx];
+      let labelText = 'Đang nhận diện';
+      let color = '#8c8c8c';
+      if (face?.matched) {
+        if (this.liveLabel && String(this.liveLabel.guestId || '') === String(face.guestId || '')) {
+          labelText = this.getLabelVi(this.liveLabel);
+          color = this.badgeHex(this.getLabelBadgeColor(this.liveLabel));
+        } else {
+          labelText = 'Đã nhận diện';
+          color = this.badgeHex('blue');
+        }
+      } else if (this.liveLabel && persons.length === 1) {
+        labelText = this.getLabelVi(this.liveLabel);
+        color = this.badgeHex(this.getLabelBadgeColor(this.liveLabel));
+      }
+
+      overlays.push({
+        id: String(p?.trackId ?? idx),
+        label: labelText,
+        color,
+        left: offsetX + (x1 / frameW) * dispW,
+        top: offsetY + (y1 / frameH) * dispH,
+        width: Math.max(24, ((x2 - x1) / frameW) * dispW),
+        height: Math.max(24, ((y2 - y1) / frameH) * dispH),
+      });
+    });
+
+    // Không có person bbox nhưng có face bbox
+    if (!overlays.length && faces.length) {
+      faces.forEach((f, idx) => {
+        const bbox = Array.isArray(f?.bbox) ? f.bbox.map(Number) : null;
+        if (!bbox || bbox.length < 4) return;
+        const [x1, y1, x2, y2] = bbox;
+        const labelText = f?.matched
+          ? (this.liveLabel ? this.getLabelVi(this.liveLabel) : 'Đã nhận diện')
+          : 'Đang nhận diện';
+        const color = f?.matched
+          ? this.badgeHex(this.getLabelBadgeColor(this.liveLabel || { personType: 'returning_guest' }))
+          : '#8c8c8c';
+        overlays.push({
+          id: `face-${f?.trackId ?? idx}`,
+          label: labelText,
+          color,
+          left: offsetX + (x1 / frameW) * dispW,
+          top: offsetY + (y1 / frameH) * dispH,
+          width: Math.max(24, ((x2 - x1) / frameW) * dispW),
+          height: Math.max(24, ((y2 - y1) / frameH) * dispH),
+        });
+      });
+    }
+
+    return overlays;
+  }
+
+  private badgeHex(color: string): string {
+    switch (String(color || '').toLowerCase()) {
+      case 'purple': return '#722ed1';
+      case 'blue': return '#1677ff';
+      case 'green': return '#52c41a';
+      case 'orange': return '#fa8c16';
+      case 'red': return '#ff4d4f';
+      default: return '#595959';
+    }
+  }
+
+  trackOverlay(_index: number, o: FrameOverlay): string {
+    return o.id;
   }
 
   private revokePreviewUrl(): void {

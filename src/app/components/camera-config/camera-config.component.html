@@ -213,7 +213,7 @@
       <div nz-row [nzGutter]="24">
         <div nz-col [nzSpan]="12">
           <h3 class="step-title" style="text-align: left;">Kiểm tra luồng Video</h3>
-          <div class="video-preview-box">
+          <div class="video-preview-box" #previewBox>
             <div *ngIf="!previewImageUrl && !liveStreamUrl && !isTestingConnection" class="preview-placeholder">
               <i nz-icon nzType="video-camera" nzTheme="outline"></i>
               <p>Luồng RTSP realtime sẽ hiển thị tại đây</p>
@@ -225,7 +225,30 @@
               [src]="liveStreamUrl"
               alt="Camera live stream"
               (error)="onLiveStreamError()" />
-            <img *ngIf="previewImageUrl" class="snapshot-preview" [class.behind]="!!liveStreamUrl" [src]="previewImageUrl" alt="Camera snapshot" />
+            <img
+              *ngIf="previewImageUrl"
+              #previewImg
+              class="snapshot-preview"
+              [class.behind]="!!liveStreamUrl"
+              [src]="previewImageUrl"
+              alt="Camera snapshot" />
+
+            <div class="frame-overlays" *ngIf="isPreviewRunning && frameOverlays.length">
+              <div
+                class="frame-sticker"
+                *ngFor="let o of frameOverlays; trackBy: trackOverlay"
+                [style.left.px]="o.left"
+                [style.top.px]="o.top"
+                [style.width.px]="o.width"
+                [style.height.px]="o.height"
+                [style.borderColor]="o.color">
+                <span class="frame-sticker__tag" [style.background]="o.color">{{ o.label }}</span>
+              </div>
+            </div>
+
+            <div class="live-label-chip" *ngIf="isPreviewRunning && liveLabel && !frameOverlays.length">
+              <nz-tag [nzColor]="getLabelBadgeColor(liveLabel)">{{ getLabelVi(liveLabel) }}</nz-tag>
+            </div>
           </div>
           <div class="preview-hint" *ngIf="isPrivateCameraIp()">
             IP camera là nội bộ (LAN). Nếu backend chạy trên cloud (Railway) thì thường không truy cập được RTSP.
@@ -246,6 +269,7 @@
             </button>
             <nz-tag *ngIf="isPreviewRunning && liveStreamUrl" nzColor="green">MJPEG live</nz-tag>
             <nz-tag *ngIf="isPreviewRunning && !liveStreamUrl" nzColor="green">Live (low-latency)</nz-tag>
+            <nz-tag *ngIf="isPreviewRunning && aiConfigForm.value.enableGuestLabels" nzColor="purple">Nhãn dán ON</nz-tag>
           </div>
 
           <div class="pipeline-card">
@@ -339,7 +363,7 @@
             <div class="ai-feature-item">
               <div>
                 <h4><i nz-icon nzType="tags" nzTheme="outline"></i> Nhãn dán nhận diện</h4>
-                <p>Gắn nhãn từ CCCD / khuôn mặt theo đúng loại người.</p>
+                <p>Luôn hiện nhãn trên khung hình khi bấm <strong>Xem trực tuyến</strong> (YOLO + khuôn mặt).</p>
                 <div class="label-legend">
                   <nz-tag nzColor="purple">Nhân viên</nz-tag>
                   <nz-tag nzColor="blue">Khách quen</nz-tag>
