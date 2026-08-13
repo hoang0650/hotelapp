@@ -789,7 +789,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     } catch (err: any) {
       const msg = await this.extractHttpErrorMessage(err);
       this.previewError = msg || this.translate.instant('CAMERA_CONFIG.MESSAGES.SNAPSHOT_FAIL');
-      if (showToast) this.message.error(this.previewError);
+      if (showToast && this.previewError) this.message.error(this.previewError);
     } finally {
       this.isPreviewLoading = false;
     }
@@ -820,9 +820,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (accessMode === 'agent') {
       const baseUrl = this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || '');
       if (!baseUrl) {
-        this.previewError = this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_URL_BEFORE_SNAPSHOT');
-        if (showToast) this.message.error(this.previewError);
-        throw new Error(this.previewError);
+        const agentUrlError: string = this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_URL_BEFORE_SNAPSHOT');
+        this.previewError = agentUrlError;
+        if (showToast) {
+          this.message.error(agentUrlError);
+        }
+        throw new Error(agentUrlError);
       }
     }
 

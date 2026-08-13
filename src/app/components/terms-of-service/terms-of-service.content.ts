@@ -149,6 +149,8 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
               'Để đáp ứng hoặc tuân thủ các chính sách nội bộ của PHHotel và các nghĩa vụ pháp luật hoặc theo yêu cầu của cơ quan Nhà nước có thẩm quyền;',
               'Thực hiện các mục đích khác có liên quan đến hoạt động kinh doanh, vận hành, quản lý và tuân thủ của PHHotel phù hợp với quy định của pháp luật từng thời kỳ.',
             ],
+          },
+          {
             p: [
               'Một số Mục Đích thu thập, sử dụng, tiết lộ hoặc xử lý dữ liệu cá nhân còn tuỳ thuộc vào hoàn cảnh tại thời điểm thu thập, nên sẽ không xuất hiện trong danh sách trên. Tuy nhiên, PHHotel sẽ thông báo cho Bên Cung Cấp về những Mục Đích đó tại thời điểm cần sự đồng ý của Bên Cung Cấp, trừ khi việc xử lý dữ liệu cá nhân mà không cần sự đồng ý của chủ thể dữ liệu theo quy định pháp luật.',
             ],
@@ -461,6 +463,8 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
               'To meet or comply with PHHotel\'s internal policies and legal obligations, or at the request of competent state authorities;',
               'To perform other purposes relating to PHHotel\'s business, operations, management, and compliance in accordance with applicable law from time to time.',
             ],
+          },
+          {
             p: [
               'Some Purposes for collecting, using, disclosing, or processing personal data depend on the circumstances at the time of collection and therefore may not appear in the list above. However, PHHotel will notify the Provider of such Purposes when the Provider\'s consent is required, unless processing without the data subject\'s consent is permitted by law.',
             ],

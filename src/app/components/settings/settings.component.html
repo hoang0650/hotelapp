@@ -854,11 +854,16 @@
                   <button nz-button nzType="link" nzSize="small" (click)="openAnnouncementModal(announcement)">
                     <i nz-icon nzType="edit" nzTheme="outline"></i>
                   </button>
-                  <nz-popconfirm [nzTitle]="'SETTINGS.CONFIRM_DELETE_ANNOUNCEMENT' | translate" (nzOnConfirm)="deleteAnnouncement(announcement)">
-                    <button *nz-popconfirm nz-button nzType="link" nzSize="small" nzDanger>
-                      <i nz-icon nzType="delete" nzTheme="outline"></i>
-                    </button>
-                  </nz-popconfirm>
+                  <button
+                    nz-button
+                    nzType="link"
+                    nzSize="small"
+                    nzDanger
+                    nz-popconfirm
+                    [nzPopconfirmTitle]="'SETTINGS.CONFIRM_DELETE_ANNOUNCEMENT' | translate"
+                    (nzOnConfirm)="deleteAnnouncement(announcement)">
+                    <i nz-icon nzType="delete" nzTheme="outline"></i>
+                  </button>
                 </td>
               </tr>
             </tbody>
