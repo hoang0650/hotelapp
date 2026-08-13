@@ -10,7 +10,8 @@ MỤC ĐÍCH
 BẠN CẦN
   1) Một máy tính Windows bật suốt khi muốn xem camera từ xa
   2) Internet ổn định
-  3) Node.js (miễn phí) — nếu chưa có, BAT_DAU sẽ hướng dẫn cài
+  3) Node.js (miễn phí) — BAT_DAU tự kiểm tra (PATH, Program Files, NVM).
+     Chỉ mở trang cài khi thật sự không tìm thấy Node.
 
 CÁCH CHẠY (3 BƯỚC)
   Bước 1: Giải nén file ZIP vừa tải vào thư mục dễ nhớ

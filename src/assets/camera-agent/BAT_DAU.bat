@@ -1,6 +1,5 @@
 @echo off
-chcp 65001 >nul
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 title PHHotel Camera Agent
 
@@ -11,53 +10,68 @@ echo   Phan mem ket noi camera khach san
 echo  ============================================
 echo.
 echo  Huong dan: mo file HUONG_DAN.txt neu can.
-echo  De cua so nay MO — dung dong khi dang dung.
+echo  De cua so nay MO - dung dong khi dang dung.
 echo.
 
+set "NODE_EXE="
+set "NPM_CMD="
+set "PF86=%ProgramFiles(x86)%"
+
 where node >nul 2>&1
-if errorlevel 1 (
-  echo  [CAN CAI DAT] May chua co Node.js.
-  echo.
-  echo  Bam phim bat ky de mo trang cai Node.js ^(ban LTS^)...
-  pause >nul
-  start "" "https://nodejs.org/en/download"
-  echo.
-  echo  Sau khi cai xong Node.js:
-  echo   1^) Dong cua so cai dat
-  echo   2^) Dong cua so nay
-  echo   3^) Bam dup lai file BAT_DAU.bat
-  echo.
-  pause
-  exit /b 1
-)
-
-if not exist ".env" (
-  if exist "env.example" (
-    copy /Y "env.example" ".env" >nul
-    echo  [OK] Da tao file cau hinh .env ^(lan dau^)
-  ) else if exist ".env.example" (
-    copy /Y ".env.example" ".env" >nul
-    echo  [OK] Da tao file cau hinh .env ^(lan dau^)
+if not errorlevel 1 (
+  for /f "delims=" %%i in ('where node 2^>nul') do (
+    if not defined NODE_EXE set "NODE_EXE=%%i"
   )
 )
 
-if not exist "node_modules\express" (
-  echo  [LAN DAU] Dang cai thu vien — co the mat 1-3 phut...
-  echo  Vui long doi, khong tat cua so.
-  echo.
-  call npm install --omit=dev
-  if errorlevel 1 (
-    echo.
-    echo  [LOI] Cai thu vien that bai.
-    echo  Kiem tra mang internet roi chay lai BAT_DAU.bat
-    pause
-    exit /b 1
+if not defined NODE_EXE if exist "%ProgramFiles%\nodejs\node.exe" set "NODE_EXE=%ProgramFiles%\nodejs\node.exe"
+if not defined NODE_EXE if exist "!PF86!\nodejs\node.exe" set "NODE_EXE=!PF86!\nodejs\node.exe"
+if not defined NODE_EXE if exist "%LOCALAPPDATA%\Programs\nodejs\node.exe" set "NODE_EXE=%LOCALAPPDATA%\Programs\nodejs\node.exe"
+if not defined NODE_EXE if exist "C:\nvm4w\nodejs\node.exe" set "NODE_EXE=C:\nvm4w\nodejs\node.exe"
+if not defined NODE_EXE if defined NVM_HOME if exist "%NVM_HOME%\nodejs\node.exe" set "NODE_EXE=%NVM_HOME%\nodejs\node.exe"
+if not defined NODE_EXE if defined NVM_SYMLINK if exist "%NVM_SYMLINK%\node.exe" set "NODE_EXE=%NVM_SYMLINK%\node.exe"
+if not defined NODE_EXE if exist "%APPDATA%\nvm\nodejs\node.exe" set "NODE_EXE=%APPDATA%\nvm\nodejs\node.exe"
+
+if not defined NODE_EXE goto :NEED_NODE
+
+echo  [OK] Tim thay Node.js:
+call "%NODE_EXE%" -v
+if errorlevel 1 goto :BAD_NODE
+echo.
+
+for %%I in ("%NODE_EXE%") do set "NODE_DIR=%%~dpI"
+if exist "%NODE_DIR%npm.cmd" set "NPM_CMD=%NODE_DIR%npm.cmd"
+if not defined NPM_CMD (
+  where npm >nul 2>&1
+  if not errorlevel 1 (
+    for /f "delims=" %%i in ('where npm 2^>nul') do (
+      if not defined NPM_CMD set "NPM_CMD=%%i"
+    )
   )
-  echo.
-  echo  [OK] Cai xong thu vien.
-  echo.
 )
 
+if not exist ".env" goto :MAKE_ENV
+goto :AFTER_ENV
+
+:MAKE_ENV
+if exist "env.example" copy /Y "env.example" ".env" >nul & echo  [OK] Da tao file cau hinh .env ^(lan dau^) & goto :AFTER_ENV
+if exist ".env.example" copy /Y ".env.example" ".env" >nul & echo  [OK] Da tao file cau hinh .env ^(lan dau^)
+goto :AFTER_ENV
+
+:AFTER_ENV
+if exist "node_modules\express" goto :START_AGENT
+
+echo  [LAN DAU] Dang cai thu vien - co the mat 1-3 phut...
+echo  Vui long doi, khong tat cua so.
+echo.
+if not defined NPM_CMD goto :NEED_NPM
+call "%NPM_CMD%" install --omit=dev
+if errorlevel 1 goto :NPM_FAIL
+echo.
+echo  [OK] Cai xong thu vien.
+echo.
+
+:START_AGENT
 if not exist "bin" mkdir bin
 
 echo  Dang khoi dong...
@@ -68,17 +82,51 @@ echo  Bam Ctrl+C de dung.
 echo  --------------------------------------------
 echo.
 
-node server.js
-set ERR=%ERRORLEVEL%
+call "%NODE_EXE%" server.js
+set "ERR=!ERRORLEVEL!"
 
 echo.
-if not "%ERR%"=="0" (
-  echo  [LOI] Chuong trinh dung bat thuong ^(ma %ERR%^).
-  echo  Gui anh man hinh nay cho ky thuat PHHotel neu can ho tro.
-) else (
+if "!ERR!"=="0" (
   echo  Da dung Camera Agent.
+) else (
+  echo  [LOI] Chuong trinh dung bat thuong ^(ma !ERR!^).
+  echo  Gui anh man hinh nay cho ky thuat PHHotel neu can ho tro.
 )
 echo.
 pause
-endlocal
-exit /b %ERR%
+exit /b !ERR!
+
+:NEED_NODE
+echo  [CAN CAI DAT] Khong tim thay Node.js tren may nay.
+echo  Da kiem tra: PATH, Program Files, NVM.
+echo.
+echo  Bam phim bat ky de mo trang cai Node.js ^(ban LTS^)...
+pause >nul
+start "" "https://nodejs.org/en/download"
+echo.
+echo  Sau khi cai xong Node.js:
+echo   1^) Dong cua so cai dat
+echo   2^) Dong cua so nay
+echo   3^) Bam dup lai file BAT_DAU.bat
+echo.
+pause
+exit /b 1
+
+:BAD_NODE
+echo  [LOI] File node.exe khong chay duoc:
+echo  %NODE_EXE%
+pause
+exit /b 1
+
+:NEED_NPM
+echo  [LOI] Tim thay node nhung khong tim thay npm.cmd
+echo  Hay cai lai Node.js ^(ban LTS^) tu nodejs.org
+pause
+exit /b 1
+
+:NPM_FAIL
+echo.
+echo  [LOI] Cai thu vien that bai.
+echo  Kiem tra mang internet roi chay lai BAT_DAU.bat
+pause
+exit /b 1
