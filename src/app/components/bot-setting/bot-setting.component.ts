@@ -140,7 +140,7 @@ export class BotSettingComponent implements OnInit {
     const hotelId = u?.hotelId || null;
     if (hotelId) {
       this.loadRoomsFromService(hotelId);
-      this.msg.success(this.translate.instant('Đã tải lại danh sách phòng từ hệ thống'));
+      this.msg.success(this.translate.instant('BOT_SETTING.MESSAGES.ROOMS_RELOADED'));
     }
   }
 
@@ -272,13 +272,13 @@ export class BotSettingComponent implements OnInit {
   async saveSettings(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.msg.warning(this.translate.instant('Vui lòng điền đủ thông tin bắt buộc'));
+      this.msg.warning(this.translate.instant('BOT_SETTING.MESSAGES.REQUIRED_FIELDS'));
       return;
     }
     const u = this.auth.getCurrentUser();
     const hotelId = u?.hotelId || null;
     if (!hotelId) {
-      this.msg.error(this.translate.instant('Không tìm thấy khách sạn hiện tại'));
+      this.msg.error(this.translate.instant('BOT_SETTING.MESSAGES.HOTEL_NOT_FOUND'));
       return;
     }
     this.saving = true;
@@ -288,12 +288,12 @@ export class BotSettingComponent implements OnInit {
       await firstValueFrom(this.hotelService.updateHotelSettings(hotelId, { enableAiChatbox: true, botContext }).pipe(take(1)));
       try {
         await this.syncAIContext(hotelId, val, botContext);
-        this.msg.success(this.translate.instant('Đã lưu cấu hình bot và đồng bộ AI'));
+        this.msg.success(this.translate.instant('BOT_SETTING.MESSAGES.SAVE_AND_SYNC_SUCCESS'));
       } catch {
-        this.msg.warning(this.translate.instant('Đã lưu cấu hình bot nhưng đồng bộ AI chưa thành công'));
+        this.msg.warning(this.translate.instant('BOT_SETTING.MESSAGES.SAVE_SYNC_PARTIAL'));
       }
     } catch {
-      this.msg.error(this.translate.instant('Lưu cấu hình thất bại'));
+      this.msg.error(this.translate.instant('BOT_SETTING.MESSAGES.SAVE_ERROR'));
     } finally {
       this.saving = false;
     }
@@ -354,7 +354,7 @@ export class BotSettingComponent implements OnInit {
     const u = this.auth.getCurrentUser();
     const hotelId = u?.hotelId || null;
     if (!hotelId) {
-      this.msg.error(this.translate.instant('Không tìm thấy khách sạn hiện tại'));
+      this.msg.error(this.translate.instant('BOT_SETTING.MESSAGES.HOTEL_NOT_FOUND'));
       return;
     }
     const tenantId = hotelId.toString();
@@ -371,8 +371,8 @@ export class BotSettingComponent implements OnInit {
       type: 'qa',
       name: 'Q&A',
       price: '',
-      description: `Câu hỏi: ${q.question}\nTrả lời: ${q.answer}`,
-      use_case: 'Thông tin chung',
+      description: `${this.translate.instant('BOT_SETTING.QA_DESC_QUESTION')}: ${q.question}\n${this.translate.instant('BOT_SETTING.QA_DESC_ANSWER')}: ${q.answer}`,
+      use_case: this.translate.instant('BOT_SETTING.QA_USE_CASE_GENERAL'),
       question: q.question,
       answer: q.answer
     }));
@@ -380,16 +380,16 @@ export class BotSettingComponent implements OnInit {
     const products = [...roomItems, ...qaItems];
 
     if (products.length === 0) {
-      this.msg.warning(this.translate.instant('Vui lòng thêm dữ liệu (phòng hoặc câu hỏi)'));
+      this.msg.warning(this.translate.instant('BOT_SETTING.MESSAGES.NEED_DATA'));
       return;
     }
     this.syncing = true;
     try {
       const botContext = this.buildBotContext(val);
       await this.syncAIContext(hotelId, val, botContext);
-      this.msg.success(this.translate.instant('Đã đồng bộ dữ liệu AI'));
+      this.msg.success(this.translate.instant('BOT_SETTING.MESSAGES.SYNC_SUCCESS'));
     } catch {
-      this.msg.error(this.translate.instant('Đồng bộ AI thất bại'));
+      this.msg.error(this.translate.instant('BOT_SETTING.MESSAGES.SYNC_ERROR'));
     } finally {
       this.syncing = false;
     }
@@ -410,8 +410,8 @@ export class BotSettingComponent implements OnInit {
       type: 'qa',
       name: 'Q&A',
       price: '',
-      description: `Câu hỏi: ${q.question}\nTrả lời: ${q.answer}`,
-      use_case: 'Thông tin chung',
+      description: `${this.translate.instant('BOT_SETTING.QA_DESC_QUESTION')}: ${q.question}\n${this.translate.instant('BOT_SETTING.QA_DESC_ANSWER')}: ${q.answer}`,
+      use_case: this.translate.instant('BOT_SETTING.QA_USE_CASE_GENERAL'),
       question: q.question,
       answer: q.answer
     }));

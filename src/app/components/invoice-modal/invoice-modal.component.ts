@@ -4,6 +4,7 @@ import { takeUntil } from 'rxjs/operators';
 import { InvoiceService, Invoice } from '../../services/invoice.service';
 import { HotelService } from '../../services/hotel.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-invoice-modal',
@@ -29,7 +30,8 @@ export class InvoiceModalComponent implements OnInit, OnDestroy {
   constructor(
     private invoiceService: InvoiceService,
     private hotelService: HotelService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -320,13 +322,13 @@ export class InvoiceModalComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(
         () => {
-          this.message.success('Đã xóa hóa đơn thành công');
+          this.message.success(this.translate.instant('INVOICE_MODAL.MESSAGES.DELETE_SUCCESS'));
           this.handleCancel();
           this.isLoading = false;
         },
         error => {
           console.error('Lỗi khi xóa hóa đơn:', error);
-          this.message.error('Không thể xóa hóa đơn');
+          this.message.error(this.translate.instant('INVOICE_MODAL.MESSAGES.DELETE_FAILED'));
           this.isLoading = false;
         }
       );

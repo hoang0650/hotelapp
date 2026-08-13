@@ -3,12 +3,12 @@
   <nz-table #categoryTable nzBordered [nzData]="categories" [nzScroll]="{ x: '900px' }" nzSize="small">
     <thead>
       <tr>
-        <th nzWidth="180px">Tên hạng phòng</th>
-        <th nzWidth="120px">Giá theo giờ</th>
-        <th nzWidth="120px">Giá theo ngày</th>
-        <th nzWidth="120px">Giá qua đêm</th>
-        <th nzWidth="100px">Sức chứa</th>
-        <th nzWidth="150px">Thao tác</th>
+        <th nzWidth="180px">{{ 'ROOM_CATEGORY.NAME' | translate }}</th>
+        <th nzWidth="120px">{{ 'ROOM_CATEGORY.HOURLY_PRICE' | translate }}</th>
+        <th nzWidth="120px">{{ 'ROOM_CATEGORY.DAILY_PRICE' | translate }}</th>
+        <th nzWidth="120px">{{ 'ROOM_CATEGORY.NIGHTLY_PRICE' | translate }}</th>
+        <th nzWidth="100px">{{ 'ROOM_CATEGORY.CAPACITY' | translate }}</th>
+        <th nzWidth="150px">{{ 'ROOM_CATEGORY.ACTIONS' | translate }}</th>
       </tr>
     </thead>
     <tbody>
@@ -23,7 +23,7 @@
             <i nz-icon nzType="edit"></i>
           </button>
           <nz-divider nzType="vertical"></nz-divider>
-          <a nz-popconfirm nzPopconfirmTitle="Bạn có chắc muốn xóa hạng phòng này?" (nzOnConfirm)="deleteCategory(cat._id!)">
+          <a nz-popconfirm [nzPopconfirmTitle]="'ROOM_CATEGORY.CONFIRM_DELETE' | translate" (nzOnConfirm)="deleteCategory(cat._id!)">
             <button nz-button nzType="primary" nzDanger nzSize="small">
               <i nz-icon nzType="delete"></i>
             </button>
@@ -36,22 +36,22 @@
 
 <!-- Form thêm/sửa hạng phòng -->
 <div class="category-form-section">
-  <h4>{{ editingCategory ? 'Cập nhật hạng phòng' : 'Thêm hạng phòng mới' }}</h4>
+  <h4>{{ (editingCategory ? 'ROOM_CATEGORY.UPDATE_TITLE' : 'ROOM_CATEGORY.ADD_TITLE') | translate }}</h4>
   <form nz-form [formGroup]="categoryForm" (ngSubmit)="submitForm()">
     <div nz-row [nzGutter]="16">
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label nzRequired>Tên hạng phòng</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng nhập tên hạng phòng">
-            <input nz-input formControlName="name" placeholder="VD: Standard, Deluxe, VIP..." />
+          <nz-form-label nzRequired>{{ 'ROOM_CATEGORY.NAME' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'ROOM_CATEGORY.NAME_REQUIRED' | translate">
+            <input nz-input formControlName="name" [placeholder]="'ROOM_CATEGORY.NAME_PLACEHOLDER' | translate" />
           </nz-form-control>
         </nz-form-item>
       </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Mô tả</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.DESCRIPTION' | translate }}</nz-form-label>
           <nz-form-control>
-            <input nz-input formControlName="description" placeholder="Mô tả hạng phòng" />
+            <input nz-input formControlName="description" [placeholder]="'ROOM_CATEGORY.DESCRIPTION_PLACEHOLDER' | translate" />
           </nz-form-control>
         </nz-form-item>
       </div>
@@ -60,7 +60,7 @@
     <div nz-row [nzGutter]="16" formGroupName="pricing">
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Giá theo giờ</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.HOURLY_PRICE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number formControlName="hourly" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
           </nz-form-control>
@@ -68,7 +68,7 @@
       </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Giá theo ngày</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.DAILY_PRICE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number formControlName="daily" [nzMin]="0" [nzStep]="50000" class="w-100"></nz-input-number>
           </nz-form-control>
@@ -76,7 +76,7 @@
       </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Giá qua đêm</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.NIGHTLY_PRICE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number formControlName="nightly" [nzMin]="0" [nzStep]="50000" class="w-100"></nz-input-number>
           </nz-form-control>
@@ -84,7 +84,7 @@
       </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Giá theo tuần</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.WEEKLY_PRICE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number formControlName="weekly" [nzMin]="0" [nzStep]="100000" class="w-100"></nz-input-number>
           </nz-form-control>
@@ -92,7 +92,7 @@
       </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Giá theo tháng</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.MONTHLY_PRICE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number formControlName="monthly" [nzMin]="0" [nzStep]="500000" class="w-100"></nz-input-number>
           </nz-form-control>
@@ -103,7 +103,7 @@
     <div nz-row [nzGutter]="16">
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Giá giờ đầu</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.FIRST_HOUR_RATE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number formControlName="firstHourRate" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
           </nz-form-control>
@@ -111,7 +111,7 @@
       </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Giá giờ tiếp theo</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.ADDITIONAL_HOUR_RATE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number formControlName="additionalHourRate" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
           </nz-form-control>
@@ -122,7 +122,7 @@
     <div nz-row [nzGutter]="16" formGroupName="capacity">
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Số người lớn</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.CAPACITY_ADULTS' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number formControlName="adults" [nzMin]="1" [nzStep]="1" class="w-100"></nz-input-number>
           </nz-form-control>
@@ -130,7 +130,7 @@
       </div>
       <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
         <nz-form-item>
-          <nz-form-label>Số trẻ em</nz-form-label>
+          <nz-form-label>{{ 'ROOM_CATEGORY.CAPACITY_CHILDREN' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-input-number formControlName="children" [nzMin]="0" [nzStep]="1" class="w-100"></nz-input-number>
           </nz-form-control>
@@ -139,18 +139,18 @@
     </div>
 
     <div class="mt-4" formGroupName="priceConfig">
-      <h4 class="mb-2">Cấu hình tính giá</h4>
+      <h4 class="mb-2">{{ 'ROOM_CATEGORY.PRICE_CONFIG_TITLE' | translate }}</h4>
 
       <div nz-row [nzGutter]="16">
         <div nz-col [nzSpan]="24">
           <nz-form-item>
-            <nz-form-label>Danh sách ngày lễ (YYYY-MM-DD hoặc MM-DD, mỗi dòng 1 ngày)</nz-form-label>
+            <nz-form-label>{{ 'ROOM_CATEGORY.HOLIDAY_DATES_LABEL' | translate }}</nz-form-label>
             <nz-form-control>
               <textarea
                 nz-input
                 formControlName="holidayDates"
                 rows="3"
-                placeholder="VD:\n2026-01-01\n04-30\n05-01\n09-02"
+                [placeholder]="'ROOM_CATEGORY.HOLIDAY_DATES_PLACEHOLDER' | translate"
               ></textarea>
             </nz-form-control>
           </nz-form-item>
@@ -160,7 +160,7 @@
       <div nz-row [nzGutter]="16" formGroupName="nightlyRates">
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Giờ bắt đầu tính qua đêm</nz-form-label>
+            <nz-form-label>{{ 'ROOM_CATEGORY.NIGHTLY_START_TIME' | translate }}</nz-form-label>
             <nz-form-control>
               <input nz-input type="time" formControlName="startTime" />
             </nz-form-control>
@@ -168,7 +168,7 @@
         </div>
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Giờ kết thúc tính qua đêm</nz-form-label>
+            <nz-form-label>{{ 'ROOM_CATEGORY.NIGHTLY_END_TIME' | translate }}</nz-form-label>
             <nz-form-control>
               <input nz-input type="time" formControlName="endTime" />
             </nz-form-control>
@@ -176,7 +176,7 @@
         </div>
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Ngưỡng giờ để bắt đầu tính thêm theo ngày (sau qua đêm)</nz-form-label>
+            <nz-form-label>{{ 'ROOM_CATEGORY.AUTO_DAILY_HOURS' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-input-number formControlName="autoDailyHours" [nzMin]="1" [nzStep]="1" class="w-100"></nz-input-number>
             </nz-form-control>
@@ -187,7 +187,7 @@
       <div nz-row [nzGutter]="16" formGroupName="dailyRates">
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Giờ bắt đầu tính theo ngày</nz-form-label>
+            <nz-form-label>{{ 'ROOM_CATEGORY.DAILY_START_TIME' | translate }}</nz-form-label>
             <nz-form-control>
               <input nz-input type="time" formControlName="checkInTime" />
             </nz-form-control>
@@ -195,7 +195,7 @@
         </div>
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Giờ kết thúc tính theo ngày</nz-form-label>
+            <nz-form-label>{{ 'ROOM_CATEGORY.DAILY_END_TIME' | translate }}</nz-form-label>
             <nz-form-control>
               <input nz-input type="time" formControlName="checkOutTime" />
             </nz-form-control>
@@ -206,7 +206,7 @@
       <div nz-row [nzGutter]="16" formGroupName="hourlyRates">
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Thời gian miễn phí (phút)</nz-form-label>
+            <nz-form-label>{{ 'ROOM_CATEGORY.GRACE_PERIOD' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-input-number formControlName="gracePeriodMinutes" [nzMin]="0" [nzMax]="60" [nzStep]="1" class="w-100"></nz-input-number>
             </nz-form-control>
@@ -214,7 +214,7 @@
         </div>
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Số giờ tối đa trước khi chuyển sang ngày</nz-form-label>
+            <nz-form-label>{{ 'ROOM_CATEGORY.MAX_HOURS_BEFORE_DAY' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-input-number formControlName="maxHoursBeforeDay" [nzMin]="1" [nzStep]="1" class="w-100"></nz-input-number>
             </nz-form-control>
@@ -222,7 +222,7 @@
         </div>
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Số giờ tự động chuyển sang qua đêm</nz-form-label>
+            <nz-form-label>{{ 'ROOM_CATEGORY.AUTO_NIGHTLY_HOURS' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-input-number formControlName="autoNightlyHours" [nzMin]="1" [nzStep]="1" class="w-100"></nz-input-number>
             </nz-form-control>
@@ -230,13 +230,13 @@
         </div>
       </div>
 
-      <h4 class="mb-2 mt-3">Phụ thu check-in sớm và check-out trễ</h4>
+      <h4 class="mb-2 mt-3">{{ 'ROOM_CATEGORY.SURCHARGE_TITLE' | translate }}</h4>
       <div nz-row [nzGutter]="16">
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="12" formGroupName="dailyRates">
           <div nz-row [nzGutter]="16">
             <div nz-col [nzSpan]="12">
               <nz-form-item>
-                <nz-form-label>Daily: check-in sớm (đ/giờ)</nz-form-label>
+                <nz-form-label>{{ 'ROOM_CATEGORY.DAILY_EARLY_CHECKIN' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="earlyCheckinSurcharge" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -244,7 +244,7 @@
             </div>
             <div nz-col [nzSpan]="12">
               <nz-form-item>
-                <nz-form-label>Daily: check-out trễ (đ/giờ)</nz-form-label>
+                <nz-form-label>{{ 'ROOM_CATEGORY.DAILY_LATE_CHECKOUT' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="latecheckOutFee" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -256,7 +256,7 @@
           <div nz-row [nzGutter]="16">
             <div nz-col [nzSpan]="12">
               <nz-form-item>
-                <nz-form-label>Nightly: check-in sớm (đ/giờ)</nz-form-label>
+                <nz-form-label>{{ 'ROOM_CATEGORY.NIGHTLY_EARLY_CHECKIN' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="earlyCheckinSurcharge" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -264,7 +264,7 @@
             </div>
             <div nz-col [nzSpan]="12">
               <nz-form-item>
-                <nz-form-label>Nightly: check-out trễ (đ/giờ)</nz-form-label>
+                <nz-form-label>{{ 'ROOM_CATEGORY.NIGHTLY_LATE_CHECKOUT' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="lateCheckoutSurcharge" [nzMin]="0" [nzStep]="10000" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -279,7 +279,7 @@
           <div nz-row [nzGutter]="16">
             <div nz-col [nzSpan]="12">
               <nz-form-item>
-                <nz-form-label>Daily: phụ thu cuối tuần (%)</nz-form-label>
+                <nz-form-label>{{ 'ROOM_CATEGORY.DAILY_WEEKEND_SURCHARGE' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="weekendSurcharge" [nzMin]="0" [nzMax]="100" [nzStep]="1" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -287,7 +287,7 @@
             </div>
             <div nz-col [nzSpan]="12">
               <nz-form-item>
-                <nz-form-label>Daily: phụ thu ngày lễ (%)</nz-form-label>
+                <nz-form-label>{{ 'ROOM_CATEGORY.DAILY_HOLIDAY_SURCHARGE' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="holidaySurcharge" [nzMin]="0" [nzMax]="100" [nzStep]="1" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -299,7 +299,7 @@
           <div nz-row [nzGutter]="16">
             <div nz-col [nzSpan]="12">
               <nz-form-item>
-                <nz-form-label>Nightly: phụ thu cuối tuần (%)</nz-form-label>
+                <nz-form-label>{{ 'ROOM_CATEGORY.NIGHTLY_WEEKEND_SURCHARGE' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="weekendSurcharge" [nzMin]="0" [nzMax]="100" [nzStep]="1" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -307,7 +307,7 @@
             </div>
             <div nz-col [nzSpan]="12">
               <nz-form-item>
-                <nz-form-label>Nightly: phụ thu ngày lễ (%)</nz-form-label>
+                <nz-form-label>{{ 'ROOM_CATEGORY.NIGHTLY_HOLIDAY_SURCHARGE' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-input-number formControlName="holidaySurcharge" [nzMin]="0" [nzMax]="100" [nzStep]="1" class="w-100"></nz-input-number>
                 </nz-form-control>
@@ -319,7 +319,7 @@
 
       <div nz-row>
         <div nz-col [nzSpan]="24">
-          <label nz-checkbox formControlName="updateRooms">Áp dụng giá/cấu hình cho các phòng thuộc hạng này</label>
+          <label nz-checkbox formControlName="updateRooms">{{ 'ROOM_CATEGORY.APPLY_TO_ROOMS' | translate }}</label>
         </div>
       </div>
     </div>
@@ -329,10 +329,10 @@
         <nz-form-item>
           <nz-form-control>
             <button nz-button nzType="primary" type="submit" [disabled]="categoryForm.invalid">
-              {{ editingCategory ? 'Cập nhật' : 'Thêm mới' }}
+              {{ (editingCategory ? 'ROOM_CATEGORY.UPDATE' : 'ROOM_CATEGORY.ADD_NEW') | translate }}
             </button>
             <button nz-button nzType="default" class="ml-2" *ngIf="editingCategory" (click)="cancelEdit()">
-              Hủy
+              {{ 'ROOM_CATEGORY.CANCEL' | translate }}
             </button>
           </nz-form-control>
         </nz-form-item>

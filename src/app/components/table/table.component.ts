@@ -535,7 +535,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     const roomId = item.roomId || item.room?._id || item.room?._id?.toString();
     
     if (!roomId) {
-      this.message.error('Không tìm thấy thông tin phòng');
+      this.message.error(this.translate.instant('TABLE.MESSAGES.ROOM_NOT_FOUND'));
       console.error('Item data:', item);
       return;
     }
@@ -572,7 +572,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
 
         this.roomService.recheckinRoom(payload).subscribe(
           (response) => {
-            this.message.success('Check-in lại thành công');
+            this.message.success(this.translate.instant('TABLE.MESSAGES.RE_CHECKIN_SUCCESS'));
             
             // Lưu thông tin checkin event vào localStorage nếu có trong response
             if (response.checkinEvent && response.room?._id) {
@@ -620,7 +620,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           (error) => {
             console.error('Recheckin error:', error);
             const errorMessage = error.error?.error || error.error?.message || error.message || 'Lỗi không xác định';
-            this.message.error('Lỗi khi check-in lại: ' + errorMessage);
+            this.message.error(this.translate.instant('TABLE.MESSAGES.RE_CHECKIN_ERROR', { message: errorMessage }));
             
             // Hiển thị thông tin chi tiết nếu có
             if (error.error?.details) {
@@ -641,7 +641,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     const historyId = item._id || item.bookingId;
     
     if (!roomId || !historyId) {
-      this.message.error('Không tìm thấy thông tin cần thiết');
+      this.message.error(this.translate.instant('TABLE.MESSAGES.REQUIRED_INFO_NOT_FOUND'));
       console.error('Item data:', item);
       return;
     }
@@ -671,7 +671,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
 
         this.roomService.deleteCheckoutHistory(payload).subscribe(
           (response) => {
-            this.message.success('Xóa lịch sử thành công');
+            this.message.success(this.translate.instant('TABLE.MESSAGES.HISTORY_DELETE_SUCCESS'));
             // Reload history
             if (this.hotelId) {
               setTimeout(() => {
@@ -692,7 +692,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           (error) => {
             console.error('Delete history error:', error);
             const errorMessage = error.error?.error || error.error?.message || error.message || 'Lỗi không xác định';
-            this.message.error('Lỗi khi xóa lịch sử: ' + errorMessage);
+            this.message.error(this.translate.instant('TABLE.MESSAGES.HISTORY_DELETE_ERROR', { message: errorMessage }));
           }
         );
       }
@@ -790,13 +790,13 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           }
           this.showInvoiceModalForEdit(invoiceData);
         } else {
-          this.message.error('Không tìm thấy hóa đơn trong database');
+          this.message.error(this.translate.instant('TABLE.MESSAGES.INVOICE_NOT_FOUND'));
         }
       },
       error: (error: any) => {
         this.settingValue.loading = false;
         console.error('Error loading invoice for edit:', error);
-        this.message.error('Lỗi khi tải hóa đơn: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('TABLE.MESSAGES.INVOICE_LOAD_ERROR', { message: error.error?.message || error.message }));
       }
     });
   }
@@ -903,13 +903,13 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           }
           this.showInvoiceModal(invoiceData);
         } else {
-          this.message.error('Không tìm thấy hóa đơn trong database');
+          this.message.error(this.translate.instant('TABLE.MESSAGES.INVOICE_NOT_FOUND'));
         }
       },
       error: (error: any) => {
         this.settingValue.loading = false;
         console.error('Error loading invoice:', error);
-        this.message.error('Lỗi khi tải hóa đơn: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('TABLE.MESSAGES.INVOICE_LOAD_ERROR', { message: error.error?.message || error.message }));
       }
     });
   }
@@ -1495,7 +1495,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       (error) => {
         console.error('Error loading staff list:', error);
         this.isLoadingStaff = false;
-        this.message.error('Không thể tải danh sách nhân viên');
+        this.message.error(this.translate.instant('TABLE.MESSAGES.STAFF_LOAD_ERROR'));
       }
     );
   }
@@ -2016,7 +2016,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
       (response: any) => {
         this.handoverMessage = response.message || 'Giao ca thành công!';
         this.handoverMessageType = 'success';
-        this.message.success('Giao ca thành công');
+        this.message.success(this.translate.instant('TABLE.MESSAGES.SHIFT_HANDOVER_SUCCESS'));
         
         console.log('Đã gửi dữ liệu giao ca:', response);
         
@@ -2056,7 +2056,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           }
           
           const displayName = response.login.user?.fullName || response.login.user?.username || 'nhân viên mới';
-          this.message.success(`Đã đăng nhập với tài khoản: ${displayName}. Hệ thống sẽ tải lại để áp dụng...`);
+          this.message.success(this.translate.instant('TABLE.MESSAGES.LOGIN_RELOAD', { displayName }));
           
           // [CẬP NHẬT QUAN TRỌNG]: Ép tải lại toàn bộ trang web để xóa sạch bộ nhớ của ca trước
           setTimeout(() => {
@@ -2425,12 +2425,12 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     // Kiểm tra các trường bắt buộc
     if (!formData.managerUsername || !formData.managerUsername.trim()) {
-      this.message.error('Vui lòng nhập tài khoản quản lý (username hoặc email)');
+      this.message.error(this.translate.instant('TABLE.MESSAGES.MANAGER_ACCOUNT_REQUIRED'));
       return;
     }
     
     if (!formData.managerPassword || !formData.managerPassword.trim()) {
-      this.message.error('Vui lòng nhập mật khẩu quản lý');
+      this.message.error(this.translate.instant('TABLE.MESSAGES.MANAGER_PASSWORD_REQUIRED'));
       return;
     }
     
@@ -2468,17 +2468,17 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           this.shiftHandoverForm.patchValue({ fromStaffId: fromStaffId });
           console.log('Đã cập nhật fromStaffId:', fromStaffId);
         } else {
-          this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng chọn nhân viên trong form giao ca trước.');
+          this.message.error(this.translate.instant('TABLE.MESSAGES.STAFF_NOT_FOUND_SELECT'));
           return;
         }
       }
     } else {
-      this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng chọn nhân viên trong form giao ca trước.');
+      this.message.error(this.translate.instant('TABLE.MESSAGES.STAFF_NOT_FOUND_SELECT'));
       return;
     }
     
     if (!this.hotelId) {
-      this.message.error('Không tìm thấy thông tin khách sạn');
+      this.message.error(this.translate.instant('TABLE.MESSAGES.HOTEL_NOT_FOUND'));
       return;
     }
     
@@ -2724,7 +2724,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     // Validate fromStaffId - kiểm tra xem có trong danh sách staff hiện tại không
     if (!fromStaffId || fromStaffId.trim() === '') {
-      this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng chọn nhân viên trong form giao ca trước.');
+      this.message.error(this.translate.instant('TABLE.MESSAGES.STAFF_NOT_FOUND_SELECT'));
       this.isSubmittingManagerHandover = false;
       return;
     }
@@ -2755,7 +2755,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         this.shiftHandoverForm.patchValue({ fromStaffId: fromStaffId });
         console.log('Đã cập nhật fromStaffId:', fromStaffId);
       } else {
-        this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng chọn nhân viên trong form giao ca trước.');
+        this.message.error(this.translate.instant('TABLE.MESSAGES.STAFF_NOT_FOUND_SELECT'));
         this.isSubmittingManagerHandover = false;
         return;
       }
@@ -2793,7 +2793,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
     
     // Validate fromStaffId trước khi gửi
     if (!fromStaffId || fromStaffId.trim() === '') {
-      this.message.error('Không tìm thấy thông tin nhân viên. Vui lòng đăng nhập lại.');
+      this.message.error(this.translate.instant('TABLE.MESSAGES.STAFF_NOT_FOUND_RELOGIN'));
       this.isSubmittingManagerHandover = false;
       return;
     }
@@ -2856,7 +2856,11 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
         }
         
         const managerName = response.managerInfo?.name || formData.managerUsername || 'quản lý';
-        this.message.success(`Đã giao ${this.formatterVND(managerAmount)} đ cho ${managerName}. Tiền mặt còn lại: ${this.formatterVND(cashAfterHandover)} đ`);
+        this.message.success(this.translate.instant('TABLE.MESSAGES.MANAGER_HANDOVER_SUCCESS', {
+          amount: this.formatterVND(managerAmount),
+          managerName,
+          cashRemaining: this.formatterVND(cashAfterHandover)
+        }));
         
         // Cập nhật thời điểm giao tiền quản lý cuối cùng
         this.lastManagerHandoverTime = new Date();
@@ -3118,7 +3122,7 @@ export class TableComponent implements OnInit, OnChanges, OnDestroy {
           },
           error: (error: any) => {
             console.error('Error loading history:', error);
-            this.message.error('Không thể tải lịch sử phòng');
+            this.message.error(this.translate.instant('TABLE.MESSAGES.ROOM_HISTORY_LOAD_ERROR'));
             this.settingValue.loading = false;
             // Vẫn tính lại tổng tiền ngay cả khi có lỗi (với dữ liệu hiện tại)
             this.calculateTotalPayment();

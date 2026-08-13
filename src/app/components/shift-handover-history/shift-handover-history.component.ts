@@ -148,7 +148,7 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
         },
         error: (error) => {
           console.error('Error loading shift history:', error);
-          this.message.error('Không thể tải lịch sử giao ca');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER_EXPORT.LOAD_HISTORY_ERROR'));
           this.isLoading = false;
         }
       })
@@ -1226,12 +1226,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
 
           // Xuất file
           XLSX.writeFile(workbook, `${fileName}.xlsx`);
-          this.message.success(`Đã xuất doanh thu ${periodLabel.replace('_', ' ')}`);
+          this.message.success(this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPORT_REVENUE_SUCCESS', { period: periodLabel.replace('_', ' ') }));
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error exporting revenue by period:', error);
-          this.message.error('Không thể xuất dữ liệu ra Excel');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER_EXPORT.ERROR'));
           this.isLoading = false;
         }
       })
@@ -1364,12 +1364,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
 
           // Xuất file
           XLSX.writeFile(workbook, `${fileName}.xlsx`);
-          this.message.success(`Đã xuất phiếu chi ${periodLabel.replace('_', ' ')}`);
+          this.message.success(this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPORT_EXPENSE_SUCCESS', { period: periodLabel.replace('_', ' ') }));
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error exporting expense by period:', error);
-          this.message.error('Không thể xuất dữ liệu ra Excel');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER_EXPORT.ERROR'));
           this.isLoading = false;
         }
       })
@@ -1502,12 +1502,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
 
           // Xuất file
           XLSX.writeFile(workbook, `${fileName}.xlsx`);
-          this.message.success(`Đã xuất phiếu thu ${periodLabel.replace('_', ' ')}`);
+          this.message.success(this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPORT_INCOME_SUCCESS', { period: periodLabel.replace('_', ' ') }));
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error exporting income by period:', error);
-          this.message.error('Không thể xuất dữ liệu ra Excel');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER_EXPORT.ERROR'));
           this.isLoading = false;
         }
       })
@@ -1768,12 +1768,12 @@ export class ShiftHandoverHistoryComponent implements OnInit, OnDestroy, OnChang
 
           // Xuất file
           XLSX.writeFile(workbook, `${fileName}.xlsx`);
-          this.message.success(`Đã xuất tổng hợp doanh thu, phiếu chi và phiếu thu ${periodLabel.replace('_', ' ')}`);
+          this.message.success(this.translate.instant('SHIFT_HANDOVER_EXPORT.EXPORT_SUMMARY_SUCCESS', { period: periodLabel.replace('_', ' ') }));
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error exporting combined by period:', error);
-          this.message.error('Không thể xuất dữ liệu ra Excel');
+          this.message.error(this.translate.instant('SHIFT_HANDOVER_EXPORT.ERROR'));
           this.isLoading = false;
         }
       })

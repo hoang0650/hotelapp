@@ -750,14 +750,16 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
           (resp: any) => {
             const userId = resp?.user?._id;
             if (!userId) {
-              this.message.error('Không tạo được tài khoản nhân viên');
+              this.message.error(this.translate.instant('STAFF_MANAGEMENT.CREATE_ACCOUNT_ERROR'));
               this.isLoading = false;
               return;
             }
             createStaffRecord(userId);
           },
           (error) => {
-            this.message.error('Tạo tài khoản nhân viên thất bại: ' + (error.error?.message || error.message));
+            this.message.error(this.translate.instant('STAFF_MANAGEMENT.CREATE_ACCOUNT_FAILED', {
+              message: error.error?.message || error.message
+            }));
             this.isLoading = false;
           }
         )
@@ -1339,7 +1341,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     const fileName = `Phieu_Tinh_Luong_${staffName.replace(/\s+/g, '_')}_${period.replace('/', '_')}.xlsx`;
     XLSX.writeFile(wb, fileName);
     
-    this.message.success('Đã xuất file Excel thành công!');
+    this.message.success(this.translate.instant('STAFF_MANAGEMENT.EXPORT.EXCEL_SUCCESS'));
   }
 
   // ============ LỊCH SỬ PAYROLL ============
@@ -1536,7 +1538,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     
     XLSX.writeFile(wb, fileName);
     
-    this.message.success('Đã xuất file Excel thành công!');
+    this.message.success(this.translate.instant('STAFF_MANAGEMENT.EXPORT.EXCEL_SUCCESS'));
   }
 
   // Xuất PDF lịch sử payroll
@@ -1788,7 +1790,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
 
   loadAllStaffPayrollSummary(): void {
     if (!this.selectedHotelId) {
-      this.message.error('Vui lòng chọn khách sạn');
+      this.message.error(this.translate.instant('STAFF_MANAGEMENT.SELECT_HOTEL_REQUIRED'));
       return;
     }
 
@@ -2118,7 +2120,7 @@ export class StaffManagementComponent implements OnInit, OnDestroy {
     }
 
     window.pdfMake.createPdf(documentDefinition).download(fileName);
-    this.message.success('Xuất PDF thành công!');
+    this.message.success(this.translate.instant('STAFF_MANAGEMENT.EXPORT.PDF_SUCCESS'));
     this.closeExportSummaryModal();
   }
 

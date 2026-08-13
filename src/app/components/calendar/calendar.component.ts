@@ -337,7 +337,7 @@ export class CalendarComponent implements OnInit, OnDestroy, OnChanges {
 
   cancelBooking(booking: Booking): void {
     if (!booking.roomId) {
-      this.message.error('Không tìm thấy thông tin phòng.');
+      this.message.error(this.translate.instant('CALENDAR.ROOM_NOT_FOUND'));
       return;
     }
 
@@ -432,7 +432,7 @@ export class CalendarComponent implements OnInit, OnDestroy, OnChanges {
 
     this.roomsService.checkInRoom(booking.roomId, checkinData).subscribe({
       next: () => {
-        this.message.success(this.translate.instant('CALENDAR.CHECKIN_SUCCESS') || 'Nhận phòng thành công');
+        this.message.success(this.translate.instant('CALENDAR.CHECKIN_SUCCESS'));
         this.isCheckingIn = false;
         this.roomsService.clearBookingsCache();
         this.refresh(true);
@@ -446,7 +446,7 @@ export class CalendarComponent implements OnInit, OnDestroy, OnChanges {
         });
       },
       error: (error) => {
-        this.message.error(error.error?.message || this.translate.instant('CALENDAR.CHECKIN_ERROR') || 'Không thể nhận phòng');
+        this.message.error(error.error?.message || this.translate.instant('CALENDAR.CHECKIN_ERROR'));
         this.isCheckingIn = false;
       }
     });

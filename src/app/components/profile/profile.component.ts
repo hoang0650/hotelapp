@@ -85,7 +85,7 @@ export class ProfileComponent implements OnInit {
     // Hiển thị thông báo nếu vừa xác thực email xong (redirect từ backend)
     const emailVerifiedParam = this.route.snapshot.queryParamMap.get('emailVerified');
     if (emailVerifiedParam === '1') {
-      this.message.success(this.translate.instant('PROFILE.EMAIL_VERIFIED_SUCCESS') || 'Email đã được xác thực thành công');
+      this.message.success(this.translate.instant('PROFILE.EMAIL_VERIFIED_SUCCESS'));
       // Xóa query param khỏi URL (nếu cần)
       history.replaceState(null, '', window.location.pathname);
     }
@@ -118,14 +118,14 @@ export class ProfileComponent implements OnInit {
     this.userService.sendVerificationEmail().subscribe({
       next: (response) => {
         if (response.success !== false) {
-          this.message.success(response.message || this.translate.instant('PROFILE.SEND_VERIFICATION_EMAIL_SUCCESS') || 'Đã gửi email xác thực. Vui lòng kiểm tra hộp thư của bạn.');
+          this.message.success(response.message || this.translate.instant('PROFILE.SEND_VERIFICATION_EMAIL_SUCCESS'));
         } else {
-          this.message.error(response.message || this.translate.instant('PROFILE.SEND_VERIFICATION_EMAIL_ERROR') || 'Gửi email xác thực thất bại');
+          this.message.error(response.message || this.translate.instant('PROFILE.SEND_VERIFICATION_EMAIL_ERROR'));
         }
       },
       error: (error) => {
         console.error('Error sending verification email:', error);
-        this.message.error(error.error?.message || this.translate.instant('PROFILE.SEND_VERIFICATION_EMAIL_ERROR') || 'Gửi email xác thực thất bại');
+        this.message.error(error.error?.message || this.translate.instant('PROFILE.SEND_VERIFICATION_EMAIL_ERROR'));
       }
     });
   }
@@ -379,7 +379,10 @@ export class ProfileComponent implements OnInit {
       }
       this.isLoadingUpload = false;
     } else if (info.file.status === 'error') {
-      this.message.error(`${this.translate.instant('PROFILE.UPLOAD_AVATAR_ERROR')} ${info.file.error?.message || this.translate.instant('COMMON.UNKNOWN')}`);
+      this.message.error(
+        this.translate.instant('PROFILE.UPLOAD_AVATAR_ERROR') + ' ' +
+        (info.file.error?.message || this.translate.instant('COMMON.UNKNOWN'))
+      );
       console.error('Upload error:', info.file.error);
       this.isLoadingUpload = false;
     }

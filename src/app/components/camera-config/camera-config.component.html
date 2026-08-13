@@ -1,30 +1,30 @@
-<nz-card [nzTitle]="'Cấu hình Camera AI Lễ tân'" [nzBordered]="false" class="camera-config-container">
+<nz-card [nzTitle]="'CAMERA_CONFIG.TITLE' | translate" [nzBordered]="false" class="camera-config-container">
   <div class="sync-status">
     <div class="sync-item">
-      <span class="sync-label">Backend</span>
+      <span class="sync-label">{{ 'CAMERA_CONFIG.BACKEND' | translate }}</span>
       <nz-tag [nzColor]="backendOnline === true ? 'green' : backendOnline === false ? 'red' : 'default'">
-        {{ backendOnline === true ? 'Online' : backendOnline === false ? 'Offline' : '...' }}
+        {{ backendOnline === true ? ('CAMERA_CONFIG.ONLINE' | translate) : backendOnline === false ? ('CAMERA_CONFIG.OFFLINE' | translate) : ('CAMERA_CONFIG.STATUS_PENDING' | translate) }}
       </nz-tag>
     </div>
     <div class="sync-item">
-      <span class="sync-label">AI</span>
+      <span class="sync-label">{{ 'CAMERA_CONFIG.AI' | translate }}</span>
       <nz-tag [nzColor]="aiOnline === true ? 'green' : aiOnline === false ? 'red' : 'default'">
-        {{ aiOnline === true ? 'Online' : aiOnline === false ? 'Offline' : '...' }}
+        {{ aiOnline === true ? ('CAMERA_CONFIG.ONLINE' | translate) : aiOnline === false ? ('CAMERA_CONFIG.OFFLINE' | translate) : ('CAMERA_CONFIG.STATUS_PENDING' | translate) }}
       </nz-tag>
     </div>
     <div class="sync-item" *ngIf="selectedHotelId; else hotelPicker">
-      <span class="sync-label">Hotel</span>
+      <span class="sync-label">{{ 'CAMERA_CONFIG.HOTEL' | translate }}</span>
       <nz-tag nzColor="blue">{{ selectedHotelId }}</nz-tag>
     </div>
     <ng-template #hotelPicker>
       <div class="sync-item">
-        <span class="sync-label">Hotel</span>
+        <span class="sync-label">{{ 'CAMERA_CONFIG.HOTEL' | translate }}</span>
         <nz-select
           class="hotel-select"
           [ngModel]="selectedHotelId"
           (ngModelChange)="onSelectHotel($event)"
           [nzLoading]="isLoadingHotels"
-          nzPlaceHolder="Chọn khách sạn">
+          [nzPlaceHolder]="'CAMERA_CONFIG.SELECT_HOTEL' | translate">
           <nz-option
             *ngFor="let h of hotels"
             [nzValue]="h._id || h.id"
@@ -35,22 +35,22 @@
     </ng-template>
   </div>
   <nz-steps [nzCurrent]="currentStep" style="margin-bottom: 32px;">
-    <nz-step nzTitle="Nhà cung cấp" nzDescription="Chọn hãng Camera"></nz-step>
-    <nz-step nzTitle="Tài khoản" nzDescription="Thông tin kết nối"></nz-step>
-    <nz-step nzTitle="Tích hợp AI" nzDescription="Cấu hình luồng AI"></nz-step>
+    <nz-step [nzTitle]="'CAMERA_CONFIG.STEP_PROVIDER' | translate" [nzDescription]="'CAMERA_CONFIG.STEP_PROVIDER_DESC' | translate"></nz-step>
+    <nz-step [nzTitle]="'CAMERA_CONFIG.STEP_ACCOUNT' | translate" [nzDescription]="'CAMERA_CONFIG.STEP_ACCOUNT_DESC' | translate"></nz-step>
+    <nz-step [nzTitle]="'CAMERA_CONFIG.STEP_AI' | translate" [nzDescription]="'CAMERA_CONFIG.STEP_AI_DESC' | translate"></nz-step>
   </nz-steps>
 
   <div class="steps-content" [ngSwitch]="currentStep">
     
     <div *ngSwitchCase="0" class="step-container">
-      <h3 class="step-title">Chọn nhà cung cấp thiết bị của bạn</h3>
+      <h3 class="step-title">{{ 'CAMERA_CONFIG.SELECT_PROVIDER_TITLE' | translate }}</h3>
 
       <div class="camera-select-row" *ngIf="cameras.length > 0">
         <nz-select
           class="camera-select"
           [ngModel]="selectedCameraId"
           (ngModelChange)="onSelectCamera($event)"
-          nzPlaceHolder="Chọn camera đã cấu hình">
+          [nzPlaceHolder]="'CAMERA_CONFIG.SELECT_CAMERA' | translate">
           <nz-option
             *ngFor="let cam of cameras"
             [nzValue]="cam._id"
@@ -62,9 +62,9 @@
       <div class="camera-name-row">
         <form nz-form [formGroup]="cameraForm" nzLayout="vertical" class="camera-form camera-form-wide">
           <nz-form-item>
-            <nz-form-label nzRequired>Tên camera</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập tên camera">
-              <input nz-input formControlName="name" placeholder="VD: Camera Quầy Lễ Tân" />
+            <nz-form-label nzRequired>{{ 'CAMERA_CONFIG.CAMERA_NAME' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'CAMERA_CONFIG.CAMERA_NAME_REQUIRED' | translate">
+              <input nz-input formControlName="name" [placeholder]="'CAMERA_CONFIG.CAMERA_NAME_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
         </form>
@@ -87,51 +87,51 @@
     </div>
 
     <div *ngSwitchCase="1" class="step-container">
-      <h3 class="step-title">Thông tin kết nối Camera {{ selectedProvider === 'hikvision' ? 'Hikvision' : 'KBVision' }}</h3>
+      <h3 class="step-title">{{ 'CAMERA_CONFIG.CONNECTION_INFO_TITLE' | translate:{ provider: selectedProvider === 'hikvision' ? 'Hikvision' : 'KBVision' } }}</h3>
       <form nz-form [formGroup]="cameraForm" nzLayout="vertical" class="camera-form">
         <nz-form-item>
-          <nz-form-label>Chế độ truy cập</nz-form-label>
+          <nz-form-label>{{ 'CAMERA_CONFIG.ACCESS_MODE' | translate }}</nz-form-label>
           <nz-form-control>
             <nz-radio-group formControlName="accessMode" nzSize="small">
-              <label nz-radio-button nzValue="cloud">Cloud</label>
-              <label nz-radio-button nzValue="agent">Máy khách sạn (Camera Agent)</label>
+              <label nz-radio-button nzValue="cloud">{{ 'CAMERA_CONFIG.ACCESS_CLOUD' | translate }}</label>
+              <label nz-radio-button nzValue="agent">{{ 'CAMERA_CONFIG.ACCESS_AGENT' | translate }}</label>
             </nz-radio-group>
           </nz-form-control>
         </nz-form-item>
 
         <div *ngIf="cameraForm.value.accessMode === 'agent'">
           <nz-form-item>
-            <nz-form-label nzRequired>Địa chỉ Agent (URL công khai)</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập URL Agent">
-              <input nz-input formControlName="agentBaseUrl" placeholder="VD: https://xxxxxx.tunnel.phgrouptechs.com (copy từ BAT_DAU.bat)" />
+            <nz-form-label nzRequired>{{ 'CAMERA_CONFIG.AGENT_URL' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'CAMERA_CONFIG.AGENT_URL_REQUIRED' | translate">
+              <input nz-input formControlName="agentBaseUrl" [placeholder]="'CAMERA_CONFIG.AGENT_URL_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-alert
             nzType="warning"
             nzShowIcon
             style="margin-bottom: 8px;"
-            nzMessage="URL phải khớp đúng dòng https://... mà BAT_DAU.bat in ra (sai 1 ký tự sẽ báo Tunnel not found). Tải gói tại Kho tài liệu → Camera Agent."
+            [nzMessage]="'CAMERA_CONFIG.AGENT_URL_WARNING' | translate"
           ></nz-alert>
           <nz-alert
             *ngIf="agentPublicUrl"
             nzType="success"
             nzShowIcon
             style="margin-bottom: 8px;"
-            [nzMessage]="'URL công khai từ agent: ' + agentPublicUrl"
+            [nzMessage]="'CAMERA_CONFIG.AGENT_PUBLIC_URL' | translate:{ url: agentPublicUrl }"
             [nzAction]="proxvnAction">
           </nz-alert>
           <ng-template #proxvnAction>
-            <button nz-button nzType="primary" nzSize="small" (click)="useProxvnPublicUrl()">Dùng URL này</button>
+            <button nz-button nzType="primary" nzSize="small" (click)="useProxvnPublicUrl()">{{ 'CAMERA_CONFIG.USE_THIS_URL' | translate }}</button>
           </ng-template>
           <div class="agent-test-row" style="margin-bottom: 8px;">
-            <input nz-input [(ngModel)]="agentHostInput" [ngModelOptions]="{standalone: true}" placeholder="IP/hostname máy chạy agent (VD: 192.168.1.50)" style="max-width: 360px; margin-right: 8px;" />
-            <button nz-button nzType="default" (click)="applyAgentHost()">Tạo URL</button>
-            <button nz-button nzType="default" (click)="useLocalhostAgent()" style="margin-left: 8px;">Dùng localhost</button>
-            <button nz-button nzType="default" (click)="detectLocalAgent()" style="margin-left: 8px;">Quét lại agent</button>
-            <button nz-button nzType="default" (click)="openAgentHealth()" style="margin-left: 8px;">Mở /health</button>
+            <input nz-input [(ngModel)]="agentHostInput" [ngModelOptions]="{standalone: true}" [placeholder]="'CAMERA_CONFIG.AGENT_HOST_PLACEHOLDER' | translate" style="max-width: 360px; margin-right: 8px;" />
+            <button nz-button nzType="default" (click)="applyAgentHost()">{{ 'CAMERA_CONFIG.CREATE_URL' | translate }}</button>
+            <button nz-button nzType="default" (click)="useLocalhostAgent()" style="margin-left: 8px;">{{ 'CAMERA_CONFIG.USE_LOCALHOST' | translate }}</button>
+            <button nz-button nzType="default" (click)="detectLocalAgent()" style="margin-left: 8px;">{{ 'CAMERA_CONFIG.RESCAN_AGENT' | translate }}</button>
+            <button nz-button nzType="default" (click)="openAgentHealth()" style="margin-left: 8px;">{{ 'CAMERA_CONFIG.OPEN_HEALTH' | translate }}</button>
           </div>
           <div class="agent-test-row" *ngIf="agentSuggestedUrls.length > 0" style="margin-bottom: 8px;">
-            <span style="margin-right: 8px;">Gợi ý:</span>
+            <span style="margin-right: 8px;">{{ 'CAMERA_CONFIG.SUGGESTIONS' | translate }}</span>
             <nz-tag
               *ngFor="let u of agentSuggestedUrls"
               [nzColor]="(agentPublicUrl && u === agentPublicUrl) ? 'green' : 'blue'"
@@ -144,15 +144,15 @@
             {{ agentDetectError }}
           </div>
           <nz-form-item>
-            <nz-form-label>Mã bảo vệ Agent (tuỳ chọn)</nz-form-label>
+            <nz-form-label>{{ 'CAMERA_CONFIG.AGENT_TOKEN' | translate }}</nz-form-label>
             <nz-form-control>
-              <input nz-input formControlName="agentToken" placeholder="Để trống nếu chưa đặt CAMERA_AGENT_TOKEN" />
+              <input nz-input formControlName="agentToken" [placeholder]="'CAMERA_CONFIG.AGENT_TOKEN_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <div class="agent-test-row">
-            <button nz-button nzType="default" (click)="testAgent()">Kiểm tra Agent</button>
-            <nz-tag *ngIf="agentOnline === true" nzColor="green">Online</nz-tag>
-            <nz-tag *ngIf="agentOnline === false" nzColor="red">Offline</nz-tag>
+            <button nz-button nzType="default" (click)="testAgent()">{{ 'CAMERA_CONFIG.TEST_AGENT' | translate }}</button>
+            <nz-tag *ngIf="agentOnline === true" nzColor="green">{{ 'CAMERA_CONFIG.ONLINE' | translate }}</nz-tag>
+            <nz-tag *ngIf="agentOnline === false" nzColor="red">{{ 'CAMERA_CONFIG.OFFLINE' | translate }}</nz-tag>
             <span *ngIf="agentError" class="agent-error">{{ agentError }}</span>
           </div>
         </div>
@@ -160,16 +160,16 @@
         <div nz-row [nzGutter]="16">
           <div nz-col nzSpan="16">
             <nz-form-item>
-              <nz-form-label nzRequired>Địa chỉ IP / Domain</nz-form-label>
-              <nz-form-control nzErrorTip="Vui lòng nhập IP hợp lệ (VD: 192.168.1.100)">
-                <input nz-input formControlName="ipAddress" placeholder="192.168.1.xxx" />
+              <nz-form-label nzRequired>{{ 'CAMERA_CONFIG.IP_ADDRESS' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'CAMERA_CONFIG.IP_ADDRESS_REQUIRED' | translate">
+                <input nz-input formControlName="ipAddress" [placeholder]="'CAMERA_CONFIG.IP_ADDRESS_PLACEHOLDER' | translate" />
               </nz-form-control>
             </nz-form-item>
           </div>
           <div nz-col nzSpan="8">
             <nz-form-item>
-              <nz-form-label nzRequired>Port (RTSP)</nz-form-label>
-              <nz-form-control nzErrorTip="Nhập Port">
+              <nz-form-label nzRequired>{{ 'CAMERA_CONFIG.PORT_RTSP' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'CAMERA_CONFIG.PORT_REQUIRED' | translate">
                 <input nz-input formControlName="port" placeholder="554" />
               </nz-form-control>
             </nz-form-item>
@@ -177,17 +177,17 @@
         </div>
 
         <nz-form-item>
-          <nz-form-label nzRequired>Tài khoản (Username)</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng nhập tài khoản">
+          <nz-form-label nzRequired>{{ 'CAMERA_CONFIG.USERNAME' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'CAMERA_CONFIG.USERNAME_REQUIRED' | translate">
             <input nz-input formControlName="username" placeholder="admin" />
           </nz-form-control>
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label nzRequired>Mật khẩu (Password)</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu">
+          <nz-form-label nzRequired>{{ 'CAMERA_CONFIG.PASSWORD' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'CAMERA_CONFIG.PASSWORD_REQUIRED' | translate">
             <nz-input-group [nzSuffix]="suffixTemplate">
-              <input [type]="passwordVisible ? 'text' : 'password'" nz-input formControlName="password" placeholder="Nhập mật khẩu camera" />
+              <input [type]="passwordVisible ? 'text' : 'password'" nz-input formControlName="password" [placeholder]="'CAMERA_CONFIG.PASSWORD_PLACEHOLDER' | translate" />
             </nz-input-group>
             <ng-template #suffixTemplate>
               <i nz-icon [nzType]="passwordVisible ? 'eye-invisible' : 'eye'" (click)="passwordVisible = !passwordVisible" style="cursor: pointer;"></i>
@@ -196,13 +196,13 @@
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label nzRequired>RTSP Path</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng nhập RTSP Path">
+          <nz-form-label nzRequired>{{ 'CAMERA_CONFIG.RTSP_PATH' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'CAMERA_CONFIG.RTSP_PATH_REQUIRED' | translate">
             <nz-input-group [nzSuffix]="rtspSuffixTemplate">
               <input nz-input formControlName="rtspPath" placeholder="/Streaming/Channels/101" />
             </nz-input-group>
             <ng-template #rtspSuffixTemplate>
-              <a (click)="applyRtspTemplate()" style="cursor: pointer;">Mẫu</a>
+              <a (click)="applyRtspTemplate()" style="cursor: pointer;">{{ 'CAMERA_CONFIG.RTSP_TEMPLATE' | translate }}</a>
             </ng-template>
           </nz-form-control>
         </nz-form-item>
@@ -212,13 +212,13 @@
     <div *ngSwitchCase="2" class="step-container">
       <div nz-row [nzGutter]="24">
         <div nz-col [nzSpan]="12">
-          <h3 class="step-title" style="text-align: left;">Kiểm tra luồng Video</h3>
+          <h3 class="step-title" style="text-align: left;">{{ 'CAMERA_CONFIG.VIDEO_STREAM_TITLE' | translate }}</h3>
           <div class="video-preview-box" #previewBox>
             <div *ngIf="!previewImageUrl && !liveStreamUrl && !isTestingConnection" class="preview-placeholder">
               <i nz-icon nzType="video-camera" nzTheme="outline"></i>
-              <p>Luồng RTSP realtime sẽ hiển thị tại đây</p>
+              <p>{{ 'CAMERA_CONFIG.PREVIEW_PLACEHOLDER' | translate }}</p>
             </div>
-            <nz-spin *ngIf="isTestingConnection" nzSimple nzTip="Đang kết nối camera..."></nz-spin>
+            <nz-spin *ngIf="isTestingConnection" nzSimple [nzTip]="'CAMERA_CONFIG.CONNECTING_CAMERA' | translate"></nz-spin>
             <img
               *ngIf="liveStreamUrl"
               class="snapshot-preview live-stream"
@@ -251,42 +251,42 @@
             </div>
           </div>
           <div class="preview-hint" *ngIf="isPrivateCameraIp()">
-            IP camera là nội bộ (LAN). Nếu backend chạy trên cloud (Railway) thì thường không truy cập được RTSP.
+            {{ 'CAMERA_CONFIG.PRIVATE_IP_HINT' | translate }}
           </div>
           <div class="preview-error" *ngIf="previewError">
             {{ previewError }}
           </div>
           <button nz-button nzType="default" nzBlock (click)="testConnection()" [nzLoading]="isTestingConnection" style="margin-top: 16px;">
-            <i nz-icon nzType="api" nzTheme="outline"></i> Test Kết Nối
+            <i nz-icon nzType="api" nzTheme="outline"></i> {{ 'CAMERA_CONFIG.TEST_CONNECTION' | translate }}
           </button>
 
           <div class="preview-actions">
             <button nz-button nzType="primary" (click)="startPreview()" [disabled]="isPreviewRunning || !selectedCameraId">
-              Xem trực tuyến
+              {{ 'CAMERA_CONFIG.LIVE_VIEW' | translate }}
             </button>
             <button nz-button nzType="default" (click)="stopPreview()" [disabled]="!isPreviewRunning">
-              Dừng
+              {{ 'CAMERA_CONFIG.STOP' | translate }}
             </button>
-            <nz-tag *ngIf="isPreviewRunning && liveStreamUrl" nzColor="green">MJPEG live</nz-tag>
-            <nz-tag *ngIf="isPreviewRunning && !liveStreamUrl" nzColor="green">Live (low-latency)</nz-tag>
-            <nz-tag *ngIf="isPreviewRunning && aiConfigForm.value.enableGuestLabels" nzColor="purple">Nhãn dán ON</nz-tag>
+            <nz-tag *ngIf="isPreviewRunning && liveStreamUrl" nzColor="green">{{ 'CAMERA_CONFIG.MJPEG_LIVE' | translate }}</nz-tag>
+            <nz-tag *ngIf="isPreviewRunning && !liveStreamUrl" nzColor="green">{{ 'CAMERA_CONFIG.LIVE_LOW_LATENCY' | translate }}</nz-tag>
+            <nz-tag *ngIf="isPreviewRunning && aiConfigForm.value.enableGuestLabels" nzColor="purple">{{ 'CAMERA_CONFIG.LABELS_ON' | translate }}</nz-tag>
           </div>
 
           <div class="pipeline-card">
             <div class="pipeline-header">
-              <div class="pipeline-title">Test AI Pipeline (YOLO → Track → Face → OCR → PMS)</div>
-              <button nz-button nzType="default" nzSize="small" (click)="clearTestImages()">Xóa</button>
+              <div class="pipeline-title">{{ 'CAMERA_CONFIG.PIPELINE_TITLE' | translate }}</div>
+              <button nz-button nzType="default" nzSize="small" (click)="clearTestImages()">{{ 'CAMERA_CONFIG.CLEAR' | translate }}</button>
             </div>
 
             <div class="pipeline-inputs">
               <div class="pipeline-input">
-                <div class="pipeline-label">Ảnh mặt trước</div>
+                <div class="pipeline-label">{{ 'CAMERA_CONFIG.FRONT_IMAGE' | translate }}</div>
                 <input type="file" accept="image/*" (change)="onSelectTestImage('front', $event)" />
                 <img *ngIf="testFrontImage" class="pipeline-preview" [src]="testFrontImage" alt="Front preview" />
               </div>
 
               <div class="pipeline-input">
-                <div class="pipeline-label">Ảnh mặt sau (tuỳ chọn)</div>
+                <div class="pipeline-label">{{ 'CAMERA_CONFIG.BACK_IMAGE' | translate }}</div>
                 <input type="file" accept="image/*" (change)="onSelectTestImage('back', $event)" />
                 <img *ngIf="testBackImage" class="pipeline-preview" [src]="testBackImage" alt="Back preview" />
               </div>
@@ -299,7 +299,7 @@
               (click)="testAiPipeline()"
               [nzLoading]="isTestingPipeline"
               style="margin-top: 12px;">
-              Test AI Pipeline
+              {{ 'CAMERA_CONFIG.TEST_AI_PIPELINE' | translate }}
             </button>
 
             <div class="pipeline-result" *ngIf="pipelineResult">
@@ -315,15 +315,15 @@
                 </div>
               </div>
               <div class="pipeline-kv">
-                <div class="k">Trạng thái</div>
+                <div class="k">{{ 'CAMERA_CONFIG.STATUS' | translate }}</div>
                 <div class="v">{{ pipelineResult.status || '-' }} — {{ pipelineResult.message || '' }}</div>
               </div>
               <div class="pipeline-kv">
-                <div class="k">Người</div>
+                <div class="k">{{ 'CAMERA_CONFIG.PERSON' | translate }}</div>
                 <div class="v">{{ pipelineResult.label?.fullName || pipelineResult.guestInfo?.personalInfo?.fullName || pipelineResult.ocrRawData?.fullName || '-' }}</div>
               </div>
               <div class="pipeline-kv">
-                <div class="k">Nhãn dán</div>
+                <div class="k">{{ 'CAMERA_CONFIG.LABEL' | translate }}</div>
                 <div class="v">
                   <nz-tag [nzColor]="getLabelBadgeColor(pipelineResult.label)">
                     {{ getLabelVi(pipelineResult.label) }}
@@ -331,18 +331,17 @@
                 </div>
               </div>
               <div class="pipeline-kv" *ngIf="pipelineResult.label?.summary">
-                <div class="k">Tóm tắt</div>
+                <div class="k">{{ 'CAMERA_CONFIG.SUMMARY' | translate }}</div>
                 <div class="v">{{ pipelineResult.label.summary }}</div>
               </div>
               <div class="pipeline-kv" *ngIf="pipelineResult.label?.estimatedStayHours && !pipelineResult.label?.isEmployee">
-                <div class="k">Ước tính lưu trú</div>
-                <div class="v">~{{ pipelineResult.label.estimatedStayHours }} giờ</div>
+                <div class="k">{{ 'CAMERA_CONFIG.ESTIMATED_STAY' | translate }}</div>
+                <div class="v">{{ 'CAMERA_CONFIG.ESTIMATED_STAY_HOURS' | translate:{ hours: pipelineResult.label.estimatedStayHours } }}</div>
               </div>
               <div class="pipeline-kv" *ngIf="pipelineResult.label?.currentStay?.durationSeconds">
-                <div class="k">Đang ở</div>
+                <div class="k">{{ 'CAMERA_CONFIG.CURRENT_STAY' | translate }}</div>
                 <div class="v">
-                  Phòng {{ pipelineResult.label.currentStay.roomNumber || '-' }}
-                  · {{ (pipelineResult.label.currentStay.durationSeconds / 3600) | number:'1.0-1' }} giờ
+                  {{ 'CAMERA_CONFIG.CURRENT_STAY_DETAIL' | translate:{ room: (pipelineResult.label.currentStay.roomNumber || '-'), hours: ((pipelineResult.label.currentStay.durationSeconds / 3600) | number:'1.0-1') } }}
                 </div>
               </div>
             </div>
@@ -350,25 +349,25 @@
         </div>
 
         <div nz-col [nzSpan]="12">
-          <h3 class="step-title" style="text-align: left;">Cấu hình Module AI</h3>
+          <h3 class="step-title" style="text-align: left;">{{ 'CAMERA_CONFIG.AI_MODULE_TITLE' | translate }}</h3>
           <div class="ai-config-list" [formGroup]="aiConfigForm">
             <div class="ai-feature-item">
               <div>
-                <h4><i nz-icon nzType="scan" nzTheme="outline"></i> Nhận diện OCR Giấy tờ</h4>
-                <p>Tự động bóc tách CCCD/Passport khi khách đưa vào camera.</p>
+                <h4><i nz-icon nzType="scan" nzTheme="outline"></i> {{ 'CAMERA_CONFIG.FEATURE_OCR_TITLE' | translate }}</h4>
+                <p>{{ 'CAMERA_CONFIG.FEATURE_OCR_DESC' | translate }}</p>
               </div>
               <nz-switch formControlName="enableOcr"></nz-switch>
             </div>
 
             <div class="ai-feature-item">
               <div>
-                <h4><i nz-icon nzType="tags" nzTheme="outline"></i> Nhãn dán nhận diện</h4>
-                <p>Luôn hiện nhãn trên khung hình khi bấm <strong>Xem trực tuyến</strong> (YOLO + khuôn mặt).</p>
+                <h4><i nz-icon nzType="tags" nzTheme="outline"></i> {{ 'CAMERA_CONFIG.FEATURE_LABELS_TITLE' | translate }}</h4>
+                <p>{{ 'CAMERA_CONFIG.FEATURE_LABELS_DESC' | translate }}</p>
                 <div class="label-legend">
-                  <nz-tag nzColor="purple">Nhân viên</nz-tag>
-                  <nz-tag nzColor="blue">Khách quen</nz-tag>
-                  <nz-tag nzColor="green">Khách mới</nz-tag>
-                  <nz-tag nzColor="orange">Khách vãng lai</nz-tag>
+                  <nz-tag nzColor="purple">{{ 'CAMERA_CONFIG.LABEL_EMPLOYEE' | translate }}</nz-tag>
+                  <nz-tag nzColor="blue">{{ 'CAMERA_CONFIG.LABEL_RETURNING' | translate }}</nz-tag>
+                  <nz-tag nzColor="green">{{ 'CAMERA_CONFIG.LABEL_NEW' | translate }}</nz-tag>
+                  <nz-tag nzColor="orange">{{ 'CAMERA_CONFIG.LABEL_WALK_IN' | translate }}</nz-tag>
                 </div>
               </div>
               <nz-switch formControlName="enableGuestLabels"></nz-switch>
@@ -376,24 +375,24 @@
 
             <div class="ai-feature-item">
               <div>
-                <h4><i nz-icon nzType="clock-circle" nzTheme="outline"></i> Ước tính thời lượng lưu trú</h4>
-                <p>Ước tính giờ ở dựa trên lịch sử lưu trú hoặc mặc định 24 giờ.</p>
+                <h4><i nz-icon nzType="clock-circle" nzTheme="outline"></i> {{ 'CAMERA_CONFIG.FEATURE_STAY_TITLE' | translate }}</h4>
+                <p>{{ 'CAMERA_CONFIG.FEATURE_STAY_DESC' | translate }}</p>
               </div>
               <nz-switch formControlName="enableStayEstimate"></nz-switch>
             </div>
 
             <div class="ai-feature-item">
               <div>
-                <h4><i nz-icon nzType="user-switch" nzTheme="outline"></i> Nhận diện khuôn mặt khách quen</h4>
-                <p>So khớp face embedding (nếu đã đồng bộ Redis).</p>
+                <h4><i nz-icon nzType="user-switch" nzTheme="outline"></i> {{ 'CAMERA_CONFIG.FEATURE_FACE_TITLE' | translate }}</h4>
+                <p>{{ 'CAMERA_CONFIG.FEATURE_FACE_DESC' | translate }}</p>
               </div>
               <nz-switch formControlName="enableFaceRecognition"></nz-switch>
             </div>
 
             <div class="ai-feature-item">
               <div>
-                <h4><i nz-icon nzType="check-square" nzTheme="outline"></i> Tự động Check-in</h4>
-                <p>Tạo luồng tự động check-in khi nhận diện thành công.</p>
+                <h4><i nz-icon nzType="check-square" nzTheme="outline"></i> {{ 'CAMERA_CONFIG.FEATURE_CHECKIN_TITLE' | translate }}</h4>
+                <p>{{ 'CAMERA_CONFIG.FEATURE_CHECKIN_DESC' | translate }}</p>
               </div>
               <nz-switch formControlName="autoCheckin"></nz-switch>
             </div>
@@ -401,47 +400,47 @@
 
           <div class="stats-card" *ngIf="selectedHotelId">
             <div class="stats-header">
-              <div class="stats-title">Thống kê AI theo khách sạn</div>
+              <div class="stats-title">{{ 'CAMERA_CONFIG.STATS_TITLE' | translate }}</div>
               <div class="stats-actions">
                 <nz-radio-group [(ngModel)]="statsPeriod" (ngModelChange)="refreshStats()" nzSize="small">
-                  <label nz-radio-button nzValue="day">Ngày</label>
-                  <label nz-radio-button nzValue="week">Tuần</label>
-                  <label nz-radio-button nzValue="month">Tháng</label>
+                  <label nz-radio-button nzValue="day">{{ 'CAMERA_CONFIG.PERIOD_DAY' | translate }}</label>
+                  <label nz-radio-button nzValue="week">{{ 'CAMERA_CONFIG.PERIOD_WEEK' | translate }}</label>
+                  <label nz-radio-button nzValue="month">{{ 'CAMERA_CONFIG.PERIOD_MONTH' | translate }}</label>
                 </nz-radio-group>
-                <button nz-button nzType="default" nzSize="small" (click)="refreshStats()" [nzLoading]="isLoadingStats">Làm mới</button>
+                <button nz-button nzType="default" nzSize="small" (click)="refreshStats()" [nzLoading]="isLoadingStats">{{ 'CAMERA_CONFIG.REFRESH' | translate }}</button>
               </div>
             </div>
             <div class="stats-body" *ngIf="stats?.points?.length">
               <div class="stats-row">
                 <div class="stats-kpi">
-                  <div class="kpi-label">Lượt lưu trú</div>
+                  <div class="kpi-label">{{ 'CAMERA_CONFIG.KPI_STAYS' | translate }}</div>
                   <div class="kpi-value">{{ stats.points[stats.points.length - 1].totalStays }}</div>
                 </div>
                 <div class="stats-kpi">
-                  <div class="kpi-label">Phòng phát sinh</div>
+                  <div class="kpi-label">{{ 'CAMERA_CONFIG.KPI_ROOMS' | translate }}</div>
                   <div class="kpi-value">{{ stats.points[stats.points.length - 1].roomsUsed }}</div>
                 </div>
                 <div class="stats-kpi">
-                  <div class="kpi-label">Khách</div>
+                  <div class="kpi-label">{{ 'CAMERA_CONFIG.KPI_GUESTS' | translate }}</div>
                   <div class="kpi-value">{{ stats.points[stats.points.length - 1].uniqueGuests }}</div>
                 </div>
               </div>
               <div class="stats-row">
                 <div class="stats-kpi">
-                  <div class="kpi-label">Lượt khách quen</div>
+                  <div class="kpi-label">{{ 'CAMERA_CONFIG.KPI_RETURNING_STAYS' | translate }}</div>
                   <div class="kpi-value">{{ stats.points[stats.points.length - 1].returningStays }}</div>
                 </div>
                 <div class="stats-kpi">
-                  <div class="kpi-label">Khách quen</div>
+                  <div class="kpi-label">{{ 'CAMERA_CONFIG.KPI_RETURNING_GUESTS' | translate }}</div>
                   <div class="kpi-value">{{ stats.points[stats.points.length - 1].uniqueReturningGuests }}</div>
                 </div>
               </div>
             </div>
             <div class="stats-empty" *ngIf="!stats?.points?.length && !isLoadingStats">
-              Chưa có dữ liệu thống kê.
+              {{ 'CAMERA_CONFIG.STATS_EMPTY' | translate }}
             </div>
             <div class="pipeline-kv" *ngIf="stats?.lastPipeline?.label" style="margin-top: 12px;">
-              <div class="k">Nhãn dán gần nhất</div>
+              <div class="k">{{ 'CAMERA_CONFIG.LAST_LABEL' | translate }}</div>
               <div class="v">
                 <nz-tag [nzColor]="getLabelBadgeColor(stats.lastPipeline.label)">
                   {{ getLabelVi(stats.lastPipeline.label) }}
@@ -457,13 +456,13 @@
 
   <div class="steps-action">
     <button nz-button nzType="default" (click)="pre()" *ngIf="currentStep > 0">
-      <span>Quay lại</span>
+      <span>{{ 'CAMERA_CONFIG.BACK' | translate }}</span>
     </button>
     <button nz-button nzType="primary" (click)="next()" *ngIf="currentStep < 2">
-      <span>Tiếp tục</span>
+      <span>{{ 'CAMERA_CONFIG.NEXT' | translate }}</span>
     </button>
     <button nz-button nzType="primary" (click)="done()" *ngIf="currentStep === 2" [nzLoading]="isSavingConfig">
-      <span>Hoàn tất tích hợp</span>
+      <span>{{ 'CAMERA_CONFIG.FINISH' | translate }}</span>
     </button>
   </div>
 </nz-card>

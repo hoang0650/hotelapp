@@ -563,17 +563,17 @@ export class RoomComponent implements OnInit, OnDestroy {
     
     this.roomsService.createShiftHandover(handoverData).subscribe(
       (response) => {
-        this.message.success('Yêu cầu giao ca đã được tạo. Vui lòng xác nhận bằng mật khẩu.');
+        this.message.success(this.translate.instant('ROOM.MESSAGES.SHIFT_REQUEST_CREATED'));
         this.isLoading = false;
         this.modalService.closeAll(); 
         if (response && response.id) {
-            this.message.success(`Giao ca (ID: ${response.id}) thành công!`);
+            this.message.success(this.translate.instant('ROOM.MESSAGES.SHIFT_HANDOVER_SUCCESS', { id: response.id }));
         } else {
             this.message.info('Giao ca đã được ghi nhận.');
         }
       },
       (error) => {
-        this.message.error('Lỗi tạo giao ca: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('ROOM.MESSAGES.SHIFT_HANDOVER_ERROR', { message: error.error?.message || error.message }));
         this.isLoading = false;
       }
     );
@@ -845,7 +845,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.incomeLoading = false;
       },
       (error) => {
-        this.message.error('Lỗi tạo phiếu thu: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('ROOM.MESSAGES.INCOME_CREATE_ERROR', { message: error.error?.message || error.message }));
         this.incomeLoading = false;
       }
     );
@@ -874,7 +874,7 @@ export class RoomComponent implements OnInit, OnDestroy {
             }, 200);
           },
           (error) => {
-            this.message.error('Lỗi xóa phiếu thu: ' + (error.error?.message || error.message));
+            this.message.error(this.translate.instant('ROOM.MESSAGES.INCOME_DELETE_ERROR', { message: error.error?.message || error.message }));
           }
         );
       }
@@ -915,7 +915,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.expenseLoading = false;
       },
       (error) => {
-        this.message.error('Lỗi tạo phiếu chi: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('ROOM.MESSAGES.EXPENSE_CREATE_ERROR', { message: error.error?.message || error.message }));
         this.expenseLoading = false;
       }
     );
@@ -944,7 +944,7 @@ export class RoomComponent implements OnInit, OnDestroy {
             }, 200);
           },
           (error) => {
-            this.message.error('Lỗi xóa phiếu chi: ' + (error.error?.message || error.message));
+            this.message.error(this.translate.instant('ROOM.MESSAGES.EXPENSE_DELETE_ERROR', { message: error.error?.message || error.message }));
           }
         );
       }
@@ -1049,7 +1049,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.selectedHotelId = null;
           this.rooms = [];
           this.floors = [];
-          this.message.error('Lỗi khi tải thông tin khách sạn: ' + (error.error?.message || error.message));
+          this.message.error(this.translate.instant('ROOM.MESSAGES.HOTEL_LOAD_ERROR', { message: error.error?.message || error.message }));
           this.isLoading = false;
           this.cdr.detectChanges();
         }
@@ -1095,7 +1095,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (error) => {
-        this.message.error('Lỗi khi tải danh sách khách sạn: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('ROOM.MESSAGES.HOTELS_LOAD_ERROR', { message: error.error?.message || error.message }));
         this.isLoading = false;
         this.cdr.detectChanges();
       }
@@ -1702,11 +1702,13 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.lastPaymentToastEventKey = eventKey;
 
     const amountLabel = amount > 0 ? amount.toLocaleString('vi-VN') + ' VND' : '';
-    const roomLabel = payload?.roomNumber ? ` · Phòng ${payload.roomNumber}` : '';
+    const roomLabel = payload?.roomNumber
+      ? this.translate.instant('ROOM.MESSAGES.SEPAY_ROOM_LABEL', { roomNumber: payload.roomNumber })
+      : '';
     this.message.success(
       amountLabel
-        ? `Thanh toán SePay thành công: ${amountLabel}${roomLabel}`
-        : `Thanh toán SePay thành công${roomLabel}`
+        ? this.translate.instant('ROOM.MESSAGES.SEPAY_SUCCESS_WITH_AMOUNT', { amount: amountLabel, roomLabel })
+        : this.translate.instant('ROOM.MESSAGES.SEPAY_SUCCESS', { roomLabel })
     );
 
     if (this.paymentSpeakerEnabled) {

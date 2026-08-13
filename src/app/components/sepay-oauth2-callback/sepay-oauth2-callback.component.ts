@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BankTransferService } from '../../services/bank-transfer.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { getCookie, removeCookie, setCookie } from '../../utils/cookie-storage';
 
 @Component({
@@ -12,14 +13,17 @@ import { getCookie, removeCookie, setCookie } from '../../utils/cookie-storage';
 export class SepayOAuth2CallbackComponent implements OnInit {
   isLoading = true;
   status: 'processing' | 'success' | 'error' = 'processing';
-  message = 'Đang xử lý...';
+  message = '';
 
   constructor(
     private route: ActivatedRoute,
     public router: Router,
     private bankTransferService: BankTransferService,
-    private messageService: NzMessageService
-  ) {}
+    private messageService: NzMessageService,
+    private translate: TranslateService
+  ) {
+    this.message = this.translate.instant('SEPAY_OAUTH.MESSAGES.PROCESSING');
+  }
 
   ngOnInit(): void {
     const code = this.route.snapshot.queryParams['code'];
@@ -33,7 +37,7 @@ export class SepayOAuth2CallbackComponent implements OnInit {
     }
 
     if (!code) {
-      this.handleError('missing_code', 'Không nhận được authorization code từ SePay');
+      this.handleError('missing_code', this.translate.instant('SEPAY_OAUTH.MESSAGES.MISSING_CODE'));
       return;
     }
 
@@ -43,12 +47,12 @@ export class SepayOAuth2CallbackComponent implements OnInit {
     const redirectUri = getCookie('sepay_oauth2_redirect_uri');
 
     if (state && savedState && state !== savedState) {
-      this.handleError('invalid_state', 'State không khớp. Có thể bị tấn công CSRF.');
+      this.handleError('invalid_state', this.translate.instant('SEPAY_OAUTH.MESSAGES.INVALID_STATE'));
       return;
     }
 
     if (!clientId || !clientSecret || !redirectUri) {
-      this.handleError('missing_credentials', 'Thiếu thông tin client_id, client_secret hoặc redirect_uri. Vui lòng đăng nhập lại.');
+      this.handleError('missing_credentials', this.translate.instant('SEPAY_OAUTH.MESSAGES.MISSING_CREDENTIALS'));
       return;
     }
 
@@ -57,7 +61,7 @@ export class SepayOAuth2CallbackComponent implements OnInit {
 
   private exchangeToken(code: string, clientId: string, clientSecret: string, redirectUri: string): void {
     this.status = 'processing';
-    this.message = 'Đang đổi authorization code lấy access token...';
+    this.message = this.translate.instant('SEPAY_OAUTH.MESSAGES.EXCHANGING_TOKEN');
 
     this.bankTransferService.exchangeOAuth2Token({
       code: code,
@@ -82,19 +86,19 @@ export class SepayOAuth2CallbackComponent implements OnInit {
           removeCookie('sepay_oauth2_redirect_uri');
 
           this.status = 'success';
-          this.message = 'Đăng nhập thành công! Đang chuyển hướng...';
-          this.messageService.success('Đăng nhập SePay thành công!');
+          this.message = this.translate.instant('SEPAY_OAUTH.MESSAGES.SUCCESS_REDIRECT');
+          this.messageService.success(this.translate.instant('SEPAY_OAUTH.MESSAGES.LOGIN_SUCCESS'));
 
           setTimeout(() => {
             this.router.navigate(['/admin/bank-transfer-history']);
           }, 2000);
         } else {
-          this.handleError('invalid_response', 'Không nhận được access token từ SePay');
+          this.handleError('invalid_response', this.translate.instant('SEPAY_OAUTH.MESSAGES.INVALID_RESPONSE'));
         }
       },
       error: (error) => {
         console.error('Error exchanging token:', error);
-        const errorMsg = error.error?.error || error.error?.detail || error.message || 'Lỗi không xác định';
+        const errorMsg = error.error?.error || error.error?.detail || error.message || this.translate.instant('SEPAY_OAUTH.MESSAGES.UNKNOWN_ERROR');
         this.handleError('exchange_failed', errorMsg);
       }
     });
@@ -102,7 +106,7 @@ export class SepayOAuth2CallbackComponent implements OnInit {
 
   private handleError(error: string, description?: string): void {
     this.status = 'error';
-    this.message = description || `Lỗi: ${error}`;
+    this.message = description || this.translate.instant('SEPAY_OAUTH.MESSAGES.ERROR_GENERIC', { error });
     this.isLoading = false;
     this.messageService.error(this.message);
 

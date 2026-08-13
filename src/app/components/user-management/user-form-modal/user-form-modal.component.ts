@@ -2,6 +2,7 @@ import { Component, Input, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzModalRef } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { UserService } from '../../../services/user.service';
 import { User } from '../../../interfaces/user';
 import { Observable } from 'rxjs';
@@ -113,7 +114,8 @@ export class UserFormModalComponent implements OnInit {
     private fb: FormBuilder,
     private modalRef: NzModalRef,
     private message: NzMessageService,
-    private userService: UserService
+    private userService: UserService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -146,12 +148,14 @@ export class UserFormModalComponent implements OnInit {
       request.subscribe({
         next: (response: User) => {
           this.message.success(
-            this.isEdit ? 'Cập nhật người dùng thành công!' : 'Thêm người dùng mới thành công!'
+            this.isEdit
+              ? this.translate.instant('USER_MANAGEMENT.MESSAGES.UPDATE_SUCCESS')
+              : this.translate.instant('USER_MANAGEMENT.MESSAGES.CREATE_SUCCESS')
           );
           this.modalRef.close(response);
         },
         error: (err: { error?: { message?: string } }) => {
-          this.message.error(err.error?.message || 'Có lỗi xảy ra, vui lòng thử lại!');
+          this.message.error(err.error?.message || this.translate.instant('USER_MANAGEMENT.MESSAGES.FORM_ERROR'));
           this.isSubmitting = false;
         },
         complete: () => {

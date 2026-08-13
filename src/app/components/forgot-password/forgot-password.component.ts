@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { UserService } from '../../services/user.service';
 
 @Component({
@@ -17,7 +18,8 @@ export class ForgotPasswordComponent implements OnInit {
     private fb: FormBuilder,
     private userService: UserService,
     private router: Router,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {
     this.initForm();
   }
@@ -60,7 +62,7 @@ export class ForgotPasswordComponent implements OnInit {
 
     this.userService.forgotPassword(requestData).subscribe({
       next: (response) => {
-        this.message.success(response.message || 'Chúng tôi đã gửi link đặt lại mật khẩu đến email của bạn. Vui lòng kiểm tra hộp thư.');
+        this.message.success(response.message || this.translate.instant('FORGOT_PASSWORD.MESSAGES.SUCCESS'));
         // Chuyển về trang login sau 2 giây
         setTimeout(() => {
           this.router.navigate(['/login']);
@@ -68,7 +70,7 @@ export class ForgotPasswordComponent implements OnInit {
       },
       error: (error) => {
         this.isLoading = false;
-        this.message.error(error.error?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.');
+        this.message.error(error.error?.message || this.translate.instant('FORGOT_PASSWORD.MESSAGES.ERROR'));
       },
       complete: () => {
         this.isLoading = false;
@@ -80,4 +82,3 @@ export class ForgotPasswordComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 }
-

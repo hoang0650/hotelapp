@@ -5,6 +5,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subscription, interval, firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { TranslateService } from '@ngx-translate/core';
 
 type CameraProviderId = 'hikvision' | 'kbvision';
 type CameraAccessMode = 'cloud' | 'agent';
@@ -92,7 +93,8 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private fb: FormBuilder,
     private message: NzMessageService,
-    private authService: AuthService
+    private authService: AuthService,
+    private translate: TranslateService
   ) { }
 
   ngOnInit(): void {
@@ -117,7 +119,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.cameraForm = this.fb.group({
-      name: ['Camera Quầy Lễ Tân', [Validators.required]],
+      name: [this.translate.instant('CAMERA_CONFIG.DEFAULT_CAMERA_NAME'), [Validators.required]],
       provider: [null, [Validators.required]],
       accessMode: ['cloud'],
       agentBaseUrl: [''],
@@ -285,7 +287,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   applyAgentHost(): void {
     const baseUrl = this.buildAgentBaseUrlFromHost(this.agentHostInput);
     if (!baseUrl) {
-      this.message.warning('Vui lòng nhập IP hoặc hostname máy chạy agent');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_HOST_REQUIRED'));
       return;
     }
     this.cameraForm.patchValue({ agentBaseUrl: baseUrl });
@@ -336,7 +338,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
           }
           return;
         }
-        this.agentDetectError = `Agent /info HTTP ${resp.status}`;
+        this.agentDetectError = this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_INFO_HTTP', { status: resp.status });
         return;
       }
       const data: any = await resp.json();
@@ -353,21 +355,21 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         this.cameraForm.get('agentBaseUrl')?.markAsDirty();
       }
     } catch (e: any) {
-      this.agentDetectError = e?.message || 'Không thể kết nối agent local';
+      this.agentDetectError = e?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_CONNECT_FAIL');
     }
   }
 
   /** Nhãn dán AI — khớp PHGroup-AI / guestsController */
   getLabelVi(label: any): string {
-    if (!label) return 'Chưa xác định';
+    if (!label) return this.translate.instant('CAMERA_CONFIG.LABEL_UNKNOWN');
     const raw = String(label.labelVi || '').trim();
     if (raw) return raw;
     const t = String(label.personType || '').trim();
-    if (label.isEmployee || t === 'employee') return 'Nhân viên';
-    if (label.isReturning || t === 'returning_guest') return 'Khách quen';
-    if (label.isNewGuest || t === 'new_guest') return 'Khách mới';
-    if (label.isWalkIn || t === 'walk_in') return 'Khách vãng lai';
-    return 'Chưa xác định';
+    if (label.isEmployee || t === 'employee') return this.translate.instant('CAMERA_CONFIG.LABEL_EMPLOYEE');
+    if (label.isReturning || t === 'returning_guest') return this.translate.instant('CAMERA_CONFIG.LABEL_RETURNING');
+    if (label.isNewGuest || t === 'new_guest') return this.translate.instant('CAMERA_CONFIG.LABEL_NEW');
+    if (label.isWalkIn || t === 'walk_in') return this.translate.instant('CAMERA_CONFIG.LABEL_WALK_IN');
+    return this.translate.instant('CAMERA_CONFIG.LABEL_UNKNOWN');
   }
 
   getLabelBadgeColor(label: any): string {
@@ -384,7 +386,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
 
   useProxvnPublicUrl(): void {
     if (!this.agentPublicUrl) {
-      this.message.warning('Chưa có URL công khai. Hãy chạy BAT_DAU.bat trên máy khách sạn (có ProxVN).');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.NO_PUBLIC_URL'));
       return;
     }
     this.cameraForm.patchValue({ agentBaseUrl: this.agentPublicUrl });
@@ -395,12 +397,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   testAgent(): void {
     const baseUrl = String(this.cameraForm.value.agentBaseUrl || '').trim();
     if (!baseUrl) {
-      this.message.warning('Vui lòng nhập địa chỉ Agent (URL công khai)');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_URL_REQUIRED'));
       return;
     }
     if (/api\.phgrouptechs\.com$/i.test(baseUrl) || /api\.phhotel\.vn$/i.test(baseUrl)) {
       this.agentOnline = false;
-      this.agentError = 'Không dùng URL API production. Hãy dán URL https://….tunnel… mà BAT_DAU.bat in ra.';
+      this.agentError = this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_URL_NOT_API');
       return;
     }
     this.agentOnline = null;
@@ -414,15 +416,15 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.agentOnline = !!res?.ok;
         if (!this.agentOnline) {
-          this.agentError = res?.message || 'Agent offline / không hợp lệ';
+          this.agentError = res?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_OFFLINE');
         } else {
           this.agentError = null;
-          this.message.success('Agent online');
+          this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_ONLINE'));
         }
       },
       error: (err) => {
         this.agentOnline = false;
-        this.agentError = err?.error?.message || err?.message || 'Không thể kết nối agent';
+        this.agentError = err?.error?.message || err?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_CONNECT_ERROR');
       }
     });
   }
@@ -451,7 +453,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingConfig = false;
-        this.message.error('Không thể tải cấu hình camera từ backend');
+        this.message.error(this.translate.instant('CAMERA_CONFIG.MESSAGES.LOAD_CONFIG_ERROR'));
       }
     });
   }
@@ -462,7 +464,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.revokePreviewUrl();
     this.previewError = null;
     this.cameraForm.patchValue({
-      name: cam?.name || 'Camera Quầy Lễ Tân',
+      name: cam?.name || this.translate.instant('CAMERA_CONFIG.DEFAULT_CAMERA_NAME'),
       provider: cam?.provider || null,
       accessMode: (cam?.accessMode as CameraAccessMode) || 'cloud',
       agentBaseUrl: cam?.agentBaseUrl || '',
@@ -486,7 +488,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   // Chuyển bước tiếp theo
   next(): void {
     if (this.currentStep === 0 && !this.selectedProvider) {
-      this.message.warning('Vui lòng chọn nhà cung cấp Camera!');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_PROVIDER'));
       return;
     }
 
@@ -498,7 +500,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
             control.updateValueAndValidity({ onlySelf: true });
           }
         });
-        this.message.warning('Vui lòng điền đầy đủ thông tin đăng nhập!');
+        this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.FILL_LOGIN'));
         return;
       }
     }
@@ -514,11 +516,11 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   // Nút test kết nối giả lập
   testConnection(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Vui lòng chọn khách sạn trước khi kiểm tra');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_HOTEL_FIRST'));
       return;
     }
     if (!this.selectedCameraId) {
-      this.message.warning('Vui lòng lưu cấu hình và chọn camera trước khi kiểm tra');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SAVE_AND_SELECT_CAMERA'));
       return;
     }
 
@@ -531,7 +533,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
 
   startPreview(): void {
     if (!this.selectedCameraId) {
-      this.message.warning('Vui lòng chọn camera trước khi xem');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_CAMERA_VIEW'));
       return;
     }
     if (this.isPreviewRunning) return;
@@ -550,7 +552,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   private startLiveStream(): void {
     const token = this.authService.getToken();
     if (!token || !this.selectedCameraId) {
-      this.previewError = 'Thiếu token hoặc camera — fallback snapshot nhanh.';
+      this.previewError = this.translate.instant('CAMERA_CONFIG.MESSAGES.MISSING_TOKEN_FALLBACK');
       this.startFastSnapshotLive();
       return;
     }
@@ -559,7 +561,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (this.cameraForm.value.accessMode === 'agent') {
       this.liveStreamUrl = null;
       this.startFastSnapshotLive();
-      this.message.success('Đang xem trực tuyến + nhãn dán');
+      this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.LIVE_VIEW_STICKERS'));
       return;
     }
 
@@ -568,7 +570,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       `${environment.apiUrl}/cameras/${this.selectedCameraId}/stream?access_token=${encodeURIComponent(token)}&t=${ts}`;
     this.previewImageUrl = null;
     this.startOverlayPolling();
-    this.message.success('Đang mở luồng realtime + nhãn dán');
+    this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.REALTIME_STREAM_STICKERS'));
   }
 
   private startFastSnapshotLive(): void {
@@ -691,14 +693,14 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       if (!bbox || bbox.length < 4) return;
       const [x1, y1, x2, y2] = bbox;
       const face = faces.find((f) => f?.trackId != null && f.trackId === p?.trackId) || faces[idx];
-      let labelText = 'Đang nhận diện';
+      let labelText = this.translate.instant('CAMERA_CONFIG.LABEL_RECOGNIZING');
       let color = '#8c8c8c';
       if (face?.matched) {
         if (this.liveLabel && String(this.liveLabel.guestId || '') === String(face.guestId || '')) {
           labelText = this.getLabelVi(this.liveLabel);
           color = this.badgeHex(this.getLabelBadgeColor(this.liveLabel));
         } else {
-          labelText = 'Đã nhận diện';
+          labelText = this.translate.instant('CAMERA_CONFIG.LABEL_RECOGNIZED');
           color = this.badgeHex('blue');
         }
       } else if (this.liveLabel && persons.length === 1) {
@@ -724,8 +726,8 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         if (!bbox || bbox.length < 4) return;
         const [x1, y1, x2, y2] = bbox;
         const labelText = f?.matched
-          ? (this.liveLabel ? this.getLabelVi(this.liveLabel) : 'Đã nhận diện')
-          : 'Đang nhận diện';
+          ? (this.liveLabel ? this.getLabelVi(this.liveLabel) : this.translate.instant('CAMERA_CONFIG.LABEL_RECOGNIZED'))
+          : this.translate.instant('CAMERA_CONFIG.LABEL_RECOGNIZING');
         const color = f?.matched
           ? this.badgeHex(this.getLabelBadgeColor(this.liveLabel || { personType: 'returning_guest' }))
           : '#8c8c8c';
@@ -783,10 +785,10 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       this.lastObjectUrl = url;
       this.previewImageUrl = url;
       this.previewError = null;
-      if (showToast) this.message.success('Đã lấy snapshot thành công (RTSP OK)');
+      if (showToast) this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.SNAPSHOT_SUCCESS'));
     } catch (err: any) {
       const msg = await this.extractHttpErrorMessage(err);
-      this.previewError = msg || 'Lấy snapshot thất bại (kiểm tra rtspPath/luồng RTSP/ffmpeg trên server)';
+      this.previewError = msg || this.translate.instant('CAMERA_CONFIG.MESSAGES.SNAPSHOT_FAIL');
       if (showToast) this.message.error(this.previewError);
     } finally {
       this.isPreviewLoading = false;
@@ -818,7 +820,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (accessMode === 'agent') {
       const baseUrl = this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || '');
       if (!baseUrl) {
-        this.previewError = 'Vui lòng nhập địa chỉ Agent (URL công khai) trước khi xem snapshot.';
+        this.previewError = this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_URL_BEFORE_SNAPSHOT');
         if (showToast) this.message.error(this.previewError);
         throw new Error(this.previewError);
       }
@@ -832,7 +834,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         control.markAsDirty();
         control.updateValueAndValidity({ onlySelf: true });
       });
-      const msg = 'Vui lòng điền đủ cấu hình camera trước khi test snapshot.';
+      const msg = this.translate.instant('CAMERA_CONFIG.MESSAGES.FILL_CONFIG_BEFORE_SNAPSHOT');
       this.previewError = msg;
       if (showToast) this.message.error(msg);
       throw new Error(msg);
@@ -941,27 +943,72 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       return { name, detail, ok, warn: warn && !ok, err };
     };
     return [
-      mk('1. Camera', 'Frame đã nhận', 'ok', true),
-      mk('2. YOLO người', detectCount ? `${detectCount} người` : (st.detect?.error || 'không phát hiện'), st.detect?.status || (detectCount ? 'ok' : 'empty'), detectCount > 0),
-      mk('3. ByteTrack', trackCount ? `${trackCount} track` : 'chưa track', st.track?.status || (trackCount ? 'ok' : 'empty'), trackCount > 0),
-      mk('4. Face', faceMatched ? `${faceMatched} khớp` : (faceStatus || 'chưa khớp'), faceStatus || (faceMatched ? 'ok' : 'empty'), faceMatched > 0),
-      mk('5. OCR CCCD', ocrOk ? (res?.ocrRawData?.idNumber || st.ocr?.data?.idNumber) : (st.ocr?.status || 'chưa đọc'), st.ocr?.status || (ocrOk ? 'ok' : 'empty'), ocrOk),
-      mk('6. PMS', pmsOk ? (res?.label?.labelVi || 'đã ghi') : 'chưa ghi guest', pmsOk ? 'ok' : 'empty', pmsOk),
-      mk('7. Dashboard', 'Hiển thị kết quả', 'ok', true)
+      mk(
+        this.translate.instant('CAMERA_CONFIG.PIPELINE.CAMERA'),
+        this.translate.instant('CAMERA_CONFIG.PIPELINE.CAMERA_DETAIL'),
+        'ok',
+        true
+      ),
+      mk(
+        this.translate.instant('CAMERA_CONFIG.PIPELINE.YOLO'),
+        detectCount
+          ? this.translate.instant('CAMERA_CONFIG.PIPELINE.YOLO_COUNT', { count: detectCount })
+          : (st.detect?.error || this.translate.instant('CAMERA_CONFIG.PIPELINE.YOLO_NONE')),
+        st.detect?.status || (detectCount ? 'ok' : 'empty'),
+        detectCount > 0
+      ),
+      mk(
+        this.translate.instant('CAMERA_CONFIG.PIPELINE.TRACK'),
+        trackCount
+          ? this.translate.instant('CAMERA_CONFIG.PIPELINE.TRACK_COUNT', { count: trackCount })
+          : this.translate.instant('CAMERA_CONFIG.PIPELINE.TRACK_NONE'),
+        st.track?.status || (trackCount ? 'ok' : 'empty'),
+        trackCount > 0
+      ),
+      mk(
+        this.translate.instant('CAMERA_CONFIG.PIPELINE.FACE'),
+        faceMatched
+          ? this.translate.instant('CAMERA_CONFIG.PIPELINE.FACE_MATCHED', { count: faceMatched })
+          : (faceStatus || this.translate.instant('CAMERA_CONFIG.PIPELINE.FACE_NONE')),
+        faceStatus || (faceMatched ? 'ok' : 'empty'),
+        faceMatched > 0
+      ),
+      mk(
+        this.translate.instant('CAMERA_CONFIG.PIPELINE.OCR'),
+        ocrOk
+          ? (res?.ocrRawData?.idNumber || st.ocr?.data?.idNumber)
+          : (st.ocr?.status || this.translate.instant('CAMERA_CONFIG.PIPELINE.OCR_NONE')),
+        st.ocr?.status || (ocrOk ? 'ok' : 'empty'),
+        ocrOk
+      ),
+      mk(
+        this.translate.instant('CAMERA_CONFIG.PIPELINE.PMS'),
+        pmsOk
+          ? (res?.label?.labelVi || this.translate.instant('CAMERA_CONFIG.PIPELINE.PMS_OK'))
+          : this.translate.instant('CAMERA_CONFIG.PIPELINE.PMS_NONE'),
+        pmsOk ? 'ok' : 'empty',
+        pmsOk
+      ),
+      mk(
+        this.translate.instant('CAMERA_CONFIG.PIPELINE.DASHBOARD'),
+        this.translate.instant('CAMERA_CONFIG.PIPELINE.DASHBOARD_DETAIL'),
+        'ok',
+        true
+      )
     ];
   }
 
   testAiPipeline(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Chưa xác định khách sạn để test');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.HOTEL_REQUIRED_TEST'));
       return;
     }
     if (!this.selectedCameraId) {
-      this.message.warning('Vui lòng chọn camera để test');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_CAMERA_TEST'));
       return;
     }
     if (!this.testFrontImage) {
-      this.message.warning('Vui lòng chọn ảnh mặt trước (CCCD/Passport) để test');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_FRONT_IMAGE'));
       return;
     }
 
@@ -981,7 +1028,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         if (res?.ocrError && !res?.ocrRawData?.idNumber) {
           this.message.warning(res.message || res.ocrError);
         } else {
-          this.message.success(res?.message || 'Test AI Pipeline thành công');
+          this.message.success(res?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.AI_PIPELINE_SUCCESS'));
         }
         this.refreshStats();
       },
@@ -989,7 +1036,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         this.isTestingPipeline = false;
         const details = err?.error?.details;
         const detailMsg = details?.error || details?.message || '';
-        this.message.error(err?.error?.message || detailMsg || 'Test AI Pipeline thất bại');
+        this.message.error(err?.error?.message || detailMsg || this.translate.instant('CAMERA_CONFIG.MESSAGES.AI_PIPELINE_FAIL'));
       }
     });
   }
@@ -997,15 +1044,15 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   // Hoàn tất cấu hình
   done(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Chưa xác định khách sạn để lưu cấu hình');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.HOTEL_REQUIRED_SAVE'));
       return;
     }
     if (!this.selectedProvider) {
-      this.message.warning('Vui lòng chọn nhà cung cấp Camera!');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_PROVIDER'));
       return;
     }
     if (this.cameraForm.invalid) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin cấu hình');
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.FILL_CONFIG'));
       return;
     }
 
@@ -1023,12 +1070,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         if (saved?._id) {
           this.selectedCameraId = saved._id;
         }
-        this.message.success('Đã đồng bộ cấu hình Camera với backend');
+        this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.SYNC_SUCCESS'));
         this.loadCameras();
       },
       error: () => {
         this.isSavingConfig = false;
-        this.message.error('Lưu cấu hình camera thất bại');
+        this.message.error(this.translate.instant('CAMERA_CONFIG.MESSAGES.SAVE_FAIL'));
       }
     });
   }

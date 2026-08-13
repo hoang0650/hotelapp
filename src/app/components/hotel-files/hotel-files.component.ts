@@ -7,6 +7,7 @@ import { renderAsync } from 'docx-preview';
 import { ViewChild, ElementRef } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { buildStoreZip, ZipEntry } from './zip-store';
+import { TranslateService } from '@ngx-translate/core';
 
 type FileItem = {
   name: string;
@@ -72,7 +73,8 @@ export class HotelFilesComponent implements OnInit {
     })),
   ];
 
-  constructor(private message: NzMessageService, private sanitizer: DomSanitizer, private http: HttpClient) {}
+  constructor(private message: NzMessageService, private sanitizer: DomSanitizer, private http: HttpClient, private translate: TranslateService) {}
+
 
   ngOnInit(): void {
     this.isMobile = window.innerWidth <= 768;
@@ -118,9 +120,9 @@ export class HotelFilesComponent implements OnInit {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      this.message.success('Đã tải PHHotel-Camera-Agent.zip — giải nén rồi bấm BAT_DAU.bat');
+      this.message.success(this.translate.instant('HOTEL_FILES.MESSAGES.ZIP_DOWNLOAD_SUCCESS'));
     } catch {
-      this.message.error('Không tạo được gói Camera Agent. Thử tải từng file bên dưới.');
+      this.message.error(this.translate.instant('HOTEL_FILES.MESSAGES.ZIP_DOWNLOAD_ERROR'));
     } finally {
       this.cameraZipLoading = false;
     }
@@ -128,12 +130,12 @@ export class HotelFilesComponent implements OnInit {
 
   openInline(file: FileItem): void {
     if (file.group === 'camera-agent' || file.type === 'other') {
-      this.message.info('File kỹ thuật — vui lòng dùng nút Tải về.');
+      this.message.info(this.translate.instant('HOTEL_FILES.TYPE_TECHNICAL'));
       this.download(file);
       return;
     }
     if (file.inlineContent) {
-      this.message.info('File script không hỗ trợ xem trực tiếp, vui lòng tải về.');
+      this.message.info(this.translate.instant('HOTEL_FILES.TYPE_SCRIPT'));
       this.download(file);
       return;
     }
@@ -201,7 +203,7 @@ export class HotelFilesComponent implements OnInit {
           const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
           if (rows.length > 0) {
             const headerRow = rows[0] as string[];
-            this.xlsxColumns = headerRow.map((c, i) => c || `Cột ${i + 1}`);
+            this.xlsxColumns = headerRow.map((c, i) => c || this.translate.instant('HOTEL_FILES.COLUMN_N', { n: i + 1 }));
             this.xlsxRows = rows.slice(1).map(r => {
               const obj: Record<string, any> = {};
               this.xlsxColumns.forEach((col, idx) => {
@@ -214,11 +216,11 @@ export class HotelFilesComponent implements OnInit {
             this.xlsxRows = [];
           }
         } catch (e) {
-          this.message.error('Không thể đọc file Excel');
+          this.message.error(this.translate.instant('HOTEL_FILES.MESSAGES.EXCEL_READ_ERROR'));
         }
       },
       error: () => {
-        this.message.error('Không tải được file Excel');
+        this.message.error(this.translate.instant('HOTEL_FILES.MESSAGES.EXCEL_LOAD_ERROR'));
       }
     });
   }

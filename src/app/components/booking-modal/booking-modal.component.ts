@@ -468,7 +468,7 @@ export class BookingModalComponent implements OnInit {
       checkInDay.setHours(0, 0, 0, 0);
       
       if (checkInDay < today) {
-        this.message.error(this.translate.instant('BOOKING_MODAL.CHECK_IN_PAST_ERROR') || 'Không thể đặt phòng cho ngày đã qua');
+        this.message.error(this.translate.instant('BOOKING_MODAL.CHECK_IN_PAST_ERROR'));
         this.bookingForm.get('checkInDate')?.setErrors({ pastDate: true });
         this.bookingForm.get('checkInDate')?.markAsDirty();
         return false;

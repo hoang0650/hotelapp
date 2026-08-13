@@ -1010,7 +1010,7 @@ export class GuestManagementComponent implements OnInit {
 
     if (!ocrData || Object.keys(ocrData).length === 0) {
       console.error('[GuestSaveModal] Invalid OCR response format:', response);
-      this.message.error('Không tìm thấy thông tin hợp lệ từ ảnh scan');
+      this.message.error(this.translate.instant('GUEST_MANAGEMENT.OCR_INVALID_DATA'));
       return;
     }
 
@@ -1075,7 +1075,7 @@ export class GuestManagementComponent implements OnInit {
       });
     }
 
-    this.message.success(`Đã tự động điền thông tin từ ${cardType || 'AI'}. Vui lòng kiểm tra lại.`);
+    this.message.success(this.translate.instant('GUEST_MANAGEMENT.OCR_FILLED_FROM', { cardType: cardType || 'AI' }));
   }
 
   // Disable dates trước hôm nay cho check-in

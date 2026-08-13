@@ -12,6 +12,7 @@ import { SessionContextService } from '../../services/session-context.service';
 import { take } from 'rxjs/operators';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
+import { TranslateService } from '@ngx-translate/core';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
 declare global {
@@ -204,7 +205,8 @@ export class InvoiceComponent implements OnInit {
     private providerService: EInvoiceProviderService,
     private fb: FormBuilder,
     private modalRef: NzModalRef,
-    private sessionContext: SessionContextService
+    private sessionContext: SessionContextService,
+    private translate: TranslateService
   ) {
     console.log('=== InvoiceComponent Constructor ===');
     console.log('Raw data received:', this.data);
@@ -1162,7 +1164,7 @@ export class InvoiceComponent implements OnInit {
     if (!invoicePayload.hotelId || !invoicePayload.roomNumber || !invoicePayload.customerName) {
       this.isLoading = false;
       this.message.remove();
-      this.message.error('Thiếu thông tin bắt buộc để tạo hóa đơn (hotelId, roomNumber, customerName).');
+      this.message.error(this.translate.instant('INVOICE.MESSAGES.MISSING_REQUIRED_CREATE'));
       return;
     }
 
@@ -1179,15 +1181,15 @@ export class InvoiceComponent implements OnInit {
         } else {
           this.isLoading = false;
           this.message.remove();
-          this.message.error('Không thể lấy ID hóa đơn sau khi tạo.');
+          this.message.error(this.translate.instant('INVOICE.MESSAGES.CANNOT_GET_INVOICE_ID'));
         }
       },
       error: (error: any) => {
         this.isLoading = false;
         this.message.remove();
         console.error('Error creating invoice:', error);
-        const errorMessage = error.error?.message || error.message || 'Vui lòng thử lại sau';
-        this.message.error('Lỗi khi tạo hóa đơn: ' + errorMessage);
+        const errorMessage = error.error?.message || error.message || this.translate.instant('INVOICE.MESSAGES.TRY_AGAIN');
+        this.message.error(this.translate.instant('INVOICE.MESSAGES.CREATE_ERROR', { message: errorMessage }));
       }
     });
   }
@@ -1201,14 +1203,14 @@ export class InvoiceComponent implements OnInit {
       next: (response: any) => {
         this.isLoading = false;
         this.message.remove();
-        this.message.success(`Hóa đơn đã được gửi đến ${customerEmail}`);
+        this.message.success(this.translate.instant('INVOICE.MESSAGES.EMAIL_SENT_SUCCESS', { email: customerEmail }));
       },
       error: (error: any) => {
         this.isLoading = false;
         this.message.remove();
         console.error('Error sending invoice email:', error);
-        const errorMessage = error.error?.message || error.message || 'Vui lòng thử lại sau';
-        this.message.error('Lỗi khi gửi email: ' + errorMessage);
+        const errorMessage = error.error?.message || error.message || this.translate.instant('INVOICE.MESSAGES.TRY_AGAIN');
+        this.message.error(this.translate.instant('INVOICE.MESSAGES.EMAIL_ERROR', { message: errorMessage }));
       }
     });
   }
@@ -1308,7 +1310,7 @@ export class InvoiceComponent implements OnInit {
       next: (response: any) => {
         this.isLoading = false;
         this.message.remove();
-        this.message.success('Xóa hóa đơn thành công');
+        this.message.success(this.translate.instant('INVOICE.MESSAGES.DELETE_SUCCESS'));
         // Đóng modal sau 1 giây
         setTimeout(() => {
           // Có thể emit event để parent component đóng modal
@@ -1319,7 +1321,7 @@ export class InvoiceComponent implements OnInit {
         this.isLoading = false;
         this.message.remove();
         console.error('Error deleting invoice:', error);
-        this.message.error('Lỗi khi xóa hóa đơn: ' + (error.error?.message || error.message || 'Vui lòng thử lại sau'));
+        this.message.error(this.translate.instant('INVOICE.MESSAGES.DELETE_ERROR', { message: error.error?.message || error.message || this.translate.instant('INVOICE.MESSAGES.TRY_AGAIN') }));
       }
     });
   }
@@ -1367,7 +1369,7 @@ export class InvoiceComponent implements OnInit {
       const missingFields = requiredFields.filter(field => invoiceData[field] === undefined || invoiceData[field] === null);
       if (missingFields.length > 0) {
         this.isLoadingEasyInvoice = false;
-        this.message.error(`Thiếu các trường bắt buộc: ${missingFields.join(', ')}`);
+        this.message.error(this.translate.instant('INVOICE.MESSAGES.MISSING_REQUIRED_FIELDS', { fields: missingFields.join(', ') }));
         console.error('[Invoice Component] Missing required fields:', missingFields);
         return;
       }
@@ -1375,7 +1377,7 @@ export class InvoiceComponent implements OnInit {
       // Validate buyer
       if (!invoiceData.buyer || !invoiceData.buyer.name) {
         this.isLoadingEasyInvoice = false;
-        this.message.error('Thiếu thông tin khách hàng (buyer.name)');
+        this.message.error(this.translate.instant('INVOICE.MESSAGES.MISSING_BUYER'));
         console.error('[Invoice Component] Missing buyer.name');
         return;
       }
@@ -1383,14 +1385,14 @@ export class InvoiceComponent implements OnInit {
       // Validate items
       if (!invoiceData.items || !Array.isArray(invoiceData.items) || invoiceData.items.length === 0) {
         this.isLoadingEasyInvoice = false;
-        this.message.error('Thiếu danh sách sản phẩm/dịch vụ (items)');
+        this.message.error(this.translate.instant('INVOICE.MESSAGES.MISSING_ITEMS'));
         console.error('[Invoice Component] Missing or empty items array');
         return;
       }
     } catch (error: any) {
       this.isLoadingEasyInvoice = false;
       console.error('[Invoice Component] Error preparing invoice data:', error);
-      this.message.error(error.message || 'Lỗi khi chuẩn bị dữ liệu hóa đơn');
+      this.message.error(error.message || this.translate.instant('INVOICE.MESSAGES.PREPARE_DATA_ERROR'));
       return;
     }
     
@@ -1403,7 +1405,7 @@ export class InvoiceComponent implements OnInit {
           this.checkCreateStatusAndShowPreview(trackingCode);
         } else {
           this.isLoadingEasyInvoice = false;
-          this.message.error('Không nhận được tracking code từ server');
+          this.message.error(this.translate.instant('INVOICE.MESSAGES.NO_TRACKING_CODE'));
         }
       },
       error: (error: any) => {
@@ -1411,7 +1413,7 @@ export class InvoiceComponent implements OnInit {
         console.error('Error creating draft invoice:', error);
         // Backend trả về: { success: false, error: { code, message, details } }
         const errorCode = error.error?.error?.code || error.error?.code;
-        const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
+        const errorMessage = error.error?.error?.message || error.error?.message || error.message || this.translate.instant('INVOICE.MESSAGES.TRY_AGAIN');
         
         // Kiểm tra nếu lỗi liên quan đến quota
         if (errorCode === 'INSUFFICIENT_QUOTA' || errorCode === 'QUOTA_EXCEEDED' || 
@@ -1427,7 +1429,7 @@ export class InvoiceComponent implements OnInit {
             }
           });
         } else {
-          this.message.error('Lỗi khi tạo hóa đơn nháp: ' + errorMessage);
+          this.message.error(this.translate.instant('INVOICE.MESSAGES.DRAFT_CREATE_ERROR', { message: errorMessage }));
         }
       }
     });
@@ -1459,19 +1461,19 @@ export class InvoiceComponent implements OnInit {
               // Lấy chi tiết hóa đơn để xem preview
               this.getInvoiceDetailsAndShowPreview(referenceCode);
             } else {
-              this.message.success('Tạo hóa đơn nháp thành công');
+              this.message.success(this.translate.instant('INVOICE.MESSAGES.DRAFT_CREATE_SUCCESS'));
             }
           } else if (status === 'processing' || status === 'pending') {
             // Tiếp tục kiểm tra
             this.checkCreateStatusAndShowPreview(trackingCode, retries + 1);
           } else if (status === 'failed' || status === 'error') {
             this.isLoadingEasyInvoice = false;
-            const errorMsg = statusData.message || statusData.error || 'Tạo hóa đơn nháp thất bại';
+            const errorMsg = statusData.message || statusData.error || this.translate.instant('INVOICE.MESSAGES.DRAFT_CREATE_FAILED');
             // Kiểm tra nếu lỗi liên quan đến quota
             if (errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('hạn ngạch')) {
               this.checkQuotaAndShowError();
             } else {
-              this.message.error('Lỗi: ' + errorMsg);
+              this.message.error(this.translate.instant('INVOICE.MESSAGES.ERROR_PREFIX', { message: errorMsg }));
             }
           } else {
             // Tiếp tục kiểm tra nếu chưa có kết quả
@@ -1483,14 +1485,14 @@ export class InvoiceComponent implements OnInit {
           console.error('Error checking create status:', error);
           // Backend trả về: { success: false, error: { code, message, details } }
           const errorCode = error.error?.error?.code || error.error?.code;
-          const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
+          const errorMessage = error.error?.error?.message || error.error?.message || error.message || this.translate.instant('INVOICE.MESSAGES.TRY_AGAIN');
           
           // Kiểm tra nếu lỗi liên quan đến quota
           if (errorCode === 'INSUFFICIENT_QUOTA' || errorCode === 'QUOTA_EXCEEDED' || 
               errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('hạn ngạch')) {
             this.checkQuotaAndShowError();
           } else {
-            this.message.error('Lỗi khi kiểm tra trạng thái: ' + errorMessage);
+            this.message.error(this.translate.instant('INVOICE.MESSAGES.STATUS_CHECK_ERROR', { message: errorMessage }));
           }
         }
       });
@@ -1516,7 +1518,7 @@ export class InvoiceComponent implements OnInit {
         const pdfUrl = invoiceData.pdf_url || invoiceData.pdfUrl;
         
         // Hiển thị thông báo thành công với thông tin về draft
-        this.message.success(`Tạo hóa đơn nháp thành công! Hóa đơn đã được lưu vào "Hóa đơn nháp". Reference code: ${referenceCode}`, {
+        this.message.success(this.translate.instant('INVOICE.MESSAGES.DRAFT_CREATE_SUCCESS_WITH_REF', { referenceCode }), {
           nzDuration: 5000
         });
         
@@ -1531,7 +1533,7 @@ export class InvoiceComponent implements OnInit {
         // Backend trả về: { success: false, error: { code, message } }
         const errorMessage = error.error?.error?.message || error.error?.message || 'Không thể lấy chi tiết hóa đơn';
         // Vẫn hiển thị thông báo thành công vì đã tạo draft
-        this.message.success(`Tạo hóa đơn nháp thành công! Hóa đơn đã được lưu vào "Hóa đơn nháp". Reference code: ${referenceCode}`, {
+        this.message.success(this.translate.instant('INVOICE.MESSAGES.DRAFT_CREATE_SUCCESS_WITH_REF', { referenceCode }), {
           nzDuration: 5000
         });
       }
@@ -1608,12 +1610,12 @@ export class InvoiceComponent implements OnInit {
             // Có quota, tiếp tục xuất hóa đơn
             this.proceedWithInvoiceIssue();
           } else {
-            this.message.error('Không thể kiểm tra hạn ngạch. Vui lòng thử lại.');
+            this.message.error(this.translate.instant('INVOICE.MESSAGES.QUOTA_CHECK_ERROR'));
           }
         },
         error: (error: any) => {
           console.error('Error checking quota:', error);
-          this.message.error('Không thể kiểm tra hạn ngạch. Vui lòng thử lại.');
+          this.message.error(this.translate.instant('INVOICE.MESSAGES.QUOTA_CHECK_ERROR'));
         }
       });
     } else {
@@ -1640,15 +1642,15 @@ export class InvoiceComponent implements OnInit {
           this.checkCreateStatusAndIssue(trackingCode);
         } else {
           this.isLoadingEasyInvoice = false;
-          this.message.error('Không nhận được tracking code từ server');
+          this.message.error(this.translate.instant('INVOICE.MESSAGES.NO_TRACKING_CODE'));
         }
       },
       error: (error: any) => {
         this.isLoadingEasyInvoice = false;
         console.error('Error creating invoice:', error);
         // Backend trả về: { success: false, error: { code, message, details } }
-        const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
-        this.message.error('Lỗi khi tạo hóa đơn: ' + errorMessage);
+        const errorMessage = error.error?.error?.message || error.error?.message || error.message || this.translate.instant('INVOICE.MESSAGES.TRY_AGAIN');
+        this.message.error(this.translate.instant('INVOICE.MESSAGES.CREATE_ERROR', { message: errorMessage }));
       }
     });
   }
@@ -1678,15 +1680,15 @@ export class InvoiceComponent implements OnInit {
               this.issueInvoice(referenceCode);
             } else {
               this.isLoadingEasyInvoice = false;
-              this.message.error('Không nhận được reference code');
+              this.message.error(this.translate.instant('INVOICE.MESSAGES.NO_REFERENCE_CODE'));
             }
           } else if (status === 'processing' || status === 'pending') {
             // Tiếp tục kiểm tra
             this.checkCreateStatusAndIssue(trackingCode, retries + 1);
           } else if (status === 'failed' || status === 'error') {
             this.isLoadingEasyInvoice = false;
-            const errorMsg = statusData.message || statusData.error || 'Tạo hóa đơn thất bại';
-            this.message.error('Lỗi: ' + errorMsg);
+            const errorMsg = statusData.message || statusData.error || this.translate.instant('INVOICE.MESSAGES.INVOICE_CREATE_FAILED');
+            this.message.error(this.translate.instant('INVOICE.MESSAGES.ERROR_PREFIX', { message: errorMsg }));
           } else {
             // Tiếp tục kiểm tra
             this.checkCreateStatusAndIssue(trackingCode, retries + 1);
@@ -1696,8 +1698,8 @@ export class InvoiceComponent implements OnInit {
           this.isLoadingEasyInvoice = false;
           console.error('Error checking create status:', error);
           // Backend trả về: { success: false, error: { code, message, details } }
-          const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
-          this.message.error('Lỗi khi kiểm tra trạng thái: ' + errorMessage);
+          const errorMessage = error.error?.error?.message || error.error?.message || error.message || this.translate.instant('INVOICE.MESSAGES.TRY_AGAIN');
+          this.message.error(this.translate.instant('INVOICE.MESSAGES.STATUS_CHECK_ERROR', { message: errorMessage }));
         }
       });
     }, delay);
@@ -1714,15 +1716,15 @@ export class InvoiceComponent implements OnInit {
           this.checkIssueStatusAndShowResult(issueTrackingCode, referenceCode);
         } else {
           this.isLoadingEasyInvoice = false;
-          this.message.error('Không nhận được tracking code phát hành');
+          this.message.error(this.translate.instant('INVOICE.MESSAGES.NO_ISSUE_TRACKING_CODE'));
         }
       },
       error: (error: any) => {
         this.isLoadingEasyInvoice = false;
         console.error('Error issuing invoice:', error);
         // Backend trả về: { success: false, error: { code, message, details } }
-        const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
-        this.message.error('Lỗi khi phát hành hóa đơn: ' + errorMessage);
+        const errorMessage = error.error?.error?.message || error.error?.message || error.message || this.translate.instant('INVOICE.MESSAGES.TRY_AGAIN');
+        this.message.error(this.translate.instant('INVOICE.MESSAGES.ISSUE_ERROR', { message: errorMessage }));
       }
     });
   }
@@ -1749,7 +1751,7 @@ export class InvoiceComponent implements OnInit {
             this.isLoadingEasyInvoice = false;
             
             // Hiển thị thông báo thành công với thông tin về issued invoice
-            this.message.success(`Xuất hóa đơn điện tử thành công! Hóa đơn đã được lưu vào "Hóa đơn đã xuất". Reference code: ${referenceCode}`, {
+            this.message.success(this.translate.instant('INVOICE.MESSAGES.ISSUE_SUCCESS_WITH_REF', { referenceCode }), {
               nzDuration: 5000
             });
             
@@ -1760,8 +1762,8 @@ export class InvoiceComponent implements OnInit {
             this.checkIssueStatusAndShowResult(trackingCode, referenceCode, retries + 1);
           } else if (status === 'failed' || status === 'error') {
             this.isLoadingEasyInvoice = false;
-            const errorMsg = statusData.message || statusData.error || 'Phát hành hóa đơn thất bại';
-            this.message.error('Lỗi: ' + errorMsg);
+            const errorMsg = statusData.message || statusData.error || this.translate.instant('INVOICE.MESSAGES.ISSUE_FAILED');
+            this.message.error(this.translate.instant('INVOICE.MESSAGES.ERROR_PREFIX', { message: errorMsg }));
           } else {
             // Tiếp tục kiểm tra
             this.checkIssueStatusAndShowResult(trackingCode, referenceCode, retries + 1);
@@ -1771,8 +1773,8 @@ export class InvoiceComponent implements OnInit {
           this.isLoadingEasyInvoice = false;
           console.error('Error checking issue status:', error);
           // Backend trả về: { success: false, error: { code, message, details } }
-          const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Vui lòng thử lại sau';
-          this.message.error('Lỗi khi kiểm tra trạng thái phát hành: ' + errorMessage);
+          const errorMessage = error.error?.error?.message || error.error?.message || error.message || this.translate.instant('INVOICE.MESSAGES.TRY_AGAIN');
+          this.message.error(this.translate.instant('INVOICE.MESSAGES.ISSUE_STATUS_CHECK_ERROR', { message: errorMessage }));
         }
       });
     }, delay);
@@ -2316,7 +2318,7 @@ export class InvoiceComponent implements OnInit {
    */
   saveInvoiceChanges(): void {
     if (!this.editForm || this.editForm.invalid) {
-      this.message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      this.message.error(this.translate.instant('INVOICE.MESSAGES.FILL_REQUIRED'));
       return;
     }
 
@@ -2374,7 +2376,7 @@ export class InvoiceComponent implements OnInit {
       this.invoiceService.updateInvoice(invoiceId, this.invoiceData).subscribe({
         next: (response: any) => {
           this.isSaving = false;
-          this.message.success('Cập nhật hóa đơn thành công');
+          this.message.success(this.translate.instant('INVOICE.MESSAGES.UPDATE_SUCCESS'));
           // Đóng modal và trả về kết quả
           if (this.modalRef) {
             this.modalRef.close('updated');
@@ -2383,13 +2385,13 @@ export class InvoiceComponent implements OnInit {
         error: (error: any) => {
           this.isSaving = false;
           console.error('Error updating invoice:', error);
-          this.message.error('Lỗi khi cập nhật hóa đơn: ' + (error.error?.message || error.message));
+          this.message.error(this.translate.instant('INVOICE.MESSAGES.UPDATE_ERROR', { message: error.error?.message || error.message }));
         }
       });
     } else {
       // Nếu không có invoiceId, chỉ cập nhật local data
       this.isSaving = false;
-      this.message.success('Đã cập nhật thông tin hóa đơn');
+      this.message.success(this.translate.instant('INVOICE.MESSAGES.INFO_UPDATED'));
       if (this.modalRef) {
         this.modalRef.close('updated');
       }

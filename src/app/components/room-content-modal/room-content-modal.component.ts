@@ -1247,16 +1247,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
 
     if (!addedCount && !updatedCount) {
-      this.message.error('Không tìm thấy dịch vụ đã chọn!');
+      this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.SERVICE_NOT_FOUND'));
       return;
     }
 
     if (addedCount && updatedCount) {
-      this.message.success(`Đã thêm ${addedCount} và cập nhật ${updatedCount} dịch vụ`);
+      this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.SERVICES_ADDED_AND_UPDATED', { addedCount, updatedCount }));
     } else if (updatedCount) {
-      this.message.success(`Đã cập nhật số lượng ${updatedCount} dịch vụ`);
+      this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.SERVICES_UPDATED', { updatedCount }));
     } else {
-      this.message.success(`Đã thêm ${addedCount} dịch vụ`);
+      this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.SERVICES_ADDED', { addedCount }));
     }
 
     // Cập nhật vào RoomEvent nếu phòng đang occupied và có event checkin
@@ -1389,7 +1389,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: (response) => {
           console.log('Dịch vụ đã được cập nhật vào RoomEvent', response);
-          this.message.success('Đã xóa dịch vụ');
+          this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.SERVICE_DELETED'));
           
           // Cập nhật listData để đồng bộ
           if (this.listData && this.listData.length > 0) {
@@ -1398,7 +1398,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Lỗi khi cập nhật dịch vụ vào RoomEvent:', error);
-          this.message.error('Lỗi khi cập nhật dịch vụ: ' + (error.error?.message || error.message));
+          this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.SERVICE_UPDATE_ERROR', { message: error.error?.message || error.message }));
         }
       });
     }
@@ -1576,7 +1576,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     // Kiểm tra trạng thái phòng
     const allowPrebooked = this.isPrebookedAvailable();
     if (this.roomData.status !== 'vacant' && !allowPrebooked) {
-      this.message.error(`Phòng ${this.roomData.roomNumber} không sẵn sàng để nhận phòng (Trạng thái hiện tại: ${this.getStatusLabel(this.roomData.status)}).`);
+      this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.ROOM_NOT_READY_CHECKIN', {
+        roomNumber: this.roomData.roomNumber,
+        status: this.getStatusLabel(this.roomData.status)
+      }));
       this.isLoading = false;
       return;
     }
@@ -1678,7 +1681,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       .subscribe(
         (room) => {
           setTimeout(() => {
-            this.message.success('Nhận phòng thành công');
+            this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKIN_SUCCESS'));
             
             // Tạo phiếu thu cho tiền đặt trước nếu có
             // Nếu nhận từ booking đã có đặt trước → chỉ tạo phần chênh lệch (tránh trùng phiếu thu booking_advance)
@@ -1775,7 +1778,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         },
         (error) => {
           setTimeout(() => {
-            this.message.error('Lỗi khi nhận phòng: ' + error.message);
+            this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKIN_ERROR', { message: error.message }));
             this.emitRoomDataUpdated('checkin', {
               roomId: this.roomData?._id,
               delayMs: 0,
@@ -1818,7 +1821,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   processCheckOut(): void {
     // Kiểm tra trạng thái phòng
     if (this.roomData.status !== 'occupied') {
-      this.message.error(`Phòng ${this.roomData.roomNumber} hiện không có khách để trả phòng (Trạng thái: ${this.getStatusLabel(this.roomData.status)}).`);
+      this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.ROOM_NOT_OCCUPIED_CHECKOUT', {
+        roomNumber: this.roomData.roomNumber,
+        status: this.getStatusLabel(this.roomData.status)
+      }));
       this.isLoading = false;
       return;
     }
@@ -2420,12 +2426,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         .subscribe(
           (response) => {
             this.finishCheckoutSuccess(response, invoiceData, {
-              successMessage: 'Check-out thành công',
+              successMessage: this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKOUT_SUCCESS'),
               showInvoice: (checkoutData.paymentStatus || 'paid') === 'paid'
             });
           },
           (error) => {
-            this.message.error('Lỗi khi trả phòng: ' + error.message);
+            this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKOUT_ERROR', { message: error.message }));
             this.emitRoomDataUpdated('checkout', {
               roomId: this.roomData?._id,
               force: true,
@@ -2599,17 +2605,17 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         if (response.success !== false) {
           this.finishCheckoutSuccess(response, invoiceData, {
-            successMessage: 'Check-out thành công',
+            successMessage: this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKOUT_SUCCESS'),
             showInvoice: shouldShowInvoice
           });
         } else {
-          this.message.error(response.message || 'Lỗi khi checkout');
+          this.message.error(response.message || this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKOUT_ERROR_GENERIC'));
         }
       },
       error: (error) => {
         this.isLoading = false;
         console.error('Error during checkout:', error);
-        this.message.error('Lỗi khi checkout');
+        this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKOUT_ERROR_GENERIC'));
       }
     });
   }
@@ -2630,7 +2636,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
     const userId = this.currentUser?._id || this.currentUser?.id;
     if (!userId) {
-      this.message.error('Không tìm thấy thông tin người dùng');
+      this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.USER_NOT_FOUND'));
       return;
     }
 
@@ -2945,12 +2951,12 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           this.finishCheckoutSuccess(response, invoiceData, {
             successMessage: paymentStatus === 'pending'
               ? 'Check-out thành công. Đang chờ xác nhận thanh toán...'
-              : 'Check-out thành công',
+              : this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKOUT_SUCCESS'),
             showInvoice: shouldShowInvoice
           });
         },
         (error) => {
-          this.message.error('Lỗi khi trả phòng: ' + error.message);
+          this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKOUT_ERROR', { message: error.message }));
           this.emitRoomDataUpdated('checkout', { roomId: this.roomData?._id, force: false, delayMs: 0 });
         }
       );
@@ -3083,7 +3089,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       // this.loadLatestPaymentAndPlaySound();
       
       // Hiển thị thông báo thành công (màu xanh)
-      this.message.success('Check-out thành công');
+      this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKOUT_SUCCESS'));
       
       // Đợi một chút để modal QR đóng hoàn toàn trước khi đóng modal checkout
       setTimeout(() => {
@@ -3849,7 +3855,10 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   cleanRoom(): void {
     // Kiểm tra trạng thái phòng
     if (this.roomData.status !== 'dirty' && this.roomData.status !== 'maintenance' && this.roomData.status !== 'cleaning') {
-      this.message.error(`Phòng ${this.roomData.roomNumber} không ở trạng thái cần dọn dẹp hoặc bảo trì (Trạng thái: ${this.getStatusLabel(this.roomData.status)}).`);
+      this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.ROOM_NOT_NEED_CLEANING_TOAST', {
+        roomNumber: this.roomData.roomNumber,
+        status: this.getStatusLabel(this.roomData.status)
+      }));
       this.isLoading = false;
       return;
     }
@@ -3877,10 +3886,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.roomsService.cleanRoom(this.roomData._id, newRoom)
       .subscribe(
         (room) => {
-          let successMessage = 'Đã cập nhật trạng thái phòng thành "Sẵn sàng"';
-          if (this.roomData.status === 'maintenance') {
-            successMessage = 'Đã hoàn thành bảo trì và cập nhật trạng thái phòng thành "Sẵn sàng"';
-          }
+          const successMessage = this.roomData.status === 'maintenance'
+            ? this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.MAINTENANCE_DONE_SUCCESS')
+            : this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.ROOM_READY_SUCCESS');
           this.message.success(successMessage);
           this.emitRoomDataUpdated('cleaning', {
             roomId: this.roomData?._id,
@@ -3891,7 +3899,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           });
         },
         (error) => {
-          this.message.error('Lỗi khi cập nhật trạng thái phòng: ' + error.message);
+          this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.ROOM_STATUS_UPDATE_ERROR', { message: error.message }));
           this.emitRoomDataUpdated('cleaning', {
             roomId: this.roomData?._id,
             force: false,
@@ -4009,7 +4017,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     invoiceData: any,
     options?: { successMessage?: string; showInvoice?: boolean }
   ): void {
-    const successMessage = options?.successMessage || 'Check-out thành công';
+    const successMessage = options?.successMessage || this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.CHECKOUT_SUCCESS');
     const shouldShowInvoice = options?.showInvoice !== false;
 
     this.message.success(successMessage);
@@ -4271,13 +4279,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       guestInfoFormGroup.patchValue({ address });
     }
 
-    this.message.success('Đã tự động điền thông tin từ OCR. Vui lòng kiểm tra và chỉnh sửa nếu cần.');
+    this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.OCR_FILLED'));
   }
 
   // Mở modal để lưu thông tin khách vào guest-management
   openGuestSaveModal(): void {
     if (!this.roomData || !this.roomData._id) {
-      this.message.error('Không tìm thấy thông tin phòng.');
+      this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.ROOM_INFO_NOT_FOUND'));
       return;
     }
     
@@ -4305,7 +4313,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     
     modalRef.afterClose.subscribe((result) => {
       if (result && result.success) {
-        this.message.success('Đã lưu và assign khách vào phòng thành công');
+        this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.GUEST_ASSIGNED_SUCCESS'));
         // Reload room data
         this.roomsService.getRoomById(this.roomData._id).subscribe({
           next: (updatedRoom) => {
@@ -4334,7 +4342,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
 
     if (!this.roomData || !this.roomData._id) {
-      this.message.error('Không tìm thấy thông tin phòng.');
+      this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.ROOM_INFO_NOT_FOUND'));
       return;
     }
 
@@ -4457,7 +4465,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     );
 
     this.calculateTotalPrice();
-    this.message.success('Đã lưu thông tin khách.');
+    this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.GUEST_SAVED'));
     this.isSaving = false;
 
     const hotelId = this.normalizeObjectId(
@@ -4650,12 +4658,16 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
             source
           );
           if (!options?.silent) {
-            this.message.success(`Đã tạo phiếu thu đặt trước ${advanceDiff.toLocaleString('vi-VN')} đ`);
+            this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.ADVANCE_RECEIPT_CREATED', {
+              amount: advanceDiff.toLocaleString('vi-VN')
+            }));
           }
         },
         error: (err) => {
           console.error('Lỗi tạo phiếu thu đặt trước:', err);
-          this.message.error('Không tạo được phiếu thu đặt trước: ' + (err?.error?.message || err?.message || 'Lỗi không xác định'));
+          this.message.error(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.ADVANCE_RECEIPT_ERROR', {
+            message: err?.error?.message || err?.message || this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.UNKNOWN_ERROR')
+          }));
         }
       });
     } catch (e) {
@@ -4775,7 +4787,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       return;
     }
     navigator.clipboard.writeText(code).then(
-      () => this.message.success('Đã copy mã thanh toán'),
+      () => this.message.success(this.translate.instant('ROOM_CONTENT_MODAL.MESSAGES.PAYMENT_CODE_COPIED')),
       () => this.message.warning('Không copy được mã thanh toán')
     );
   }

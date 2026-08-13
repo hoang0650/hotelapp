@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { EmailService, EmailHistory } from '../../services/email.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-email-list',
@@ -13,7 +14,8 @@ export class EmailListComponent implements OnInit {
 
   constructor(
     private emailService: EmailService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -36,7 +38,7 @@ export class EmailListComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading email list', error);
-        this.message.error('Lỗi khi tải danh sách email');
+        this.message.error(this.translate.instant('EMAIL_LIST.MESSAGES.LOAD_ERROR'));
         this.loading = false;
       }
     });

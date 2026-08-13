@@ -489,11 +489,13 @@ export class ServiceManagementComponent implements OnInit {
         this.serviceForm.patchValue({
           image: imageUrl
         });
-        this.message.success('Tải lên hình ảnh thành công');
+        this.message.success(this.translate.instant('SERVICE_MANAGEMENT.UPLOAD_SUCCESS'));
       }
       this.isLoading = false;
     } else if (info.file.status === 'error') {
-      this.message.error(`Lỗi khi tải lên hình ảnh: ${info.file.error?.status || 'Không xác định'}`);
+      this.message.error(this.translate.instant('SERVICE_MANAGEMENT.UPLOAD_ERROR', {
+        message: info.file.error?.status || this.translate.instant('SERVICE_MANAGEMENT.UPLOAD_ERROR_UNKNOWN')
+      }));
       console.error('Upload error:', info.file.error);
       this.isLoading = false;
     }
@@ -502,12 +504,12 @@ export class ServiceManagementComponent implements OnInit {
   beforeUpload = (file: NzUploadFile): boolean => {
     const isImage = file.type?.startsWith('image/');
     if (!isImage) {
-      this.message.error('Bạn chỉ có thể tải lên file hình ảnh!');
+      this.message.error(this.translate.instant('SERVICE_MANAGEMENT.UPLOAD_IMAGE_ONLY'));
       return false;
     }
     const isLt2M = (file.size || 0) / 1024 / 1024 < 2;
     if (!isLt2M) {
-      this.message.error('Hình ảnh phải nhỏ hơn 2MB!');
+      this.message.error(this.translate.instant('SERVICE_MANAGEMENT.UPLOAD_SIZE_LIMIT'));
       return false;
     }
     this.fileList = this.fileList.concat(file);
@@ -524,11 +526,11 @@ export class ServiceManagementComponent implements OnInit {
         this.isLoading = false;
         this.imageUrl = info.file.response?.secure_url;
         this.serviceForm.patchValue({ image: this.imageUrl });
-        this.message.success(`${info.file.name} file uploaded successfully`);
+        this.message.success(this.translate.instant('SERVICE_MANAGEMENT.UPLOAD_FILE_SUCCESS', { fileName: info.file.name }));
         break;
       case 'error':
         this.isLoading = false;
-        this.message.error(`${info.file.name} file upload failed.`);
+        this.message.error(this.translate.instant('SERVICE_MANAGEMENT.UPLOAD_FILE_ERROR', { fileName: info.file.name }));
         break;
     }
   }
@@ -564,11 +566,11 @@ export class ServiceManagementComponent implements OnInit {
           this.services[index] = updatedService;
           this.services = [...this.services];
         }
-        this.message.success('Đã cập nhật số lượng nhập');
+        this.message.success(this.translate.instant('SERVICE_MANAGEMENT.IMPORT_QTY_UPDATED'));
       },
       error: (error) => {
         console.error('Lỗi khi cập nhật số lượng nhập:', error);
-        this.message.error(error.error?.message || 'Không thể cập nhật số lượng nhập.');
+        this.message.error(error.error?.message || this.translate.instant('SERVICE_MANAGEMENT.UPDATE_IMPORT_QTY_ERROR'));
       }
     });
   }
@@ -841,7 +843,7 @@ export class ServiceManagementComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi tải thống kê:', error);
-        this.message.error(error.error?.message || 'Lỗi khi tải thống kê');
+        this.message.error(error.error?.message || this.translate.instant('SERVICE_MANAGEMENT.LOAD_STATS_ERROR'));
         this.isLoadingStatistics = false;
       }
     });

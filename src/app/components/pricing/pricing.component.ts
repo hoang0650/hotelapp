@@ -880,22 +880,22 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         this.pricingService.cancelSubscription(this.userId).subscribe({
           next: (response) => {
             if (response.success !== false) {
-              this.message.success(response.message || 'Yêu cầu hủy đã ghi nhận. Gói sẽ được hủy khi hết hạn.');
+              this.message.success(response.message || this.t('PRICING_PAGE.MESSAGES.CANCEL_SUCCESS'));
               this.loadCurrentPackage({ force: true });
               this.loadPaymentHistory();
             } else {
-              this.message.error(response.message || 'Hủy gói thất bại');
+              this.message.error(response.message || this.t('PRICING_PAGE.MESSAGES.CANCEL_ERROR'));
             }
             this.loading = false;
           },
           error: (error) => {
             console.error('Cancel subscription error:', error);
             if (error.status === 401) {
-              this.message.error('Vui lòng đăng nhập để hủy gói');
+              this.message.error(this.t('PRICING_PAGE.MESSAGES.CANCEL_LOGIN_REQUIRED'));
             } else if (error.status === 403) {
-              this.message.error('Bạn không có quyền hủy gói dịch vụ');
+              this.message.error(this.t('PRICING_PAGE.MESSAGES.CANCEL_NO_PERMISSION'));
             } else {
-              this.message.error(error.error?.message || 'Hủy gói thất bại');
+              this.message.error(error.error?.message || this.t('PRICING_PAGE.MESSAGES.CANCEL_ERROR'));
             }
             this.loading = false;
           }
@@ -1370,7 +1370,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         next: (response: any) => {
           if (response.success !== false) {
             const billingTypeText = event.paymentData.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
-            this.message.success(response.message || `Đăng ký gói ${billingTypeText} thành công`);
+            this.message.success(response.message || this.t('PRICING_PAGE.MESSAGES.SUBSCRIBE_SUCCESS', { billingType: billingTypeText }));
             this.loadCurrentPackage({ force: true });
             // Tạo thông báo hệ thống cho thanh toán và đăng ký gói thành công
             const pkg = this.packages.find(p => (p._id || p.id) === event.paymentData.packageId);
@@ -1384,13 +1384,13 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
               }
             }
           } else {
-            this.message.error(response.message || 'Đăng ký gói dịch vụ thất bại');
+            this.message.error(response.message || this.t('PRICING_PAGE.MESSAGES.SUBSCRIBE_ERROR'));
           }
           this.loading = false;
         },
         error: (error: any) => {
           console.error('Subscribe error after PayPal payment:', error);
-          this.message.error(error.error?.message || 'Có lỗi xảy ra khi đăng ký gói dịch vụ sau thanh toán');
+          this.message.error(error.error?.message || this.t('PRICING_PAGE.MESSAGES.SUBSCRIBE_AFTER_PAYMENT_ERROR'));
           this.loading = false;
         }
       });
@@ -1790,7 +1790,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loadLatestPaymentAndPlaySound();
     
     // Hiển thị thông báo thành công
-    this.message.success('Thanh toán thành công! Hệ thống đang xử lý đăng ký gói...');
+    this.message.success(this.t('PRICING_PAGE.MESSAGES.PAYMENT_SUCCESS_PROCESSING_SHORT'));
     
     // Tạo thông báo hệ thống cho thanh toán thành công
     if (this.selectedPackage) {

@@ -41,7 +41,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   saving = false;
   testingPaymentSpeaker = false;
   paymentSpeakerTestAmount = 100000;
-  paymentSpeakerTestMessage = 'Thanh toán thành công số tiền 100.000 đồng';
+  paymentSpeakerTestMessage = '';
   
   // Current user
   currentUser: any = null;
@@ -70,19 +70,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // Email providers - will be initialized in ngOnInit
   emailProviders: { value: string, label: string, description: string }[] = [];
   readonly systemAdminCapabilities: string[] = [
-    'Cấu hình hệ thống chung, bảo trì, bảo mật và định dạng vận hành',
-    'Quản lý email gửi hệ thống, thanh toán mặc định, Fanpage và OpenClaw pairing',
-    'Thiết lập thông báo toàn hệ thống và phát hành thông báo diện rộng'
+    'SETTINGS.CAP_ADMIN_1',
+    'SETTINGS.CAP_ADMIN_2',
+    'SETTINGS.CAP_ADMIN_3'
   ];
   readonly operatorCapabilities: string[] = [
-    'Quản lý cài đặt theo khách sạn đang làm việc',
-    'Bật hoặc tắt tính năng khách sạn theo gói đăng ký',
-    'Điều chỉnh QR thanh toán và thông báo riêng của khách sạn'
+    'SETTINGS.CAP_OPERATOR_1',
+    'SETTINGS.CAP_OPERATOR_2',
+    'SETTINGS.CAP_OPERATOR_3'
   ];
   readonly readonlyCapabilities: string[] = [
-    'Xem phân quyền và cài đặt đang áp dụng cho phạm vi làm việc',
-    'Không được thay đổi cấu hình hệ thống hoặc cấu hình khách sạn',
-    'Cần dùng tài khoản business, hotel manager hoặc admin khi muốn chỉnh sửa'
+    'SETTINGS.CAP_READONLY_1',
+    'SETTINGS.CAP_READONLY_2',
+    'SETTINGS.CAP_READONLY_3'
   ];
   
   constructor(
@@ -105,6 +105,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.initEmailProviders();
+    this.paymentSpeakerTestMessage = this.translate.instant('SETTINGS.PAYMENT_SPEAKER_MESSAGE_PLACEHOLDER');
+    if (!this.generalForm.get('maintenanceMessage')?.value) {
+      this.generalForm.patchValue({
+        maintenanceMessage: this.translate.instant('SETTINGS.MAINTENANCE_MESSAGE_PLACEHOLDER')
+      });
+    }
     this.loadCurrentUser();
     if (this.isManagementGroup()) {
       this.loadSettings();
@@ -133,7 +139,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private initForms(): void {
     // System Settings Form
     this.systemForm = this.fb.group({
-      systemName: ['Hệ thống quản lý khách sạn', Validators.required],
+      systemName: ['Hotel Management System', Validators.required],
       systemVersion: ['1.0.0'],
       timezone: ['Asia/Ho_Chi_Minh', Validators.required],
       language: ['vi', Validators.required],
@@ -171,7 +177,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       awsRegion: ['us-east-1'],
       // Common
       emailFrom: ['', [Validators.required, Validators.email]],
-      emailFromName: ['Hệ thống quản lý khách sạn'],
+      emailFromName: ['Hotel Management System'],
       emailReplyTo: [''],
       emailTestAddress: ['']
     });
@@ -234,7 +240,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       logo: [''],
       favicon: [''],
       maintenanceMode: [false],
-      maintenanceMessage: ['Hệ thống đang bảo trì. Vui lòng quay lại sau.'],
+      maintenanceMessage: [''],
       allowRegistration: [true],
       requireEmailVerification: [false],
       enable2FA: [false]
@@ -360,7 +366,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading settings:', error);
-        this.message.error('Lỗi khi tải cài đặt');
+        this.message.error(this.translate.instant('SETTINGS.MESSAGES.LOAD_ERROR'));
         this.loading = false;
       }
     });
@@ -369,7 +375,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   saveSystemSettings(): void {
     if (this.systemForm.invalid) {
       this.markFormGroupTouched(this.systemForm);
-      this.message.error('Vui lòng kiểm tra lại các trường bắt buộc');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.REQUIRED_FIELDS'));
       return;
     }
 
@@ -380,14 +386,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.saving = false;
         if (response.success) {
-          this.message.success(response.message || 'Đã lưu cài đặt hệ thống');
+          this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_SYSTEM_SUCCESS'));
         } else {
-          this.message.error(response.message || 'Lỗi khi lưu cài đặt hệ thống');
+          this.message.error(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_SYSTEM_ERROR'));
         }
       },
       error: (error) => {
         this.saving = false;
-        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt hệ thống');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_SYSTEM_ERROR'));
       }
     });
   }
@@ -395,7 +401,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   saveEmailSettings(): void {
     if (this.emailForm.invalid) {
       this.markFormGroupTouched(this.emailForm);
-      this.message.error('Vui lòng kiểm tra lại các trường bắt buộc');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.REQUIRED_FIELDS'));
       return;
     }
 
@@ -407,7 +413,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       emailEnabled: formValue.emailEnabled,
       emailProvider: formValue.emailProvider,
       emailFrom: formValue.emailFrom,
-      emailFromName: formValue.emailFromName || 'Hệ thống quản lý khách sạn',
+      emailFromName: formValue.emailFromName || this.translate.instant('SETTINGS.EMAIL_FROM_NAME_PLACEHOLDER'),
       emailReplyTo: formValue.emailReplyTo || '',
       emailTestAddress: formValue.emailTestAddress || ''
     };
@@ -461,18 +467,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.saving = false;
         if (response.success) {
-          this.message.success(response.message || 'Đã lưu cài đặt email');
+          this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_EMAIL_SUCCESS'));
           // Cập nhật lại form với password đã được ẩn
           if (response.data) {
             this.emailForm.patchValue(response.data);
           }
         } else {
-          this.message.error(response.message || 'Lỗi khi lưu cài đặt email');
+          this.message.error(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_EMAIL_ERROR'));
         }
       },
       error: (error) => {
         this.saving = false;
-        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt email');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_EMAIL_ERROR'));
       }
     });
   }
@@ -480,7 +486,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   savePaymentSettings(): void {
     if (this.paymentForm.invalid) {
       this.markFormGroupTouched(this.paymentForm);
-      this.message.error('Vui lòng kiểm tra lại các trường bắt buộc');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.REQUIRED_FIELDS'));
       return;
     }
 
@@ -511,15 +517,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.saving = false;
         if (response.success) {
-          this.message.success(response.message || 'Đã lưu cài đặt thanh toán');
+          this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_PAYMENT_SUCCESS'));
         } else {
-          this.message.error(response.message || 'Lỗi khi lưu cài đặt thanh toán');
+          this.message.error(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_PAYMENT_ERROR'));
         }
       },
       error: (error) => {
         this.saving = false;
         console.error('Error saving payment settings:', error);
-        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt thanh toán');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_PAYMENT_ERROR'));
       }
     });
   }
@@ -527,7 +533,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   saveNotificationSettings(): void {
     if (this.notificationForm.invalid) {
       this.markFormGroupTouched(this.notificationForm);
-      this.message.error('Vui lòng kiểm tra lại các trường bắt buộc');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.REQUIRED_FIELDS'));
       return;
     }
 
@@ -538,14 +544,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.saving = false;
         if (response.success) {
-          this.message.success(response.message || 'Đã lưu cài đặt thông báo');
+          this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_NOTIFICATION_SUCCESS'));
         } else {
-          this.message.error(response.message || 'Lỗi khi lưu cài đặt thông báo');
+          this.message.error(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_NOTIFICATION_ERROR'));
         }
       },
       error: (error) => {
         this.saving = false;
-        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt thông báo');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_NOTIFICATION_ERROR'));
       }
     });
   }
@@ -553,7 +559,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   saveGeneralSettings(): void {
     if (this.generalForm.invalid) {
       this.markFormGroupTouched(this.generalForm);
-      this.message.error('Vui lòng kiểm tra lại các trường bắt buộc');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.REQUIRED_FIELDS'));
       return;
     }
 
@@ -589,7 +595,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.saving = false;
         if (response.success) {
-          this.message.success(response.message || 'Đã lưu cài đặt chung');
+          this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_GENERAL_SUCCESS'));
           
           // Kiểm tra nếu maintenance mode được tắt
           if (previousMaintenanceMode === true && newMaintenanceMode === false) {
@@ -603,13 +609,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
             this.handleMaintenanceModeDisabled();
           }
         } else {
-          this.message.error(response.message || 'Lỗi khi lưu cài đặt chung');
+          this.message.error(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_GENERAL_ERROR'));
         }
       },
       error: (error) => {
         this.saving = false;
         console.error('Error saving general settings:', error);
-        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt chung');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_GENERAL_ERROR'));
       }
     });
   }
@@ -625,7 +631,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       detail: { enabled: false } 
     }));
     
-    this.message.success('Chế độ bảo trì đã được tắt. Người dùng có thể sử dụng hệ thống bình thường.');
+    this.message.success(this.translate.instant('SETTINGS.MESSAGES.MAINTENANCE_OFF'));
   }
 
   private handleMaintenanceModeEnabled(maintenanceMessage?: string): void {
@@ -642,7 +648,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   testEmailConnection(): void {
     if (this.emailForm.invalid) {
-      this.message.error('Vui lòng điền đầy đủ thông tin email');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.EMAIL_INFO_REQUIRED'));
       return;
     }
 
@@ -685,14 +691,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.loading = false;
         if (response.success) {
-          this.message.success(response.message || 'Kết nối email thành công');
+          this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.EMAIL_CONNECT_SUCCESS'));
         } else {
-          this.message.error(response.message || 'Lỗi khi kiểm tra kết nối email');
+          this.message.error(response.message || this.translate.instant('SETTINGS.MESSAGES.EMAIL_CONNECT_ERROR'));
         }
       },
       error: (error) => {
         this.loading = false;
-        this.message.error(error.error?.message || 'Lỗi khi kiểm tra kết nối email');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.EMAIL_CONNECT_ERROR'));
       }
     });
   }
@@ -768,7 +774,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   sendTestEmail(): void {
     const testAddress = this.emailForm.get('emailTestAddress')?.value;
     if (!testAddress) {
-      this.message.error('Vui lòng nhập địa chỉ email test');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.EMAIL_TEST_ADDRESS_REQUIRED'));
       return;
     }
 
@@ -811,14 +817,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.loading = false;
         if (response.success) {
-          this.message.success(response.message || `Đã gửi email test đến ${testAddress}`);
+          this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.EMAIL_TEST_SENT', { address: testAddress }));
         } else {
-          this.message.error(response.message || 'Lỗi khi gửi email test');
+          this.message.error(response.message || this.translate.instant('SETTINGS.MESSAGES.EMAIL_TEST_ERROR'));
         }
       },
       error: (error) => {
         this.loading = false;
-        this.message.error(error.error?.message || 'Lỗi khi gửi email test');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.EMAIL_TEST_ERROR'));
       }
     });
   }
@@ -834,7 +840,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   resetForm(form: FormGroup): void {
     form.reset();
     this.loadSettings();
-    this.message.info('Đã khôi phục cài đặt mặc định');
+    this.message.info(this.translate.instant('SETTINGS.MESSAGES.RESET_DEFAULT_SUCCESS'));
   }
 
   private loadHotels(): void {
@@ -914,7 +920,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading hotel settings:', error);
-        this.message.error('Lỗi khi tải cài đặt khách sạn');
+        this.message.error(this.translate.instant('SETTINGS.MESSAGES.LOAD_HOTEL_ERROR'));
       }
     });
   }
@@ -985,7 +991,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   
   saveHotelQRPaymentSettings(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Vui lòng chọn khách sạn');
+      this.message.warning(this.translate.instant('SETTINGS.MESSAGES.SELECT_HOTEL_WARNING'));
       return;
     }
     
@@ -998,19 +1004,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.hotelService.updateHotelSettings(this.selectedHotelId, settings).subscribe({
       next: (response) => {
         this.saving = false;
-        this.message.success(response.message || 'Đã lưu cài đặt QR thanh toán cho khách sạn');
+        this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_QR_SUCCESS'));
         this.currentHotelSettings = response.settings || {};
       },
       error: (error) => {
         this.saving = false;
-        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt QR thanh toán');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_QR_ERROR'));
       }
     });
   }
   
   saveHotelFeaturesSettings(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Vui lòng chọn khách sạn');
+      this.message.warning(this.translate.instant('SETTINGS.MESSAGES.SELECT_HOTEL_WARNING'));
       return;
     }
     
@@ -1033,7 +1039,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.hotelService.updateHotelSettings(this.selectedHotelId, settings).subscribe({
       next: (response) => {
         this.saving = false;
-        this.message.success(response.message || 'Đã lưu cài đặt tính năng cho khách sạn');
+        this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_HOTEL_FEATURES_SUCCESS'));
         this.currentHotelSettings = response.settings || {};
         window.dispatchEvent(new CustomEvent('paymentSettingsChanged', { detail: { enablePayPalPayment: settings.enablePayPalPayment, enableCryptoPayment: settings.enableCryptoPayment } }));
         // Reload để cập nhật UI
@@ -1136,24 +1142,24 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.paymentSpeakerTestAmount = amount > 0 ? amount : 0;
     if (this.paymentSpeakerTestAmount > 0) {
       const formatted = this.paymentSpeakerTestAmount.toLocaleString('vi-VN');
-      this.paymentSpeakerTestMessage = `Thanh toán thành công số tiền ${formatted} đồng`;
+      this.paymentSpeakerTestMessage = this.translate.instant('SETTINGS.PAYMENT_SPEAKER_TEST_TEMPLATE', { amount: formatted });
     }
   }
 
   testPaymentSpeaker(): void {
     const message = String(this.paymentSpeakerTestMessage || '').trim();
     if (!message) {
-      this.message.warning('Vui lòng nhập nội dung thông báo để nghe thử');
+      this.message.warning(this.translate.instant('SETTINGS.MESSAGES.SPEAKER_MESSAGE_REQUIRED'));
       return;
     }
 
     this.testingPaymentSpeaker = true;
-    this.message.loading('Đang gọi AI TTS (Edge)...', { nzDuration: 0 });
+    this.message.loading(this.translate.instant('SETTINGS.MESSAGES.TTS_LOADING'), { nzDuration: 0 });
     this.paymentSpeakerService.testSpeakViaAiTts(message).subscribe({
       next: () => {
         this.testingPaymentSpeaker = false;
         this.message.remove();
-        this.message.success('Edge TTS OK — đang phát loa thử');
+        this.message.success(this.translate.instant('SETTINGS.MESSAGES.EDGE_TTS_OK'));
       },
       error: (error) => {
         this.testingPaymentSpeaker = false;
@@ -1162,21 +1168,21 @@ export class SettingsComponent implements OnInit, OnDestroy {
           error?.error?.error ||
           error?.error?.detail ||
           error?.message ||
-          'Không gọi được AI TTS (ai.phhotel.vn/tts)';
-        this.message.error(`Nghe thử thất bại: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
+          this.translate.instant('SETTINGS.MESSAGES.TTS_UNREACHABLE');
+        this.message.error(this.translate.instant('SETTINGS.MESSAGES.LISTEN_FAIL', { detail: typeof detail === 'string' ? detail : JSON.stringify(detail) }));
       }
     });
   }
 
   saveHotelNotificationSettings(): void {
     if (!this.selectedHotelId) {
-      this.message.warning('Vui lòng chọn khách sạn');
+      this.message.warning(this.translate.instant('SETTINGS.MESSAGES.SELECT_HOTEL_WARNING'));
       return;
     }
     
     if (this.hotelNotificationForm.invalid) {
       this.markFormGroupTouched(this.hotelNotificationForm);
-      this.message.error('Vui lòng kiểm tra lại các trường bắt buộc');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.REQUIRED_FIELDS'));
       return;
     }
     
@@ -1190,7 +1196,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.hotelService.updateHotelSettings(this.selectedHotelId, settings).subscribe({
       next: (response) => {
         this.saving = false;
-        this.message.success(response.message || 'Đã lưu cài đặt thông báo cho khách sạn');
+        this.message.success(response.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_HOTEL_NOTIFICATION_SUCCESS'));
         this.currentHotelSettings = response.settings || settings;
         const savedNotificationSettings =
           this.currentHotelSettings?.notificationSettings || notificationSettings;
@@ -1207,7 +1213,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.saving = false;
-        this.message.error(error.error?.message || 'Lỗi khi lưu cài đặt thông báo');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.SAVE_NOTIFICATION_ERROR'));
       }
     });
   }
@@ -1246,31 +1252,31 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   getSettingsPageTitle(): string {
-    return this.isManagementGroup() ? 'Cài đặt hệ thống' : 'Cài đặt phạm vi làm việc';
+    return this.translate.instant(this.isManagementGroup() ? 'SETTINGS.TITLE' : 'SETTINGS.TITLE_SCOPED');
   }
 
   getSettingsPageSubtitle(): string {
     if (this.isManagementGroup()) {
-      return 'Quản trị hệ thống, tích hợp, thanh toán và chính sách vận hành toàn cục';
+      return this.translate.instant('SETTINGS.SUBTITLE_ADMIN');
     }
 
     if (this.canManageHotelSettings()) {
-      return 'Quản lý cấu hình theo khách sạn, gói dịch vụ và thông báo vận hành';
+      return this.translate.instant('SETTINGS.SUBTITLE_HOTEL');
     }
 
-    return 'Theo dõi quyền truy cập và các cài đặt đang áp dụng cho tài khoản hiện tại';
+    return this.translate.instant('SETTINGS.SUBTITLE_READONLY');
   }
 
   getRoleGroupLabel(): string {
     if (this.isManagementGroup()) {
-      return 'Nhóm quản trị';
+      return this.translate.instant('SETTINGS.ROLE_GROUP_ADMIN');
     }
 
     if (this.isUserGroup()) {
-      return 'Nhóm người dùng';
+      return this.translate.instant('SETTINGS.ROLE_GROUP_USER');
     }
 
-    return 'Người dùng';
+    return this.translate.instant('SETTINGS.ROLE_GROUP_DEFAULT');
   }
   
   // ============ ANNOUNCEMENTS MANAGEMENT ============
@@ -1351,7 +1357,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   saveAnnouncement(): void {
     if (this.announcementForm.invalid) {
       this.markFormGroupTouched(this.announcementForm);
-      this.message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.ANNOUNCEMENT_REQUIRED'));
       return;
     }
     
@@ -1375,24 +1381,24 @@ export class SettingsComponent implements OnInit, OnDestroy {
       // Update
       this.notificationsService.updateAnnouncement(this.editingAnnouncement.id, announcementData).subscribe({
         next: () => {
-          this.message.success('Đã cập nhật thông báo thành công');
+          this.message.success(this.translate.instant('SETTINGS.MESSAGES.ANNOUNCEMENT_UPDATE_SUCCESS'));
           this.closeAnnouncementModal();
           this.loadAnnouncements();
         },
         error: (error) => {
-          this.message.error(error.error?.message || 'Lỗi khi cập nhật thông báo');
+          this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.ANNOUNCEMENT_UPDATE_ERROR'));
         }
       });
     } else {
       // Create
       this.notificationsService.createAnnouncement(announcementData).subscribe({
         next: () => {
-          this.message.success('Đã tạo thông báo thành công');
+          this.message.success(this.translate.instant('SETTINGS.MESSAGES.ANNOUNCEMENT_CREATE_SUCCESS'));
           this.closeAnnouncementModal();
           this.loadAnnouncements();
         },
         error: (error) => {
-          this.message.error(error.error?.message || 'Lỗi khi tạo thông báo');
+          this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.ANNOUNCEMENT_CREATE_ERROR'));
         }
       });
     }
@@ -1401,47 +1407,57 @@ export class SettingsComponent implements OnInit, OnDestroy {
   deleteAnnouncement(announcement: Announcement): void {
     this.notificationsService.deleteAnnouncement(announcement.id).subscribe({
       next: () => {
-        this.message.success('Đã xóa thông báo thành công');
+        this.message.success(this.translate.instant('SETTINGS.MESSAGES.ANNOUNCEMENT_DELETE_SUCCESS'));
         this.loadAnnouncements();
       },
       error: (error) => {
-        this.message.error(error.error?.message || 'Lỗi khi xóa thông báo');
+        this.message.error(error.error?.message || this.translate.instant('SETTINGS.MESSAGES.ANNOUNCEMENT_DELETE_ERROR'));
       }
     });
   }
   
   getAnnouncementTypeLabel(type: string): string {
     const labels: { [key: string]: string } = {
-      'maintenance': 'Bảo trì',
-      'update': 'Cập nhật',
-      'info': 'Thông tin',
-      'warning': 'Cảnh báo',
-      'success': 'Thành công'
+      'maintenance': 'SETTINGS.ANNOUNCEMENT_TYPE_MAINTENANCE',
+      'update': 'SETTINGS.ANNOUNCEMENT_TYPE_UPDATE',
+      'info': 'SETTINGS.ANNOUNCEMENT_TYPE_INFO',
+      'warning': 'SETTINGS.ANNOUNCEMENT_TYPE_WARNING',
+      'success': 'SETTINGS.ANNOUNCEMENT_TYPE_SUCCESS'
     };
-    return labels[type] || type;
+    return this.translate.instant(labels[type] || type);
   }
   
   getTargetTypeLabel(type: string): string {
     const labels: { [key: string]: string } = {
-      'system': 'Hệ thống (Tất cả)',
-      'business': 'Doanh nghiệp',
-      'hotel': 'Khách sạn'
+      'system': 'SETTINGS.TARGET_SYSTEM_ALL',
+      'business': 'SETTINGS.TARGET_BUSINESS',
+      'hotel': 'SETTINGS.TARGET_HOTEL'
     };
-    return labels[type] || type;
+    return this.translate.instant(labels[type] || type);
   }
   
   getNotificationTypeLabel(type: string): string {
     const labels: { [key: string]: string } = {
-      'general': 'Chung',
-      'booking': 'Đặt phòng',
-      'checkin': 'Check-in',
-      'checkout': 'Check-out',
-      'payment': 'Thanh toán',
-      'cancellation': 'Hủy đặt phòng',
-      'lowInventory': 'Hết hàng',
-      'systemError': 'Lỗi hệ thống'
+      'general': 'SETTINGS.NOTIF_TYPE_GENERAL',
+      'booking': 'SETTINGS.NOTIF_TYPE_BOOKING',
+      'checkin': 'SETTINGS.NOTIF_TYPE_CHECKIN',
+      'checkout': 'SETTINGS.NOTIF_TYPE_CHECKOUT',
+      'payment': 'SETTINGS.NOTIF_TYPE_PAYMENT',
+      'cancellation': 'SETTINGS.NOTIF_TYPE_CANCELLATION',
+      'lowInventory': 'SETTINGS.NOTIF_TYPE_LOW_INVENTORY',
+      'systemError': 'SETTINGS.NOTIF_TYPE_SYSTEM_ERROR'
     };
-    return labels[type] || type;
+    return this.translate.instant(labels[type] || type);
+  }
+
+  getPriorityLabel(priority: string): string {
+    const labels: { [key: string]: string } = {
+      'low': 'SETTINGS.PRIORITY_LOW',
+      'medium': 'SETTINGS.PRIORITY_MEDIUM',
+      'high': 'SETTINGS.PRIORITY_HIGH',
+      'urgent': 'SETTINGS.PRIORITY_URGENT'
+    };
+    return this.translate.instant(labels[priority] || priority);
   }
   
   onTargetTypeChange(targetType: string): void {
@@ -1479,7 +1495,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   generateQrPayment(): void {
     const bankAccountFormGroup = this.paymentForm.get('bankAccount');
     if (!bankAccountFormGroup) {
-      this.message.warning('Không tìm thấy form thông tin ngân hàng');
+      this.message.warning(this.translate.instant('SETTINGS.MESSAGES.BANK_FORM_NOT_FOUND'));
       return;
     }
 
@@ -1488,7 +1504,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     const beneficiaryName = bankAccountFormGroup.get('beneficiaryName')?.value?.trim() || '';
 
     if (!bankName || !accountNumber) {
-      this.message.warning('Vui lòng nhập tên ngân hàng và số tài khoản');
+      this.message.warning(this.translate.instant('SETTINGS.MESSAGES.BANK_INFO_REQUIRED'));
       return;
     }
 
@@ -1508,7 +1524,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     });
     
     this.showQrPreview = true;
-    this.message.success('Đã tạo QR thanh toán thành công. Vui lòng bấm "Lưu cài đặt" để lưu vào hệ thống.');
+    this.message.success(this.translate.instant('SETTINGS.MESSAGES.QR_CREATED'));
   }
 
   /**
@@ -1558,7 +1574,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   connectFanpage(): void {
     const tenantId = this.getTenantIdForAI();
     if (!tenantId) {
-      this.message.error('Vui lòng chọn đúng khách sạn trước khi kết nối Fanpage.');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.FANPAGE_SELECT_HOTEL_CONNECT'));
       return;
     }
     this.aiAssistant.getFacebookOAuthUrl(tenantId).then(url => {
@@ -1571,7 +1587,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   loadFacebookPages(): void {
     const tenantId = this.getTenantIdForAI();
     if (!tenantId) {
-      this.message.error('Vui lòng chọn đúng khách sạn trước khi tải danh sách Fanpage.');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.FANPAGE_SELECT_HOTEL_LOAD'));
       return;
     }
     this.loadingFacebook = true;
@@ -1579,11 +1595,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.facebookPages = pages || [];
       this.loadingFacebook = false;
       if (!this.facebookPages.length) {
-        this.message.info('Chưa có fanpage liên kết. Vui lòng bấm Kết nối Fanpage.');
+        this.message.info(this.translate.instant('SETTINGS.MESSAGES.FANPAGE_NONE'));
       }
     }).catch(() => {
       this.loadingFacebook = false;
-      this.message.error('Lỗi tải danh sách fanpage');
+      this.message.error(this.translate.instant('SETTINGS.MESSAGES.FANPAGE_LOAD_ERROR'));
     });
   }
 
@@ -1592,7 +1608,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
    */
   openOpenClawControlUi(): void {
     if (!this.isManagementGroup()) {
-      this.message.warning('Chỉ admin hoặc superadmin mới được phép mở OpenClaw.');
+      this.message.warning(this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_ADMIN_ONLY_OPEN'));
       return;
     }
     if (this.openingOpenClaw) {
@@ -1611,13 +1627,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
           } else {
             window.open(res.url, '_blank');
           }
-          this.message.info('Đang mở OpenClaw với token gateway... Tự động duyệt kết nối.');
+          this.message.info(this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_OPENING'));
           this.startOpenClawAutoApprovePolling(30, 1000);
         } else {
           if (newTab) {
             newTab.close();
           }
-          this.message.error(res?.message || 'Không lấy được URL OpenClaw.');
+          this.message.error(res?.message || this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_URL_ERROR'));
         }
       },
       error: (error) => {
@@ -1625,7 +1641,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         if (newTab) {
           newTab.close();
         }
-        this.message.error(error?.error?.message || error?.error?.detail || 'Lỗi khi lấy URL OpenClaw.');
+        this.message.error(error?.error?.message || error?.error?.detail || this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_URL_FETCH_ERROR'));
       }
     });
   }
@@ -1640,7 +1656,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.aiAssistant.approveOpenClawPairing().subscribe({
         next: (response) => {
           if (response?.success) {
-            this.message.success(response?.message || 'Đã auto-approve OpenClaw pairing.');
+            this.message.success(response?.message || this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_AUTO_APPROVE'));
             this.approvingOpenClawPairing = false;
             this.clearOpenClawApprovePoll();
             this.loadOpenClawDevicePairings();
@@ -1649,7 +1665,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
           if (attempts >= maxAttempts) {
             this.approvingOpenClawPairing = false;
             this.clearOpenClawApprovePoll();
-            this.message.info('Chưa có pending pairing. Có thể thiết bị đã được duyệt hoặc chưa kết nối.');
+            this.message.info(this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_NO_PENDING_MAYBE'));
             this.loadOpenClawDevicePairings();
           }
         },
@@ -1682,7 +1698,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   loadOpenClawDevicePairings(): void {
     if (!this.isManagementGroup()) {
-      this.message.warning('Chỉ admin hoặc superadmin mới được phép quản lý OpenClaw pairing.');
+      this.message.warning(this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_ADMIN_ONLY_MANAGE'));
       return;
     }
 
@@ -1704,21 +1720,21 @@ export class SettingsComponent implements OnInit, OnDestroy {
           this.openClawPairedDevices = [];
         }
         if (!this.openClawPendingPairings.length) {
-          this.message.info('Hiện tại không có pending OpenClaw pairing nào.');
+          this.message.info(this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_NO_PENDING_INFO'));
         } else {
-          this.message.success(`Đã tải ${this.openClawPendingPairings.length} pending OpenClaw pairing.`);
+          this.message.success(this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_PENDING_LOADED', { count: this.openClawPendingPairings.length }));
         }
       },
       error: (error) => {
         this.loadingOpenClawPairings = false;
-        this.message.error(error?.error?.message || 'Lỗi khi tải danh sách OpenClaw pairing.');
+        this.message.error(error?.error?.message || this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_PENDING_LOAD_ERROR'));
       }
     });
   }
 
   approveLatestOpenClawPairing(requestId?: string): void {
     if (!this.isManagementGroup()) {
-      this.message.warning('Chỉ admin hoặc superadmin mới được phép approve OpenClaw pairing.');
+      this.message.warning(this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_ADMIN_ONLY_APPROVE'));
       return;
     }
 
@@ -1727,15 +1743,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.approvingOpenClawPairing = false;
         if (response?.success) {
-          this.message.success(response?.message || 'Đã approve OpenClaw pairing thành công.');
+          this.message.success(response?.message || this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_APPROVE_SUCCESS'));
         } else {
-          this.message.info(response?.message || 'Chưa có pending pairing để approve.');
+          this.message.info(response?.message || this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_NO_PENDING_APPROVE'));
         }
         this.loadOpenClawDevicePairings();
       },
       error: (error) => {
         this.approvingOpenClawPairing = false;
-        this.message.error(error?.error?.message || 'Không approve được OpenClaw pairing.');
+        this.message.error(error?.error?.message || this.translate.instant('SETTINGS.MESSAGES.OPENCLAW_APPROVE_ERROR'));
       }
     });
   }

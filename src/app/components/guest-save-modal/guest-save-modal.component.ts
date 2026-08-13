@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzModalRef, NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { GuestsService } from '../../services/guests.service';
 import { Guest } from '../../models/guest.model';
 import { Room } from '../../interfaces/rooms';
@@ -141,7 +142,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     const cardType = response?.result?.type || response?.type || '';
 
     if (!ocrData || Object.keys(ocrData).length === 0) {
-      this.message.error('Không tìm thấy dữ liệu văn bản trên ảnh.');
+      this.message.error(this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.NO_TEXT_ON_IMAGE'));
       return;
     }
 
@@ -197,7 +198,8 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       });
     }
 
-    this.message.success(`Đã tự động điền thông tin ${cardType ? 'từ ' + cardType : ''}.`);
+    const fromCard = cardType ? this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.OCR_FROM_CARD', { cardType }) : '';
+    this.message.success(this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.OCR_FILLED', { fromCard }));
   }
 
   constructor(
@@ -207,7 +209,8 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     private guestsService: GuestsService,
     private roomsService: RoomsService,
     private message: NzMessageService,
-    private authService: AuthService
+    private authService: AuthService,
+    private translate: TranslateService
   ) {
     this.room = data.room;
   }
@@ -445,13 +448,13 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
           this.roomsService.updateRoomCheckinInfo(this.room._id, guestInfo, 0).subscribe({
             next: () => {
               console.log('[GuestSaveModal] Update room info for occupied room successful');
-              this.message.success(`Đã cập nhật thông tin khách "${this.getGuestName(guest)}" vào phòng`);
+              this.message.success(this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.GUEST_UPDATED_TO_ROOM', { name: this.getGuestName(guest) }));
               this.modalRef.close({ success: true, guestId: this.selectedGuestId });
               this.isLoading = false;
             },
             error: (err: any) => {
               console.error('[GuestSaveModal] Update room check-in info error:', err);
-              this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
+              this.message.error(err.error?.message || this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.GUEST_UPDATE_FAILED'));
               this.isLoading = false;
             }
           });
@@ -464,13 +467,13 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
           }).subscribe({
             next: () => {
               console.log('[GuestSaveModal] Assign guest to vacant room successful');
-              this.message.success(`Đã assign khách "${this.getGuestName(guest)}" vào phòng`);
+              this.message.success(this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.GUEST_ASSIGNED_TO_ROOM', { name: this.getGuestName(guest) }));
               this.modalRef.close({ success: true, guestId: guestId });
               this.isLoading = false;
             },
             error: (err: any) => {
               console.error('[GuestSaveModal] Assign guest to room error:', err);
-              this.message.error(err.error?.message || 'Lỗi assign khách vào phòng');
+              this.message.error(err.error?.message || this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.GUEST_ASSIGN_FAILED'));
               this.isLoading = false;
             }
           });
@@ -478,7 +481,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       },
       error: (error: any) => {
         console.error('[GuestSaveModal] Get guest by ID error:', error);
-        this.message.error('Không thể lấy thông tin khách');
+        this.message.error(this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.GUEST_FETCH_FAILED'));
         this.isLoading = false;
       }
     });
@@ -543,7 +546,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
     this.guestsService.createGuest(guestData).subscribe({
       next: (response) => {
         console.log('[GuestSaveModal] Guest created successfully:', response.guest._id);
-        this.message.success('Lưu thông tin khách thành công');
+        this.message.success(this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.SAVE_SUCCESS'));
 
         if (response.guest._id) {
           // Lấy địa chỉ đầy đủ từ form
@@ -576,13 +579,13 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
             this.roomsService.updateRoomCheckinInfo(this.room._id, guestInfo, 0).subscribe({
               next: () => {
                 console.log('[GuestSaveModal] Update room info for occupied room successful');
-                this.message.success('Đã lưu và cập nhật thông tin khách vào phòng');
+                this.message.success(this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.SAVE_AND_UPDATE_ROOM'));
                 this.modalRef.close({ success: true, guestId: response.guest._id });
                 this.isLoading = false;
               },
               error: (err: any) => {
                 console.error('[GuestSaveModal] Update room check-in info error:', err);
-                this.message.error(err.error?.message || 'Cập nhật thông tin khách thất bại');
+                this.message.error(err.error?.message || this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.GUEST_UPDATE_FAILED'));
                 this.isLoading = false;
               }
             });
@@ -594,13 +597,13 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
             }).subscribe({
               next: () => {
                 console.log('[GuestSaveModal] Assign new guest to vacant room successful');
-                this.message.success('Đã lưu và assign khách vào phòng');
+                this.message.success(this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.SAVE_AND_ASSIGN_ROOM'));
                 this.modalRef.close({ success: true, guestId: response.guest._id });
                 this.isLoading = false;
               },
               error: (err: any) => {
                 console.error('[GuestSaveModal] Assign guest to room error:', err);
-                this.message.error(err.error?.message || 'Lỗi assign khách vào phòng');
+                this.message.error(err.error?.message || this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.GUEST_ASSIGN_FAILED'));
                 this.isLoading = false;
               }
             });
@@ -612,7 +615,7 @@ export class GuestSaveModalComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('[GuestSaveModal] Create guest error:', error);
-        this.message.error(error.error?.message || 'Lỗi lưu thông tin khách');
+        this.message.error(error.error?.message || this.translate.instant('GUEST_SAVE_MODAL.MESSAGES.SAVE_ERROR'));
         this.isLoading = false;
       }
     });

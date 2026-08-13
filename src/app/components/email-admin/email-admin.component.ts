@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { SettingsService, EmailSettings } from '../../services/settings.service';
 import { AuthService } from '../../services/auth.service';
 import { EmailService, EmailData } from '../../services/email.service';
@@ -20,32 +21,45 @@ export class EmailAdminComponent implements OnInit {
   testEmailAddress = '';
 
   emailProviders = [
-    { value: 'resend', label: 'Resend (Khuyến nghị)', description: 'Miễn phí 3000 email/tháng, API đơn giản' },
-    { value: 'sendgrid', label: 'SendGrid', description: 'Miễn phí 100 email/ngày' },
-    { value: 'mailgun', label: 'Mailgun', description: 'Miễn phí 5000 email/tháng (3 tháng đầu)' },
-    { value: 'aws-ses', label: 'AWS SES', description: 'Giá rẻ, scale tốt' },
-    { value: 'nodemailer', label: 'Nodemailer (SMTP)', description: 'SMTP truyền thống (Gmail, Outlook, etc.)' }
+    { value: 'resend', label: '', description: '' },
+    { value: 'sendgrid', label: '', description: '' },
+    { value: 'mailgun', label: '', description: '' },
+    { value: 'aws-ses', label: '', description: '' },
+    { value: 'nodemailer', label: '', description: '' }
   ];
 
   constructor(
     private fb: FormBuilder,
     private message: NzMessageService,
+    private translate: TranslateService,
     private settingsService: SettingsService,
     private authService: AuthService,
     private emailService: EmailService
   ) {
     this.initForm();
     this.initSendEmailForm();
+    this.refreshEmailProviders();
   }
 
   ngOnInit(): void {
     // Kiểm tra quyền truy cập
     if (!this.canAccess()) {
-      this.message.error('Bạn không có quyền truy cập trang này');
+      this.message.error(this.translate.instant('EMAIL_ADMIN.MESSAGES.NO_ACCESS'));
       return;
     }
-    
+
+    this.translate.onLangChange.subscribe(() => this.refreshEmailProviders());
     this.loadEmailSettings();
+  }
+
+  private refreshEmailProviders(): void {
+    this.emailProviders = [
+      { value: 'resend', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_RESEND'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_RESEND_DESC') },
+      { value: 'sendgrid', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_SENDGRID'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_SENDGRID_DESC') },
+      { value: 'mailgun', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_MAILGUN'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_MAILGUN_DESC') },
+      { value: 'aws-ses', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_AWS_SES'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_AWS_SES_DESC') },
+      { value: 'nodemailer', label: this.translate.instant('SETTINGS.EMAIL_PROVIDER_NODEMAILER'), description: this.translate.instant('SETTINGS.EMAIL_PROVIDER_NODEMAILER_DESC') }
+    ];
   }
 
   canAccess(): boolean {
@@ -81,7 +95,7 @@ export class EmailAdminComponent implements OnInit {
       awsRegion: ['us-east-1'],
       // Common
       emailFrom: ['', [Validators.required, Validators.email]],
-      emailFromName: ['Hệ thống quản lý khách sạn'],
+      emailFromName: [this.translate.instant('SETTINGS.EMAIL_FROM_NAME_PLACEHOLDER')],
       emailReplyTo: [''],
       emailTestAddress: ['']
     });
@@ -181,7 +195,7 @@ export class EmailAdminComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading email settings:', error);
-        this.message.error('Lỗi khi tải cài đặt email');
+        this.message.error(this.translate.instant('EMAIL_ADMIN.MESSAGES.LOAD_SETTINGS_ERROR'));
         this.loading = false;
       }
     });
@@ -195,7 +209,7 @@ export class EmailAdminComponent implements OnInit {
           control.updateValueAndValidity({ onlySelf: true });
         }
       });
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc');
+      this.message.warning(this.translate.instant('EMAIL_ADMIN.MESSAGES.REQUIRED_FIELDS'));
       return;
     }
 
@@ -207,7 +221,7 @@ export class EmailAdminComponent implements OnInit {
       emailEnabled: formValue.emailEnabled,
       emailProvider: formValue.emailProvider,
       emailFrom: formValue.emailFrom,
-      emailFromName: formValue.emailFromName || 'Hệ thống quản lý khách sạn',
+      emailFromName: formValue.emailFromName || this.translate.instant('SETTINGS.EMAIL_FROM_NAME_PLACEHOLDER'),
       emailReplyTo: formValue.emailReplyTo || '',
       emailTestAddress: formValue.emailTestAddress || ''
     };
@@ -273,16 +287,16 @@ export class EmailAdminComponent implements OnInit {
     this.settingsService.updateEmailSettings(emailSettings).subscribe({
       next: (response) => {
         if (response.success) {
-          this.message.success('Đã lưu cài đặt email thành công');
+          this.message.success(this.translate.instant('EMAIL_ADMIN.MESSAGES.SAVE_SUCCESS'));
           this.loadEmailSettings(); // Reload để có dữ liệu mới nhất
         } else {
-          this.message.error(response.message || 'Lỗi khi lưu cài đặt email');
+          this.message.error(response.message || this.translate.instant('EMAIL_ADMIN.MESSAGES.SAVE_ERROR'));
         }
         this.saving = false;
       },
       error: (error) => {
         console.error('Error saving email settings:', error);
-        this.message.error('Lỗi khi lưu cài đặt email');
+        this.message.error(this.translate.instant('EMAIL_ADMIN.MESSAGES.SAVE_ERROR'));
         this.saving = false;
       }
     });
@@ -290,7 +304,7 @@ export class EmailAdminComponent implements OnInit {
 
   testConnection(): void {
     if (this.emailForm.invalid) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc trước khi test');
+      this.message.warning(this.translate.instant('EMAIL_ADMIN.MESSAGES.REQUIRED_BEFORE_TEST'));
       return;
     }
 
@@ -331,15 +345,15 @@ export class EmailAdminComponent implements OnInit {
     this.settingsService.testEmailConnection(emailSettings).subscribe({
       next: (response) => {
         if (response.success) {
-          this.message.success(response.message || 'Kết nối email thành công');
+          this.message.success(response.message || this.translate.instant('EMAIL_ADMIN.MESSAGES.CONNECT_SUCCESS'));
         } else {
-          this.message.error(response.message || 'Lỗi khi kiểm tra kết nối email');
+          this.message.error(response.message || this.translate.instant('EMAIL_ADMIN.MESSAGES.CONNECT_ERROR'));
         }
         this.testing = false;
       },
       error: (error) => {
         console.error('Error testing email connection:', error);
-        this.message.error(error.error?.message || 'Lỗi khi kiểm tra kết nối email');
+        this.message.error(error.error?.message || this.translate.instant('EMAIL_ADMIN.MESSAGES.CONNECT_ERROR'));
         this.testing = false;
       }
     });
@@ -347,12 +361,12 @@ export class EmailAdminComponent implements OnInit {
 
   sendTestEmail(): void {
     if (!this.testEmailAddress || !this.testEmailAddress.includes('@')) {
-      this.message.warning('Vui lòng nhập địa chỉ email hợp lệ');
+      this.message.warning(this.translate.instant('EMAIL_ADMIN.MESSAGES.INVALID_TEST_EMAIL'));
       return;
     }
 
     if (this.emailForm.invalid) {
-      this.message.warning('Vui lòng điền đầy đủ thông tin bắt buộc trước khi gửi test');
+      this.message.warning(this.translate.instant('EMAIL_ADMIN.MESSAGES.REQUIRED_BEFORE_SEND_TEST'));
       return;
     }
 
@@ -393,15 +407,15 @@ export class EmailAdminComponent implements OnInit {
     this.settingsService.sendTestEmail(emailSettings, this.testEmailAddress).subscribe({
       next: (response) => {
         if (response.success) {
-          this.message.success(response.message || 'Đã gửi email test thành công');
+          this.message.success(response.message || this.translate.instant('EMAIL_ADMIN.MESSAGES.TEST_SEND_SUCCESS'));
         } else {
-          this.message.error(response.message || 'Lỗi khi gửi email test');
+          this.message.error(response.message || this.translate.instant('EMAIL_ADMIN.MESSAGES.TEST_SEND_ERROR'));
         }
         this.testing = false;
       },
       error: (error) => {
         console.error('Error sending test email:', error);
-        this.message.error(error.error?.message || 'Lỗi khi gửi email test');
+        this.message.error(error.error?.message || this.translate.instant('EMAIL_ADMIN.MESSAGES.TEST_SEND_ERROR'));
         this.testing = false;
       }
     });
@@ -438,7 +452,7 @@ export class EmailAdminComponent implements OnInit {
           control.updateValueAndValidity({ onlySelf: true });
         }
       });
-      this.message.warning('Vui lòng điền đầy đủ thông tin');
+      this.message.warning(this.translate.instant('EMAIL_ADMIN.MESSAGES.FILL_SEND_FORM'));
       return;
     }
 
@@ -455,15 +469,15 @@ export class EmailAdminComponent implements OnInit {
       next: (response) => {
         this.sending = false;
         if (response.success || response.messageId) {
-          this.message.success('Email đã được gửi thành công');
+          this.message.success(this.translate.instant('EMAIL_ADMIN.MESSAGES.SEND_SUCCESS'));
           this.sendEmailForm.reset();
         } else {
-          this.message.error('Lỗi khi gửi email');
+          this.message.error(this.translate.instant('EMAIL_ADMIN.MESSAGES.SEND_ERROR'));
         }
       },
       error: (error) => {
         console.error('Error sending email:', error);
-        this.message.error(error.error?.message || 'Lỗi khi gửi email');
+        this.message.error(error.error?.message || this.translate.instant('EMAIL_ADMIN.MESSAGES.SEND_ERROR'));
         this.sending = false;
       }
     });

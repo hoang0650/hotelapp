@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { BankTransferService, BankTransfer } from '../../services/bank-transfer.service';
 import { PayPalService } from '../../services/paypal.service';
 import { CryptoService } from '../../services/crypto.service';
@@ -67,7 +68,8 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     private hotelService: HotelService,
     private message: NzMessageService,
     private paymentSpeakerService: PaymentSpeakerService,
-    private userService: UserService
+    private userService: UserService,
+    private translate: TranslateService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -188,8 +190,10 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
 
     this.message.success(
       amount > 0
-        ? `Thanh toán SePay thành công: ${amount.toLocaleString('vi-VN')} VND`
-        : 'Thanh toán SePay thành công'
+        ? this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.SEPAY_SUCCESS_WITH_AMOUNT', {
+            amount: amount.toLocaleString('vi-VN')
+          })
+        : this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.SEPAY_SUCCESS')
     );
 
     if (this.enablePaymentSpeaker) {
@@ -289,7 +293,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     // Refresh transfers
     this.loadTransfers();
     
-    this.message.success('Đã làm mới dữ liệu');
+    this.message.success(this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.REFRESHED'));
   }
 
   loadTransfers() {
@@ -301,7 +305,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         },
         error: (error) => {
-          this.message.error('Không thể tải dữ liệu. Vui lòng thử lại sau.');
+          this.message.error(this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.LOAD_FAIL'));
           this.isLoading = false;
         }
       });
@@ -320,7 +324,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         },
         error: (error) => {
-          this.message.error('Không thể tìm kiếm. Vui lòng thử lại sau.');
+          this.message.error(this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.SEARCH_FAIL'));
           this.isLoading = false;
         }
       });
@@ -718,12 +722,12 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     this.sepayService.updatePaymentHistoryStatus(paymentHistoryId, status).subscribe({
       next: (response: any) => {
         this.updatingPaymentIds.delete(paymentHistoryId);
-        this.message.success(response?.message || 'Đã cập nhật trạng thái thanh toán');
+        this.message.success(response?.message || this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.UPDATE_STATUS_SUCCESS'));
         this.refreshPaymentHistory();
       },
       error: (error) => {
         this.updatingPaymentIds.delete(paymentHistoryId);
-        this.message.error(error?.error?.message || 'Không thể cập nhật trạng thái thanh toán');
+        this.message.error(error?.error?.message || this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.UPDATE_STATUS_FAIL'));
       }
     });
   }

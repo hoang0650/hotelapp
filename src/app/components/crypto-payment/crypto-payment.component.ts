@@ -1,5 +1,6 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { CryptoService, CryptoPaymentRequest, CryptoPaymentData } from '../../services/crypto.service';
 
 @Component({
@@ -28,7 +29,8 @@ export class CryptoPaymentComponent implements OnInit {
 
   constructor(
     private cryptoService: CryptoService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -44,7 +46,7 @@ export class CryptoPaymentComponent implements OnInit {
 
   createPayment(): void {
     if (!this.paymentData) {
-      this.message.error('Thiếu thông tin thanh toán');
+      this.message.error(this.translate.instant('CRYPTO_PAYMENT.MESSAGES.MISSING_PAYMENT_INFO'));
       return;
     }
 
@@ -65,11 +67,11 @@ export class CryptoPaymentComponent implements OnInit {
       next: (response) => {
         this.paymentInfo = response;
         this.loading = false;
-        this.message.success('Đã tạo thông tin thanh toán crypto');
+        this.message.success(this.translate.instant('CRYPTO_PAYMENT.MESSAGES.CREATED'));
       },
       error: (error) => {
         console.error('Error creating crypto payment:', error);
-        this.message.error(error.error?.error || 'Không thể tạo thanh toán crypto');
+        this.message.error(error.error?.error || this.translate.instant('CRYPTO_PAYMENT.MESSAGES.CREATE_ERROR'));
         this.loading = false;
       }
     });
@@ -94,7 +96,7 @@ export class CryptoPaymentComponent implements OnInit {
       network: this.selectedNetwork
     }).subscribe({
       next: (response) => {
-        this.message.success('Đã gửi yêu cầu xác nhận. Vui lòng đợi admin xác nhận.');
+        this.message.success(this.translate.instant('CRYPTO_PAYMENT.MESSAGES.CONFIRM_REQUESTED'));
         this.verifying = false;
         // Có thể emit event để parent component xử lý
         this.paymentSuccess.emit({
@@ -106,7 +108,7 @@ export class CryptoPaymentComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error verifying payment:', error);
-        this.message.error(error.error?.error || 'Không thể xác nhận thanh toán');
+        this.message.error(error.error?.error || this.translate.instant('CRYPTO_PAYMENT.MESSAGES.CONFIRM_ERROR'));
         this.verifying = false;
       }
     });
@@ -114,9 +116,9 @@ export class CryptoPaymentComponent implements OnInit {
 
   copyToClipboard(text: string, label: string): void {
     navigator.clipboard.writeText(text).then(() => {
-      this.message.success(`Đã copy ${label}`);
+      this.message.success(this.translate.instant('CRYPTO_PAYMENT.MESSAGES.COPIED_LABEL', { label }));
     }).catch(() => {
-      this.message.error('Không thể copy');
+      this.message.error(this.translate.instant('CRYPTO_PAYMENT.MESSAGES.COPY_FAIL'));
     });
   }
 

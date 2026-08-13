@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter, AfterViewInit, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -67,7 +68,8 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
     private message: NzMessageService,
     @Inject(PLATFORM_ID) private platformId: Object,
     public currencyService: CurrencyService,
-    private http: HttpClient
+    private http: HttpClient,
+    private translate: TranslateService
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
@@ -138,7 +140,7 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
         next: (cfg) => {
           const clientId = cfg?.clientId;
           if (!clientId) {
-            this.message.error('Thiếu cấu hình PayPal Client ID');
+            this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.CLIENT_ID_MISSING'));
             return;
           }
           const script = document.createElement('script');
@@ -150,12 +152,12 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
             this.renderPayPalButton();
           };
           script.onerror = () => {
-            this.message.error('Không thể tải PayPal SDK. Vui lòng thử lại sau.');
+            this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.SDK_LOAD_FAIL'));
           };
           document.body.appendChild(script);
         },
         error: () => {
-          this.message.error('Không thể lấy cấu hình PayPal từ hệ thống');
+          this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.CONFIG_FAIL'));
         }
       });
   }
@@ -235,17 +237,17 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
         }
       }).render(`#${this.paypalButtonId}`).catch((error: any) => {
         console.error('PayPal render error:', error);
-        this.message.error('Không thể tải PayPal button. Vui lòng thử lại.');
+        this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.BUTTON_LOAD_FAIL'));
       });
     } catch (error: any) {
       console.error('Error rendering PayPal button:', error);
-      this.message.error('Có lỗi xảy ra khi tải PayPal button. Vui lòng thử lại.');
+      this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.BUTTON_LOAD_ERROR'));
     }
   }
 
   handlePaymentSuccess(details: any): void {
     this.loading = true;
-    this.message.success('Thanh toán PayPal thành công!');
+    this.message.success(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.PAYMENT_SUCCESS'));
     
     // Emit event với thông tin thanh toán, bao gồm currency đã chọn
     this.paymentSuccess.emit({
@@ -272,7 +274,7 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
 
   handlePaymentError(err: any): void {
     console.error('PayPal payment error:', err);
-    this.message.error('Có lỗi xảy ra khi thanh toán PayPal. Vui lòng thử lại.');
+    this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.PAYMENT_FAIL'));
     this.loading = false;
   }
 
@@ -419,7 +421,7 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
         },
         error: (error) => {
           console.error('Currency conversion error:', error);
-          this.message.error('Không thể lấy tỷ giá. Sử dụng giá gốc.');
+          this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.EXCHANGE_RATE_FAIL'));
           this.convertedAmount = this.originalAmount;
           this.exchangeRate = 1;
           this.isConverting = false;

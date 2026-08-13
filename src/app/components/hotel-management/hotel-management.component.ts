@@ -746,7 +746,10 @@ export class HotelManagementComponent implements OnInit, OnDestroy {
       }
       this.isLoadingUpload = false;
     } else if (info.file.status === 'error') {
-      this.message.error(`${this.translate.instant('HOTEL_MANAGEMENT.UPLOAD_LOGO_ERROR')} ${info.file.error?.message || this.translate.instant('COMMON.ERROR')}`);
+      this.message.error(
+        this.translate.instant('HOTEL_MANAGEMENT.UPLOAD_LOGO_ERROR') + ' ' +
+        (info.file.error?.message || this.translate.instant('COMMON.ERROR'))
+      );
       console.error('Upload error:', info.file.error);
       this.isLoadingUpload = false;
     }

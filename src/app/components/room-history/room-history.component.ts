@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { TranslateService } from '@ngx-translate/core';
 
 // Mở rộng BookingHistory để thêm các trường cần thiết cho hiển thị
 export interface ExtendedBookingHistory extends BookingHistory {
@@ -140,7 +141,8 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
     private message: NzMessageService,
     private router: Router,
     private fb: FormBuilder,
-    private cdr: ChangeDetectorRef // Inject ChangeDetectorRef
+    private cdr: ChangeDetectorRef, // Inject ChangeDetectorRef
+    private translate: TranslateService
   ) { }
 
   ngOnInit(): void {
@@ -253,7 +255,7 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
     // Implement Excel export functionality here
     
     setTimeout(() => {
-      this.message.success('Xuất file Excel thành công!');
+      this.message.success(this.translate.instant('ROOM_HISTORY.MESSAGES.EXPORT_EXCEL_SUCCESS'));
     }, 1000);
   }
   
@@ -385,7 +387,7 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
         this.cdr.detectChanges(); // Trigger change detection
       },
       error: (error) => {
-        this.message.error('Lỗi khi tải lịch sử phòng.');
+        this.message.error(this.translate.instant('ROOM_HISTORY.MESSAGES.LOAD_ERROR'));
         console.error('Error loading room history:', error);
         this.isLoading = false;
       }
@@ -590,7 +592,7 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
       // Tạo dữ liệu hóa đơn từ history item
       this.showInvoiceFromHistoryItem(historyItem);
     } else {
-      this.message.error('Không tìm thấy thông tin để xem hóa đơn.');
+      this.message.error(this.translate.instant('ROOM_HISTORY.MESSAGES.INVOICE_INFO_NOT_FOUND'));
       console.error('Invalid history item passed to viewInvoiceFromTable:', historyItem);
     }
   }
@@ -790,7 +792,7 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
   // Hàm xem hóa đơn gốc (được gọi bởi viewInvoiceFromTable)
   viewInvoice(invoiceId: string | undefined): void {
     if (!invoiceId) {
-      this.message.error('Không tìm thấy ID hóa đơn.');
+      this.message.error(this.translate.instant('ROOM_HISTORY.MESSAGES.INVOICE_ID_NOT_FOUND'));
       return;
     }
     this.isLoading = true;
@@ -801,12 +803,12 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
         if (invoiceData) {
           this.showInvoiceModal(invoiceData);
         } else {
-          this.message.error('Không tìm thấy thông tin hóa đơn.');
+          this.message.error(this.translate.instant('ROOM_HISTORY.MESSAGES.INVOICE_NOT_FOUND'));
         }
         this.isLoading = false;
       },
       error: (error: any) => {
-        this.message.error('Lỗi khi tải thông tin hóa đơn.');
+        this.message.error(this.translate.instant('ROOM_HISTORY.MESSAGES.INVOICE_LOAD_ERROR'));
         console.error('Error fetching invoice:', error);
         this.isLoading = false;
       }

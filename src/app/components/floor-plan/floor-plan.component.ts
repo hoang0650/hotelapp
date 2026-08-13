@@ -112,7 +112,7 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
         if (gen !== this.loadGen) return;
         this.isLoading = false;
         console.error('Error loading rooms:', error);
-        this.message.error('Lỗi khi tải danh sách phòng');
+        this.message.error(this.translate.instant('FLOOR_PLAN.MESSAGES.LOAD_ROOMS_ERROR'));
       }
     );
   }
@@ -194,15 +194,15 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   getStatusLabel(status: string): string {
-    switch (status) {
-      case 'vacant': return 'Trống';
-      case 'occupied': return 'Đang ở';
-      case 'cleaning': return 'Dọn dẹp';
-      case 'dirty': return 'Bẩn';
-      case 'maintenance': return 'Bảo trì';
-      case 'booked': return 'Đã đặt';
-      default: return status;
-    }
+    const keyMap: Record<string, string> = {
+      vacant: 'FLOOR_PLAN.STATUS.VACANT',
+      occupied: 'FLOOR_PLAN.STATUS.OCCUPIED',
+      cleaning: 'FLOOR_PLAN.STATUS.CLEANING',
+      dirty: 'FLOOR_PLAN.STATUS.DIRTY',
+      maintenance: 'FLOOR_PLAN.STATUS.MAINTENANCE',
+      booked: 'FLOOR_PLAN.STATUS.BOOKED'
+    };
+    return keyMap[status] ? this.translate.instant(keyMap[status]) : status;
   }
 
   addFloor(): void {
@@ -210,21 +210,21 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
 
     const floorStr = String(this.newFloorNumber);
     if (this.floors.includes(floorStr)) {
-      this.message.warning(`Tầng ${floorStr} đã tồn tại`);
+      this.message.warning(this.translate.instant('FLOOR_PLAN.MESSAGES.FLOOR_EXISTS', { floor: floorStr }));
       return;
     }
 
     this.floors.push(floorStr);
     this.floors.sort((a, b) => Number(a) - Number(b));
     this.newRoomData[floorStr] = { roomNumber: '', categoryId: '' };
-    this.message.success(`Đã thêm tầng ${floorStr}`);
+    this.message.success(this.translate.instant('FLOOR_PLAN.MESSAGES.FLOOR_ADDED', { floor: floorStr }));
     this.newFloorNumber = null;
   }
 
   addRoom(floor: string): void {
     const roomData = this.newRoomData[floor];
     if (!roomData || !roomData.roomNumber) {
-      this.message.warning('Vui lòng nhập số phòng');
+      this.message.warning(this.translate.instant('FLOOR_PLAN.MESSAGES.ROOM_NUMBER_REQUIRED'));
       return;
     }
 
@@ -251,13 +251,16 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
       (created) => {
         this.rooms.push(created);
         this.rooms = [...this.rooms];
-        this.message.success(`Đã thêm phòng ${roomData.roomNumber} vào tầng ${floor}`);
+        this.message.success(this.translate.instant('FLOOR_PLAN.MESSAGES.ROOM_ADDED', {
+          roomNumber: roomData.roomNumber,
+          floor
+        }));
         this.newRoomData[floor] = { roomNumber: '', categoryId: roomData.categoryId };
         this.loadFloors();
       },
       (error) => {
         console.error('Error creating room:', error);
-        this.message.error(error.error?.message || 'Lỗi khi tạo phòng');
+        this.message.error(error.error?.message || this.translate.instant('FLOOR_PLAN.MESSAGES.CREATE_ROOM_ERROR'));
       }
     );
   }
@@ -266,11 +269,11 @@ export class FloorPlanComponent implements OnInit, OnChanges, OnDestroy {
     this.roomService.deleteRoom(roomId).subscribe(
       () => {
         this.rooms = this.rooms.filter(r => r._id !== roomId);
-        this.message.success('Đã xóa phòng');
+        this.message.success(this.translate.instant('FLOOR_PLAN.MESSAGES.ROOM_DELETED'));
       },
       (error) => {
         console.error('Error deleting room:', error);
-        this.message.error(error.error?.message || 'Lỗi khi xóa phòng');
+        this.message.error(error.error?.message || this.translate.instant('FLOOR_PLAN.MESSAGES.DELETE_ROOM_ERROR'));
       }
     );
   }

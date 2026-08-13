@@ -123,7 +123,7 @@ export class BlogManagementComponent implements OnInit {
         })
           .then((url) => callback(url, { title: file.name, alt: file.name }))
           .catch((err) => {
-            this.message.error(err?.message || 'Upload ảnh TinyMCE thất bại');
+            this.message.error(err?.message || this.translate.instant('BLOG_MANAGEMENT.TINYMCE_UPLOAD_ERROR'));
           });
       };
       input.click();
@@ -632,7 +632,7 @@ export class BlogManagementComponent implements OnInit {
           );
 
         if (!imageUrl) {
-          this.message.error('Upload thành công nhưng không nhận được link ảnh CDN');
+          this.message.error(this.translate.instant('BLOG_MANAGEMENT.UPLOAD_NO_CDN_URL'));
           this.isLoading = false;
           return;
         }
@@ -643,11 +643,13 @@ export class BlogManagementComponent implements OnInit {
           imageUrl: forSave,
           featuredImage: forSave
         });
-        this.message.success('Tải lên hình ảnh thành công');
+        this.message.success(this.translate.instant('BLOG_MANAGEMENT.UPLOAD_SUCCESS'));
       }
       this.isLoading = false;
     } else if (info.file.status === 'error') {
-      this.message.error(`Lỗi khi tải lên hình ảnh: ${info.file.error?.message || 'Không xác định'}`);
+      this.message.error(this.translate.instant('BLOG_MANAGEMENT.UPLOAD_ERROR', {
+        message: info.file.error?.message || this.translate.instant('BLOG_MANAGEMENT.UPLOAD_ERROR_UNKNOWN')
+      }));
       console.error('Upload error:', info.file.error);
       this.isLoading = false;
     }
@@ -656,12 +658,12 @@ export class BlogManagementComponent implements OnInit {
   beforeUpload = (file: NzUploadFile): boolean => {
     const isImage = file.type?.startsWith('image/');
     if (!isImage) {
-      this.message.error('Bạn chỉ có thể tải lên file hình ảnh!');
+      this.message.error(this.translate.instant('BLOG_MANAGEMENT.UPLOAD_IMAGE_ONLY'));
       return false;
     }
     const isLt5M = (file.size || 0) / 1024 / 1024 < 5;
     if (!isLt5M) {
-      this.message.error('Hình ảnh phải nhỏ hơn 5MB!');
+      this.message.error(this.translate.instant('BLOG_MANAGEMENT.UPLOAD_SIZE_LIMIT'));
       return false;
     }
     this.fileList = this.fileList.concat(file);

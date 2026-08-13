@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
@@ -35,7 +36,8 @@ export class EInvoiceTemplateComponent implements OnInit, OnDestroy {
     private message: NzMessageService,
     private authService: AuthService,
     public providerService: EInvoiceProviderService, // Public để dùng trong template
-    private invoiceService: InvoiceService
+    private invoiceService: InvoiceService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -145,14 +147,14 @@ export class EInvoiceTemplateComponent implements OnInit, OnDestroy {
           
           console.log('[EInvoice Template] Loaded templates:', this.templates);
         } else {
-          this.message.error(response.message || 'Không thể tải danh sách mẫu');
+          this.message.error(response.message || this.translate.instant('E_INVOICE_TEMPLATE.MESSAGES.LOAD_TEMPLATES_ERROR'));
           this.templates = [];
         }
       },
       error: (error) => {
         this.loading = false;
         console.error('Error loading templates:', error);
-        this.message.error('Có lỗi xảy ra khi tải danh sách mẫu hóa đơn');
+        this.message.error(this.translate.instant('E_INVOICE_TEMPLATE.MESSAGES.LOAD_TEMPLATES_ERROR_GENERIC'));
         this.templates = [];
       }
     });
@@ -177,7 +179,9 @@ export class EInvoiceTemplateComponent implements OnInit, OnDestroy {
     this.selectedTemplate = template;
     // Lưu template đã chọn vào service để dùng làm mặc định khi tạo hóa đơn
     this.providerService.setSelectedTemplate(template);
-    this.message.success(`Đã chọn mẫu: ${template.name || template.invoice_label}`);
+    this.message.success(this.translate.instant('E_INVOICE_TEMPLATE.MESSAGES.SELECTED_TEMPLATE', {
+      name: template.name || template.invoice_label
+    }));
   }
 
   setAsDefault(template: InvoiceTemplate): void {
@@ -186,7 +190,7 @@ export class EInvoiceTemplateComponent implements OnInit, OnDestroy {
     this.templates.forEach(t => t.isDefault = false);
     template.isDefault = true;
     this.selectedTemplate = template;
-    this.message.success('Đã đặt mẫu mặc định');
+    this.message.success(this.translate.instant('E_INVOICE_TEMPLATE.MESSAGES.SET_DEFAULT'));
   }
 
   previewTemplate(template: InvoiceTemplate): void {

@@ -4,6 +4,7 @@ import { RoomServiceService, RoomService, ServiceOrder } from '../../services/ro
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { OrderedService } from '../../interfaces/rooms';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-room-service',
@@ -36,7 +37,8 @@ export class RoomServiceComponent implements OnInit {
     private roomServiceService: RoomServiceService,
     private message: NzMessageService,
     private modal: NzModalService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private translate: TranslateService
   ) {
     this.serviceForm = this.fb.group({
       name: ['', [Validators.required]],
@@ -60,7 +62,7 @@ export class RoomServiceComponent implements OnInit {
 
   loadServices(): void {
     if (!this.hotelId) {
-      this.message.error('Không có khách sạn được chọn');
+      this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.NO_HOTEL'));
       return;
     }
 
@@ -72,7 +74,7 @@ export class RoomServiceComponent implements OnInit {
         this.loadCategories();
       },
       (error) => {
-        this.message.error('Lỗi khi tải danh sách dịch vụ: ' + error.message);
+        this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.LOAD_SERVICES_ERROR', { message: error.message }));
         this.isLoading = false;
       }
     );
@@ -86,7 +88,7 @@ export class RoomServiceComponent implements OnInit {
         this.categories = data;
       },
       (error) => {
-        this.message.error('Lỗi khi tải danh mục dịch vụ: ' + error.message);
+        this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.LOAD_CATEGORIES_ERROR', { message: error.message }));
       }
     );
   }
@@ -142,12 +144,12 @@ export class RoomServiceComponent implements OnInit {
 
   submitServiceForm(): void {
     if (this.serviceForm.invalid) {
-      this.message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.REQUIRED_FIELDS'));
       return;
     }
 
     if (!this.hotelId) {
-      this.message.error('Không có khách sạn được chọn');
+      this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.NO_HOTEL'));
       return;
     }
 
@@ -162,26 +164,26 @@ export class RoomServiceComponent implements OnInit {
     if (this.isEditing && this.editingServiceId) {
       this.roomServiceService.updateService(this.editingServiceId, serviceData).subscribe(
         (updatedService) => {
-          this.message.success('Cập nhật dịch vụ thành công');
+          this.message.success(this.translate.instant('ROOM_SERVICE.MESSAGES.UPDATE_SUCCESS'));
           this.isLoading = false;
           this.isServiceFormVisible = false;
           this.loadServices();
         },
         (error) => {
-          this.message.error('Lỗi khi cập nhật dịch vụ: ' + error.message);
+          this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.UPDATE_ERROR', { message: error.message }));
           this.isLoading = false;
         }
       );
     } else {
       this.roomServiceService.createService(serviceData).subscribe(
         (newService) => {
-          this.message.success('Thêm dịch vụ thành công');
+          this.message.success(this.translate.instant('ROOM_SERVICE.MESSAGES.ADD_SUCCESS'));
           this.isLoading = false;
           this.isServiceFormVisible = false;
           this.loadServices();
         },
         (error) => {
-          this.message.error('Lỗi khi thêm dịch vụ: ' + error.message);
+          this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.ADD_ERROR', { message: error.message }));
           this.isLoading = false;
         }
       );
@@ -198,12 +200,12 @@ export class RoomServiceComponent implements OnInit {
         this.isLoading = true;
         this.roomServiceService.deleteService(serviceId).subscribe(
           () => {
-            this.message.success('Xóa dịch vụ thành công');
+            this.message.success(this.translate.instant('ROOM_SERVICE.MESSAGES.DELETE_SUCCESS'));
             this.isLoading = false;
             this.loadServices();
           },
           (error) => {
-            this.message.error('Lỗi khi xóa dịch vụ: ' + error.message);
+            this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.DELETE_ERROR', { message: error.message }));
             this.isLoading = false;
           }
         );
@@ -230,7 +232,7 @@ export class RoomServiceComponent implements OnInit {
     }
     
     this.calculateTotal();
-    this.message.success(`Đã thêm ${service.name} vào giỏ hàng`);
+    this.message.success(this.translate.instant('ROOM_SERVICE.MESSAGES.CART_ADDED', { name: service.name }));
   }
 
   updateCartItemQuantity(item: OrderedService, change: number): void {
@@ -270,7 +272,7 @@ export class RoomServiceComponent implements OnInit {
 
   submitOrder(): void {
     if (!this.hotelId || !this.roomId) {
-      this.message.error('Không có thông tin phòng hoặc khách sạn');
+      this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.NO_ROOM_OR_HOTEL'));
       return;
     }
 
@@ -292,13 +294,13 @@ export class RoomServiceComponent implements OnInit {
     this.isLoading = true;
     this.roomServiceService.createServiceOrder(order).subscribe(
       (newOrder) => {
-        this.message.success('Đặt dịch vụ thành công');
+        this.message.success(this.translate.instant('ROOM_SERVICE.MESSAGES.ORDER_SUCCESS'));
         this.isLoading = false;
         this.clearCart();
         this.loadServiceOrders();
       },
       (error) => {
-        this.message.error('Lỗi khi đặt dịch vụ: ' + error.message);
+        this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.ORDER_ERROR', { message: error.message }));
         this.isLoading = false;
       }
     );
@@ -316,7 +318,7 @@ export class RoomServiceComponent implements OnInit {
         this.isLoading = false;
       },
       (error) => {
-        this.message.error('Lỗi khi tải lịch sử đơn hàng: ' + error.message);
+        this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.HISTORY_LOAD_ERROR', { message: error.message }));
         this.isLoading = false;
       }
     );
@@ -332,12 +334,12 @@ export class RoomServiceComponent implements OnInit {
         this.isLoading = true;
         this.roomServiceService.updateServiceOrderStatus(orderId, 'cancelled').subscribe(
           () => {
-            this.message.success('Hủy đơn hàng thành công');
+            this.message.success(this.translate.instant('ROOM_SERVICE.MESSAGES.CANCEL_SUCCESS'));
             this.isLoading = false;
             this.loadServiceOrders();
           },
           (error) => {
-            this.message.error('Lỗi khi hủy đơn hàng: ' + error.message);
+            this.message.error(this.translate.instant('ROOM_SERVICE.MESSAGES.CANCEL_ERROR', { message: error.message }));
             this.isLoading = false;
           }
         );

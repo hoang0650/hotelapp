@@ -8,6 +8,7 @@ import { SessionContextService } from '../../services/session-context.service';
 import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
 import { Hotel } from '../../interfaces/hotel';
+import { TranslateService } from '@ngx-translate/core';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -75,7 +76,8 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
     private aiAssistantService: AiAssistantService,
     private sessionContext: SessionContextService,
     private authService: AuthService,
-    private hotelService: HotelService
+    private hotelService: HotelService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -401,7 +403,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
           if (newTab) {
             newTab.close();
           }
-          this.message.error(res?.message || 'Không lấy được đường dẫn OpenClaw Gateway.');
+          this.message.error(res?.message || this.translate.instant('AI_CHATBOX.MESSAGES.OPENCLAW_URL_ERROR'));
         }
       },
       error: err => {
@@ -410,7 +412,9 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
           newTab.close();
         }
         this.message.error(
-          'Lỗi khi lấy URL OpenClaw: ' + (err?.error?.detail || err?.error?.message || err.message)
+          this.translate.instant('AI_CHATBOX.MESSAGES.OPENCLAW_URL_FETCH_ERROR', {
+            detail: err?.error?.detail || err?.error?.message || err.message
+          })
         );
       }
     });
@@ -431,7 +435,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
       this.aiAssistantService.approveOpenClawPairing().subscribe({
         next: res => {
           if (res && res.success) {
-            this.message.success('Đã tự động Approve kết nối OpenClaw!');
+            this.message.success(this.translate.instant('AI_CHATBOX.MESSAGES.OPENCLAW_APPROVE_SUCCESS'));
             this.isApprovingDevice = false;
             this.clearApproveTimers();
             return;
@@ -580,7 +584,7 @@ export class AiChatboxComponent implements OnInit, OnDestroy {
         { hotelId: effectiveHotelId || null }
       );
     } catch (error) {
-      this.message.error('Lỗi khi kết nối với AI Assistant.');
+      this.message.error(this.translate.instant('AI_CHATBOX.MESSAGES.AI_CONNECT_ERROR'));
       console.error('Chat error:', error);
     }
   }

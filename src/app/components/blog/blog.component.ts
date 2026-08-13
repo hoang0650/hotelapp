@@ -294,7 +294,7 @@ export class BlogComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi like comment:', error);
-        this.message.error(error.error?.message || 'Không thể thích bình luận');
+        this.message.error(error.error?.message || this.translate.instant('BLOG.LIKE_COMMENT_ERROR'));
       }
     });
   }
@@ -312,7 +312,7 @@ export class BlogComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi dislike comment:', error);
-        this.message.error(error.error?.message || 'Không thể không thích bình luận');
+        this.message.error(error.error?.message || this.translate.instant('BLOG.UNLIKE_COMMENT_ERROR'));
       }
     });
   }
@@ -339,7 +339,7 @@ export class BlogComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi like blog:', error);
-        this.message.error(error.error?.message || 'Không thể thích bài viết');
+        this.message.error(error.error?.message || this.translate.instant('BLOG.LIKE_POST_ERROR'));
         this.isLikingBlog = false;
       }
     });
@@ -367,7 +367,7 @@ export class BlogComponent implements OnInit {
       },
       error: (error) => {
         console.error('Lỗi khi dislike blog:', error);
-        this.message.error(error.error?.message || 'Không thể không thích bài viết');
+        this.message.error(error.error?.message || this.translate.instant('BLOG.UNLIKE_POST_ERROR'));
         this.isDislikingBlog = false;
       }
     });
@@ -376,14 +376,14 @@ export class BlogComponent implements OnInit {
   deleteComment(commentId: string): void {
     this.commentService.deleteComment(commentId).subscribe({
       next: () => {
-        this.message.success('Đã xóa bình luận');
+        this.message.success(this.translate.instant('BLOG.COMMENT_DELETE_SUCCESS'));
         if (this.selectedBlog?._id) {
           this.loadComments(this.selectedBlog._id);
         }
       },
       error: (error) => {
         console.error('Lỗi khi xóa comment:', error);
-        this.message.error(error.error?.message || 'Không thể xóa bình luận');
+        this.message.error(error.error?.message || this.translate.instant('BLOG.COMMENT_DELETE_ERROR'));
       }
     });
   }

@@ -20,6 +20,7 @@ import {
 } from '../../interfaces/ota-integration';
 import { Hotel } from '../../interfaces/hotel';
 import { Room } from '../../interfaces/rooms';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-ota-management',
@@ -80,7 +81,8 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     private roomsService: RoomsService,
     private authService: AuthService,
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private translate: TranslateService
   ) {
     this.initializeForms();
   }
@@ -173,7 +175,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.hotelService.getHotels().subscribe(
         (data: Hotel[]) => this.hotels = data,
-        (err: any) => this.message.error('Không thể tải danh sách khách sạn.')
+        (err: any) => this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.HOTELS_LOAD_ERROR'))
       )
     );
   }
@@ -190,7 +192,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         },
         (error: any) => {
           this.isLoading = false;
-          this.message.error('Lỗi khi tải danh sách cấu hình OTA.');
+          this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.CONFIG_LOAD_ERROR'));
           console.error(error);
         }
       )
@@ -216,11 +218,11 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         (response: OtaBookingsResponse) => {
           this.bookings = response.data || [];
           this.isBookingsLoading = false;
-          this.message.success(`Đã lấy ${this.bookings.length} đặt phòng từ ${provider}`);
+          this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.BOOKINGS_FETCHED', { count: this.bookings.length, provider }));
         },
         (error: any) => {
           this.isBookingsLoading = false;
-          this.message.error(`Lỗi khi lấy đặt phòng từ ${provider}`);
+          this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.BOOKINGS_FETCH_ERROR', { provider }));
           console.error(error);
         }
       )
@@ -249,11 +251,11 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
           this.calendarEvents = response.data || [];
           this.calendarSummary = response.summary;
           this.isBookingsLoading = false;
-          this.message.success(`Đã lấy ${this.calendarEvents.length} đặt phòng cho calendar`);
+          this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.CALENDAR_FETCHED', { count: this.calendarEvents.length }));
         },
         (error: any) => {
           this.isBookingsLoading = false;
-          this.message.error('Lỗi khi lấy đặt phòng cho calendar');
+          this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.CALENDAR_FETCH_ERROR'));
           console.error(error);
         }
       )
@@ -274,7 +276,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
    */
   assignBookingToRoom(booking: OtaBooking, roomId: string): void {
     if (!booking._id) {
-      this.message.error('Không tìm thấy booking ID');
+      this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.BOOKING_ID_NOT_FOUND'));
       return;
     }
 
@@ -285,12 +287,12 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
       this.otaService.assignOtaBookingToRoom(booking._id, roomId, staffId || undefined).subscribe(
         (response: ApiResponse) => {
           this.isLoading = false;
-          this.message.success('Đã assign booking vào phòng thành công');
+          this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.ASSIGN_SUCCESS'));
           this.loadCalendarBookings(); // Refresh
         },
         (error: any) => {
           this.isLoading = false;
-          this.message.error(error.error?.message || 'Lỗi khi assign booking');
+          this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.ASSIGN_ERROR'));
           console.error(error);
         }
       )
@@ -321,7 +323,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
           (rooms: Room[]) => this.roomsForHotel = rooms,
           (err: any) => {
             this.roomsForHotel = [];
-            this.message.error(`Không thể tải danh sách phòng cho khách sạn ID: ${hotelId}`);
+            this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.ROOMS_LOAD_ERROR', { hotelId }));
           }
         )
       );
@@ -373,7 +375,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
 
   submitForm(): void {
     if (this.otaForm.invalid) {
-      this.message.error('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.REQUIRED_FIELDS'));
       Object.values(this.otaForm.controls).forEach(control => {
         if (control.invalid) {
           control.markAsDirty();
@@ -398,12 +400,12 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         (res: ApiResponse<OtaIntegration>) => {
           this.isLoading = false;
           this.isModalVisible = false;
-          this.message.success(res.message || (this.editId ? 'Cập nhật thành công!' : 'Tạo mới thành công!'));
+          this.message.success(res.message || this.translate.instant(this.editId ? 'OTA_MANAGEMENT.MESSAGES.UPDATE_SUCCESS' : 'OTA_MANAGEMENT.MESSAGES.CREATE_SUCCESS'));
           this.loadOtaIntegrations();
         },
         (error: any) => {
           this.isLoading = false;
-          this.message.error(error.error?.message || 'Đã có lỗi xảy ra.');
+          this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.GENERIC_ERROR'));
           console.error(error);
         }
       )
@@ -454,12 +456,12 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         this.otaService.updateOtaIntegration(this.selectedIntegration._id, formData)
           .subscribe({
             next: (response) => {
-              this.message.success('Cập nhật tích hợp OTA thành công');
+              this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_UPDATE_SUCCESS'));
               this.loadOtaIntegrations();
               this.isModalVisible = false;
             },
             error: (error) => {
-              this.message.error('Lỗi khi cập nhật tích hợp OTA');
+              this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_UPDATE_ERROR'));
               console.error('Update integration error:', error);
             }
           });
@@ -472,12 +474,12 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         this.otaService.createOtaIntegration(formData)
           .subscribe({
             next: (response) => {
-              this.message.success('Thêm tích hợp OTA thành công');
+              this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_SUCCESS'));
               this.loadOtaIntegrations();
               this.isModalVisible = false;
             },
             error: (error) => {
-              this.message.error('Lỗi khi thêm tích hợp OTA');
+              this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_ERROR'));
               console.error('Create integration error:', error);
             }
           });
@@ -507,11 +509,11 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         this.otaService.deleteOtaIntegration(integration._id)
           .subscribe({
             next: () => {
-              this.message.success('Xóa tích hợp OTA thành công');
+              this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_DELETE_SUCCESS'));
               this.loadOtaIntegrations();
             },
             error: (error) => {
-              this.message.error('Lỗi khi xóa tích hợp OTA');
+              this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_DELETE_ERROR'));
               console.error('Delete integration error:', error);
             }
           });
@@ -530,11 +532,11 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.otaService.loginOtaProvider(integration._id, integration.provider, credentials)
       .subscribe({
         next: (response: ApiResponse<OtaIntegration>) => {
-          this.message.success('Đăng nhập thành công!');
+          this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.LOGIN_SUCCESS'));
           this.loadOtaIntegrations();
         },
         error: (error: any) => {
-          this.message.error(error.error?.message || 'Đăng nhập thất bại');
+          this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.LOGIN_ERROR'));
         }
       });
   }
@@ -549,12 +551,12 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.otaService.syncOtaData(integration._id)
       .subscribe({
         next: (response: ApiResponse) => {
-          this.message.success('Đồng bộ dữ liệu thành công!');
+          this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.SYNC_SUCCESS'));
           this.loadOtaIntegrations();
           this.isSyncing = false;
         },
         error: (error: any) => {
-          this.message.error(error.error?.message || 'Lỗi khi đồng bộ dữ liệu');
+          this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.SYNC_ERROR'));
           this.isSyncing = false;
         }
       });
@@ -693,9 +695,9 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
 
         const successCount = this.inventorySyncResult.totalSuccess;
         if (successCount > 0) {
-          this.message.success(`Đã đồng bộ thành công ${successCount}/${syncResults.length} OTA`);
+          this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.INVENTORY_SYNC_PARTIAL', { successCount, total: syncResults.length }));
         } else {
-          this.message.error('Không có OTA nào đồng bộ thành công');
+          this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.INVENTORY_SYNC_NONE'));
         }
 
         // Refresh integrations để cập nhật lastSync
@@ -703,7 +705,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
       })
       .catch(error => {
         this.isSyncingInventory = false;
-        this.message.error('Lỗi khi đồng bộ inventory');
+        this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.INVENTORY_SYNC_ERROR'));
         console.error('Sync inventory error:', error);
       });
   }
@@ -731,12 +733,12 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
           this.otaService.syncInventoryToOta(integration._id, startDate, endDate).subscribe({
             next: (response: ApiResponse) => {
               this.isSyncingInventory = false;
-              this.message.success(`Đã đồng bộ ${response.data?.syncedRooms || 0} loại phòng lên ${integration.provider}`);
+              this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.INVENTORY_SYNC_ROOMS', { count: response.data?.syncedRooms || 0, provider: integration.provider }));
               this.loadOtaIntegrations();
             },
             error: (error: any) => {
               this.isSyncingInventory = false;
-              this.message.error(error.error?.message || 'Lỗi khi đồng bộ inventory');
+              this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.INVENTORY_SYNC_ERROR'));
               console.error('Sync inventory error:', error);
             }
           })

@@ -1,20 +1,20 @@
 <div class="email-admin-container" *ngIf="canAccess()">
-  <nz-card [nzTitle]="'Cấu hình Email'" [nzBordered]="true">
+  <nz-card [nzTitle]="'EMAIL_ADMIN.TITLE' | translate" [nzBordered]="true">
     <nz-spin [nzSpinning]="loading">
       <form nz-form [formGroup]="emailForm" nzLayout="vertical">
         <!-- Email Enabled -->
         <nz-form-item>
-          <nz-form-label>Bật gửi email</nz-form-label>
+          <nz-form-label>{{ 'SETTINGS.EMAIL_ENABLED' | translate }}</nz-form-label>
           <nz-form-control>
-            <nz-switch formControlName="emailEnabled" [nzCheckedChildren]="'Bật'" [nzUnCheckedChildren]="'Tắt'"></nz-switch>
+            <nz-switch formControlName="emailEnabled" [nzCheckedChildren]="'EMAIL_ADMIN.ON' | translate" [nzUnCheckedChildren]="'EMAIL_ADMIN.OFF' | translate"></nz-switch>
           </nz-form-control>
         </nz-form-item>
 
         <!-- Email Provider -->
         <nz-form-item>
-          <nz-form-label nzRequired>Email Provider</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng chọn email provider">
-            <nz-select formControlName="emailProvider" nzPlaceHolder="Chọn email provider">
+          <nz-form-label nzRequired>{{ 'SETTINGS.EMAIL_PROVIDER' | translate }}</nz-form-label>
+          <nz-form-control [nzErrorTip]="'SETTINGS.EMAIL_PROVIDER_REQUIRED' | translate">
+            <nz-select formControlName="emailProvider" [nzPlaceHolder]="'SETTINGS.EMAIL_PROVIDER_PLACEHOLDER' | translate">
               <nz-option *ngFor="let provider of emailProviders" [nzValue]="provider.value" [nzLabel]="provider.label">
                 <div>
                   <strong>{{ provider.label }}</strong>
@@ -26,117 +26,117 @@
         </nz-form-item>
 
         <!-- Nodemailer/SMTP Settings -->
-        <nz-card *ngIf="showField('smtp')" [nzTitle]="'Cấu hình SMTP'" [nzBordered]="false" style="margin-top: 16px;">
+        <nz-card *ngIf="showField('smtp')" [nzTitle]="'SETTINGS.SMTP_CONFIG' | translate" [nzBordered]="false" style="margin-top: 16px;">
           <nz-form-item>
-            <nz-form-label nzRequired>SMTP Host</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập SMTP host">
-              <input nz-input formControlName="smtpHost" placeholder="smtp.gmail.com" />
+            <nz-form-label nzRequired>{{ 'SETTINGS.SMTP_HOST' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.SMTP_HOST_REQUIRED' | translate">
+              <input nz-input formControlName="smtpHost" [placeholder]="'SETTINGS.SMTP_HOST_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label nzRequired>SMTP Port</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập SMTP port">
+            <nz-form-label nzRequired>{{ 'SETTINGS.SMTP_PORT' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.SMTP_PORT_REQUIRED' | translate">
               <nz-input-number formControlName="smtpPort" [nzMin]="1" [nzMax]="65535" style="width: 100%;"></nz-input-number>
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Bảo mật (SSL/TLS)</nz-form-label>
+            <nz-form-label>{{ 'SETTINGS.SMTP_SECURE' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-switch formControlName="smtpSecure"></nz-switch>
-              <div style="font-size: 12px; color: #999; margin-top: 4px;">Bật cho port 465, tắt cho port 587</div>
+              <div style="font-size: 12px; color: #999; margin-top: 4px;">{{ 'SETTINGS.SMTP_SECURE_NOTE' | translate }}</div>
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label nzRequired>Email/Username</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
-              <input nz-input type="email" formControlName="smtpUser" placeholder="email@gmail.com" />
+            <nz-form-label nzRequired>{{ 'SETTINGS.SMTP_USER' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.SMTP_USER_REQUIRED' | translate">
+              <input nz-input type="email" formControlName="smtpUser" [placeholder]="'SETTINGS.SMTP_USER_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label nzRequired>Mật khẩu/App Password</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập mật khẩu">
-              <input nz-input type="password" formControlName="smtpPassword" placeholder="Nhập mật khẩu hoặc App Password" />
+            <nz-form-label nzRequired>{{ 'SETTINGS.SMTP_PASSWORD' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.SMTP_PASSWORD_REQUIRED' | translate">
+              <input nz-input type="password" formControlName="smtpPassword" [placeholder]="'SETTINGS.SMTP_PASSWORD_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
         </nz-card>
 
         <!-- Resend Settings -->
-        <nz-card *ngIf="showField('resend')" [nzTitle]="'Cấu hình Resend'" [nzBordered]="false" style="margin-top: 16px;">
-          <nz-alert nzType="info" nzMessage="Resend - Miễn phí 3000 email/tháng" [nzDescription]="'Đăng ký tại https://resend.com và lấy API Key từ dashboard. Lưu ý: Để gửi email đến các địa chỉ khác (không phải email đăng ký), bạn cần verify domain tại https://resend.com/domains và sử dụng email từ domain đã verify làm địa chỉ From.'" style="margin-bottom: 16px;"></nz-alert>
+        <nz-card *ngIf="showField('resend')" [nzTitle]="'SETTINGS.RESEND_CONFIG' | translate" [nzBordered]="false" style="margin-top: 16px;">
+          <nz-alert nzType="info" [nzMessage]="'SETTINGS.RESEND_INFO' | translate" [nzDescription]="'EMAIL_ADMIN.RESEND_DESCRIPTION' | translate" style="margin-bottom: 16px;"></nz-alert>
           <nz-form-item>
-            <nz-form-label nzRequired>Resend API Key</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập Resend API Key">
-              <input nz-input type="password" formControlName="resendApiKey" placeholder="re_xxxxx" />
+            <nz-form-label nzRequired>{{ 'SETTINGS.RESEND_API_KEY' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.RESEND_API_KEY_REQUIRED' | translate">
+              <input nz-input type="password" formControlName="resendApiKey" [placeholder]="'SETTINGS.RESEND_API_KEY_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Template đặt lại mật khẩu (ID hoặc alias)</nz-form-label>
+            <nz-form-label>{{ 'EMAIL_ADMIN.TEMPLATE_RESET' | translate }}</nz-form-label>
             <nz-form-control>
-              <input nz-input formControlName="resendTemplateResetId" placeholder="ID template (nếu dùng ID)" style="margin-bottom:8px;" />
-              <input nz-input formControlName="resendTemplateResetAlias" placeholder="Alias template, ví dụ: password-reset-notification" />
+              <input nz-input formControlName="resendTemplateResetId" [placeholder]="'EMAIL_ADMIN.TEMPLATE_ID_PLACEHOLDER' | translate" style="margin-bottom:8px;" />
+              <input nz-input formControlName="resendTemplateResetAlias" [placeholder]="'EMAIL_ADMIN.TEMPLATE_RESET_ALIAS_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Template xác nhận đăng ký gói (ID hoặc alias)</nz-form-label>
+            <nz-form-label>{{ 'EMAIL_ADMIN.TEMPLATE_SUBSCRIPTION' | translate }}</nz-form-label>
             <nz-form-control>
-              <input nz-input formControlName="resendTemplateSubscriptionId" placeholder="ID template (nếu dùng ID)" style="margin-bottom:8px;" />
-              <input nz-input formControlName="resendTemplateSubscriptionAlias" placeholder="Alias template, ví dụ: package-signup-confirmation" />
+              <input nz-input formControlName="resendTemplateSubscriptionId" [placeholder]="'EMAIL_ADMIN.TEMPLATE_ID_PLACEHOLDER' | translate" style="margin-bottom:8px;" />
+              <input nz-input formControlName="resendTemplateSubscriptionAlias" [placeholder]="'EMAIL_ADMIN.TEMPLATE_SUBSCRIPTION_ALIAS_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
         </nz-card>
 
         <!-- SendGrid Settings -->
-        <nz-card *ngIf="showField('sendgrid')" [nzTitle]="'Cấu hình SendGrid'" [nzBordered]="false" style="margin-top: 16px;">
-          <nz-alert nzType="info" nzMessage="SendGrid - Miễn phí 100 email/ngày" [nzDescription]="'Đăng ký tại https://sendgrid.com và tạo API Key'" style="margin-bottom: 16px;"></nz-alert>
+        <nz-card *ngIf="showField('sendgrid')" [nzTitle]="'SETTINGS.SENDGRID_CONFIG' | translate" [nzBordered]="false" style="margin-top: 16px;">
+          <nz-alert nzType="info" [nzMessage]="'SETTINGS.SENDGRID_INFO' | translate" [nzDescription]="'SETTINGS.SENDGRID_DESCRIPTION' | translate" style="margin-bottom: 16px;"></nz-alert>
           <nz-form-item>
-            <nz-form-label nzRequired>SendGrid API Key</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập SendGrid API Key">
-              <input nz-input type="password" formControlName="sendgridApiKey" placeholder="SG.xxxxx" />
+            <nz-form-label nzRequired>{{ 'SETTINGS.SENDGRID_API_KEY' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.SENDGRID_API_KEY_REQUIRED' | translate">
+              <input nz-input type="password" formControlName="sendgridApiKey" [placeholder]="'SETTINGS.SENDGRID_API_KEY_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
         </nz-card>
 
         <!-- Mailgun Settings -->
-        <nz-card *ngIf="showField('mailgun')" [nzTitle]="'Cấu hình Mailgun'" [nzBordered]="false" style="margin-top: 16px;">
-          <nz-alert nzType="info" nzMessage="Mailgun - Miễn phí 5000 email/tháng (3 tháng đầu)" [nzDescription]="'Đăng ký tại https://mailgun.com và verify domain'" style="margin-bottom: 16px;"></nz-alert>
+        <nz-card *ngIf="showField('mailgun')" [nzTitle]="'SETTINGS.MAILGUN_CONFIG' | translate" [nzBordered]="false" style="margin-top: 16px;">
+          <nz-alert nzType="info" [nzMessage]="'SETTINGS.MAILGUN_INFO' | translate" [nzDescription]="'SETTINGS.MAILGUN_DESCRIPTION' | translate" style="margin-bottom: 16px;"></nz-alert>
           <nz-form-item>
-            <nz-form-label nzRequired>Mailgun API Key</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập Mailgun API Key">
-              <input nz-input type="password" formControlName="mailgunApiKey" placeholder="xxxxx" />
+            <nz-form-label nzRequired>{{ 'SETTINGS.MAILGUN_API_KEY' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.MAILGUN_API_KEY_REQUIRED' | translate">
+              <input nz-input type="password" formControlName="mailgunApiKey" [placeholder]="'SETTINGS.MAILGUN_API_KEY_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label nzRequired>Mailgun Domain</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập Mailgun Domain">
-              <input nz-input formControlName="mailgunDomain" placeholder="yourdomain.com" />
+            <nz-form-label nzRequired>{{ 'SETTINGS.MAILGUN_DOMAIN' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.MAILGUN_DOMAIN_REQUIRED' | translate">
+              <input nz-input formControlName="mailgunDomain" [placeholder]="'SETTINGS.MAILGUN_DOMAIN_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
         </nz-card>
 
         <!-- AWS SES Settings -->
-        <nz-card *ngIf="showField('aws')" [nzTitle]="'Cấu hình AWS SES'" [nzBordered]="false" style="margin-top: 16px;">
-          <nz-alert nzType="info" nzMessage="AWS SES - Giá rẻ, scale tốt" [nzDescription]="'$0.10 cho 1000 email. Cần có AWS account và verify domain'" style="margin-bottom: 16px;"></nz-alert>
+        <nz-card *ngIf="showField('aws')" [nzTitle]="'SETTINGS.AWS_SES_CONFIG' | translate" [nzBordered]="false" style="margin-top: 16px;">
+          <nz-alert nzType="info" [nzMessage]="'SETTINGS.AWS_SES_INFO' | translate" [nzDescription]="'SETTINGS.AWS_SES_DESCRIPTION' | translate" style="margin-bottom: 16px;"></nz-alert>
           <nz-form-item>
-            <nz-form-label nzRequired>AWS Access Key ID</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập AWS Access Key ID">
-              <input nz-input formControlName="awsAccessKeyId" placeholder="AKIAIOSFODNN7EXAMPLE" />
+            <nz-form-label nzRequired>{{ 'SETTINGS.AWS_ACCESS_KEY_ID' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.AWS_ACCESS_KEY_ID_REQUIRED' | translate">
+              <input nz-input formControlName="awsAccessKeyId" [placeholder]="'SETTINGS.AWS_ACCESS_KEY_ID_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label nzRequired>AWS Secret Access Key</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập AWS Secret Access Key">
-              <input nz-input type="password" formControlName="awsSecretAccessKey" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" />
+            <nz-form-label nzRequired>{{ 'SETTINGS.AWS_SECRET_ACCESS_KEY' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.AWS_SECRET_ACCESS_KEY_REQUIRED' | translate">
+              <input nz-input type="password" formControlName="awsSecretAccessKey" [placeholder]="'SETTINGS.AWS_SECRET_ACCESS_KEY_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
           <nz-form-item>
-            <nz-form-label nzRequired>AWS Region</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập AWS Region">
+            <nz-form-label nzRequired>{{ 'SETTINGS.AWS_REGION' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.AWS_REGION_REQUIRED' | translate">
               <nz-select formControlName="awsRegion">
                 <nz-option nzValue="us-east-1" nzLabel="US East (N. Virginia)"></nz-option>
                 <nz-option nzValue="us-west-2" nzLabel="US West (Oregon)"></nz-option>
@@ -148,45 +148,45 @@
         </nz-card>
 
         <!-- Common Settings -->
-        <nz-card [nzTitle]="'Cài đặt chung'" [nzBordered]="false" style="margin-top: 16px;">
+        <nz-card [nzTitle]="'EMAIL_ADMIN.COMMON_SETTINGS' | translate" [nzBordered]="false" style="margin-top: 16px;">
           <nz-form-item>
-            <nz-form-label nzRequired>Email From (Người gửi)</nz-form-label>
-            <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
-              <input nz-input type="email" formControlName="emailFrom" placeholder="noreply@yourdomain.com" />
-              <div style="font-size: 12px; color: #999; margin-top: 4px;">Email này sẽ hiển thị trong phần "From" của email gửi đi</div>
+            <nz-form-label nzRequired>{{ 'EMAIL_ADMIN.EMAIL_FROM' | translate }}</nz-form-label>
+            <nz-form-control [nzErrorTip]="'SETTINGS.SMTP_USER_REQUIRED' | translate">
+              <input nz-input type="email" formControlName="emailFrom" [placeholder]="'SETTINGS.EMAIL_FROM_PLACEHOLDER' | translate" />
+              <div style="font-size: 12px; color: #999; margin-top: 4px;">{{ 'EMAIL_ADMIN.EMAIL_FROM_NOTE' | translate }}</div>
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Tên người gửi</nz-form-label>
+            <nz-form-label>{{ 'SETTINGS.EMAIL_FROM_NAME' | translate }}</nz-form-label>
             <nz-form-control>
-              <input nz-input formControlName="emailFromName" placeholder="Hệ thống quản lý khách sạn" />
+              <input nz-input formControlName="emailFromName" [placeholder]="'SETTINGS.EMAIL_FROM_NAME_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Email Reply To</nz-form-label>
+            <nz-form-label>{{ 'SETTINGS.EMAIL_REPLY_TO' | translate }}</nz-form-label>
             <nz-form-control>
-              <input nz-input type="email" formControlName="emailReplyTo" placeholder="support@yourdomain.com" />
+              <input nz-input type="email" formControlName="emailReplyTo" [placeholder]="'SETTINGS.EMAIL_REPLY_TO_PLACEHOLDER' | translate" />
             </nz-form-control>
           </nz-form-item>
         </nz-card>
 
         <!-- Test Section -->
-        <nz-card [nzTitle]="'Test Email'" [nzBordered]="false" style="margin-top: 16px;">
+        <nz-card [nzTitle]="'EMAIL_ADMIN.TEST_SECTION' | translate" [nzBordered]="false" style="margin-top: 16px;">
           <nz-form-item>
-            <nz-form-label>Địa chỉ email test</nz-form-label>
+            <nz-form-label>{{ 'SETTINGS.EMAIL_TEST_ADDRESS' | translate }}</nz-form-label>
             <nz-form-control>
-              <input nz-input type="email" [(ngModel)]="testEmailAddress" [ngModelOptions]="{standalone: true}" placeholder="test@example.com" style="width: 100%;" />
+              <input nz-input type="email" [(ngModel)]="testEmailAddress" [ngModelOptions]="{standalone: true}" [placeholder]="'SETTINGS.EMAIL_TEST_ADDRESS_PLACEHOLDER' | translate" style="width: 100%;" />
             </nz-form-control>
           </nz-form-item>
 
           <div style="margin-top: 16px;">
             <button nz-button nzType="default" (click)="testConnection()" [nzLoading]="testing" style="margin-right: 8px;">
-              <i nz-icon nzType="check-circle"></i> Test Kết nối
+              <i nz-icon nzType="check-circle"></i> {{ 'SETTINGS.TEST_CONNECTION' | translate }}
             </button>
             <button nz-button nzType="default" (click)="sendTestEmail()" [nzLoading]="testing">
-              <i nz-icon nzType="mail"></i> Gửi Email Test
+              <i nz-icon nzType="mail"></i> {{ 'SETTINGS.SEND_TEST_EMAIL' | translate }}
             </button>
   </div>
         </nz-card>
@@ -194,7 +194,7 @@
         <!-- Actions -->
         <div style="margin-top: 24px; text-align: right;">
           <button nz-button nzType="primary" (click)="saveEmailSettings()" [nzLoading]="saving" [nzSize]="'large'">
-            <i nz-icon nzType="save"></i> Lưu cài đặt
+            <i nz-icon nzType="save"></i> {{ 'SETTINGS.SAVE_SETTINGS' | translate }}
           </button>
       </div>
       </form>
@@ -202,32 +202,32 @@
   </nz-card>
 
   <!-- Form gửi email -->
-  <nz-card [nzTitle]="'Gửi Email'" [nzBordered]="true" style="margin-top: 16px;">
+  <nz-card [nzTitle]="'EMAIL_ADMIN.SEND_EMAIL' | translate" [nzBordered]="true" style="margin-top: 16px;">
     <form nz-form [formGroup]="sendEmailForm" nzLayout="vertical">
       <nz-form-item>
-        <nz-form-label nzRequired>Đến (To)</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
-          <input nz-input type="email" formControlName="to" placeholder="recipient@example.com" />
+        <nz-form-label nzRequired>{{ 'EMAIL_ADMIN.TO' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'EMAIL_ADMIN.EMAIL_INVALID' | translate">
+          <input nz-input type="email" formControlName="to" [placeholder]="'EMAIL_ADMIN.TO_PLACEHOLDER' | translate" />
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label nzRequired>Chủ đề (Subject)</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập chủ đề">
-          <input nz-input formControlName="subject" placeholder="Chủ đề email" />
+        <nz-form-label nzRequired>{{ 'EMAIL_ADMIN.SUBJECT' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'EMAIL_ADMIN.SUBJECT_REQUIRED' | translate">
+          <input nz-input formControlName="subject" [placeholder]="'EMAIL_ADMIN.SUBJECT_PLACEHOLDER' | translate" />
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label nzRequired>Nội dung (Body)</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập nội dung">
-          <textarea nz-input formControlName="body" rows="6" placeholder="Nội dung email"></textarea>
+        <nz-form-label nzRequired>{{ 'EMAIL_ADMIN.BODY' | translate }}</nz-form-label>
+        <nz-form-control [nzErrorTip]="'EMAIL_ADMIN.BODY_REQUIRED' | translate">
+          <textarea nz-input formControlName="body" rows="6" [placeholder]="'EMAIL_ADMIN.BODY_PLACEHOLDER' | translate"></textarea>
         </nz-form-control>
       </nz-form-item>
 
       <div style="margin-top: 16px; text-align: right;">
         <button nz-button nzType="primary" (click)="sendEmail()" [nzLoading]="sending" [nzSize]="'large'">
-          <i nz-icon nzType="mail"></i> Gửi Email
+          <i nz-icon nzType="mail"></i> {{ 'EMAIL_ADMIN.SEND' | translate }}
         </button>
       </div>
     </form>
@@ -235,6 +235,6 @@
   </div>
 
 <div *ngIf="!canAccess()" style="text-align: center; padding: 50px;">
-  <nz-result nzStatus="403" nzTitle="Không có quyền truy cập" nzSubTitle="Chỉ superadmin, admin và business mới có quyền truy cập trang này.">
+  <nz-result nzStatus="403" [nzTitle]="'EMAIL_ADMIN.NO_ACCESS_TITLE' | translate" [nzSubTitle]="'EMAIL_ADMIN.NO_ACCESS_SUBTITLE' | translate">
   </nz-result>
 </div>

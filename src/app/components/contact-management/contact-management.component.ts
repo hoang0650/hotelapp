@@ -258,13 +258,13 @@ export class ContactManagementComponent implements OnInit {
 
     this.contactService.updateContactStatus(this.selectedContact._id, this.selectedContact.status || 'pending', notes).subscribe({
       next: (response) => {
-        this.message.success('Cập nhật ghi chú thành công');
+        this.message.success(this.translate.instant('CONTACT_MANAGEMENT.UPDATE_NOTES_SUCCESS'));
         this.selectedContact = response.contact;
         this.isUpdatingNotes = false;
       },
       error: (error) => {
         console.error('Error updating notes:', error);
-        this.message.error(error.error?.error || 'Lỗi khi cập nhật ghi chú');
+        this.message.error(error.error?.error || this.translate.instant('CONTACT_MANAGEMENT.UPDATE_NOTES_ERROR'));
         this.isUpdatingNotes = false;
       }
     });
@@ -281,7 +281,7 @@ export class ContactManagementComponent implements OnInit {
       nzOnOk: () => {
         this.contactService.deleteContact(contact._id!).subscribe({
           next: () => {
-            this.message.success('Xóa liên hệ thành công');
+            this.message.success(this.translate.instant('CONTACT_MANAGEMENT.DELETE_SUCCESS'));
             this.loadContacts();
             this.loadStats();
             if (this.selectedContact && this.selectedContact._id === contact._id) {
@@ -290,7 +290,7 @@ export class ContactManagementComponent implements OnInit {
           },
           error: (error) => {
             console.error('Error deleting contact:', error);
-            this.message.error(error.error?.error || 'Lỗi khi xóa liên hệ');
+            this.message.error(error.error?.error || this.translate.instant('CONTACT_MANAGEMENT.DELETE_ERROR'));
           }
         });
       }

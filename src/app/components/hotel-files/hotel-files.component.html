@@ -1,12 +1,12 @@
 <div class="hotel-files">
-  <h2>Kho tài liệu khách sạn</h2>
+  <h2>{{ 'HOTEL_FILES.TITLE' | translate }}</h2>
 
   <section class="camera-pack" aria-labelledby="camera-pack-title">
     <div class="camera-pack__head">
       <div>
-        <h3 id="camera-pack-title">Camera Agent — chạy trên máy khách sạn</h3>
+        <h3 id="camera-pack-title">{{ 'HOTEL_FILES.CAMERA_PACK_TITLE' | translate }}</h3>
         <p class="camera-pack__lead">
-          Tải về, giải nén, bấm đúp <strong>BAT_DAU.bat</strong>. Không cần biết lập trình.
+          {{ 'HOTEL_FILES.CAMERA_PACK_LEAD_BEFORE' | translate }}<strong>{{ 'HOTEL_FILES.CAMERA_PACK_LEAD_STRONG' | translate }}</strong>{{ 'HOTEL_FILES.CAMERA_PACK_LEAD_AFTER' | translate }}
         </p>
       </div>
       <button
@@ -16,19 +16,18 @@
         [nzLoading]="cameraZipLoading"
         (click)="downloadCameraAgentZip()"
       >
-        Tải gói Camera Agent (ZIP)
+        {{ 'HOTEL_FILES.ZIP_BUTTON' | translate }}
       </button>
     </div>
 
     <ol class="camera-pack__steps">
-      <li>Tải ZIP → giải nén vào máy tính Windows trong khách sạn.</li>
-      <li>Bấm đúp <code>BAT_DAU.bat</code> (lần đầu chờ cài vài phút, để cửa sổ mở).</li>
-      <li>Copy dòng <code>https://...</code> hiện ra → dán vào <strong>Cấu hình Camera → Agent URL</strong>.</li>
+      <li>{{ 'HOTEL_FILES.STEP_1' | translate }}</li>
+      <li>{{ 'HOTEL_FILES.STEP_2_BEFORE' | translate }} <code>BAT_DAU.bat</code> {{ 'HOTEL_FILES.STEP_2_AFTER' | translate }}</li>
+      <li>{{ 'HOTEL_FILES.STEP_3_BEFORE' | translate }} <code>https://...</code> {{ 'HOTEL_FILES.STEP_3_MID' | translate }} <strong>{{ 'HOTEL_FILES.STEP_3_STRONG' | translate }}</strong>{{ 'HOTEL_FILES.STEP_3_AFTER' | translate }}</li>
     </ol>
 
     <p class="camera-pack__hint">
-      Chi tiết xem file <code>HUONG_DAN.txt</code> trong gói.
-      Có thể tải từng file bên dưới nếu không dùng được ZIP.
+      {{ 'HOTEL_FILES.HINT_BEFORE' | translate }} <code>HUONG_DAN.txt</code> {{ 'HOTEL_FILES.HINT_AFTER' | translate }}
     </p>
 
     <div class="camera-pack__files">
@@ -45,15 +44,15 @@
   </section>
 
   <div class="toolbar">
-    <input nz-input [(ngModel)]="searchText" placeholder="Tìm kiếm file..." />
+    <input nz-input [(ngModel)]="searchText" [placeholder]="'HOTEL_FILES.SEARCH_PLACEHOLDER' | translate" />
   </div>
   <div *ngIf="!isMobile" class="table-container">
     <nz-table [nzData]="filteredFiles" nzSize="small" [nzShowPagination]="false">
       <thead>
         <tr>
-          <th>Tên file</th>
-          <th>Loại</th>
-          <th style="width: 180px; text-align: right;">Thao tác</th>
+          <th>{{ 'HOTEL_FILES.COL_NAME' | translate }}</th>
+          <th>{{ 'HOTEL_FILES.COL_TYPE' | translate }}</th>
+          <th style="width: 180px; text-align: right;">{{ 'HOTEL_FILES.COL_ACTIONS' | translate }}</th>
         </tr>
       </thead>
       <tbody>
@@ -61,9 +60,9 @@
           <td>{{ f.name }}</td>
           <td>{{ f.type.toUpperCase() }}</td>
           <td style="text-align: right;">
-            <button nz-button nzType="default" (click)="openInline(f)" class="mr-1">Xem</button>
-            <button nz-button nzType="default" (click)="openInNewTab(f)" class="mr-1">Mở</button>
-            <button nz-button nzType="primary" (click)="download(f)">Tải về</button>
+            <button nz-button nzType="default" (click)="openInline(f)" class="mr-1">{{ 'HOTEL_FILES.VIEW' | translate }}</button>
+            <button nz-button nzType="default" (click)="openInNewTab(f)" class="mr-1">{{ 'HOTEL_FILES.OPEN' | translate }}</button>
+            <button nz-button nzType="primary" (click)="download(f)">{{ 'HOTEL_FILES.DOWNLOAD' | translate }}</button>
           </td>
         </tr>
       </tbody>
@@ -75,9 +74,9 @@
       <div class="file-name">{{ f.name }}</div>
       <div class="file-meta">{{ f.type.toUpperCase() }}</div>
       <div class="file-actions">
-        <button nz-button nzType="default" (click)="openInline(f)">Xem</button>
-        <button nz-button nzType="default" (click)="openInNewTab(f)">Mở</button>
-        <button nz-button nzType="primary" (click)="download(f)">Tải về</button>
+        <button nz-button nzType="default" (click)="openInline(f)">{{ 'HOTEL_FILES.VIEW' | translate }}</button>
+        <button nz-button nzType="default" (click)="openInNewTab(f)">{{ 'HOTEL_FILES.OPEN' | translate }}</button>
+        <button nz-button nzType="primary" (click)="download(f)">{{ 'HOTEL_FILES.DOWNLOAD' | translate }}</button>
       </div>
     </div>
   </div>
@@ -85,8 +84,8 @@
   <div *ngIf="selectedFile" class="overlay" (click)="closeOverlay()">
     <div class="overlay-content" (click)="$event.stopPropagation()">
       <div class="overlay-header">
-        <div class="title">Xem: {{ selectedFile.name }}</div>
-        <button nz-button nzType="default" (click)="closeOverlay()">Đóng</button>
+        <div class="title">{{ 'HOTEL_FILES.VIEW_FILE' | translate:{ name: selectedFile.name } }}</div>
+        <button nz-button nzType="default" (click)="closeOverlay()">{{ 'HOTEL_FILES.CLOSE' | translate }}</button>
       </div>
       <div class="overlay-body">
         <div *ngIf="pdfUrl" class="viewer-block">
@@ -113,7 +112,7 @@
           </nz-table>
         </div>
         <div *ngIf="selectedFile && !pdfUrl && !officeUrl && xlsxRows.length === 0" class="text-muted">
-          Không thể hiển thị trực tiếp, vui lòng dùng nút Tải về.
+          {{ 'HOTEL_FILES.CANNOT_PREVIEW' | translate }}
         </div>
       </div>
     </div>

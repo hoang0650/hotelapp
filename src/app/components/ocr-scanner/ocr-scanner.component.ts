@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnInit, OnDestroy } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { createWorker, Worker, PSM } from 'tesseract.js';
 import { FileService } from '../../services/file.service';
 
@@ -46,7 +47,8 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
 
   constructor(
     private message: NzMessageService,
-    private fileService: FileService
+    private fileService: FileService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {}
@@ -72,7 +74,7 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
       if (!file.type.startsWith('image/')) {
-        this.message.error(`File "${file.name}" không phải là ảnh. Vui lòng chọn file ảnh.`);
+        this.message.error(this.translate.instant('OCR_SCANNER.MESSAGES.NOT_IMAGE_FILE', { fileName: file.name }));
         continue;
       }
       
@@ -230,11 +232,11 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
           }
         }
       }
-      this.message.success('Đã nhận dạng hai ảnh với /ocr-card!');
+      this.message.success(this.translate.instant('OCR_SCANNER.MESSAGES.DUAL_OCR_SUCCESS'));
       this.emitScanComplete(aiResult);
       this.fillFormFromOCRData(parsedData);
     } catch (error: any) {
-      this.message.error(error?.message || 'Lỗi OCR hai ảnh');
+      this.message.error(error?.message || this.translate.instant('OCR_SCANNER.MESSAGES.DUAL_OCR_ERROR'));
     } finally {
       this.isScanning = false;
       this.ocrProgress = 0;
@@ -258,7 +260,9 @@ export class OcrScannerComponent implements OnInit, OnDestroy {
       await this.scanOCR(next.file, next.index);
     }
   } catch (error: any) {
-    this.message.error('Lỗi OCR: ' + (error.message || 'Không thể quét ảnh'));
+    this.message.error(this.translate.instant('OCR_SCANNER.MESSAGES.OCR_ERROR', {
+      message: error.message || this.translate.instant('OCR_SCANNER.MESSAGES.OCR_SCAN_FAILED')
+    }));
   } finally {
     this.isProcessingQueue = false;
   }
@@ -650,17 +654,21 @@ fillFormWithData(res: any) {
             data.isFrontSide = data.side === 'front';
           });
           const mergedData = this.mergeScannedData(sortedData);
-          this.message.success(`Đã nhận dạng thành công ${this.selectedFiles.length} ảnh!`);
+          this.message.success(this.translate.instant('OCR_SCANNER.MESSAGES.MULTI_IMAGE_SUCCESS', { count: this.selectedFiles.length }));
           this.emitScanComplete(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else if (!this.allowMultiple || this.selectedFiles.length === 1) {
           const mergedData = this.mergeScannedData([parsedData]);
-          this.message.success('Đã nhận dạng văn bản thành công!');
+          this.message.success(this.translate.instant('OCR_SCANNER.MESSAGES.TEXT_OCR_SUCCESS'));
           this.emitScanComplete(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else {
           const scannedCount = this.scannedData.filter(data => data !== null).length;
-          this.message.success(`Đã nhận dạng ${sideLabel} (${scannedCount}/${this.selectedFiles.length})`);
+          this.message.success(this.translate.instant('OCR_SCANNER.MESSAGES.SIDE_OCR_PROGRESS', {
+            sideLabel,
+            scannedCount,
+            total: this.selectedFiles.length
+          }));
         }
         return;
       }
@@ -780,7 +788,7 @@ fillFormWithData(res: any) {
           
           const mergedData = this.mergeScannedData(sortedData);
           
-          this.message.success(`Đã nhận dạng thành công ${this.selectedFiles.length} ${this.selectedFiles.length > 1 ? 'ảnh' : 'ảnh'}!`);
+          this.message.success(this.translate.instant('OCR_SCANNER.MESSAGES.MULTI_IMAGE_SUCCESS', { count: this.selectedFiles.length }));
           this.emitScanComplete(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else if (!this.allowMultiple || this.selectedFiles.length === 1) {
@@ -788,13 +796,17 @@ fillFormWithData(res: any) {
           // Đảm bảo parsedData có side đúng (ưu tiên mặt trước nếu detect được)
           const singleDataArray = [parsedData];
           const mergedData = this.mergeScannedData(singleDataArray);
-          this.message.success('Đã nhận dạng văn bản thành công!');
+          this.message.success(this.translate.instant('OCR_SCANNER.MESSAGES.TEXT_OCR_SUCCESS'));
           this.emitScanComplete(mergedData);
           this.fillFormFromOCRData(mergedData);
         } else {
           // Đang xử lý ảnh tiếp theo
           const scannedCount = this.scannedData.filter(data => data !== null).length;
-          this.message.success(`Đã nhận dạng ${sideLabel} (${scannedCount}/${this.selectedFiles.length})`);
+          this.message.success(this.translate.instant('OCR_SCANNER.MESSAGES.SIDE_OCR_PROGRESS', {
+            sideLabel,
+            scannedCount,
+            total: this.selectedFiles.length
+          }));
         }
       } else {
         // Thêm null vào scannedData để đánh dấu đã xử lý nhưng không có kết quả
@@ -3603,7 +3615,7 @@ fillFormWithData(res: any) {
       }
     }
     
-    this.message.success('Đã tự động điền thông tin từ OCR. Vui lòng kiểm tra và chỉnh sửa nếu cần.');
+    this.message.success(this.translate.instant('OCR_SCANNER.MESSAGES.OCR_FILLED'));
   }
 
   /**

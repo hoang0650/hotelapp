@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { User } from '../../interfaces/user';
 import { UserService } from '../../services/user.service';
 
@@ -22,7 +23,8 @@ export class QrPaymentComponent implements OnInit {
 
   constructor(
     private userService: UserService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -38,7 +40,7 @@ export class QrPaymentComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading QR payment profile:', error);
-        this.message.error('Khong the tai thong tin QR thanh toan tu ho so');
+        this.message.error(this.translate.instant('QR_PAYMENT.MESSAGES.LOAD_FROM_PROFILE_ERROR'));
         this.loading = false;
       }
     });

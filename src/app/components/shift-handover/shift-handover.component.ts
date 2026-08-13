@@ -408,7 +408,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
         (response) => {
           this.isLoading = false;
           this.isManagerHandoverModalVisible = false;
-          this.message.success(response.message || this.translate.instant('SHIFT_HANDOVER.MANAGER_HANDOVER_SUCCESS') || 'Giao tiền quản lý thành công');
+          this.message.success(response.message || this.translate.instant('SHIFT_HANDOVER.MANAGER_HANDOVER_SUCCESS'));
           // Update the form with the new manager handover amount
           const currentManagerAmount = this.handoverForm.value.managerHandoverAmount || 0;
           this.handoverForm.patchValue({
@@ -423,7 +423,7 @@ export class ShiftHandoverComponent implements OnInit, OnDestroy {
         },
         (error) => {
           this.isLoading = false;
-          this.message.error(error.error?.message || this.translate.instant('SHIFT_HANDOVER.MANAGER_HANDOVER_ERROR') || 'Lỗi giao tiền quản lý');
+          this.message.error(error.error?.message || this.translate.instant('SHIFT_HANDOVER.MANAGER_HANDOVER_ERROR'));
           console.error(error);
         }
       )

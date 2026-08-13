@@ -161,7 +161,7 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading devices:', error);
-        this.message.error('Không thể tải danh sách thiết bị: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('TUYA_SWITCH.MESSAGES.LOAD_DEVICES_ERROR', { message: error.error?.message || error.message }));
         this.isLoading = false;
       }
     });
@@ -254,7 +254,7 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading data:', error);
-        this.message.error('Không thể tải dữ liệu: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('TUYA_SWITCH.MESSAGES.LOAD_DATA_ERROR', { message: error.error?.message || error.message }));
         this.isLoading = false;
       }
     });
@@ -270,20 +270,20 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
     this.tuyaService.turnOn(device.id).subscribe({
       next: (response) => {
         if (response.success) {
-          this.message.success(`Đã bật ${device.name}`);
+          this.message.success(this.translate.instant('TUYA_SWITCH.MESSAGES.TURNED_ON', { name: device.name }));
           // Cập nhật trạng thái local
           const deviceIndex = this.devices.findIndex(d => d.id === device.id);
           if (deviceIndex !== -1) {
             this.devices[deviceIndex].state = true;
           }
         } else {
-          this.message.error(response.message || 'Không thể bật công tắc');
+          this.message.error(response.message || this.translate.instant('TUYA_SWITCH.MESSAGES.TURN_ON_FAIL'));
         }
         this.isToggling[device.id] = false;
       },
       error: (error) => {
         console.error('Error turning on device:', error);
-        this.message.error('Lỗi khi bật công tắc: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('TUYA_SWITCH.MESSAGES.TURN_ON_ERROR', { message: error.error?.message || error.message }));
         this.isToggling[device.id] = false;
       }
     });
@@ -299,20 +299,20 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
     this.tuyaService.turnOff(device.id).subscribe({
       next: (response) => {
         if (response.success) {
-          this.message.success(`Đã tắt ${device.name}`);
+          this.message.success(this.translate.instant('TUYA_SWITCH.MESSAGES.TURNED_OFF', { name: device.name }));
           // Cập nhật trạng thái local
           const deviceIndex = this.devices.findIndex(d => d.id === device.id);
           if (deviceIndex !== -1) {
             this.devices[deviceIndex].state = false;
           }
         } else {
-          this.message.error(response.message || 'Không thể tắt công tắc');
+          this.message.error(response.message || this.translate.instant('TUYA_SWITCH.MESSAGES.TURN_OFF_FAIL'));
         }
         this.isToggling[device.id] = false;
       },
       error: (error) => {
         console.error('Error turning off device:', error);
-        this.message.error('Lỗi khi tắt công tắc: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('TUYA_SWITCH.MESSAGES.TURN_OFF_ERROR', { message: error.error?.message || error.message }));
         this.isToggling[device.id] = false;
       }
     });
@@ -329,20 +329,20 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.success) {
           const newState = response.data?.state ?? !device.state;
-          this.message.success(`${newState ? 'Đã bật' : 'Đã tắt'} ${device.name}`);
+          this.message.success(this.translate.instant('TUYA_SWITCH.MESSAGES.TOGGLED', { action: this.translate.instant(newState ? 'TUYA_SWITCH.MESSAGES.TOGGLE_ON' : 'TUYA_SWITCH.MESSAGES.TOGGLE_OFF'), name: device.name }));
           // Cập nhật trạng thái local
           const deviceIndex = this.devices.findIndex(d => d.id === device.id);
           if (deviceIndex !== -1) {
             this.devices[deviceIndex].state = newState;
           }
         } else {
-          this.message.error(response.message || 'Không thể chuyển đổi công tắc');
+          this.message.error(response.message || this.translate.instant('TUYA_SWITCH.MESSAGES.TOGGLE_FAIL'));
         }
         this.isToggling[device.id] = false;
       },
       error: (error) => {
         console.error('Error toggling device:', error);
-        this.message.error('Lỗi khi chuyển đổi công tắc: ' + (error.error?.message || error.message));
+        this.message.error(this.translate.instant('TUYA_SWITCH.MESSAGES.TOGGLE_ERROR', { message: error.error?.message || error.message }));
         this.isToggling[device.id] = false;
       }
     });
@@ -560,7 +560,7 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Error turning on devices by room:', err);
-        this.message.error('Lỗi khi bật thiết bị: ' + (err.error?.message || err.message));
+        this.message.error(this.translate.instant('TUYA_SWITCH.MESSAGES.TURN_ON_DEVICE_ERROR', { message: err.error?.message || err.message }));
       }
     });
   }
@@ -578,7 +578,7 @@ export class TuyaSwitchComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Error turning off devices by room:', err);
-        this.message.error('Lỗi khi tắt thiết bị: ' + (err.error?.message || err.message));
+        this.message.error(this.translate.instant('TUYA_SWITCH.MESSAGES.TURN_OFF_DEVICE_ERROR', { message: err.error?.message || err.message }));
       }
     });
   }

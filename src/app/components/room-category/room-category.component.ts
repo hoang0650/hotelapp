@@ -129,7 +129,7 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
       },
       (error) => {
         console.error('Error loading categories:', error);
-        this.message.error('Lỗi khi tải danh sách hạng phòng');
+        this.message.error(this.translate.instant('ROOM_CATEGORY.MESSAGES.LOAD_ERROR'));
       }
     );
   }
@@ -334,17 +334,17 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
               if (cfg?._id) {
                 this.priceConfigId = cfg._id;
               }
-              this.message.success('Cập nhật hạng phòng thành công');
+              this.message.success(this.translate.instant('ROOM_CATEGORY.MESSAGES.UPDATE_SUCCESS'));
               this.cancelEdit();
             },
             error: (error) => {
-              this.message.error(error.error?.message || 'Cập nhật cấu hình giá thất bại');
+              this.message.error(error.error?.message || this.translate.instant('ROOM_CATEGORY.MESSAGES.PRICE_CONFIG_UPDATE_ERROR'));
             }
           });
         },
         (error) => {
           console.error('Error updating category:', error);
-          this.message.error(error.error?.message || 'Lỗi khi cập nhật hạng phòng');
+          this.message.error(error.error?.message || this.translate.instant('ROOM_CATEGORY.MESSAGES.UPDATE_ERROR'));
         }
       );
     } else {
@@ -356,17 +356,17 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
           const payload = this.buildPriceConfigPayload(newCategory._id, newCategory.name || formValue.name, formValue);
           this.categoryService.createPriceConfig(this.hotelId, payload).subscribe({
             next: () => {
-              this.message.success('Thêm hạng phòng thành công');
+              this.message.success(this.translate.instant('ROOM_CATEGORY.MESSAGES.CREATE_SUCCESS'));
               this.cancelEdit();
             },
             error: (error) => {
-              this.message.error(error.error?.message || 'Tạo cấu hình giá thất bại');
+              this.message.error(error.error?.message || this.translate.instant('ROOM_CATEGORY.MESSAGES.PRICE_CONFIG_CREATE_ERROR'));
             }
           });
         },
         (error) => {
           console.error('Error creating category:', error);
-          this.message.error(error.error?.message || 'Lỗi khi thêm hạng phòng');
+          this.message.error(error.error?.message || this.translate.instant('ROOM_CATEGORY.MESSAGES.CREATE_ERROR'));
         }
       );
     }
@@ -376,11 +376,11 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
     this.categoryService.deleteCategory(id).subscribe(
       () => {
         this.categories = this.categories.filter(c => c._id !== id);
-        this.message.success('Xóa hạng phòng thành công');
+        this.message.success(this.translate.instant('ROOM_CATEGORY.MESSAGES.DELETE_SUCCESS'));
       },
       (error) => {
         console.error('Error deleting category:', error);
-        this.message.error(error.error?.message || 'Lỗi khi xóa hạng phòng');
+        this.message.error(error.error?.message || this.translate.instant('ROOM_CATEGORY.MESSAGES.DELETE_ERROR'));
       }
     );
   }

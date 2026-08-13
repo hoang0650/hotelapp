@@ -20,17 +20,17 @@
 
   <nz-tabset *ngIf="selectedHotelId">
     <!-- Tab 1: Hạng phòng -->
-    <nz-tab nzTitle="Hạng phòng">
+    <nz-tab [nzTitle]="'ROOM_MANAGEMENT.TAB_ROOM_CATEGORY' | translate">
       <app-room-category [hotelId]="selectedHotelId"></app-room-category>
     </nz-tab>
 
     <!-- Tab 2: Sơ đồ tầng -->
-    <nz-tab nzTitle="Sơ đồ tầng">
+    <nz-tab [nzTitle]="'ROOM_MANAGEMENT.TAB_FLOOR_PLAN' | translate">
       <app-floor-plan [hotelId]="selectedHotelId"></app-floor-plan>
     </nz-tab>
 
     <!-- Tab 3: Danh sách phòng (existing content) -->
-    <nz-tab nzTitle="Danh sách phòng">
+    <nz-tab [nzTitle]="'ROOM_MANAGEMENT.TAB_ROOM_LIST' | translate">
   <!-- Bộ lọc phòng theo tầng -->
   <div class="mb-4" style="margin-top: 16px;">
     <div nz-row [nzGutter]="16">
@@ -179,9 +179,9 @@
 
         <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8">
           <nz-form-item>
-            <nz-form-label>Hạng phòng</nz-form-label>
+            <nz-form-label>{{ 'ROOM_MANAGEMENT.ROOM_CATEGORY' | translate }}</nz-form-label>
             <nz-form-control>
-              <nz-select formControlName="roomCategoryId" nzPlaceHolder="Chọn hạng phòng" nzAllowClear nzShowSearch>
+              <nz-select formControlName="roomCategoryId" [nzPlaceHolder]="'ROOM_MANAGEMENT.SELECT_ROOM_CATEGORY' | translate" nzAllowClear nzShowSearch>
                 <nz-option *ngFor="let cat of roomCategories" [nzValue]="cat._id" [nzLabel]="cat.name"></nz-option>
               </nz-select>
             </nz-form-control>
@@ -354,7 +354,7 @@
                               <nz-option *ngFor="let c of availableCurrencies" [nzValue]="c.code" [nzLabel]="c.code + ' - ' + c.name"></nz-option>
                             </nz-select>
                             <div class="form-hint" *ngIf="selectedCurrency !== 'USD'">
-                              Tỷ giá: 1 {{ selectedCurrency }} ≈ {{ exchangeRateToUSD | number:'1.4-4' }} USD
+                              {{ 'ROOM_MANAGEMENT.EXCHANGE_RATE' | translate:{ currency: selectedCurrency, rate: (exchangeRateToUSD | number:'1.4-4') } }}
                             </div>
                         </nz-form-control>
                     </nz-form-item>

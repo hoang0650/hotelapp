@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService, BusinessInfo, SignUpRequest } from '../../services/user.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-business-signup',
@@ -18,7 +19,8 @@ export class BusinessSignupComponent implements OnInit {
     private fb: FormBuilder,
     private userService: UserService,
     private router: Router,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {
     this.businessForm = this.createForm();
   }
@@ -79,14 +81,14 @@ export class BusinessSignupComponent implements OnInit {
     this.userService.signUpBusiness(formData).subscribe({
       next: (response) => {
         this.isLoading = false;
-        this.message.success('Đăng ký tài khoản doanh nghiệp thành công!');
+        this.message.success(this.translate.instant('SIGNUP.BUSINESS_SIGNUP_SUCCESS'));
         this.router.navigate(['/login'], { 
           queryParams: { registrationSuccess: true } 
         });
       },
       error: (error) => {
         this.isLoading = false;
-        let errorMessage = 'Đã xảy ra lỗi khi đăng ký tài khoản doanh nghiệp';
+        let errorMessage = this.translate.instant('SIGNUP.BUSINESS_SIGNUP_FAILED');
         if (error.error && error.error.message) {
           errorMessage = error.error.message;
         }

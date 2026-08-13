@@ -3,6 +3,7 @@ import { NzModalRef, NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RoomsService } from '../../services/rooms.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { Room } from '../../interfaces/rooms';
 import { Subject } from 'rxjs';
 import { take, takeUntil } from 'rxjs/operators';
@@ -31,6 +32,7 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private roomsService: RoomsService,
     private message: NzMessageService,
+    private translate: TranslateService,
     private sessionContext: SessionContextService,
     private authService: AuthService,
     private checkinCache: CheckinCacheService
@@ -156,13 +158,20 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
         this.checkinCache.remove(this.sourceRoom._id);
         
         // Tạo thông báo chi tiết
-        let successMessage = `Đã chuyển từ phòng ${this.sourceRoom.roomNumber} sang phòng ${targetRoom?.roomNumber || 'N/A'}`;
-        
+        const fromRoom = this.sourceRoom.roomNumber;
+        const toRoom = targetRoom?.roomNumber || 'N/A';
         if (booking && booking.basePrice) {
-          successMessage += `\nGiá phòng mới: ${booking.basePrice.toLocaleString('vi-VN')} VNĐ`;
+          this.message.success(this.translate.instant('TRANSFER_ROOM_MODAL.MESSAGES.TRANSFER_SUCCESS_WITH_PRICE', {
+            fromRoom,
+            toRoom,
+            price: booking.basePrice.toLocaleString('vi-VN')
+          }));
+        } else {
+          this.message.success(this.translate.instant('TRANSFER_ROOM_MODAL.MESSAGES.TRANSFER_SUCCESS', {
+            fromRoom,
+            toRoom
+          }));
         }
-        
-        this.message.success(successMessage);
         
         // QUAN TRỌNG: Thông báo cho room component để reload events cho cả phòng nguồn và phòng đích
         // Điều này đảm bảo thông tin từ phòng cũ được hiển thị đúng trên phòng mới
@@ -195,8 +204,8 @@ export class TransferRoomModalComponent implements OnInit, OnDestroy {
       (error) => {
         this.isLoading = false;
         console.error('Error transferring room:', error);
-        const errorMessage = error.error?.details || error.error?.message || error.message || 'Vui lòng thử lại sau';
-        this.message.error('Lỗi khi chuyển phòng: ' + errorMessage);
+        const errorMessage = error.error?.details || error.error?.message || error.message || this.translate.instant('TRANSFER_ROOM_MODAL.MESSAGES.TRY_AGAIN');
+        this.message.error(this.translate.instant('TRANSFER_ROOM_MODAL.MESSAGES.TRANSFER_ERROR', { message: errorMessage }));
       }
     );
   }

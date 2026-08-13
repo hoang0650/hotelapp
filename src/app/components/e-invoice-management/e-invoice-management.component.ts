@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
@@ -115,7 +116,8 @@ export class EInvoiceManagementComponent implements OnInit {
     private authService: AuthService,
     private invoiceService: InvoiceService,
     private providerService: EInvoiceProviderService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -191,7 +193,7 @@ export class EInvoiceManagementComponent implements OnInit {
           });
           this.totalDrafts = response.data?.total || this.drafts.length;
         } else {
-          this.message.error(response.message || 'Không thể tải danh sách bản nháp');
+          this.message.error(response.message || this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOAD_DRAFTS_ERROR'));
           this.drafts = [];
           this.totalDrafts = 0;
         }
@@ -225,7 +227,7 @@ export class EInvoiceManagementComponent implements OnInit {
           });
           this.totalIssued = response.data?.total || this.issuedInvoices.length;
         } else {
-          this.message.error(response.message || 'Không thể tải danh sách hóa đơn');
+          this.message.error(response.message || this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOAD_INVOICES_ERROR'));
           this.issuedInvoices = [];
           this.totalIssued = 0;
         }
@@ -274,7 +276,7 @@ export class EInvoiceManagementComponent implements OnInit {
                           (invoice.sepayData && (invoice.sepayData.reference_code || invoice.sepayData.tracking_code || invoice.sepayData.invoice_number || invoice.sepayData.id));
     
     if (!referenceCode) {
-      this.message.error('Không tìm thấy mã tham chiếu của hóa đơn');
+      this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.REFERENCE_NOT_FOUND'));
       this.loadingDraftDetails = false;
       return;
     }
@@ -320,14 +322,14 @@ export class EInvoiceManagementComponent implements OnInit {
             notes: invoiceData.notes || ''
           };
         } else {
-          this.message.error('Không thể tải chi tiết hóa đơn');
+          this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOAD_DETAIL_ERROR'));
           this.closeEditDraftModal();
         }
       },
       error: (error) => {
         this.loadingDraftDetails = false;
         console.error('Error loading invoice details:', error);
-        this.message.error('Lỗi khi tải chi tiết hóa đơn: ' + (error.error?.error?.message || error.message));
+        this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOAD_DETAIL_ERROR_WITH_MSG', { message: error.error?.error?.message || error.message }));
         this.closeEditDraftModal();
       }
     });
@@ -354,7 +356,7 @@ export class EInvoiceManagementComponent implements OnInit {
                           (invoice.sepayData && (invoice.sepayData.reference_code || invoice.sepayData.tracking_code || invoice.sepayData.invoice_number || invoice.sepayData.id));
     
     if (!referenceCode) {
-      this.message.error('Không tìm thấy mã tham chiếu của hóa đơn');
+      this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.REFERENCE_NOT_FOUND'));
       this.loadingDraftDetails = false;
       return;
     }
@@ -392,14 +394,14 @@ export class EInvoiceManagementComponent implements OnInit {
             notes: invoiceData.notes || ''
           };
         } else {
-          this.message.error('Không thể tải chi tiết hóa đơn');
+          this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOAD_DETAIL_ERROR'));
           this.closeEditDraftModal();
         }
       },
       error: (error) => {
         this.loadingDraftDetails = false;
         console.error('Error loading draft details:', error);
-        this.message.error('Lỗi khi tải chi tiết hóa đơn: ' + (error.error?.error?.message || error.message));
+        this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOAD_DETAIL_ERROR_WITH_MSG', { message: error.error?.error?.message || error.message }));
         this.closeEditDraftModal();
       }
     });
@@ -450,7 +452,7 @@ export class EInvoiceManagementComponent implements OnInit {
         console.error('[EInvoice Management] Error status:', error.status);
         console.error('[EInvoice Management] Error details:', error.error);
         
-        this.message.error('Không thể tải PDF hóa đơn. Vui lòng thử lại.');
+        this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.PDF_LOAD_ERROR'));
         this.safePdfUrl = null;
         this.loadingPdf = false;
       }
@@ -478,12 +480,12 @@ export class EInvoiceManagementComponent implements OnInit {
 
     // Validate form
     if (!this.draftForm.template_code || !this.draftForm.invoice_series || !this.draftForm.buyer.name) {
-      this.message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.FILL_REQUIRED'));
       return;
     }
 
     if (!this.draftForm.items || this.draftForm.items.length === 0) {
-      this.message.error('Hóa đơn phải có ít nhất một sản phẩm/dịch vụ');
+      this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.NEED_ITEMS'));
       return;
     }
 
@@ -499,17 +501,17 @@ export class EInvoiceManagementComponent implements OnInit {
       next: (response: any) => {
         this.savingDraft = false;
         if (response.success !== false) {
-          this.message.success('Lưu hóa đơn nháp thành công');
+          this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.DRAFT_SAVE_SUCCESS'));
           this.closeEditDraftModal();
           this.loadDrafts(); // Reload danh sách
         } else {
-          this.message.error(response.error?.message || 'Lỗi khi lưu hóa đơn nháp');
+          this.message.error(response.error?.message || this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.DRAFT_SAVE_ERROR'));
         }
       },
       error: (error) => {
         this.savingDraft = false;
         console.error('Error saving draft:', error);
-        this.message.error('Lỗi khi lưu hóa đơn nháp: ' + (error.error?.error?.message || error.message));
+        this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.DRAFT_SAVE_ERROR_WITH_MSG', { message: error.error?.error?.message || error.message }));
       }
     });
   }
@@ -528,7 +530,7 @@ export class EInvoiceManagementComponent implements OnInit {
                           (this.editingDraft.sepayData && (this.editingDraft.sepayData.reference_code || this.editingDraft.sepayData.tracking_code || this.editingDraft.sepayData.invoice_number || this.editingDraft.sepayData.id));
     
     if (!referenceCode) {
-      this.message.error('Không tìm thấy mã tham chiếu của hóa đơn');
+      this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.REFERENCE_NOT_FOUND'));
       return;
     }
 
@@ -544,19 +546,19 @@ export class EInvoiceManagementComponent implements OnInit {
           next: (response: any) => {
             this.issuingDraft = false;
             if (response.success !== false) {
-              this.message.success('Đã gửi yêu cầu xuất hóa đơn. Đang xử lý...');
+              this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.ISSUE_REQUEST_SUCCESS'));
               this.closeEditDraftModal();
               // Chuyển sang tab hóa đơn đã xuất
               this.currentTab = 'issued';
               this.loadIssuedInvoices();
             } else {
-              this.message.error(response.error?.message || 'Lỗi khi xuất hóa đơn');
+              this.message.error(response.error?.message || this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.ISSUE_ERROR'));
             }
           },
           error: (error) => {
             this.issuingDraft = false;
             console.error('Error issuing draft:', error);
-            this.message.error('Lỗi khi xuất hóa đơn: ' + (error.error?.error?.message || error.message));
+            this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.ISSUE_ERROR_WITH_MSG', { message: error.error?.error?.message || error.message }));
           }
         });
       }
@@ -574,15 +576,15 @@ export class EInvoiceManagementComponent implements OnInit {
         this.http.delete(`${environment.apiUrl}/e-invoice/drafts/${invoice.id}`).subscribe({
           next: (response: any) => {
             if (response.success !== false) {
-              this.message.success('Xóa bản nháp thành công');
+              this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.DELETE_DRAFT_SUCCESS'));
               this.loadDrafts();
             } else {
-              this.message.error(response.message || 'Không thể xóa bản nháp');
+              this.message.error(response.message || this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.DELETE_DRAFT_ERROR'));
             }
           },
           error: (error) => {
             console.error('Error deleting draft:', error);
-            this.message.error('Có lỗi xảy ra khi xóa bản nháp');
+            this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.DELETE_DRAFT_ERROR_GENERIC'));
           }
         });
       }
@@ -617,7 +619,7 @@ export class EInvoiceManagementComponent implements OnInit {
         const newWindow = window.open(blobUrl, '_blank');
         
         if (!newWindow) {
-          this.message.error('Trình duyệt đã chặn popup. Vui lòng cho phép popup để xem PDF.');
+          this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.POPUP_BLOCKED'));
           URL.revokeObjectURL(blobUrl);
           return;
         }
@@ -643,7 +645,7 @@ export class EInvoiceManagementComponent implements OnInit {
                    (invoice.sepayData && invoice.sepayData.pdf_url);
     
     if (!pdfUrl) {
-      this.message.error('Không tìm thấy PDF để tải xuống');
+      this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.PDF_NOT_FOUND'));
       return;
     }
     
@@ -663,7 +665,7 @@ export class EInvoiceManagementComponent implements OnInit {
         document.body.removeChild(link);
         URL.revokeObjectURL(blobUrl);
         
-        this.message.success('Đã tải xuống hóa đơn thành công');
+        this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.PDF_DOWNLOAD_SUCCESS'));
       },
       error: (error) => {
         console.error('Error downloading PDF:', error);
@@ -676,7 +678,7 @@ export class EInvoiceManagementComponent implements OnInit {
         link.click();
         document.body.removeChild(link);
         
-        this.message.success('Đang tải xuống hóa đơn...');
+        this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.PDF_DOWNLOADING'));
       }
     });
   }
@@ -692,15 +694,15 @@ export class EInvoiceManagementComponent implements OnInit {
         this.http.post(`${environment.apiUrl}/e-invoice/${invoice.id}/cancel`, {}).subscribe({
           next: (response: any) => {
             if (response.success !== false) {
-              this.message.success('Hủy hóa đơn thành công');
+              this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.CANCEL_SUCCESS'));
               this.loadIssuedInvoices();
             } else {
-              this.message.error(response.message || 'Không thể hủy hóa đơn');
+              this.message.error(response.message || this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.CANCEL_ERROR'));
             }
           },
           error: (error) => {
             console.error('Error cancelling invoice:', error);
-            this.message.error('Có lỗi xảy ra khi hủy hóa đơn');
+            this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.CANCEL_ERROR_GENERIC'));
           }
         });
       }
@@ -920,19 +922,19 @@ export class EInvoiceManagementComponent implements OnInit {
       next: (response: any) => {
         this.loggingIn = false;
         if (response.success !== false) {
-          this.message.success('Đăng nhập thành công');
+          this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOGIN_SUCCESS'));
           this.closeLoginModal();
           // Kiểm tra lại authentication và load provider accounts
           this.checkAuthentication();
         } else {
-          this.message.error(response.message || 'Đăng nhập thất bại');
+          this.message.error(response.message || this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOGIN_FAILED'));
         }
       },
       error: (error: any) => {
         this.loggingIn = false;
         console.error('Login error:', error);
-        const errorMessage = error.error?.error?.message || error.error?.message || error.message || 'Đăng nhập thất bại';
-        this.message.error('Lỗi đăng nhập: ' + errorMessage);
+        const errorMessage = error.error?.error?.message || error.error?.message || error.message || this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOGIN_FAILED');
+        this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOGIN_ERROR', { message: errorMessage }));
       }
     });
   }
@@ -944,7 +946,7 @@ export class EInvoiceManagementComponent implements OnInit {
     this.invoiceService.logoutEInvoice().subscribe({
       next: (response: any) => {
         if (response.success !== false) {
-          this.message.success('Đăng xuất thành công');
+          this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOGOUT_SUCCESS'));
           this.isAuthenticated = false;
           this.selectedProvider = null;
           this.providerService.clearSelectedProvider();
@@ -1015,7 +1017,7 @@ export class EInvoiceManagementComponent implements OnInit {
           }
         } else {
           console.error('[EInvoice Management] Error response:', response);
-          this.message.error(response?.message || response?.error?.message || 'Không thể tải danh sách tài khoản nhà cung cấp');
+          this.message.error(response?.message || response?.error?.message || this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOAD_PROVIDER_ACCOUNTS_ERROR'));
           this.providerAccounts = [];
         }
       },
@@ -1023,7 +1025,7 @@ export class EInvoiceManagementComponent implements OnInit {
         this.loadingProviders = false;
         console.error('[EInvoice Management] Error loading provider accounts:', error);
         console.error('[EInvoice Management] Error details:', error.error || error);
-        this.message.error('Có lỗi xảy ra khi tải danh sách tài khoản nhà cung cấp');
+        this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOAD_PROVIDER_ACCOUNTS_ERROR_GENERIC'));
         this.providerAccounts = [];
       }
     });
@@ -1064,7 +1066,7 @@ export class EInvoiceManagementComponent implements OnInit {
     // Tự động load chi tiết (templates) từ API
     this.loadProviderDetails(provider);
     
-    this.message.success(`Đã chọn tài khoản: ${provider.provider}`);
+    this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.SELECT_ACCOUNT_SUCCESS', { provider: provider.provider }));
     this.closeProviderModal();
   }
 
@@ -1127,7 +1129,7 @@ export class EInvoiceManagementComponent implements OnInit {
       error: (error) => {
         this.loadingProviderDetails = false;
         console.error('Error loading provider details:', error);
-        this.message.error('Có lỗi xảy ra khi tải chi tiết tài khoản nhà cung cấp');
+        this.message.error(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOAD_PROVIDER_DETAIL_ERROR'));
       }
     });
   }

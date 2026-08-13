@@ -5,42 +5,40 @@
     <nz-alert
       *ngIf="isManagementGroup()"
       nzType="info"
-      [nzMessage]="'Đang đăng nhập với ' + getRoleGroupLabel()"
-      nzDescription="Nhóm quản trị có thể chỉnh cấu hình hệ thống chung, tích hợp, thanh toán, thông báo toàn cục và OpenClaw."
+      [nzMessage]="'SETTINGS.LOGGED_IN_AS' | translate:{ role: getRoleGroupLabel() }"
+      [nzDescription]="'SETTINGS.ROLE_ADMIN_ALERT_DESC' | translate"
       style="margin-bottom: 16px;">
     </nz-alert>
 
     <nz-alert
       *ngIf="!isManagementGroup() && canAccessScopedSettings()"
       nzType="info"
-      [nzMessage]="'Đang đăng nhập với ' + getRoleGroupLabel()"
-      [nzDescription]="canManageHotelSettings()
-        ? 'Bạn chỉ được cấu hình trong phạm vi khách sạn hoặc doanh nghiệp đang quản lý.'
-        : 'Bạn chỉ được xem cài đặt áp dụng, không thể thay đổi cấu hình hệ thống hoặc khách sạn.'"
+      [nzMessage]="'SETTINGS.LOGGED_IN_AS' | translate:{ role: getRoleGroupLabel() }"
+      [nzDescription]="(canManageHotelSettings() ? 'SETTINGS.ROLE_SCOPED_MANAGE_DESC' : 'SETTINGS.ROLE_SCOPED_VIEW_DESC') | translate"
       style="margin-bottom: 16px;">
     </nz-alert>
 
     <nz-tabset [(nzSelectedIndex)]="activeTab" nzType="card">
-      <nz-tab nzTitle="Tổng quan quyền" nzIcon="safety-certificate">
+      <nz-tab [nzTitle]="'SETTINGS.TAB_OVERVIEW' | translate" nzIcon="safety-certificate">
         <div class="settings-grid">
-          <nz-card class="settings-role-card" nzTitle="Superadmin / Admin">
-            <p class="role-card-subtitle">Toàn quyền quản trị hệ thống.</p>
+          <nz-card class="settings-role-card" [nzTitle]="'SETTINGS.ROLE_CARD_SUPERADMIN' | translate">
+            <p class="role-card-subtitle">{{ 'SETTINGS.ROLE_CARD_SUPERADMIN_SUBTITLE' | translate }}</p>
             <ul class="role-capability-list">
-              <li *ngFor="let item of systemAdminCapabilities">{{ item }}</li>
+              <li *ngFor="let item of systemAdminCapabilities">{{ item | translate }}</li>
             </ul>
           </nz-card>
 
-          <nz-card class="settings-role-card" nzTitle="Business / Hotel Manager">
-            <p class="role-card-subtitle">Quản lý theo doanh nghiệp hoặc khách sạn.</p>
+          <nz-card class="settings-role-card" [nzTitle]="'SETTINGS.ROLE_CARD_OPERATOR' | translate">
+            <p class="role-card-subtitle">{{ 'SETTINGS.ROLE_CARD_OPERATOR_SUBTITLE' | translate }}</p>
             <ul class="role-capability-list">
-              <li *ngFor="let item of operatorCapabilities">{{ item }}</li>
+              <li *ngFor="let item of operatorCapabilities">{{ item | translate }}</li>
             </ul>
           </nz-card>
 
-          <nz-card class="settings-role-card" nzTitle="Staff / Guest">
-            <p class="role-card-subtitle">Chỉ xem phạm vi đang được áp dụng.</p>
+          <nz-card class="settings-role-card" [nzTitle]="'SETTINGS.ROLE_CARD_READONLY' | translate">
+            <p class="role-card-subtitle">{{ 'SETTINGS.ROLE_CARD_READONLY_SUBTITLE' | translate }}</p>
             <ul class="role-capability-list">
-              <li *ngFor="let item of readonlyCapabilities">{{ item }}</li>
+              <li *ngFor="let item of readonlyCapabilities">{{ item | translate }}</li>
             </ul>
           </nz-card>
         </div>
@@ -49,39 +47,39 @@
           <div nz-col [nzXs]="24" [nzMd]="12">
             <nz-alert
               nzType="warning"
-              nzMessage="Chỉ superadmin/admin mới được can thiệp"
-              nzDescription="Cấu hình hệ thống, email hệ thống, thanh toán mặc định, bảo trì, thông báo toàn cục, Fanpage hệ thống và OpenClaw pairing."
+              [nzMessage]="'SETTINGS.ROLE_ADMIN_ONLY_TITLE' | translate"
+              [nzDescription]="'SETTINGS.ROLE_ADMIN_ONLY_DESC' | translate"
               [nzShowIcon]="true">
             </nz-alert>
           </div>
           <div nz-col [nzXs]="24" [nzMd]="12">
             <nz-alert
               nzType="success"
-              nzMessage="Business/hotel manager có thể dùng"
-              nzDescription="QR thanh toán tại khách sạn, tính năng theo gói, thông báo riêng theo khách sạn và cấu hình phạm vi vận hành."
+              [nzMessage]="'SETTINGS.ROLE_MANAGER_CAN_TITLE' | translate"
+              [nzDescription]="'SETTINGS.ROLE_MANAGER_CAN_DESC' | translate"
               [nzShowIcon]="true">
             </nz-alert>
           </div>
         </div>
       </nz-tab>
 
-      <nz-tab *ngIf="isManagementGroup()" nzTitle="Hệ thống chung" nzIcon="setting">
-        <nz-card class="settings-section-card" nzTitle="Cấu hình hệ thống">
+      <nz-tab *ngIf="isManagementGroup()" [nzTitle]="'SETTINGS.TAB_SYSTEM_GENERAL' | translate" nzIcon="setting">
+        <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.SYSTEM_CONFIG' | translate">
           <form nz-form [formGroup]="systemForm" nzLayout="vertical">
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label nzRequired>Tên hệ thống</nz-form-label>
-                  <nz-form-control nzErrorTip="Vui lòng nhập tên hệ thống">
-                    <input nz-input formControlName="systemName" placeholder="Hệ thống quản lý khách sạn" />
+                  <nz-form-label nzRequired>{{ 'SETTINGS.SYSTEM_NAME' | translate }}</nz-form-label>
+                  <nz-form-control [nzErrorTip]="'SETTINGS.SYSTEM_NAME_REQUIRED' | translate">
+                    <input nz-input formControlName="systemName" [placeholder]="'SETTINGS.SYSTEM_NAME_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Phiên bản</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.VERSION' | translate }}</nz-form-label>
                   <nz-form-control>
-                    <input nz-input formControlName="systemVersion" placeholder="1.0.0" />
+                    <input nz-input formControlName="systemVersion" [placeholder]="'SETTINGS.VERSION_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
@@ -90,32 +88,32 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="8">
                 <nz-form-item>
-                  <nz-form-label>Múi giờ</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.TIMEZONE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="timezone">
-                      <nz-option nzValue="Asia/Ho_Chi_Minh" nzLabel="UTC+7 (Việt Nam)"></nz-option>
-                      <nz-option nzValue="Asia/Bangkok" nzLabel="UTC+7 (Thái Lan)"></nz-option>
-                      <nz-option nzValue="Asia/Singapore" nzLabel="UTC+8 (Singapore)"></nz-option>
-                      <nz-option nzValue="UTC" nzLabel="UTC"></nz-option>
+                      <nz-option nzValue="Asia/Ho_Chi_Minh" [nzLabel]="'SETTINGS.TIMEZONE_VN' | translate"></nz-option>
+                      <nz-option nzValue="Asia/Bangkok" [nzLabel]="'SETTINGS.TIMEZONE_TH' | translate"></nz-option>
+                      <nz-option nzValue="Asia/Singapore" [nzLabel]="'SETTINGS.TIMEZONE_SG' | translate"></nz-option>
+                      <nz-option nzValue="UTC" [nzLabel]="'SETTINGS.TIMEZONE_UTC' | translate"></nz-option>
                     </nz-select>
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="8">
                 <nz-form-item>
-                  <nz-form-label>Ngôn ngữ</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.LANGUAGE' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="language">
-                      <nz-option nzValue="vi" nzLabel="Tiếng Việt"></nz-option>
-                      <nz-option nzValue="en" nzLabel="English"></nz-option>
-                      <nz-option nzValue="zh" nzLabel="中文"></nz-option>
+                      <nz-option nzValue="vi" [nzLabel]="'SETTINGS.LANG_VI' | translate"></nz-option>
+                      <nz-option nzValue="en" [nzLabel]="'SETTINGS.LANG_EN' | translate"></nz-option>
+                      <nz-option nzValue="zh" [nzLabel]="'SETTINGS.LANG_ZH' | translate"></nz-option>
                     </nz-select>
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="8">
                 <nz-form-item>
-                  <nz-form-label>Tiền tệ</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.CURRENCY' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="currency">
                       <nz-option nzValue="VND" nzLabel="VND (₫)"></nz-option>
@@ -131,7 +129,7 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Định dạng ngày</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.DATE_FORMAT' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="dateFormat">
                       <nz-option nzValue="DD/MM/YYYY" nzLabel="DD/MM/YYYY"></nz-option>
@@ -143,36 +141,36 @@
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Định dạng giờ</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.TIME_FORMAT' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="timeFormat">
-                      <nz-option nzValue="24h" nzLabel="24 giờ"></nz-option>
-                      <nz-option nzValue="12h" nzLabel="12 giờ (AM/PM)"></nz-option>
+                      <nz-option nzValue="24h" [nzLabel]="'SETTINGS.TIME_FORMAT_24H' | translate"></nz-option>
+                      <nz-option nzValue="12h" [nzLabel]="'SETTINGS.TIME_FORMAT_12H' | translate"></nz-option>
                     </nz-select>
                   </nz-form-control>
                 </nz-form-item>
               </div>
             </div>
 
-            <nz-divider nzText="Sao lưu và log"></nz-divider>
+            <nz-divider [nzText]="'SETTINGS.BACKUP_AND_LOG' | translate"></nz-divider>
 
             <div nz-row [nzGutter]="16">
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="autoBackup">Tự động sao lưu</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="autoBackup">{{ 'SETTINGS.AUTO_BACKUP' | translate }}</label></div>
               <div nz-col [nzXs]="24" [nzSm]="8">
                 <nz-form-item>
-                  <nz-form-label>Tần suất sao lưu</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.BACKUP_FREQUENCY' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="backupFrequency">
-                      <nz-option nzValue="daily" nzLabel="Hàng ngày"></nz-option>
-                      <nz-option nzValue="weekly" nzLabel="Hàng tuần"></nz-option>
-                      <nz-option nzValue="monthly" nzLabel="Hàng tháng"></nz-option>
+                      <nz-option nzValue="daily" [nzLabel]="'SETTINGS.FREQ_DAILY' | translate"></nz-option>
+                      <nz-option nzValue="weekly" [nzLabel]="'SETTINGS.FREQ_WEEKLY' | translate"></nz-option>
+                      <nz-option nzValue="monthly" [nzLabel]="'SETTINGS.FREQ_MONTHLY' | translate"></nz-option>
                     </nz-select>
                   </nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="8">
                 <nz-form-item>
-                  <nz-form-label>Số file sao lưu tối đa</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.MAX_BACKUP_FILES' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number formControlName="maxBackupFiles" [nzMin]="1" [nzMax]="365" style="width: 100%;"></nz-input-number>
                   </nz-form-control>
@@ -183,7 +181,7 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Timeout phiên (phút)</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.SESSION_TIMEOUT_SHORT' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-input-number formControlName="sessionTimeout" [nzMin]="5" [nzMax]="480" style="width: 100%;"></nz-input-number>
                   </nz-form-control>
@@ -191,7 +189,7 @@
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Mức log</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.LOG_LEVEL_SHORT' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="logLevel">
                       <nz-option nzValue="debug" nzLabel="Debug"></nz-option>
@@ -204,28 +202,28 @@
               </div>
             </div>
 
-            <label nz-checkbox formControlName="enableLogging">Bật ghi log</label>
+            <label nz-checkbox formControlName="enableLogging">{{ 'SETTINGS.ENABLE_LOGGING' | translate }}</label>
 
             <div class="settings-actions">
-              <button nz-button nzType="default" (click)="resetForm(systemForm)">Khôi phục mặc định</button>
-              <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveSystemSettings()">Lưu cài đặt hệ thống</button>
+              <button nz-button nzType="default" (click)="resetForm(systemForm)">{{ 'SETTINGS.RESET_DEFAULT' | translate }}</button>
+              <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveSystemSettings()">{{ 'SETTINGS.SAVE_SYSTEM_SETTINGS' | translate }}</button>
             </div>
           </form>
         </nz-card>
 
-        <nz-card class="settings-section-card" nzTitle="Thông tin doanh nghiệp và bảo mật">
+        <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.COMPANY_AND_SECURITY' | translate">
           <form nz-form [formGroup]="generalForm" nzLayout="vertical">
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Tên công ty</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="companyName" placeholder="Tên công ty" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.COMPANY_NAME' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="companyName" [placeholder]="'SETTINGS.COMPANY_NAME_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Địa chỉ</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="companyAddress" placeholder="Địa chỉ công ty" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.COMPANY_ADDRESS' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="companyAddress" [placeholder]="'SETTINGS.COMPANY_ADDRESS_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
             </div>
@@ -233,15 +231,15 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Số điện thoại</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="companyPhone" placeholder="+84..." /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.COMPANY_PHONE' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="companyPhone" [placeholder]="'SETTINGS.COMPANY_PHONE_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Email</nz-form-label>
-                  <nz-form-control nzErrorTip="Email không hợp lệ">
-                    <input nz-input formControlName="companyEmail" type="email" placeholder="contact@example.com" />
+                  <nz-form-label>{{ 'SETTINGS.COMPANY_EMAIL' | translate }}</nz-form-label>
+                  <nz-form-control [nzErrorTip]="'SETTINGS.EMAIL_INVALID_SHORT' | translate">
+                    <input nz-input formControlName="companyEmail" type="email" [placeholder]="'SETTINGS.COMPANY_EMAIL_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
               </div>
@@ -250,14 +248,14 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Website</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="companyWebsite" placeholder="https://example.com" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.COMPANY_WEBSITE' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="companyWebsite" [placeholder]="'SETTINGS.COMPANY_WEBSITE_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Mã số thuế</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="taxId" placeholder="Mã số thuế" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.TAX_ID' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="taxId" [placeholder]="'SETTINGS.TAX_ID_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
             </div>
@@ -265,14 +263,14 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Giấy phép kinh doanh</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="businessLicense" placeholder="Số giấy phép" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.BUSINESS_LICENSE' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="businessLicense" [placeholder]="'SETTINGS.BUSINESS_LICENSE_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Logo</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="logo" placeholder="URL logo" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.LOGO' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="logo" [placeholder]="'SETTINGS.LOGO_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
             </div>
@@ -280,44 +278,44 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Favicon</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="favicon" placeholder="URL favicon" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.FAVICON' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="favicon" [placeholder]="'SETTINGS.FAVICON_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
             </div>
 
-            <nz-divider nzText="Bảo trì và bảo mật"></nz-divider>
+            <nz-divider [nzText]="'SETTINGS.MAINTENANCE_SECURITY' | translate"></nz-divider>
 
             <div nz-row [nzGutter]="16">
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="maintenanceMode">Chế độ bảo trì</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="allowRegistration">Cho phép đăng ký</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="requireEmailVerification">Yêu cầu xác thực email</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="enable2FA">Bật xác thực 2 yếu tố</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="maintenanceMode">{{ 'SETTINGS.MAINTENANCE_MODE' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="allowRegistration">{{ 'SETTINGS.ALLOW_REGISTRATION' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="requireEmailVerification">{{ 'SETTINGS.REQUIRE_EMAIL_VERIFICATION' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="enable2FA">{{ 'SETTINGS.ENABLE_2FA' | translate }}</label></div>
             </div>
 
             <nz-form-item style="margin-top: 16px;">
-              <nz-form-label>Thông báo bảo trì</nz-form-label>
+              <nz-form-label>{{ 'SETTINGS.MAINTENANCE_MESSAGE' | translate }}</nz-form-label>
               <nz-form-control>
-                <textarea nz-input formControlName="maintenanceMessage" rows="3" placeholder="Hệ thống đang bảo trì. Vui lòng quay lại sau."></textarea>
+                <textarea nz-input formControlName="maintenanceMessage" rows="3" [placeholder]="'SETTINGS.MAINTENANCE_MESSAGE_PLACEHOLDER' | translate"></textarea>
               </nz-form-control>
             </nz-form-item>
 
             <div class="settings-actions">
-              <button nz-button nzType="default" (click)="resetForm(generalForm)">Khôi phục mặc định</button>
-              <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveGeneralSettings()">Lưu cấu hình chung</button>
+              <button nz-button nzType="default" (click)="resetForm(generalForm)">{{ 'SETTINGS.RESET_DEFAULT' | translate }}</button>
+              <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveGeneralSettings()">{{ 'SETTINGS.SAVE_GENERAL_SETTINGS' | translate }}</button>
             </div>
           </form>
         </nz-card>
       </nz-tab>
 
-      <nz-tab *ngIf="isManagementGroup()" nzTitle="Tích hợp & thanh toán" nzIcon="api">
-        <nz-card class="settings-section-card" nzTitle="Email hệ thống">
+      <nz-tab *ngIf="isManagementGroup()" [nzTitle]="'SETTINGS.TAB_INTEGRATIONS' | translate" nzIcon="api">
+        <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.EMAIL_SYSTEM' | translate">
           <form nz-form [formGroup]="emailForm" nzLayout="vertical">
-            <label nz-checkbox formControlName="emailEnabled">Bật gửi email</label>
+            <label nz-checkbox formControlName="emailEnabled">{{ 'SETTINGS.EMAIL_ENABLED' | translate }}</label>
 
             <nz-form-item style="margin-top: 16px;">
-              <nz-form-label nzRequired>Email Provider</nz-form-label>
-              <nz-form-control nzErrorTip="Vui lòng chọn email provider">
+              <nz-form-label nzRequired>{{ 'SETTINGS.EMAIL_PROVIDER' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'SETTINGS.EMAIL_PROVIDER_REQUIRED' | translate">
                 <nz-select formControlName="emailProvider">
                   <nz-option *ngFor="let provider of emailProviders" [nzValue]="provider.value" [nzLabel]="provider.label"></nz-option>
                 </nz-select>
@@ -328,13 +326,13 @@
               <div nz-row [nzGutter]="16">
                 <div nz-col [nzXs]="24" [nzSm]="12">
                   <nz-form-item>
-                    <nz-form-label>SMTP Host</nz-form-label>
-                    <nz-form-control><input nz-input formControlName="smtpHost" placeholder="smtp.gmail.com" /></nz-form-control>
+                    <nz-form-label>{{ 'SETTINGS.SMTP_HOST' | translate }}</nz-form-label>
+                    <nz-form-control><input nz-input formControlName="smtpHost" [placeholder]="'SETTINGS.SMTP_HOST_PLACEHOLDER' | translate" /></nz-form-control>
                   </nz-form-item>
                 </div>
                 <div nz-col [nzXs]="24" [nzSm]="12">
                   <nz-form-item>
-                    <nz-form-label>SMTP Port</nz-form-label>
+                    <nz-form-label>{{ 'SETTINGS.SMTP_PORT' | translate }}</nz-form-label>
                     <nz-form-control><nz-input-number formControlName="smtpPort" [nzMin]="1" [nzMax]="65535" style="width: 100%;"></nz-input-number></nz-form-control>
                   </nz-form-item>
                 </div>
@@ -342,56 +340,56 @@
               <div nz-row [nzGutter]="16">
                 <div nz-col [nzXs]="24" [nzSm]="12">
                   <nz-form-item>
-                    <nz-form-label>Email/Username</nz-form-label>
-                    <nz-form-control><input nz-input type="email" formControlName="smtpUser" placeholder="your-email@gmail.com" /></nz-form-control>
+                    <nz-form-label>{{ 'SETTINGS.SMTP_USER' | translate }}</nz-form-label>
+                    <nz-form-control><input nz-input type="email" formControlName="smtpUser" [placeholder]="'SETTINGS.SMTP_USER_PLACEHOLDER' | translate" /></nz-form-control>
                   </nz-form-item>
                 </div>
                 <div nz-col [nzXs]="24" [nzSm]="12">
                   <nz-form-item>
-                    <nz-form-label>Mật khẩu/App Password</nz-form-label>
-                    <nz-form-control><input nz-input type="password" formControlName="smtpPassword" placeholder="Mật khẩu hoặc App Password" /></nz-form-control>
+                    <nz-form-label>{{ 'SETTINGS.SMTP_PASSWORD' | translate }}</nz-form-label>
+                    <nz-form-control><input nz-input type="password" formControlName="smtpPassword" [placeholder]="'SETTINGS.SMTP_PASSWORD_PLACEHOLDER' | translate" /></nz-form-control>
                   </nz-form-item>
                 </div>
               </div>
-              <label nz-checkbox formControlName="smtpSecure">Bật SSL/TLS</label>
+              <label nz-checkbox formControlName="smtpSecure">{{ 'SETTINGS.SMTP_SECURE_ENABLE' | translate }}</label>
             </div>
 
             <div *ngIf="showEmailField('resend')" class="nested-settings-card">
               <nz-form-item>
-                <nz-form-label>Resend API Key</nz-form-label>
-                <nz-form-control><input nz-input type="password" formControlName="resendApiKey" placeholder="re_xxxxx" /></nz-form-control>
+                <nz-form-label>{{ 'SETTINGS.RESEND_API_KEY' | translate }}</nz-form-label>
+                <nz-form-control><input nz-input type="password" formControlName="resendApiKey" [placeholder]="'SETTINGS.RESEND_API_KEY_PLACEHOLDER' | translate" /></nz-form-control>
               </nz-form-item>
             </div>
 
             <div *ngIf="showEmailField('sendgrid')" class="nested-settings-card">
               <nz-form-item>
-                <nz-form-label>SendGrid API Key</nz-form-label>
-                <nz-form-control><input nz-input type="password" formControlName="sendgridApiKey" placeholder="SG.xxxxx" /></nz-form-control>
+                <nz-form-label>{{ 'SETTINGS.SENDGRID_API_KEY' | translate }}</nz-form-label>
+                <nz-form-control><input nz-input type="password" formControlName="sendgridApiKey" [placeholder]="'SETTINGS.SENDGRID_API_KEY_PLACEHOLDER' | translate" /></nz-form-control>
               </nz-form-item>
             </div>
 
             <div *ngIf="showEmailField('mailgun')" class="nested-settings-card">
               <nz-form-item>
-                <nz-form-label>Mailgun API Key</nz-form-label>
-                <nz-form-control><input nz-input type="password" formControlName="mailgunApiKey" placeholder="xxxxx" /></nz-form-control>
+                <nz-form-label>{{ 'SETTINGS.MAILGUN_API_KEY' | translate }}</nz-form-label>
+                <nz-form-control><input nz-input type="password" formControlName="mailgunApiKey" [placeholder]="'SETTINGS.MAILGUN_API_KEY_PLACEHOLDER' | translate" /></nz-form-control>
               </nz-form-item>
               <nz-form-item>
-                <nz-form-label>Mailgun Domain</nz-form-label>
-                <nz-form-control><input nz-input formControlName="mailgunDomain" placeholder="yourdomain.com" /></nz-form-control>
+                <nz-form-label>{{ 'SETTINGS.MAILGUN_DOMAIN' | translate }}</nz-form-label>
+                <nz-form-control><input nz-input formControlName="mailgunDomain" [placeholder]="'SETTINGS.MAILGUN_DOMAIN_PLACEHOLDER' | translate" /></nz-form-control>
               </nz-form-item>
             </div>
 
             <div *ngIf="showEmailField('aws')" class="nested-settings-card">
               <nz-form-item>
-                <nz-form-label>AWS Access Key ID</nz-form-label>
-                <nz-form-control><input nz-input formControlName="awsAccessKeyId" placeholder="AKIA..." /></nz-form-control>
+                <nz-form-label>{{ 'SETTINGS.AWS_ACCESS_KEY_ID' | translate }}</nz-form-label>
+                <nz-form-control><input nz-input formControlName="awsAccessKeyId" [placeholder]="'SETTINGS.AWS_ACCESS_KEY_ID_PLACEHOLDER' | translate" /></nz-form-control>
               </nz-form-item>
               <nz-form-item>
-                <nz-form-label>AWS Secret Access Key</nz-form-label>
-                <nz-form-control><input nz-input type="password" formControlName="awsSecretAccessKey" placeholder="Secret key" /></nz-form-control>
+                <nz-form-label>{{ 'SETTINGS.AWS_SECRET_ACCESS_KEY' | translate }}</nz-form-label>
+                <nz-form-control><input nz-input type="password" formControlName="awsSecretAccessKey" [placeholder]="'SETTINGS.AWS_SECRET_ACCESS_KEY_PLACEHOLDER' | translate" /></nz-form-control>
               </nz-form-item>
               <nz-form-item>
-                <nz-form-label>AWS Region</nz-form-label>
+                <nz-form-label>{{ 'SETTINGS.AWS_REGION' | translate }}</nz-form-label>
                 <nz-form-control>
                   <nz-select formControlName="awsRegion">
                     <nz-option nzValue="us-east-1" nzLabel="US East (N. Virginia)"></nz-option>
@@ -406,14 +404,14 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Email gửi từ</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="emailFrom" placeholder="noreply@example.com" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.EMAIL_FROM' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="emailFrom" [placeholder]="'SETTINGS.EMAIL_FROM_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Tên người gửi</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="emailFromName" placeholder="Hệ thống quản lý khách sạn" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.EMAIL_FROM_NAME' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="emailFromName" [placeholder]="'SETTINGS.EMAIL_FROM_NAME_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
             </div>
@@ -421,38 +419,38 @@
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Email trả lời</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="emailReplyTo" placeholder="support@example.com" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.EMAIL_REPLY_TO' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="emailReplyTo" [placeholder]="'SETTINGS.EMAIL_REPLY_TO_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Email test</nz-form-label>
-                  <nz-form-control><input nz-input formControlName="emailTestAddress" type="email" placeholder="test@example.com" /></nz-form-control>
+                  <nz-form-label>{{ 'SETTINGS.EMAIL_TEST_ADDRESS' | translate }}</nz-form-label>
+                  <nz-form-control><input nz-input formControlName="emailTestAddress" type="email" [placeholder]="'SETTINGS.EMAIL_TEST_ADDRESS_PLACEHOLDER' | translate" /></nz-form-control>
                 </nz-form-item>
               </div>
             </div>
 
             <div class="settings-actions">
-              <button nz-button nzType="default" (click)="testEmailConnection()" [nzLoading]="loading">Kiểm tra kết nối</button>
-              <button nz-button nzType="default" (click)="sendTestEmail()" [nzLoading]="loading">Gửi email test</button>
-              <button nz-button nzType="default" (click)="resetForm(emailForm)">Khôi phục mặc định</button>
-              <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveEmailSettings()">Lưu cài đặt email</button>
+              <button nz-button nzType="default" (click)="testEmailConnection()" [nzLoading]="loading">{{ 'SETTINGS.TEST_CONNECTION' | translate }}</button>
+              <button nz-button nzType="default" (click)="sendTestEmail()" [nzLoading]="loading">{{ 'SETTINGS.SEND_TEST_EMAIL' | translate }}</button>
+              <button nz-button nzType="default" (click)="resetForm(emailForm)">{{ 'SETTINGS.RESET_DEFAULT' | translate }}</button>
+              <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveEmailSettings()">{{ 'SETTINGS.SAVE_EMAIL_SETTINGS' | translate }}</button>
             </div>
           </form>
         </nz-card>
 
-        <nz-card class="settings-section-card" nzTitle="Thanh toán mặc định">
+        <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.PAYMENT_DEFAULT' | translate">
           <form nz-form [formGroup]="paymentForm" nzLayout="vertical">
             <div nz-row [nzGutter]="16">
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Phương thức mặc định</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.DEFAULT_PAYMENT_METHOD_SHORT' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="defaultPaymentMethod">
-                      <nz-option nzValue="cash" nzLabel="Tiền mặt"></nz-option>
-                      <nz-option nzValue="bank_transfer" nzLabel="Chuyển khoản"></nz-option>
-                      <nz-option nzValue="card" nzLabel="Thẻ"></nz-option>
+                      <nz-option nzValue="cash" [nzLabel]="'SETTINGS.ENABLE_CASH' | translate"></nz-option>
+                      <nz-option nzValue="bank_transfer" [nzLabel]="'SETTINGS.ENABLE_BANK_TRANSFER' | translate"></nz-option>
+                      <nz-option nzValue="card" [nzLabel]="'SETTINGS.ENABLE_CARD' | translate"></nz-option>
                       <nz-option nzValue="qr" nzLabel="QR Code"></nz-option>
                     </nz-select>
                   </nz-form-control>
@@ -460,31 +458,31 @@
               </div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Timeout thanh toán (giây)</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.PAYMENT_TIMEOUT_SHORT' | translate }}</nz-form-label>
                   <nz-form-control><nz-input-number formControlName="paymentTimeout" [nzMin]="30" [nzMax]="3600" style="width: 100%;"></nz-input-number></nz-form-control>
                 </nz-form-item>
               </div>
             </div>
 
             <div nz-row [nzGutter]="16">
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableCash">Tiền mặt</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableBankTransfer">Chuyển khoản</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableCard">Thẻ</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableQR">QR</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enablePayPal">PayPal</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableCrypto">Crypto</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableCash">{{ 'SETTINGS.ENABLE_CASH' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableBankTransfer">{{ 'SETTINGS.ENABLE_BANK_TRANSFER' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableCard">{{ 'SETTINGS.ENABLE_CARD' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableQR">{{ 'SETTINGS.ENABLE_QR' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enablePayPal">{{ 'SETTINGS.ENABLE_PAYPAL' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableCrypto">{{ 'SETTINGS.ENABLE_CRYPTO' | translate }}</label></div>
             </div>
 
             <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="autoReconcile">Tự động đối soát</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="autoReconcile">{{ 'SETTINGS.AUTO_RECONCILE' | translate }}</label></div>
               <div nz-col [nzXs]="24" [nzSm]="12">
                 <nz-form-item>
-                  <nz-form-label>Tần suất đối soát</nz-form-label>
+                  <nz-form-label>{{ 'SETTINGS.RECONCILE_FREQUENCY' | translate }}</nz-form-label>
                   <nz-form-control>
                     <nz-select formControlName="reconcileFrequency">
-                      <nz-option nzValue="hourly" nzLabel="Hàng giờ"></nz-option>
-                      <nz-option nzValue="daily" nzLabel="Hàng ngày"></nz-option>
-                      <nz-option nzValue="weekly" nzLabel="Hàng tuần"></nz-option>
+                      <nz-option nzValue="hourly" [nzLabel]="'SETTINGS.FREQ_HOURLY' | translate"></nz-option>
+                      <nz-option nzValue="daily" [nzLabel]="'SETTINGS.FREQ_DAILY' | translate"></nz-option>
+                      <nz-option nzValue="weekly" [nzLabel]="'SETTINGS.FREQ_WEEKLY' | translate"></nz-option>
                     </nz-select>
                   </nz-form-control>
                 </nz-form-item>
@@ -492,94 +490,94 @@
             </div>
 
             <nz-form-item>
-              <nz-form-label>Số dư tối thiểu cảnh báo</nz-form-label>
+              <nz-form-label>{{ 'SETTINGS.MINIMUM_BALANCE_ALERT' | translate }}</nz-form-label>
               <nz-form-control>
                 <nz-input-number formControlName="minimumBalanceAlert" [nzMin]="0" [nzFormatter]="formatterVND" [nzParser]="parserVND" style="width: 100%;"></nz-input-number>
               </nz-form-control>
             </nz-form-item>
 
-            <nz-divider nzText="Thông tin ngân hàng cho QR"></nz-divider>
+            <nz-divider [nzText]="'SETTINGS.BANK_INFO_FOR_QR' | translate"></nz-divider>
             <div formGroupName="bankAccount">
               <div nz-row [nzGutter]="16">
-                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>Tên ngân hàng</nz-form-label><nz-form-control><input nz-input formControlName="bankName" placeholder="Ví dụ: Vietcombank" /></nz-form-control></nz-form-item></div>
-                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>Số tài khoản</nz-form-label><nz-form-control><input nz-input formControlName="accountNumber" placeholder="Số tài khoản ngân hàng" /></nz-form-control></nz-form-item></div>
+                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>{{ 'SETTINGS.BANK_NAME' | translate }}</nz-form-label><nz-form-control><input nz-input formControlName="bankName" [placeholder]="'SETTINGS.BANK_NAME_PLACEHOLDER' | translate" /></nz-form-control></nz-form-item></div>
+                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>{{ 'SETTINGS.ACCOUNT_NUMBER' | translate }}</nz-form-label><nz-form-control><input nz-input formControlName="accountNumber" [placeholder]="'SETTINGS.ACCOUNT_NUMBER_PLACEHOLDER' | translate" /></nz-form-control></nz-form-item></div>
               </div>
               <div nz-row [nzGutter]="16">
-                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>Tên chủ tài khoản</nz-form-label><nz-form-control><input nz-input formControlName="accountHolderName" placeholder="Tên chủ tài khoản" /></nz-form-control></nz-form-item></div>
-                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>Tên người thụ hưởng</nz-form-label><nz-form-control><input nz-input formControlName="beneficiaryName" placeholder="Tên hiển thị trên QR code" /></nz-form-control></nz-form-item></div>
+                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>{{ 'SETTINGS.ACCOUNT_HOLDER_NAME' | translate }}</nz-form-label><nz-form-control><input nz-input formControlName="accountHolderName" [placeholder]="'SETTINGS.ACCOUNT_HOLDER_NAME_PLACEHOLDER' | translate" /></nz-form-control></nz-form-item></div>
+                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>{{ 'SETTINGS.BENEFICIARY_NAME' | translate }}</nz-form-label><nz-form-control><input nz-input formControlName="beneficiaryName" [placeholder]="'SETTINGS.BENEFICIARY_NAME_PLACEHOLDER' | translate" /></nz-form-control></nz-form-item></div>
               </div>
               <div nz-row [nzGutter]="16">
-                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>Chi nhánh</nz-form-label><nz-form-control><input nz-input formControlName="branch" placeholder="Chi nhánh ngân hàng" /></nz-form-control></nz-form-item></div>
-                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>SWIFT Code</nz-form-label><nz-form-control><input nz-input formControlName="swiftCode" placeholder="SWIFT Code (nếu có)" /></nz-form-control></nz-form-item></div>
+                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>{{ 'SETTINGS.BRANCH' | translate }}</nz-form-label><nz-form-control><input nz-input formControlName="branch" [placeholder]="'SETTINGS.BRANCH_PLACEHOLDER' | translate" /></nz-form-control></nz-form-item></div>
+                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>{{ 'SETTINGS.SWIFT_CODE' | translate }}</nz-form-label><nz-form-control><input nz-input formControlName="swiftCode" [placeholder]="'SETTINGS.SWIFT_CODE_PLACEHOLDER' | translate" /></nz-form-control></nz-form-item></div>
               </div>
               <div nz-row [nzGutter]="16">
-                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>IBAN</nz-form-label><nz-form-control><input nz-input formControlName="iban" placeholder="IBAN (nếu có)" /></nz-form-control></nz-form-item></div>
+                <div nz-col [nzXs]="24" [nzSm]="12"><nz-form-item><nz-form-label>{{ 'SETTINGS.IBAN' | translate }}</nz-form-label><nz-form-control><input nz-input formControlName="iban" [placeholder]="'SETTINGS.IBAN_PLACEHOLDER' | translate" /></nz-form-control></nz-form-item></div>
               </div>
 
               <div class="settings-actions">
-                <button nz-button nzType="primary" (click)="generateQrPayment()" [disabled]="!paymentForm.get('bankAccount.bankName')?.value || !paymentForm.get('bankAccount.accountNumber')?.value">Tạo QR thanh toán</button>
-                <button *ngIf="showQrPreview" nz-button nzType="default" nzDanger (click)="clearQrPreview()">Xóa QR code</button>
+                <button nz-button nzType="primary" (click)="generateQrPayment()" [disabled]="!paymentForm.get('bankAccount.bankName')?.value || !paymentForm.get('bankAccount.accountNumber')?.value">{{ 'SETTINGS.GENERATE_QR' | translate }}</button>
+                <button *ngIf="showQrPreview" nz-button nzType="default" nzDanger (click)="clearQrPreview()">{{ 'SETTINGS.CLEAR_QR' | translate }}</button>
               </div>
 
               <nz-form-item>
-                <nz-form-label>QR Code URL (SePay)</nz-form-label>
-                <nz-form-control><input nz-input formControlName="qrPaymentUrl" placeholder="https://qr.sepay.vn/..." readonly /></nz-form-control>
+                <nz-form-label>{{ 'SETTINGS.QR_PAYMENT_URL' | translate }}</nz-form-label>
+                <nz-form-control><input nz-input formControlName="qrPaymentUrl" [placeholder]="'SETTINGS.QR_PAYMENT_URL_PLACEHOLDER' | translate" readonly /></nz-form-control>
               </nz-form-item>
             </div>
 
             <div class="settings-actions">
-              <button nz-button nzType="default" (click)="resetForm(paymentForm)">Khôi phục mặc định</button>
-              <button nz-button nzType="primary" [nzLoading]="saving" (click)="savePaymentSettings()">Lưu cài đặt thanh toán</button>
+              <button nz-button nzType="default" (click)="resetForm(paymentForm)">{{ 'SETTINGS.RESET_DEFAULT' | translate }}</button>
+              <button nz-button nzType="primary" [nzLoading]="saving" (click)="savePaymentSettings()">{{ 'SETTINGS.SAVE_PAYMENT_SETTINGS' | translate }}</button>
             </div>
           </form>
         </nz-card>
 
-        <nz-card class="settings-section-card" nzTitle="Tích hợp đặc quyền">
+        <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.PRIVILEGE_INTEGRATIONS' | translate">
           <div class="settings-toolbar">
-            <button nz-button nzType="primary" (click)="connectFanpage()">Kết nối Fanpage</button>
-            <button nz-button nzType="default" [nzLoading]="loadingFacebook" (click)="loadFacebookPages()">Tải danh sách Fanpage</button>
+            <button nz-button nzType="primary" (click)="connectFanpage()">{{ 'SETTINGS.CONNECT_FANPAGE' | translate }}</button>
+            <button nz-button nzType="default" [nzLoading]="loadingFacebook" (click)="loadFacebookPages()">{{ 'SETTINGS.LOAD_FANPAGE_LIST' | translate }}</button>
           </div>
 
           <nz-table [nzData]="facebookPages" [nzLoading]="loadingFacebook" [nzPageSize]="5" *ngIf="facebookPages && facebookPages.length">
             <thead>
               <tr>
-                <th>Tên Page</th>
-                <th>ID</th>
-                <th>Token</th>
+                <th>{{ 'SETTINGS.PAGE_NAME' | translate }}</th>
+                <th>{{ 'SETTINGS.PAGE_ID' | translate }}</th>
+                <th>{{ 'SETTINGS.PAGE_TOKEN' | translate }}</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let p of facebookPages">
                 <td>{{ p.name }}</td>
                 <td>{{ p.id }}</td>
-                <td>{{ p.access_token ? 'Đã lưu' : '-' }}</td>
+                <td>{{ p.access_token ? ('SETTINGS.TOKEN_SAVED' | translate) : '-' }}</td>
               </tr>
             </tbody>
           </nz-table>
 
-          <nz-divider nzText="OpenClaw Device Pairing"></nz-divider>
+          <nz-divider [nzText]="'SETTINGS.OPENCLAW_DIVIDER' | translate"></nz-divider>
           <nz-alert
             nzType="info"
-            nzMessage="Chỉ superadmin/admin mới được approve pairing"
-            nzDescription="Bấm Mở OpenClaw để tự động điền token_gateway và duyệt pairing. Hoặc tải pending pairing để duyệt thủ công."
+            [nzMessage]="'SETTINGS.OPENCLAW_APPROVE_ONLY_TITLE' | translate"
+            [nzDescription]="'SETTINGS.OPENCLAW_APPROVE_ONLY_DESC' | translate"
             style="margin-bottom: 16px;">
           </nz-alert>
 
           <div class="settings-toolbar">
-            <button nz-button nzType="primary" [nzLoading]="openingOpenClaw" (click)="openOpenClawControlUi()">Mở OpenClaw (auto login)</button>
-            <button nz-button nzType="default" [nzLoading]="loadingOpenClawPairings" (click)="loadOpenClawDevicePairings()">Tải pending pairing</button>
-            <button nz-button nzType="default" [nzLoading]="approvingOpenClawPairing" [disabled]="!openClawPendingPairings.length" (click)="approveLatestOpenClawPairing()">Approve mới nhất</button>
+            <button nz-button nzType="primary" [nzLoading]="openingOpenClaw" (click)="openOpenClawControlUi()">{{ 'SETTINGS.OPENCLAW_OPEN' | translate }}</button>
+            <button nz-button nzType="default" [nzLoading]="loadingOpenClawPairings" (click)="loadOpenClawDevicePairings()">{{ 'SETTINGS.OPENCLAW_LOAD_PENDING' | translate }}</button>
+            <button nz-button nzType="default" [nzLoading]="approvingOpenClawPairing" [disabled]="!openClawPendingPairings.length" (click)="approveLatestOpenClawPairing()">{{ 'SETTINGS.OPENCLAW_APPROVE_LATEST' | translate }}</button>
           </div>
 
           <nz-table [nzData]="openClawPendingPairings" [nzLoading]="loadingOpenClawPairings" [nzPageSize]="5" *ngIf="openClawPendingPairings.length">
             <thead>
               <tr>
-                <th>Request ID</th>
-                <th>Client</th>
-                <th>Role</th>
-                <th>Scopes</th>
-                <th>Thời gian</th>
-                <th>Thao tác</th>
+                <th>{{ 'SETTINGS.OPENCLAW_REQUEST_ID' | translate }}</th>
+                <th>{{ 'SETTINGS.OPENCLAW_CLIENT' | translate }}</th>
+                <th>{{ 'SETTINGS.OPENCLAW_ROLE' | translate }}</th>
+                <th>{{ 'SETTINGS.OPENCLAW_SCOPES' | translate }}</th>
+                <th>{{ 'SETTINGS.OPENCLAW_TIME' | translate }}</th>
+                <th>{{ 'SETTINGS.OPENCLAW_ACTIONS' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -589,7 +587,7 @@
                 <td>{{ pairing.role || (pairing.roles?.join(', ') || '-') }}</td>
                 <td>{{ pairing.scopes?.join(', ') || '-' }}</td>
                 <td>{{ getOpenClawPairingRequestedAt(pairing) ? (getOpenClawPairingRequestedAt(pairing) | date:'dd/MM/yyyy HH:mm:ss') : '-' }}</td>
-                <td><button nz-button nzType="link" nzSize="small" [nzLoading]="approvingOpenClawPairing" (click)="approveLatestOpenClawPairing(pairing.requestId)">Approve</button></td>
+                <td><button nz-button nzType="link" nzSize="small" [nzLoading]="approvingOpenClawPairing" (click)="approveLatestOpenClawPairing(pairing.requestId)">{{ 'SETTINGS.OPENCLAW_APPROVE' | translate }}</button></td>
               </tr>
             </tbody>
           </nz-table>
@@ -597,18 +595,18 @@
           <nz-alert
             *ngIf="!loadingOpenClawPairings && !openClawPendingPairings.length"
             nzType="info"
-            nzMessage="Chưa có pending OpenClaw pairing"
-            nzDescription="Bấm Kết nối ở OpenClaw Control UI trước, sau đó quay lại đây tải pending pairing."
+            [nzMessage]="'SETTINGS.OPENCLAW_NO_PENDING_TITLE' | translate"
+            [nzDescription]="'SETTINGS.OPENCLAW_NO_PENDING_DESC' | translate"
             style="margin-bottom: 16px;">
           </nz-alert>
 
           <nz-table [nzData]="openClawPairedDevices" [nzLoading]="loadingOpenClawPairings" [nzPageSize]="5" *ngIf="openClawPairedDevices.length">
             <thead>
               <tr>
-                <th>Device ID</th>
-                <th>Client</th>
-                <th>Role</th>
-                <th>Scopes</th>
+                <th>{{ 'SETTINGS.OPENCLAW_DEVICE_ID' | translate }}</th>
+                <th>{{ 'SETTINGS.OPENCLAW_CLIENT' | translate }}</th>
+                <th>{{ 'SETTINGS.OPENCLAW_ROLE' | translate }}</th>
+                <th>{{ 'SETTINGS.OPENCLAW_SCOPES' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -623,12 +621,12 @@
         </nz-card>
       </nz-tab>
 
-      <nz-tab nzTitle="Khách sạn & vận hành" nzIcon="appstore" *ngIf="canViewHotelSettingsTab()">
+      <nz-tab [nzTitle]="'SETTINGS.TAB_HOTEL_OPS' | translate" nzIcon="appstore" *ngIf="canViewHotelSettingsTab()">
         <nz-alert
           *ngIf="isReadOnlyUserGroup()"
           nzType="warning"
-          nzMessage="Tài khoản hiện tại không có quyền chỉnh sửa cài đặt khách sạn"
-          nzDescription="Vai trò staff chỉ được xem phạm vi cấu hình. Nếu cần thay đổi, hãy dùng tài khoản business, hotel manager hoặc admin."
+          [nzMessage]="'SETTINGS.HOTEL_NO_EDIT_TITLE' | translate"
+          [nzDescription]="'SETTINGS.HOTEL_NO_EDIT_DESC' | translate"
           style="margin-bottom: 16px;">
         </nz-alert>
 
@@ -638,76 +636,71 @@
           </div>
 
           <div *ngIf="!loadingHotels && hotels.length > 0">
-            <nz-card class="settings-section-card" nzTitle="Khách sạn đang cấu hình">
+            <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.CONFIGURING_HOTEL' | translate">
               <nz-form-item>
-                <nz-form-label>Chọn khách sạn</nz-form-label>
+                <nz-form-label>{{ 'SETTINGS.SELECT_HOTEL' | translate }}</nz-form-label>
                 <nz-form-control>
-                  <nz-select [(ngModel)]="selectedHotelId" (ngModelChange)="onHotelChange($event)" nzPlaceHolder="Chọn khách sạn" style="width: 100%;">
+                  <nz-select [(ngModel)]="selectedHotelId" (ngModelChange)="onHotelChange($event)" [nzPlaceHolder]="'SETTINGS.SELECT_HOTEL_PLACEHOLDER' | translate" style="width: 100%;">
                     <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
                   </nz-select>
                 </nz-form-control>
               </nz-form-item>
             </nz-card>
 
-            <nz-card class="settings-section-card" nzTitle="QR thanh toán tại khách sạn">
+            <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.HOTEL_QR_PAYMENT' | translate">
               <form nz-form [formGroup]="hotelQRPaymentForm" nzLayout="vertical">
-                <label nz-checkbox formControlName="enableQRPaymentForBankTransfer">Bật QR thanh toán khi chuyển khoản trong room</label>
-                <div class="settings-hint">Nếu gói đăng ký có QR payment, tính năng này sẽ tự động bật.</div>
+                <label nz-checkbox formControlName="enableQRPaymentForBankTransfer">{{ 'SETTINGS.ENABLE_QR_PAYMENT_FOR_BANK_TRANSFER' | translate }}</label>
+                <div class="settings-hint">{{ 'SETTINGS.HOTEL_QR_AUTO_HINT' | translate }}</div>
                 <div class="settings-actions">
-                  <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelQRPaymentSettings()">Lưu cài đặt QR</button>
+                  <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelQRPaymentSettings()">{{ 'SETTINGS.SAVE_QR_SETTINGS' | translate }}</button>
                 </div>
               </form>
             </nz-card>
 
-            <nz-card class="settings-section-card" nzTitle="Tính năng khách sạn">
+            <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.TAB_HOTEL_FEATURES' | translate">
               <form nz-form [formGroup]="hotelFeaturesForm" nzLayout="vertical">
                 <div class="settings-actions">
-                  <button nz-button nzType="default" (click)="toggleAllFeatures(true)">Bật tất cả</button>
-                  <button nz-button nzType="default" (click)="toggleAllFeatures(false)">Tắt tất cả</button>
+                  <button nz-button nzType="default" (click)="toggleAllFeatures(true)">{{ 'SETTINGS.ENABLE_ALL' | translate }}</button>
+                  <button nz-button nzType="default" (click)="toggleAllFeatures(false)">{{ 'SETTINGS.DISABLE_ALL' | translate }}</button>
                 </div>
 
                 <div class="feature-list">
-                  <label nz-checkbox formControlName="enableOTAManagement" [nzDisabled]="isFeatureDisabledByPackage('enableOTAManagement')">Bật quản lý OTA</label>
-                  <label nz-checkbox formControlName="enableEmailManagement" [nzDisabled]="isFeatureDisabledByPackage('enableEmailManagement')">Bật quản lý email</label>
-                  <label nz-checkbox formControlName="enableElectricManagement" [nzDisabled]="isFeatureDisabledByPackage('enableElectricManagement')">Bật quản lý điện</label>
-                  <label *ngIf="isManagementGroup()" nz-checkbox formControlName="enablePayPalPayment" [nzDisabled]="isFeatureDisabledByPackage('enablePayPalPayment')">Bật thanh toán PayPal</label>
-                  <!--<label nz-checkbox formControlName="enableCryptoPayment" [nzDisabled]="isFeatureDisabledByPackage('enableCryptoPayment')">Bật thanh toán Crypto</label>-->
-                  <!--<label nz-checkbox formControlName="enableDraftInvoice" [nzDisabled]="isFeatureDisabledByPackage('enableDraftInvoice')">Bật xem hóa đơn nháp</label>-->
-                  <label nz-checkbox formControlName="enableExportInvoice" [nzDisabled]="isFeatureDisabledByPackage('enableExportInvoice')">Bật xuất hóa đơn</label>
-                  <label nz-checkbox formControlName="enableAiChatbox" [nzDisabled]="isFeatureDisabledByPackage('enableAiChatbox')">Bật AI Chatbox</label>
+                  <label nz-checkbox formControlName="enableOTAManagement" [nzDisabled]="isFeatureDisabledByPackage('enableOTAManagement')">{{ 'SETTINGS.ENABLE_OTA_MANAGEMENT' | translate }}</label>
+                  <label nz-checkbox formControlName="enableEmailManagement" [nzDisabled]="isFeatureDisabledByPackage('enableEmailManagement')">{{ 'SETTINGS.ENABLE_EMAIL_MANAGEMENT' | translate }}</label>
+                  <label nz-checkbox formControlName="enableElectricManagement" [nzDisabled]="isFeatureDisabledByPackage('enableElectricManagement')">{{ 'SETTINGS.ENABLE_ELECTRIC_MANAGEMENT' | translate }}</label>
+                  <label *ngIf="isManagementGroup()" nz-checkbox formControlName="enablePayPalPayment" [nzDisabled]="isFeatureDisabledByPackage('enablePayPalPayment')">{{ 'SETTINGS.ENABLE_PAYPAL_PAYMENT' | translate }}</label>
+                  <!-- ENABLE_CRYPTO_PAYMENT / ENABLE_DRAFT_INVOICE kept commented intentionally -->
+                  <label nz-checkbox formControlName="enableExportInvoice" [nzDisabled]="isFeatureDisabledByPackage('enableExportInvoice')">{{ 'SETTINGS.ENABLE_EXPORT_INVOICE' | translate }}</label>
+                  <label nz-checkbox formControlName="enableAiChatbox" [nzDisabled]="isFeatureDisabledByPackage('enableAiChatbox')">{{ 'SETTINGS.ENABLE_AI_CHATBOX' | translate }}</label>
                 </div>
 
-                <div class="settings-hint">Tính năng được cấp bởi gói đăng ký sẽ luôn bật và không thể tắt ở cấp khách sạn.</div>
+                <div class="settings-hint">{{ 'SETTINGS.FEATURES_PACKAGE_LOCKED_HINT' | translate }}</div>
 
                 <div class="settings-actions">
-                  <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelFeaturesSettings()">Lưu cài đặt tính năng</button>
+                  <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveHotelFeaturesSettings()">{{ 'SETTINGS.SAVE_FEATURES_SETTINGS' | translate }}</button>
                 </div>
               </form>
             </nz-card>
 
-            <nz-card class="settings-section-card" nzTitle="Thông báo riêng của khách sạn">
+            <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.HOTEL_PRIVATE_NOTIFICATIONS' | translate">
               <form nz-form [formGroup]="hotelNotificationForm" nzLayout="vertical">
                 <div nz-row [nzGutter]="16">
-                  <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableEmailNotifications">Thông báo Email</label></div>
-                  <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableSMSNotifications">Thông báo SMS</label></div>
-                  <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enablePushNotifications">Thông báo Push</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableEmailNotifications">{{ 'SETTINGS.ENABLE_EMAIL_NOTIFICATIONS' | translate }}</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableSMSNotifications">{{ 'SETTINGS.ENABLE_SMS_NOTIFICATIONS' | translate }}</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enablePushNotifications">{{ 'SETTINGS.ENABLE_PUSH_NOTIFICATIONS' | translate }}</label></div>
                 </div>
 
-                <nz-divider nzText="Loa thanh toán và sự kiện"></nz-divider>
-                <label nz-checkbox formControlName="enablePaymentSpeaker">Bật loa thông báo khi SePay báo thanh toán thành công</label>
-                <div class="settings-hint">
-                  Hệ thống sẽ đối chiếu giao dịch tiền vào theo tài khoản ngân hàng đã cấu hình trong `Hồ sơ cá nhân`.
-                  Khi tiền vào đúng tài khoản đó, màn `/admin/room` và các trang admin sẽ phát loa nếu tính năng này đang bật.
-                  Checkbox “Thông báo khi thanh toán” bên dưới chỉ dành cho thông báo hệ thống (email/push), không bật loa.
-                </div>
+                <nz-divider [nzText]="'SETTINGS.PAYMENT_SPEAKER_DIVIDER' | translate"></nz-divider>
+                <label nz-checkbox formControlName="enablePaymentSpeaker">{{ 'SETTINGS.ENABLE_PAYMENT_SPEAKER' | translate }}</label>
+                <div class="settings-hint">{{ 'SETTINGS.PAYMENT_SPEAKER_HINT' | translate }}</div>
 
                 <div class="payment-speaker-test" style="margin-top: 16px; padding: 12px; border: 1px dashed var(--border-color, #d9d9d9); border-radius: 8px;">
-                  <div style="font-weight: 600; margin-bottom: 8px;">Nghe thử loa (Edge TTS · ai.phhotel.vn)</div>
+                  <div style="font-weight: 600; margin-bottom: 8px;">{{ 'SETTINGS.PAYMENT_SPEAKER_TEST_TITLE' | translate }}</div>
                   <div class="settings-hint" style="margin-bottom: 8px;">
-                    Nhập nội dung rồi bấm nghe thử để gọi API <code>GET /tts</code> trên PHGroup-AI (giọng Edge Neural tiếng Việt).
+                    {{ 'SETTINGS.PAYMENT_SPEAKER_TEST_HINT' | translate }}
                   </div>
                   <nz-form-item style="margin-bottom: 8px;">
-                    <nz-form-label>Số tiền mẫu (VND)</nz-form-label>
+                    <nz-form-label>{{ 'SETTINGS.PAYMENT_SPEAKER_SAMPLE_AMOUNT' | translate }}</nz-form-label>
                     <nz-form-control>
                       <input
                         nz-input
@@ -722,14 +715,14 @@
                     </nz-form-control>
                   </nz-form-item>
                   <nz-form-item style="margin-bottom: 8px;">
-                    <nz-form-label>Nội dung thông báo</nz-form-label>
+                    <nz-form-label>{{ 'SETTINGS.PAYMENT_SPEAKER_MESSAGE' | translate }}</nz-form-label>
                     <nz-form-control>
                       <textarea
                         nz-input
                         rows="2"
                         [(ngModel)]="paymentSpeakerTestMessage"
                         [ngModelOptions]="{standalone: true}"
-                        placeholder="Thanh toán thành công số tiền 100.000 đồng"
+                        [placeholder]="'SETTINGS.PAYMENT_SPEAKER_MESSAGE_PLACEHOLDER' | translate"
                         maxlength="200"
                       ></textarea>
                     </nz-form-control>
@@ -742,97 +735,97 @@
                     [disabled]="testingPaymentSpeaker || !paymentSpeakerTestMessage.trim()"
                     (click)="testPaymentSpeaker()"
                   >
-                    Nghe thử qua Edge TTS
+                    {{ 'SETTINGS.PAYMENT_SPEAKER_LISTEN' | translate }}
                   </button>
                 </div>
 
                 <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnBooking">Thông báo khi có đặt phòng</label></div>
-                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCheckin">Thông báo khi check-in</label></div>
-                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCheckout">Thông báo khi check-out</label></div>
-                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnPayment">Thông báo khi thanh toán</label></div>
-                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCancellation">Thông báo khi hủy đặt phòng</label></div>
-                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnLowInventory">Thông báo khi hết hàng</label></div>
-                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnSystemError">Thông báo lỗi hệ thống</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnBooking">{{ 'SETTINGS.NOTIFY_ON_BOOKING' | translate }}</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCheckin">{{ 'SETTINGS.NOTIFY_ON_CHECKIN' | translate }}</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCheckout">{{ 'SETTINGS.NOTIFY_ON_CHECKOUT' | translate }}</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnPayment">{{ 'SETTINGS.NOTIFY_ON_PAYMENT' | translate }}</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCancellation">{{ 'SETTINGS.NOTIFY_ON_CANCELLATION' | translate }}</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnLowInventory">{{ 'SETTINGS.NOTIFY_ON_LOW_INVENTORY' | translate }}</label></div>
+                  <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnSystemError">{{ 'SETTINGS.NOTIFY_ON_SYSTEM_ERROR' | translate }}</label></div>
                 </div>
 
                 <nz-form-item style="margin-top: 16px;">
-                  <nz-form-label>Email nhận thông báo</nz-form-label>
-                  <nz-form-control nzErrorTip="Email không hợp lệ">
-                    <input nz-input formControlName="notificationEmail" type="email" placeholder="admin@example.com" />
+                  <nz-form-label>{{ 'SETTINGS.NOTIFICATION_EMAIL' | translate }}</nz-form-label>
+                  <nz-form-control [nzErrorTip]="'SETTINGS.EMAIL_INVALID_SHORT' | translate">
+                    <input nz-input formControlName="notificationEmail" type="email" [placeholder]="'SETTINGS.NOTIFICATION_EMAIL_PLACEHOLDER' | translate" />
                   </nz-form-control>
                 </nz-form-item>
 
                 <div class="settings-actions">
-                  <button nz-button nzType="primary" type="button" [nzLoading]="saving" (click)="saveHotelNotificationSettings()">Lưu cài đặt thông báo</button>
+                  <button nz-button nzType="primary" type="button" [nzLoading]="saving" (click)="saveHotelNotificationSettings()">{{ 'SETTINGS.SAVE_NOTIFICATION_SETTINGS_BTN' | translate }}</button>
                 </div>
               </form>
             </nz-card>
           </div>
 
           <div *ngIf="!loadingHotels && hotels.length === 0" class="settings-loading">
-            <nz-empty nzNotFoundContent="Chưa có khách sạn nào"></nz-empty>
+            <nz-empty [nzNotFoundContent]="'SETTINGS.NO_HOTELS' | translate"></nz-empty>
           </div>
         </ng-container>
 
         <ng-template #readonlyHotelSettings>
           <nz-card [nzBordered]="false">
-            <nz-empty nzNotFoundContent="Tài khoản hiện tại không có quyền chỉnh sửa cài đặt khách sạn"></nz-empty>
+            <nz-empty [nzNotFoundContent]="'SETTINGS.HOTEL_NO_EDIT_TITLE' | translate"></nz-empty>
           </nz-card>
         </ng-template>
       </nz-tab>
 
-      <nz-tab *ngIf="isManagementGroup()" nzTitle="Thông báo & điều phối" nzIcon="notification">
-        <nz-card class="settings-section-card" nzTitle="Thông báo toàn hệ thống">
+      <nz-tab *ngIf="isManagementGroup()" [nzTitle]="'SETTINGS.TAB_NOTIFICATIONS_DISPATCH' | translate" nzIcon="notification">
+        <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.SYSTEM_NOTIFICATIONS' | translate">
           <form nz-form [formGroup]="notificationForm" nzLayout="vertical">
             <div nz-row [nzGutter]="16">
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableEmailNotifications">Thông báo Email</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableSMSNotifications">Thông báo SMS</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enablePushNotifications">Thông báo Push</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableEmailNotifications">{{ 'SETTINGS.ENABLE_EMAIL_NOTIFICATIONS' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enableSMSNotifications">{{ 'SETTINGS.ENABLE_SMS_NOTIFICATIONS' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="8"><label nz-checkbox formControlName="enablePushNotifications">{{ 'SETTINGS.ENABLE_PUSH_NOTIFICATIONS' | translate }}</label></div>
             </div>
 
             <div nz-row [nzGutter]="16" style="margin-top: 16px;">
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnBooking">Thông báo khi có đặt phòng</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCheckin">Thông báo khi check-in</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCheckout">Thông báo khi check-out</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnPayment">Thông báo khi thanh toán</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCancellation">Thông báo khi hủy đặt phòng</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnLowInventory">Thông báo khi hết hàng</label></div>
-              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnSystemError">Thông báo lỗi hệ thống</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnBooking">{{ 'SETTINGS.NOTIFY_ON_BOOKING' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCheckin">{{ 'SETTINGS.NOTIFY_ON_CHECKIN' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCheckout">{{ 'SETTINGS.NOTIFY_ON_CHECKOUT' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnPayment">{{ 'SETTINGS.NOTIFY_ON_PAYMENT' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnCancellation">{{ 'SETTINGS.NOTIFY_ON_CANCELLATION' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnLowInventory">{{ 'SETTINGS.NOTIFY_ON_LOW_INVENTORY' | translate }}</label></div>
+              <div nz-col [nzXs]="24" [nzSm]="12"><label nz-checkbox formControlName="notifyOnSystemError">{{ 'SETTINGS.NOTIFY_ON_SYSTEM_ERROR' | translate }}</label></div>
             </div>
 
             <nz-form-item style="margin-top: 16px;">
-              <nz-form-label>Email nhận thông báo</nz-form-label>
-              <nz-form-control nzErrorTip="Email không hợp lệ">
-                <input nz-input formControlName="notificationEmail" type="email" placeholder="admin@example.com" />
+              <nz-form-label>{{ 'SETTINGS.NOTIFICATION_EMAIL' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'SETTINGS.EMAIL_INVALID_SHORT' | translate">
+                <input nz-input formControlName="notificationEmail" type="email" [placeholder]="'SETTINGS.NOTIFICATION_EMAIL_PLACEHOLDER' | translate" />
               </nz-form-control>
             </nz-form-item>
 
             <div class="settings-actions">
-              <button nz-button nzType="default" (click)="resetForm(notificationForm)">Khôi phục mặc định</button>
-              <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveNotificationSettings()">Lưu cài đặt thông báo</button>
+              <button nz-button nzType="default" (click)="resetForm(notificationForm)">{{ 'SETTINGS.RESET_DEFAULT' | translate }}</button>
+              <button nz-button nzType="primary" [nzLoading]="saving" (click)="saveNotificationSettings()">{{ 'SETTINGS.SAVE_NOTIFICATION_SETTINGS_BTN' | translate }}</button>
             </div>
           </form>
         </nz-card>
 
-        <nz-card class="settings-section-card" nzTitle="Điều phối thông báo">
+        <nz-card class="settings-section-card" [nzTitle]="'SETTINGS.ANNOUNCEMENT_DISPATCH' | translate">
           <div class="settings-toolbar">
             <button nz-button nzType="primary" (click)="openAnnouncementModal()">
               <i nz-icon nzType="plus" nzTheme="outline"></i>
-              Tạo thông báo mới
+              {{ 'SETTINGS.CREATE_ANNOUNCEMENT' | translate }}
             </button>
           </div>
 
           <nz-table [nzData]="announcements" [nzLoading]="loadingAnnouncements" [nzShowPagination]="true" [nzPageSize]="10">
             <thead>
               <tr>
-                <th>Tiêu đề</th>
-                <th>Loại</th>
-                <th>Độ ưu tiên</th>
-                <th>Đối tượng</th>
-                <th>Trạng thái</th>
-                <th>Ngày tạo</th>
-                <th>Thao tác</th>
+                <th>{{ 'SETTINGS.ANNOUNCEMENT_TABLE_TITLE' | translate }}</th>
+                <th>{{ 'SETTINGS.ANNOUNCEMENT_TABLE_TYPE' | translate }}</th>
+                <th>{{ 'SETTINGS.ANNOUNCEMENT_TABLE_PRIORITY' | translate }}</th>
+                <th>{{ 'SETTINGS.ANNOUNCEMENT_TABLE_TARGET' | translate }}</th>
+                <th>{{ 'SETTINGS.ANNOUNCEMENT_TABLE_STATUS' | translate }}</th>
+                <th>{{ 'SETTINGS.ANNOUNCEMENT_TABLE_CREATED' | translate }}</th>
+                <th>{{ 'SETTINGS.ANNOUNCEMENT_TABLE_ACTIONS' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -845,7 +838,7 @@
                 </td>
                 <td>
                   <nz-tag [nzColor]="announcement.priority === 'urgent' ? 'red' : announcement.priority === 'high' ? 'orange' : announcement.priority === 'medium' ? 'blue' : 'default'">
-                    {{ announcement.priority }}
+                    {{ getPriorityLabel(announcement.priority) }}
                   </nz-tag>
                 </td>
                 <td>
@@ -853,7 +846,7 @@
                 </td>
                 <td>
                   <nz-tag [nzColor]="announcement.isActive ? 'green' : 'default'">
-                    {{ announcement.isActive ? 'Hoạt động' : 'Tắt' }}
+                    {{ announcement.isActive ? ('SETTINGS.ANNOUNCEMENT_ACTIVE' | translate) : ('SETTINGS.ANNOUNCEMENT_INACTIVE' | translate) }}
                   </nz-tag>
                 </td>
                 <td>{{ announcement.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
@@ -861,7 +854,7 @@
                   <button nz-button nzType="link" nzSize="small" (click)="openAnnouncementModal(announcement)">
                     <i nz-icon nzType="edit" nzTheme="outline"></i>
                   </button>
-                  <nz-popconfirm nzTitle="Bạn có chắc muốn xóa thông báo này?" (nzOnConfirm)="deleteAnnouncement(announcement)">
+                  <nz-popconfirm [nzTitle]="'SETTINGS.CONFIRM_DELETE_ANNOUNCEMENT' | translate" (nzOnConfirm)="deleteAnnouncement(announcement)">
                     <button *nz-popconfirm nz-button nzType="link" nzSize="small" nzDanger>
                       <i nz-icon nzType="delete" nzTheme="outline"></i>
                     </button>
@@ -878,7 +871,7 @@
 
 <nz-modal
   [(nzVisible)]="isAnnouncementModalVisible"
-  [nzTitle]="editingAnnouncement ? 'Cập nhật thông báo' : 'Tạo thông báo mới'"
+  [nzTitle]="(editingAnnouncement ? 'SETTINGS.UPDATE_ANNOUNCEMENT' : 'SETTINGS.CREATE_ANNOUNCEMENT') | translate"
   (nzOnCancel)="closeAnnouncementModal()"
   (nzOnOk)="saveAnnouncement()"
   [nzOkLoading]="saving"
@@ -888,27 +881,27 @@
       <div nz-row [nzGutter]="16">
         <div nz-col [nzXs]="24" [nzSm]="12">
           <nz-form-item>
-            <nz-form-label nzRequired>Loại thông báo</nz-form-label>
+            <nz-form-label nzRequired>{{ 'SETTINGS.ANNOUNCEMENT_TYPE' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-select formControlName="type">
-                <nz-option nzValue="maintenance" nzLabel="Bảo trì"></nz-option>
-                <nz-option nzValue="update" nzLabel="Cập nhật"></nz-option>
-                <nz-option nzValue="info" nzLabel="Thông tin"></nz-option>
-                <nz-option nzValue="warning" nzLabel="Cảnh báo"></nz-option>
-                <nz-option nzValue="success" nzLabel="Thành công"></nz-option>
+                <nz-option nzValue="maintenance" [nzLabel]="'SETTINGS.ANNOUNCEMENT_TYPE_MAINTENANCE' | translate"></nz-option>
+                <nz-option nzValue="update" [nzLabel]="'SETTINGS.ANNOUNCEMENT_TYPE_UPDATE' | translate"></nz-option>
+                <nz-option nzValue="info" [nzLabel]="'SETTINGS.ANNOUNCEMENT_TYPE_INFO' | translate"></nz-option>
+                <nz-option nzValue="warning" [nzLabel]="'SETTINGS.ANNOUNCEMENT_TYPE_WARNING' | translate"></nz-option>
+                <nz-option nzValue="success" [nzLabel]="'SETTINGS.ANNOUNCEMENT_TYPE_SUCCESS' | translate"></nz-option>
               </nz-select>
             </nz-form-control>
           </nz-form-item>
         </div>
         <div nz-col [nzXs]="24" [nzSm]="12">
           <nz-form-item>
-            <nz-form-label nzRequired>Độ ưu tiên</nz-form-label>
+            <nz-form-label nzRequired>{{ 'SETTINGS.ANNOUNCEMENT_PRIORITY' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-select formControlName="priority">
-                <nz-option nzValue="low" nzLabel="Thấp"></nz-option>
-                <nz-option nzValue="medium" nzLabel="Trung bình"></nz-option>
-                <nz-option nzValue="high" nzLabel="Cao"></nz-option>
-                <nz-option nzValue="urgent" nzLabel="Khẩn cấp"></nz-option>
+                <nz-option nzValue="low" [nzLabel]="'SETTINGS.PRIORITY_LOW' | translate"></nz-option>
+                <nz-option nzValue="medium" [nzLabel]="'SETTINGS.PRIORITY_MEDIUM' | translate"></nz-option>
+                <nz-option nzValue="high" [nzLabel]="'SETTINGS.PRIORITY_HIGH' | translate"></nz-option>
+                <nz-option nzValue="urgent" [nzLabel]="'SETTINGS.PRIORITY_URGENT' | translate"></nz-option>
               </nz-select>
             </nz-form-control>
           </nz-form-item>
@@ -916,23 +909,23 @@
       </div>
 
       <nz-form-item>
-        <nz-form-label nzRequired>Tiêu đề</nz-form-label>
+        <nz-form-label nzRequired>{{ 'SETTINGS.ANNOUNCEMENT_TITLE' | translate }}</nz-form-label>
         <nz-form-control>
-          <input nz-input formControlName="title" placeholder="Nhập tiêu đề thông báo" />
+          <input nz-input formControlName="title" [placeholder]="'SETTINGS.ANNOUNCEMENT_TITLE_PLACEHOLDER' | translate" />
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label nzRequired>Nội dung</nz-form-label>
+        <nz-form-label nzRequired>{{ 'SETTINGS.ANNOUNCEMENT_CONTENT' | translate }}</nz-form-label>
         <nz-form-control>
-          <textarea nz-input formControlName="message" rows="4" placeholder="Nhập nội dung thông báo"></textarea>
+          <textarea nz-input formControlName="message" rows="4" [placeholder]="'SETTINGS.ANNOUNCEMENT_CONTENT_PLACEHOLDER' | translate"></textarea>
         </nz-form-control>
       </nz-form-item>
 
       <div nz-row [nzGutter]="16">
         <div nz-col [nzXs]="24" [nzSm]="12">
           <nz-form-item>
-            <nz-form-label>Ngày bắt đầu</nz-form-label>
+            <nz-form-label>{{ 'SETTINGS.START_DATE' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-date-picker formControlName="startDate" style="width: 100%;"></nz-date-picker>
             </nz-form-control>
@@ -940,7 +933,7 @@
         </div>
         <div nz-col [nzXs]="24" [nzSm]="12">
           <nz-form-item>
-            <nz-form-label>Ngày kết thúc</nz-form-label>
+            <nz-form-label>{{ 'SETTINGS.END_DATE' | translate }}</nz-form-label>
             <nz-form-control>
               <nz-date-picker formControlName="endDate" style="width: 100%;"></nz-date-picker>
             </nz-form-control>
@@ -949,54 +942,54 @@
       </div>
 
       <nz-form-item>
-        <nz-form-label>Loại thông báo (Áp dụng cài đặt)</nz-form-label>
+        <nz-form-label>{{ 'SETTINGS.NOTIFICATION_TYPE' | translate }}</nz-form-label>
         <nz-form-control>
           <nz-select formControlName="notificationType">
-            <nz-option nzValue="general" nzLabel="Chung"></nz-option>
-            <nz-option nzValue="booking" nzLabel="Đặt phòng"></nz-option>
-            <nz-option nzValue="checkin" nzLabel="Check-in"></nz-option>
-            <nz-option nzValue="checkout" nzLabel="Check-out"></nz-option>
-            <nz-option nzValue="payment" nzLabel="Thanh toán"></nz-option>
-            <nz-option nzValue="cancellation" nzLabel="Hủy đặt phòng"></nz-option>
-            <nz-option nzValue="lowInventory" nzLabel="Hết hàng"></nz-option>
-            <nz-option nzValue="systemError" nzLabel="Lỗi hệ thống"></nz-option>
+            <nz-option nzValue="general" [nzLabel]="'SETTINGS.NOTIF_TYPE_GENERAL' | translate"></nz-option>
+            <nz-option nzValue="booking" [nzLabel]="'SETTINGS.NOTIF_TYPE_BOOKING' | translate"></nz-option>
+            <nz-option nzValue="checkin" [nzLabel]="'SETTINGS.NOTIF_TYPE_CHECKIN' | translate"></nz-option>
+            <nz-option nzValue="checkout" [nzLabel]="'SETTINGS.NOTIF_TYPE_CHECKOUT' | translate"></nz-option>
+            <nz-option nzValue="payment" [nzLabel]="'SETTINGS.NOTIF_TYPE_PAYMENT' | translate"></nz-option>
+            <nz-option nzValue="cancellation" [nzLabel]="'SETTINGS.NOTIF_TYPE_CANCELLATION' | translate"></nz-option>
+            <nz-option nzValue="lowInventory" [nzLabel]="'SETTINGS.NOTIF_TYPE_LOW_INVENTORY' | translate"></nz-option>
+            <nz-option nzValue="systemError" [nzLabel]="'SETTINGS.NOTIF_TYPE_SYSTEM_ERROR' | translate"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label>Đối tượng nhận</nz-form-label>
+        <nz-form-label>{{ 'SETTINGS.TARGET_TYPE' | translate }}</nz-form-label>
         <nz-form-control>
           <nz-select formControlName="targetType" (ngModelChange)="onTargetTypeChange($event)">
-            <nz-option nzValue="system" nzLabel="Hệ thống"></nz-option>
-            <nz-option nzValue="business" nzLabel="Doanh nghiệp"></nz-option>
-            <nz-option nzValue="hotel" nzLabel="Khách sạn"></nz-option>
+            <nz-option nzValue="system" [nzLabel]="'SETTINGS.TARGET_SYSTEM' | translate"></nz-option>
+            <nz-option nzValue="business" [nzLabel]="'SETTINGS.TARGET_BUSINESS' | translate"></nz-option>
+            <nz-option nzValue="hotel" [nzLabel]="'SETTINGS.TARGET_HOTEL' | translate"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item *ngIf="announcementForm.get('targetType')?.value === 'business'">
-        <nz-form-label>Chọn doanh nghiệp</nz-form-label>
+        <nz-form-label>{{ 'SETTINGS.TARGET_BUSINESSES' | translate }}</nz-form-label>
         <nz-form-control>
-          <nz-select formControlName="targetBusinesses" nzMode="multiple" nzPlaceHolder="Chọn doanh nghiệp">
+          <nz-select formControlName="targetBusinesses" nzMode="multiple" [nzPlaceHolder]="'SETTINGS.TARGET_BUSINESSES_PLACEHOLDER' | translate">
             <nz-option *ngFor="let business of businesses" [nzValue]="business._id" [nzLabel]="business.name"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item *ngIf="announcementForm.get('targetType')?.value === 'hotel'">
-        <nz-form-label>Chọn khách sạn</nz-form-label>
+        <nz-form-label>{{ 'SETTINGS.TARGET_HOTELS' | translate }}</nz-form-label>
         <nz-form-control>
-          <nz-select formControlName="targetHotels" nzMode="multiple" nzPlaceHolder="Chọn khách sạn">
+          <nz-select formControlName="targetHotels" nzMode="multiple" [nzPlaceHolder]="'SETTINGS.TARGET_HOTELS_PLACEHOLDER' | translate">
             <nz-option *ngFor="let hotel of hotels" [nzValue]="hotel._id" [nzLabel]="hotel.name"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label>Vai trò nhận thông báo</nz-form-label>
+        <nz-form-label>{{ 'SETTINGS.TARGET_ROLES' | translate }}</nz-form-label>
         <nz-form-control>
-          <nz-select formControlName="targetRoles" nzMode="multiple" nzPlaceHolder="Để trống = tất cả vai trò">
+          <nz-select formControlName="targetRoles" nzMode="multiple" [nzPlaceHolder]="'SETTINGS.TARGET_ROLES_PLACEHOLDER' | translate">
             <nz-option nzValue="superadmin" nzLabel="Superadmin"></nz-option>
             <nz-option nzValue="admin" nzLabel="Admin"></nz-option>
             <nz-option nzValue="business" nzLabel="Business"></nz-option>
@@ -1006,7 +999,7 @@
         </nz-form-control>
       </nz-form-item>
 
-      <label nz-checkbox formControlName="isActive">Kích hoạt thông báo</label>
+      <label nz-checkbox formControlName="isActive">{{ 'SETTINGS.IS_ACTIVE' | translate }}</label>
     </form>
   </div>
 </nz-modal>

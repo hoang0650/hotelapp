@@ -881,7 +881,7 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
           const currentHotelId = this.selectedHotelId || roomData.hotelId;
           const currentCount = this.rooms.filter(r => r.hotelId === currentHotelId).length;
           if (currentCount >= maxRooms) {
-            this.message.warning(`Gói hiện tại chỉ cho phép tạo tối đa ${maxRooms} phòng. Vui lòng nâng cấp gói để tạo thêm phòng.`);
+            this.message.warning(this.translate.instant('ROOM_MANAGEMENT.MAX_ROOMS_LIMIT', { maxRooms }));
             return;
           }
         }

@@ -3,6 +3,7 @@ import { AiAssistantService } from '../../services/ai-assistant.service';
 import { AuthService } from '../../services/auth.service';
 import { SessionContextService } from '../../services/session-context.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 
 interface FbMessage {
   tenant_id?: string;
@@ -60,10 +61,10 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
 
   private onPopupMessage = async (event: MessageEvent) => {
     if (event.data === 'facebook_connected') {
-      this.message.success('Đã kết nối Fanpage thành công');
+      this.message.success(this.translate.instant('FANPAGE_MESSAGES.MESSAGES.CONNECT_SUCCESS'));
     } else if (event.data === 'facebook_connect_failed') {
       this.message.error(
-        'Kết nối Fanpage thất bại. Thường do App chưa duyệt Advanced Access (pages_show_list / pages_messaging) hoặc tài khoản không phải Admin Page.'
+        this.translate.instant('FANPAGE_MESSAGES.MESSAGES.CONNECT_FAIL_DETAIL')
       );
     } else {
       return;
@@ -83,7 +84,8 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
     private authService: AuthService,
     private sessionContext: SessionContextService,
     private cdr: ChangeDetectorRef,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) { }
 
   private getTenantId(): string {
@@ -327,7 +329,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
       this.message.warning('Cấu hình Facebook Login for Business thiếu config_id — có thể bị Meta chặn.');
     }
     if (!url) {
-      this.message.error('Không lấy được URL kết nối Facebook. Kiểm tra AI server / FACEBOOK_APP_ID.');
+      this.message.error(this.translate.instant('FANPAGE_MESSAGES.MESSAGES.FACEBOOK_URL_ERROR'));
       return;
     }
     const width = 600, height = 700;
@@ -368,7 +370,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
       }
     } catch (error: any) {
       const detail = error?.error?.error || error?.message || 'Lỗi không xác định';
-      this.message.error(`Token không hợp lệ: ${detail}`);
+      this.message.error(this.translate.instant('FANPAGE_MESSAGES.MESSAGES.INVALID_TOKEN', { detail }));
       this.manualPages = [];
     } finally {
       this.checkingToken = false;
@@ -400,7 +402,7 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
       const resp = await this.aiAssistant.connectFacebookManual(tenantId, token, pageIds);
       if (resp?.success) {
         const names = (resp.pages || []).map((p: any) => p.name).join(', ');
-        this.message.success(`Đã liên kết ${resp.linked} Fanpage: ${names}`);
+        this.message.success(this.translate.instant('FANPAGE_MESSAGES.MESSAGES.LINKED_PAGES', { count: resp.linked, names }));
         if (resp.subscribe_errors?.length) {
           this.message.warning(
             `${resp.subscribe_errors.length} page chưa subscribe webhook (kiểm tra quyền pages_manage_metadata).`
@@ -416,11 +418,11 @@ export class FanpageMessagesComponent implements OnInit, OnDestroy, AfterViewChe
           await this.loadBotStatus();
         }
       } else {
-        this.message.error(resp?.error || 'Kết nối thất bại');
+        this.message.error(resp?.error || this.translate.instant('FANPAGE_MESSAGES.MESSAGES.CONNECT_FAIL'));
       }
     } catch (error: any) {
       const detail = error?.error?.error || error?.message || 'Lỗi không xác định';
-      this.message.error(`Kết nối thất bại: ${detail}`);
+      this.message.error(this.translate.instant('FANPAGE_MESSAGES.MESSAGES.CONNECT_FAIL_WITH_DETAIL', { detail }));
     } finally {
       this.connectingManual = false;
       this.cdr.detectChanges();

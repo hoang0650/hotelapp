@@ -655,12 +655,15 @@ export class UserManagementComponent implements OnInit {
     this.userService.updateUserStatus(user._id, status).subscribe({
       next: (response) => {
         const statusLabels: Record<UserStatus, string> = {
-          'active': 'kích hoạt',
-          'inactive': 'vô hiệu hóa',
-          'suspended': 'khóa',
-          'deleted': 'xóa'
+          'active': this.translate.instant('USER_MANAGEMENT.MESSAGES.STATUS_ACTIVATE'),
+          'inactive': this.translate.instant('USER_MANAGEMENT.MESSAGES.STATUS_DEACTIVATE'),
+          'suspended': this.translate.instant('USER_MANAGEMENT.MESSAGES.STATUS_SUSPEND'),
+          'deleted': this.translate.instant('USER_MANAGEMENT.MESSAGES.STATUS_DELETE')
         };
-        this.message.success(`Đã ${statusLabels[status]} tài khoản ${user.username}`);
+        this.message.success(this.translate.instant('USER_MANAGEMENT.MESSAGES.STATUS_CHANGED', {
+          action: statusLabels[status],
+          username: user.username
+        }));
         this.loadUsers();
       },
       error: (error) => {

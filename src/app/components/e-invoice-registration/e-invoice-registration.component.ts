@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -66,7 +67,8 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private invoiceService: InvoiceService,
     private hotelService: HotelService,
-    private sepayService: SePayService
+    private sepayService: SePayService,
+    private translate: TranslateService
   ) {
     this.initializePackages();
   }
@@ -245,7 +247,7 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
     }
 
     if (!this.currentUser) {
-      this.message.error('Vui lòng đăng nhập để tiếp tục');
+      this.message.error(this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.LOGIN_REQUIRED'));
       return;
     }
 
@@ -323,14 +325,14 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
         } else {
           // Response có success: false hoặc error
           console.error('[EInvoice Registration] Payment history creation failed:', response);
-          const errorMsg = response.error || response.message || 'Có lỗi xảy ra khi tạo payment history';
+          const errorMsg = response.error || response.message || this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.CREATE_PAYMENT_HISTORY_ERROR');
           this.message.error(errorMsg);
         }
       },
       error: (error: any) => {
         this.loading = false;
         console.error('Error creating payment history:', error);
-        const errorMessage = error.error?.error || error.error?.message || error.message || 'Có lỗi xảy ra khi tạo payment history. Vui lòng thử lại.';
+        const errorMessage = error.error?.error || error.error?.message || error.message || this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.CREATE_PAYMENT_HISTORY_ERROR_RETRY');
         this.message.error(errorMessage);
       }
     });
@@ -358,7 +360,7 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
             const status = response.data.status;
             if (status === 'completed' || status === 'success') {
               // Thanh toán thành công
-              this.message.success('Thanh toán thành công! Hệ thống đang xử lý đăng ký gói...');
+              this.message.success(this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.PAYMENT_PROCESSING'));
               this.closePaymentModal();
               
               // Gọi API đăng ký gói sau khi thanh toán thành công
@@ -399,7 +401,7 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
     this.http.post(`${environment.apiUrl}/e-invoice/register`, orderData).subscribe({
       next: (response: any) => {
         if (response.success !== false) {
-          this.message.success('Đăng ký gói hóa đơn điện tử thành công!');
+          this.message.success(this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.SUBSCRIBE_SUCCESS'));
           
           // Emit event để e-invoice-management component reload quota
           // Hoặc có thể dùng service để notify
@@ -414,12 +416,12 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
           this.totalAmount = 0;
           this.closePaymentModal();
         } else {
-          this.message.error(response.message || 'Có lỗi xảy ra khi đăng ký');
+          this.message.error(response.message || this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.SUBSCRIBE_ERROR'));
         }
       },
       error: (error) => {
         console.error('Error registering e-invoice packages:', error);
-        this.message.error(error.error?.error?.message || error.error?.message || 'Có lỗi xảy ra khi đăng ký');
+        this.message.error(error.error?.error?.message || error.error?.message || this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.SUBSCRIBE_ERROR'));
       }
     });
   }
@@ -462,7 +464,10 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
 
     // Kiểm tra system quota còn đủ không
     if (this.systemQuota && this.systemQuota.unallocatedQuota < totalQuota) {
-      this.message.error(`Không đủ quota để phân chia. Quota còn lại: ${this.systemQuota.unallocatedQuota}, yêu cầu: ${totalQuota}`);
+      this.message.error(this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.QUOTA_INSUFFICIENT', {
+        remaining: this.systemQuota.unallocatedQuota,
+        required: totalQuota
+      }));
       return;
     }
 
@@ -483,7 +488,7 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
 
     Promise.all(allocationPromises).then(() => {
       this.loading = false;
-      this.message.success(`Đã phân chia ${totalQuota} quota cho khách sạn thành công!`);
+      this.message.success(this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.QUOTA_ALLOCATED', { totalQuota }));
       // Reset form
       this.selectedPackages = [];
       this.packages.forEach(pkg => {
@@ -497,7 +502,7 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
     }).catch((error) => {
       this.loading = false;
       console.error('Error allocating quota:', error);
-      this.message.error(error.error?.error?.message || 'Có lỗi xảy ra khi phân chia quota');
+      this.message.error(error.error?.error?.message || this.translate.instant('E_INVOICE_REGISTRATION.MESSAGES.QUOTA_ALLOCATE_ERROR'));
     });
   }
 

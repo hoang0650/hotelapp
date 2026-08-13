@@ -1,109 +1,109 @@
 <div class="bot-setting">
   <div class="header">
-    <h2>Cấu hình Bot Tư vấn Khách sạn</h2>
+    <h2>{{ 'BOT_SETTING.TITLE' | translate }}</h2>
     <div class="actions">
-      <button nz-button nzType="primary" type="submit" [nzLoading]="saving">Lưu cấu hình</button>
-      <button nz-button nzType="default" type="button" [nzLoading]="syncing" (click)="syncAI()">Đồng bộ AI</button>
+      <button nz-button nzType="primary" type="submit" [nzLoading]="saving" (click)="saveSettings()">{{ 'BOT_SETTING.SAVE' | translate }}</button>
+      <button nz-button nzType="default" type="button" [nzLoading]="syncing" (click)="syncAI()">{{ 'BOT_SETTING.SYNC_AI' | translate }}</button>
     </div>
   </div>
 
   <form [formGroup]="form" class="form" (ngSubmit)="saveSettings()">
     <div class="section">
-      <h3>Thông tin khách sạn</h3>
+      <h3>{{ 'BOT_SETTING.SECTION_HOTEL' | translate }}</h3>
       <div class="grid-2">
         <label>
-          Tên khách sạn
-          <input nz-input formControlName="hotelName" placeholder="Ví dụ: PH Hotel Saigon" />
+          {{ 'BOT_SETTING.HOTEL_NAME' | translate }}
+          <input nz-input formControlName="hotelName" [placeholder]="'BOT_SETTING.HOTEL_NAME_PLACEHOLDER' | translate" />
         </label>
         <div formGroupName="location">
           <div class="grid-3">
             <label>
-              Đường
-              <input nz-input formControlName="street" placeholder="Số nhà, đường" />
+              {{ 'BOT_SETTING.STREET' | translate }}
+              <input nz-input formControlName="street" [placeholder]="'BOT_SETTING.STREET_PLACEHOLDER' | translate" />
             </label>
             <label>
-              Thành phố
-              <input nz-input formControlName="city" placeholder="TP. Hồ Chí Minh" />
+              {{ 'BOT_SETTING.CITY' | translate }}
+              <input nz-input formControlName="city" [placeholder]="'BOT_SETTING.CITY_PLACEHOLDER' | translate" />
             </label>
             <label>
-              Quốc gia
-              <input nz-input formControlName="country" placeholder="Việt Nam" />
+              {{ 'BOT_SETTING.COUNTRY' | translate }}
+              <input nz-input formControlName="country" [placeholder]="'BOT_SETTING.COUNTRY_PLACEHOLDER' | translate" />
             </label>
           </div>
         </div>
       </div>
       <div class="grid-2">
         <label>
-          Giờ nhận phòng
+          {{ 'BOT_SETTING.CHECKIN_TIME' | translate }}
           <input nz-input formControlName="checkin_time" placeholder="14:00" />
         </label>
         <label>
-          Giờ trả phòng
+          {{ 'BOT_SETTING.CHECKOUT_TIME' | translate }}
           <input nz-input formControlName="checkout_time" placeholder="12:00" />
         </label>
       </div>
       <div class="grid-2">
         <label>
-          Hotline
-          <input nz-input formControlName="hotline" placeholder="0901 234 567" />
+          {{ 'BOT_SETTING.HOTLINE' | translate }}
+          <input nz-input formControlName="hotline" [placeholder]="'BOT_SETTING.HOTLINE_PLACEHOLDER' | translate" />
         </label>
         <label>
-          Email hỗ trợ
-          <input nz-input formControlName="email_support" placeholder="info@hotel.com" />
+          {{ 'BOT_SETTING.EMAIL_SUPPORT' | translate }}
+          <input nz-input formControlName="email_support" [placeholder]="'BOT_SETTING.EMAIL_SUPPORT_PLACEHOLDER' | translate" />
         </label>
       </div>
     </div>
 
     <div class="section" formGroupName="bankTransfer">
       <div class="section-head">
-        <h3>Nhận cọc chuyển khoản qua Bot</h3>
+        <h3>{{ 'BOT_SETTING.SECTION_BANK' | translate }}</h3>
       </div>
       <div class="grid-2">
         <label>
-          Bật nhận cọc qua bot
+          {{ 'BOT_SETTING.BANK_ENABLED' | translate }}
           <nz-switch formControlName="enabled"></nz-switch>
         </label>
         <label>
-          Số tiền cọc mặc định
+          {{ 'BOT_SETTING.DEPOSIT_AMOUNT' | translate }}
           <input nz-input type="number" formControlName="depositAmount" placeholder="500000" />
         </label>
       </div>
       <div class="grid-2">
         <label>
-          Tiền tệ
+          {{ 'BOT_SETTING.CURRENCY' | translate }}
           <input nz-input formControlName="currency" placeholder="VND" />
         </label>
         <label>
-          Tiền tố mã chuyển khoản
+          {{ 'BOT_SETTING.PAYMENT_CODE_PREFIX' | translate }}
           <input nz-input formControlName="paymentCodePrefix" placeholder="BOT" maxlength="5" />
         </label>
       </div>
       <label>
-        Hướng dẫn chuyển khoản
+        {{ 'BOT_SETTING.DEPOSIT_INSTRUCTIONS' | translate }}
         <textarea
           nz-input
           formControlName="depositInstructions"
           rows="2"
-          placeholder="Ví dụ: Khách vui lòng chuyển khoản đúng nội dung mã bot cung cấp để hệ thống tự xác nhận cọc."
+          [placeholder]="'BOT_SETTING.DEPOSIT_INSTRUCTIONS_PLACEHOLDER' | translate"
         ></textarea>
       </label>
       <div class="grid-2">
         <label>
-          Ngân hàng nhận cọc
+          {{ 'BOT_SETTING.BANK_NAME' | translate }}
           <input nz-input formControlName="bankName" placeholder="Vietcombank" />
         </label>
         <label>
-          Số tài khoản nhận cọc
+          {{ 'BOT_SETTING.ACCOUNT_NUMBER' | translate }}
           <input nz-input formControlName="accountNumber" placeholder="0123456789" />
         </label>
       </div>
       <div class="grid-2">
         <label>
-          Tên người thụ hưởng
+          {{ 'BOT_SETTING.BENEFICIARY_NAME' | translate }}
           <input nz-input formControlName="beneficiaryName" placeholder="PH Hotel" />
         </label>
         <label>
-          Link QR thanh toán
+          {{ 'BOT_SETTING.QR_PAYMENT_URL' | translate }}
           <input nz-input formControlName="qrPaymentUrl" placeholder="https://..." />
         </label>
       </div>
@@ -111,60 +111,60 @@
 
     <div class="section">
       <div class="section-head">
-        <h3>Hạng phòng, giá và tiện ích</h3>
+        <h3>{{ 'BOT_SETTING.SECTION_ROOMS' | translate }}</h3>
         <div>
-          <button nz-button nzType="default" type="button" (click)="resetRoomsFromService()" style="margin-right: 8px;">Làm mới từ DS phòng</button>
-          <button nz-button nzType="dashed" type="button" (click)="addRoom()">Thêm hạng phòng</button>
+          <button nz-button nzType="default" type="button" (click)="resetRoomsFromService()" style="margin-right: 8px;">{{ 'BOT_SETTING.REFRESH_ROOMS' | translate }}</button>
+          <button nz-button nzType="dashed" type="button" (click)="addRoom()">{{ 'BOT_SETTING.ADD_ROOM' | translate }}</button>
         </div>
       </div>
       <div formArrayName="rooms">
         <div class="room-card" *ngFor="let r of rooms.controls; let i = index" [formGroupName]="i">
           <div class="room-head">
-            <strong>Hạng phòng #{{ i + 1 }}</strong>
-            <button nz-button nzType="text" nzDanger type="button" (click)="removeRoom(i)">Xóa</button>
+            <strong>{{ 'BOT_SETTING.ROOM_INDEX' | translate:{ n: i + 1 } }}</strong>
+            <button nz-button nzType="text" nzDanger type="button" (click)="removeRoom(i)">{{ 'BOT_SETTING.DELETE' | translate }}</button>
           </div>
           <div class="grid-2">
             <label>
-              Tên hạng phòng
-              <input nz-input formControlName="name" placeholder="Phòng Deluxe Twin" />
+              {{ 'BOT_SETTING.ROOM_NAME' | translate }}
+              <input nz-input formControlName="name" [placeholder]="'BOT_SETTING.ROOM_NAME_PLACEHOLDER' | translate" />
             </label>
             <label>
-              Giá tham khảo
-              <input nz-input formControlName="price" placeholder="850000 VND" />
+              {{ 'BOT_SETTING.ROOM_PRICE' | translate }}
+              <input nz-input formControlName="price" [placeholder]="'BOT_SETTING.ROOM_PRICE_PLACEHOLDER' | translate" />
             </label>
           </div>
           <label>
-            Mô tả
-            <textarea nz-input formControlName="description" rows="2" placeholder="Mô tả ngắn"></textarea>
+            {{ 'BOT_SETTING.ROOM_DESCRIPTION' | translate }}
+            <textarea nz-input formControlName="description" rows="2" [placeholder]="'BOT_SETTING.ROOM_DESCRIPTION_PLACEHOLDER' | translate"></textarea>
           </label>
           <label>
-            Trải nghiệm phù hợp
-            <input nz-input formControlName="use_case" placeholder="Công tác, cặp đôi, gia đình" />
+            {{ 'BOT_SETTING.ROOM_USE_CASE' | translate }}
+            <input nz-input formControlName="use_case" [placeholder]="'BOT_SETTING.ROOM_USE_CASE_PLACEHOLDER' | translate" />
           </label>
 
           <div class="grid-2">
             <div class="sub-section" formArrayName="images">
               <div class="sub-head">
-                <span>Hình ảnh (URL)</span>
-                <button nz-button nzType="dashed" type="button" (click)="addImage(i)">Thêm ảnh</button>
+                <span>{{ 'BOT_SETTING.IMAGES' | translate }}</span>
+                <button nz-button nzType="dashed" type="button" (click)="addImage(i)">{{ 'BOT_SETTING.ADD_IMAGE' | translate }}</button>
               </div>
               <div class="list">
                 <div class="list-item" *ngFor="let ctrl of getImages(i).controls; let j = index">
                   <input nz-input [formControlName]="j" placeholder="https://..." />
-                  <button nz-button nzType="text" nzDanger type="button" (click)="removeImage(i, j)">Xóa</button>
+                  <button nz-button nzType="text" nzDanger type="button" (click)="removeImage(i, j)">{{ 'BOT_SETTING.DELETE' | translate }}</button>
                 </div>
               </div>
             </div>
 
             <div class="sub-section" formArrayName="amenities">
               <div class="sub-head">
-                <span>Tiện ích</span>
-                <button nz-button nzType="dashed" type="button" (click)="addAmenity(i)">Thêm tiện ích</button>
+                <span>{{ 'BOT_SETTING.AMENITIES' | translate }}</span>
+                <button nz-button nzType="dashed" type="button" (click)="addAmenity(i)">{{ 'BOT_SETTING.ADD_AMENITY' | translate }}</button>
               </div>
               <div class="list">
                 <div class="list-item" *ngFor="let ctrl of getAmenities(i).controls; let j = index">
-                  <input nz-input [formControlName]="j" placeholder="Wifi, Buffet sáng..." />
-                  <button nz-button nzType="text" nzDanger type="button" (click)="removeAmenity(i, j)">Xóa</button>
+                  <input nz-input [formControlName]="j" [placeholder]="'BOT_SETTING.AMENITY_PLACEHOLDER' | translate" />
+                  <button nz-button nzType="text" nzDanger type="button" (click)="removeAmenity(i, j)">{{ 'BOT_SETTING.DELETE' | translate }}</button>
                 </div>
               </div>
             </div>
@@ -175,22 +175,22 @@
 
     <div class="section">
       <div class="section-head">
-        <h3>Mẫu câu trả lời (Q&A)</h3>
-        <button nz-button nzType="dashed" type="button" (click)="addQuestion()">Thêm câu hỏi</button>
+        <h3>{{ 'BOT_SETTING.SECTION_QA' | translate }}</h3>
+        <button nz-button nzType="dashed" type="button" (click)="addQuestion()">{{ 'BOT_SETTING.ADD_QUESTION' | translate }}</button>
       </div>
       <div formArrayName="questions">
         <div class="room-card" *ngFor="let q of questions.controls; let i = index" [formGroupName]="i">
           <div class="room-head">
-            <strong>Câu hỏi #{{ i + 1 }}</strong>
-            <button nz-button nzType="text" nzDanger type="button" (click)="removeQuestion(i)">Xóa</button>
+            <strong>{{ 'BOT_SETTING.QUESTION_INDEX' | translate:{ n: i + 1 } }}</strong>
+            <button nz-button nzType="text" nzDanger type="button" (click)="removeQuestion(i)">{{ 'BOT_SETTING.DELETE' | translate }}</button>
           </div>
           <label>
-            Câu hỏi
-            <input nz-input formControlName="question" placeholder="Ví dụ: Khách sạn có cho mang thú cưng không?" />
+            {{ 'BOT_SETTING.QUESTION' | translate }}
+            <input nz-input formControlName="question" [placeholder]="'BOT_SETTING.QUESTION_PLACEHOLDER' | translate" />
           </label>
           <label style="margin-top: 8px;">
-            Trả lời
-            <textarea nz-input formControlName="answer" rows="2" placeholder="Ví dụ: Dạ có, nhưng phụ thu 200k/bé ạ."></textarea>
+            {{ 'BOT_SETTING.ANSWER' | translate }}
+            <textarea nz-input formControlName="answer" rows="2" [placeholder]="'BOT_SETTING.ANSWER_PLACEHOLDER' | translate"></textarea>
           </label>
         </div>
       </div>

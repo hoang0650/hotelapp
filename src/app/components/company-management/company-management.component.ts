@@ -617,7 +617,10 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
       }
       this.isLoadingUpload = false;
     } else if (info.file.status === 'error') {
-      this.message.error(`${this.translate.instant('COMPANY_MANAGEMENT.UPLOAD_ERROR')} ${info.file.error?.message || this.translate.instant('COMPANY_MANAGEMENT.UPLOAD_ERROR_UNKNOWN')}`);
+      this.message.error(
+        this.translate.instant('COMPANY_MANAGEMENT.UPLOAD_ERROR') + ' ' +
+        (info.file.error?.message || this.translate.instant('COMPANY_MANAGEMENT.UPLOAD_ERROR_UNKNOWN'))
+      );
       console.error('Upload error:', info.file.error);
       this.isLoadingUpload = false;
     }
