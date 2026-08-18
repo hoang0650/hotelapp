@@ -16,8 +16,11 @@ BẠN CẦN
 CÁCH CHẠY (3 BƯỚC)
   Bước 1: Giải nén file ZIP vừa tải vào thư mục dễ nhớ
           (ví dụ: Desktop\PHHotel-Camera-Agent)
+          ★ QUAN TRỌNG: phải GIẢI NÉN thật sự ra ổ đĩa.
+            KHÔNG bấm đúp BAT_DAU.bat ngay trong cửa sổ WinRAR/ZIP
+            (sẽ lỗi: Cannot find module ...\Rar$DI...\server.js).
 
-  Bước 2: Bấm đúp file   BAT_DAU.bat
+  Bước 2: Mở thư mục ĐÃ GIẢI NÉN, bấm đúp file   BAT_DAU.bat
           - Lần đầu có thể chờ vài phút (tự cài thư viện)
           - Để cửa sổ đen mở — ĐỪNG đóng cửa sổ này
 

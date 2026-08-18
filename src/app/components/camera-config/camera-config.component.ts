@@ -5,10 +5,20 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subscription, interval, firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { StaffService } from '../../services/staff.service';
+import { Staff } from '../../interfaces/staff';
 import { TranslateService } from '@ngx-translate/core';
 
 type CameraProviderId = 'hikvision' | 'kbvision';
 type CameraAccessMode = 'cloud' | 'agent';
+type StaffLabelRole = 'receptionist' | 'housekeeper';
+type LabelZone = 'general' | 'reception_desk' | 'housekeeping';
+
+interface StaffAssignment {
+  staffId: string;
+  name: string;
+  role: StaffLabelRole;
+}
 
 interface CameraProviderOption {
   id: CameraProviderId;
@@ -77,6 +87,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   agentDetectError: string | null = null;
   frameOverlays: FrameOverlay[] = [];
   liveLabel: any = null;
+  hotelStaff: Staff[] = [];
+  staffAssignments: StaffAssignment[] = [];
+  assignStaffId: string | null = null;
+  assignRole: StaffLabelRole = 'receptionist';
+  isAssigningStaff = false;
+  liveUnmatchedEncoding: number[] | null = null;
   private previewSub: Subscription | null = null;
   private overlaySub: Subscription | null = null;
   private overlayBusy = false;
@@ -94,6 +110,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private message: NzMessageService,
     private authService: AuthService,
+    private staffService: StaffService,
     private translate: TranslateService
   ) { }
 
@@ -135,7 +152,8 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         enableFaceRecognition: [false],
         enableGuestLabels: [true],
         enableStayEstimate: [true],
-        autoCheckin: [false]
+        autoCheckin: [false],
+        labelZone: ['general']
       })
     });
 
@@ -148,6 +166,10 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         this.frameOverlays = [];
         this.liveLabel = null;
       }
+    });
+
+    this.cameraForm.get('aiConfig.labelZone')?.valueChanges.subscribe((zone: LabelZone) => {
+      this.assignRole = this.defaultRoleFromZone(zone);
     });
 
     this.cameraForm.get('accessMode')?.valueChanges.subscribe((mode: CameraAccessMode) => {
@@ -183,6 +205,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (directHotelId) {
       this.selectedHotelId = directHotelId;
       this.loadCameras();
+      this.loadHotelStaff();
       this.startStatsPolling();
       return;
     }
@@ -198,6 +221,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         this.selectedHotelId = res?.selectedHotelId || null;
         if (this.selectedHotelId) {
           this.loadCameras();
+          this.loadHotelStaff();
           this.startStatsPolling();
         } else {
           this.loadHotelsOptions();
@@ -219,6 +243,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       });
     }
     this.loadCameras();
+    this.loadHotelStaff();
     this.startStatsPolling();
   }
 
@@ -362,6 +387,13 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   /** Nhãn dán AI — khớp PHGroup-AI / guestsController */
   getLabelVi(label: any): string {
     if (!label) return this.translate.instant('CAMERA_CONFIG.LABEL_UNKNOWN');
+    const role = String(label.employeeRole || '').trim();
+    if (role === 'receptionist' || String(label.labelVi || '') === 'Nhân viên lễ tân') {
+      return this.translate.instant('CAMERA_CONFIG.LABEL_RECEPTIONIST');
+    }
+    if (role === 'housekeeper' || String(label.labelVi || '') === 'Nhân viên buồng phòng') {
+      return this.translate.instant('CAMERA_CONFIG.LABEL_HOUSEKEEPER');
+    }
     const raw = String(label.labelVi || '').trim();
     if (raw) return raw;
     const t = String(label.personType || '').trim();
@@ -374,6 +406,8 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
 
   getLabelBadgeColor(label: any): string {
     if (!label) return 'default';
+    const role = String(label.employeeRole || '').trim();
+    if (role === 'housekeeper') return 'magenta';
     const c = String(label.badgeColor || '').trim();
     if (c) return c;
     const t = String(label.personType || '').trim();
@@ -382,6 +416,153 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (label.isNewGuest || t === 'new_guest') return 'green';
     if (label.isWalkIn || t === 'walk_in') return 'orange';
     return 'default';
+  }
+
+  defaultRoleFromZone(zone?: string | null): StaffLabelRole {
+    return zone === 'housekeeping' ? 'housekeeper' : 'receptionist';
+  }
+
+  staffOptionName(staff: Staff): string {
+    const name = [staff?.personalInfo?.lastName, staff?.personalInfo?.firstName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    return name || String((staff as any)?.personalInfo?.fullName || staff?._id || '');
+  }
+
+  staffOptionId(staff: Staff): string {
+    return String(staff?._id || '');
+  }
+
+  roleLabel(role: StaffLabelRole): string {
+    return role === 'housekeeper'
+      ? this.translate.instant('CAMERA_CONFIG.LABEL_HOUSEKEEPER')
+      : this.translate.instant('CAMERA_CONFIG.LABEL_RECEPTIONIST');
+  }
+
+  assignmentTagColor(role: StaffLabelRole): string {
+    return role === 'housekeeper' ? 'magenta' : 'purple';
+  }
+
+  assignStaffToCamera(): void {
+    if (!this.assignStaffId) {
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_STAFF_REQUIRED'));
+      return;
+    }
+    const staff = this.hotelStaff.find((s) => String(s._id) === String(this.assignStaffId));
+    const role: StaffLabelRole = this.assignRole || this.defaultRoleFromZone(this.aiConfigForm.value.labelZone);
+    const row: StaffAssignment = {
+      staffId: String(this.assignStaffId),
+      name: staff ? this.staffOptionName(staff) : '',
+      role
+    };
+
+    if (!this.selectedCameraId) {
+      this.upsertLocalAssignment(row);
+      this.cameraForm.markAsDirty();
+      this.assignStaffId = null;
+      this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_SUCCESS'));
+      return;
+    }
+
+    this.isAssigningStaff = true;
+    this.http.post<any>(`${environment.apiUrl}/cameras/${this.selectedCameraId}/assign-staff-label`, {
+      staffId: row.staffId,
+      role: row.role,
+      encoding: this.liveUnmatchedEncoding || undefined
+    }).subscribe({
+      next: (res) => {
+        this.isAssigningStaff = false;
+        const cam = res?.data;
+        if (cam) {
+          this.staffAssignments = (cam?.aiConfig?.staffAssignments || [])
+      .filter((a: any) => a?.staffId && (a.role === 'receptionist' || a.role === 'housekeeper'))
+      .map((a: any) => ({
+        staffId: String(a.staffId),
+        name: a.name || '',
+        role: a.role as StaffLabelRole
+      }));
+          if (cam.aiConfig?.labelZone) {
+            this.aiConfigForm.patchValue({ labelZone: cam.aiConfig.labelZone }, { emitEvent: false });
+          }
+          const idx = this.cameras.findIndex((c) => String(c._id) === String(cam._id));
+          if (idx >= 0) this.cameras[idx] = { ...this.cameras[idx], ...cam };
+        } else {
+          this.upsertLocalAssignment(row);
+        }
+        this.liveUnmatchedEncoding = null;
+        this.assignStaffId = null;
+        this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_SUCCESS'));
+      },
+      error: (err) => {
+        this.isAssigningStaff = false;
+        this.message.error(err?.error?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_FAIL'));
+      }
+    });
+  }
+
+  removeStaffAssignment(row: StaffAssignment): void {
+    if (!row?.staffId) return;
+    if (!this.selectedCameraId) {
+      this.staffAssignments = this.staffAssignments.filter((a) => a.staffId !== row.staffId);
+      this.cameraForm.markAsDirty();
+      return;
+    }
+    this.http.post<any>(`${environment.apiUrl}/cameras/${this.selectedCameraId}/assign-staff-label`, {
+      staffId: row.staffId,
+      remove: true
+    }).subscribe({
+      next: (res) => {
+        this.applyAssignmentsFromCamera(res?.data);
+        this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_REMOVED'));
+      },
+      error: () => {
+        this.staffAssignments = this.staffAssignments.filter((a) => a.staffId !== row.staffId);
+        this.cameraForm.markAsDirty();
+      }
+    });
+  }
+
+  private applyAssignmentsFromCamera(cam: any): void {
+    this.staffAssignments = (cam?.aiConfig?.staffAssignments || [])
+      .filter((a: any) => a?.staffId && (a.role === 'receptionist' || a.role === 'housekeeper'))
+      .map((a: any) => ({
+        staffId: String(a.staffId),
+        name: a.name || '',
+        role: a.role as StaffLabelRole
+      }));
+  }
+
+  private upsertLocalAssignment(row: StaffAssignment): void {
+    const idx = this.staffAssignments.findIndex((a) => a.staffId === row.staffId);
+    if (idx >= 0) this.staffAssignments[idx] = row;
+    else this.staffAssignments = [...this.staffAssignments, row];
+  }
+
+  private loadHotelStaff(): void {
+    if (!this.selectedHotelId) {
+      this.hotelStaff = [];
+      return;
+    }
+    this.staffService.getStaffByHotel(this.selectedHotelId).subscribe({
+      next: (list) => {
+        const rows = Array.isArray(list) ? list : ((list as any)?.data || []);
+        this.hotelStaff = rows.filter((s: Staff) => s?.employmentInfo?.status !== 'terminated');
+      },
+      error: () => {
+        this.hotelStaff = [];
+      }
+    });
+  }
+
+  private faceMatchesLiveLabel(face: any): boolean {
+    if (!this.liveLabel || !face) return false;
+    const gid = String(face.guestId || '');
+    if (this.liveLabel.guestId && String(this.liveLabel.guestId) === gid) return true;
+    const sid = String(this.liveLabel.staffId || '');
+    if (!sid) return false;
+    const normalized = gid.startsWith('staff:') ? gid.slice(6) : gid;
+    return normalized === sid || gid === `staff:${sid}`;
   }
 
   useProxvnPublicUrl(): void {
@@ -447,6 +628,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         } else {
           this.selectedCameraId = null;
           this.selectedProvider = null;
+          this.staffAssignments = [];
           this.cameraForm.patchValue({ provider: null });
         }
         this.isLoadingConfig = false;
@@ -481,8 +663,19 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       enableFaceRecognition: !!cam?.aiConfig?.enableFaceRecognition,
       enableGuestLabels: cam?.aiConfig?.enableGuestLabels !== false,
       enableStayEstimate: cam?.aiConfig?.enableStayEstimate !== false,
-      autoCheckin: !!cam?.aiConfig?.autoCheckin
+      autoCheckin: !!cam?.aiConfig?.autoCheckin,
+      labelZone: cam?.aiConfig?.labelZone || 'general'
     });
+    this.staffAssignments = (cam?.aiConfig?.staffAssignments || [])
+      .filter((a: any) => a?.staffId && (a.role === 'receptionist' || a.role === 'housekeeper'))
+      .map((a: any) => ({
+        staffId: String(a.staffId),
+        name: a.name || '',
+        role: a.role as StaffLabelRole
+      }));
+    this.assignRole = this.defaultRoleFromZone(cam?.aiConfig?.labelZone);
+    this.assignStaffId = null;
+    this.liveUnmatchedEncoding = null;
   }
 
   // Chuyển bước tiếp theo
@@ -601,6 +794,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.overlaySub = null;
     this.liveStreamUrl = null;
     this.frameOverlays = [];
+    this.liveUnmatchedEncoding = null;
   }
 
   private startOverlayPolling(): void {
@@ -656,6 +850,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         }),
       );
       this.liveLabel = res?.label || null;
+      const unmatched = (res?.faces || []).find(
+        (f: any) => !f?.matched && Array.isArray(f?.encoding) && f.encoding.length
+      );
+      if (unmatched?.encoding) {
+        this.liveUnmatchedEncoding = unmatched.encoding;
+      }
       this.frameOverlays = this.buildFrameOverlays(res);
       // Cho ảnh render xong rồi map lại % (object-fit: contain)
       setTimeout(() => {
@@ -696,7 +896,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       let labelText = this.translate.instant('CAMERA_CONFIG.LABEL_RECOGNIZING');
       let color = '#8c8c8c';
       if (face?.matched) {
-        if (this.liveLabel && String(this.liveLabel.guestId || '') === String(face.guestId || '')) {
+        if (this.faceMatchesLiveLabel(face)) {
           labelText = this.getLabelVi(this.liveLabel);
           color = this.badgeHex(this.getLabelBadgeColor(this.liveLabel));
         } else {
@@ -749,6 +949,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   private badgeHex(color: string): string {
     switch (String(color || '').toLowerCase()) {
       case 'purple': return '#722ed1';
+      case 'magenta': return '#c41d7f';
       case 'blue': return '#1677ff';
       case 'green': return '#52c41a';
       case 'orange': return '#fa8c16';
@@ -809,7 +1010,10 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       password: this.cameraForm.value.password,
       rtspPath: this.cameraForm.value.rtspPath,
       status: this.cameraForm.value.status,
-      aiConfig: this.aiConfigForm.value
+      aiConfig: {
+        ...this.aiConfigForm.value,
+        staffAssignments: this.staffAssignments
+      }
     };
   }
 

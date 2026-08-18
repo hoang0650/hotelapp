@@ -13,6 +13,17 @@ echo  Huong dan: mo file HUONG_DAN.txt neu can.
 echo  De cua so nay MO - dung dong khi dang dung.
 echo.
 
+REM Phat hien mo BAT tu trong RAR/ZIP ^(WinRAR/7-Zip temp^) - chua giai nen
+set "CURDIR=%CD%"
+echo %CURDIR% | findstr /I /C:"Rar$DI" /C:".rartemp" /C:"\Temp\Rar" /C:"\Temp\7z" /C:"\INetCache\" /C:"\AppData\Local\Temp\7z" >nul
+if not errorlevel 1 goto :NEED_EXTRACT
+echo %CURDIR% | findstr /I /C:"\AppData\Local\Temp\" >nul
+if not errorlevel 1 (
+  if not exist "%~dp0server.js" goto :NEED_EXTRACT
+)
+
+if not exist "%~dp0server.js" goto :NEED_SERVER_JS
+
 set "NODE_EXE="
 set "NPM_CMD="
 set "PF86=%ProgramFiles(x86)%"
@@ -136,6 +147,30 @@ if "!ERR!"=="0" (
 echo.
 pause
 exit /b !ERR!
+
+:NEED_EXTRACT
+echo  [LOI] Ban dang mo BAT_DAU.bat TU BEN TRONG file RAR/ZIP.
+echo  WinRAR chi giai nen tam vao Temp, thieu server.js nen Agent khong chay.
+echo.
+echo  CACH DUNG DUNG:
+echo   1^) Click chuot phai file ZIP/RAR ^> Extract to / Giai nen vao...
+echo   2^) Chon thu muc de nho ^(vd: Desktop\PHHotel-Camera-Agent^)
+echo   3^) Mo thu muc DA GIAI NEN, bam dup BAT_DAU.bat o do
+echo.
+echo  KHONG bam dup BAT_DAU.bat ngay trong cua so WinRAR.
+echo.
+pause
+exit /b 1
+
+:NEED_SERVER_JS
+echo  [LOI] Thieu file server.js trong thu muc:
+echo  %CD%
+echo.
+echo  Hay tai lai goi ZIP tu PHHotel ^> Kho tai lieu, giai nen DAY DU,
+echo  roi bam dup BAT_DAU.bat trong thu muc da giai nen.
+echo.
+pause
+exit /b 1
 
 :NEED_NODE
 echo  [CAN CAI DAT] Khong tim thay Node.js tren may nay.

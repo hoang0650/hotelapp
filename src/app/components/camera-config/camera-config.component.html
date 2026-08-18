@@ -359,18 +359,81 @@
               <nz-switch formControlName="enableOcr"></nz-switch>
             </div>
 
-            <div class="ai-feature-item">
-              <div>
-                <h4><i nz-icon nzType="tags" nzTheme="outline"></i> {{ 'CAMERA_CONFIG.FEATURE_LABELS_TITLE' | translate }}</h4>
-                <p>{{ 'CAMERA_CONFIG.FEATURE_LABELS_DESC' | translate }}</p>
-                <div class="label-legend">
-                  <nz-tag nzColor="purple">{{ 'CAMERA_CONFIG.LABEL_EMPLOYEE' | translate }}</nz-tag>
-                  <nz-tag nzColor="blue">{{ 'CAMERA_CONFIG.LABEL_RETURNING' | translate }}</nz-tag>
-                  <nz-tag nzColor="green">{{ 'CAMERA_CONFIG.LABEL_NEW' | translate }}</nz-tag>
-                  <nz-tag nzColor="orange">{{ 'CAMERA_CONFIG.LABEL_WALK_IN' | translate }}</nz-tag>
+            <div class="ai-feature-item ai-feature-item--stack">
+              <div class="ai-feature-head">
+                <div>
+                  <h4><i nz-icon nzType="tags" nzTheme="outline"></i> {{ 'CAMERA_CONFIG.FEATURE_LABELS_TITLE' | translate }}</h4>
+                  <p>{{ 'CAMERA_CONFIG.FEATURE_LABELS_DESC' | translate }}</p>
+                  <div class="label-legend">
+                    <nz-tag nzColor="purple">{{ 'CAMERA_CONFIG.LABEL_RECEPTIONIST' | translate }}</nz-tag>
+                    <nz-tag nzColor="magenta">{{ 'CAMERA_CONFIG.LABEL_HOUSEKEEPER' | translate }}</nz-tag>
+                    <nz-tag nzColor="blue">{{ 'CAMERA_CONFIG.LABEL_RETURNING' | translate }}</nz-tag>
+                    <nz-tag nzColor="green">{{ 'CAMERA_CONFIG.LABEL_NEW' | translate }}</nz-tag>
+                    <nz-tag nzColor="orange">{{ 'CAMERA_CONFIG.LABEL_WALK_IN' | translate }}</nz-tag>
+                  </div>
                 </div>
+                <nz-switch formControlName="enableGuestLabels"></nz-switch>
               </div>
-              <nz-switch formControlName="enableGuestLabels"></nz-switch>
+
+              <div class="label-assign" *ngIf="aiConfigForm.value.enableGuestLabels">
+                <div class="label-assign-row">
+                  <span class="label-assign-k">{{ 'CAMERA_CONFIG.LABEL_ZONE' | translate }}</span>
+                  <nz-radio-group formControlName="labelZone" nzSize="small">
+                    <label nz-radio-button nzValue="reception_desk">{{ 'CAMERA_CONFIG.ZONE_RECEPTION' | translate }}</label>
+                    <label nz-radio-button nzValue="housekeeping">{{ 'CAMERA_CONFIG.ZONE_HOUSEKEEPING' | translate }}</label>
+                    <label nz-radio-button nzValue="general">{{ 'CAMERA_CONFIG.ZONE_GENERAL' | translate }}</label>
+                  </nz-radio-group>
+                </div>
+                <div class="label-assign-row">
+                  <nz-select
+                    [(ngModel)]="assignStaffId"
+                    [ngModelOptions]="{standalone: true}"
+                    [nzPlaceHolder]="'CAMERA_CONFIG.ASSIGN_STAFF_PLACEHOLDER' | translate"
+                    nzShowSearch
+                    nzAllowClear
+                    nzSize="small"
+                    class="label-assign-select"
+                  >
+                    <nz-option
+                      *ngFor="let s of hotelStaff"
+                      [nzValue]="staffOptionId(s)"
+                      [nzLabel]="staffOptionName(s)"
+                    ></nz-option>
+                  </nz-select>
+                  <nz-select
+                    [(ngModel)]="assignRole"
+                    [ngModelOptions]="{standalone: true}"
+                    nzSize="small"
+                    class="label-assign-role"
+                  >
+                    <nz-option nzValue="receptionist" [nzLabel]="'CAMERA_CONFIG.LABEL_RECEPTIONIST' | translate"></nz-option>
+                    <nz-option nzValue="housekeeper" [nzLabel]="'CAMERA_CONFIG.LABEL_HOUSEKEEPER' | translate"></nz-option>
+                  </nz-select>
+                  <button
+                    nz-button
+                    nzType="primary"
+                    nzSize="small"
+                    [nzLoading]="isAssigningStaff"
+                    (click)="assignStaffToCamera()"
+                  >{{ 'CAMERA_CONFIG.ASSIGN_ADD' | translate }}</button>
+                </div>
+                <div class="label-assign-hint" *ngIf="liveUnmatchedEncoding">
+                  {{ 'CAMERA_CONFIG.ASSIGN_LIVE_HINT' | translate }}
+                </div>
+                <div class="assigned-staff-list" *ngIf="staffAssignments.length; else noAssignedStaff">
+                  <nz-tag
+                    *ngFor="let a of staffAssignments"
+                    [nzColor]="assignmentTagColor(a.role)"
+                    nzMode="closeable"
+                    (nzOnClose)="removeStaffAssignment(a)"
+                  >
+                    {{ a.name || a.staffId }} · {{ roleLabel(a.role) }}
+                  </nz-tag>
+                </div>
+                <ng-template #noAssignedStaff>
+                  <div class="label-assign-empty">{{ 'CAMERA_CONFIG.ASSIGN_EMPTY' | translate }}</div>
+                </ng-template>
+              </div>
             </div>
 
             <div class="ai-feature-item">
