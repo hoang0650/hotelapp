@@ -604,7 +604,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     });
   }
 
-  private cameraIdOf(cam: any): string | null {
+  cameraIdOf(cam: any): string | null {
     const raw = cam?._id ?? cam?.id ?? null;
     if (!raw) return null;
     if (typeof raw === 'string' && raw && raw !== '[object Object]') return raw;
