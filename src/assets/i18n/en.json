@@ -196,6 +196,8 @@
     "RTSP_PATH": "RTSP Path",
     "RTSP_PATH_REQUIRED": "Please enter RTSP Path",
     "RTSP_TEMPLATE": "Template",
+    "RTSP_PATH_HINT_KBVISION": "KBVision/Dahua: /cam/realmonitor?channel=1&subtype=0 (0 = main stream, 1 = sub). Missing subtype causes 404.",
+    "RTSP_PATH_HINT_HIK": "Hikvision: /Streaming/Channels/101 (main) or /Streaming/Channels/102 (sub).",
     "VIDEO_STREAM_TITLE": "Check video stream",
     "PREVIEW_PLACEHOLDER": "Realtime RTSP stream will appear here",
     "CONNECTING_CAMERA": "Connecting to camera...",

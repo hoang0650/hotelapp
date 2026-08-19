@@ -199,11 +199,12 @@
           <nz-form-label nzRequired>{{ 'CAMERA_CONFIG.RTSP_PATH' | translate }}</nz-form-label>
           <nz-form-control [nzErrorTip]="'CAMERA_CONFIG.RTSP_PATH_REQUIRED' | translate">
             <nz-input-group [nzSuffix]="rtspSuffixTemplate">
-              <input nz-input formControlName="rtspPath" placeholder="/Streaming/Channels/101" />
+              <input nz-input formControlName="rtspPath" [placeholder]="getDefaultRtspPath(selectedProvider || 'hikvision')" />
             </nz-input-group>
             <ng-template #rtspSuffixTemplate>
               <a (click)="applyRtspTemplate()" style="cursor: pointer;">{{ 'CAMERA_CONFIG.RTSP_TEMPLATE' | translate }}</a>
             </ng-template>
+            <div class="rtsp-hint">{{ (selectedProvider === 'kbvision' ? 'CAMERA_CONFIG.RTSP_PATH_HINT_KBVISION' : 'CAMERA_CONFIG.RTSP_PATH_HINT_HIK') | translate }}</div>
           </nz-form-control>
         </nz-form-item>
       </form>

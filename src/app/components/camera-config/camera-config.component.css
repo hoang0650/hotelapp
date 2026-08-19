@@ -170,6 +170,13 @@
   max-width: 520px;
 }
 
+.rtsp-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8c8c8c;
+  line-height: 1.4;
+}
+
 .camera-select-row {
   display: flex;
   justify-content: center;

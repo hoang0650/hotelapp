@@ -196,6 +196,8 @@
     "RTSP_PATH": "RTSP-Pfad",
     "RTSP_PATH_REQUIRED": "Bitte RTSP-Pfad eingeben",
     "RTSP_TEMPLATE": "Vorlage",
+    "RTSP_PATH_HINT_KBVISION": "KBVision/Dahua: /cam/realmonitor?channel=1&subtype=0 (0 = Hauptstream, 1 = Sub). Ohne subtype kommt 404.",
+    "RTSP_PATH_HINT_HIK": "Hikvision: /Streaming/Channels/101 (Haupt) oder /Streaming/Channels/102 (Sub).",
     "VIDEO_STREAM_TITLE": "Videostream prüfen",
     "PREVIEW_PLACEHOLDER": "Echtzeit-RTSP-Stream erscheint hier",
     "CONNECTING_CAMERA": "Verbinde mit Kamera...",

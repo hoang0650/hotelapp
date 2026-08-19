@@ -271,11 +271,21 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     }
   }
 
-  private getDefaultRtspPath(providerId: CameraProviderId): string {
+  getDefaultRtspPath(providerId: CameraProviderId): string {
     if (providerId === 'kbvision') {
       return '/cam/realmonitor?channel=1&subtype=0';
     }
     return '/Streaming/Channels/101';
+  }
+
+  private normalizeRtspPath(path: string, providerId?: CameraProviderId | null): string {
+    let p = String(path || '').trim();
+    if (!p) return this.getDefaultRtspPath(providerId || 'hikvision');
+    if (!p.startsWith('/')) p = `/${p}`;
+    if (/\/cam\/realmonitor/i.test(p) && !/[?&]subtype=/i.test(p)) {
+      p += (p.includes('?') ? '&' : '?') + 'subtype=0';
+    }
+    return p;
   }
 
   applyRtspTemplate(): void {
@@ -667,7 +677,10 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       port: cam?.port || 554,
       username: cam?.username || 'admin',
       password: cam?.password || '',
-      rtspPath: cam?.rtspPath || this.getDefaultRtspPath((cam?.provider as CameraProviderId) || 'hikvision'),
+      rtspPath: this.normalizeRtspPath(
+        cam?.rtspPath || this.getDefaultRtspPath((cam?.provider as CameraProviderId) || 'hikvision'),
+        cam?.provider
+      ),
       status: cam?.status || 'active'
     });
     this.aiConfigForm.patchValue({
@@ -1035,7 +1048,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       port: Number(this.cameraForm.value.port || 554),
       username: this.cameraForm.value.username,
       password: this.cameraForm.value.password,
-      rtspPath: this.cameraForm.value.rtspPath,
+      rtspPath: this.normalizeRtspPath(this.cameraForm.value.rtspPath, this.selectedProvider),
       status: this.cameraForm.value.status,
       aiConfig: {
         ...this.aiConfigForm.value,

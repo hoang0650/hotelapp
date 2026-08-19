@@ -204,6 +204,8 @@
     "RTSP_PATH": "RTSP Path",
     "RTSP_PATH_REQUIRED": "Vui lòng nhập RTSP Path",
     "RTSP_TEMPLATE": "Mẫu",
+    "RTSP_PATH_HINT_KBVISION": "KBVision/Dahua: /cam/realmonitor?channel=1&subtype=0 (0 = luồng chính, 1 = phụ). Thiếu subtype sẽ lỗi 404.",
+    "RTSP_PATH_HINT_HIK": "Hikvision: /Streaming/Channels/101 (chính) hoặc /Streaming/Channels/102 (phụ).",
     "VIDEO_STREAM_TITLE": "Kiểm tra luồng Video",
     "PREVIEW_PLACEHOLDER": "Luồng RTSP realtime sẽ hiển thị tại đây",
     "CONNECTING_CAMERA": "Đang kết nối camera...",
