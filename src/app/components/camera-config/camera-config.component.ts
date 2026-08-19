@@ -457,47 +457,41 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       role
     };
 
-    if (!this.selectedCameraId) {
+    this.isAssigningStaff = true;
+    void this.ensureCameraSaved(false).then((cameraId) => {
+      this.http.post<any>(`${environment.apiUrl}/cameras/${cameraId}/assign-staff-label`, {
+        staffId: row.staffId,
+        role: row.role,
+        encoding: this.liveUnmatchedEncoding || undefined
+      }).subscribe({
+        next: (res) => {
+          this.isAssigningStaff = false;
+          const cam = res?.data;
+          if (cam) {
+            this.applyAssignmentsFromCamera(cam);
+            if (cam.aiConfig?.labelZone) {
+              this.aiConfigForm.patchValue({ labelZone: cam.aiConfig.labelZone }, { emitEvent: false });
+            }
+            const idx = this.cameras.findIndex((c) => this.cameraIdOf(c) === this.cameraIdOf(cam));
+            if (idx >= 0) this.cameras[idx] = { ...this.cameras[idx], ...cam };
+          } else {
+            this.upsertLocalAssignment(row);
+          }
+          this.liveUnmatchedEncoding = null;
+          this.assignStaffId = null;
+          this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_SUCCESS'));
+        },
+        error: (err) => {
+          this.isAssigningStaff = false;
+          this.message.error(err?.error?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_FAIL'));
+        }
+      });
+    }).catch((err) => {
+      this.isAssigningStaff = false;
       this.upsertLocalAssignment(row);
       this.cameraForm.markAsDirty();
       this.assignStaffId = null;
-      this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_SUCCESS'));
-      return;
-    }
-
-    this.isAssigningStaff = true;
-    this.http.post<any>(`${environment.apiUrl}/cameras/${this.selectedCameraId}/assign-staff-label`, {
-      staffId: row.staffId,
-      role: row.role,
-      encoding: this.liveUnmatchedEncoding || undefined
-    }).subscribe({
-      next: (res) => {
-        this.isAssigningStaff = false;
-        const cam = res?.data;
-        if (cam) {
-          this.staffAssignments = (cam?.aiConfig?.staffAssignments || [])
-      .filter((a: any) => a?.staffId && (a.role === 'receptionist' || a.role === 'housekeeper'))
-      .map((a: any) => ({
-        staffId: String(a.staffId),
-        name: a.name || '',
-        role: a.role as StaffLabelRole
-      }));
-          if (cam.aiConfig?.labelZone) {
-            this.aiConfigForm.patchValue({ labelZone: cam.aiConfig.labelZone }, { emitEvent: false });
-          }
-          const idx = this.cameras.findIndex((c) => String(c._id) === String(cam._id));
-          if (idx >= 0) this.cameras[idx] = { ...this.cameras[idx], ...cam };
-        } else {
-          this.upsertLocalAssignment(row);
-        }
-        this.liveUnmatchedEncoding = null;
-        this.assignStaffId = null;
-        this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_SUCCESS'));
-      },
-      error: (err) => {
-        this.isAssigningStaff = false;
-        this.message.error(err?.error?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.ASSIGN_FAIL'));
-      }
+      this.message.warning(err?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.SAVE_FAIL'));
     });
   }
 
@@ -610,8 +604,24 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     });
   }
 
+  private cameraIdOf(cam: any): string | null {
+    const raw = cam?._id ?? cam?.id ?? null;
+    if (!raw) return null;
+    if (typeof raw === 'string' && raw && raw !== '[object Object]') return raw;
+    if (typeof raw === 'object' && raw.$oid) return String(raw.$oid);
+    const asStr = String(raw);
+    return asStr && asStr !== '[object Object]' ? asStr : null;
+  }
+
+  private parseCamerasResponse(res: any): any[] {
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res?.cameras)) return res.cameras;
+    if (Array.isArray(res)) return res;
+    return [];
+  }
+
   onSelectCamera(cameraId: string): void {
-    const cam = this.cameras.find(c => String(c._id) === String(cameraId));
+    const cam = this.cameras.find(c => this.cameraIdOf(c) === String(cameraId));
     if (!cam) return;
     this.applyCameraToForm(cam);
   }
@@ -621,8 +631,10 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.isLoadingConfig = true;
     this.http.get<any>(`${environment.apiUrl}/cameras`, { params: { hotelId: this.selectedHotelId } }).subscribe({
       next: (res) => {
-        this.cameras = res?.data || [];
-        const active = this.cameras.find(c => c.status === 'active') || this.cameras[0] || null;
+        this.cameras = this.parseCamerasResponse(res);
+        const keepId = this.selectedCameraId ? String(this.selectedCameraId) : null;
+        const kept = keepId ? this.cameras.find(c => this.cameraIdOf(c) === keepId) : null;
+        const active = kept || this.cameras.find(c => c.status === 'active') || this.cameras[0] || null;
         if (active) {
           this.applyCameraToForm(active);
         } else {
@@ -641,7 +653,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   }
 
   private applyCameraToForm(cam: any): void {
-    this.selectedCameraId = cam?._id || null;
+    this.selectedCameraId = this.cameraIdOf(cam);
     this.selectedProvider = cam?.provider || null;
     this.revokePreviewUrl();
     this.previewError = null;
@@ -679,7 +691,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   }
 
   // Chuyển bước tiếp theo
-  next(): void {
+  async next(): Promise<void> {
     if (this.currentStep === 0 && !this.selectedProvider) {
       this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_PROVIDER'));
       return;
@@ -696,6 +708,11 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.FILL_LOGIN'));
         return;
       }
+      try {
+        await this.ensureCameraSaved(false);
+      } catch {
+        return;
+      }
     }
 
     this.currentStep += 1;
@@ -706,25 +723,35 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.currentStep -= 1;
   }
 
-  // Nút test kết nối giả lập
-  testConnection(): void {
+  // Nút test kết nối
+  async testConnection(): Promise<void> {
     if (!this.selectedHotelId) {
       this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_HOTEL_FIRST'));
-      return;
-    }
-    if (!this.selectedCameraId) {
-      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SAVE_AND_SELECT_CAMERA'));
       return;
     }
 
     this.isTestingConnection = true;
     this.previewError = null;
-    this.fetchSnapshotOnce(true).finally(() => {
+    try {
+      await this.ensureCameraSaved(false);
+      await this.fetchSnapshotOnce(true);
+    } catch (err: any) {
+      if (err?.message && !this.previewError) {
+        this.message.warning(err.message);
+      }
+    } finally {
       this.isTestingConnection = false;
-    });
+    }
   }
 
-  startPreview(): void {
+  async startPreview(): Promise<void> {
+    if (this.isPreviewRunning) return;
+    try {
+      await this.ensureCameraSaved(false);
+    } catch (err: any) {
+      this.message.warning(err?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_CAMERA_VIEW'));
+      return;
+    }
     if (!this.selectedCameraId) {
       this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_CAMERA_VIEW'));
       return;
@@ -1017,44 +1044,90 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     };
   }
 
-  private async ensureCameraConfigSyncedForSnapshot(showToast: boolean): Promise<void> {
-    if (!this.selectedCameraId || !this.selectedHotelId) return;
+  private async ensureCameraSaved(showToast: boolean): Promise<string> {
+    if (!this.selectedHotelId) {
+      const msg = this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_HOTEL_FIRST');
+      if (showToast) this.message.warning(msg);
+      throw new Error(msg);
+    }
+    if (!this.selectedProvider) {
+      const msg = this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_PROVIDER');
+      if (showToast) this.message.warning(msg);
+      throw new Error(msg);
+    }
 
     const accessMode: CameraAccessMode = this.cameraForm.value.accessMode;
     if (accessMode === 'agent') {
       const baseUrl = this.normalizeAgentBaseUrl(this.cameraForm.value.agentBaseUrl || '');
       if (!baseUrl) {
-        const agentUrlError: string = this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_URL_BEFORE_SNAPSHOT');
+        const agentUrlError = this.translate.instant('CAMERA_CONFIG.MESSAGES.AGENT_URL_BEFORE_SNAPSHOT');
         this.previewError = agentUrlError;
-        if (showToast) {
-          this.message.error(agentUrlError);
-        }
+        if (showToast) this.message.error(agentUrlError);
         throw new Error(agentUrlError);
       }
     }
 
-    if (!this.cameraForm.dirty) return;
-    if (this.isSavingConfig) return;
+    const needsCreate = !this.selectedCameraId;
+    const needsUpdate = !!this.selectedCameraId && this.cameraForm.dirty;
+    if (!needsCreate && !needsUpdate) {
+      return String(this.selectedCameraId);
+    }
 
     if (this.cameraForm.invalid) {
-      Object.values(this.cameraForm.controls).forEach(control => {
-        control.markAsDirty();
-        control.updateValueAndValidity({ onlySelf: true });
-      });
-      const msg = this.translate.instant('CAMERA_CONFIG.MESSAGES.FILL_CONFIG_BEFORE_SNAPSHOT');
-      this.previewError = msg;
-      if (showToast) this.message.error(msg);
-      throw new Error(msg);
+      const passwordOnly =
+        !!this.selectedCameraId &&
+        !!this.cameraForm.get('password')?.invalid &&
+        Object.entries(this.cameraForm.controls)
+          .filter(([key]) => key !== 'password')
+          .every(([, ctrl]) => ctrl.valid);
+      if (!passwordOnly) {
+        Object.values(this.cameraForm.controls).forEach(control => {
+          control.markAsDirty();
+          control.updateValueAndValidity({ onlySelf: true });
+        });
+        const msg = this.translate.instant('CAMERA_CONFIG.MESSAGES.FILL_CONFIG_BEFORE_SNAPSHOT');
+        this.previewError = msg;
+        if (showToast) this.message.error(msg);
+        throw new Error(msg);
+      }
     }
 
     this.isSavingConfig = true;
     try {
       const payload = this.buildCameraPayload();
-      await firstValueFrom(this.http.put<any>(`${environment.apiUrl}/cameras/${this.selectedCameraId}`, payload));
+      if (!needsCreate && !String(payload.password || '').trim()) {
+        delete payload.password;
+      }
+      const res = needsCreate
+        ? await firstValueFrom(this.http.post<any>(`${environment.apiUrl}/cameras`, payload))
+        : await firstValueFrom(this.http.put<any>(`${environment.apiUrl}/cameras/${this.selectedCameraId}`, payload));
+      const saved = res?.data || res;
+      const id = this.cameraIdOf(saved) || this.selectedCameraId;
+      if (!id) {
+        const msg = this.translate.instant('CAMERA_CONFIG.MESSAGES.SAVE_FAIL');
+        if (showToast) this.message.error(msg);
+        throw new Error(msg);
+      }
+      this.selectedCameraId = String(id);
+      if (saved) {
+        const idx = this.cameras.findIndex((c) => this.cameraIdOf(c) === this.selectedCameraId);
+        if (idx >= 0) this.cameras[idx] = { ...this.cameras[idx], ...saved };
+        else this.cameras = [saved, ...this.cameras];
+      }
       this.cameraForm.markAsPristine();
+      return this.selectedCameraId;
+    } catch (err: any) {
+      const msg = err?.error?.message || err?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.SAVE_FAIL');
+      this.previewError = msg;
+      if (showToast) this.message.error(msg);
+      throw new Error(msg);
     } finally {
       this.isSavingConfig = false;
     }
+  }
+
+  private async ensureCameraConfigSyncedForSnapshot(showToast: boolean): Promise<void> {
+    await this.ensureCameraSaved(showToast);
   }
 
   private async extractHttpErrorMessage(err: any): Promise<string> {
@@ -1205,13 +1278,9 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     ];
   }
 
-  testAiPipeline(): void {
+  async testAiPipeline(): Promise<void> {
     if (!this.selectedHotelId) {
       this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.HOTEL_REQUIRED_TEST'));
-      return;
-    }
-    if (!this.selectedCameraId) {
-      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_CAMERA_TEST'));
       return;
     }
     if (!this.testFrontImage) {
@@ -1222,6 +1291,18 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.isTestingPipeline = true;
     this.pipelineResult = null;
     this.pipelineStages = [];
+    try {
+      await this.ensureCameraSaved(false);
+    } catch (err: any) {
+      this.isTestingPipeline = false;
+      this.message.warning(err?.message || this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_CAMERA_TEST'));
+      return;
+    }
+    if (!this.selectedCameraId) {
+      this.isTestingPipeline = false;
+      this.message.warning(this.translate.instant('CAMERA_CONFIG.MESSAGES.SELECT_CAMERA_TEST'));
+      return;
+    }
     this.http.post<any>(`${environment.apiUrl}/cameras/process-frame`, {
       cameraId: this.selectedCameraId,
       imageFrontBase64: this.testFrontImage,
@@ -1274,8 +1355,9 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.isSavingConfig = false;
         const saved = res?.data;
-        if (saved?._id) {
-          this.selectedCameraId = saved._id;
+        const id = this.cameraIdOf(saved);
+        if (id) {
+          this.selectedCameraId = id;
         }
         this.message.success(this.translate.instant('CAMERA_CONFIG.MESSAGES.SYNC_SUCCESS'));
         this.loadCameras();
