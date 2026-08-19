@@ -394,38 +394,76 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Nhãn dán AI — khớp PHGroup-AI / guestsController */
+  private isUnknownCaption(text: string): boolean {
+    const t = String(text || '').trim().toLowerCase();
+    if (!t || t === 'undefined' || t === 'null' || t === 'nan') return true;
+    const unknown = this.translate.instant('CAMERA_CONFIG.LABEL_UNKNOWN').toLowerCase();
+    return t === unknown || t === 'chưa xác định' || t === 'unknown' || t === 'unidentified';
+  }
+
+  /** Nhãn dán AI — 5 loại cấu hình, không để “Chưa xác định” trên live view */
   getLabelVi(label: any): string {
-    if (!label) return this.translate.instant('CAMERA_CONFIG.LABEL_UNKNOWN');
+    const walkIn = this.translate.instant('CAMERA_CONFIG.LABEL_WALK_IN');
+    if (label == null || label === '') return walkIn;
+    if (typeof label === 'string') {
+      const s = label.trim();
+      return this.isUnknownCaption(s) ? walkIn : s;
+    }
     const role = String(label.employeeRole || '').trim();
-    if (role === 'receptionist' || String(label.labelVi || '') === 'Nhân viên lễ tân') {
-      return this.translate.instant('CAMERA_CONFIG.LABEL_RECEPTIONIST');
+    const roleVi = role === 'receptionist'
+      ? this.translate.instant('CAMERA_CONFIG.LABEL_RECEPTIONIST')
+      : role === 'housekeeper'
+        ? this.translate.instant('CAMERA_CONFIG.LABEL_HOUSEKEEPER')
+        : '';
+    const raw = String(label.labelVi || label.label || '').trim();
+    const t = String(label.personType || label.guestType || '').trim();
+    let caption = '';
+    if (role === 'receptionist' || raw === 'Nhân viên lễ tân') {
+      caption = this.translate.instant('CAMERA_CONFIG.LABEL_RECEPTIONIST');
+    } else if (role === 'housekeeper' || raw === 'Nhân viên buồng phòng') {
+      caption = this.translate.instant('CAMERA_CONFIG.LABEL_HOUSEKEEPER');
+    } else if (raw && !this.isUnknownCaption(raw)) {
+      caption = raw;
+    } else if (label.isEmployee || t === 'employee') {
+      caption = roleVi || this.translate.instant('CAMERA_CONFIG.LABEL_EMPLOYEE');
+    } else if (label.isReturning || t === 'returning_guest' || t === 'frequent') {
+      caption = this.translate.instant('CAMERA_CONFIG.LABEL_RETURNING');
+    } else if (label.isNewGuest || t === 'new_guest') {
+      caption = this.translate.instant('CAMERA_CONFIG.LABEL_NEW');
+    } else if (label.isWalkIn || t === 'walk_in' || t === 'regular') {
+      caption = walkIn;
+    } else {
+      caption = walkIn;
     }
-    if (role === 'housekeeper' || String(label.labelVi || '') === 'Nhân viên buồng phòng') {
-      return this.translate.instant('CAMERA_CONFIG.LABEL_HOUSEKEEPER');
+    const name = String(label.fullName || label.name || '').trim();
+    if (name && (label.isEmployee || t === 'employee' || role)) {
+      return `${name} - ${caption}`;
     }
-    const raw = String(label.labelVi || '').trim();
-    if (raw) return raw;
-    const t = String(label.personType || '').trim();
-    if (label.isEmployee || t === 'employee') return this.translate.instant('CAMERA_CONFIG.LABEL_EMPLOYEE');
-    if (label.isReturning || t === 'returning_guest') return this.translate.instant('CAMERA_CONFIG.LABEL_RETURNING');
-    if (label.isNewGuest || t === 'new_guest') return this.translate.instant('CAMERA_CONFIG.LABEL_NEW');
-    if (label.isWalkIn || t === 'walk_in') return this.translate.instant('CAMERA_CONFIG.LABEL_WALK_IN');
-    return this.translate.instant('CAMERA_CONFIG.LABEL_UNKNOWN');
+    return caption;
   }
 
   getLabelBadgeColor(label: any): string {
-    if (!label) return 'default';
+    if (!label || typeof label === 'string') {
+      if (typeof label === 'string' && !this.isUnknownCaption(label)) {
+        const s = label.toLowerCase();
+        if (s.includes('lễ tân') || s.includes('receptionist')) return 'purple';
+        if (s.includes('buồng') || s.includes('housekeep')) return 'magenta';
+        if (s.includes('quen') || s.includes('returning')) return 'blue';
+        if (s.includes('mới') || s.includes('new')) return 'green';
+        return 'orange';
+      }
+      return 'orange';
+    }
     const role = String(label.employeeRole || '').trim();
     if (role === 'housekeeper') return 'magenta';
+    if (role === 'receptionist') return 'purple';
     const c = String(label.badgeColor || '').trim();
-    if (c) return c;
-    const t = String(label.personType || '').trim();
+    if (c && c !== 'default') return c;
+    const t = String(label.personType || label.guestType || '').trim();
     if (label.isEmployee || t === 'employee') return 'purple';
-    if (label.isReturning || t === 'returning_guest') return 'blue';
+    if (label.isReturning || t === 'returning_guest' || t === 'frequent') return 'blue';
     if (label.isNewGuest || t === 'new_guest') return 'green';
-    if (label.isWalkIn || t === 'walk_in') return 'orange';
-    return 'default';
+    return 'orange';
   }
 
   defaultRoleFromZone(zone?: string | null): StaffLabelRole {
@@ -567,6 +605,48 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     if (!sid) return false;
     const normalized = gid.startsWith('staff:') ? gid.slice(6) : gid;
     return normalized === sid || gid === `staff:${sid}`;
+  }
+
+  private walkInSticker(): { label: string; color: string } {
+    const label = { personType: 'walk_in', isWalkIn: true };
+    return {
+      label: this.getLabelVi(label),
+      color: this.badgeHex(this.getLabelBadgeColor(label)),
+    };
+  }
+
+  private resolvePersonSticker(face: any, personCount: number): { label: string; color: string } {
+    const fromLabel = (row: any) => ({
+      label: this.getLabelVi(row),
+      color: this.badgeHex(this.getLabelBadgeColor(row)),
+    });
+
+    if (face?.matched && this.liveLabel) {
+      return fromLabel(this.liveLabel);
+    }
+
+    const identified =
+      this.liveLabel &&
+      (this.liveLabel.isEmployee ||
+        this.liveLabel.isReturning ||
+        this.liveLabel.isNewGuest ||
+        ['employee', 'returning_guest', 'new_guest'].includes(String(this.liveLabel.personType || '')));
+    if (identified) {
+      return fromLabel(this.liveLabel);
+    }
+
+    const assigned = this.staffAssignments[0];
+    if (assigned && personCount === 1) {
+      return fromLabel({
+        personType: 'employee',
+        isEmployee: true,
+        employeeRole: assigned.role,
+        fullName: assigned.name,
+      });
+    }
+
+    if (this.liveLabel) return fromLabel(this.liveLabel);
+    return this.walkInSticker();
   }
 
   useProxvnPublicUrl(): void {
@@ -933,20 +1013,9 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       if (!bbox || bbox.length < 4) return;
       const [x1, y1, x2, y2] = bbox;
       const face = faces.find((f) => f?.trackId != null && f.trackId === p?.trackId) || faces[idx];
-      let labelText = this.translate.instant('CAMERA_CONFIG.LABEL_RECOGNIZING');
-      let color = '#8c8c8c';
-      if (face?.matched) {
-        if (this.faceMatchesLiveLabel(face)) {
-          labelText = this.getLabelVi(this.liveLabel);
-          color = this.badgeHex(this.getLabelBadgeColor(this.liveLabel));
-        } else {
-          labelText = this.translate.instant('CAMERA_CONFIG.LABEL_RECOGNIZED');
-          color = this.badgeHex('blue');
-        }
-      } else if (this.liveLabel && persons.length === 1) {
-        labelText = this.getLabelVi(this.liveLabel);
-        color = this.badgeHex(this.getLabelBadgeColor(this.liveLabel));
-      }
+      const sticker = this.resolvePersonSticker(face, persons.length);
+      const labelText = sticker.label;
+      const color = sticker.color;
 
       overlays.push({
         id: String(p?.trackId ?? idx),
@@ -965,12 +1034,9 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
         const bbox = Array.isArray(f?.bbox) ? f.bbox.map(Number) : null;
         if (!bbox || bbox.length < 4) return;
         const [x1, y1, x2, y2] = bbox;
-        const labelText = f?.matched
-          ? (this.liveLabel ? this.getLabelVi(this.liveLabel) : this.translate.instant('CAMERA_CONFIG.LABEL_RECOGNIZED'))
-          : this.translate.instant('CAMERA_CONFIG.LABEL_RECOGNIZING');
-        const color = f?.matched
-          ? this.badgeHex(this.getLabelBadgeColor(this.liveLabel || { personType: 'returning_guest' }))
-          : '#8c8c8c';
+        const sticker = this.resolvePersonSticker(f, faces.length);
+        const labelText = sticker.label;
+        const color = sticker.color;
         overlays.push({
           id: `face-${f?.trackId ?? idx}`,
           label: labelText,
