@@ -1,28 +1,65 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PHHotel · Google Sign-In</title>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      background: #f8fafc;
-      color: #0f172a;
-      text-align: center;
-      padding: 24px;
-    }
-  </style>
-</head>
-<body>
-  <div>
-    <p><strong>PHHotel</strong></p>
-    <p>Đang hoàn tất đăng nhập Google… Ứng dụng sẽ tự quay lại. Nếu không, bạn có thể đóng trang này.</p>
-  </div>
-</body>
-</html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PHHotel · Google Sign-In</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #f8fafc;
+      color: #0f172a;
+      text-align: center;
+      padding: 24px;
+    }
+    a {
+      color: #2563eb;
+      font-weight: 600;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <p><strong>PHHotel</strong></p>
+    <p id="status">Đang hoàn tất đăng nhập Google…</p>
+    <p id="fallback" hidden style="margin-top: 16px;">
+      <a id="open-app" href="#">Quay lại PHHotel PMS</a>
+    </p>
+  </div>
+  <script>
+    (function () {
+      var search = window.location.search || '';
+      var hash = window.location.hash || '';
+      if (!search && !hash) {
+        document.getElementById('status').textContent =
+          'Không có dữ liệu đăng nhập. Vui lòng thử lại từ ứng dụng.';
+        return;
+      }
+
+      var target = 'rork-app://oauthredirect' + search + hash;
+      var fallback = document.getElementById('fallback');
+      var openApp = document.getElementById('open-app');
+      openApp.href = target;
+
+      document.getElementById('status').textContent =
+        'Đang quay lại ứng dụng PHHotel PMS…';
+
+      try {
+        window.location.replace(target);
+      } catch (e) {}
+
+      setTimeout(function () {
+        fallback.hidden = false;
+        document.getElementById('status').textContent =
+          'Nếu ứng dụng chưa mở, nhấn nút bên dưới hoặc chọn Mở khi iOS hỏi.';
+      }, 1200);
+    })();
+  </script>
+</body>
+</html>
