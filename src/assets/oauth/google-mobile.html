@@ -22,19 +22,7 @@
 <body>
   <div>
     <p><strong>PHHotel</strong></p>
-    <p>Đang hoàn tất đăng nhập Google… Bạn có thể đóng trang này.</p>
+    <p>Đang hoàn tất đăng nhập Google… Ứng dụng sẽ tự quay lại. Nếu không, bạn có thể đóng trang này.</p>
   </div>
-  <script>
-    // Deep-link fallback nếu in-app browser không tự đóng (một số thiết bị).
-    (function () {
-      var hash = window.location.hash || '';
-      var search = window.location.search || '';
-      if (!hash && !search) return;
-      var target = 'rork-app://oauthredirect' + search + hash;
-      try {
-        window.location.replace(target);
-      } catch (e) {}
-    })();
-  </script>
 </body>
 </html>
