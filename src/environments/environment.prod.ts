@@ -7,5 +7,6 @@ export const environment = {
   cdnUrl: 'https://cdn.phhotel.vn',
   sepay: {
     sandbox: false
-  }
+  },
+  googleClientId: ''
 };

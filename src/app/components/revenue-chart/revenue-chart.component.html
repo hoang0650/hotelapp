@@ -1,4 +1,4 @@
-<nz-card [nzLoading]="isLoading" [nzBodyStyle]="{ padding: '20px' }">
+<nz-card [nzBodyStyle]="{ padding: '20px' }">
   <div class="chart-header">
     <div class="chart-title">
       <h3 class="main-title">{{ 'REVENUE_CHART.REVENUE_STATISTICS' | translate }}</h3>
@@ -45,14 +45,18 @@
   </div>
   
   <div class="chart-container">
-    <highcharts-chart 
-      [Highcharts]="Highcharts" 
-      [options]="chartOptions"
-      [(update)]="updateFlag"
-      [oneToOne]="oneToOneFlag"
-      (chartInstance)="onChartInstance($event)"
-      style="width: 100%; height: 450px; display: block;">
-    </highcharts-chart>
+    <nz-spin [nzSpinning]="isLoading" [nzDelay]="150">
+      <highcharts-chart
+        *ngIf="chartVisible"
+        [Highcharts]="Highcharts"
+        [options]="chartOptions"
+        [(update)]="updateFlag"
+        [oneToOne]="oneToOneFlag"
+        [runOutsideAngular]="true"
+        (chartInstance)="onChartInstance($event)"
+        style="width: 100%; height: 450px; display: block;">
+      </highcharts-chart>
+    </nz-spin>
   </div>
   
   <div class="chart-footer" *ngIf="displayLabels.length > 0">

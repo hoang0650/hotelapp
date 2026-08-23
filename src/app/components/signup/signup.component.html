@@ -6,30 +6,27 @@
       <!-- Tab đăng ký thường -->
       <nz-tab [nzTitle]="'SIGNUP.PERSONAL' | translate">
         <form [formGroup]="signupForm" class="signup-form" (ngSubmit)="submitNormalSignup()">
-          <!-- Username -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Vui lòng nhập tên đăng nhập (ít nhất 3 ký tự)">
+            <nz-form-control [nzErrorTip]="'SIGNUP.USERNAME_REQUIRED' | translate">
               <nz-input-group nzPrefixIcon="user">
-                <input type="text" nz-input formControlName="username" placeholder="Tên đăng nhập" />
+                <input type="text" nz-input formControlName="username" [placeholder]="'SIGNUP.USERNAME' | translate" />
               </nz-input-group>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Email -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
+            <nz-form-control [nzErrorTip]="'SIGNUP.EMAIL_REQUIRED' | translate">
               <nz-input-group nzPrefixIcon="mail">
-                <input type="email" nz-input formControlName="email" placeholder="Email" />
+                <input type="email" nz-input formControlName="email" [placeholder]="'SIGNUP.EMAIL' | translate" />
               </nz-input-group>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Password -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Mật khẩu phải có ít nhất 6 ký tự">
+            <nz-form-control [nzErrorTip]="'SIGNUP.PASSWORD_MIN_LENGTH' | translate">
               <nz-input-group nzPrefixIcon="lock" [nzSuffix]="suffixTemplate">
                 <input [type]="passwordVisible ? 'text' : 'password'"
-                  nz-input formControlName="password" placeholder="Mật khẩu" />
+                  nz-input formControlName="password" [placeholder]="'SIGNUP.PASSWORD' | translate" />
               </nz-input-group>
               <ng-template #suffixTemplate>
                 <i nz-icon [nzType]="passwordVisible ? 'eye-invisible' : 'eye'"
@@ -38,12 +35,11 @@
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Confirm Password -->
           <nz-form-item>
             <nz-form-control [nzErrorTip]="errorTpl">
               <nz-input-group nzPrefixIcon="lock" [nzSuffix]="confirmSuffixTemplate">
                 <input [type]="confirmPasswordVisible ? 'text' : 'password'"
-                  nz-input formControlName="confirmPassword" placeholder="Xác nhận mật khẩu" />
+                  nz-input formControlName="confirmPassword" [placeholder]="'SIGNUP.CONFIRM_PASSWORD' | translate" />
               </nz-input-group>
               <ng-template #confirmSuffixTemplate>
                 <i nz-icon [nzType]="confirmPasswordVisible ? 'eye-invisible' : 'eye'"
@@ -51,48 +47,44 @@
               </ng-template>
               <ng-template #errorTpl let-control>
                 <ng-container *ngIf="control.hasError('required')">
-                  Vui lòng xác nhận mật khẩu
+                  {{ 'SIGNUP.CONFIRM_PASSWORD_REQUIRED' | translate }}
                 </ng-container>
                 <ng-container *ngIf="signupForm.hasError('mismatch')">
-                  Mật khẩu không khớp
+                  {{ 'SIGNUP.PASSWORD_MISMATCH' | translate }}
                 </ng-container>
               </ng-template>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Full Name -->
           <nz-form-item>
             <nz-form-control>
               <nz-input-group nzPrefixIcon="user">
-                <input type="text" nz-input formControlName="fullName" placeholder="Họ và tên" />
+                <input type="text" nz-input formControlName="fullName" [placeholder]="'SIGNUP.FULL_NAME' | translate" />
               </nz-input-group>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Phone -->
           <nz-form-item>
             <nz-form-control>
               <nz-input-group nzPrefixIcon="phone">
-                <input type="text" nz-input formControlName="phone" placeholder="Số điện thoại" />
+                <input type="text" nz-input formControlName="phone" [placeholder]="'SIGNUP.PHONE' | translate" />
               </nz-input-group>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Accept Terms -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Vui lòng chấp nhận điều khoản sử dụng">
+            <nz-form-control [nzErrorTip]="'SIGNUP.ACCEPT_TERMS_REQUIRED' | translate">
               <div style="display: flex; align-items: center; flex-wrap: wrap;">
                 <label nz-checkbox formControlName="acceptTerms" style="margin-right: 4px;">
-                  Tôi chấp nhận
+                  {{ 'SIGNUP.ACCEPT_TERMS' | translate }}
                 </label>
                 <a routerLink="/privacy-policy" target="_blank" (click)="$event.stopPropagation()" style="color: #1890ff; text-decoration: none;">
-                  Các điều khoản sử dụng chương trình
+                  {{ 'SIGNUP.TERMS_LINK' | translate }}
                 </a>
               </div>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Submit Button -->
           <button nz-button nzType="primary" [nzLoading]="isLoading" [disabled]="signupForm.invalid" class="submit-btn">
             {{ 'SIGNUP.SIGNUP_BUTTON' | translate }}
           </button>
@@ -102,30 +94,27 @@
       <!-- Tab đăng ký doanh nghiệp -->
       <nz-tab [nzTitle]="'SIGNUP.BUSINESS' | translate">
         <form [formGroup]="businessForm" class="signup-form" (ngSubmit)="submitBusinessSignup()">
-          <!-- Username -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Vui lòng nhập tên đăng nhập (ít nhất 3 ký tự)">
+            <nz-form-control [nzErrorTip]="'SIGNUP.USERNAME_REQUIRED' | translate">
               <nz-input-group nzPrefixIcon="user">
-                <input type="text" nz-input formControlName="username" placeholder="Tên đăng nhập" />
+                <input type="text" nz-input formControlName="username" [placeholder]="'SIGNUP.USERNAME' | translate" />
               </nz-input-group>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Email -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Vui lòng nhập email hợp lệ">
+            <nz-form-control [nzErrorTip]="'SIGNUP.EMAIL_REQUIRED' | translate">
               <nz-input-group nzPrefixIcon="mail">
-                <input type="email" nz-input formControlName="email" placeholder="Email" />
+                <input type="email" nz-input formControlName="email" [placeholder]="'SIGNUP.EMAIL' | translate" />
               </nz-input-group>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Password -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Mật khẩu phải có ít nhất 6 ký tự">
+            <nz-form-control [nzErrorTip]="'SIGNUP.PASSWORD_MIN_LENGTH' | translate">
               <nz-input-group nzPrefixIcon="lock" [nzSuffix]="businessSuffixTemplate">
                 <input [type]="businessPasswordVisible ? 'text' : 'password'"
-                  nz-input formControlName="password" placeholder="Mật khẩu" />
+                  nz-input formControlName="password" [placeholder]="'SIGNUP.PASSWORD' | translate" />
               </nz-input-group>
               <ng-template #businessSuffixTemplate>
                 <i nz-icon [nzType]="businessPasswordVisible ? 'eye-invisible' : 'eye'"
@@ -134,12 +123,11 @@
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Confirm Password -->
           <nz-form-item>
             <nz-form-control [nzErrorTip]="businessErrorTpl">
               <nz-input-group nzPrefixIcon="lock" [nzSuffix]="businessConfirmSuffixTemplate">
                 <input [type]="businessConfirmPasswordVisible ? 'text' : 'password'"
-                  nz-input formControlName="confirmPassword" placeholder="Xác nhận mật khẩu" />
+                  nz-input formControlName="confirmPassword" [placeholder]="'SIGNUP.CONFIRM_PASSWORD' | translate" />
               </nz-input-group>
               <ng-template #businessConfirmSuffixTemplate>
                 <i nz-icon [nzType]="businessConfirmPasswordVisible ? 'eye-invisible' : 'eye'"
@@ -147,126 +135,113 @@
               </ng-template>
               <ng-template #businessErrorTpl let-control>
                 <ng-container *ngIf="control.hasError('required')">
-                  Vui lòng xác nhận mật khẩu
+                  {{ 'SIGNUP.CONFIRM_PASSWORD_REQUIRED' | translate }}
                 </ng-container>
                 <ng-container *ngIf="businessForm.hasError('mismatch')">
-                  Mật khẩu không khớp
+                  {{ 'SIGNUP.PASSWORD_MISMATCH' | translate }}
                 </ng-container>
               </ng-template>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Full Name -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Vui lòng nhập họ và tên">
+            <nz-form-control [nzErrorTip]="'SIGNUP.FULL_NAME_REQUIRED' | translate">
               <nz-input-group nzPrefixIcon="user">
-                <input type="text" nz-input formControlName="fullName" placeholder="Họ và tên" />
+                <input type="text" nz-input formControlName="fullName" [placeholder]="'SIGNUP.FULL_NAME' | translate" />
               </nz-input-group>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Phone -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Vui lòng nhập số điện thoại">
+            <nz-form-control [nzErrorTip]="'SIGNUP.PHONE_REQUIRED' | translate">
               <nz-input-group nzPrefixIcon="phone">
-                <input type="text" nz-input formControlName="phone" placeholder="Số điện thoại" />
+                <input type="text" nz-input formControlName="phone" [placeholder]="'SIGNUP.PHONE' | translate" />
               </nz-input-group>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Business Info -->
           <div formGroupName="businessInfo">
-            <!-- Business Name -->
             <nz-form-item>
-              <nz-form-control nzErrorTip="Vui lòng nhập tên doanh nghiệp">
+              <nz-form-control [nzErrorTip]="'SIGNUP.BUSINESS_NAME_REQUIRED' | translate">
                 <nz-input-group nzPrefixIcon="shop">
-                  <input type="text" nz-input formControlName="name" placeholder="Tên doanh nghiệp" />
+                  <input type="text" nz-input formControlName="name" [placeholder]="'SIGNUP.BUSINESS_NAME' | translate" />
                 </nz-input-group>
               </nz-form-control>
             </nz-form-item>
 
-            <!-- Legal Name -->
             <nz-form-item>
-              <nz-form-control nzErrorTip="Vui lòng nhập tên pháp lý">
+              <nz-form-control [nzErrorTip]="'SIGNUP.LEGAL_NAME_REQUIRED' | translate">
                 <nz-input-group nzPrefixIcon="solution">
-                  <input type="text" nz-input formControlName="legalName" placeholder="Tên pháp lý" />
+                  <input type="text" nz-input formControlName="legalName" [placeholder]="'SIGNUP.LEGAL_NAME' | translate" />
                 </nz-input-group>
               </nz-form-control>
             </nz-form-item>
 
-            <!-- Tax ID -->
             <nz-form-item>
-              <nz-form-control nzErrorTip="Vui lòng nhập mã số thuế">
+              <nz-form-control [nzErrorTip]="'SIGNUP.TAX_ID_REQUIRED' | translate">
                 <nz-input-group nzPrefixIcon="audit">
-                  <input type="text" nz-input formControlName="taxId" placeholder="Mã số thuế" />
+                  <input type="text" nz-input formControlName="taxId" [placeholder]="'SIGNUP.TAX_ID' | translate" />
                 </nz-input-group>
               </nz-form-control>
             </nz-form-item>
 
-            <!-- Address -->
             <nz-form-item>
-              <nz-form-control nzErrorTip="Vui lòng nhập địa chỉ">
+              <nz-form-control [nzErrorTip]="'SIGNUP.ADDRESS_REQUIRED' | translate">
                 <nz-input-group nzPrefixIcon="environment">
-                  <input type="text" nz-input formControlName="address" placeholder="Địa chỉ" />
+                  <input type="text" nz-input formControlName="address" [placeholder]="'SIGNUP.ADDRESS' | translate" />
                 </nz-input-group>
               </nz-form-control>
             </nz-form-item>
 
-            <!-- Business Contact Info -->
             <div formGroupName="contactInfo">
-              <!-- Business Email -->
               <nz-form-item>
                 <nz-form-control>
                   <nz-input-group nzPrefixIcon="mail">
-                    <input type="email" nz-input formControlName="email" placeholder="Email doanh nghiệp (tùy chọn)" />
+                    <input type="email" nz-input formControlName="email" [placeholder]="'SIGNUP.BUSINESS_EMAIL_OPTIONAL' | translate" />
                   </nz-input-group>
                 </nz-form-control>
               </nz-form-item>
 
-              <!-- Business Phone -->
               <nz-form-item>
                 <nz-form-control>
                   <nz-input-group nzPrefixIcon="phone">
-                    <input type="text" nz-input formControlName="phone" placeholder="Số điện thoại doanh nghiệp (tùy chọn)" />
+                    <input type="text" nz-input formControlName="phone" [placeholder]="'SIGNUP.BUSINESS_PHONE_OPTIONAL' | translate" />
                   </nz-input-group>
                 </nz-form-control>
               </nz-form-item>
 
-              <!-- Website -->
               <nz-form-item>
                 <nz-form-control>
                   <nz-input-group nzPrefixIcon="global">
-                    <input type="text" nz-input formControlName="website" placeholder="Website (tùy chọn)" />
+                    <input type="text" nz-input formControlName="website" [placeholder]="'SIGNUP.WEBSITE_OPTIONAL' | translate" />
                   </nz-input-group>
                 </nz-form-control>
               </nz-form-item>
             </div>
           </div>
 
-          <!-- Accept Terms -->
           <nz-form-item>
-            <nz-form-control nzErrorTip="Vui lòng chấp nhận điều khoản sử dụng">
+            <nz-form-control [nzErrorTip]="'SIGNUP.ACCEPT_TERMS_REQUIRED' | translate">
               <div style="display: flex; align-items: center; flex-wrap: wrap;">
                 <label nz-checkbox formControlName="acceptTerms" style="margin-right: 4px;">
-                  Tôi chấp nhận
+                  {{ 'SIGNUP.ACCEPT_TERMS' | translate }}
                 </label>
                 <a routerLink="/privacy-policy" target="_blank" (click)="$event.stopPropagation()" style="color: #1890ff; text-decoration: none;">
-                  Các điều khoản sử dụng chương trình
+                  {{ 'SIGNUP.TERMS_LINK' | translate }}
                 </a>
               </div>
             </nz-form-control>
           </nz-form-item>
 
-          <!-- Submit Button -->
           <button nz-button nzType="primary" [nzLoading]="isLoading" [disabled]="businessForm.invalid" class="submit-btn">
-            Đăng ký doanh nghiệp
+            {{ 'SIGNUP.BUSINESS_SIGNUP_BUTTON' | translate }}
           </button>
         </form>
       </nz-tab>
     </nz-tabset>
 
     <div class="login-link">
-      Đã có tài khoản? <a routerLink="/login">Đăng nhập ngay</a>
+      {{ 'SIGNUP.HAVE_ACCOUNT_PREFIX' | translate }} <a routerLink="/login">{{ 'SIGNUP.LOGIN_NOW' | translate }}</a>
     </div>
   </nz-card>
 </div>

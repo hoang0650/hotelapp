@@ -7,5 +7,7 @@ export const environment = {
   cdnUrl: 'https://cdn.phhotel.vn',
   sepay: {
     sandbox: true
-  }
+  },
+  /** Google OAuth Web Client ID (Google Cloud Console) */
+  googleClientId: ''
 };

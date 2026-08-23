@@ -46,6 +46,12 @@ export interface LoginResponse {
   userId?: string;
 }
 
+export interface GoogleLoginRequest {
+  idToken?: string;
+  code?: string;
+  redirectUri?: string;
+}
+
 export interface ApiResponse<T = any> {
   success?: boolean;
   message: string;
@@ -117,6 +123,18 @@ export class UserService {
         if (!response.requireTwoFactor) {
           this.currentUserSubject.next(response.user);
         }
+        return response;
+      })
+    );
+  }
+
+  loginWithGoogle(payload: GoogleLoginRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/google/login`, {
+      ...payload,
+      redirectUri: payload.redirectUri || 'postmessage'
+    }, { withCredentials: true }).pipe(
+      map(response => {
+        this.currentUserSubject.next(response.user);
         return response;
       })
     );

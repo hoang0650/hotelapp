@@ -54,6 +54,8 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
   public updateFlag = false;
   public oneToOneFlag = true;
   public chartInstance: Highcharts.Chart | null = null;
+  /** Chỉ mount Highcharts sau khi có dữ liệu — tránh render width=0 trong collapse. */
+  public chartVisible = false;
 
   public isLoading = false;
   public roomRevenue = 0;
@@ -140,8 +142,31 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
 
   onChartInstance(chart: Highcharts.Chart): void {
     this.chartInstance = chart;
-    // Collapse panel đôi khi render width=0 → reflow ngay khi có instance
-    setTimeout(() => this.reflowChart(), 0);
+    this.scheduleReflow();
+  }
+
+  /** Gọi từ room panel sau khi collapse mở xong (animation). */
+  reflowAfterVisible(): void {
+    if (!this.normalizeHotelId(this.hotelId)) {
+      return;
+    }
+    if (this.displayLabels.length === 0 && !this.isLoading) {
+      this.loadHotelRevenue(true);
+      return;
+    }
+    this.chartVisible = true;
+    this.updateChart();
+    this.scheduleReflow();
+  }
+
+  reload(): void {
+    this.loadHotelRevenue(true);
+  }
+
+  private scheduleReflow(): void {
+    [0, 80, 250, 500].forEach((delay) => {
+      setTimeout(() => this.reflowChart(), delay);
+    });
   }
 
   loadHotelRevenue(force = false): void {
@@ -244,14 +269,26 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
           paymentData: response?.paymentData || []
         });
 
+        const normalizedRevenueSum = this.sum(normalized.revenueData);
+        const apiRevenueSum = this.sum(response?.revenueData || []);
+        const series =
+          normalizedRevenueSum === 0 && apiRevenueSum > 0 && (response?.labels?.length || 0) > 0
+            ? {
+                labels: [...(response.labels || [])],
+                revenueData: [...(response.revenueData || [])],
+                expenseData: [...(response.expenseData || [])],
+                paymentData: [...(response.paymentData || [])]
+              }
+            : normalized;
+
         const payload = {
-          labels: normalized.labels,
-          revenueData: normalized.revenueData,
-          expenseData: normalized.expenseData,
-          paymentData: normalized.paymentData,
-          totalRevenue: Number(response?.totalRevenue) || this.sum(normalized.revenueData),
-          totalPayment: Number(response?.totalPayment) || this.sum(normalized.paymentData),
-          totalExpense: Number(response?.totalExpense) || this.sum(normalized.expenseData)
+          labels: series.labels,
+          revenueData: series.revenueData,
+          expenseData: series.expenseData,
+          paymentData: series.paymentData,
+          totalRevenue: Number(response?.totalRevenue) || this.sum(series.revenueData),
+          totalPayment: Number(response?.totalPayment) || this.sum(series.paymentData),
+          totalExpense: Number(response?.totalExpense) || this.sum(series.expenseData)
         };
 
         this.hotelService.setCachedHotelRevenueByPeriod(hotelId, this.selectedPeriod, payload);
@@ -304,7 +341,11 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
     this.totalExpense = Number(payload.totalExpense) || this.sum(this.displayExpense);
     this.receiptExpenseTotal = this.totalExpense;
 
+    this.chartVisible = this.displayLabels.length > 0;
     this.updateChart();
+    if (this.chartVisible) {
+      this.scheduleReflow();
+    }
   }
 
   private resetSeries(): void {
@@ -322,6 +363,8 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
     this.bankTransferTotal = 0;
     this.cardTotal = 0;
     this.lastLoadedKey = '';
+    this.chartVisible = false;
+    this.chartInstance = null;
   }
 
   private normalizeHotelId(value: any): string {
@@ -520,9 +563,12 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
         }
       },
       yAxis: {
-        visible: false,
+        visible: true,
         min: 0,
-        max: yAxisMax
+        max: yAxisMax,
+        gridLineColor: '#f5f5f5',
+        labels: { enabled: false },
+        title: { text: undefined }
       },
       tooltip: {
         shared: true,
@@ -633,26 +679,14 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
           name: totalRevenueLabel,
           data: processedRevenueData,
           type: 'column',
-          color: {
-            linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-            stops: [
-              [0, '#40a9ff'],
-              [1, '#1890ff']
-            ]
-          },
+          color: '#1890ff',
           borderColor: '#1890ff'
         },
         {
           name: totalExpenseLabel,
           data: processedExpenseData,
           type: 'column',
-          color: {
-            linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-            stops: [
-              [0, '#ff7875'],
-              [1, '#ff4d4f']
-            ]
-          },
+          color: '#ff4d4f',
           borderColor: '#ff4d4f'
         }
       ],
@@ -675,15 +709,19 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
       }
     };
 
-    // Trigger highcharts-angular update
+    // highcharts-angular cần toggle update để nhận options mới
+    this.updateFlag = false;
+    this.cdr.detectChanges();
     this.updateFlag = true;
     this.cdr.detectChanges();
-    setTimeout(() => this.reflowChart(), 0);
+    this.scheduleReflow();
   }
 
   private reflowChart(): void {
     try {
-      this.chartInstance?.reflow();
+      if (this.chartInstance) {
+        this.chartInstance.reflow();
+      }
     } catch {
       /* ignore */
     }
@@ -693,12 +731,7 @@ export class RevenueChartComponent implements OnInit, OnChanges, OnDestroy {
     const changed = this.selectedPeriod !== period;
     this.selectedPeriod = period;
     this.periodChange.emit(period);
-    // Tránh double-load khi parent sync lại cùng period qua @Input
     this.loadHotelRevenue(changed);
-  }
-
-  reload(): void {
-    this.loadHotelRevenue(true);
   }
 
   getPeriodTitle(period: 'day' | 'week' | 'month'): string {

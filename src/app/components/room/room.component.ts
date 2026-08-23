@@ -424,11 +424,11 @@ export class RoomComponent implements OnInit, OnDestroy {
   onRevenuePanelChange(active: boolean): void {
     this.isRevenuePanelActive = active;
     if (active && this.selectedHotelId && !this.isRoomsLoading) {
-      // Force reload khi mở panel — không chờ bấm nút reload
       setTimeout(() => {
-        this.loadChartDataFromAPI(true);
         this.revenueChartComponent?.reload();
+        this.revenueChartComponent?.reflowAfterVisible();
       }, 0);
+      setTimeout(() => this.revenueChartComponent?.reflowAfterVisible(), 350);
     }
   }
   
@@ -452,12 +452,12 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.isHistoryPanelActive = true;
     if (this.selectedHotelId && !this.isRoomsLoading) {
       setTimeout(() => {
-        this.loadChartDataFromAPI(true);
         this.revenueChartComponent?.reload();
-        // Calendar tự load qua ngOnInit khi panel mở
+        this.revenueChartComponent?.reflowAfterVisible();
         this.scheduleRoomHistoryReload(true);
         this.tableComponent?.reloadData();
       }, 0);
+      setTimeout(() => this.revenueChartComponent?.reflowAfterVisible(), 350);
     }
   }
   

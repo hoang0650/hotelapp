@@ -6,7 +6,8 @@ import { UserService, LoginRequest } from '../../services/user.service';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../services/auth.service';
 import { LoginBootstrapService } from '../../services/login-bootstrap.service';
-import { timeout, catchError } from 'rxjs/operators';
+import { GoogleAuthService } from '../../services/google-auth.service';
+import { timeout, catchError, switchMap } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 
 
@@ -18,6 +19,8 @@ import { throwError } from 'rxjs';
 export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
   isLoading = false;
+  isGoogleLoading = false;
+  googleSignInEnabled = false;
   showTwoFactorInput = false;
   userId: string | null = null;
   passwordVisible = false;
@@ -31,7 +34,8 @@ export class LoginComponent implements OnInit {
     private message: NzMessageService,
     private translate: TranslateService,
     private authService: AuthService,
-    private loginBootstrap: LoginBootstrapService
+    private loginBootstrap: LoginBootstrapService,
+    private googleAuthService: GoogleAuthService
   ) {
     this.initForm();
   }
@@ -52,6 +56,15 @@ export class LoginComponent implements OnInit {
         remember: true
       });
     }
+
+    this.googleAuthService.getConfig().subscribe({
+      next: (config) => {
+        this.googleSignInEnabled = config.enabled;
+      },
+      error: () => {
+        this.googleSignInEnabled = false;
+      }
+    });
   }
 
   private initForm(): void {
@@ -125,7 +138,7 @@ export class LoginComponent implements OnInit {
       catchError((err) => {
         if (err?.name === 'TimeoutError') {
           return throwError(() => ({
-            error: { message: 'Đăng nhập quá lâu. Vui lòng thử lại.' }
+            error: { message: this.translate.instant('LOGIN.LOGIN_TIMEOUT') }
           }));
         }
         return throwError(() => err);
@@ -160,6 +173,58 @@ export class LoginComponent implements OnInit {
       error: (error) => {
         this.isLoading = false;
         this.message.error(error.error?.message || this.translate.instant('COMMON.ERROR_OCCURRED'));
+      }
+    });
+  }
+
+  loginWithGoogle(): void {
+    if (this.isLoading || this.isGoogleLoading || !this.googleSignInEnabled) {
+      if (!this.googleSignInEnabled) {
+        this.message.warning(this.translate.instant('LOGIN.GOOGLE_NOT_CONFIGURED'));
+      }
+      return;
+    }
+
+    this.isGoogleLoading = true;
+    this.googleAuthService.signIn().pipe(
+      switchMap((googleResult) =>
+        this.userService.loginWithGoogle({
+          idToken: googleResult.idToken,
+          code: googleResult.code
+        })
+      ),
+      timeout(30000),
+      catchError((err) => {
+        if (err?.name === 'TimeoutError') {
+          return throwError(() => ({
+            error: { message: this.translate.instant('LOGIN.LOGIN_TIMEOUT') }
+          }));
+        }
+        return throwError(() => err);
+      })
+    ).subscribe({
+      next: (response) => {
+        try {
+          if (response.token && response.user) {
+            try {
+              this.loginBootstrap.bootstrapAfterLogin(response.token, response.user);
+            } catch (bootstrapErr) {
+              console.error('[login] google bootstrap failed, continue redirect:', bootstrapErr);
+              this.authService.loginFromShiftHandover(response.token, response.user);
+              this.authService.authResolved.next(true);
+            }
+            this.executeFastRedirect();
+            return;
+          }
+          this.message.error(this.translate.instant('COMMON.ERROR_OCCURRED'));
+        } finally {
+          this.isGoogleLoading = false;
+        }
+      },
+      error: (error) => {
+        this.isGoogleLoading = false;
+        const message = error?.error?.message || error?.message || this.translate.instant('LOGIN.GOOGLE_LOGIN_FAILED');
+        this.message.error(message);
       }
     });
   }
