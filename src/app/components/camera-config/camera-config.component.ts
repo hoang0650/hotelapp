@@ -86,6 +86,8 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   agentPublicUrl: string | null = null;
   agentDetectError: string | null = null;
   frameOverlays: FrameOverlay[] = [];
+  enlargeOverlays: FrameOverlay[] = [];
+  isPreviewEnlarged = false;
   liveLabel: any = null;
   hotelStaff: Staff[] = [];
   staffAssignments: StaffAssignment[] = [];
@@ -97,8 +99,11 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
   private overlaySub: Subscription | null = null;
   private overlayBusy = false;
   private lastObjectUrl: string | null = null;
+  private lastOverlayRes: any = null;
   @ViewChild('previewImg') previewImg?: ElementRef<HTMLImageElement>;
   @ViewChild('previewBox') previewBox?: ElementRef<HTMLDivElement>;
+  @ViewChild('enlargeImg') enlargeImg?: ElementRef<HTMLImageElement>;
+  @ViewChild('enlargeBox') enlargeBox?: ElementRef<HTMLDivElement>;
 
   providers: CameraProviderOption[] = [
     { id: 'hikvision', name: 'Hikvision', icon: 'video-camera', color: '#ff4d4f' },
@@ -126,6 +131,7 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.statsSub?.unsubscribe();
     this.userSub?.unsubscribe();
     this.overlaySub?.unsubscribe();
+    this.closePreviewEnlarge();
     this.stopPreview();
     this.revokePreviewUrl();
   }
@@ -914,7 +920,33 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     this.overlaySub = null;
     this.liveStreamUrl = null;
     this.frameOverlays = [];
+    this.enlargeOverlays = [];
+    this.lastOverlayRes = null;
     this.liveUnmatchedEncoding = null;
+  }
+
+  openPreviewEnlarge(event?: Event): void {
+    event?.stopPropagation();
+    if (!this.previewImageUrl && !this.liveStreamUrl) return;
+    this.isPreviewEnlarged = true;
+    setTimeout(() => this.syncEnlargeOverlays(), 60);
+  }
+
+  closePreviewEnlarge(): void {
+    this.isPreviewEnlarged = false;
+    this.enlargeOverlays = [];
+  }
+
+  syncEnlargeOverlays(): void {
+    if (!this.isPreviewEnlarged || !this.lastOverlayRes) {
+      this.enlargeOverlays = [];
+      return;
+    }
+    this.enlargeOverlays = this.buildFrameOverlays(
+      this.lastOverlayRes,
+      this.enlargeBox?.nativeElement,
+      this.enlargeImg?.nativeElement
+    );
   }
 
   private startOverlayPolling(): void {
@@ -976,10 +1008,12 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
       if (unmatched?.encoding) {
         this.liveUnmatchedEncoding = unmatched.encoding;
       }
+      this.lastOverlayRes = res;
       this.frameOverlays = this.buildFrameOverlays(res);
       // Cho ảnh render xong rồi map lại % (object-fit: contain)
       setTimeout(() => {
         this.frameOverlays = this.buildFrameOverlays(res);
+        this.syncEnlargeOverlays();
       }, 40);
     } catch (_) {
       // Giữ overlay cũ nếu một nhịp lỗi
@@ -988,15 +1022,20 @@ export class CameraConfigComponent implements OnInit, OnDestroy {
     }
   }
 
-  private buildFrameOverlays(res: any): FrameOverlay[] {
+  private buildFrameOverlays(
+    res: any,
+    boxEl?: HTMLDivElement | null,
+    imgEl?: HTMLImageElement | null
+  ): FrameOverlay[] {
     const persons: any[] = Array.isArray(res?.persons) ? res.persons : [];
     const faces: any[] = Array.isArray(res?.faces) ? res.faces : [];
-    const frameW = Number(res?.frameWidth) || this.previewImg?.nativeElement?.naturalWidth || 0;
-    const frameH = Number(res?.frameHeight) || this.previewImg?.nativeElement?.naturalHeight || 0;
+    const imgRef = imgEl || this.previewImg?.nativeElement;
+    const frameW = Number(res?.frameWidth) || imgRef?.naturalWidth || 0;
+    const frameH = Number(res?.frameHeight) || imgRef?.naturalHeight || 0;
     if (!frameW || !frameH) return [];
 
-    const box = this.previewBox?.nativeElement;
-    const img = this.previewImg?.nativeElement;
+    const box = boxEl || this.previewBox?.nativeElement;
+    const img = imgRef;
     if (!box || !img) return [];
 
     const boxW = box.clientWidth || 1;

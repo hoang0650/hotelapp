@@ -209,6 +209,47 @@
   overflow: hidden;
 }
 
+.video-preview-box.preview-clickable {
+  cursor: zoom-in;
+}
+
+.video-preview-box.preview-clickable:hover .preview-enlarge-btn {
+  opacity: 1;
+}
+
+.preview-enlarge-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 8;
+  opacity: 0.92;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.enlarge-preview-box {
+  height: min(78vh, 820px);
+  border: none;
+  border-radius: 0;
+}
+
+.enlarge-preview-img {
+  height: min(78vh, 820px) !important;
+  border-radius: 0;
+}
+
+::ng-deep .camera-preview-enlarge-modal .ant-modal-close {
+  color: #fff;
+}
+
+::ng-deep .camera-preview-enlarge-modal .ant-modal-header {
+  background: #111;
+  border-bottom-color: #333;
+}
+
+::ng-deep .camera-preview-enlarge-modal .ant-modal-title {
+  color: #f5f5f5;
+}
+
 .snapshot-preview.live-stream {
   object-fit: contain;
   background: #000;

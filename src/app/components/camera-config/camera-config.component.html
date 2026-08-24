@@ -227,7 +227,11 @@
       <div nz-row [nzGutter]="24">
         <div nz-col [nzSpan]="12">
           <h3 class="step-title" style="text-align: left;">{{ 'CAMERA_CONFIG.VIDEO_STREAM_TITLE' | translate }}</h3>
-          <div class="video-preview-box" #previewBox>
+          <div
+            class="video-preview-box"
+            #previewBox
+            [class.preview-clickable]="!!previewImageUrl || !!liveStreamUrl"
+            (click)="openPreviewEnlarge($event)">
             <div *ngIf="!previewImageUrl && !liveStreamUrl && !isTestingConnection" class="preview-placeholder">
               <i nz-icon nzType="video-camera" nzTheme="outline"></i>
               <p>{{ 'CAMERA_CONFIG.PREVIEW_PLACEHOLDER' | translate }}</p>
@@ -263,6 +267,22 @@
             <div class="live-label-chip" *ngIf="isPreviewRunning && liveLabel && !frameOverlays.length">
               <nz-tag [nzColor]="getLabelBadgeColor(liveLabel)">{{ getLabelVi(liveLabel) }}</nz-tag>
             </div>
+
+            <button
+              *ngIf="previewImageUrl || liveStreamUrl"
+              type="button"
+              class="preview-enlarge-btn"
+              nz-button
+              nzType="default"
+              nzSize="small"
+              (click)="openPreviewEnlarge($event)"
+              [attr.title]="'CAMERA_CONFIG.ENLARGE_VIEW' | translate">
+              <i nz-icon nzType="fullscreen" nzTheme="outline"></i>
+              {{ 'CAMERA_CONFIG.ENLARGE_VIEW' | translate }}
+            </button>
+          </div>
+          <div class="preview-hint" *ngIf="previewImageUrl || liveStreamUrl">
+            {{ 'CAMERA_CONFIG.ENLARGE_HINT' | translate }}
           </div>
           <div class="preview-hint" *ngIf="isPrivateCameraIp()">
             {{ 'CAMERA_CONFIG.PRIVATE_IP_HINT' | translate }}
@@ -285,6 +305,49 @@
             <nz-tag *ngIf="isPreviewRunning && !liveStreamUrl" nzColor="green">{{ 'CAMERA_CONFIG.LIVE_LOW_LATENCY' | translate }}</nz-tag>
             <nz-tag *ngIf="isPreviewRunning && aiConfigForm.value.enableGuestLabels" nzColor="purple">{{ 'CAMERA_CONFIG.LABELS_ON' | translate }}</nz-tag>
           </div>
+
+          <nz-modal
+            [(nzVisible)]="isPreviewEnlarged"
+            [nzTitle]="'CAMERA_CONFIG.ENLARGE_TITLE' | translate"
+            [nzFooter]="null"
+            [nzWidth]="'92vw'"
+            [nzBodyStyle]="{ padding: '12px', background: '#0a0a0a' }"
+            [nzClassName]="'camera-preview-enlarge-modal'"
+            (nzOnCancel)="closePreviewEnlarge()">
+            <ng-container *nzModalContent>
+              <div class="video-preview-box enlarge-preview-box" #enlargeBox>
+                <img
+                  *ngIf="liveStreamUrl"
+                  class="snapshot-preview live-stream enlarge-preview-img"
+                  [src]="liveStreamUrl"
+                  alt="Camera live stream enlarged"
+                  (error)="onLiveStreamError()" />
+                <img
+                  *ngIf="previewImageUrl"
+                  #enlargeImg
+                  class="snapshot-preview enlarge-preview-img"
+                  [class.behind]="!!liveStreamUrl"
+                  [src]="previewImageUrl"
+                  alt="Camera snapshot enlarged"
+                  (load)="syncEnlargeOverlays()" />
+                <div class="frame-overlays" *ngIf="enlargeOverlays.length">
+                  <div
+                    class="frame-sticker"
+                    *ngFor="let o of enlargeOverlays; trackBy: trackOverlay"
+                    [style.left.px]="o.left"
+                    [style.top.px]="o.top"
+                    [style.width.px]="o.width"
+                    [style.height.px]="o.height"
+                    [style.borderColor]="o.color">
+                    <span class="frame-sticker__tag" [style.background]="o.color">{{ o.label }}</span>
+                  </div>
+                </div>
+                <div class="live-label-chip" *ngIf="isPreviewRunning && liveLabel && !enlargeOverlays.length">
+                  <nz-tag [nzColor]="getLabelBadgeColor(liveLabel)">{{ getLabelVi(liveLabel) }}</nz-tag>
+                </div>
+              </div>
+            </ng-container>
+          </nz-modal>
 
           <div class="pipeline-card">
             <div class="pipeline-header">
