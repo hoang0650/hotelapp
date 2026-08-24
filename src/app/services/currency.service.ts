@@ -64,7 +64,10 @@ export class CurrencyService {
       // Lấy tỷ giá từ API hoặc cache
       return this.fetchAllRates().pipe(
         map(rates => {
-          const rate = rates[toCurrency] || this.defaultRates[toCurrency] || 1;
+          const rate = rates[toCurrency] || this.defaultRates[toCurrency];
+          if (!rate || rate <= 0) {
+            throw new Error(`Missing exchange rate for ${toCurrency}`);
+          }
           
           // Cache tỷ giá
           this.exchangeRatesCache.set(cacheKey, {
@@ -78,7 +81,10 @@ export class CurrencyService {
         }),
         catchError(() => {
           // Fallback về tỷ giá mặc định nếu API lỗi
-          const rate = this.defaultRates[toCurrency] || 1;
+          const rate = this.defaultRates[toCurrency];
+          if (!rate || rate <= 0) {
+            return of(0);
+          }
           this.exchangeRatesCache.set(cacheKey, {
             from: 'USD',
             to: toCurrency,
@@ -102,7 +108,10 @@ export class CurrencyService {
       // Lấy tỷ giá từ API và tính nghịch đảo
       return this.fetchAllRates().pipe(
         map(rates => {
-          const fromRate = rates[fromCurrency] || this.defaultRates[fromCurrency] || 1;
+          const fromRate = rates[fromCurrency] || this.defaultRates[fromCurrency];
+          if (!fromRate || fromRate <= 0) {
+            throw new Error(`Missing exchange rate for ${fromCurrency}`);
+          }
           const rate = 1 / fromRate;
           
           // Cache tỷ giá
@@ -117,7 +126,10 @@ export class CurrencyService {
         }),
         catchError(() => {
           // Fallback về tỷ giá mặc định nếu API lỗi
-          const fromRate = this.defaultRates[fromCurrency] || 1;
+          const fromRate = this.defaultRates[fromCurrency];
+          if (!fromRate || fromRate <= 0) {
+            return of(0);
+          }
           const rate = 1 / fromRate;
           this.exchangeRatesCache.set(cacheKey, {
             from: fromCurrency,
@@ -134,11 +146,14 @@ export class CurrencyService {
     // Convert: fromCurrency -> USD -> toCurrency
     return this.getExchangeRate(fromCurrency, 'USD').pipe(
       switchMap(usdRate => {
+        if (!(usdRate > 0)) {
+          return of(0);
+        }
         return this.getExchangeRate('USD', toCurrency).pipe(
-          map(toRate => usdRate * toRate)
+          map(toRate => (toRate > 0 ? usdRate * toRate : 0))
         );
       }),
-      catchError(() => of(1))
+      catchError(() => of(0))
     );
   }
 

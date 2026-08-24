@@ -3,7 +3,7 @@
   (nzVisibleChange)="onVisibleChange($event)"
   nzTitle="Thanh toán qua PayPal"
   [nzFooter]="null"
-  [nzWidth]="500"
+  [nzWidth]="520"
   [nzMaskClosable]="false"
 >
   <ng-container *nzModalContent>
@@ -21,53 +21,65 @@
         <div class="summary-item">
           <span class="label">Loại tiền tệ:</span>
           <span class="value">
-            <nz-select 
-              [(ngModel)]="selectedCurrency" 
+            <nz-select
+              [(ngModel)]="selectedCurrency"
               (ngModelChange)="onCurrencyChange()"
-              style="width: 150px;"
+              style="width: 180px;"
               nzPlaceHolder="Chọn tiền tệ"
               [nzDisabled]="isConverting">
-              <nz-option 
-                *ngFor="let currency of availableCurrencies" 
-                [nzValue]="currency.code" 
+              <nz-option
+                *ngFor="let currency of availableCurrencies"
+                [nzValue]="currency.code"
                 [nzLabel]="currency.code + ' - ' + currency.name">
-                <span>{{ currency.code }} - {{ currency.name }} ({{ currency.symbol }})</span>
               </nz-option>
             </nz-select>
+            <div style="font-size: 11px; color: #999; margin-top: 4px;">
+              Giá gói gốc: {{ formatPrice(sourceAmount, sourceCurrency) }} — chọn tiền tệ để xem quy đổi
+            </div>
           </span>
         </div>
+
         <div class="summary-item">
-          <span class="label">Số tiền:</span>
+          <span class="label">Giá gói ({{ sourceCurrency }}):</span>
+          <span class="value">{{ formatPrice(sourceAmount, sourceCurrency) }}</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="label">Số tiền ({{ selectedCurrency }}):</span>
           <span class="value amount">
-            <span *ngIf="selectedCurrency !== 'USD'">
-              {{ formatPrice(originalAmount, selectedCurrency) }}
-              <span style="font-size: 12px; color: #999; margin-left: 8px;">
-                (≈ {{ formatPrice(convertedAmount, 'USD') }} USD)
+            <ng-container *ngIf="isConverting">Đang quy đổi…</ng-container>
+            <ng-container *ngIf="!isConverting && displayAmount > 0">
+              {{ formatPrice(displayAmount, selectedCurrency) }}
+              <span
+                *ngIf="selectedCurrency !== sourceCurrency"
+                style="font-size: 12px; color: #999; margin-left: 8px; font-weight: 400;">
+                (từ {{ formatPrice(sourceAmount, sourceCurrency) }})
               </span>
-            </span>
-            <span *ngIf="selectedCurrency === 'USD'">
-              {{ formatPrice(originalAmount, 'USD') }}
-            </span>
+            </ng-container>
+            <ng-container *ngIf="!isConverting && !(displayAmount > 0)">—</ng-container>
           </span>
         </div>
-        <div class="summary-item" *ngIf="selectedCurrency !== 'USD' && exchangeRate !== 1">
+
+        <div class="summary-item" *ngIf="!isConverting && (usdToSourceRate > 0 || sourceToSelectedRate > 0)">
           <span class="label">Tỷ giá:</span>
           <span class="value" style="font-size: 12px; color: #666;">
-            1 {{ selectedCurrency }} = {{ exchangeRate.toFixed(4) }} USD
+            {{ formatExchangeRate() }}
           </span>
         </div>
-        <div class="summary-item" *ngIf="selectedCurrency !== 'USD'">
+
+        <div class="summary-item">
           <span class="label">Thanh toán qua PayPal:</span>
           <span class="value" style="color: #1890ff; font-weight: 600;">
-            {{ formatPrice(convertedAmount, 'USD') }}
-            <span style="font-size: 11px; color: #999; margin-left: 4px;" *ngIf="!currencyService.isPayPalSupported(selectedCurrency)">
-              ({{ selectedCurrency }} không được PayPal hỗ trợ, đã chuyển đổi sang USD)
-            </span>
-            <span style="font-size: 11px; color: #999; margin-left: 4px;" *ngIf="currencyService.isPayPalSupported(selectedCurrency)">
-              (Đã chuyển đổi sang USD)
-            </span>
+            <ng-container *ngIf="isConverting">Đang quy đổi…</ng-container>
+            <ng-container *ngIf="!isConverting && paypalUsdAmount > 0">
+              {{ formatPrice(paypalUsdAmount, 'USD') }}
+              <span style="font-size: 11px; color: #999; margin-left: 4px; font-weight: 400;">
+                (PayPal thu bằng USD, quy đổi từ {{ sourceCurrency }})
+              </span>
+            </ng-container>
           </span>
         </div>
+
         <div class="summary-item" *ngIf="paymentData.description">
           <span class="label">Mô tả:</span>
           <span class="value">{{ paymentData.description }}</span>
@@ -91,4 +103,3 @@
     </div>
   </ng-container>
 </nz-modal>
-

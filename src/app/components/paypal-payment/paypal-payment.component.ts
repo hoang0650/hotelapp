@@ -3,8 +3,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, forkJoin, of } from 'rxjs';
+import { catchError, takeUntil } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { CurrencyService } from '../../services/currency.service';
 
@@ -42,13 +42,24 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
   private destroy$ = new Subject<void>();
   private paypalLoaded = false;
   private isBrowser: boolean;
-  
+  private convertRequestId = 0;
+
+  /** Giá gói luôn tính bằng VND (hoặc currency gốc từ paymentData). */
+  sourceCurrency: string = 'VND';
+  /** Currency người dùng chọn để xem giá. */
   selectedCurrency: string = 'VND';
-  originalAmount: number = 0; // Số tiền gốc
-  convertedAmount: number = 0; // Số tiền đã convert sang USD
-  exchangeRate: number = 1; // Tỷ giá hiện tại
+  /** Số tiền gốc của gói (VND). */
+  sourceAmount: number = 0;
+  /** Số tiền đã quy đổi sang selectedCurrency để hiển thị. */
+  displayAmount: number = 0;
+  /** Số tiền PayPal thu (luôn USD). */
+  paypalUsdAmount: number = 0;
+  /** 1 USD = X sourceCurrency */
+  usdToSourceRate: number = 0;
+  /** 1 sourceCurrency = X selectedCurrency (khi khác nhau) */
+  sourceToSelectedRate: number = 0;
   isConverting: boolean = false;
-  
+
   availableCurrencies: CurrencyOption[] = [
     { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
     { code: 'USD', name: 'US Dollar', symbol: '$' },
@@ -76,9 +87,8 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ngOnInit(): void {
     if (this.paymentData) {
-      this.applyPaymentCurrency();
+      this.resetFromPaymentData();
     }
-    
     if (this.visible && this.paymentData) {
       this.loadPayPalScript();
     }
@@ -86,9 +96,7 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ngAfterViewInit(): void {
     if (this.visible && this.paymentData) {
-      setTimeout(() => {
-        this.loadPayPalScript();
-      }, 100);
+      setTimeout(() => this.loadPayPalScript(), 100);
     }
   }
 
@@ -97,25 +105,165 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
     this.destroy$.complete();
   }
 
-  loadPayPalScript(): void {
-    // Chỉ chạy trên browser, không chạy trên server
-    if (!this.isBrowser) {
+  private resetFromPaymentData(): void {
+    if (!this.paymentData) return;
+    this.sourceCurrency = (this.paymentData.currency || 'VND').toUpperCase();
+    this.selectedCurrency = this.sourceCurrency;
+    this.sourceAmount = Number(this.paymentData.amount) || 0;
+    this.displayAmount = 0;
+    this.paypalUsdAmount = 0;
+    this.usdToSourceRate = 0;
+    this.sourceToSelectedRate = 0;
+    this.refreshConversions();
+  }
+
+  onVisibleChange(visible: boolean): void {
+    this.visible = visible;
+    this.visibleChange.emit(visible);
+
+    if (visible && this.paymentData) {
+      this.resetFromPaymentData();
+      setTimeout(() => {
+        if (this.visible && this.paymentData) {
+          this.loadPayPalScript();
+        }
+      }, 300);
+    } else if (this.isBrowser && typeof document !== 'undefined') {
+      const container = document.getElementById(this.paypalButtonId);
+      if (container) {
+        try {
+          container.innerHTML = '';
+        } catch (_) {}
+      }
+    }
+  }
+
+  onCurrencyChange(): void {
+    const code = (this.selectedCurrency || 'VND').toUpperCase();
+    this.selectedCurrency = code;
+
+    if (!this.currencyService.isPayPalSupported(code) && code !== 'USD') {
+      this.message.info(
+        `${code} không được PayPal hỗ trợ trực tiếp. PayPal sẽ thu bằng USD đã quy đổi từ giá gói ${this.sourceCurrency}.`
+      );
+    }
+
+    this.refreshConversions();
+  }
+
+  /**
+   * Luôn quy đổi từ giá gói (sourceAmount + sourceCurrency):
+   * - displayAmount = source → selectedCurrency
+   * - paypalUsdAmount = source → USD (PayPal luôn charge USD)
+   */
+  refreshConversions(): void {
+    if (!this.paymentData || !(this.sourceAmount > 0)) {
+      this.displayAmount = 0;
+      this.paypalUsdAmount = 0;
       return;
     }
 
-    // Kiểm tra container có tồn tại trong DOM không
-    if (typeof document !== 'undefined') {
-      const container = document.getElementById(this.paypalButtonId);
-      if (!container) {
-        console.warn('PayPal container not found, waiting...');
-        // Retry sau 100ms
-        setTimeout(() => {
-          if (this.visible && this.paymentData) {
-            this.loadPayPalScript();
+    const requestId = ++this.convertRequestId;
+    this.isConverting = true;
+
+    const toSelected$ =
+      this.selectedCurrency === this.sourceCurrency
+        ? of(1)
+        : this.currencyService.getExchangeRate(this.sourceCurrency, this.selectedCurrency).pipe(
+            catchError(() => of(0))
+          );
+
+    const toUsd$ =
+      this.sourceCurrency === 'USD'
+        ? of(1)
+        : this.currencyService.getExchangeRate(this.sourceCurrency, 'USD').pipe(
+            catchError(() => of(this.sourceCurrency === 'VND' ? 1 / 26000 : 0))
+          );
+
+    forkJoin({ toSelected: toSelected$, toUsd: toUsd$ })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ({ toSelected, toUsd }) => {
+          if (requestId !== this.convertRequestId) return;
+
+          const selectedRate = toSelected > 0 ? toSelected : 0;
+          let usdRate = toUsd > 0 ? toUsd : 0;
+
+          // Fallback VND → USD nếu API trả 0
+          if (!(usdRate > 0) && this.sourceCurrency === 'VND') {
+            usdRate = 1 / 26000;
           }
-        }, 100);
-        return;
-      }
+
+          this.sourceToSelectedRate = selectedRate;
+          this.usdToSourceRate = usdRate > 0 ? 1 / usdRate : 0;
+
+          if (this.selectedCurrency === this.sourceCurrency) {
+            this.displayAmount = this.currencyService.roundAmount(this.sourceAmount, this.sourceCurrency);
+            this.sourceToSelectedRate = 1;
+          } else if (selectedRate > 0) {
+            this.displayAmount = this.currencyService.roundAmount(
+              this.sourceAmount * selectedRate,
+              this.selectedCurrency
+            );
+          } else {
+            this.displayAmount = 0;
+            this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.EXCHANGE_RATE_FAIL'));
+          }
+
+          if (this.sourceCurrency === 'USD') {
+            this.paypalUsdAmount = this.currencyService.roundAmount(this.sourceAmount, 'USD');
+          } else if (usdRate > 0) {
+            this.paypalUsdAmount = this.currencyService.roundAmount(this.sourceAmount * usdRate, 'USD');
+          } else {
+            this.paypalUsdAmount = 0;
+          }
+
+          this.isConverting = false;
+
+          if (this.paypalUsdAmount >= 0.01) {
+            this.reloadPayPalButtons();
+          }
+        },
+        error: () => {
+          if (requestId !== this.convertRequestId) return;
+          this.isConverting = false;
+          if (this.sourceCurrency === 'VND') {
+            const usdRate = 1 / 26000;
+            this.usdToSourceRate = 26000;
+            this.paypalUsdAmount = this.currencyService.roundAmount(this.sourceAmount * usdRate, 'USD');
+            if (this.selectedCurrency === 'VND') {
+              this.displayAmount = this.sourceAmount;
+              this.sourceToSelectedRate = 1;
+            } else if (this.selectedCurrency === 'USD') {
+              this.displayAmount = this.paypalUsdAmount;
+              this.sourceToSelectedRate = usdRate;
+            } else {
+              this.displayAmount = 0;
+            }
+            this.reloadPayPalButtons();
+            return;
+          }
+          this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.EXCHANGE_RATE_FAIL'));
+        }
+      });
+  }
+
+  loadPayPalScript(): void {
+    if (!this.isBrowser || typeof document === 'undefined') return;
+
+    const container = document.getElementById(this.paypalButtonId);
+    if (!container) {
+      setTimeout(() => {
+        if (this.visible && this.paymentData) this.loadPayPalScript();
+      }, 100);
+      return;
+    }
+
+    if (this.isConverting || !(this.paypalUsdAmount >= 0.01)) {
+      setTimeout(() => {
+        if (this.visible && this.paymentData) this.loadPayPalScript();
+      }, 150);
+      return;
     }
 
     if (this.paypalLoaded && typeof paypal !== 'undefined') {
@@ -123,133 +271,112 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
       return;
     }
 
-    // Kiểm tra xem script đã được load chưa
-    if (typeof document !== 'undefined' && document.getElementById('paypal-script')) {
-      this.paypalLoaded = true;
-      this.renderPayPalButton();
-      return;
+    const existing = document.getElementById('paypal-script') as HTMLScriptElement | null;
+    if (existing) {
+      if (existing.src.includes('currency=USD') && typeof paypal !== 'undefined') {
+        this.paypalLoaded = true;
+        this.renderPayPalButton();
+        return;
+      }
+      existing.parentNode?.removeChild(existing);
+      this.paypalLoaded = false;
+      try {
+        delete (window as any).paypal;
+      } catch (_) {}
     }
 
-    // Load PayPal SDK từ cấu hình backend
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    this.http.get<{ clientId: string; sandbox?: boolean }>(`${environment.apiUrl}/paypal/config`)
-      .subscribe({
-        next: (cfg) => {
-          const clientId = cfg?.clientId;
-          if (!clientId) {
-            this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.CLIENT_ID_MISSING'));
-            return;
-          }
-          const script = document.createElement('script');
-          script.id = 'paypal-script';
-          script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${this.selectedCurrency}&intent=capture`;
-          script.async = true;
-          script.onload = () => {
-            this.paypalLoaded = true;
-            this.renderPayPalButton();
-          };
-          script.onerror = () => {
-            this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.SDK_LOAD_FAIL'));
-          };
-          document.body.appendChild(script);
-        },
-        error: () => {
-          this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.CONFIG_FAIL'));
+    this.http.get<{ clientId: string; sandbox?: boolean }>(`${environment.apiUrl}/paypal/config`).subscribe({
+      next: (cfg) => {
+        const clientId = cfg?.clientId;
+        if (!clientId) {
+          this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.CLIENT_ID_MISSING'));
+          return;
         }
-      });
+        const script = document.createElement('script');
+        script.id = 'paypal-script';
+        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=USD&intent=capture`;
+        script.async = true;
+        script.onload = () => {
+          this.paypalLoaded = true;
+          this.renderPayPalButton();
+        };
+        script.onerror = () => {
+          this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.SDK_LOAD_FAIL'));
+        };
+        document.body.appendChild(script);
+      },
+      error: () => {
+        this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.CONFIG_FAIL'));
+      }
+    });
   }
 
   renderPayPalButton(): void {
-    if (!this.isBrowser || typeof document === 'undefined') {
-      return;
-    }
+    if (!this.isBrowser || typeof document === 'undefined') return;
+    if (typeof paypal === 'undefined') return;
+    if (this.isConverting || !(this.paypalUsdAmount >= 0.01)) return;
 
-    if (typeof paypal === 'undefined') {
-      console.error('PayPal SDK chưa được load');
-      return;
-    }
-
-    // Kiểm tra container có tồn tại trong DOM không
     const container = document.getElementById(this.paypalButtonId);
-    if (!container) {
-      console.warn('PayPal container element not found in DOM');
-      return;
-    }
+    if (!container || !document.body.contains(container)) return;
 
-    // Kiểm tra container có trong DOM tree không
-    if (!document.body.contains(container)) {
-      console.warn('PayPal container element not in DOM tree');
-      return;
-    }
-
-    // Xóa button cũ nếu có (nhưng đảm bảo container vẫn còn trong DOM)
     try {
       container.innerHTML = '';
-    } catch (error) {
-      console.error('Error clearing PayPal container:', error);
+    } catch (_) {
       return;
     }
 
-    // Luôn dùng USD cho PayPal (đã convert trước đó)
-    const amount = this.convertedAmount;
-    const currency = 'USD'; // PayPal luôn dùng USD
-    const description = this.paymentData.description || `${this.paymentData.packageName} - ${this.paymentData.billingType === 'yearly' ? 'Thanh toán theo năm' : 'Thanh toán theo tháng'}`;
-
-    // Kiểm tra lại container trước khi render
-    const containerCheck = document.getElementById(this.paypalButtonId);
-    if (!containerCheck || !document.body.contains(containerCheck)) {
-      console.error('Container không tồn tại hoặc đã bị xóa khỏi DOM');
-      return;
-    }
+    const amountValue = this.currencyService.roundAmount(this.paypalUsdAmount, 'USD').toFixed(2);
+    const description =
+      this.paymentData.description ||
+      `${this.paymentData.packageName} - ${
+        this.paymentData.billingType === 'yearly' ? 'Thanh toán theo năm' : 'Thanh toán theo tháng'
+      }`;
 
     try {
-      paypal.Buttons({
-        style: {
-          layout: 'vertical',
-          color: 'blue',
-          shape: 'rect',
-          label: 'paypal'
-        },
-        createOrder: (data: any, actions: any) => {
-          return actions.order.create({
-            purchase_units: [{
-              amount: {
-                value: amount.toFixed(2),
-                currency_code: currency
-              },
-              description: description
-            }]
-          });
-        },
-        onApprove: (data: any, actions: any) => {
-          return actions.order.capture().then((details: any) => {
-            this.handlePaymentSuccess(details);
-          });
-        },
-        onCancel: (data: any) => {
-          this.handlePaymentCancel();
-        },
-        onError: (err: any) => {
-          this.handlePaymentError(err);
-        }
-      }).render(`#${this.paypalButtonId}`).catch((error: any) => {
-        console.error('PayPal render error:', error);
-        this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.BUTTON_LOAD_FAIL'));
-      });
+      paypal
+        .Buttons({
+          style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'paypal' },
+          createOrder: (_data: any, actions: any) =>
+            actions.order.create({
+              purchase_units: [
+                {
+                  amount: { value: amountValue, currency_code: 'USD' },
+                  description
+                }
+              ]
+            }),
+          onApprove: (_data: any, actions: any) =>
+            actions.order.capture().then((details: any) => this.handlePaymentSuccess(details)),
+          onCancel: () => this.handlePaymentCancel(),
+          onError: (err: any) => this.handlePaymentError(err)
+        })
+        .render(`#${this.paypalButtonId}`)
+        .catch((error: any) => {
+          console.error('PayPal render error:', error);
+          this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.BUTTON_LOAD_FAIL'));
+        });
     } catch (error: any) {
       console.error('Error rendering PayPal button:', error);
       this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.BUTTON_LOAD_ERROR'));
     }
   }
 
+  private reloadPayPalButtons(): void {
+    if (!this.visible || !this.isBrowser) return;
+    setTimeout(() => {
+      const container = document.getElementById(this.paypalButtonId);
+      if (!container) return;
+      try {
+        container.innerHTML = '';
+      } catch (_) {}
+      this.loadPayPalScript();
+    }, 50);
+  }
+
   handlePaymentSuccess(details: any): void {
     this.loading = true;
     this.message.success(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.PAYMENT_SUCCESS'));
-    
-    // Emit event với thông tin thanh toán, bao gồm currency đã chọn
+
     this.paymentSuccess.emit({
       success: true,
       paymentId: details.id,
@@ -257,9 +384,15 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
       paymentDetails: details,
       paymentData: {
         ...this.paymentData,
-        currency: this.selectedCurrency // Gửi currency đã chọn
+        currency: 'USD',
+        amount: this.paypalUsdAmount
       },
-      currency: this.selectedCurrency
+      currency: 'USD',
+      amountUsd: this.paypalUsdAmount,
+      sourceCurrency: this.sourceCurrency,
+      sourceAmount: this.sourceAmount,
+      displayCurrency: this.selectedCurrency,
+      displayAmount: this.displayAmount
     });
 
     this.loading = false;
@@ -283,156 +416,38 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
     this.visibleChange.emit(false);
   }
 
-  /**
-   * Áp dụng currency từ paymentData. Gói pricing tính bằng VND;
-   * nếu currency không được PayPal hỗ trợ trực tiếp vẫn giữ để hiển thị rồi convert sang USD khi charge.
-   */
-  private applyPaymentCurrency(): void {
-    if (!this.paymentData) {
-      return;
+  formatExchangeRate(): string {
+    const parts: string[] = [];
+
+    if (this.usdToSourceRate > 0 && this.sourceCurrency !== 'USD') {
+      const usdFmt = new Intl.NumberFormat('en-US', {
+        maximumFractionDigits: this.usdToSourceRate >= 100 ? 0 : 4
+      }).format(this.usdToSourceRate);
+      parts.push(`1 USD ≈ ${usdFmt} ${this.sourceCurrency}`);
     }
 
-    this.selectedCurrency = this.paymentData.currency || 'VND';
-    this.originalAmount = this.paymentData.amount;
-    this.convertedAmount = this.originalAmount;
-    this.exchangeRate = 1;
-
-    if (this.selectedCurrency !== 'USD') {
-      this.convertToUSD();
-    }
-  }
-
-  onVisibleChange(visible: boolean): void {
-    this.visible = visible;
-    this.visibleChange.emit(visible);
-    
-    if (visible && this.paymentData) {
-      // Reset currency khi mở modal — mặc định VND (gói tính bằng VND)
-      this.applyPaymentCurrency();
-      
-      // Đợi modal đã render xong trước khi load PayPal script
-      setTimeout(() => {
-        // Kiểm tra container có tồn tại trong DOM không
-        const container = document.getElementById(this.paypalButtonId);
-        if (container && document.body.contains(container)) {
-          this.loadPayPalScript();
-        } else {
-          // Retry sau 200ms nếu container chưa sẵn sàng
-          setTimeout(() => {
-            if (this.visible && this.paymentData) {
-              this.loadPayPalScript();
-            }
-          }, 200);
-        }
-      }, 300);
-    } else {
-      // Khi đóng modal, cleanup PayPal button
-      if (this.isBrowser && typeof document !== 'undefined') {
-        const container = document.getElementById(this.paypalButtonId);
-        if (container) {
-          try {
-            container.innerHTML = '';
-          } catch (error) {
-            console.error('Error cleaning up PayPal container:', error);
-          }
-        }
+    if (
+      this.selectedCurrency !== this.sourceCurrency &&
+      this.selectedCurrency !== 'USD' &&
+      this.sourceToSelectedRate > 0
+    ) {
+      // Ví dụ: 299000 VND → EUR → hiện "1 VND ≈ 0.000034 EUR" hoặc tốt hơn "299.000 ₫ ≈ €10.xx"
+      const perUnit = this.sourceToSelectedRate;
+      if (perUnit < 0.01) {
+        const perMillion = perUnit * 1_000_000;
+        parts.push(`1.000.000 ${this.sourceCurrency} ≈ ${perMillion.toFixed(2)} ${this.selectedCurrency}`);
+      } else {
+        parts.push(`1 ${this.sourceCurrency} ≈ ${perUnit.toPrecision(4)} ${this.selectedCurrency}`);
       }
     }
-  }
 
-  onCurrencyChange(): void {
-    // Nếu currency không được PayPal hỗ trợ (như VND), vẫn cho phép chọn nhưng sẽ convert sang USD
-    // Không cần kiểm tra và reject, chỉ cần convert
-    const isPayPalSupported = this.currencyService.isPayPalSupported(this.selectedCurrency);
-    
-    if (!isPayPalSupported) {
-      // Hiển thị thông báo nhưng vẫn cho phép chọn
-      this.message.info(`${this.selectedCurrency} không được PayPal hỗ trợ trực tiếp. Số tiền sẽ được chuyển đổi sang USD.`);
-    }
-
-    // Convert sang USD nếu currency khác USD hoặc không được PayPal hỗ trợ
-    if (this.selectedCurrency !== 'USD') {
-      this.convertToUSD();
-    } else {
-      // Nếu chọn USD, dùng số tiền gốc
-      this.convertedAmount = this.originalAmount;
-      this.exchangeRate = 1;
-    }
-
-    // Khi thay đổi currency, cần reload PayPal SDK với currency mới
-    if (this.isBrowser && typeof document !== 'undefined') {
-      // Đợi một chút để đảm bảo DOM đã sẵn sàng
-      setTimeout(() => {
-        // Kiểm tra container có tồn tại không
-        const container = document.getElementById(this.paypalButtonId);
-        if (!container) {
-          console.warn('Container not found when changing currency');
-          return;
-        }
-
-        // Xóa button cũ một cách an toàn
-        try {
-          container.innerHTML = '';
-        } catch (error) {
-          console.error('Error clearing container:', error);
-        }
-        
-        // Xóa script cũ
-        const oldScript = document.getElementById('paypal-script');
-        if (oldScript && oldScript.parentNode) {
-          oldScript.parentNode.removeChild(oldScript);
-        }
-        
-        // Reset flag
-        this.paypalLoaded = false;
-        
-        // Load lại với currency mới (luôn dùng USD cho PayPal)
-        setTimeout(() => {
-          if (this.visible && this.paymentData) {
-            this.loadPayPalScript();
-          }
-        }, 200);
-      }, 100);
-    }
-  }
-
-  /**
-   * Convert số tiền từ currency hiện tại sang USD
-   */
-  convertToUSD(): void {
-    if (!this.paymentData || this.selectedCurrency === 'USD') {
-      this.convertedAmount = this.originalAmount;
-      this.exchangeRate = 1;
-      return;
-    }
-
-    this.isConverting = true;
-    
-    // Lấy tỷ giá từ currency hiện tại sang USD
-    this.currencyService.getExchangeRate(this.selectedCurrency, 'USD')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (rate: number) => {
-          this.exchangeRate = rate;
-          // Convert: amount * rate = USD amount
-          const converted = this.originalAmount * rate;
-          this.convertedAmount = this.currencyService.roundAmount(converted, 'USD');
-          this.isConverting = false;
-        },
-        error: (error) => {
-          console.error('Currency conversion error:', error);
-          this.message.error(this.translate.instant('PAYPAL_PAYMENT.MESSAGES.EXCHANGE_RATE_FAIL'));
-          this.convertedAmount = this.originalAmount;
-          this.exchangeRate = 1;
-          this.isConverting = false;
-        }
-      });
+    return parts.length ? parts.join(' · ') : '—';
   }
 
   formatPrice(price: number, currency?: string): string {
     if (!price && price !== 0) return '0';
-    const currencyCode = currency || this.selectedCurrency;
-    const noDecimal = ['JPY', 'VND', 'KRW'].includes(currencyCode.toUpperCase());
+    const currencyCode = (currency || this.selectedCurrency || 'VND').toUpperCase();
+    const noDecimal = ['JPY', 'VND', 'KRW'].includes(currencyCode);
     return new Intl.NumberFormat(currencyCode === 'VND' ? 'vi-VN' : 'en-US', {
       style: 'currency',
       currency: currencyCode,
@@ -442,8 +457,7 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   getCurrencySymbol(currencyCode: string): string {
-    const currency = this.availableCurrencies.find(c => c.code === currencyCode);
+    const currency = this.availableCurrencies.find((c) => c.code === currencyCode);
     return currency ? currency.symbol : currencyCode;
   }
 }
-
