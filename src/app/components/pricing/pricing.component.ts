@@ -14,6 +14,7 @@ import { NotificationsService, Announcement } from '../../services/notifications
 import { forkJoin } from 'rxjs';
 import { HotelService } from '../../services/hotel.service';
 import { TranslateService } from '@ngx-translate/core';
+import { GoogleAdsConversionService } from '../../services/google-ads-conversion.service';
 import {
   FEATURE_PREVIEW_LIMIT,
   isRecommendedSellerPackage,
@@ -180,7 +181,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     private notificationsService: NotificationsService,
     private http: HttpClient,
     private hotelService: HotelService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private googleAdsConversion: GoogleAdsConversionService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser?._id) {
@@ -1372,6 +1374,16 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
             const billingTypeText = event.paymentData.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
             this.message.success(response.message || this.t('PRICING_PAGE.MESSAGES.SUBSCRIBE_SUCCESS', { billingType: billingTypeText }));
             this.loadCurrentPackage({ force: true });
+
+            // Google Ads — Lượt mua hàng (PayPal)
+            const amountUsd = Number(event.amountUsd || event.paymentData?.amount || 0);
+            this.googleAdsConversion.trackPurchase({
+              transactionId: String(event.paymentId || event.paymentDetails?.id || `paypal_${Date.now()}`),
+              value: amountUsd > 0 ? amountUsd : undefined,
+              currency: amountUsd > 0 ? 'USD' : undefined,
+              newCustomer: !this.currentPackage?.packageId,
+            });
+
             // Tạo thông báo hệ thống cho thanh toán và đăng ký gói thành công
             const pkg = this.packages.find(p => (p._id || p.id) === event.paymentData.packageId);
             if (pkg) {
@@ -1785,6 +1797,14 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Force change detection để đảm bảo modal đóng ngay lập tức
     this.cdr.detectChanges();
+
+    // Google Ads — Lượt mua hàng (SePay / chuyển khoản)
+    this.googleAdsConversion.trackPurchase({
+      transactionId: String(this.sepayPaymentHistoryId || this.sepayPaymentCode || `sepay_${Date.now()}`),
+      value: this.sepayAmount > 0 ? this.sepayAmount : undefined,
+      currency: this.sepayAmount > 0 ? 'VND' : undefined,
+      newCustomer: !this.currentPackage?.packageId,
+    });
     
     // Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
     this.loadLatestPaymentAndPlaySound();
