@@ -261,63 +261,125 @@ export class InvoiceService {
     return this.http.get(`${this.apiUrl}/invoice/statistics/${hotelId}`, { params });
   }
 
-  // ============ SEPAY EINVOICE API ============
+  // ============ E-INVOICE API (SEPAY / EASYINVOICE) ============
 
-  // Đăng nhập Sepay eInvoice
-  loginEInvoice(username: string, password: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/e-invoice/login`, {
+  private withProviderParams(provider?: string, extra: Record<string, string> = {}): HttpParams {
+    let params = new HttpParams();
+    Object.entries(extra).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params = params.set(key, value);
+      }
+    });
+    if (provider) {
+      params = params.set('provider', provider);
+    }
+    return params;
+  }
+
+  private withProviderBody<T extends Record<string, any>>(body: T, provider?: string): T {
+    if (!provider) {
+      return body;
+    }
+    return { ...body, provider };
+  }
+
+  getEInvoiceProviders(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/providers`);
+  }
+
+  getEasyInvoiceConfig(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/config`);
+  }
+
+  saveEasyInvoiceConfig(config: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/e-invoice/config`, config);
+  }
+
+  loginEInvoice(
+    username: string,
+    password: string,
+    provider: string = 'sepay',
+    extra: { taxCode?: string; baseUrl?: string; useCommonApi?: boolean; patterns?: any[] } = {}
+  ): Observable<any> {
+    return this.http.post(`${this.apiUrl}/e-invoice/login?provider=${provider}`, {
       username,
-      password
+      password,
+      ...extra
     });
   }
 
-  // Đăng xuất Sepay eInvoice
-  logoutEInvoice(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/e-invoice/logout`, {});
+  logoutEInvoice(provider: string = 'sepay'): Observable<any> {
+    return this.http.post(`${this.apiUrl}/e-invoice/logout?provider=${provider}`, {});
   }
 
-  // Lấy danh sách tài khoản nhà cung cấp
-  getEInvoiceProviderAccounts(): Observable<any> {
-    // Thêm timestamp để tránh cache
+  getEInvoiceProviderAccounts(provider: string = 'sepay'): Observable<any> {
     const timestamp = new Date().getTime();
     return this.http.get(`${this.apiUrl}/e-invoice/provider-accounts`, {
-      params: { _t: timestamp.toString() }
+      params: this.withProviderParams(provider, { _t: String(timestamp) })
     });
   }
 
-  // Lấy chi tiết tài khoản nhà cung cấp
-  getEInvoiceProviderAccountDetails(accountId: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/e-invoice/provider-accounts/${accountId}`);
+  getEInvoiceProviderAccountDetails(accountId: string, provider: string = 'sepay'): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/provider-accounts/${accountId}`, {
+      params: this.withProviderParams(provider)
+    });
   }
 
-  // Tạo hóa đơn điện tử (Sepay eInvoice)
-  createEInvoice(invoiceData: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/e-invoice/create`, invoiceData);
+  createEInvoice(invoiceData: any, provider?: string): Observable<any> {
+    const resolvedProvider = provider || invoiceData?.provider || 'sepay';
+    return this.http.post(
+      `${this.apiUrl}/e-invoice/create?provider=${resolvedProvider}`,
+      this.withProviderBody(invoiceData, resolvedProvider)
+    );
   }
 
-  // Kiểm tra trạng thái tạo hóa đơn
-  checkEInvoiceCreateStatus(trackingCode: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/e-invoice/create/check/${trackingCode}`);
+  checkEInvoiceCreateStatus(trackingCode: string, provider: string = 'sepay', extra?: Record<string, string>): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/create/check/${trackingCode}`, {
+      params: this.withProviderParams(provider, extra || {})
+    });
   }
 
-  // Phát hành hóa đơn điện tử
-  issueEInvoice(issueData: { reference_code: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/e-invoice/issue`, issueData);
+  issueEInvoice(issueData: { reference_code: string; template_code?: string; invoice_series?: string }, provider: string = 'sepay'): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/e-invoice/issue?provider=${provider}`,
+      this.withProviderBody(issueData, provider)
+    );
   }
 
-  // Kiểm tra trạng thái phát hành hóa đơn
-  checkEInvoiceIssueStatus(trackingCode: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/e-invoice/issue/check/${trackingCode}`);
+  checkEInvoiceIssueStatus(trackingCode: string, provider: string = 'sepay', extra?: Record<string, string>): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/issue/check/${trackingCode}`, {
+      params: this.withProviderParams(provider, extra || {})
+    });
   }
 
-  // Lấy chi tiết hóa đơn điện tử
-  getEInvoiceDetails(referenceCode: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/e-invoice/${referenceCode}`);
+  getEInvoiceDetails(referenceCode: string, provider: string = 'sepay', extra?: Record<string, string>): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/${referenceCode}`, {
+      params: this.withProviderParams(provider, extra || {})
+    });
   }
 
-  // Kiểm tra hạn ngạch
-  getEInvoiceUsage(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/e-invoice/usage`);
+  getEInvoiceUsage(provider: string = 'sepay'): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/usage`, {
+      params: this.withProviderParams(provider)
+    });
+  }
+
+  getEInvoiceDrafts(provider: string = 'sepay', page = 1, limit = 10): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/drafts`, {
+      params: this.withProviderParams(provider, {
+        page: String(page),
+        limit: String(limit)
+      })
+    });
+  }
+
+  getEInvoiceIssued(provider: string = 'sepay', page = 1, limit = 10): Observable<any> {
+    return this.http.get(`${this.apiUrl}/e-invoice/issued`, {
+      params: this.withProviderParams(provider, {
+        page: String(page),
+        limit: String(limit)
+      })
+    });
   }
 
   // Phân chia quota cho hotel (chỉ admin/superadmin)

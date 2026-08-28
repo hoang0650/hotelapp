@@ -43,6 +43,10 @@ export class EInvoiceTemplateComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.loadTemplates();
+
+    this.providerService.selectedVendor$.subscribe(() => {
+      this.loadTemplates();
+    });
     
     // Lắng nghe thay đổi provider để reload templates
     this.providerSubscription = this.providerService.selectedProvider$.subscribe(provider => {
@@ -102,7 +106,7 @@ export class EInvoiceTemplateComponent implements OnInit, OnDestroy {
 
     // Nếu chưa có templates, gọi API để lấy chi tiết provider
     this.loading = true;
-    this.invoiceService.getEInvoiceProviderAccountDetails(selectedProvider.id).subscribe({
+    this.invoiceService.getEInvoiceProviderAccountDetails(selectedProvider.id, this.providerService.getSelectedVendor()).subscribe({
       next: (response: any) => {
         this.loading = false;
         

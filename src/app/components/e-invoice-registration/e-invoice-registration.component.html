@@ -1,7 +1,13 @@
 <div class="e-invoice-container">
   <div class="e-invoice-header">
     <h1>Chọn gói hóa đơn điện tử</h1>
-    <p class="subtitle">Có thể chọn nhiều gói cùng lúc để phù hợp với nhu cầu</p>
+    <p class="subtitle">Đăng ký gói hóa đơn điện tử nội bộ (dùng cho xuất hóa đơn qua Sepay hoặc EasyInvoice)</p>
+    <div class="vendor-select" style="margin-top: 12px; display:flex; gap:8px; align-items:center;">
+      <span>Nhà cung cấp:</span>
+      <nz-select [(ngModel)]="selectedVendor" (ngModelChange)="onVendorChange($event)" style="min-width: 220px;">
+        <nz-option *ngFor="let vendor of vendorOptions" [nzValue]="vendor.id" [nzLabel]="vendor.name"></nz-option>
+      </nz-select>
+    </div>
     <div *ngIf="isAdmin" class="admin-actions" style="margin-top: 16px;">
       <nz-switch 
         [(ngModel)]="showQuotaAllocation" 

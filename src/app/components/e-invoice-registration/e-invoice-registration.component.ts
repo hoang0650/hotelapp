@@ -5,6 +5,7 @@ import { AuthService } from '../../services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { InvoiceService } from '../../services/invoice.service';
+import { EInvoiceProviderService, EInvoiceVendor } from '../../services/e-invoice-provider.service';
 import { HotelService } from '../../services/hotel.service';
 import { SePayService, SePayPaymentData } from '../../services/sepay.service';
 
@@ -55,6 +56,9 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
   private paymentStatusCheckInterval: any = null;
   
   // Digital signature pricing
+  selectedVendor: EInvoiceVendor = 'sepay';
+  vendorOptions: { id: EInvoiceVendor; name: string }[] = [];
+
   digitalSignaturePricing: DigitalSignaturePricing[] = [
     { duration: '1 năm', price: 1272000 },
     { duration: '2 năm', price: 2544000 },
@@ -66,6 +70,7 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
     private message: NzMessageService,
     private authService: AuthService,
     private invoiceService: InvoiceService,
+    private eInvoiceProviderService: EInvoiceProviderService,
     private hotelService: HotelService,
     private sepayService: SePayService,
     private translate: TranslateService
@@ -75,6 +80,8 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
+    this.vendorOptions = this.eInvoiceProviderService.vendorOptions;
+    this.selectedVendor = this.eInvoiceProviderService.getSelectedVendor();
     this.isAdmin = this.authService.isAdmin() || this.authService.isSuperAdmin();
     this.loadExistingPackages();
     
@@ -101,7 +108,7 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
   
   loadSystemQuota(): void {
     this.loadingSystemQuota = true;
-    this.invoiceService.getEInvoiceUsage().subscribe({
+    this.invoiceService.getEInvoiceUsage(this.selectedVendor).subscribe({
       next: (response: any) => {
         this.loadingSystemQuota = false;
         if (response.success !== false && response.data) {
@@ -113,6 +120,14 @@ export class EInvoiceRegistrationComponent implements OnInit, OnDestroy {
         console.error('Error loading system quota:', error);
       }
     });
+  }
+
+  onVendorChange(vendor: EInvoiceVendor): void {
+    this.eInvoiceProviderService.setSelectedVendor(vendor);
+    this.selectedVendor = vendor;
+    if (this.isAdmin && this.showQuotaAllocation) {
+      this.loadSystemQuota();
+    }
   }
 
   initializePackages(): void {

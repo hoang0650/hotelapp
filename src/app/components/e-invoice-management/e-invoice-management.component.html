@@ -5,6 +5,27 @@
       <p class="subtitle">Xem và quản lý bản nháp, danh sách hóa đơn đã xuất</p>
     </div>
     <div class="header-info-row">
+      <nz-card [nzBordered]="false" nzSize="small" class="info-card">
+        <div class="provider-info">
+          <div class="provider-label">
+            <i nz-icon nzType="api" nzTheme="outline"></i>
+            <span>Nhà cung cấp hóa đơn:</span>
+          </div>
+          <div class="provider-value">
+            <nz-select
+              [(ngModel)]="selectedVendor"
+              (ngModelChange)="onVendorChange($event)"
+              style="min-width: 220px;">
+              <nz-option
+                *ngFor="let vendor of vendorOptions"
+                [nzValue]="vendor.id"
+                [nzLabel]="vendor.name">
+              </nz-option>
+            </nz-select>
+          </div>
+        </div>
+      </nz-card>
+
       <!-- Trạng thái đăng nhập -->
       <nz-card [nzBordered]="false" nzSize="small" class="info-card">
         <div class="auth-status">
@@ -302,7 +323,7 @@
 <!-- Modal đăng nhập -->
 <nz-modal
   [(nzVisible)]="showLoginModal"
-  nzTitle="Đăng nhập Sepay eInvoice"
+  nzTitle="Đăng nhập {{ currentProviderLabel }}"
   (nzOnCancel)="closeLoginModal()"
   [nzFooter]="null"
   nzWidth="500px">
@@ -315,7 +336,7 @@
             nz-input 
             [(ngModel)]="loginForm.username" 
             name="username"
-            placeholder="Nhập username từ Sepay"
+            placeholder="Nhập username {{ selectedVendor === 'easyinvoice' ? 'EasyInvoice' : 'Sepay' }}"
             [disabled]="loggingIn" />
         </nz-form-control>
       </nz-form-item>
@@ -328,7 +349,19 @@
             type="password"
             [(ngModel)]="loginForm.password" 
             name="password"
-            placeholder="Nhập password từ Sepay"
+            placeholder="Nhập password"
+            [disabled]="loggingIn" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item *ngIf="selectedVendor === 'easyinvoice'">
+        <nz-form-label nzRequired>Mã số thuế (taxCode)</nz-form-label>
+        <nz-form-control>
+          <input
+            nz-input
+            [(ngModel)]="loginForm.taxCode"
+            name="taxCode"
+            placeholder="Nhập MST doanh nghiệp"
             [disabled]="loggingIn" />
         </nz-form-control>
       </nz-form-item>
@@ -351,7 +384,9 @@
     <nz-alert 
       nzType="info" 
       nzMessage="Thông tin đăng nhập"
-      [nzDescription]="'Vui lòng nhập Username và Password được cấp bởi Sepay. Thông tin này được sử dụng để lấy access token từ Sepay eInvoice API.'"
+      [nzDescription]="selectedVendor === 'easyinvoice'
+        ? 'Nhập tài khoản EasyInvoice và mã số thuế. Hệ thống dùng domain api.easyinvoice.vn theo tài liệu tích hợp v8.0.'
+        : 'Vui lòng nhập Username và Password được cấp bởi Sepay để lấy access token.'"
       [nzShowIcon]="true"
       style="margin-top: 16px;">
     </nz-alert>

@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, Input, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Inject, OnInit, Input, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy, NgZone } from '@angular/core';
 import { NzModalRef, NZ_MODAL_DATA, NzModalService } from 'ng-zorro-antd/modal';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RoomsService } from '../../services/rooms.service';
@@ -114,6 +114,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   sepayAccountNumber = '';
   sepayPaymentHistoryId: string = ''; // ID của payment history để kiểm tra trạng thái
   sepayInitializing = false;
+  sepayPaymentConfirmed = false;
   currentUser: any = null;
   hotelBankAccount: any = null; // Thông tin ngân hàng của hotel
   private paymentStatusCheckInterval: any = null; // Interval để kiểm tra trạng thái thanh toán
@@ -418,7 +419,8 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private translate: TranslateService,
     private http: HttpClient,
-    private transactionService: TransactionService
+    private transactionService: TransactionService,
+    private ngZone: NgZone
   ) {
     
     this.roomData = data.roomData;
@@ -2682,7 +2684,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
       orderInvoiceNumber: paymentCode,
       description: `Thanh toán phòng ${this.roomData.roomNumber} - ${invoiceData.customerName || 'Khách lẻ'}`,
       roomId: this.roomData._id,
-      roomNumber: this.roomData.roomNumber
+      roomNumber: this.roomData.roomNumber,
+      hotelId: this.getResolvedHotelId() || undefined,
+      paymentType: 'room_checkout'
     };
 
     this.sepayService.createPaymentHistoryForRoom(payload).subscribe({
@@ -2852,7 +2856,9 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
         orderInvoiceNumber: paymentCode,
         description: `Thanh toán phòng ${this.roomData.roomNumber}`,
         roomId,
-        roomNumber: this.roomData.roomNumber
+        roomNumber: this.roomData.roomNumber,
+        hotelId: this.getResolvedHotelId() || undefined,
+        paymentType: 'room_checkout'
       })
       .subscribe({
         next: (response: any) => {
@@ -3004,40 +3010,67 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
 
   private onSePayPaymentReceivedWindow = (event: Event): void => {
     const detail = (event as CustomEvent)?.detail;
-    this.handleRealtimeSePayPayment(detail);
+    this.ngZone.run(() => this.handleRealtimeSePayPayment(detail));
   };
 
-  /** Đóng modal CK khi socket báo payment_received khớp giao dịch đang chờ */
-  private handleRealtimeSePayPayment(payload: any): void {
-    if (!payload || !this.showSePayModal || this.paymentSuccessHandled) {
-      return;
+  /** Khớp giao dịch SePay đang chờ (QR checkout) với payload realtime/polling */
+  private matchesActiveSePayPayment(payload: any): boolean {
+    if (!payload) {
+      return false;
     }
 
     const payloadHistoryId = String(payload.paymentHistoryId || payload.id || '').trim();
-    const payloadCode = String(payload.paymentCode || '').trim();
+    const payloadCode = String(
+      payload.paymentCode || payload.sepayInvoiceNumber || payload.orderInvoiceNumber || ''
+    ).trim();
     const payloadRoomId = this.normalizeObjectId(payload.roomId);
     const currentRoomId = this.normalizeObjectId(this.roomData?._id);
+    const payloadHotelId = this.normalizeObjectId(payload.hotelId);
+    const currentHotelId = this.getResolvedHotelId();
     const currentHistoryId = String(this.sepayPaymentHistoryId || '').trim();
     const currentCode = String(this.sepayPaymentCode || '').trim();
     const payloadAmount = Number(payload.amount);
     const currentAmount = Number(this.sepayAmount);
-    const payloadType = String(payload.paymentType || '').trim();
+    const payloadType = String(payload.paymentType || '').trim().toLowerCase();
 
     const matchById = !!(currentHistoryId && payloadHistoryId && currentHistoryId === payloadHistoryId);
-    // Không bắt buộc khớp mã CK — chỉ nhận nếu có sẵn và trùng
     const matchByCode = !!(currentCode && payloadCode && currentCode === payloadCode);
+
     const sameRoom = !!(currentRoomId && payloadRoomId && currentRoomId === payloadRoomId);
+    const sameHotel = !!(currentHotelId && payloadHotelId && currentHotelId === payloadHotelId);
+
     const amountClose =
       Number.isFinite(payloadAmount) &&
       Number.isFinite(currentAmount) &&
       currentAmount > 0 &&
       Math.abs(payloadAmount - currentAmount) <= Math.max(currentAmount * 0.01, 1000);
-    // Bỏ qua check nội dung CK: khớp phòng + (checkout type hoặc đúng số tiền)
-    const matchByRoom =
-      sameRoom &&
-      (payloadType === 'room_checkout' || payloadType === '' || amountClose);
 
-    if (!matchById && !matchByCode && !matchByRoom) {
+    const isCheckoutLike =
+      !payloadType ||
+      payloadType === 'room_checkout' ||
+      payloadType === 'bank_transfer_in';
+
+    const matchByRoom = sameRoom && isCheckoutLike;
+    const matchByHotelAmount = sameHotel && amountClose && isCheckoutLike && this.showSePayModal;
+
+    return matchById || matchByCode || matchByRoom || matchByHotelAmount;
+  }
+
+  /** Đóng modal CK khi socket báo payment_received khớp giao dịch đang chờ */
+  private handleRealtimeSePayPayment(payload: any): void {
+    if (!payload || this.paymentSuccessHandled) {
+      return;
+    }
+
+    const awaitingPayment =
+      this.showSePayModal ||
+      (!!this.pendingCheckoutData && !!this.activeSePayTransactionToken);
+
+    if (!awaitingPayment) {
+      return;
+    }
+
+    if (!this.matchesActiveSePayPayment(payload)) {
       return;
     }
 
@@ -3067,6 +3100,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
 
     this.paymentSuccessHandled = true;
+    this.sepayPaymentConfirmed = true;
     console.log('[onPaymentSuccess] Thanh toán thành công, đóng modal QR và hiển thị invoice');
     
     // Dừng polling
@@ -4693,6 +4727,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
   ): void {
     this.stopPaymentStatusPolling(false);
     this.paymentSuccessHandled = false;
+    this.sepayPaymentConfirmed = false;
     this.activeSePayTransactionToken = `${this.roomData?._id || 'room'}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     this.sepayPaymentHistoryId = '';
     this.sepayAmount = amount;
@@ -4718,14 +4753,13 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     }
 
     this.paymentStatusCheckInFlight = true;
-    const hotelId = this.getResolvedHotelId() || undefined;
     const roomId = this.normalizeObjectId(this.roomData?._id) || undefined;
 
     this.sepayService.getPaymentStatus({
       paymentHistoryId: this.sepayPaymentHistoryId || undefined,
       paymentCode: this.sepayPaymentHistoryId ? undefined : (this.sepayPaymentCode || undefined),
-      hotelId: hotelId || undefined,
-      roomId: roomId || undefined
+      roomId: roomId || undefined,
+      paymentType: 'room_checkout'
     }).subscribe({
       next: (response: any) => {
         this.paymentStatusCheckInFlight = false;
@@ -4774,6 +4808,7 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
     this.stopPaymentStatusPolling(false);
     this.sepayInitializing = false;
     this.paymentSuccessHandled = false;
+    this.sepayPaymentConfirmed = false;
     this.activeSePayTransactionToken = '';
     this.sepayPaymentHistoryId = '';
     this.sepayPaymentCode = '';

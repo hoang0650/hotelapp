@@ -1396,7 +1396,7 @@ export class InvoiceComponent implements OnInit {
       return;
     }
     
-    this.invoiceService.createEInvoice(invoiceData).subscribe({
+    this.invoiceService.createEInvoice(invoiceData, this.getEInvoiceProvider()).subscribe({
       next: (response: any) => {
         // Backend trả về: { success: true, data: { tracking_code }, tracking_code }
         const trackingCode = response.data?.tracking_code || response.tracking_code;
@@ -1448,7 +1448,7 @@ export class InvoiceComponent implements OnInit {
     }
 
     setTimeout(() => {
-      this.invoiceService.checkEInvoiceCreateStatus(trackingCode).subscribe({
+      this.invoiceService.checkEInvoiceCreateStatus(trackingCode, this.getEInvoiceProvider(), this.getEInvoiceTemplateMeta() as any).subscribe({
         next: (response: any) => {
           // Backend trả về: { success: true, data: { status, message, reference_code } }
           const statusData = response.data || response;
@@ -1510,7 +1510,7 @@ export class InvoiceComponent implements OnInit {
 
   // Lấy chi tiết hóa đơn và hiển thị preview
   private getInvoiceDetailsAndShowPreview(referenceCode: string): void {
-    this.invoiceService.getEInvoiceDetails(referenceCode).subscribe({
+    this.invoiceService.getEInvoiceDetails(referenceCode, this.getEInvoiceProvider(), this.getEInvoiceTemplateMeta() as any).subscribe({
       next: (response: any) => {
         // Backend trả về: { success: true, data: { invoice_url, pdf_url, ... } }
         const invoiceData = response.data || response;
@@ -1570,7 +1570,7 @@ export class InvoiceComponent implements OnInit {
     
     if (!isAdminOrSuperadmin) {
       // Kiểm tra quota trước khi xuất hóa đơn
-      this.invoiceService.getEInvoiceUsage().subscribe({
+      this.invoiceService.getEInvoiceUsage(this.getEInvoiceProvider()).subscribe({
         next: (response: any) => {
           if (response.success !== false && response.data) {
             const quotaRemaining = response.data.quota_remaning || response.data.quota_remaining;
@@ -1633,7 +1633,7 @@ export class InvoiceComponent implements OnInit {
     const invoiceData = this.prepareSepayEInvoiceData(false); // is_draft = false (phát hành ngay)
     
     // Bước 1: Tạo hóa đơn
-    this.invoiceService.createEInvoice(invoiceData).subscribe({
+    this.invoiceService.createEInvoice(invoiceData, this.getEInvoiceProvider()).subscribe({
       next: (response: any) => {
         // Backend trả về: { success: true, data: { tracking_code }, tracking_code }
         const trackingCode = response.data?.tracking_code || response.tracking_code;
@@ -1667,7 +1667,7 @@ export class InvoiceComponent implements OnInit {
     }
 
     setTimeout(() => {
-      this.invoiceService.checkEInvoiceCreateStatus(trackingCode).subscribe({
+      this.invoiceService.checkEInvoiceCreateStatus(trackingCode, this.getEInvoiceProvider(), this.getEInvoiceTemplateMeta() as any).subscribe({
         next: (response: any) => {
           // Backend trả về: { success: true, data: { status, message, reference_code } }
           const statusData = response.data || response;
@@ -1707,7 +1707,10 @@ export class InvoiceComponent implements OnInit {
 
   // Phát hành hóa đơn
   private issueInvoice(referenceCode: string): void {
-    this.invoiceService.issueEInvoice({ reference_code: referenceCode }).subscribe({
+    this.invoiceService.issueEInvoice({
+      reference_code: referenceCode,
+      ...this.getEInvoiceTemplateMeta()
+    }, this.getEInvoiceProvider()).subscribe({
       next: (response: any) => {
         // Backend trả về: { success: true, data: { tracking_code }, tracking_code }
         const issueTrackingCode = response.data?.tracking_code || response.tracking_code;
@@ -1741,7 +1744,7 @@ export class InvoiceComponent implements OnInit {
     }
 
     setTimeout(() => {
-      this.invoiceService.checkEInvoiceIssueStatus(trackingCode).subscribe({
+      this.invoiceService.checkEInvoiceIssueStatus(trackingCode, this.getEInvoiceProvider(), this.getEInvoiceTemplateMeta() as any).subscribe({
         next: (response: any) => {
           // Backend trả về: { success: true, data: { status, message, invoice_url, pdf_url } }
           const statusData = response.data || response;
@@ -1782,7 +1785,7 @@ export class InvoiceComponent implements OnInit {
 
   // Lấy chi tiết hóa đơn và hiển thị kết quả
   private getInvoiceDetailsAndShowResult(referenceCode: string): void {
-    this.invoiceService.getEInvoiceDetails(referenceCode).subscribe({
+    this.invoiceService.getEInvoiceDetails(referenceCode, this.getEInvoiceProvider(), this.getEInvoiceTemplateMeta() as any).subscribe({
       next: (response: any) => {
         // Backend trả về: { success: true, data: { invoice_url, pdf_url, ... } }
         const invoiceData = response.data || response;
@@ -1807,6 +1810,18 @@ export class InvoiceComponent implements OnInit {
         // Không hiển thị lỗi vì đã phát hành thành công và đã hiển thị thông báo ở trên
       }
     });
+  }
+
+  private getEInvoiceProvider(): string {
+    return this.providerService.getSelectedVendor();
+  }
+
+  private getEInvoiceTemplateMeta(): { template_code?: string; invoice_series?: string } {
+    const template = this.providerService.getSelectedTemplate();
+    return {
+      template_code: template?.template_code,
+      invoice_series: template?.invoice_series
+    };
   }
 
   // Chuẩn bị dữ liệu cho Sepay eInvoice từ hotelInfo và invoiceData
@@ -1962,31 +1977,37 @@ export class InvoiceComponent implements OnInit {
       buyer.tax_code = taxCode.trim();
     }
 
-    // Format theo tài liệu Sepay
-    const sepayInvoiceData: any = {
+    // Format theo provider
+    const selectedVendor = this.providerService.getSelectedVendor();
+    const invoicePayload: any = {
+      provider: selectedVendor,
       template_code: templateCode,
       invoice_series: invoiceSeries,
-      issued_date: issuedDate,
+      issued_date: selectedVendor === 'easyinvoice'
+        ? (this.invoiceData.date ? new Date(this.invoiceData.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10))
+        : issuedDate,
       currency: 'VND',
-      provider_account_id: providerAccountId,
       buyer: buyer,
       items: items,
-      is_draft: isDraft === true // Đảm bảo là boolean
+      is_draft: isDraft === true
     };
+
+    if (selectedVendor === 'sepay') {
+      invoicePayload.provider_account_id = providerAccountId;
+    }
     
     // Chỉ thêm notes nếu có giá trị
     if (this.invoiceData.notes && this.invoiceData.notes.trim() !== '') {
-      sepayInvoiceData.notes = this.invoiceData.notes.trim();
+      invoicePayload.notes = this.invoiceData.notes.trim();
     }
     
-    // Thêm invoiceId nếu có (để lưu vào database)
     if (this.invoiceData['_id'] || this.invoiceData['invoiceId']) {
-      sepayInvoiceData.invoiceId = this.invoiceData['_id'] || this.invoiceData['invoiceId'];
+      invoicePayload.invoiceId = this.invoiceData['_id'] || this.invoiceData['invoiceId'];
     }
     
-    console.log('[Invoice Component] Final Sepay invoice data:', JSON.stringify(sepayInvoiceData, null, 2));
+    console.log('[Invoice Component] Final e-invoice data:', JSON.stringify(invoicePayload, null, 2));
     
-    return sepayInvoiceData;
+    return invoicePayload;
   }
 
   // Format ngày theo format Sepay: yyyy-MM-dd HH:mm:ss
@@ -2151,7 +2172,7 @@ export class InvoiceComponent implements OnInit {
 
     // Defer quota check để invoice hiện trước
     setTimeout(() => {
-      this.invoiceService.getEInvoiceUsage().subscribe({
+      this.invoiceService.getEInvoiceUsage(this.getEInvoiceProvider()).subscribe({
         next: (response: any) => {
           if (response.success !== false && response.data) {
             const quotaRemaining = response.data.quota_remaning || response.data.quota_remaining;

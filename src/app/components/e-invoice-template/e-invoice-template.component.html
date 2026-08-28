@@ -1,9 +1,16 @@
 <div class="e-invoice-template-container">
   <div class="page-header">
     <h1>Mẫu hóa đơn điện tử</h1>
-    <p class="subtitle">Chọn và quản lý mẫu hóa đơn điện tử từ nhà cung cấp</p>
-    <div *ngIf="providerService.getSelectedProvider()" class="provider-info">
-      <nz-tag [nzColor]="providerService.getSelectedProvider()?.active ? 'success' : 'default'">
+    <p class="subtitle">Chọn mẫu hóa đơn theo nhà cung cấp: Sepay hoặc EasyInvoice</p>
+    <div class="provider-info" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <nz-select
+        [ngModel]="providerService.getSelectedVendor()"
+        (ngModelChange)="providerService.setSelectedVendor($event)"
+        style="min-width: 220px;">
+        <nz-option nzValue="sepay" nzLabel="Sepay eInvoice"></nz-option>
+        <nz-option nzValue="easyinvoice" nzLabel="EasyInvoice"></nz-option>
+      </nz-select>
+      <nz-tag *ngIf="providerService.getSelectedProvider()" [nzColor]="providerService.getSelectedProvider()?.active ? 'success' : 'default'">
         <i nz-icon nzType="cloud-server" nzTheme="outline"></i>
         {{ providerService.getSelectedProvider()?.provider }}
       </nz-tag>

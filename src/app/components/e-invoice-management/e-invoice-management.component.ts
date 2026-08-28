@@ -7,7 +7,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { NzTabChangeEvent } from 'ng-zorro-antd/tabs';
 import { InvoiceService } from '../../services/invoice.service';
-import { EInvoiceProviderService, ProviderAccount } from '../../services/e-invoice-provider.service';
+import { EInvoiceProviderService, ProviderAccount, EInvoiceVendor } from '../../services/e-invoice-provider.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 interface EInvoice {
@@ -77,6 +77,12 @@ export class EInvoiceManagementComponent implements OnInit {
   loadingProviderDetails = false;
   showProviderModal = false;
   
+  // Provider vendor (Sepay / EasyInvoice)
+  selectedVendor: EInvoiceVendor = 'sepay';
+  vendorOptions: { id: EInvoiceVendor; name: string }[] = [];
+  easyInvoiceConfig: any = null;
+  loadingEasyInvoiceConfig = false;
+
   // Authentication status
   isAuthenticated = false;
   checkingAuth = false;
@@ -84,7 +90,8 @@ export class EInvoiceManagementComponent implements OnInit {
   showLoginModal = false;
   loginForm = {
     username: '',
-    password: ''
+    password: '',
+    taxCode: ''
   };
   loggingIn = false;
 
@@ -126,6 +133,20 @@ export class EInvoiceManagementComponent implements OnInit {
     // Kiểm tra role để phân biệt admin/superadmin và các role khác
     const userRole = this.currentUser?.role;
     this.isAdminOrSuperadmin = userRole === 'superadmin' || userRole === 'admin';
+    
+    this.selectedVendor = this.providerService.getSelectedVendor();
+    this.vendorOptions = this.providerService.vendorOptions;
+
+    this.providerService.selectedVendor$.subscribe(vendor => {
+      if (vendor !== this.selectedVendor) {
+        this.selectedVendor = vendor;
+        this.isAuthenticated = false;
+        this.providerAccounts = [];
+        this.selectedProvider = null;
+        this.checkAuthentication();
+        this.loadDrafts();
+      }
+    });
     
     // Load provider đã chọn
     this.selectedProvider = this.providerService.getSelectedProvider();
@@ -173,14 +194,40 @@ export class EInvoiceManagementComponent implements OnInit {
     this.onTabChange(event.index === 0 ? 'drafts' : 'issued');
   }
 
+  onVendorChange(vendor: EInvoiceVendor): void {
+    this.providerService.setSelectedVendor(vendor);
+    this.selectedVendor = vendor;
+    if (vendor === 'easyinvoice') {
+      this.loadEasyInvoiceConfig();
+    }
+  }
+
+  loadEasyInvoiceConfig(): void {
+    this.loadingEasyInvoiceConfig = true;
+    this.invoiceService.getEasyInvoiceConfig().subscribe({
+      next: (response: any) => {
+        this.loadingEasyInvoiceConfig = false;
+        this.easyInvoiceConfig = response?.data || null;
+        if (this.easyInvoiceConfig?.username && !this.loginForm.username) {
+          this.loginForm.username = this.easyInvoiceConfig.username;
+        }
+        if (this.easyInvoiceConfig?.taxCode && !this.loginForm.taxCode) {
+          this.loginForm.taxCode = this.easyInvoiceConfig.taxCode;
+        }
+      },
+      error: () => {
+        this.loadingEasyInvoiceConfig = false;
+      }
+    });
+  }
+
+  get currentProviderLabel(): string {
+    return this.providerService.getVendorLabel(this.selectedVendor);
+  }
+
   loadDrafts(): void {
     this.loading = true;
-    this.http.get(`${environment.apiUrl}/e-invoice/drafts`, {
-      params: {
-        page: this.pageIndex.toString(),
-        limit: this.pageSize.toString()
-      }
-    }).subscribe({
+    this.invoiceService.getEInvoiceDrafts(this.selectedVendor, this.pageIndex, this.pageSize).subscribe({
       next: (response: any) => {
         this.loading = false;
         if (response.success !== false) {
@@ -209,12 +256,7 @@ export class EInvoiceManagementComponent implements OnInit {
 
   loadIssuedInvoices(): void {
     this.loading = true;
-    this.http.get(`${environment.apiUrl}/e-invoice/issued`, {
-      params: {
-        page: this.pageIndex.toString(),
-        limit: this.pageSize.toString()
-      }
-    }).subscribe({
+    this.invoiceService.getEInvoiceIssued(this.selectedVendor, this.pageIndex, this.pageSize).subscribe({
       next: (response: any) => {
         this.loading = false;
         if (response.success !== false) {
@@ -281,7 +323,7 @@ export class EInvoiceManagementComponent implements OnInit {
       return;
     }
 
-    this.invoiceService.getEInvoiceDetails(referenceCode).subscribe({
+    this.invoiceService.getEInvoiceDetails(referenceCode, this.selectedVendor).subscribe({
       next: (response: any) => {
         this.loadingDraftDetails = false;
         if (response.success !== false && response.data) {
@@ -361,7 +403,7 @@ export class EInvoiceManagementComponent implements OnInit {
       return;
     }
 
-    this.invoiceService.getEInvoiceDetails(referenceCode).subscribe({
+    this.invoiceService.getEInvoiceDetails(referenceCode, this.selectedVendor).subscribe({
       next: (response: any) => {
         this.loadingDraftDetails = false;
         if (response.success !== false && response.data) {
@@ -497,7 +539,7 @@ export class EInvoiceManagementComponent implements OnInit {
       is_draft: true
     };
 
-    this.invoiceService.createEInvoice(invoiceData).subscribe({
+    this.invoiceService.createEInvoice({ ...invoiceData, provider: this.selectedVendor }, this.selectedVendor).subscribe({
       next: (response: any) => {
         this.savingDraft = false;
         if (response.success !== false) {
@@ -542,7 +584,11 @@ export class EInvoiceManagementComponent implements OnInit {
       nzCancelText: 'Hủy',
       nzOnOk: () => {
         this.issuingDraft = true;
-        this.invoiceService.issueEInvoice({ reference_code: referenceCode }).subscribe({
+        this.invoiceService.issueEInvoice({
+          reference_code: referenceCode,
+          template_code: this.draftForm?.template_code,
+          invoice_series: this.draftForm?.invoice_series
+        }, this.selectedVendor).subscribe({
           next: (response: any) => {
             this.issuingDraft = false;
             if (response.success !== false) {
@@ -691,7 +737,14 @@ export class EInvoiceManagementComponent implements OnInit {
       nzOkDanger: true,
       nzCancelText: 'Đóng',
       nzOnOk: () => {
-        this.http.post(`${environment.apiUrl}/e-invoice/${invoice.id}/cancel`, {}).subscribe({
+        this.http.post(
+          `${environment.apiUrl}/e-invoice/${invoice.id}/cancel?provider=${this.selectedVendor}`,
+          {
+            provider: this.selectedVendor,
+            template_code: (invoice as any).easyInvoicePattern,
+            invoice_series: (invoice as any).easyInvoiceSerial,
+          }
+        ).subscribe({
           next: (response: any) => {
             if (response.success !== false) {
               this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.CANCEL_SUCCESS'));
@@ -769,7 +822,7 @@ export class EInvoiceManagementComponent implements OnInit {
     this.authError = null;
     
     // Thử gọi API getProviderAccounts để kiểm tra token
-    this.invoiceService.getEInvoiceProviderAccounts().subscribe({
+    this.invoiceService.getEInvoiceProviderAccounts(this.selectedVendor).subscribe({
       next: (response: any) => {
         this.checkingAuth = false;
         if (response.success !== false) {
@@ -815,7 +868,7 @@ export class EInvoiceManagementComponent implements OnInit {
     this.loadingQuota = true;
     this.quotaError = null;
 
-    this.invoiceService.getEInvoiceUsage().subscribe({
+    this.invoiceService.getEInvoiceUsage(this.selectedVendor).subscribe({
       next: (response: any) => {
         this.loadingQuota = false;
         
@@ -917,8 +970,20 @@ export class EInvoiceManagementComponent implements OnInit {
       return;
     }
 
+    if (this.selectedVendor === 'easyinvoice' && !this.loginForm.taxCode) {
+      this.message.warning('Vui lòng nhập mã số thuế (taxCode) cho EasyInvoice');
+      return;
+    }
+
     this.loggingIn = true;
-    this.invoiceService.loginEInvoice(this.loginForm.username, this.loginForm.password).subscribe({
+    this.invoiceService.loginEInvoice(
+      this.loginForm.username,
+      this.loginForm.password,
+      this.selectedVendor,
+      this.selectedVendor === 'easyinvoice'
+        ? { taxCode: this.loginForm.taxCode, useCommonApi: true }
+        : {}
+    ).subscribe({
       next: (response: any) => {
         this.loggingIn = false;
         if (response.success !== false) {
@@ -943,7 +1008,7 @@ export class EInvoiceManagementComponent implements OnInit {
    * Đăng xuất
    */
   logout(): void {
-    this.invoiceService.logoutEInvoice().subscribe({
+    this.invoiceService.logoutEInvoice(this.selectedVendor).subscribe({
       next: (response: any) => {
         if (response.success !== false) {
           this.message.success(this.translate.instant('E_INVOICE_MANAGEMENT.MESSAGES.LOGOUT_SUCCESS'));
@@ -979,7 +1044,7 @@ export class EInvoiceManagementComponent implements OnInit {
   loadProviderAccounts(): void {
     this.loadingProviders = true;
     
-    this.invoiceService.getEInvoiceProviderAccounts().subscribe({
+    this.invoiceService.getEInvoiceProviderAccounts(this.selectedVendor).subscribe({
       next: (response: any) => {
         this.loadingProviders = false;
         
@@ -1090,7 +1155,7 @@ export class EInvoiceManagementComponent implements OnInit {
     
     this.loadingProviderDetails = true;
     
-    this.invoiceService.getEInvoiceProviderAccountDetails(provider.id).subscribe({
+    this.invoiceService.getEInvoiceProviderAccountDetails(provider.id, this.selectedVendor).subscribe({
       next: (response: any) => {
         this.loadingProviderDetails = false;
         

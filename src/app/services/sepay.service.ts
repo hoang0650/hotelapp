@@ -182,6 +182,8 @@ export class SePayService {
     roomId: string;
     roomNumber: string;
     orderInvoiceNumber?: string;
+    hotelId?: string;
+    paymentType?: string;
   }): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/create-payment-history`, payload);
   }

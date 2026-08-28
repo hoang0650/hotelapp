@@ -915,6 +915,15 @@
         style="margin-bottom: 16px;">
       </nz-alert>
 
+      <nz-alert
+        *ngIf="sepayPaymentConfirmed"
+        nzType="success"
+        nzMessage="Đã nhận thanh toán thành công"
+        nzDescription="Hệ thống đang hoàn tất check-out và đóng cửa sổ..."
+        [nzShowIcon]="true"
+        style="margin-bottom: 16px;">
+      </nz-alert>
+
       <nz-descriptions nzBordered [nzColumn]="1" style="margin-bottom: 20px;">
         <nz-descriptions-item [nzTitle]="'ROOM_CONTENT_MODAL.SEPAY_AMOUNT_LABEL' | translate">
           <strong style="font-size: 18px; color: #ff4d4f;">
