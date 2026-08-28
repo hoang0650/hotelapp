@@ -37,6 +37,14 @@
   gap: 8px;
 }
 
+.filter-item-hotel {
+  min-width: 320px;
+}
+
+.filter-item-hotel nz-tag {
+  margin-left: 4px;
+}
+
 .filter-item label {
   font-weight: 500;
   color: #666;

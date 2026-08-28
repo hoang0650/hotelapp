@@ -45,6 +45,8 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   roomsForHotel: Room[] = [];
   selectedHotelForMapping: string | null = null;
   currentHotelId: string | null = null;
+  selectedHotelName = '';
+  private currentUser: ReturnType<AuthService['getCurrentUser']> = null;
 
   otaProviders: OtaProvider[] = [...ALL_OTA_PROVIDERS];
   otaStatuses: OtaIntegrationStatus[] = ['active', 'inactive', 'error'];
@@ -157,13 +159,33 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.currentHotelId = this.authService.getHotelId();
+    this.currentUser = this.authService.getCurrentUser();
+    this.initializeHotelContext();
     this.loadChannelAdapters();
     this.loadHotels();
-    this.loadOtaIntegrations();
-    if (this.currentHotelId) {
-      this.onHotelSelectedForForm(this.currentHotelId);
-    }
+
+    this.subscriptions.add(
+      this.hotelService.selectedHotelId$.subscribe((hotelId) => {
+        const normalized = this.hotelService.normalizeHotelId(hotelId);
+        if (normalized && !this.hotelService.sameHotelId(normalized, this.currentHotelId)) {
+          this.onHotelChange(normalized, { persist: false });
+        }
+      })
+    );
+  }
+
+  private initializeHotelContext(): void {
+    const storedHotelId = this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+    if (!storedHotelId) return;
+
+    this.currentHotelId = storedHotelId;
+    this.hotels = this.hotelService.ensureSelectedHotelOption(
+      this.hotelService.getCachedHotels(),
+      storedHotelId,
+      this.hotelService.getCachedHotelName(storedHotelId)
+    );
+    this.updateSelectedHotelName(storedHotelId);
+    this.onHotelSelectedForForm(storedHotelId);
   }
 
   loadChannelAdapters(): void {
@@ -352,11 +374,115 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   // ============ LOAD DATA ============
 
   loadHotels(): void {
+    const preferred =
+      this.hotelService.normalizeHotelId(this.currentHotelId) ||
+      this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+
+    if (preferred && this.hotels.length === 0) {
+      this.hotels = this.hotelService.ensureSelectedHotelOption(
+        this.hotelService.getCachedHotels(),
+        preferred,
+        this.hotelService.getCachedHotelName(preferred)
+      );
+      this.currentHotelId = preferred;
+      this.updateSelectedHotelName(preferred);
+    }
+
+    const cached = this.hotelService.getCachedHotels();
+    if (cached.length > 0) {
+      this.applyHotelsList(cached);
+    }
+
     this.subscriptions.add(
-      this.hotelService.getHotels().subscribe(
-        (data: Hotel[]) => this.hotels = data,
-        (err: any) => this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.HOTELS_LOAD_ERROR'))
-      )
+      this.hotelService.getHotelsCached(undefined, undefined, { lite: true }).subscribe({
+        next: (data) => this.applyHotelsList(data),
+        error: () => {
+          if (preferred) {
+            this.hotels = this.hotelService.ensureSelectedHotelOption([], preferred);
+            this.currentHotelId = preferred;
+            this.updateSelectedHotelName(preferred);
+            this.loadOtaIntegrations(preferred);
+          } else {
+            this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.HOTELS_LOAD_ERROR'));
+          }
+        },
+      })
+    );
+  }
+
+  private applyHotelsList(data: Hotel[]): void {
+    const user = this.currentUser || this.authService.getCurrentUser();
+    const filtered = this.hotelService.filterHotelsForUser(data, user);
+    const selected =
+      this.hotelService.normalizeHotelId(this.currentHotelId) ||
+      this.hotelService.resolvePreferredHotelId(this.authService.getHotelId());
+
+    this.hotels = this.hotelService.ensureSelectedHotelOption(filtered, selected);
+
+    if (!selected && this.hotels.length > 0) {
+      const firstHotelId = this.hotelService.normalizeHotelId(this.hotels[0]._id);
+      if (firstHotelId) {
+        this.onHotelChange(firstHotelId);
+      }
+      return;
+    }
+
+    if (selected) {
+      this.onHotelChange(selected, { persist: false, force: !this.currentHotelId });
+    }
+  }
+
+  onHotelChange(hotelId: string | null, options?: { persist?: boolean; force?: boolean }): void {
+    const normalized = this.hotelService.normalizeHotelId(hotelId);
+    const same = this.hotelService.sameHotelId(normalized, this.currentHotelId);
+
+    this.currentHotelId = normalized;
+    if (normalized) {
+      this.hotels = this.hotelService.ensureSelectedHotelOption(
+        this.hotels,
+        normalized,
+        this.hotelService.getCachedHotelName(normalized)
+      );
+      this.updateSelectedHotelName(normalized);
+      this.onHotelSelectedForForm(normalized);
+    }
+
+    if (options?.persist !== false && normalized) {
+      this.hotelService.setSelectedHotelId(normalized);
+    }
+
+    if (!normalized) {
+      this.otaIntegrations = [];
+      this.bookings = [];
+      this.calendarSummary = null;
+      return;
+    }
+
+    if (same && !options?.force) {
+      return;
+    }
+
+    this.loadOtaIntegrations(normalized);
+  }
+
+  private updateSelectedHotelName(hotelId: string | null): void {
+    if (!hotelId) {
+      this.selectedHotelName = '';
+      return;
+    }
+    const found = this.hotels.find((h) => this.hotelService.sameHotelId(h._id, hotelId));
+    if (found?.name) {
+      this.selectedHotelName = found.name;
+      this.hotelService.rememberHotelName(hotelId, found.name);
+      return;
+    }
+
+    this.subscriptions.add(
+      this.hotelService.resolveHotelDisplayName(hotelId).subscribe((name) => {
+        this.selectedHotelName = name;
+        const id = this.hotelService.normalizeHotelId(hotelId)!;
+        this.hotels = this.hotelService.ensureSelectedHotelOption(this.hotels, id, name);
+      })
     );
   }
 

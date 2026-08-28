@@ -21,6 +21,22 @@
   <!-- Filters -->
   <nz-card class="filter-card">
     <div class="filters">
+      <div class="filter-item filter-item-hotel">
+        <label>Khách sạn:</label>
+        <nz-select
+          [ngModel]="currentHotelId"
+          (ngModelChange)="onHotelChange($event)"
+          nzPlaceHolder="Chọn khách sạn"
+          nzShowSearch
+          style="width: 280px;">
+          <nz-option
+            *ngFor="let hotel of hotels"
+            [nzValue]="hotel._id"
+            [nzLabel]="hotel.name">
+          </nz-option>
+        </nz-select>
+        <nz-tag *ngIf="selectedHotelName" nzColor="blue">{{ selectedHotelName }}</nz-tag>
+      </div>
       <div class="filter-item">
         <label>Lọc theo OTA:</label>
         <nz-select [(ngModel)]="selectedProvider" (ngModelChange)="onProviderFilter($event)" style="width: 200px;">
