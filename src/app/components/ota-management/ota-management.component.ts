@@ -141,6 +141,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.integrationForm = this.fb.group({
       adapterType: ['channex', Validators.required],
       provider: ['Channex'],
+      status: ['inactive', Validators.required],
       credentials: this.fb.group({}),
       settings: this.fb.group({
         autoAcceptBookings: [false],
@@ -718,7 +719,39 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     );
   }
 
+  private findIntegrationForAdapter(
+    hotelId: string | null | undefined,
+    adapterType?: string | null,
+    provider?: string | null
+  ): OtaIntegration | undefined {
+    if (!hotelId) return undefined;
+    return this.otaIntegrations.find((integration) => {
+      const integrationHotelId =
+        typeof integration.hotelId === 'string'
+          ? integration.hotelId
+          : (integration.hotelId as Hotel)?._id;
+      if (!this.hotelService.sameHotelId(integrationHotelId, hotelId)) {
+        return false;
+      }
+      if (adapterType && integration.adapterType === adapterType) {
+        return true;
+      }
+      if (provider && integration.provider === provider) {
+        return true;
+      }
+      return false;
+    });
+  }
+
   showAddModal(): void {
+    const defaultAdapterType = 'channex';
+    const existing = this.findIntegrationForAdapter(this.currentHotelId, defaultAdapterType, 'Channex');
+    if (existing) {
+      this.message.info('Đã có kết nối Channex cho khách sạn này. Đang mở form chỉnh sửa.');
+      this.showEditModal(existing);
+      return;
+    }
+
     this.modalTitle = 'Thêm channel connection mới';
     this.editId = null;
     this.selectedIntegration = null;
@@ -730,6 +763,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.integrationForm.reset({
       adapterType: 'channex',
       provider: 'Channex',
+      status: 'inactive',
       settings: {
         autoAcceptBookings: false,
         updateInventory: true,
@@ -749,6 +783,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   showEditModal(integration: OtaIntegration): void {
     this.modalTitle = 'Chỉnh sửa channel connection';
     this.selectedIntegration = integration;
+    this.editId = integration._id;
     const adapter = this.getAdapterForIntegration(integration);
     this.mappingRoomTypes.clear();
     this.mappingRatePlans.clear();
@@ -779,6 +814,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.integrationForm.patchValue({
       adapterType: integration.adapterType || adapter?.adapterType,
       provider: integration.provider,
+      status: integration.status || 'inactive',
       credentials: integration.credentials || integration.config || {},
       settings: integration.settings || {
         autoAcceptBookings: false,
@@ -830,17 +866,31 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this.otaService.createOtaIntegration(formData)
-        .subscribe({
-          next: () => {
-            this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_SUCCESS'));
-            this.loadOtaIntegrations();
-            this.isModalVisible = false;
-          },
-          error: (error) => {
-            this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_ERROR'));
-          }
-        });
+      const existing = this.findIntegrationForAdapter(
+        formData.hotelId,
+        formData.adapterType,
+        formData.provider
+      );
+
+      const save$ = existing
+        ? this.otaService.updateOtaIntegration(existing._id, formData)
+        : this.otaService.createOtaIntegration(formData);
+
+      save$.subscribe({
+        next: () => {
+          this.message.success(
+            existing
+              ? this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_UPDATE_SUCCESS')
+              : this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_SUCCESS')
+          );
+          this.loadOtaIntegrations();
+          this.isModalVisible = false;
+          this.selectedIntegration = null;
+        },
+        error: (error) => {
+          this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_ERROR'));
+        }
+      });
     }
   }
 

@@ -329,6 +329,18 @@
           <nz-tag [nzColor]="'purple'">{{ selectedAdapter.syncDirection }}</nz-tag>
         </div>
 
+        <nz-form-item>
+          <nz-form-label nzRequired>Trạng thái</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng chọn trạng thái">
+            <nz-select formControlName="status" nzPlaceHolder="Chọn trạng thái">
+              <nz-option nzValue="inactive" nzLabel="Không hoạt động"></nz-option>
+              <nz-option nzValue="active" nzLabel="Hoạt động"></nz-option>
+              <nz-option nzValue="pending" nzLabel="Đang chờ"></nz-option>
+              <nz-option nzValue="error" nzLabel="Lỗi"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
         <!-- Credentials (dynamic theo adapter registry) -->
         <nz-divider nzText="Connection config"></nz-divider>
         <div formGroupName="credentials">
