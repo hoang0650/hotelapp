@@ -190,8 +190,10 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
-  onAdapterTypeChange(adapterType: ChannelAdapterType): void {
-    const adapter = this.channelAdapters.find((a) => a.adapterType === adapterType) || null;
+  onAdapterTypeChange(adapterType: unknown): void {
+    if (!adapterType || typeof adapterType !== 'string') return;
+    const typedAdapterType = adapterType as ChannelAdapterType;
+    const adapter = this.channelAdapters.find((a) => a.adapterType === typedAdapterType) || null;
     this.selectedAdapter = adapter;
     this.credentialFields = adapter?.credentialFields || [];
 
