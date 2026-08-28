@@ -4,6 +4,37 @@ import { Room } from './rooms';
 export type OtaProvider = 'Booking.com' | 'Agoda' | 'Traveloka' | 'Trip.com' | 'Expedia' | 'G2J';
 export const ALL_OTA_PROVIDERS: OtaProvider[] = ['Booking.com', 'Agoda', 'Traveloka', 'Trip.com', 'Expedia', 'G2J'];
 
+export type ChannelAdapterType = 'booking_com' | 'agoda' | 'traveloka' | 'trip_com' | 'expedia' | 'g2j';
+export type ChannelSyncDirection = 'push' | 'pull' | 'bidirectional';
+export type ChannelSupportedFunction =
+  | 'pull_reservations'
+  | 'push_availability'
+  | 'push_rates'
+  | 'push_restrictions'
+  | 'push_content'
+  | 'test_connection';
+
+export interface ChannelCredentialField {
+  key: string;
+  label: string;
+  type: 'text' | 'password' | 'boolean';
+  required?: boolean;
+}
+
+/** Metadata từ GET /ota-integrations/channels/adapters — mirrors HAIP adapter registry */
+export interface ChannelAdapterDefinition {
+  adapterType: ChannelAdapterType;
+  channelCode: string;
+  channelName: string;
+  provider: OtaProvider;
+  adapterKind: 'direct' | 'aggregator';
+  syncDirection: ChannelSyncDirection;
+  supportedFunctions: ChannelSupportedFunction[];
+  color: string;
+  credentialFields: ChannelCredentialField[];
+  isRegistered?: boolean;
+}
+
 export type OtaIntegrationStatus = 'active' | 'inactive' | 'error' | 'pending';
 export type OtaBookingStatus = 'pending' | 'confirmed' | 'modified' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
 export type PaymentMethod = 'pay_at_property' | 'prepaid' | 'credit_card' | 'bank_transfer' | 'virtual_card' | 'other';
@@ -146,6 +177,11 @@ export interface OtaIntegration {
     _id: string;
     hotelId: string | Hotel;
     provider: OtaProvider;
+    adapterType?: ChannelAdapterType;
+    channelCode?: string;
+    channelName?: string;
+    syncDirection?: ChannelSyncDirection;
+    config?: OtaCredentials;
     credentials?: OtaCredentials;
     status: OtaIntegrationStatus;
     lastSync?: Date;

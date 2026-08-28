@@ -7,6 +7,8 @@ import {
   OtaIntegration, 
   OtaBooking, 
   OtaProvider,
+  ChannelAdapterDefinition,
+  ChannelAdapterType,
   OtaCalendarEvent,
   OtaCalendarResponse,
   OTA_PROVIDER_COLORS
@@ -32,6 +34,46 @@ export class OtaService {
   private apiUrl = `${environment.apiUrl}/ota-integrations`;
   
   constructor(private http: HttpClient) { }
+
+  // ============ CHANNEL ADAPTER REGISTRY (HAIP-style) ============
+
+  getChannelAdapters(): Observable<ApiResponse<ChannelAdapterDefinition[]>> {
+    return this.http.get<ApiResponse<ChannelAdapterDefinition[]>>(`${this.apiUrl}/channels/adapters`);
+  }
+
+  testChannelConnection(connectionId: string): Observable<ApiResponse<{ connected: boolean; message: string }>> {
+    return this.http.post<ApiResponse<{ connected: boolean; message: string }>>(
+      `${this.apiUrl}/${connectionId}/test`,
+      {}
+    );
+  }
+
+  pullChannelReservations(connectionId: string, since?: Date): Observable<OtaBookingsResponse> {
+    let params = new HttpParams();
+    if (since) {
+      params = params.set('since', since.toISOString());
+    }
+    return this.http.post<OtaBookingsResponse>(`${this.apiUrl}/${connectionId}/inbound/pull`, {}, { params });
+  }
+
+  pushChannelAvailability(
+    connectionId: string,
+    hotelId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Observable<ApiResponse> {
+    const body: Record<string, string> = { connectionId, hotelId };
+    if (startDate) body['startDate'] = startDate.toISOString();
+    if (endDate) body['endDate'] = endDate.toISOString();
+    return this.http.post<ApiResponse>(`${this.apiUrl}/channels/push/availability`, body);
+  }
+
+  pushChannelFullAri(connectionId: string, startDate?: Date, endDate?: Date): Observable<ApiResponse> {
+    const body: Record<string, string> = {};
+    if (startDate) body['startDate'] = startDate.toISOString();
+    if (endDate) body['endDate'] = endDate.toISOString();
+    return this.http.post<ApiResponse>(`${this.apiUrl}/${connectionId}/push/full`, body);
+  }
 
   // ============ CRUD OPERATIONS ============
   
@@ -179,9 +221,10 @@ export class OtaService {
   }
 
   /**
-   * Lấy bookings từ một OTA cụ thể
+   * Lấy bookings từ một channel connection (ưu tiên adapter API, fallback legacy)
    */
   getBookingsByProvider(provider: OtaProvider, hotelId: string, sync: boolean = false): Observable<OtaBookingsResponse> {
+    // Legacy provider endpoints — backend vẫn hỗ trợ
     switch (provider) {
       case 'Booking.com':
         return this.getBookingComBookings(hotelId, sync);
@@ -239,6 +282,19 @@ export class OtaService {
       roomId,
       staffId
     });
+  }
+
+  getAdapterColor(adapter: ChannelAdapterDefinition | OtaIntegration | null | undefined): string {
+    if (!adapter) return '#888888';
+    if ('color' in adapter && adapter.color) return adapter.color;
+    if ('provider' in adapter && adapter.provider) {
+      return OTA_PROVIDER_COLORS[adapter.provider] || '#888888';
+    }
+    return '#888888';
+  }
+
+  resolveAdapterType(integration: OtaIntegration): ChannelAdapterType | null {
+    return integration.adapterType || null;
   }
 
   // ============ HELPER METHODS ============

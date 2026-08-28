@@ -16,7 +16,10 @@ import {
     OtaRoomTypeMapping,
     OtaCalendarEvent,
     OtaCalendarResponse,
-    OTA_PROVIDER_COLORS
+    OTA_PROVIDER_COLORS,
+    ChannelAdapterDefinition,
+    ChannelAdapterType,
+    ChannelCredentialField
 } from '../../interfaces/ota-integration';
 import { Hotel } from '../../interfaces/hotel';
 import { Room } from '../../interfaces/rooms';
@@ -29,6 +32,9 @@ import { TranslateService } from '@ngx-translate/core';
 })
 export class OtaManagementComponent implements OnInit, OnDestroy {
   otaIntegrations: OtaIntegration[] = [];
+  channelAdapters: ChannelAdapterDefinition[] = [];
+  selectedAdapter: ChannelAdapterDefinition | null = null;
+  credentialFields: ChannelCredentialField[] = [];
   otaForm!: FormGroup;
   isLoading = false;
   isModalVisible = false;
@@ -125,25 +131,9 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     });
 
     this.integrationForm = this.fb.group({
-      provider: ['', Validators.required],
-      credentials: this.fb.group({
-        clientId: [''],
-        clientSecret: [''],
-        username: [''],
-        password: [''],
-        hotelId: [''],
-        propertyId: [''],
-        agodaPartnerId: [''],
-        agodaApiKey: [''],
-        travelokaClientId: [''],
-        travelokaClientSecret: [''],
-        tripClientId: [''],
-        tripClientSecret: [''],
-        tripPartnerCode: [''],
-        expediaApiKey: [''],
-        expediaSecret: [''],
-        expediaHotelId: ['']
-      }),
+      adapterType: ['', Validators.required],
+      provider: [''],
+      credentials: this.fb.group({}),
       settings: this.fb.group({
         autoAcceptBookings: [false],
         updateInventory: [true],
@@ -157,12 +147,96 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.currentHotelId = this.authService.getHotelId();
+    this.loadChannelAdapters();
     this.loadHotels();
     this.loadOtaIntegrations();
   }
 
+  loadChannelAdapters(): void {
+    this.subscriptions.add(
+      this.otaService.getChannelAdapters().subscribe({
+        next: (res) => {
+          this.channelAdapters = res.data || [];
+          if (this.channelAdapters.length > 0) {
+            this.otaProviders = this.channelAdapters.map((a) => a.provider);
+          }
+        },
+        error: () => {
+          const fallbackMap: Record<OtaProvider, ChannelAdapterType> = {
+            'Booking.com': 'booking_com',
+            'Agoda': 'agoda',
+            'Traveloka': 'traveloka',
+            'Trip.com': 'trip_com',
+            'Expedia': 'expedia',
+            'G2J': 'g2j',
+          };
+          this.channelAdapters = ALL_OTA_PROVIDERS.map((provider) => ({
+            adapterType: fallbackMap[provider],
+            channelCode: fallbackMap[provider],
+            channelName: provider,
+            provider,
+            adapterKind: 'direct' as const,
+            syncDirection: 'bidirectional' as const,
+            supportedFunctions: ['pull_reservations', 'push_availability', 'test_connection'],
+            color: OTA_PROVIDER_COLORS[provider],
+            credentialFields: [],
+          }));
+        }
+      })
+    );
+  }
+
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+  }
+
+  onAdapterTypeChange(adapterType: ChannelAdapterType): void {
+    const adapter = this.channelAdapters.find((a) => a.adapterType === adapterType) || null;
+    this.selectedAdapter = adapter;
+    this.credentialFields = adapter?.credentialFields || [];
+
+    const credentialsGroup = this.fb.group({});
+    this.credentialFields.forEach((field) => {
+      const validators = field.required ? [Validators.required] : [];
+      credentialsGroup.addControl(field.key, this.fb.control(field.type === 'boolean' ? false : '', validators));
+    });
+    this.integrationForm.setControl('credentials', credentialsGroup);
+    this.integrationForm.patchValue({
+      provider: adapter?.provider || '',
+    });
+  }
+
+  getAdapterForIntegration(integration: OtaIntegration): ChannelAdapterDefinition | null {
+    if (integration.adapterType) {
+      return this.channelAdapters.find((a) => a.adapterType === integration.adapterType) || null;
+    }
+    return this.channelAdapters.find((a) => a.provider === integration.provider) || null;
+  }
+
+  supportsFunction(integration: OtaIntegration, fn: string): boolean {
+    const adapter = this.getAdapterForIntegration(integration);
+    return adapter?.supportedFunctions?.includes(fn as any) ?? true;
+  }
+
+  testConnection(integration: OtaIntegration): void {
+    this.isLoading = true;
+    this.subscriptions.add(
+      this.otaService.testChannelConnection(integration._id).subscribe({
+        next: (res) => {
+          this.isLoading = false;
+          const connected = res.data?.connected;
+          if (connected) {
+            this.message.success(res.data?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.LOGIN_SUCCESS'));
+          } else {
+            this.message.warning(res.data?.message || 'Không kết nối được channel');
+          }
+        },
+        error: (error) => {
+          this.isLoading = false;
+          this.message.error(error.error?.message || 'Lỗi khi test connection');
+        }
+      })
+    );
   }
 
   get roomTypeMappings(): FormArray {
@@ -413,7 +487,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   }
 
   showAddModal(): void {
-    this.modalTitle = 'Thêm tích hợp OTA mới';
+    this.modalTitle = 'Thêm channel connection mới';
     this.integrationForm.reset({
       settings: {
         autoAcceptBookings: false,
@@ -424,17 +498,26 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         languageCode: 'vi'
       }
     });
+    this.selectedAdapter = null;
+    this.credentialFields = [];
+    this.integrationForm.setControl('credentials', this.fb.group({}));
     this.selectedIntegration = null;
     this.isModalVisible = true;
   }
 
   showEditModal(integration: OtaIntegration): void {
-    this.modalTitle = 'Chỉnh sửa tích hợp OTA';
+    this.modalTitle = 'Chỉnh sửa channel connection';
     this.selectedIntegration = integration;
-    
+    const adapter = this.getAdapterForIntegration(integration);
+
+    if (adapter) {
+      this.onAdapterTypeChange(adapter.adapterType);
+    }
+
     this.integrationForm.patchValue({
+      adapterType: integration.adapterType || adapter?.adapterType,
       provider: integration.provider,
-      credentials: integration.credentials || {},
+      credentials: integration.credentials || integration.config || {},
       settings: integration.settings || {
         autoAcceptBookings: false,
         updateInventory: true,
@@ -444,7 +527,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         languageCode: 'vi'
       }
     });
-    
+
     this.isModalVisible = true;
   }
 
@@ -548,16 +631,27 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
 
   syncData(integration: OtaIntegration): void {
     this.isSyncing = true;
-    this.otaService.syncOtaData(integration._id)
+    this.otaService.pullChannelReservations(integration._id)
       .subscribe({
-        next: (response: ApiResponse) => {
+        next: (response: OtaBookingsResponse) => {
+          this.bookings = response.data || [];
           this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.SYNC_SUCCESS'));
           this.loadOtaIntegrations();
           this.isSyncing = false;
         },
         error: (error: any) => {
-          this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.SYNC_ERROR'));
-          this.isSyncing = false;
+          // Fallback legacy sync
+          this.otaService.syncOtaData(integration._id).subscribe({
+            next: () => {
+              this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.SYNC_SUCCESS'));
+              this.loadOtaIntegrations();
+              this.isSyncing = false;
+            },
+            error: (syncError: any) => {
+              this.message.error(syncError.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.SYNC_ERROR'));
+              this.isSyncing = false;
+            }
+          });
         }
       });
   }
@@ -583,7 +677,12 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   }
 
   getProviderColor(provider: OtaProvider): string {
-    return OTA_PROVIDER_COLORS[provider] || '#888888';
+    const adapter = this.channelAdapters.find((a) => a.provider === provider);
+    return adapter?.color || OTA_PROVIDER_COLORS[provider] || '#888888';
+  }
+
+  getIntegrationLabel(integration: OtaIntegration): string {
+    return integration.channelName || integration.provider;
   }
 
   formatDate(date: string | Date): string {

@@ -2,7 +2,7 @@
 <div class="ota-management-container">
   <!-- Header -->
   <div class="header">
-    <h2>Quản lý tích hợp OTA</h2>
+    <h2>Quản lý Channel / OTA</h2>
     <div class="header-actions">
       <nz-button-group>
         <button nz-button [nzType]="viewMode === 'list' ? 'primary' : 'default'" (click)="toggleView('list')">
@@ -13,7 +13,7 @@
         </button>
       </nz-button-group>
       <button nz-button nzType="primary" (click)="showAddModal()">
-        <i nz-icon nzType="plus"></i> Thêm tích hợp OTA
+        <i nz-icon nzType="plus"></i> Thêm channel connection
       </button>
     </div>
   </div>
@@ -44,7 +44,8 @@
     <nz-table #basicTable [nzData]="otaIntegrations" [nzLoading]="isLoading" nzBordered>
       <thead>
         <tr>
-          <th>Nhà cung cấp</th>
+          <th>Channel</th>
+          <th>Adapter</th>
           <th>Trạng thái</th>
           <th>Đồng bộ lần cuối</th>
           <th>Thông tin khách sạn</th>
@@ -55,8 +56,11 @@
         <tr *ngFor="let integration of basicTable.data">
           <td>
             <nz-tag [nzColor]="getProviderColor(integration.provider)">
-              {{ integration.provider }}
+              {{ getIntegrationLabel(integration) }}
             </nz-tag>
+          </td>
+          <td>
+            <code>{{ integration.adapterType || getAdapterForIntegration(integration)?.adapterType || '—' }}</code>
           </td>
           <td>
             <nz-tag [nzColor]="getStatusColor(integration.status)">
@@ -79,6 +83,11 @@
               <button nz-button nzType="link" (click)="showEditModal(integration)"
                       nz-tooltip="Chỉnh sửa">
                 <i nz-icon nzType="edit"></i>
+              </button>
+              <button nz-button nzType="link" (click)="testConnection(integration)"
+                      nz-tooltip="Test connection"
+                      *ngIf="supportsFunction(integration, 'test_connection')">
+                <i nz-icon nzType="api"></i>
               </button>
               <button nz-button nzType="link" (click)="loginToBooking(integration)"
                       [disabled]="integration.status === 'active'"
@@ -275,167 +284,44 @@
   >
     <ng-container *nzModalContent>
       <form nz-form [formGroup]="integrationForm" nzLayout="vertical">
-        <!-- Provider -->
+        <!-- Channel Adapter -->
         <nz-form-item>
-          <nz-form-label nzRequired>Nhà cung cấp OTA</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng chọn nhà cung cấp">
-            <nz-select formControlName="provider" nzPlaceHolder="Chọn nhà cung cấp">
-              <nz-option *ngFor="let provider of otaProviders" [nzValue]="provider" [nzLabel]="provider">
+          <nz-form-label nzRequired>Channel Adapter</nz-form-label>
+          <nz-form-control nzErrorTip="Vui lòng chọn channel adapter">
+            <nz-select formControlName="adapterType" nzPlaceHolder="Chọn adapter"
+                       (nzValueChange)="onAdapterTypeChange($event)">
+              <nz-option *ngFor="let adapter of channelAdapters"
+                         [nzValue]="adapter.adapterType"
+                         [nzLabel]="adapter.channelName + ' (' + adapter.adapterType + ')'">
               </nz-option>
             </nz-select>
           </nz-form-control>
         </nz-form-item>
 
-        <!-- Credentials -->
-        <nz-divider nzText="Thông tin đăng nhập"></nz-divider>
+        <div *ngIf="selectedAdapter" class="adapter-capabilities" style="margin-bottom: 16px;">
+          <nz-tag *ngFor="let fn of selectedAdapter.supportedFunctions" nzColor="blue">{{ fn }}</nz-tag>
+          <nz-tag [nzColor]="'purple'">{{ selectedAdapter.syncDirection }}</nz-tag>
+        </div>
+
+        <!-- Credentials (dynamic theo adapter registry) -->
+        <nz-divider nzText="Connection config"></nz-divider>
         <div formGroupName="credentials">
-          <div nz-row [nzGutter]="16">
-            <div nz-col [nzSpan]="12">
+          <div nz-row [nzGutter]="16" *ngIf="credentialFields.length > 0">
+            <div nz-col [nzSpan]="12" *ngFor="let field of credentialFields">
               <nz-form-item>
-                <nz-form-label>Username</nz-form-label>
+                <nz-form-label [nzRequired]="field.required">{{ field.label }}</nz-form-label>
                 <nz-form-control>
-                  <input nz-input formControlName="username" placeholder="Username" />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-            <div nz-col [nzSpan]="12">
-              <nz-form-item>
-                <nz-form-label>Password</nz-form-label>
-                <nz-form-control>
-                  <input nz-input formControlName="password" type="password" placeholder="Password" />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-          </div>
-
-          <div nz-row [nzGutter]="16">
-            <div nz-col [nzSpan]="12">
-              <nz-form-item>
-                <nz-form-label>Hotel ID</nz-form-label>
-                <nz-form-control>
-                  <input nz-input formControlName="hotelId" placeholder="Hotel ID trên OTA" />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-            <div nz-col [nzSpan]="12">
-              <nz-form-item>
-                <nz-form-label>Property ID</nz-form-label>
-                <nz-form-control>
-                  <input nz-input formControlName="propertyId" placeholder="Property ID" />
+                  <label *ngIf="field.type === 'boolean'" nz-checkbox [formControlName]="field.key"></label>
+                  <input *ngIf="field.type !== 'boolean'"
+                         nz-input
+                         [type]="field.type === 'password' ? 'password' : 'text'"
+                         [formControlName]="field.key"
+                         [placeholder]="field.label" />
                 </nz-form-control>
               </nz-form-item>
             </div>
           </div>
-
-          <!-- Provider-specific fields -->
-          <nz-collapse *ngIf="integrationForm.get('provider')?.value">
-            <nz-collapse-panel nzHeader="Thông tin bổ sung cho {{ integrationForm.get('provider')?.value }}" nzActive>
-              
-              <!-- Agoda -->
-              <ng-container *ngIf="integrationForm.get('provider')?.value === 'Agoda'">
-                <div nz-row [nzGutter]="16">
-                  <div nz-col [nzSpan]="12">
-                    <nz-form-item>
-                      <nz-form-label>Agoda Partner ID</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="agodaPartnerId" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                  <div nz-col [nzSpan]="12">
-                    <nz-form-item>
-                      <nz-form-label>Agoda API Key</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="agodaApiKey" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                </div>
-              </ng-container>
-
-              <!-- Traveloka -->
-              <ng-container *ngIf="integrationForm.get('provider')?.value === 'Traveloka'">
-                <div nz-row [nzGutter]="16">
-                  <div nz-col [nzSpan]="12">
-                    <nz-form-item>
-                      <nz-form-label>Client ID</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="travelokaClientId" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                  <div nz-col [nzSpan]="12">
-                    <nz-form-item>
-                      <nz-form-label>Client Secret</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="travelokaClientSecret" type="password" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                </div>
-              </ng-container>
-
-              <!-- Trip.com -->
-              <ng-container *ngIf="integrationForm.get('provider')?.value === 'Trip.com'">
-                <div nz-row [nzGutter]="16">
-                  <div nz-col [nzSpan]="8">
-                    <nz-form-item>
-                      <nz-form-label>Client ID</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="tripClientId" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                  <div nz-col [nzSpan]="8">
-                    <nz-form-item>
-                      <nz-form-label>Client Secret</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="tripClientSecret" type="password" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                  <div nz-col [nzSpan]="8">
-                    <nz-form-item>
-                      <nz-form-label>Partner Code</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="tripPartnerCode" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                </div>
-              </ng-container>
-
-              <!-- Expedia -->
-              <ng-container *ngIf="integrationForm.get('provider')?.value === 'Expedia'">
-                <div nz-row [nzGutter]="16">
-                  <div nz-col [nzSpan]="8">
-                    <nz-form-item>
-                      <nz-form-label>API Key</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="expediaApiKey" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                  <div nz-col [nzSpan]="8">
-                    <nz-form-item>
-                      <nz-form-label>Secret</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="expediaSecret" type="password" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                  <div nz-col [nzSpan]="8">
-                    <nz-form-item>
-                      <nz-form-label>Expedia Hotel ID</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="expediaHotelId" />
-                      </nz-form-control>
-                    </nz-form-item>
-                  </div>
-                </div>
-              </ng-container>
-            </nz-collapse-panel>
-          </nz-collapse>
+          <nz-empty *ngIf="credentialFields.length === 0" nzNotFoundContent="Chọn adapter để hiển thị trường cấu hình"></nz-empty>
         </div>
 
         <!-- Settings -->
