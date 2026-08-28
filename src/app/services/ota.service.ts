@@ -75,6 +75,20 @@ export class OtaService {
     return this.http.post<ApiResponse>(`${this.apiUrl}/${connectionId}/push/full`, body);
   }
 
+  syncChannexMappings(connectionId: string): Observable<ApiResponse<{ roomTypes: any[]; ratePlans: any[] }>> {
+    return this.http.get<ApiResponse<{ roomTypes: any[]; ratePlans: any[] }>>(
+      `${this.apiUrl}/${connectionId}/channex/mappings`
+    );
+  }
+
+  getChannexBookings(hotelId: string, sync: boolean = false): Observable<OtaBookingsResponse> {
+    let params = new HttpParams().set('hotelId', hotelId);
+    if (sync) {
+      params = params.set('sync', 'true');
+    }
+    return this.http.get<OtaBookingsResponse>(`${this.apiUrl}/channex/bookings`, { params });
+  }
+
   // ============ CRUD OPERATIONS ============
   
   getOtaIntegrations(hotelId?: string): Observable<OtaIntegration[]> {
@@ -224,8 +238,9 @@ export class OtaService {
    * Lấy bookings từ một channel connection (ưu tiên adapter API, fallback legacy)
    */
   getBookingsByProvider(provider: OtaProvider, hotelId: string, sync: boolean = false): Observable<OtaBookingsResponse> {
-    // Legacy provider endpoints — backend vẫn hỗ trợ
     switch (provider) {
+      case 'Channex':
+        return this.getChannexBookings(hotelId, sync);
       case 'Booking.com':
         return this.getBookingComBookings(hotelId, sync);
       case 'Agoda':

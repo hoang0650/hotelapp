@@ -109,6 +109,12 @@
                       nz-tooltip="Đồng bộ phòng trống">
                 <i nz-icon nzType="home" [nzSpin]="isSyncingInventory"></i>
               </button>
+              <button nz-button nzType="link" (click)="syncChannexMappings(integration)"
+                      *ngIf="integration.adapterType === 'channex'"
+                      [disabled]="integration.status !== 'active'"
+                      nz-tooltip="Lấy room types Channex">
+                <i nz-icon nzType="cloud-download"></i>
+              </button>
               <button nz-button nzType="link" nzDanger (click)="deleteIntegration(integration)"
                       nz-tooltip="Xóa">
                 <i nz-icon nzType="delete"></i>
@@ -122,7 +128,10 @@
 
   <!-- Provider Quick Actions -->
   <nz-card class="provider-actions">
-    <h3>Lấy đặt phòng nhanh theo OTA</h3>
+    <h3>Lấy đặt phòng nhanh</h3>
+    <p style="color: #666; margin-bottom: 12px;">
+      Với Channex: một lần pull sẽ nhận booking từ tất cả OTA đã kết nối (Booking.com, Agoda, Expedia...)
+    </p>
     <div class="provider-buttons">
       <button *ngFor="let provider of otaProviders" 
               nz-button 
@@ -299,6 +308,7 @@
         </nz-form-item>
 
         <div *ngIf="selectedAdapter" class="adapter-capabilities" style="margin-bottom: 16px;">
+          <nz-tag *ngIf="selectedAdapter.adapterKind === 'aggregator'" nzColor="gold">Channel Manager — kết nối nhiều OTA</nz-tag>
           <nz-tag *ngFor="let fn of selectedAdapter.supportedFunctions" nzColor="blue">{{ fn }}</nz-tag>
           <nz-tag [nzColor]="'purple'">{{ selectedAdapter.syncDirection }}</nz-tag>
         </div>
@@ -322,6 +332,53 @@
             </div>
           </div>
           <nz-empty *ngIf="credentialFields.length === 0" nzNotFoundContent="Chọn adapter để hiển thị trường cấu hình"></nz-empty>
+        </div>
+
+        <!-- Channex info -->
+        <nz-alert *ngIf="isChannexAdapter()"
+                  nzType="info"
+                  nzMessage="Channex Channel Manager"
+                  nzDescription="Một kết nối Channex sẽ đồng bộ phòng trống/giá lên tất cả OTA (Booking.com, Agoda, Expedia...) và nhận booking ngược lại. Lấy API Key và Property ID tại staging.channex.io hoặc app.channex.io."
+                  [nzShowIcon]="true"
+                  style="margin-bottom: 16px;">
+        </nz-alert>
+
+        <!-- Room type mappings -->
+        <nz-divider nzText="Mapping phòng (PHHotel ↔ Channex)"></nz-divider>
+        <div formGroupName="mappings">
+          <div class="mapping-actions" style="margin-bottom: 12px;" *ngIf="isChannexAdapter() && selectedIntegration">
+            <button nz-button nzType="default" (click)="syncChannexMappings(selectedIntegration!)" [nzLoading]="isLoadingMappings">
+              <i nz-icon nzType="cloud-download"></i> Lấy room types từ Channex
+            </button>
+            <button nz-button nzType="default" (click)="autoFillMappingsFromChannex()" [disabled]="channexRoomTypes.length === 0" style="margin-left: 8px;">
+              <i nz-icon nzType="link"></i> Tự động điền mapping
+            </button>
+          </div>
+
+          <div formArrayName="roomTypes">
+            <div *ngFor="let mapping of mappingRoomTypes.controls; let i = index" [formGroupName]="i" nz-row [nzGutter]="8" style="margin-bottom: 8px;">
+              <div nz-col [nzSpan]="8">
+                <nz-select formControlName="localRoomTypeId" nzPlaceHolder="Phòng PHHotel" style="width: 100%;">
+                  <nz-option *ngFor="let room of roomsForHotel" [nzValue]="room._id" [nzLabel]="'P.' + room.roomNumber + ' - ' + room.type"></nz-option>
+                </nz-select>
+              </div>
+              <div nz-col [nzSpan]="6">
+                <input nz-input formControlName="otaRoomTypeId" placeholder="Channex Room Type ID" />
+              </div>
+              <div nz-col [nzSpan]="4">
+                <input nz-input type="number" formControlName="baseRate" placeholder="Giá" />
+              </div>
+              <div nz-col [nzSpan]="4">
+                <input nz-input type="number" formControlName="maxOccupancy" placeholder="Số khách" />
+              </div>
+              <div nz-col [nzSpan]="2">
+                <button nz-button nzType="text" nzDanger (click)="removeMappingRow(i)"><i nz-icon nzType="delete"></i></button>
+              </div>
+            </div>
+          </div>
+          <button nz-button nzType="dashed" (click)="addMappingRow()" style="width: 100%;">
+            <i nz-icon nzType="plus"></i> Thêm mapping phòng
+          </button>
         </div>
 
         <!-- Settings -->

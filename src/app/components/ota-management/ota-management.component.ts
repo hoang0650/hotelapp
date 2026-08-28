@@ -70,7 +70,7 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   // Calendar summary
   calendarSummary: {
     total: number;
-    byProvider: Record<OtaProvider, number>;
+    byProvider: Record<string, number>;
   } | null = null;
 
   // Inventory sync
@@ -79,6 +79,12 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   inventoryDateRange: [Date, Date] | null = null;
   selectedOtaForSync: string[] = [];
   inventorySyncResult: any = null;
+
+  // Channex mappings
+  channexRoomTypes: any[] = [];
+  channexRatePlans: any[] = [];
+  isLoadingMappings = false;
+  mappingRoomTypes!: FormArray;
 
   constructor(
     private fb: FormBuilder,
@@ -131,8 +137,8 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     });
 
     this.integrationForm = this.fb.group({
-      adapterType: ['', Validators.required],
-      provider: [''],
+      adapterType: ['channex', Validators.required],
+      provider: ['Channex'],
       credentials: this.fb.group({}),
       settings: this.fb.group({
         autoAcceptBookings: [false],
@@ -141,8 +147,13 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         updateAvailability: [true],
         currencyCode: ['VND'],
         languageCode: ['vi']
+      }),
+      mappings: this.fb.group({
+        roomTypes: this.fb.array([]),
+        ratePlans: this.fb.array([])
       })
     });
+    this.mappingRoomTypes = this.integrationForm.get('mappings.roomTypes') as FormArray;
   }
 
   ngOnInit(): void {
@@ -150,6 +161,9 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.loadChannelAdapters();
     this.loadHotels();
     this.loadOtaIntegrations();
+    if (this.currentHotelId) {
+      this.onHotelSelectedForForm(this.currentHotelId);
+    }
   }
 
   loadChannelAdapters(): void {
@@ -160,9 +174,14 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
           if (this.channelAdapters.length > 0) {
             this.otaProviders = this.channelAdapters.map((a) => a.provider);
           }
+          const channex = this.channelAdapters.find((a) => a.adapterType === 'channex');
+          if (channex && !this.selectedAdapter) {
+            this.onAdapterTypeChange('channex');
+          }
         },
         error: () => {
-          const fallbackMap: Record<OtaProvider, ChannelAdapterType> = {
+          const fallbackMap: Record<string, ChannelAdapterType> = {
+            'Channex': 'channex',
             'Booking.com': 'booking_com',
             'Agoda': 'agoda',
             'Traveloka': 'traveloka',
@@ -188,6 +207,91 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+  }
+
+  get mappingRatePlans(): FormArray {
+    return this.integrationForm.get('mappings.ratePlans') as FormArray;
+  }
+
+  isChannexAdapter(): boolean {
+    return this.selectedAdapter?.adapterType === 'channex';
+  }
+
+  addMappingRow(room?: Room, mapping?: OtaRoomTypeMapping): void {
+    this.mappingRoomTypes.push(this.fb.group({
+      localRoomTypeId: [mapping?.localRoomTypeId || room?._id || null, Validators.required],
+      otaRoomTypeId: [mapping?.otaRoomTypeId || '', Validators.required],
+      otaRoomTypeName: [mapping?.otaRoomTypeName || room?.type || ''],
+      maxOccupancy: [mapping?.maxOccupancy || 2, Validators.required],
+      baseRate: [mapping?.baseRate || room?.pricing?.daily || 0, Validators.required],
+    }));
+  }
+
+  removeMappingRow(index: number): void {
+    this.mappingRoomTypes.removeAt(index);
+  }
+
+  syncChannexMappings(integration: OtaIntegration): void {
+    this.isLoadingMappings = true;
+    this.subscriptions.add(
+      this.otaService.syncChannexMappings(integration._id).subscribe({
+        next: (res) => {
+          this.isLoadingMappings = false;
+          this.channexRoomTypes = res.data?.roomTypes || [];
+          this.channexRatePlans = res.data?.ratePlans || [];
+          this.message.success(`Đã lấy ${this.channexRoomTypes.length} room types từ Channex`);
+        },
+        error: (error) => {
+          this.isLoadingMappings = false;
+          this.message.error(error.error?.message || 'Lỗi khi lấy mappings từ Channex');
+        }
+      })
+    );
+  }
+
+  autoFillMappingsFromChannex(): void {
+    this.mappingRoomTypes.clear();
+    this.mappingRatePlans.clear();
+
+    const roomsByType = new Map<string, Room>();
+    this.roomsForHotel.forEach((room) => {
+      if (!roomsByType.has(room.type)) {
+        roomsByType.set(room.type, room);
+      }
+    });
+
+    this.channexRoomTypes.forEach((rt) => {
+      const localRoom = [...roomsByType.values()].find((r) => r.type === rt.title) || [...roomsByType.values()][0];
+      if (localRoom) {
+        this.addMappingRow(localRoom, {
+          localRoomTypeId: localRoom._id,
+          otaRoomTypeId: rt.id,
+          otaRoomTypeName: rt.title,
+          maxOccupancy: rt.occAdults || 2,
+          baseRate: localRoom.pricing?.daily || 0,
+        });
+      }
+    });
+
+    this.channexRatePlans.forEach((rp) => {
+      const roomMapping = this.mappingRoomTypes.controls.find(
+        (c) => c.value.otaRoomTypeId === rp.roomTypeId
+      );
+      if (roomMapping) {
+        this.mappingRatePlans.push(this.fb.group({
+          localRatePlanId: [roomMapping.value.localRoomTypeId, Validators.required],
+          otaRatePlanId: [rp.id, Validators.required],
+          otaRatePlanName: [rp.title],
+          cancellationPolicy: this.fb.group({
+            type: ['free'],
+            deadlineDays: [1],
+            penaltyAmount: [0],
+          }),
+        }));
+      }
+    });
+
+    this.message.success('Đã tự động điền mapping từ Channex');
   }
 
   onAdapterTypeChange(adapterType: unknown): void {
@@ -490,7 +594,16 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
 
   showAddModal(): void {
     this.modalTitle = 'Thêm channel connection mới';
+    this.editId = null;
+    this.selectedIntegration = null;
+    this.channexRoomTypes = [];
+    this.channexRatePlans = [];
+    this.mappingRoomTypes.clear();
+    this.mappingRatePlans.clear();
+
     this.integrationForm.reset({
+      adapterType: 'channex',
+      provider: 'Channex',
       settings: {
         autoAcceptBookings: false,
         updateInventory: true,
@@ -500,10 +613,10 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
         languageCode: 'vi'
       }
     });
-    this.selectedAdapter = null;
-    this.credentialFields = [];
-    this.integrationForm.setControl('credentials', this.fb.group({}));
-    this.selectedIntegration = null;
+    this.onAdapterTypeChange('channex');
+    if (this.currentHotelId) {
+      this.onHotelSelectedForForm(this.currentHotelId);
+    }
     this.isModalVisible = true;
   }
 
@@ -511,10 +624,31 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
     this.modalTitle = 'Chỉnh sửa channel connection';
     this.selectedIntegration = integration;
     const adapter = this.getAdapterForIntegration(integration);
+    this.mappingRoomTypes.clear();
+    this.mappingRatePlans.clear();
 
     if (adapter) {
       this.onAdapterTypeChange(adapter.adapterType);
     }
+
+    const hotelId = typeof integration.hotelId === 'string' ? integration.hotelId : (integration.hotelId as Hotel)?._id;
+    if (hotelId) {
+      this.onHotelSelectedForForm(hotelId);
+    }
+
+    integration.mappings?.roomTypes?.forEach((m) => this.addMappingRow(undefined, m));
+    integration.mappings?.ratePlans?.forEach((rp) => {
+      this.mappingRatePlans.push(this.fb.group({
+        localRatePlanId: [rp.localRatePlanId, Validators.required],
+        otaRatePlanId: [rp.otaRatePlanId, Validators.required],
+        otaRatePlanName: [rp.otaRatePlanName],
+        cancellationPolicy: this.fb.group({
+          type: [rp.cancellationPolicy?.type || 'free'],
+          deadlineDays: [rp.cancellationPolicy?.deadlineDays || 1],
+          penaltyAmount: [rp.cancellationPolicy?.penaltyAmount || 0],
+        }),
+      }));
+    });
 
     this.integrationForm.patchValue({
       adapterType: integration.adapterType || adapter?.adapterType,
@@ -534,47 +668,53 @@ export class OtaManagementComponent implements OnInit, OnDestroy {
   }
 
   handleModalOk(): void {
-    if (this.integrationForm.valid) {
-      const formData = this.integrationForm.value;
-      
-      if (this.selectedIntegration) {
-        this.otaService.updateOtaIntegration(this.selectedIntegration._id, formData)
-          .subscribe({
-            next: (response) => {
-              this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_UPDATE_SUCCESS'));
-              this.loadOtaIntegrations();
-              this.isModalVisible = false;
-            },
-            error: (error) => {
-              this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_UPDATE_ERROR'));
-              console.error('Update integration error:', error);
-            }
-          });
-      } else {
-        // Thêm hotelId nếu có
-        if (this.currentHotelId) {
-          formData.hotelId = this.currentHotelId;
-        }
-        
-        this.otaService.createOtaIntegration(formData)
-          .subscribe({
-            next: (response) => {
-              this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_SUCCESS'));
-              this.loadOtaIntegrations();
-              this.isModalVisible = false;
-            },
-            error: (error) => {
-              this.message.error(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_ERROR'));
-              console.error('Create integration error:', error);
-            }
-          });
-      }
-    } else {
+    if (this.integrationForm.invalid) {
       Object.values(this.integrationForm.controls).forEach(control => {
-        if (control.invalid) {
-          control.markAsTouched();
-        }
+        if (control.invalid) control.markAsTouched();
       });
+      this.message.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      return;
+    }
+
+    const formData = {
+      ...this.integrationForm.value,
+      provider: this.selectedAdapter?.provider || this.integrationForm.value.provider,
+      adapterType: this.selectedAdapter?.adapterType || this.integrationForm.value.adapterType,
+      mappings: this.integrationForm.value.mappings || { roomTypes: [], ratePlans: [] },
+    };
+
+    if (this.selectedIntegration) {
+      this.otaService.updateOtaIntegration(this.selectedIntegration._id, formData)
+        .subscribe({
+          next: () => {
+            this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_UPDATE_SUCCESS'));
+            this.loadOtaIntegrations();
+            this.isModalVisible = false;
+          },
+          error: (error) => {
+            this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_UPDATE_ERROR'));
+          }
+        });
+    } else {
+      if (this.currentHotelId) {
+        formData.hotelId = this.currentHotelId;
+      }
+      if (!formData.hotelId) {
+        this.message.error('Không xác định được khách sạn. Vui lòng đăng nhập lại.');
+        return;
+      }
+
+      this.otaService.createOtaIntegration(formData)
+        .subscribe({
+          next: () => {
+            this.message.success(this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_SUCCESS'));
+            this.loadOtaIntegrations();
+            this.isModalVisible = false;
+          },
+          error: (error) => {
+            this.message.error(error.error?.message || this.translate.instant('OTA_MANAGEMENT.MESSAGES.OTA_ADD_ERROR'));
+          }
+        });
     }
   }
 

@@ -1,10 +1,10 @@
 import { Hotel } from './hotel';
 import { Room } from './rooms';
 
-export type OtaProvider = 'Booking.com' | 'Agoda' | 'Traveloka' | 'Trip.com' | 'Expedia' | 'G2J';
-export const ALL_OTA_PROVIDERS: OtaProvider[] = ['Booking.com', 'Agoda', 'Traveloka', 'Trip.com', 'Expedia', 'G2J'];
+export type OtaProvider = 'Channex' | 'Booking.com' | 'Agoda' | 'Traveloka' | 'Trip.com' | 'Expedia' | 'G2J' | 'Airbnb';
+export const ALL_OTA_PROVIDERS: OtaProvider[] = ['Channex', 'Booking.com', 'Agoda', 'Traveloka', 'Trip.com', 'Expedia', 'G2J'];
 
-export type ChannelAdapterType = 'booking_com' | 'agoda' | 'traveloka' | 'trip_com' | 'expedia' | 'g2j';
+export type ChannelAdapterType = 'channex' | 'booking_com' | 'agoda' | 'traveloka' | 'trip_com' | 'expedia' | 'g2j';
 export type ChannelSyncDirection = 'push' | 'pull' | 'bidirectional';
 export type ChannelSupportedFunction =
   | 'pull_reservations'
@@ -12,7 +12,8 @@ export type ChannelSupportedFunction =
   | 'push_rates'
   | 'push_restrictions'
   | 'push_content'
-  | 'test_connection';
+  | 'test_connection'
+  | 'sync_mappings';
 
 export interface ChannelCredentialField {
   key: string;
@@ -69,6 +70,13 @@ export interface OtaCredentials {
     expediaApiKey?: string;
     expediaSecret?: string;
     expediaHotelId?: string;
+
+    // Channex specific
+    channexApiKey?: string;
+    channexPropertyId?: string;
+    useStaging?: boolean;
+    baseUrl?: string;
+    webhookSecret?: string;
 }
 
 export interface OtaSettings {
@@ -398,17 +406,19 @@ export interface OtaCalendarResponse {
     }[];
     summary: {
         total: number;
-        byProvider: Record<OtaProvider, number>;
+        byProvider: Record<string, number>;
     };
 }
 
 // ============ OTA PROVIDER COLORS ============
 
-export const OTA_PROVIDER_COLORS: Record<OtaProvider, string> = {
+export const OTA_PROVIDER_COLORS: Record<string, string> = {
+    'Channex': '#00b4a0',
     'Booking.com': '#003580',
     'Agoda': '#5391ff',
     'Traveloka': '#0194f3',
     'Trip.com': '#287dfa',
     'Expedia': '#00355f',
-    'G2J': '#ff6b35'
+    'G2J': '#ff6b35',
+    'Airbnb': '#ff5a5f'
 };
