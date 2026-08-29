@@ -946,7 +946,8 @@ export class EInvoiceManagementComponent implements OnInit {
     this.showLoginModal = true;
     this.loginForm = {
       username: '',
-      password: ''
+      password: '',
+      taxCode: ''
     };
   }
 
@@ -957,7 +958,8 @@ export class EInvoiceManagementComponent implements OnInit {
     this.showLoginModal = false;
     this.loginForm = {
       username: '',
-      password: ''
+      password: '',
+      taxCode: ''
     };
   }
 
