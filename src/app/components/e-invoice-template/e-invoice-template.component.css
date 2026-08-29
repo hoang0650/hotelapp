@@ -65,6 +65,58 @@
   border-color: #52c41a;
 }
 
+.template-card.recommended {
+  border-color: #52c41a;
+  box-shadow: 0 2px 8px rgba(82, 196, 26, 0.15);
+}
+
+.template-card.warning {
+  border-color: #faad14;
+}
+
+.guide-alert {
+  margin-bottom: 16px;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 0 24px;
+}
+
+.filter-label {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.template-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.preview-placeholder {
+  flex-direction: column;
+}
+
+.preview-placeholder i {
+  font-size: 48px;
+  color: #d9d9d9;
+}
+
+.preview-placeholder .series-preview {
+  display: block;
+  margin-top: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: #595959;
+}
+
 .template-header {
   display: flex;
   justify-content: space-between;

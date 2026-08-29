@@ -4103,11 +4103,76 @@
     }
   },
   "E_INVOICE_TEMPLATE": {
+    "TITLE": "E-invoice templates",
+    "SUBTITLE": "Choose templates compliant with cash-register e-invoices (Decree 123/2020, Decree 70/2025, Circular 78/2021)",
+    "GUIDE": {
+      "TITLE": "Hotels — cash register e-invoices (MTT)",
+      "DESC": "Under Decree 70/2025 (Article 11), hotels selling directly to consumers must use e-invoices issued from cash registers. The 6-character serial must include letter M at position 4 (e.g. C25MAA). VAT-registered businesses should use pattern 1.",
+      "NO_MTT_TITLE": "No suitable MTT template",
+      "NO_MTT_DESC": "No template with letter M found. Register an MTT template (pattern 1 + serial CxxMAA) on the General Department of Taxation portal or contact Sepay/EasyInvoice."
+    },
+    "FILTER": {
+      "LABEL": "Filter",
+      "RECOMMENDED": "Recommended for hotels",
+      "MTT": "Cash register (M)",
+      "VAT": "VAT (pattern 1)",
+      "ALL": "All"
+    },
+    "LABEL": {
+      "PATTERN": "Pattern",
+      "SERIES": "Serial",
+      "DEFAULT": "Default"
+    },
+    "ACTION": {
+      "PREVIEW": "Preview",
+      "SET_DEFAULT": "Set as default"
+    },
+    "PATTERN": {
+      "VAT": "VAT invoice",
+      "SALES": "Sales invoice",
+      "PUBLIC_ASSET": "Public asset sales invoice",
+      "NATIONAL_RESERVE": "National reserve sales invoice",
+      "OTHER": "E-ticket / e-receipt",
+      "WAREHOUSE": "E-warehouse slip",
+      "UNKNOWN": "Unknown pattern"
+    },
+    "SERIES_KIND": {
+      "T": "Registered with tax authority",
+      "D": "Public asset / special invoice",
+      "L": "Tax authority issued per transaction",
+      "M": "Cash register origin",
+      "N": "Internal delivery note",
+      "B": "Consignment warehouse slip",
+      "G": "VAT e-ticket/card",
+      "H": "Sales e-ticket/card",
+      "UNKNOWN": "Unknown serial type"
+    },
+    "COMPLIANCE_TAG": {
+      "RECOMMENDED": "Recommended",
+      "ACCEPTABLE": "Acceptable",
+      "WARNING": "Caution",
+      "NOT_SUITABLE": "Not suitable"
+    },
+    "COMPLIANCE": {
+      "GENERIC": "Verify pattern and serial before use",
+      "HOTEL_VAT_MTT_C": "Recommended for hotels: VAT invoice with tax code, cash register (Decree 70/2025)",
+      "HOTEL_VAT_MTT": "VAT cash-register invoice — suitable for room/service sales",
+      "HOTEL_SALES_MTT": "Sales cash-register invoice — for direct tax method",
+      "VAT_NOT_MTT": "Standard VAT invoice (T serial), not MTT — hotels should use M serial",
+      "NOT_MTT": "Serial without M — not a cash register e-invoice",
+      "NOT_FOR_HOTEL": "This pattern is not suitable for hotel operations"
+    },
     "MESSAGES": {
       "LOAD_TEMPLATES_ERROR": "Unable to load template list",
       "LOAD_TEMPLATES_ERROR_GENERIC": "An error occurred while loading invoice templates",
       "SELECTED_TEMPLATE": "Selected template: {{name}}",
-      "SET_DEFAULT": "Default template set"
+      "SET_DEFAULT": "Default template set",
+      "SELECT_PROVIDER_FIRST": "Please select a provider account first",
+      "NO_TEMPLATES": "Provider account has no invoice templates",
+      "NO_TEMPLATES_PROVIDER": "No templates yet. Please select a provider account first.",
+      "NO_TEMPLATES_FILTER": "No templates match the filter. Try \"All\" or register MTT templates.",
+      "AUTO_SELECTED_HOTEL": "Auto-selected recommended hotel template: {{name}}",
+      "WARN_NOT_MTT": "Selected template is not a cash-register invoice (missing M). Please choose an MTT template."
     }
   },
   "E_INVOICE_REGISTRATION": {

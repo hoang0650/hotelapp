@@ -4243,11 +4243,76 @@
     }
   },
   "E_INVOICE_TEMPLATE": {
+    "TITLE": "Mẫu hóa đơn điện tử",
+    "SUBTITLE": "Chọn mẫu phù hợp quy định HĐĐT khởi tạo từ máy tính tiền (NĐ 123/2020, NĐ 70/2025, TT 78/2021)",
+    "GUIDE": {
+      "TITLE": "Khách sạn — hóa đơn máy tính tiền (MTT)",
+      "DESC": "Theo NĐ 70/2025/NĐ-CP (Điều 11), khách sạn bán trực tiếp cho khách lẻ phải dùng HĐĐT khởi tạo từ máy tính tiền. Ký hiệu hóa đơn 6 ký tự phải có chữ M ở vị trí thứ 4 (ví dụ C25MAA: C=có mã CQT, 25=năm, M=MTT). Doanh nghiệp khấu trừ thuế GTGT nên chọn mẫu số 1.",
+      "NO_MTT_TITLE": "Chưa có mẫu MTT phù hợp",
+      "NO_MTT_DESC": "Danh sách mẫu hiện tại không có ký hiệu chứa chữ M. Vui lòng đăng ký mẫu HĐĐT MTT (mẫu số 1 + ký hiệu CxxMAA) trên Cổng thông tin HĐĐT của Tổng cục Thuế hoặc liên hệ nhà cung cấp Sepay/EasyInvoice."
+    },
+    "FILTER": {
+      "LABEL": "Lọc mẫu",
+      "RECOMMENDED": "Khuyến nghị khách sạn",
+      "MTT": "Máy tính tiền (M)",
+      "VAT": "GTGT (mẫu 1)",
+      "ALL": "Tất cả"
+    },
+    "LABEL": {
+      "PATTERN": "Mẫu số",
+      "SERIES": "Ký hiệu",
+      "DEFAULT": "Mặc định"
+    },
+    "ACTION": {
+      "PREVIEW": "Xem trước",
+      "SET_DEFAULT": "Đặt mặc định"
+    },
+    "PATTERN": {
+      "VAT": "Hóa đơn GTGT",
+      "SALES": "Hóa đơn bán hàng",
+      "PUBLIC_ASSET": "Hóa đơn bán tài sản công",
+      "NATIONAL_RESERVE": "Hóa đơn bán hàng dự trữ quốc gia",
+      "OTHER": "Tem, vé, thẻ, phiếu thu điện tử",
+      "WAREHOUSE": "Phiếu xuất kho điện tử",
+      "UNKNOWN": "Loại mẫu chưa xác định"
+    },
+    "SERIES_KIND": {
+      "T": "Hóa đơn đăng ký với CQT",
+      "D": "Hóa đơn bán tài sản công / đặc thù",
+      "L": "Hóa đơn CQT cấp theo lần phát sinh",
+      "M": "Khởi tạo từ máy tính tiền",
+      "N": "Phiếu xuất kho kiêm vận chuyển nội bộ",
+      "B": "Phiếu xuất kho gửi bán đại lý",
+      "G": "Tem/vé/thẻ GTGT",
+      "H": "Tem/vé/thẻ bán hàng",
+      "UNKNOWN": "Loại ký hiệu chưa xác định"
+    },
+    "COMPLIANCE_TAG": {
+      "RECOMMENDED": "Khuyến nghị",
+      "ACCEPTABLE": "Chấp nhận được",
+      "WARNING": "Cần lưu ý",
+      "NOT_SUITABLE": "Không phù hợp"
+    },
+    "COMPLIANCE": {
+      "GENERIC": "Kiểm tra mẫu số và ký hiệu trước khi sử dụng",
+      "HOTEL_VAT_MTT_C": "Phù hợp khách sạn: HĐ GTGT có mã CQT, khởi tạo từ MTT (NĐ 70/2025)",
+      "HOTEL_VAT_MTT": "HĐ GTGT khởi tạo từ MTT — phù hợp bán phòng/dịch vụ trực tiếp",
+      "HOTEL_SALES_MTT": "HĐ bán hàng MTT — dùng khi kê khai thuế trực tiếp",
+      "VAT_NOT_MTT": "HĐ GTGT thường (ký hiệu T), không phải MTT — khách sạn B2C nên dùng ký hiệu có M",
+      "NOT_MTT": "Ký hiệu không có M — không phải hóa đơn khởi tạo từ máy tính tiền",
+      "NOT_FOR_HOTEL": "Loại mẫu này không phù hợp hoạt động khách sạn"
+    },
     "MESSAGES": {
       "LOAD_TEMPLATES_ERROR": "Không thể tải danh sách mẫu",
       "LOAD_TEMPLATES_ERROR_GENERIC": "Có lỗi xảy ra khi tải danh sách mẫu hóa đơn",
       "SELECTED_TEMPLATE": "Đã chọn mẫu: {{name}}",
-      "SET_DEFAULT": "Đã đặt mẫu mặc định"
+      "SET_DEFAULT": "Đã đặt mẫu mặc định",
+      "SELECT_PROVIDER_FIRST": "Vui lòng chọn tài khoản nhà cung cấp trước",
+      "NO_TEMPLATES": "Tài khoản nhà cung cấp không có mẫu hóa đơn nào",
+      "NO_TEMPLATES_PROVIDER": "Chưa có mẫu hóa đơn nào. Vui lòng chọn tài khoản nhà cung cấp trước.",
+      "NO_TEMPLATES_FILTER": "Không có mẫu phù hợp bộ lọc. Hãy chọn \"Tất cả\" hoặc đăng ký thêm mẫu MTT.",
+      "AUTO_SELECTED_HOTEL": "Đã tự chọn mẫu khuyến nghị cho khách sạn: {{name}}",
+      "WARN_NOT_MTT": "Mẫu đang chọn không phải HĐĐT máy tính tiền (thiếu ký hiệu M). Vui lòng chọn mẫu MTT."
     }
   },
   "E_INVOICE_REGISTRATION": {
