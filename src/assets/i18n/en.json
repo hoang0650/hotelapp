@@ -4444,7 +4444,7 @@
       "FILL_SEND_FORM": "Please fill in all fields"
     },
     "INBOX_TITLE": "Resend inbox",
-    "INBOX_HINT": "Receive mail at phanhuyhoang@, payments@ and support@phgrouptechs.com. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
+    "INBOX_HINT": "Receive mail at phanhuyhoang@, payment@ and support@phgrouptechs.com. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
     "INBOX_ALL": "All",
     "INBOX_UNREAD": "Unread",
     "INBOX_REFRESH": "Refresh",
