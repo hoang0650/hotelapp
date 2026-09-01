@@ -1,4 +1,54 @@
 <div class="email-admin-container" *ngIf="canAccess()">
+  <nz-card [nzTitle]="'EMAIL_ADMIN.INBOX_TITLE' | translate" [nzBordered]="true" style="margin-bottom: 16px;">
+    <nz-alert nzType="info" [nzMessage]="'EMAIL_ADMIN.INBOX_HINT' | translate" style="margin-bottom: 12px;"></nz-alert>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+      <nz-select [(ngModel)]="inboundMailbox" style="min-width: 220px;" (ngModelChange)="loadInbound()">
+        <nz-option nzValue="all" [nzLabel]="'EMAIL_ADMIN.INBOX_ALL' | translate"></nz-option>
+        <nz-option nzValue="owner" nzLabel="phanhuyhoang@phgrouptechs.com"></nz-option>
+        <nz-option nzValue="payments" nzLabel="payments@phgrouptechs.com"></nz-option>
+        <nz-option nzValue="support" nzLabel="support@phgrouptechs.com"></nz-option>
+        <nz-option nzValue="other" nzLabel="Khác @phgrouptechs.com"></nz-option>
+      </nz-select>
+      <label nz-checkbox [(ngModel)]="inboundUnreadOnly" (ngModelChange)="loadInbound()">
+        {{ 'EMAIL_ADMIN.INBOX_UNREAD' | translate }}
+      </label>
+      <button nz-button (click)="loadInbound()" [nzLoading]="inboundLoading">
+        {{ 'EMAIL_ADMIN.INBOX_REFRESH' | translate }}
+      </button>
+      <span *ngIf="inboundUnreadCount" style="color:#d4380d; font-weight:600;">{{ inboundUnreadCount }} {{ 'EMAIL_ADMIN.INBOX_UNREAD' | translate }}</span>
+    </div>
+    <nz-table
+      [nzData]="inboundEmails"
+      [nzLoading]="inboundLoading"
+      [nzFrontPagination]="false"
+      [nzShowPagination]="false"
+      [nzNoResult]="'EMAIL_ADMIN.INBOX_EMPTY' | translate">
+      <thead>
+        <tr>
+          <th>{{ 'EMAIL_ADMIN.INBOX_TO' | translate }}</th>
+          <th>{{ 'EMAIL_ADMIN.INBOX_FROM' | translate }}</th>
+          <th>{{ 'EMAIL_ADMIN.INBOX_SUBJECT' | translate }}</th>
+          <th>{{ 'EMAIL_ADMIN.INBOX_TIME' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let mail of inboundEmails" (click)="openInbound(mail)" style="cursor:pointer;" [style.fontWeight]="mail.readAt ? '400' : '600'">
+          <td>{{ mail.mailboxAddress }}</td>
+          <td>{{ mail.from }}</td>
+          <td>{{ mail.subject }}</td>
+          <td>{{ mail.receivedAt | date:'short' }}</td>
+        </tr>
+      </tbody>
+    </nz-table>
+    <div *ngIf="selectedInbound" style="margin-top:16px; padding:16px; background:#fafafa; border-radius:8px;">
+      <h4 style="margin-top:0;">{{ selectedInbound.subject }}</h4>
+      <p><strong>{{ 'EMAIL_ADMIN.INBOX_FROM' | translate }}:</strong> {{ selectedInbound.from }}</p>
+      <p><strong>{{ 'EMAIL_ADMIN.INBOX_TO' | translate }}:</strong> {{ selectedInbound.mailboxAddress }}</p>
+      <div *ngIf="selectedInbound.text" style="white-space:pre-wrap;">{{ selectedInbound.text }}</div>
+      <div *ngIf="!selectedInbound.text && selectedInbound.html" [innerHTML]="selectedInbound.html"></div>
+    </div>
+  </nz-card>
+
   <nz-card [nzTitle]="'EMAIL_ADMIN.TITLE' | translate" [nzBordered]="true">
     <nz-spin [nzSpinning]="loading">
       <form nz-form [formGroup]="emailForm" nzLayout="vertical">

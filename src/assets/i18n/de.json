@@ -4199,7 +4199,7 @@
     "TEMPLATE_SUBSCRIPTION_ALIAS_PLACEHOLDER": "Vorlagen-Alias, z. B. package-signup-confirmation",
     "RESEND_DESCRIPTION": "Registrieren Sie sich unter https://resend.com und holen Sie den API-Key aus dem Dashboard. Hinweis: Zum Senden an andere Adressen als Ihre Registrierungs-E-Mail müssen Sie eine Domain unter https://resend.com/domains verifizieren und eine Adresse aus dieser Domain als From verwenden.",
     "NO_ACCESS_TITLE": "Kein Zugriff",
-    "NO_ACCESS_SUBTITLE": "Nur Superadmin, Admin und Business haben Zugriff auf diese Seite.",
+    "NO_ACCESS_SUBTITLE": "Nur Superadmin darf den Resend-Posteingang und die System-E-Mail-Einstellungen sehen.",
     "MESSAGES": {
       "NO_ACCESS": "Sie haben keine Berechtigung, diese Seite zu öffnen",
       "LOAD_SETTINGS_ERROR": "Fehler beim Laden der E-Mail-Einstellungen",
@@ -4216,7 +4216,18 @@
       "REQUIRED_BEFORE_SEND_TEST": "Bitte füllen Sie alle Pflichtfelder vor dem Testversand aus",
       "INVALID_TEST_EMAIL": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
       "FILL_SEND_FORM": "Bitte füllen Sie alle Felder aus"
-    }
+    },
+    "INBOX_TITLE": "Resend-Posteingang",
+    "INBOX_HINT": "Empfang an phanhuyhoang@, payments@ und support@phgrouptechs.com. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
+    "INBOX_ALL": "Alle",
+    "INBOX_UNREAD": "Ungelesen",
+    "INBOX_REFRESH": "Aktualisieren",
+    "INBOX_EMPTY": "Noch keine eingehenden E-Mails",
+    "INBOX_FROM": "Von",
+    "INBOX_TO": "Postfach",
+    "INBOX_SUBJECT": "Betreff",
+    "INBOX_TIME": "Zeit",
+    "INBOX_LOAD_ERROR": "Posteingang konnte nicht geladen werden"
   },
   "SEPAY_OAUTH": {
     "MESSAGES": {

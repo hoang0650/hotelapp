@@ -4425,7 +4425,7 @@
     "TEMPLATE_SUBSCRIPTION_ALIAS_PLACEHOLDER": "Template alias, e.g. package-signup-confirmation",
     "RESEND_DESCRIPTION": "Sign up at https://resend.com and get an API Key from the dashboard. Note: To send to addresses other than your signup email, verify a domain at https://resend.com/domains and use an address from that domain as From.",
     "NO_ACCESS_TITLE": "Access denied",
-    "NO_ACCESS_SUBTITLE": "Only superadmin, admin, and business roles can access this page.",
+    "NO_ACCESS_SUBTITLE": "Only superadmin can view the Resend inbox and system email settings.",
     "MESSAGES": {
       "NO_ACCESS": "You do not have permission to access this page",
       "LOAD_SETTINGS_ERROR": "Error loading email settings",
@@ -4442,7 +4442,18 @@
       "REQUIRED_BEFORE_SEND_TEST": "Please fill in all required fields before sending a test",
       "INVALID_TEST_EMAIL": "Please enter a valid email address",
       "FILL_SEND_FORM": "Please fill in all fields"
-    }
+    },
+    "INBOX_TITLE": "Resend inbox",
+    "INBOX_HINT": "Receive mail at phanhuyhoang@, payments@ and support@phgrouptechs.com. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
+    "INBOX_ALL": "All",
+    "INBOX_UNREAD": "Unread",
+    "INBOX_REFRESH": "Refresh",
+    "INBOX_EMPTY": "No incoming email yet",
+    "INBOX_FROM": "From",
+    "INBOX_TO": "Mailbox",
+    "INBOX_SUBJECT": "Subject",
+    "INBOX_TIME": "Time",
+    "INBOX_LOAD_ERROR": "Could not load inbound mailbox"
   },
   "SEPAY_OAUTH": {
     "MESSAGES": {

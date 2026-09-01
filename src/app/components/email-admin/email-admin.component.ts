@@ -19,6 +19,12 @@ export class EmailAdminComponent implements OnInit {
   testing = false;
   sending = false;
   testEmailAddress = '';
+  inboundLoading = false;
+  inboundMailbox = 'all';
+  inboundUnreadOnly = false;
+  inboundEmails: any[] = [];
+  inboundUnreadCount = 0;
+  selectedInbound: any = null;
 
   emailProviders = [
     { value: 'resend', label: '', description: '' },
@@ -50,6 +56,7 @@ export class EmailAdminComponent implements OnInit {
 
     this.translate.onLangChange.subscribe(() => this.refreshEmailProviders());
     this.loadEmailSettings();
+    this.loadInbound();
   }
 
   private refreshEmailProviders(): void {
@@ -62,10 +69,39 @@ export class EmailAdminComponent implements OnInit {
     ];
   }
 
+  loadInbound(): void {
+    this.inboundLoading = true;
+    this.emailService.listInbound({
+      mailbox: this.inboundMailbox,
+      unread: this.inboundUnreadOnly,
+      limit: 50
+    }).subscribe({
+      next: (response) => {
+        this.inboundEmails = response?.data || [];
+        this.inboundUnreadCount = response?.unreadCount || 0;
+        this.inboundLoading = false;
+      },
+      error: () => {
+        this.inboundLoading = false;
+        this.message.error(this.translate.instant('EMAIL_ADMIN.INBOX_LOAD_ERROR'));
+      }
+    });
+  }
+
+  openInbound(mail: { _id: string }): void {
+    this.emailService.getInbound(mail._id).subscribe({
+      next: (response) => {
+        this.selectedInbound = response?.data || null;
+        this.loadInbound();
+      },
+      error: () => {
+        this.message.error(this.translate.instant('EMAIL_ADMIN.INBOX_LOAD_ERROR'));
+      }
+    });
+  }
+
   canAccess(): boolean {
-    return this.authService.isSuperAdmin() || 
-           this.authService.isAdmin() || 
-           this.authService.isBusiness();
+    return this.authService.isSuperAdmin();
   }
 
   initForm(): void {

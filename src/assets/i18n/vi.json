@@ -4565,7 +4565,7 @@
     "TEMPLATE_SUBSCRIPTION_ALIAS_PLACEHOLDER": "Alias template, ví dụ: package-signup-confirmation",
     "RESEND_DESCRIPTION": "Đăng ký tại https://resend.com và lấy API Key từ dashboard. Lưu ý: Để gửi email đến các địa chỉ khác (không phải email đăng ký), bạn cần verify domain tại https://resend.com/domains và sử dụng email từ domain đã verify làm địa chỉ From.",
     "NO_ACCESS_TITLE": "Không có quyền truy cập",
-    "NO_ACCESS_SUBTITLE": "Chỉ superadmin, admin và business mới có quyền truy cập trang này.",
+    "NO_ACCESS_SUBTITLE": "Chỉ superadmin mới được xem hộp thư Resend và cấu hình email hệ thống.",
     "MESSAGES": {
       "NO_ACCESS": "Bạn không có quyền truy cập trang này",
       "LOAD_SETTINGS_ERROR": "Lỗi khi tải cài đặt email",
@@ -4582,7 +4582,18 @@
       "REQUIRED_BEFORE_SEND_TEST": "Vui lòng điền đầy đủ thông tin bắt buộc trước khi gửi test",
       "INVALID_TEST_EMAIL": "Vui lòng nhập địa chỉ email hợp lệ",
       "FILL_SEND_FORM": "Vui lòng điền đầy đủ thông tin"
-    }
+    },
+    "INBOX_TITLE": "Hộp thư đến Resend",
+    "INBOX_HINT": "Nhận mail tại phanhuyhoang@, payments@ và support@phgrouptechs.com. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
+    "INBOX_ALL": "Tất cả",
+    "INBOX_UNREAD": "Chưa đọc",
+    "INBOX_REFRESH": "Tải lại",
+    "INBOX_EMPTY": "Chưa có email đến",
+    "INBOX_FROM": "Người gửi",
+    "INBOX_TO": "Hộp thư",
+    "INBOX_SUBJECT": "Tiêu đề",
+    "INBOX_TIME": "Thời gian",
+    "INBOX_LOAD_ERROR": "Không tải được hộp thư đến"
   },
   "SEPAY_OAUTH": {
     "MESSAGES": {

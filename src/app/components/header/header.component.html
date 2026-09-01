@@ -211,7 +211,7 @@
       <li nz-menu-item routerLink="/notfound">Notfound</li>
       <li nz-menu-item routerLink="/email-compose">Email Compose</li>
       <li nz-menu-item routerLink="/email-list">Email List</li>
-      <li nz-menu-item routerLink="/admin/email-admin">Email Admin</li>
+      <li nz-menu-item *ngIf="authService.isSuperAdmin()" routerLink="/admin/email-admin">Email Admin</li>
     </ul>
   </li>  
   <li nz-submenu nzTitle="Sign in" class="login-menu" *ngIf="!isLoggedIn">

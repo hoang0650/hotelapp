@@ -284,7 +284,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   canAccessEmailAdmin(): boolean {
-    return this.permissionService.hasFeatureAccess('email_admin');
+    return this.authService.isSuperAdmin();
   }
 
   canAccessFile(): boolean {

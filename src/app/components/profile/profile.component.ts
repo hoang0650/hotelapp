@@ -341,8 +341,11 @@ export class ProfileComponent implements OnInit {
 
   get uploadHeaders(): { [key: string]: string } {
     const token = this.authService.getToken();
+    if (!token) {
+      return {};
+    }
     return {
-      'Authorization': token || ''
+      Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
     };
   }
 

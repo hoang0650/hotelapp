@@ -71,6 +71,15 @@ export class PermissionGuard implements CanActivate {
         return false;
       }
 
+      const isEmailAdminRoute = url === '/admin/email-admin' || url.endsWith('/email-admin');
+      if (isEmailAdminRoute) {
+        if (u.role === 'superadmin') {
+          return true;
+        }
+        this.router.navigate([unauthorizedUrl]);
+        return false;
+      }
+
       if (u.role === 'superadmin' || u.role === 'admin') {
         return true;
       }

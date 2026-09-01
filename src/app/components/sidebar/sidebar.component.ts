@@ -249,6 +249,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.menuItems = this.menuItems.map(item => {
       if (item.children) {
         const filteredChildren = item.children.filter(child => {
+          if (child.route === '/admin/email-admin') {
+            return user?.role === 'superadmin';
+          }
           if (child.feature) {
             return this.permissionService.hasFeatureAccess(child.feature);
           }
