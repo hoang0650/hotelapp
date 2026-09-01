@@ -4218,7 +4218,7 @@
       "FILL_SEND_FORM": "Bitte füllen Sie alle Felder aus"
     },
     "INBOX_TITLE": "Resend-Posteingang",
-    "INBOX_HINT": "Empfang an phanhuyhoang@, payment@ und support@phgrouptechs.com. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
+    "INBOX_HINT": "Empfang an phanhuyhoang@, payment@, support@phgrouptechs.com und support@phhotel.vn. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
     "INBOX_ALL": "Alle",
     "INBOX_UNREAD": "Ungelesen",
     "INBOX_REFRESH": "Aktualisieren",

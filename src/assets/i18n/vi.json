@@ -4584,7 +4584,7 @@
       "FILL_SEND_FORM": "Vui lòng điền đầy đủ thông tin"
     },
     "INBOX_TITLE": "Hộp thư đến Resend",
-    "INBOX_HINT": "Nhận mail tại phanhuyhoang@, payment@ và support@phgrouptechs.com. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
+    "INBOX_HINT": "Nhận mail tại phanhuyhoang@, payment@, support@phgrouptechs.com và support@phhotel.vn. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
     "INBOX_ALL": "Tất cả",
     "INBOX_UNREAD": "Chưa đọc",
     "INBOX_REFRESH": "Tải lại",
