@@ -9,7 +9,7 @@ import { NzUploadFile, NzUploadChangeParam } from 'ng-zorro-antd/upload';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
-import { normalizeBlogImageForSave, resolveBlogImageUrl, rewriteBlogHtmlImageUrls, normalizeBlogHtmlImageUrlsForSave } from '../../helpers/blog-image-url';
+import { normalizeBlogImageForSave, resolveBlogImageUrl, rewriteBlogHtmlImageUrls, normalizeBlogHtmlImageUrlsForSave, resolveUploadedMediaUrl, toPortableBlogImageUrl } from '../../helpers/blog-image-url';
 
 export interface BlogSection {
   title: string;
@@ -249,15 +249,7 @@ export class BlogManagementComponent implements OnInit {
         }
         try {
           const response = JSON.parse(xhr.responseText || '{}');
-          const absolute =
-            response.absoluteUrl ||
-            resolveBlogImageUrl(
-              response.imageUrl ||
-                (response.filename ? `/assets/blog/${response.filename}` : '') ||
-                (response.imageId ? `/files/${response.imageId}` : ''),
-              this.apiBaseUrl,
-              this.cdnBaseUrl
-            );
+          const absolute = resolveUploadedMediaUrl(response, this.apiBaseUrl, this.cdnBaseUrl);
 
           if (!absolute) {
             reject(new Error('Server không trả về link ảnh CDN'));
@@ -625,15 +617,7 @@ export class BlogManagementComponent implements OnInit {
       // Ưu tiên absolute CDN (https://cdn.phhotel.vn/...)
       if (info.file.response) {
         const response = info.file.response;
-        const imageUrl =
-          response.absoluteUrl ||
-          resolveBlogImageUrl(
-            response.imageUrl ||
-              (response.filename ? `/assets/blog/${response.filename}` : '') ||
-              (response.imageId ? `/files/${response.imageId}` : ''),
-            this.apiBaseUrl,
-            this.cdnBaseUrl
-          );
+        const imageUrl = resolveUploadedMediaUrl(response, this.apiBaseUrl, this.cdnBaseUrl);
 
         if (!imageUrl) {
           this.message.error(this.translate.instant('BLOG_MANAGEMENT.UPLOAD_NO_CDN_URL'));
@@ -641,7 +625,7 @@ export class BlogManagementComponent implements OnInit {
           return;
         }
 
-        const forSave = normalizeBlogImageForSave(imageUrl, this.cdnBaseUrl) || imageUrl;
+        const forSave = toPortableBlogImageUrl(imageUrl, this.apiBaseUrl, this.cdnBaseUrl) || imageUrl;
         this.imageUrl = imageUrl;
         this.blogForm.patchValue({
           imageUrl: forSave,

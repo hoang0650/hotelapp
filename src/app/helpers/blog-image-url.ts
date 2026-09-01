@@ -38,6 +38,29 @@ export function toGoogleDriveDirectImageUrl(url: string): string | null {
   return `https://lh3.googleusercontent.com/d/${fileId}=w2000`;
 }
 
+function isFrontendAppHost(host: string): boolean {
+  const h = String(host || '').toLowerCase();
+  return h === 'admin.phhotel.vn' || h === 'www.phhotel.vn' || h === 'phhotel.vn';
+}
+
+/** admin.phhotel.vn/assets/... không có file upload — chuyển sang API. */
+function rewriteFrontendHostedAssetUrl(url: string, apiBaseUrl: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname || '';
+    if (!path.startsWith('/assets/') && !path.startsWith('/files/')) {
+      return null;
+    }
+    if (!isFrontendAppHost(parsed.host)) {
+      return null;
+    }
+    const base = String(apiBaseUrl || 'https://api.phhotel.vn').replace(/\/$/, '');
+    return `${base}${path}`;
+  } catch {
+    return null;
+  }
+}
+
 function isCdnHost(host: string, cdnBaseUrl: string): boolean {
   try {
     const cdnHost = new URL(cdnBaseUrl).host.toLowerCase();
@@ -106,6 +129,11 @@ export function resolveBlogImageUrl(
     return cdnUrl;
   }
 
+  const rewritten = rewriteFrontendHostedAssetUrl(trimmed, apiBaseUrl);
+  if (rewritten) {
+    return rewritten;
+  }
+
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
     return trimmed;
   }
@@ -170,6 +198,9 @@ export function toPortableBlogImageUrl(
   try {
     const parsed = new URL(next);
     if (parsed.pathname.startsWith('/assets/') || parsed.pathname.startsWith('/files/')) {
+      if (isFrontendAppHost(parsed.host)) {
+        return parsed.pathname;
+      }
       const apiHost = base ? new URL(base).host : '';
       if (!apiHost || parsed.host === apiHost) {
         return parsed.pathname;
@@ -210,4 +241,33 @@ export function normalizeBlogHtmlImageUrlsForSave(
     const portable = toPortableBlogImageUrl(src, apiBaseUrl, cdnBaseUrl);
     return `src=${quote}${portable || src}${quote}`;
   });
+}
+
+/** Chọn URL ảnh từ response upload: CDN hoặc API, không dùng host admin. */
+export function resolveUploadedMediaUrl(
+  response: {
+    absoluteUrl?: string;
+    imageUrl?: string;
+    filename?: string;
+    imageId?: string;
+  } | null | undefined,
+  apiBaseUrl: string,
+  cdnBaseUrl?: string
+): string {
+  if (!response) {
+    return '';
+  }
+  const candidates = [
+    response.absoluteUrl,
+    response.imageUrl,
+    response.filename ? `/assets/blog/${response.filename}` : '',
+    response.imageId ? `/files/${response.imageId}` : ''
+  ];
+  for (const candidate of candidates) {
+    const resolved = resolveBlogImageUrl(candidate, apiBaseUrl, cdnBaseUrl);
+    if (resolved) {
+      return resolved;
+    }
+  }
+  return '';
 }

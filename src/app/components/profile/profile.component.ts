@@ -9,7 +9,7 @@ import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 import { ActivatedRoute } from '@angular/router';
-import { normalizeBlogImageForSave, resolveBlogImageUrl } from '../../helpers/blog-image-url';
+import { normalizeBlogImageForSave, resolveBlogImageUrl, resolveUploadedMediaUrl } from '../../helpers/blog-image-url';
 
 @Component({
   selector: 'app-profile',
@@ -360,14 +360,7 @@ export class ProfileComponent implements OnInit {
     if (info.file.status === 'done') {
       if (info.file.response) {
         const response = info.file.response;
-        const imageUrl =
-          response.absoluteUrl ||
-          resolveBlogImageUrl(
-            response.imageUrl ||
-              (response.imageId ? `/files/${response.imageId}` : ''),
-            this.apiBaseUrl,
-            this.cdnBaseUrl
-          );
+        const imageUrl = resolveUploadedMediaUrl(response, this.apiBaseUrl, this.cdnBaseUrl);
 
         if (!imageUrl) {
           this.message.error(this.translate.instant('PROFILE.UPLOAD_AVATAR_ERROR'));
