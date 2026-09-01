@@ -77,24 +77,4 @@ export class EmailService {
       params: queryParams
     });
   }
-
-  listInbound(params?: { mailbox?: string; unread?: boolean; limit?: number; skip?: number }): Observable<any> {
-    const queryParams: Record<string, string | number> = {};
-    if (params?.mailbox) queryParams['mailbox'] = params.mailbox;
-    if (params?.unread) queryParams['unread'] = '1';
-    if (params?.limit) queryParams['limit'] = params.limit;
-    if (params?.skip) queryParams['skip'] = params.skip;
-    return this.http.get(`${this.apiUrl}/inbound`, {
-      headers: this.getHeaders(),
-      params: queryParams
-    });
-  }
-
-  getInbound(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/inbound/${id}`, { headers: this.getHeaders() });
-  }
-
-  markInbound(id: string, read: boolean): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/inbound/${id}`, { read }, { headers: this.getHeaders() });
-  }
 }

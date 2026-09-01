@@ -4582,18 +4582,7 @@
       "REQUIRED_BEFORE_SEND_TEST": "Vui lòng điền đầy đủ thông tin bắt buộc trước khi gửi test",
       "INVALID_TEST_EMAIL": "Vui lòng nhập địa chỉ email hợp lệ",
       "FILL_SEND_FORM": "Vui lòng điền đầy đủ thông tin"
-    },
-    "INBOX_TITLE": "Hộp thư đến Resend",
-    "INBOX_HINT": "Nhận mail tại phanhuyhoang@, payment@, support@phgrouptechs.com và support@phhotel.vn. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
-    "INBOX_ALL": "Tất cả",
-    "INBOX_UNREAD": "Chưa đọc",
-    "INBOX_REFRESH": "Tải lại",
-    "INBOX_EMPTY": "Chưa có email đến",
-    "INBOX_FROM": "Người gửi",
-    "INBOX_TO": "Hộp thư",
-    "INBOX_SUBJECT": "Tiêu đề",
-    "INBOX_TIME": "Thời gian",
-    "INBOX_LOAD_ERROR": "Không tải được hộp thư đến"
+    }
   },
   "SEPAY_OAUTH": {
     "MESSAGES": {

@@ -4442,18 +4442,7 @@
       "REQUIRED_BEFORE_SEND_TEST": "Please fill in all required fields before sending a test",
       "INVALID_TEST_EMAIL": "Please enter a valid email address",
       "FILL_SEND_FORM": "Please fill in all fields"
-    },
-    "INBOX_TITLE": "Resend inbox",
-    "INBOX_HINT": "Receive mail at phanhuyhoang@, payment@, support@phgrouptechs.com and support@phhotel.vn. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
-    "INBOX_ALL": "All",
-    "INBOX_UNREAD": "Unread",
-    "INBOX_REFRESH": "Refresh",
-    "INBOX_EMPTY": "No incoming email yet",
-    "INBOX_FROM": "From",
-    "INBOX_TO": "Mailbox",
-    "INBOX_SUBJECT": "Subject",
-    "INBOX_TIME": "Time",
-    "INBOX_LOAD_ERROR": "Could not load inbound mailbox"
+    }
   },
   "SEPAY_OAUTH": {
     "MESSAGES": {

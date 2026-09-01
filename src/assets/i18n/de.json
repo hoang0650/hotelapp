@@ -4216,18 +4216,7 @@
       "REQUIRED_BEFORE_SEND_TEST": "Bitte füllen Sie alle Pflichtfelder vor dem Testversand aus",
       "INVALID_TEST_EMAIL": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
       "FILL_SEND_FORM": "Bitte füllen Sie alle Felder aus"
-    },
-    "INBOX_TITLE": "Resend-Posteingang",
-    "INBOX_HINT": "Empfang an phanhuyhoang@, payment@, support@phgrouptechs.com und support@phhotel.vn. Webhook: https://api.phhotel.vn/hooks/resend-inbound",
-    "INBOX_ALL": "Alle",
-    "INBOX_UNREAD": "Ungelesen",
-    "INBOX_REFRESH": "Aktualisieren",
-    "INBOX_EMPTY": "Noch keine eingehenden E-Mails",
-    "INBOX_FROM": "Von",
-    "INBOX_TO": "Postfach",
-    "INBOX_SUBJECT": "Betreff",
-    "INBOX_TIME": "Zeit",
-    "INBOX_LOAD_ERROR": "Posteingang konnte nicht geladen werden"
+    }
   },
   "SEPAY_OAUTH": {
     "MESSAGES": {
