@@ -3085,6 +3085,27 @@
       }
     }
   },
+  "DUNS": {
+    "HERO_TITLE": "D-U-N-S-Nummer",
+    "HERO_SUBTITLE": "Unternehmensprofil bei Dun & Bradstreet",
+    "SEAL_TITLE": "Registrierte D-U-N-S-Nummer",
+    "SEAL_ALT": "D-U-N-S-Siegel von PHGROUP Technology Solutions",
+    "REGISTERED_INFO": "D-U-N-S-Registrierungsdaten",
+    "NUMBER": "D-U-N-S-Nummer",
+    "NUMBER_NUMERIC": "Nummer (ohne Bindestriche)",
+    "LEGAL_NAME": "Rechtlicher Name (Englisch)",
+    "LEGAL_NAME_VI": "Rechtlicher Name (Vietnamesisch)",
+    "ADDRESS": "Bei D&B hinterlegte Adresse",
+    "PHONE": "Telefon",
+    "WEBSITE": "Website",
+    "EMAIL": "E-Mail",
+    "TAX_ID": "Steuer-ID",
+    "WHAT_IS": "Was ist eine D-U-N-S-Nummer?",
+    "WHAT_IS_DESC": "D-U-N-S (Data Universal Numbering System) ist eine 9-stellige Unternehmenskennung von Dun & Bradstreet. Sie dient zur Identitätsprüfung einer juristischen Person auf internationalen Plattformen wie Google Play, Apple, bei Banken und Handelspartnern.",
+    "COPY": "Kopieren",
+    "COPIED": "D-U-N-S-Nummer kopiert",
+    "VERIFY_NOTE": "Die oben genannten Angaben entsprechen dem von CRIF D&B Vietnam erfassten D-U-N-S-Eintrag für PHGROUP TECHNOLOGY SOLUTIONS COMPANY LIMITED."
+  },
   "CONTACT": {
     "TITLE": "Kontaktieren Sie uns",
     "DESCRIPTION": "Wir sind immer bereit zuzuhören und Sie zu unterstützen. Bitte senden Sie uns eine Nachricht!",
@@ -3879,6 +3900,10 @@
     "ABOUT_US": {
       "TITLE": "Über uns",
       "DESCRIPTION": "Erfahren Sie mehr über PHHotel und das Team hinter dem Produkt."
+    },
+    "DUNS": {
+      "TITLE": "D-U-N-S-Nummer",
+      "DESCRIPTION": "D-U-N-S-Nummer 66-547-1898 von PHGROUP TECHNOLOGY SOLUTIONS COMPANY LIMITED."
     },
     "ADMIN": {
       "TITLE": "Admin"

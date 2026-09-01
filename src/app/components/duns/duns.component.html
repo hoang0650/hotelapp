@@ -1,0 +1,126 @@
+<div class="duns-container">
+  <nz-card [nzBordered]="false" class="duns-card">
+    <div class="hero-section">
+      <img
+        src="assets/images/introduce/duns.png"
+        [alt]="'DUNS.SEAL_ALT' | translate"
+        class="duns-seal">
+      <h1 class="hero-title">{{ 'DUNS.HERO_TITLE' | translate }}</h1>
+      <p class="hero-subtitle">{{ 'DUNS.HERO_SUBTITLE' | translate }}</p>
+      <div class="duns-number-badge">
+        <span class="duns-number">{{ dunsFormatted }}</span>
+        <button nz-button nzType="default" nzSize="small" type="button" (click)="copyDuns(dunsNumeric)">
+          {{ 'DUNS.COPY' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <div class="info-section">
+      <h2 class="section-heading">{{ 'DUNS.REGISTERED_INFO' | translate }}</h2>
+
+      <div nz-row nzGutter="24" class="info-row">
+        <div nz-col nzXs="24" nzSm="12" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="idcard" nzTheme="outline"></i>
+            <strong>{{ 'DUNS.NUMBER' | translate }}</strong>
+          </div>
+          <div class="info-value duns-mono">{{ dunsFormatted }}</div>
+        </div>
+
+        <div nz-col nzXs="24" nzSm="12" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="barcode" nzTheme="outline"></i>
+            <strong>{{ 'DUNS.NUMBER_NUMERIC' | translate }}</strong>
+          </div>
+          <div class="info-value duns-mono">
+            {{ dunsNumeric }}
+            <button nz-button nzType="link" nzSize="small" type="button" (click)="copyDuns(dunsNumeric)">
+              {{ 'DUNS.COPY' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div nz-row nzGutter="24" class="info-row">
+        <div nz-col nzXs="24" nzSm="12" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="bank" nzTheme="outline"></i>
+            <strong>{{ 'DUNS.LEGAL_NAME' | translate }}</strong>
+          </div>
+          <div class="info-value">{{ legalNameEn }}</div>
+        </div>
+
+        <div nz-col nzXs="24" nzSm="12" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="file-text" nzTheme="outline"></i>
+            <strong>{{ 'DUNS.LEGAL_NAME_VI' | translate }}</strong>
+          </div>
+          <div class="info-value">{{ legalNameVi }}</div>
+        </div>
+      </div>
+
+      <div nz-row nzGutter="24" class="info-row">
+        <div nz-col nzXs="24" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="environment" nzTheme="outline"></i>
+            <strong>{{ 'DUNS.ADDRESS' | translate }}</strong>
+          </div>
+          <div class="info-value">{{ addressEn }}</div>
+        </div>
+      </div>
+
+      <div nz-row nzGutter="24" class="info-row">
+        <div nz-col nzXs="24" nzSm="12" nzMd="8" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="phone" nzTheme="outline"></i>
+            <strong>{{ 'DUNS.PHONE' | translate }}</strong>
+          </div>
+          <div class="info-value">
+            <a href="tel:+84931881584">{{ phone }}</a>
+          </div>
+        </div>
+
+        <div nz-col nzXs="24" nzSm="12" nzMd="8" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="global" nzTheme="outline"></i>
+            <strong>{{ 'DUNS.WEBSITE' | translate }}</strong>
+          </div>
+          <div class="info-value">
+            <a [href]="website" target="_blank" rel="noopener noreferrer">{{ websiteLabel }}</a>
+          </div>
+        </div>
+
+        <div nz-col nzXs="24" nzSm="12" nzMd="8" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="mail" nzTheme="outline"></i>
+            <strong>{{ 'DUNS.EMAIL' | translate }}</strong>
+          </div>
+          <div class="info-value">
+            <a [href]="'mailto:' + email">{{ email }}</a>
+          </div>
+        </div>
+      </div>
+
+      <div nz-row nzGutter="24" class="info-row">
+        <div nz-col nzXs="24" nzSm="12" class="info-item">
+          <div class="info-label">
+            <i nz-icon nzType="audit" nzTheme="outline"></i>
+            <strong>{{ 'DUNS.TAX_ID' | translate }}</strong>
+          </div>
+          <div class="info-value duns-mono">{{ taxId }}</div>
+        </div>
+      </div>
+
+      <p class="verify-note">{{ 'DUNS.VERIFY_NOTE' | translate }}</p>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <div class="about-section">
+      <h2 class="section-heading">{{ 'DUNS.WHAT_IS' | translate }}</h2>
+      <p class="about-text">{{ 'DUNS.WHAT_IS_DESC' | translate }}</p>
+    </div>
+  </nz-card>
+</div>

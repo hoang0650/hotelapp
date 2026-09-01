@@ -23,6 +23,23 @@
   text-decoration: underline;
 }
 
+.footer-seals {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.footer-seal img {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+}
+
+.footer-seal:hover img {
+  opacity: 0.85;
+}
+
 @media (max-width: 767.98px) {
   .footer-links {
     justify-content: flex-start;

@@ -3655,6 +3655,27 @@
       }
     }
   },
+  "DUNS": {
+    "HERO_TITLE": "Mã số D-U-N-S",
+    "HERO_SUBTITLE": "Hồ sơ doanh nghiệp đăng ký với Dun & Bradstreet",
+    "SEAL_TITLE": "Đã đăng ký mã số D-U-N-S",
+    "SEAL_ALT": "Con dấu D-U-N-S của PHGROUP Technology Solutions",
+    "REGISTERED_INFO": "Thông tin đăng ký D-U-N-S",
+    "NUMBER": "Mã số D-U-N-S",
+    "NUMBER_NUMERIC": "Mã số (không dấu gạch)",
+    "LEGAL_NAME": "Tên pháp lý (tiếng Anh)",
+    "LEGAL_NAME_VI": "Tên pháp lý (tiếng Việt)",
+    "ADDRESS": "Địa chỉ đăng ký D&B",
+    "PHONE": "Điện thoại",
+    "WEBSITE": "Website",
+    "EMAIL": "Email",
+    "TAX_ID": "Mã số thuế",
+    "WHAT_IS": "D-U-N-S là gì?",
+    "WHAT_IS_DESC": "D-U-N-S (Data Universal Numbering System) là mã định danh doanh nghiệp 9 chữ số do Dun & Bradstreet cấp. Mã này được dùng để xác minh pháp nhân trên các nền tảng quốc tế như Google Play, Apple, ngân hàng và đối tác thương mại.",
+    "COPY": "Sao chép",
+    "COPIED": "Đã sao chép mã D-U-N-S",
+    "VERIFY_NOTE": "Thông tin trên khớp với hồ sơ D-U-N-S do CRIF D&B Việt Nam ghi nhận cho CÔNG TY TNHH GIẢI PHÁP CÔNG NGHỆ PHGROUP."
+  },
   "CONTACT": {
     "TITLE": "Liên hệ với chúng tôi",
     "DESCRIPTION": "Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn. Hãy gửi tin nhắn cho chúng tôi!",
@@ -4152,6 +4173,10 @@
     "ABOUT_US": {
       "TITLE": "Về chúng tôi",
       "DESCRIPTION": "Tìm hiểu về PHHotel và đội ngũ phát triển sản phẩm."
+    },
+    "DUNS": {
+      "TITLE": "Mã số D-U-N-S",
+      "DESCRIPTION": "Mã số D-U-N-S 66-547-1898 của CÔNG TY TNHH GIẢI PHÁP CÔNG NGHỆ PHGROUP."
     },
     "ADMIN": {
       "TITLE": "Quản trị"

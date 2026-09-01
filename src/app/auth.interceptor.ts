@@ -56,7 +56,7 @@ export class AuthInterceptor implements HttpInterceptor {
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
         const isRefreshEndpoint = typeof request.url === 'string' && request.url.includes('/users/refresh-token');
-        const publicRoutes = ['/forgot-password', '/reset-password', '/signup', '/home', '/pricing', '/blog', '/contact', '/privacy-policy', '/terms-of-service', '/login', '/about-us'];
+        const publicRoutes = ['/forgot-password', '/reset-password', '/signup', '/home', '/pricing', '/blog', '/contact', '/privacy-policy', '/terms-of-service', '/login', '/about-us', '/duns'];
         const currentUrl = this.router.url || (typeof location !== 'undefined' ? location.pathname : '');
         const isOnPublicRoute = publicRoutes.some(r => (currentUrl || '').startsWith(r));
         const isPublicApi = typeof request.url === 'string' && (request.url.includes('/forgot-password') || request.url.includes('/reset-password'));

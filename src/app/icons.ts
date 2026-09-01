@@ -70,7 +70,11 @@ import {
   LoadingOutline,
   CaretDownOutline,
   CaretRightOutline,
-  CaretUpOutline
+  CaretUpOutline,
+  IdcardOutline,
+  BarcodeOutline,
+  EnvironmentOutline,
+  AuditOutline
 } from '@ant-design/icons-angular/icons';
 
 /** Icons dùng cho sidebar admin + UI chung — bắt buộc với ng-zorro 18 */
@@ -146,5 +150,9 @@ export const APP_ICONS = [
   LoadingOutline,
   CaretDownOutline,
   CaretRightOutline,
-  CaretUpOutline
+  CaretUpOutline,
+  IdcardOutline,
+  BarcodeOutline,
+  EnvironmentOutline,
+  AuditOutline
 ];

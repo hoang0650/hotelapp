@@ -27,6 +27,7 @@ import { EmailComposeComponent } from './components/email-compose/email-compose.
 import { EmailListComponent } from './components/email-list/email-list.component';
 import { EmailAdminComponent } from './components/email-admin/email-admin.component';
 import { AboutUsComponent } from './components/about-us/about-us.component';
+import { DunsComponent } from './components/duns/duns.component';
 import { ChatComponent } from './components/chat/chat.component';
 import { BusinessSignupComponent } from './components/business-signup/business-signup.component';
 import { ServiceManagementComponent } from './components/service-management/service-management.component';
@@ -258,6 +259,7 @@ const routes: Routes = [
   { path: 'email-compose', component: EmailComposeComponent },
   { path: 'hotel-files', component: HotelFilesComponent },
   { path: 'about-us', component: AboutUsComponent, data: { titleKey: 'SEO.ABOUT_US.TITLE', descriptionKey: 'SEO.ABOUT_US.DESCRIPTION' } },
+  { path: 'duns', component: DunsComponent, data: { titleKey: 'SEO.DUNS.TITLE', descriptionKey: 'SEO.DUNS.DESCRIPTION' } },
   { path: 'chat', component: ChatComponent },
   { path: 'qr-payment', component: QrPaymentComponent, canActivate: [PermissionGuard] },
   { path: 'visa-payment', component: VisaPaymentComponent, canActivate: [PermissionGuard] },

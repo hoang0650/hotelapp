@@ -110,6 +110,7 @@ import { EmailAdminComponent } from './components/email-admin/email-admin.compon
 import { CaliendarModalComponent } from './components/caliendar-modal/caliendar-modal.component';
 import { CapitalizePipe } from './pipes/capitalize.pipe';
 import { AboutUsComponent } from './components/about-us/about-us.component';
+import { DunsComponent } from './components/duns/duns.component';
 import { ChatComponent } from './components/chat/chat.component';
 import { BusinessSignupComponent } from './components/business-signup/business-signup.component';
 import { RoomServiceComponent } from './components/room-service/room-service.component';
@@ -278,6 +279,7 @@ export function preloadTranslationsFactory(
         CaliendarModalComponent,
         CapitalizePipe,
         AboutUsComponent,
+        DunsComponent,
         ChatComponent,
         BusinessSignupComponent,
         RoomServiceComponent,

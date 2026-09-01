@@ -161,6 +161,11 @@ export class SeoService {
         name: this.getTranslatedValue('SEO.ABOUT_US.TITLE') || 'Về chúng tôi',
         description: this.getTranslatedValue('SEO.ABOUT_US.DESCRIPTION') || '',
         path: '/about-us'
+      },
+      {
+        name: this.getTranslatedValue('SEO.DUNS.TITLE') || 'Mã số D-U-N-S',
+        description: this.getTranslatedValue('SEO.DUNS.DESCRIPTION') || '',
+        path: '/duns'
       }
     ];
   }

@@ -1,0 +1,139 @@
+.duns-container {
+  padding: 20px;
+  background-color: #f0f2f5;
+  min-height: calc(100vh - 200px);
+}
+
+.duns-card {
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #ffffff;
+}
+
+.hero-section {
+  text-align: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #0b3d6e 0%, #1a6bb5 100%);
+  color: #fff;
+  border-radius: 10px;
+  margin-bottom: 30px;
+}
+
+.duns-seal {
+  height: 88px;
+  width: auto;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 16px;
+}
+
+.hero-title {
+  font-size: 2.4rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.hero-subtitle {
+  font-size: 1.15rem;
+  margin: 12px 0 20px;
+  opacity: 0.95;
+}
+
+.duns-number-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 8px 16px;
+}
+
+.duns-number {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+.section-heading {
+  font-size: 1.75rem;
+  color: #0b3d6e;
+  margin-bottom: 25px;
+  font-weight: 600;
+}
+
+.info-section,
+.about-section {
+  margin: 30px 0;
+}
+
+.info-row {
+  margin-bottom: 8px;
+}
+
+.info-item {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #1a6bb5;
+  height: calc(100% - 20px);
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #0b3d6e;
+  font-size: 0.95rem;
+}
+
+.info-value {
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.6;
+  padding-left: 28px;
+  word-break: break-word;
+}
+
+.info-value a {
+  color: #1a6bb5;
+}
+
+.duns-mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.verify-note {
+  color: #555;
+  font-size: 0.95rem;
+  margin-top: 8px;
+}
+
+.about-text {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: #444;
+}
+
+@media (max-width: 767.98px) {
+  .hero-title {
+    font-size: 1.8rem;
+  }
+
+  .duns-number {
+    font-size: 1.25rem;
+  }
+
+  .duns-number-badge {
+    flex-direction: column;
+    border-radius: 16px;
+  }
+}
