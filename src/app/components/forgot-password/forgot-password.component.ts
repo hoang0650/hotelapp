@@ -46,19 +46,12 @@ export class ForgotPasswordComponent implements OnInit {
     }
 
     this.isLoading = true;
-    const emailOrUsername = this.forgotPasswordForm.get('emailOrUsername')?.value;
-    
-    // Kiểm tra xem input có phải là email không (chứa @)
+    const emailOrUsername = String(this.forgotPasswordForm.get('emailOrUsername')?.value || '').trim();
     const isEmail = emailOrUsername.includes('@');
-    
-    const requestData: any = {};
-    if (isEmail) {
-      requestData.email = emailOrUsername;
-    } else {
-      requestData.username = emailOrUsername;
-    }
-    
-    // Không gửi emailFrom; hệ thống sẽ dùng email cấu hình sẵn
+    const requestData: { email?: string; username?: string } = isEmail
+      ? { email: emailOrUsername.toLowerCase() }
+      : { username: emailOrUsername };
+
 
     this.userService.forgotPassword(requestData).subscribe({
       next: (response) => {
