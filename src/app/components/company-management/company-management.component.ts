@@ -590,14 +590,16 @@ export class CompanyManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  get uploadHeaders(): { [key: string]: string } {
+  get uploadHeaders(): { [key: string]: string | null } {
     const token = this.authService.getToken();
-    if (!token) {
-      return {};
-    }
-    return {
-      Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
+    const headers: { [key: string]: string | null } = {
+      'X-Requested-With': null
     };
+    if (!token) {
+      return headers;
+    }
+    headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    return headers;
   }
 
   handleLogoChange(info: NzUploadChangeParam): void {

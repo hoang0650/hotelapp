@@ -196,11 +196,15 @@ export class BlogManagementComponent implements OnInit {
     return !!this.editId;
   }
 
-  get uploadHeaders(): { [key: string]: string } {
+  get uploadHeaders(): { [key: string]: string | null } {
     const token = this.authService.getToken();
-    return {
-      Authorization: token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : ''
+    const headers: { [key: string]: string | null } = {
+      'X-Requested-With': null
     };
+    if (token) {
+      headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    }
+    return headers;
   }
 
   addSection(title = '', content = ''): void {
