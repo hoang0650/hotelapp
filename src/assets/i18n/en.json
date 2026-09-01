@@ -4224,7 +4224,35 @@
       "LOAD_FAIL": "Unable to load data. Please try again later.",
       "SEARCH_FAIL": "Unable to search. Please try again later.",
       "UPDATE_STATUS_SUCCESS": "Payment status updated",
-      "UPDATE_STATUS_FAIL": "Unable to update payment status"
+      "UPDATE_STATUS_FAIL": "Unable to update payment status",
+      "MANUAL_NOTE_REQUIRED": "Please enter a reason so the manual reconciliation stays auditable",
+      "MANUAL_NOT_SUPPORTED": "This transaction does not support manual confirmation"
+    },
+    "RECONCILE": {
+      "TITLE": "Manual reconciliation",
+      "SYSTEM_WIDE": "System-wide",
+      "SYSTEM_WIDE_TOOLTIP": "Drop the hotel filter to see transactions of every user in the system",
+      "HINT": "When the SePay webhook fails or money has arrived but the system has not recorded it, check the bank statement first and then confirm manually. Every action records who did it and why.",
+      "ALL_STATUSES": "All statuses",
+      "SEARCH_PLACEHOLDER": "Transaction id, invoice number, transfer content…",
+      "SEARCH": "Search",
+      "CLEAR": "Clear filters",
+      "COUNT": "{{count}} SePay transactions",
+      "MANUAL_BADGE": "Manually confirmed",
+      "CONFIRM_RECEIVED": "Confirm money received",
+      "BACK_TO_PENDING": "Return to pending",
+      "MARK_FAILED": "Mark as failed",
+      "MODAL_TITLE": "Confirm payment status manually",
+      "MODAL_WARNING": "This action records real money",
+      "MODAL_WARNING_DESC": "Use it only after checking the bank statement. The system stores who did it, when, and why.",
+      "NEW_STATUS": "New status",
+      "NOTE_LABEL": "Reason for manual reconciliation",
+      "NOTE_PLACEHOLDER": "E.g. SePay webhook failed; matched VCB statement on 01/09 at 13:14, amount 200,000 VND",
+      "OWNER": "Transaction owner",
+      "STATUS_COMPLETED": "Completed — money received",
+      "STATUS_PENDING": "Pending — awaiting reconciliation",
+      "STATUS_FAILED": "Failed — money not received",
+      "STATUS_CANCELLED": "Cancelled — transaction cancelled"
     }
   },
   "ROOM_CATEGORY": {

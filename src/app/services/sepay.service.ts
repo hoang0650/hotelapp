@@ -284,8 +284,13 @@ export class SePayService {
     userId?: string;
     hotelId?: string;
     status?: string;
+    paymentType?: string;
+    /** Reconciliation keyword: transaction id, invoice number or transfer content. */
+    search?: string;
     limit?: number;
     skip?: number;
+    /** Admin: `system` lists every payer. `own` stays inside the signed-in hotel/user. */
+    scope?: 'system' | 'own';
   }): Observable<any> {
     let queryParams = '';
     if (params) {
@@ -293,8 +298,11 @@ export class SePayService {
       if (params.userId) query.append('userId', params.userId);
       if (params.hotelId) query.append('hotelId', params.hotelId);
       if (params.status) query.append('status', params.status);
+      if (params.paymentType) query.append('paymentType', params.paymentType);
+      if (params.search) query.append('search', params.search);
       if (params.limit) query.append('limit', params.limit.toString());
       if (params.skip) query.append('skip', params.skip.toString());
+      if (params.scope) query.append('scope', params.scope);
       queryParams = '?' + query.toString();
     }
     return this.http.get(`${this.apiUrl}/payment-history${queryParams}`);
@@ -319,10 +327,16 @@ export class SePayService {
     return this.http.get(`${this.apiUrl}/payment-status?${query.toString()}`);
   }
 
-  updatePaymentHistoryStatus(paymentHistoryId: string, status: 'pending' | 'completed' | 'failed' | 'cancelled', note?: string): Observable<any> {
+  updatePaymentHistoryStatus(
+    paymentHistoryId: string,
+    status: 'pending' | 'completed' | 'failed' | 'cancelled',
+    note?: string,
+    transactionId?: string
+  ): Observable<any> {
     return this.http.patch(`${this.apiUrl}/payment-history/${paymentHistoryId}/status`, {
       status,
-      note: note || ''
+      note: note || '',
+      transactionId: transactionId || undefined
     });
   }
 }

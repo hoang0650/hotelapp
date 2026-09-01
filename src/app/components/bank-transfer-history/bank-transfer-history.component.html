@@ -43,6 +43,70 @@
     </nz-alert>
   </ng-template>
 
+  <!-- Đối soát thủ công: chỉ Admin/Superadmin -->
+  <div class="reconcile-panel" *ngIf="isAdmin">
+    <div class="reconcile-panel-head">
+      <div>
+        <i nz-icon nzType="safety-certificate" nzTheme="outline"></i>
+        <strong>Đối soát thủ công</strong>
+        <nz-tag [nzColor]="isSuperAdmin ? 'purple' : 'blue'">
+          {{ isSuperAdmin ? 'Superadmin' : 'Admin' }}
+        </nz-tag>
+      </div>
+      <label nz-tooltip nzTooltipTitle="Bỏ lọc theo khách sạn để xem giao dịch của tất cả người dùng trong hệ thống">
+        <nz-switch
+          [ngModel]="systemWideMode"
+          (ngModelChange)="onSystemWideModeChange($event)"
+          nzSize="small"
+          name="systemWideMode">
+        </nz-switch>
+        <span class="reconcile-switch-label">Toàn hệ thống</span>
+      </label>
+    </div>
+
+    <p class="reconcile-hint">
+      Khi webhook SePay lỗi hoặc tiền đã về tài khoản mà hệ thống chưa ghi nhận, bật
+      <strong>Toàn hệ thống</strong> để xem giao dịch của mọi người dùng, đối chiếu sao kê ngân hàng
+      rồi bấm <strong>Xác nhận đã nhận tiền</strong>. Thao tác này cũng kích hoạt gói / đánh dấu
+      checkout đã thanh toán. Mọi lần xác nhận đều lưu người thực hiện và lý do.
+    </p>
+
+    <div class="reconcile-filters">
+      <nz-select
+        [(ngModel)]="reconcileStatusFilter"
+        (ngModelChange)="applyReconcileFilters()"
+        nzAllowClear
+        nzPlaceHolder="Tất cả trạng thái"
+        name="reconcileStatusFilter"
+        style="min-width: 180px;">
+        <nz-option nzValue="pending" nzLabel="Đang xử lý"></nz-option>
+        <nz-option nzValue="completed" nzLabel="Hoàn thành"></nz-option>
+        <nz-option nzValue="failed" nzLabel="Thất bại"></nz-option>
+        <nz-option nzValue="cancelled" nzLabel="Đã hủy"></nz-option>
+      </nz-select>
+
+      <input
+        nz-input
+        [(ngModel)]="reconcileSearch"
+        (keyup.enter)="applyReconcileFilters()"
+        placeholder="Tên, email, ID user, mã GD, nội dung CK…"
+        name="reconcileSearch"
+        style="max-width: 320px;" />
+
+      <button nz-button nzType="primary" nzSize="default" (click)="applyReconcileFilters()">
+        <i nz-icon nzType="search" nzTheme="outline"></i>
+        Tìm
+      </button>
+      <button nz-button nzType="default" nzSize="default" (click)="clearReconcileFilters()">
+        Xóa lọc
+      </button>
+
+      <span class="reconcile-count" *ngIf="sepayTotal">
+        {{ sepayTotal | number:'1.0-0' }} giao dịch SePay
+      </span>
+    </div>
+  </div>
+
   <!-- Tabs để chuyển đổi giữa các loại thanh toán -->
   <nz-tabset [(nzSelectedIndex)]="activeTabIndex" (nzSelectChange)="onTabChange($event)">
     <!-- Tab Tất cả -->
@@ -67,9 +131,17 @@
                     <nz-tag [nzColor]="getStatusColor(item.status)">
                       {{ getStatusText(item.status) }}
                     </nz-tag>
+                    <nz-tag *ngIf="isAdmin" [nzColor]="getPaymentKindColor(item)">
+                      {{ getSePayPaymentTypeLabel(item) }}
+                    </nz-tag>
+                    <nz-tag *ngIf="getManualUpdateInfo(item)" nzColor="gold">
+                      <i nz-icon nzType="user" nzTheme="outline"></i>
+                      Xác nhận thủ công
+                    </nz-tag>
                   </div>
                 </nz-list-item-meta-title>
                 <nz-list-item-meta-description>
+                  <ng-container *ngTemplateOutlet="payerBlock; context: { $implicit: item }"></ng-container>
                   <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                     <div><strong>Gói:</strong> {{ item.packageId?.name || 'N/A' }}</div>
                     <div>
@@ -95,6 +167,49 @@
                       <strong>Network:</strong> 
                       <nz-tag [nzColor]="'blue'">{{ item.cryptoNetwork }}</nz-tag>
                     </div>
+                  </div>
+
+                  <div class="manual-note" *ngIf="getManualUpdateInfo(item) as manual">
+                    <i nz-icon nzType="edit" nzTheme="outline"></i>
+                    <span>
+                      {{ getStatusText(manual.status) }} bởi <strong>{{ manual.byRole || 'quản trị viên' }}</strong>
+                      <ng-container *ngIf="manual.updatedAt">
+                        lúc {{ manual.updatedAt | date:'dd/MM/yyyy HH:mm' }}
+                      </ng-container>
+                      <ng-container *ngIf="manual.note"> — {{ manual.note }}</ng-container>
+                    </span>
+                  </div>
+
+                  <div class="manual-actions" *ngIf="canManualUpdate(item)">
+                    <button
+                      nz-button
+                      nzSize="small"
+                      nzType="primary"
+                      *ngIf="item.status !== 'completed'"
+                      [nzLoading]="isUpdatingPayment(item)"
+                      (click)="openManualUpdate(item, 'completed')">
+                      <i nz-icon nzType="check" nzTheme="outline"></i>
+                      Xác nhận đã nhận tiền
+                    </button>
+                    <button
+                      nz-button
+                      nzSize="small"
+                      nzType="default"
+                      *ngIf="item.status === 'completed'"
+                      [nzLoading]="isUpdatingPayment(item)"
+                      (click)="openManualUpdate(item, 'pending')">
+                      <i nz-icon nzType="undo" nzTheme="outline"></i>
+                      Đưa về chờ đối soát
+                    </button>
+                    <button
+                      nz-button
+                      nzSize="small"
+                      nzDanger
+                      *ngIf="isAdmin && item.status !== 'failed' && item.status !== 'cancelled'"
+                      [nzLoading]="isUpdatingPayment(item)"
+                      (click)="openManualUpdate(item, 'failed')">
+                      Đánh dấu thất bại
+                    </button>
                   </div>
                 </nz-list-item-meta-description>
               </nz-list-item-meta>
@@ -141,6 +256,10 @@
                   <nz-tag *ngIf="item.metadata?.matchedByAccount" nzColor="blue">
                     Khớp theo tài khoản hồ sơ
                   </nz-tag>
+                  <nz-tag *ngIf="getManualUpdateInfo(item)" nzColor="gold">
+                    <i nz-icon nzType="user" nzTheme="outline"></i>
+                    Xác nhận thủ công
+                  </nz-tag>
                   <span *ngIf="item.status === 'pending'" style="font-size: 11px; color: #ff9800;">
                     <i nz-icon nzType="clock-circle" nzTheme="outline"></i>
                     Đang chờ thanh toán
@@ -148,6 +267,7 @@
                 </div>
               </nz-list-item-meta-title>
               <nz-list-item-meta-description>
+                <ng-container *ngTemplateOutlet="payerBlock; context: { $implicit: item }"></ng-container>
                 <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                   <div><strong>Gói:</strong> {{ item.packageId?.name || 'N/A' }}</div>
                   <div><strong>Số tiền:</strong> {{ formatAmount(item.amount, item.currency || 'VND') }}</div>
@@ -173,26 +293,49 @@
                       {{ item.paymentGatewayResponse.transferAmount | number:'1.0-0' }} VNĐ
                     </code>
                   </div>
-                  <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                    <button
-                      nz-button
-                      nzSize="small"
-                      nzType="default"
-                      *ngIf="item.status !== 'completed'"
-                      [nzLoading]="isUpdatingPayment(item)"
-                      (click)="updateSePayPaymentStatus(item, 'completed')">
-                      Đánh dấu đã thanh toán
-                    </button>
-                    <button
-                      nz-button
-                      nzSize="small"
-                      nzType="default"
-                      *ngIf="item.status === 'completed' && item.metadata?.paymentType !== 'bank_transfer_in'"
-                      [nzLoading]="isUpdatingPayment(item)"
-                      (click)="updateSePayPaymentStatus(item, 'pending')">
-                      Đưa về chờ đối soát
-                    </button>
-                  </div>
+                </div>
+
+                <div class="manual-note" *ngIf="getManualUpdateInfo(item) as manual">
+                  <i nz-icon nzType="edit" nzTheme="outline"></i>
+                  <span>
+                    {{ getStatusText(manual.status) }} bởi <strong>{{ manual.byRole || 'quản trị viên' }}</strong>
+                    <ng-container *ngIf="manual.updatedAt">
+                      lúc {{ manual.updatedAt | date:'dd/MM/yyyy HH:mm' }}
+                    </ng-container>
+                    <ng-container *ngIf="manual.note"> — {{ manual.note }}</ng-container>
+                  </span>
+                </div>
+
+                <div class="manual-actions" *ngIf="canManualUpdate(item)">
+                  <button
+                    nz-button
+                    nzSize="small"
+                    nzType="primary"
+                    *ngIf="item.status !== 'completed'"
+                    [nzLoading]="isUpdatingPayment(item)"
+                    (click)="openManualUpdate(item, 'completed')">
+                    <i nz-icon nzType="check" nzTheme="outline"></i>
+                    Xác nhận đã nhận tiền
+                  </button>
+                  <button
+                    nz-button
+                    nzSize="small"
+                    nzType="default"
+                    *ngIf="item.status === 'completed' && item.metadata?.paymentType !== 'bank_transfer_in'"
+                    [nzLoading]="isUpdatingPayment(item)"
+                    (click)="openManualUpdate(item, 'pending')">
+                    <i nz-icon nzType="undo" nzTheme="outline"></i>
+                    Đưa về chờ đối soát
+                  </button>
+                  <button
+                    nz-button
+                    nzSize="small"
+                    nzDanger
+                    *ngIf="isAdmin && item.status !== 'failed' && item.status !== 'cancelled'"
+                    [nzLoading]="isUpdatingPayment(item)"
+                    (click)="openManualUpdate(item, 'failed')">
+                    Đánh dấu thất bại
+                  </button>
                 </div>
               </nz-list-item-meta-description>
             </nz-list-item-meta>
@@ -221,9 +364,13 @@
                   <nz-tag [nzColor]="getStatusColor(item.status)">
                     {{ getStatusText(item.status) }}
                   </nz-tag>
+                  <nz-tag *ngIf="isAdmin" [nzColor]="getPaymentKindColor(item)">
+                    {{ getSePayPaymentTypeLabel(item) }}
+                  </nz-tag>
                 </div>
               </nz-list-item-meta-title>
               <nz-list-item-meta-description>
+                <ng-container *ngTemplateOutlet="payerBlock; context: { $implicit: item }"></ng-container>
                 <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                   <div><strong>Gói:</strong> {{ item.packageId?.name || 'N/A' }}</div>
                   <div><strong>Số tiền:</strong> {{ formatAmount(item.amount, item.currency || 'USD') }}</div>
@@ -259,9 +406,13 @@
                   <nz-tag [nzColor]="getStatusColor(item.status)">
                     {{ getStatusText(item.status) }}
                   </nz-tag>
+                  <nz-tag *ngIf="isAdmin" [nzColor]="getPaymentKindColor(item)">
+                    {{ getSePayPaymentTypeLabel(item) }}
+                  </nz-tag>
                 </div>
               </nz-list-item-meta-title>
               <nz-list-item-meta-description>
+                <ng-container *ngTemplateOutlet="payerBlock; context: { $implicit: item }"></ng-container>
                 <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                   <div><strong>Gói:</strong> {{ item.packageId?.name || 'N/A' }}</div>
                   <div>
@@ -287,4 +438,138 @@
       <nz-empty *ngIf="cryptoPayments.length === 0" nzNotFoundContent="Chưa có lịch sử thanh toán Crypto"></nz-empty>
     </nz-tab>
   </nz-tabset>
+
+  <!-- Hộp thoại xác nhận thủ công: bắt buộc có lý do để lưu vết -->
+  <nz-modal
+    [(nzVisible)]="manualModalVisible"
+    nzTitle="Xác nhận trạng thái thanh toán thủ công"
+    [nzOkLoading]="manualSubmitting"
+    nzOkText="Xác nhận"
+    nzCancelText="Hủy"
+    (nzOnOk)="confirmManualUpdate()"
+    (nzOnCancel)="cancelManualUpdate()">
+    <ng-container *nzModalContent>
+      <nz-alert
+        nzType="warning"
+        nzShowIcon
+        nzMessage="Thao tác này ghi nhận tiền thật"
+        nzDescription="Chỉ dùng khi đã đối chiếu với sao kê ngân hàng. Hệ thống lưu lại người thực hiện, thời điểm và lý do."
+        style="margin-bottom: 16px;">
+      </nz-alert>
+
+      <div class="manual-summary" *ngIf="manualTarget">
+        <div>
+          <strong>Giao dịch:</strong>
+          {{ getSePayPaymentTypeLabel(manualTarget) }}
+          <nz-tag [nzColor]="getStatusColor(manualTarget.status)">
+            {{ getStatusText(manualTarget.status) }}
+          </nz-tag>
+        </div>
+        <div>
+          <strong>Số tiền:</strong>
+          {{ formatAmount(manualTarget.amount, manualTarget.currency || 'VND') }}
+        </div>
+        <ng-container *ngTemplateOutlet="payerBlock; context: { $implicit: manualTarget }"></ng-container>
+        <div *ngIf="manualTarget.transactionId">
+          <strong>Mã GD:</strong>
+          <code>{{ manualTarget.transactionId }}</code>
+        </div>
+        <div *ngIf="manualTarget.metadata?.transactionContent">
+          <strong>Nội dung CK:</strong> {{ manualTarget.metadata.transactionContent }}
+        </div>
+        <div>
+          <strong>Ngày tạo:</strong>
+          {{ (manualTarget.createdAt || manualTarget.created_at) | date:'dd/MM/yyyy HH:mm' }}
+        </div>
+      </div>
+
+      <div class="manual-field">
+        <label>Trạng thái mới</label>
+        <nz-select [(ngModel)]="manualStatus" name="manualStatus" style="width: 100%;">
+          <nz-option
+            *ngFor="let opt of manualStatusOptions"
+            [nzValue]="opt.value"
+            [nzLabel]="opt.label">
+          </nz-option>
+        </nz-select>
+      </div>
+
+      <div class="manual-field">
+        <label>Mã giao dịch ngân hàng (tuỳ chọn)</label>
+        <input
+          nz-input
+          [(ngModel)]="manualTransactionId"
+          name="manualTransactionId"
+          placeholder="Dán mã GD trên sao kê nếu webhook không ghi nhận" />
+      </div>
+
+      <div class="manual-field">
+        <label>Lý do đối soát thủ công <span class="required">*</span></label>
+        <textarea
+          nz-input
+          [(ngModel)]="manualNote"
+          name="manualNote"
+          rows="3"
+          placeholder="VD: Webhook SePay lỗi, đã đối chiếu sao kê VCB ngày 01/09 lúc 13:14, số tiền 200.000đ khớp">
+        </textarea>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <ng-template #payerBlock let-item>
+    <div class="party-card" *ngIf="isAdmin && item">
+      <div class="party-kind">
+        <nz-tag [nzColor]="getPaymentKindColor(item)">{{ getSePayPaymentTypeLabel(item) }}</nz-tag>
+        <span *ngIf="getPaymentKind(item) === 'package'">Người đăng ký gói trên hệ thống</span>
+        <span *ngIf="getPaymentKind(item) === 'hotel_guest'">Khách thanh toán tại khách sạn</span>
+        <span *ngIf="getPaymentKind(item) === 'hotel_transfer'">Tiền vào tài khoản khách sạn</span>
+      </div>
+
+      <ng-container *ngIf="getAccountUser(item) as user">
+        <div class="party-row">
+          <span class="party-label">{{ getPaymentKind(item) === 'package' ? 'Người dùng' : 'Tài khoản hệ thống' }}</span>
+          <span class="party-value">
+            <strong>{{ user.name }}</strong>
+            <nz-tag *ngIf="user.roleLabel" nzColor="default">{{ user.roleLabel }}</nz-tag>
+          </span>
+        </div>
+        <div class="party-row" *ngIf="user.id">
+          <span class="party-label">User ID</span>
+          <span class="party-value">
+            <code>{{ user.id }}</code>
+            <button type="button" nz-button nzType="link" nzSize="small" (click)="copyText(user.id, 'User ID')">
+              Copy
+            </button>
+          </span>
+        </div>
+        <div class="party-row" *ngIf="user.username">
+          <span class="party-label">Username</span>
+          <span class="party-value">{{ user.username }}</span>
+        </div>
+        <div class="party-row" *ngIf="user.email">
+          <span class="party-label">Email</span>
+          <span class="party-value">{{ user.email }}</span>
+        </div>
+      </ng-container>
+
+      <div class="party-row" *ngIf="getGuestName(item)">
+        <span class="party-label">Khách tại KS</span>
+        <span class="party-value">
+          <strong>{{ getGuestName(item) }}</strong>
+          <span *ngIf="getGuestPhone(item)"> · {{ getGuestPhone(item) }}</span>
+        </span>
+      </div>
+      <div class="party-row" *ngIf="getHotelName(item) || getHotelId(item)">
+        <span class="party-label">Khách sạn</span>
+        <span class="party-value">
+          {{ getHotelName(item) || '—' }}
+          <code *ngIf="getHotelId(item)">{{ getHotelId(item) }}</code>
+        </span>
+      </div>
+      <div class="party-row" *ngIf="getRoomLabel(item)">
+        <span class="party-label">Phòng</span>
+        <span class="party-value">{{ getRoomLabel(item) }}</span>
+      </div>
+    </div>
+  </ng-template>
 </div> 

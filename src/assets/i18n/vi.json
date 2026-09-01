@@ -4364,7 +4364,35 @@
       "LOAD_FAIL": "Không thể tải dữ liệu. Vui lòng thử lại sau.",
       "SEARCH_FAIL": "Không thể tìm kiếm. Vui lòng thử lại sau.",
       "UPDATE_STATUS_SUCCESS": "Đã cập nhật trạng thái thanh toán",
-      "UPDATE_STATUS_FAIL": "Không thể cập nhật trạng thái thanh toán"
+      "UPDATE_STATUS_FAIL": "Không thể cập nhật trạng thái thanh toán",
+      "MANUAL_NOTE_REQUIRED": "Vui lòng nhập lý do đối soát thủ công để lưu vết",
+      "MANUAL_NOT_SUPPORTED": "Giao dịch này không hỗ trợ xác nhận thủ công"
+    },
+    "RECONCILE": {
+      "TITLE": "Đối soát thủ công",
+      "SYSTEM_WIDE": "Toàn hệ thống",
+      "SYSTEM_WIDE_TOOLTIP": "Bỏ lọc theo khách sạn để xem giao dịch của tất cả người dùng trong hệ thống",
+      "HINT": "Khi webhook SePay lỗi hoặc tiền đã về tài khoản mà hệ thống chưa ghi nhận, hãy đối chiếu với sao kê ngân hàng rồi xác nhận thủ công. Mọi thao tác đều lưu lại người thực hiện và lý do.",
+      "ALL_STATUSES": "Tất cả trạng thái",
+      "SEARCH_PLACEHOLDER": "Mã GD, số hóa đơn, nội dung chuyển khoản…",
+      "SEARCH": "Tìm",
+      "CLEAR": "Xóa lọc",
+      "COUNT": "{{count}} giao dịch SePay",
+      "MANUAL_BADGE": "Xác nhận thủ công",
+      "CONFIRM_RECEIVED": "Xác nhận đã nhận tiền",
+      "BACK_TO_PENDING": "Đưa về chờ đối soát",
+      "MARK_FAILED": "Đánh dấu thất bại",
+      "MODAL_TITLE": "Xác nhận trạng thái thanh toán thủ công",
+      "MODAL_WARNING": "Thao tác này ghi nhận tiền thật",
+      "MODAL_WARNING_DESC": "Chỉ dùng khi đã đối chiếu với sao kê ngân hàng. Hệ thống lưu lại người thực hiện, thời điểm và lý do.",
+      "NEW_STATUS": "Trạng thái mới",
+      "NOTE_LABEL": "Lý do đối soát thủ công",
+      "NOTE_PLACEHOLDER": "VD: Webhook SePay lỗi, đã đối chiếu sao kê VCB ngày 01/09 lúc 13:14, số tiền 200.000đ khớp",
+      "OWNER": "Chủ giao dịch",
+      "STATUS_COMPLETED": "Hoàn thành — đã nhận được tiền",
+      "STATUS_PENDING": "Đang xử lý — chờ đối soát lại",
+      "STATUS_FAILED": "Thất bại — không nhận được tiền",
+      "STATUS_CANCELLED": "Đã hủy — giao dịch bị hủy"
     }
   },
   "ROOM_CATEGORY": {

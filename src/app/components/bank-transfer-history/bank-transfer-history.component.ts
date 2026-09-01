@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
 import { PaymentSpeakerService } from '../../services/payment-speaker.service';
 import { UserService } from '../../services/user.service';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 
@@ -43,6 +43,20 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   } | null = null;
   updatingPaymentIds = new Set<string>();
 
+  // ===== Đối soát thủ công (admin/superadmin) =====
+  /** Bỏ lọc theo hotel/user để đối soát giao dịch của toàn bộ người dùng. */
+  systemWideMode = true;
+  reconcileStatusFilter = '';
+  reconcileSearch = '';
+  sepayTotal = 0;
+
+  manualModalVisible = false;
+  manualTarget: any = null;
+  manualStatus: 'pending' | 'completed' | 'failed' | 'cancelled' = 'completed';
+  manualNote = '';
+  manualTransactionId = '';
+  manualSubmitting = false;
+
   // Auto-refresh interval
   private refreshInterval: any = null;
   private readonly REFRESH_INTERVAL = 30000; // 30 giây
@@ -51,6 +65,17 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   private isFirstLoadSePay = true;
   private lastPlayedPaymentId: string | null = null;
   private readonly paymentSpeakerChangedHandler = (event: Event) => this.handlePaymentSpeakerChanged(event as CustomEvent);
+  private authSub: Subscription | null = null;
+  private scopeTouched = false;
+  private adminHistoryLoaded = false;
+
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.authService.isSuperAdmin();
+  }
 
   // Payment method visibility settings
   enablePayPalPayment: boolean = false;
@@ -77,6 +102,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     }
     const resolvedHotelId = this.authService.getHotelId() || currentUser?.hotelId || '';
     this.hotelId = typeof resolvedHotelId === 'string' ? resolvedHotelId : String((resolvedHotelId as any)?._id || '');
+    this.systemWideMode = this.authService.isAdmin();
     this.searchForm = this.fb.group({
       startDate: [null],
       endDate: [null],
@@ -92,6 +118,22 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     if (!this.hotelId && this.userId) {
       this.refreshPaymentHistory();
     }
+
+    this.authSub = this.authService.currentUser$.subscribe((user) => {
+      if (!user) return;
+      if (user._id) this.userId = String(user._id);
+      const hotel = this.authService.getHotelId() || (user as any).hotelId || '';
+      if (hotel) {
+        this.hotelId = typeof hotel === 'string' ? hotel : String(hotel._id || hotel);
+      }
+      if (this.authService.isAdmin() && !this.scopeTouched) {
+        this.systemWideMode = true;
+        if (!this.adminHistoryLoaded) {
+          this.adminHistoryLoaded = true;
+          this.refreshPaymentHistory();
+        }
+      }
+    });
 
     this.startAutoRefresh();
     this.startPaymentSocket();
@@ -142,6 +184,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     }
     this.stopPaymentSocket();
     window.removeEventListener('hotelPaymentSpeakerChanged', this.paymentSpeakerChangedHandler);
+    this.authSub?.unsubscribe();
   }
 
   private startPaymentSocket(): void {
@@ -254,7 +297,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Bắt đầu auto-refresh payment history
    */
   startAutoRefresh(): void {
-    if (!this.userId && !this.hotelId) return;
+    if (!this.canLoadPayments()) return;
 
     // Clear interval cũ nếu có
     if (this.refreshInterval) {
@@ -272,7 +315,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Refresh tất cả payment history (không refresh SePay transactions)
    */
   refreshPaymentHistory(): void {
-    if (!this.userId && !this.hotelId) return;
+    if (!this.canLoadPayments()) return;
 
     // Refresh payment history từ các phương thức thanh toán
     this.loadPayPalPayments();
@@ -424,19 +467,18 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Load lịch sử thanh toán SePay từ PaymentHistory
    */
   loadSePayPayments(): void {
-    if ((!this.userId && !this.hotelId) || !this.enableSePayPayment) return;
+    if (!this.canLoadPayments() || !this.enableSePayPayment) return;
 
-    this.sepayService.getPaymentHistory({
-      hotelId: this.hotelId || undefined,
-      userId: this.hotelId ? undefined : this.userId,
-      limit: 100
-    }).subscribe({
+    this.sepayService.getPaymentHistory(this.sepayQueryParams()).subscribe({
       next: (response: any) => {
         if (response?.success && response.data) {
           this.sepayPayments = response.data;
+          this.sepayTotal = Number(response.total) || response.data.length;
           
           // LOGIC PHÁT ÂM THANH KHI CÓ TIỀN VÀO
-          const paymentHistories = response.data;
+          // Chế độ toàn hệ thống liệt kê giao dịch của mọi khách sạn, nên không phát loa
+          // để tránh báo tiền vào của người khác.
+          const paymentHistories = this.systemWideMode ? [] : response.data;
           if (paymentHistories && paymentHistories.length > 0) {
             // Tìm giao dịch gần nhất đã thành công
             const latestCompleted = paymentHistories.find((p: any) => 
@@ -478,7 +520,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Load tất cả lịch sử thanh toán (tổng hợp từ tất cả phương thức)
    */
   loadAllPayments(): void {
-    if (!this.userId && !this.hotelId) return;
+    if (!this.canLoadPayments()) return;
 
     this.allPaymentsLoading = true;
 
@@ -492,11 +534,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
       requests.push(this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 100 }));
     }
     if (this.enableSePayPayment) {
-      requests.push(this.sepayService.getPaymentHistory({
-        hotelId: this.hotelId || undefined,
-        userId: this.hotelId ? undefined : this.userId,
-        limit: 100
-      }));
+      requests.push(this.sepayService.getPaymentHistory(this.sepayQueryParams()));
     }
 
     if (requests.length === 0) {
@@ -699,35 +737,295 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   }
 
   getSePayPaymentTypeLabel(item: any): string {
-    const paymentType = String(item?.metadata?.paymentType || '').trim();
-    switch (paymentType) {
-      case 'room_checkout':
-        return 'Thanh toán phòng';
-      case 'booking_deposit':
-        return 'Đặt cọc';
-      case 'bank_transfer_in':
-        return 'Tiền vào tài khoản';
+    const kind = this.getPaymentKind(item);
+    switch (kind) {
+      case 'package':
+        return 'Đăng ký gói';
+      case 'hotel_guest':
+        return String(item?.metadata?.paymentType || '') === 'booking_deposit'
+          ? 'Khách đặt cọc'
+          : 'Khách thanh toán tại KS';
+      case 'hotel_transfer':
+        return 'Tiền vào tài khoản KS';
       default:
-        return 'Giao dịch SePay';
+        if (item?.paymentMethod === 'paypal') return 'Thanh toán PayPal';
+        if (item?.paymentMethod === 'crypto_usdt') return 'Thanh toán Crypto';
+        return 'Giao dịch';
     }
   }
 
-  updateSePayPaymentStatus(item: any, status: 'pending' | 'completed'): void {
+  getPaymentKind(item: any): 'package' | 'hotel_guest' | 'hotel_transfer' | 'other' {
+    const paymentType = String(item?.metadata?.paymentType || '').trim();
+    if (item?.packageId || paymentType === 'pricing' || paymentType === 'pricing_subscription') {
+      return 'package';
+    }
+    if (paymentType === 'room_checkout' || paymentType === 'booking_deposit' || item?.roomId) {
+      return 'hotel_guest';
+    }
+    if (paymentType === 'bank_transfer_in') {
+      return 'hotel_transfer';
+    }
+    return 'other';
+  }
+
+  getPaymentKindColor(item: any): string {
+    switch (this.getPaymentKind(item)) {
+      case 'package':
+        return 'purple';
+      case 'hotel_guest':
+        return 'cyan';
+      case 'hotel_transfer':
+        return 'blue';
+      default:
+        return 'default';
+    }
+  }
+
+  private asId(value: any): string {
+    if (!value) return '';
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    return String(value._id || value.id || '').trim();
+  }
+
+  getAccountUser(item: any): {
+    id: string;
+    name: string;
+    username: string;
+    email: string;
+    phone: string;
+    role: string;
+    roleLabel: string;
+  } | null {
+    const raw = item?.userId;
+    if (!raw) return null;
+    const id = this.asId(raw);
+    const obj = typeof raw === 'object' ? raw : {};
+    const username = String(obj.username || '').trim();
+    const email = String(obj.email || '').trim();
+    const name = String(obj.fullName || obj.name || username || email || '').trim();
+    const role = String(obj.role || '').trim();
+    const roleMap: Record<string, string> = {
+      superadmin: 'Superadmin',
+      admin: 'Admin',
+      business: 'Doanh nghiệp',
+      hotel: 'Chủ KS',
+      staff: 'Nhân viên',
+      guest: 'Tài khoản khách'
+    };
+    return {
+      id,
+      name: name || id,
+      username,
+      email,
+      phone: String(obj.phone || '').trim(),
+      role,
+      roleLabel: roleMap[role] || role
+    };
+  }
+
+  getGuestName(item: any): string {
+    return String(item?.metadata?.guestName || item?.metadata?.customerName || '').trim();
+  }
+
+  getGuestPhone(item: any): string {
+    return String(item?.metadata?.guestPhone || item?.metadata?.customerPhone || '').trim();
+  }
+
+  getHotelName(item: any): string {
+    const hotel = item?.hotelId;
+    if (hotel && typeof hotel === 'object') return String(hotel.name || '').trim();
+    return '';
+  }
+
+  getHotelId(item: any): string {
+    return this.asId(item?.hotelId);
+  }
+
+  getRoomLabel(item: any): string {
+    const fromMeta = String(item?.metadata?.roomNumber || '').trim();
+    if (fromMeta) return fromMeta;
+    const room = item?.roomId;
+    if (room && typeof room === 'object') return String(room.roomNumber || '').trim();
+    return '';
+  }
+
+  copyText(value: string, label = 'ID'): void {
+    const text = String(value || '').trim();
+    if (!text || !navigator?.clipboard) return;
+    navigator.clipboard.writeText(text).then(
+      () => this.message.success(`Đã copy ${label}`),
+      () => this.message.error(`Không copy được ${label}`)
+    );
+  }
+
+  /**
+   * Đủ dữ kiện để gọi API chưa. Admin ở chế độ toàn hệ thống không cần userId/hotelId
+   * vì backend tự mở phạm vi theo quyền.
+   */
+  private canLoadPayments(): boolean {
+    if (this.isAdmin && this.systemWideMode) return true;
+    return !!this.userId || !!this.hotelId;
+  }
+
+  /**
+   * Tham số truy vấn SePay. Ở chế độ toàn hệ thống ta cố tình bỏ hotelId/userId
+   * để backend trả về giao dịch của mọi người dùng.
+   */
+  private sepayQueryParams(): {
+    hotelId?: string;
+    userId?: string;
+    status?: string;
+    search?: string;
+    scope?: 'system' | 'own';
+    limit: number;
+  } {
+    const scopeAll = this.isAdmin && this.systemWideMode;
+    return {
+      hotelId: scopeAll ? undefined : this.hotelId || undefined,
+      userId: scopeAll ? undefined : this.hotelId ? undefined : this.userId,
+      status: this.reconcileStatusFilter || undefined,
+      search: this.reconcileSearch.trim() || undefined,
+      scope: this.isAdmin ? (scopeAll ? 'system' : 'own') : undefined,
+      limit: scopeAll ? 200 : 100
+    };
+  }
+
+  /** Bật/tắt phạm vi toàn hệ thống rồi tải lại. */
+  onSystemWideModeChange(enabled: boolean): void {
+    this.scopeTouched = true;
+    this.systemWideMode = enabled;
+    this.isFirstLoadSePay = true;
+    this.lastPlayedPaymentId = null;
+    this.refreshPaymentHistory();
+  }
+
+  /** Áp dụng bộ lọc đối soát. */
+  applyReconcileFilters(): void {
+    this.refreshPaymentHistory();
+  }
+
+  clearReconcileFilters(): void {
+    this.reconcileStatusFilter = '';
+    this.reconcileSearch = '';
+    this.refreshPaymentHistory();
+  }
+
+  /** Chỉ giao dịch SePay có endpoint cập nhật trạng thái thủ công. */
+  canManualUpdate(item: any): boolean {
+    if (!this.isAdmin || !item) return false;
+    const method = String(item.paymentMethod || 'sepay');
+    if (method !== 'sepay') return false;
+    return !!this.getPaymentHistoryId(item);
+  }
+
+  /** Chủ giao dịch — chỉ cần khi admin xem nhiều người dùng cùng lúc. */
+  getOwnerLabel(item: any): string {
+    const user = this.getAccountUser(item);
+    const hotel = this.getHotelName(item);
+    const parts: string[] = [];
+    if (user) {
+      parts.push(user.name);
+      if (user.id) parts.push(user.id);
+    }
+    if (hotel) parts.push(hotel);
+    return parts.join(' · ');
+  }
+
+  /** Thông tin lần đối soát thủ công gần nhất, để biết ai đã xác nhận. */
+  getManualUpdateInfo(item: any): { byRole: string; note: string; updatedAt: string; status: string } | null {
+    const entry = item?.paymentGatewayResponse?.manualStatusUpdate;
+    if (!entry) return null;
+    return {
+      byRole: String(entry.byEmail || entry.byRole || '').trim(),
+      note: String(entry.note || '').trim(),
+      updatedAt: String(entry.updatedAt || '').trim(),
+      status: String(entry.status || '').trim()
+    };
+  }
+
+  /** Các trạng thái người dùng hiện tại được phép đặt thủ công. */
+  get manualStatusOptions(): Array<{ value: 'pending' | 'completed' | 'failed' | 'cancelled'; label: string }> {
+    const options: Array<{ value: 'pending' | 'completed' | 'failed' | 'cancelled'; label: string }> = [
+      { value: 'completed', label: 'Hoàn thành — đã nhận được tiền' },
+      { value: 'pending', label: 'Đang xử lý — chờ đối soát lại' }
+    ];
+    if (this.isAdmin) {
+      options.push(
+        { value: 'failed', label: 'Thất bại — không nhận được tiền' },
+        { value: 'cancelled', label: 'Đã hủy — giao dịch bị hủy' }
+      );
+    }
+    return options;
+  }
+
+  /**
+   * Mở hộp thoại xác nhận thủ công. Bắt buộc qua bước này thay vì đổi trạng thái
+   * ngay khi bấm, vì đây là thao tác ghi nhận tiền thật.
+   */
+  openManualUpdate(item: any, status: 'pending' | 'completed' | 'failed' | 'cancelled' = 'completed'): void {
+    if (!this.canManualUpdate(item)) {
+      this.message.warning('Giao dịch này không hỗ trợ xác nhận thủ công');
+      return;
+    }
+    this.manualTarget = item;
+    this.manualStatus = status;
+    this.manualNote = '';
+    this.manualTransactionId = '';
+    this.manualSubmitting = false;
+    this.manualModalVisible = true;
+  }
+
+  cancelManualUpdate(): void {
+    this.manualModalVisible = false;
+    this.manualTarget = null;
+    this.manualNote = '';
+    this.manualTransactionId = '';
+    this.manualSubmitting = false;
+  }
+
+  confirmManualUpdate(): void {
+    const item = this.manualTarget;
     const paymentHistoryId = this.getPaymentHistoryId(item);
-    if (!paymentHistoryId || this.updatingPaymentIds.has(paymentHistoryId)) {
+    if (!paymentHistoryId || this.manualSubmitting) {
       return;
     }
 
+    const note = this.manualNote.trim();
+    if (note.length < 5) {
+      this.message.warning('Vui lòng nhập lý do đối soát thủ công (tối thiểu 5 ký tự)');
+      return;
+    }
+
+    this.manualSubmitting = true;
     this.updatingPaymentIds.add(paymentHistoryId);
-    this.sepayService.updatePaymentHistoryStatus(paymentHistoryId, status).subscribe({
+    this.sepayService
+      .updatePaymentHistoryStatus(
+        paymentHistoryId,
+        this.manualStatus,
+        note,
+        this.manualTransactionId.trim()
+      )
+      .subscribe({
       next: (response: any) => {
         this.updatingPaymentIds.delete(paymentHistoryId);
-        this.message.success(response?.message || this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.UPDATE_STATUS_SUCCESS'));
+        this.manualSubmitting = false;
+        this.manualModalVisible = false;
+        this.manualTarget = null;
+        this.manualNote = '';
+        this.manualTransactionId = '';
+        this.message.success(
+          response?.message || this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.UPDATE_STATUS_SUCCESS')
+        );
         this.refreshPaymentHistory();
       },
       error: (error) => {
         this.updatingPaymentIds.delete(paymentHistoryId);
-        this.message.error(error?.error?.message || this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.UPDATE_STATUS_FAIL'));
+        this.manualSubmitting = false;
+        this.message.error(
+          error?.error?.error ||
+            error?.error?.message ||
+            this.translate.instant('BANK_TRANSFER_HISTORY.MESSAGES.UPDATE_STATUS_FAIL')
+        );
       }
     });
   }
