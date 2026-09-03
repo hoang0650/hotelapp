@@ -4188,6 +4188,10 @@
     "TERMS_OF_SERVICE": {
       "TITLE": "Thỏa thuận bảo vệ và xử lý dữ liệu cá nhân",
       "DESCRIPTION": "Thỏa thuận chấp thuận bảo vệ và xử lý dữ liệu cá nhân PHHotel (Nghị định 13/2023/NĐ-CP)."
+    },
+    "DELETE_ACCOUNT": {
+      "TITLE": "Xóa tài khoản PHHotel",
+      "DESCRIPTION": "Hướng dẫn và form yêu cầu xóa tài khoản PHHotel theo chính sách Google Play."
     }
   },
   "INVOICE": {

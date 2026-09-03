@@ -3915,6 +3915,10 @@
     "TERMS_OF_SERVICE": {
       "TITLE": "Nutzungsbedingungen",
       "DESCRIPTION": "Nutzungsbedingungen von PHHotel."
+    },
+    "DELETE_ACCOUNT": {
+      "TITLE": "PHHotel-Konto löschen",
+      "DESCRIPTION": "Anleitung zur Kontolöschung für die Google-Play-Richtlinie zur Kontolöschung."
     }
   },
   "INVOICE": {

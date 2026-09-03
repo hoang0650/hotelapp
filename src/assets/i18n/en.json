@@ -4048,6 +4048,10 @@
     "TERMS_OF_SERVICE": {
       "TITLE": "Personal Data Protection Consent Agreement",
       "DESCRIPTION": "PHHotel personal data protection and processing consent agreement (Decree 13/2023/ND-CP)."
+    },
+    "DELETE_ACCOUNT": {
+      "TITLE": "Delete PHHotel account",
+      "DESCRIPTION": "PHHotel account deletion instructions for Google Play Account Deletion policy."
     }
   },
   "INVOICE": {

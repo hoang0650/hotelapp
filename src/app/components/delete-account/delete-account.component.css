@@ -1,0 +1,34 @@
+.delete-account-page {
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+.card-panel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+h1 {
+  font-size: 1.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.lead {
+  color: #555;
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #0d6efd;
+}
+
+.muted {
+  color: #777;
+  font-size: 0.9rem;
+  margin-top: 1.5rem;
+}

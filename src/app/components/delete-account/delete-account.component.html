@@ -1,0 +1,50 @@
+<div class="delete-account-page">
+  <div class="container py-5">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <div class="card-panel">
+          <h1>Xóa tài khoản PHHotel</h1>
+          <p class="lead">Delete your PHHotel account (Google Play Account Deletion)</p>
+
+          <h2>Cách 1 — Trong ứng dụng</h2>
+          <ol>
+            <li>Đăng nhập PHHotel PMS hoặc <a href="https://admin.phhotel.vn/login">admin.phhotel.vn</a></li>
+            <li>Vào <strong>Hồ sơ / Profile</strong></li>
+            <li>Chọn <strong>Xóa tài khoản</strong> và xác nhận bằng mật khẩu</li>
+          </ol>
+
+          <h2>Cách 2 — Gửi yêu cầu tại đây</h2>
+          <p>Nhập email đã đăng ký. Chúng tôi xử lý trong vòng 7 ngày làm việc.</p>
+
+          <form nz-form [formGroup]="form" (ngSubmit)="submit()" *ngIf="!submitted">
+            <nz-form-item>
+              <nz-form-label nzRequired>Email tài khoản</nz-form-label>
+              <nz-form-control [nzErrorTip]="'Nhập email hợp lệ'">
+                <input nz-input formControlName="email" type="email" placeholder="email@example.com" />
+              </nz-form-control>
+            </nz-form-item>
+            <nz-form-item>
+              <nz-form-label>Ghi chú (không bắt buộc)</nz-form-label>
+              <nz-form-control>
+                <textarea nz-input formControlName="note" rows="3" placeholder="Lý do hoặc thông tin bổ sung"></textarea>
+              </nz-form-control>
+            </nz-form-item>
+            <button nz-button nzType="primary" [nzLoading]="submitting" type="submit">Gửi yêu cầu xóa</button>
+          </form>
+
+          <nz-alert
+            *ngIf="submitted"
+            nzType="success"
+            nzShowIcon
+            nzMessage="Đã ghi nhận yêu cầu"
+            nzDescription="Chúng tôi sẽ xử lý và phản hồi qua email trong vòng 7 ngày làm việc.">
+          </nz-alert>
+
+          <h2>Liên hệ trực tiếp</h2>
+          <p>Email: <a href="mailto:support@phhotel.vn">support@phhotel.vn</a></p>
+          <p class="muted">App: PHHotel PMS · Package: app.ronk.phhotel_pms_interface</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
