@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -17,7 +18,8 @@ export class DeleteAccountComponent {
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private translate: TranslateService
   ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -35,11 +37,13 @@ export class DeleteAccountComponent {
       next: () => {
         this.submitted = true;
         this.submitting = false;
-        this.message.success('Đã gửi yêu cầu xóa tài khoản.');
+        this.message.success(this.translate.instant('DELETE_ACCOUNT.SUCCESS_TOAST'));
       },
       error: (err) => {
         this.submitting = false;
-        this.message.error(err?.error?.message || 'Không gửi được yêu cầu. Email support@phhotel.vn');
+        this.message.error(
+          err?.error?.message || this.translate.instant('DELETE_ACCOUNT.ERROR_TOAST')
+        );
       }
     });
   }

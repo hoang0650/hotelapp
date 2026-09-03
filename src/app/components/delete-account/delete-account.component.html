@@ -3,46 +3,62 @@
     <div class="row">
       <div class="col-lg-8 mx-auto">
         <div class="card-panel">
-          <h1>Xóa tài khoản PHHotel</h1>
-          <p class="lead">Delete your PHHotel account (Google Play Account Deletion)</p>
+          <h1>{{ 'DELETE_ACCOUNT.TITLE' | translate }}</h1>
+          <p class="lead">{{ 'DELETE_ACCOUNT.SUBTITLE' | translate }}</p>
 
-          <h2>Cách 1 — Trong ứng dụng</h2>
+          <h2>{{ 'DELETE_ACCOUNT.METHOD1_TITLE' | translate }}</h2>
           <ol>
-            <li>Đăng nhập PHHotel PMS hoặc <a href="https://admin.phhotel.vn/login">admin.phhotel.vn</a></li>
-            <li>Vào <strong>Hồ sơ / Profile</strong></li>
-            <li>Chọn <strong>Xóa tài khoản</strong> và xác nhận bằng mật khẩu</li>
+            <li>
+              {{ 'DELETE_ACCOUNT.METHOD1_STEP1' | translate }}
+              <a href="https://admin.phhotel.vn/login">admin.phhotel.vn</a>
+            </li>
+            <li>{{ 'DELETE_ACCOUNT.METHOD1_STEP2' | translate }}</li>
+            <li>{{ 'DELETE_ACCOUNT.METHOD1_STEP3' | translate }}</li>
           </ol>
 
-          <h2>Cách 2 — Gửi yêu cầu tại đây</h2>
-          <p>Nhập email đã đăng ký. Chúng tôi xử lý trong vòng 7 ngày làm việc.</p>
+          <h2>{{ 'DELETE_ACCOUNT.METHOD2_TITLE' | translate }}</h2>
+          <p>{{ 'DELETE_ACCOUNT.METHOD2_DESC' | translate }}</p>
 
           <form nz-form [formGroup]="form" (ngSubmit)="submit()" *ngIf="!submitted">
             <nz-form-item>
-              <nz-form-label nzRequired>Email tài khoản</nz-form-label>
-              <nz-form-control [nzErrorTip]="'Nhập email hợp lệ'">
-                <input nz-input formControlName="email" type="email" placeholder="email&#64;example.com" />
+              <nz-form-label nzRequired>{{ 'DELETE_ACCOUNT.EMAIL_LABEL' | translate }}</nz-form-label>
+              <nz-form-control [nzErrorTip]="'DELETE_ACCOUNT.EMAIL_ERROR' | translate">
+                <input
+                  nz-input
+                  formControlName="email"
+                  type="email"
+                  [placeholder]="'DELETE_ACCOUNT.EMAIL_PLACEHOLDER' | translate" />
               </nz-form-control>
             </nz-form-item>
             <nz-form-item>
-              <nz-form-label>Ghi chú (không bắt buộc)</nz-form-label>
+              <nz-form-label>{{ 'DELETE_ACCOUNT.NOTE_LABEL' | translate }}</nz-form-label>
               <nz-form-control>
-                <textarea nz-input formControlName="note" rows="3" placeholder="Lý do hoặc thông tin bổ sung"></textarea>
+                <textarea
+                  nz-input
+                  formControlName="note"
+                  rows="3"
+                  [placeholder]="'DELETE_ACCOUNT.NOTE_PLACEHOLDER' | translate"></textarea>
               </nz-form-control>
             </nz-form-item>
-            <button nz-button nzType="primary" [nzLoading]="submitting" type="submit">Gửi yêu cầu xóa</button>
+            <button nz-button nzType="primary" [nzLoading]="submitting" type="submit">
+              {{ 'DELETE_ACCOUNT.SUBMIT' | translate }}
+            </button>
           </form>
 
           <nz-alert
             *ngIf="submitted"
             nzType="success"
             nzShowIcon
-            nzMessage="Đã ghi nhận yêu cầu"
-            nzDescription="Chúng tôi sẽ xử lý và phản hồi qua email trong vòng 7 ngày làm việc.">
+            [nzMessage]="'DELETE_ACCOUNT.SUCCESS_TITLE' | translate"
+            [nzDescription]="'DELETE_ACCOUNT.SUCCESS_DESC' | translate">
           </nz-alert>
 
-          <h2>Liên hệ trực tiếp</h2>
-          <p>Email: <a href="mailto:support&#64;phhotel.vn">support&#64;phhotel.vn</a></p>
-          <p class="muted">App: PHHotel PMS · Package: app.ronk.phhotel_pms_interface</p>
+          <h2>{{ 'DELETE_ACCOUNT.CONTACT_TITLE' | translate }}</h2>
+          <p>
+            {{ 'DELETE_ACCOUNT.CONTACT_EMAIL' | translate }}:
+            <a href="mailto:support&#64;phhotel.vn">support&#64;phhotel.vn</a>
+          </p>
+          <p class="muted">{{ 'DELETE_ACCOUNT.APP_META' | translate }}</p>
         </div>
       </div>
     </div>

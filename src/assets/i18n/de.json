@@ -541,6 +541,29 @@
     "CONTACT_TITLE": "Kontakt",
     "CONTACT_CONTENT": "Wenn Sie Fragen zu den Nutzungsbedingungen haben, kontaktieren Sie uns bitte."
   },
+  "DELETE_ACCOUNT": {
+    "TITLE": "PHHotel-Konto löschen",
+    "SUBTITLE": "Antrag auf Kontolöschung gemäß der Google-Play-Richtlinie zur Kontolöschung",
+    "METHOD1_TITLE": "Option 1 — In der App",
+    "METHOD1_STEP1": "Melden Sie sich an bei PHHotel PMS oder",
+    "METHOD1_STEP2": "Öffnen Sie das Profil",
+    "METHOD1_STEP3": "Wählen Sie Konto löschen und bestätigen Sie mit Ihrem Passwort",
+    "METHOD2_TITLE": "Option 2 — Hier anfordern",
+    "METHOD2_DESC": "Geben Sie Ihre registrierte E-Mail-Adresse ein. Wir bearbeiten Anfragen innerhalb von 7 Werktagen.",
+    "EMAIL_LABEL": "Konto-E-Mail",
+    "EMAIL_ERROR": "Gültige E-Mail eingeben",
+    "EMAIL_PLACEHOLDER": "email@example.com",
+    "NOTE_LABEL": "Hinweis (optional)",
+    "NOTE_PLACEHOLDER": "Grund oder zusätzliche Informationen",
+    "SUBMIT": "Löschantrag senden",
+    "SUCCESS_TITLE": "Antrag eingegangen",
+    "SUCCESS_DESC": "Wir bearbeiten Ihre Anfrage und antworten per E-Mail innerhalb von 7 Werktagen.",
+    "SUCCESS_TOAST": "Antrag auf Kontolöschung wurde gesendet.",
+    "ERROR_TOAST": "Antrag konnte nicht gesendet werden. Bitte E-Mail an support@phhotel.vn",
+    "CONTACT_TITLE": "Direkt kontaktieren",
+    "CONTACT_EMAIL": "E-Mail",
+    "APP_META": "App: PHHotel PMS · Package: app.rork.phhotel_pms_interface"
+  },
   "SERVICE_MANAGEMENT": {
     "EXPORT": {
       "VIEW_STATS_FIRST": "Bitte Statistiken anzeigen, bevor Sie Excel exportieren",
