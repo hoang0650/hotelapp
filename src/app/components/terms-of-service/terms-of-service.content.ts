@@ -24,7 +24,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
     title: 'Thoả thuận sử dụng Dịch vụ Phần mềm PHHotel',
     lastUpdatedLabel: 'Cập nhật lần cuối',
     subtitle:
-      'Giữa Khách hàng và Công ty TNHH Giải Pháp Công Nghệ PHGROUP (“PHHotel”). Áp dụng cho PHHotel PMS (web, ứng dụng di động, App Clip) và các dịch vụ liên quan trên hệ sinh thái PHHotel / AI Markets.',
+      'Giữa Khách hàng và Công ty TNHH Giải Pháp Công Nghệ PHGROUP (“PHHotel”). Áp dụng cho PHHotel PMS trên web, ứng dụng di động và App Clip.',
     sections: [
       {
         title: '',
@@ -33,7 +33,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
             p: [
               'Đây là thỏa thuận pháp lý giữa Khách hàng với Công ty TNHH Giải Pháp Công Nghệ PHGROUP (“PHHotel”), quy định điều khoản khi Khách hàng sử dụng phần mềm và dịch vụ PHHotel (“Thỏa thuận”).',
               'Thỏa thuận này là Hợp đồng dịch vụ dưới hình thức giao dịch điện tử. Bằng việc đăng ký tài khoản, tích chọn đồng ý, thanh toán hoặc tiếp tục sử dụng Dịch vụ, Khách hàng xác nhận đã đọc, hiểu và chấp thuận toàn bộ điều khoản.',
-              'Website chính: https://phhotel.vn — Hỗ trợ: hotro@phhotel.vn — AI Markets: https://aimarkets.vn',
+              'Website chính: https://phhotel.vn — Hỗ trợ: support@phhotel.vn',
             ],
           },
         ],
@@ -43,7 +43,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
         blocks: [
           {
             p: [
-              '1.1 Phần mềm PHHotel: Hệ thống quản lý khách sạn (PMS) và các module liên quan do PHHotel phát triển/cung cấp, bao gồm phiên bản web, ứng dụng di động iOS/Android, App Clip và tính năng AI (chatbox, OpenClaw, tích hợp AI Markets), được mô tả tại https://phhotel.vn và tài liệu sản phẩm từng thời kỳ.',
+              '1.1 Phần mềm PHHotel: Hệ thống quản lý khách sạn (PMS) và các module liên quan do PHHotel phát triển/cung cấp, bao gồm phiên bản web, ứng dụng di động iOS/Android, App Clip và các tính năng hỗ trợ vận hành trong sản phẩm (ví dụ chatbox AI trong PMS), được mô tả tại https://phhotel.vn và tài liệu sản phẩm từng thời kỳ.',
               '1.2 Dịch vụ: Quyền truy cập và sử dụng Phần mềm trong thời hạn đã đăng ký/thanh toán (theo tháng, năm hoặc gói khác công bố trên website/ứng dụng).',
               '1.3 Khách hàng: Cá nhân hoặc tổ chức đăng ký/sử dụng Dịch vụ và đồng ý Thỏa thuận này (cơ sở lưu trú, chuỗi khách sạn, đơn vị vận hành…).',
               '1.4 Tài khoản quản trị: Tài khoản có quyền cao nhất trên hệ thống của Khách hàng (cấu hình cơ sở, người dùng, phân quyền, thanh toán…).',
@@ -51,7 +51,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
               '1.6 Kích hoạt Dịch vụ: Thời điểm PHHotel bàn giao/cấp quyền truy cập Tài khoản quản trị và Khách hàng có thể đăng nhập sử dụng.',
               '1.7 Tạm dừng / Huỷ Dịch vụ: Tạm hạn chế hoặc chấm dứt quyền truy cập theo Thỏa thuận.',
               '1.8 Phí Dịch vụ: Khoản phí Khách hàng thanh toán để sử dụng/duy trì Dịch vụ theo bảng giá công bố hoặc hợp đồng riêng.',
-              '1.9 Đối tác thứ ba: Ngân hàng, cổng thanh toán, e-invoice, SMS, AI provider, Google, Apple, kho ứng dụng và bên cung cấp tiện ích kết nối với Phần mềm.',
+              '1.9 Đối tác thứ ba: Ngân hàng, cổng thanh toán, e-invoice, SMS, Google, Apple, kho ứng dụng và bên cung cấp tiện ích kết nối với Phần mềm.',
               '1.10 Dữ liệu Khách hàng: Dữ liệu do Khách hàng hoặc Người dùng nhập/tạo trên Phần mềm (phòng, đặt phòng, khách lưu trú, hóa đơn, báo cáo…), bao gồm dữ liệu cá nhân theo Nghị định 13/2023/NĐ-CP.',
             ],
           },
@@ -76,8 +76,8 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
           {
             p: [
               '3.1 Phí Kích hoạt (nếu có) và Phí Dịch vụ được công bố tại https://phhotel.vn, trên ứng dụng hoặc theo báo giá/hợp đồng riêng.',
-              '3.2 Phí có thể gồm: phí thuê bao Phần mềm; phí vượt hạn mức (phòng, chi nhánh, người dùng, lưu trữ, AI tokens…); phí module bổ sung.',
-              '3.3 Phí Dịch vụ không bao gồm phí Đối tác thứ ba (ngân hàng, VietQR/NAPAS, e-invoice, SMS, Apple/Google, nhà cung cấp AI…).',
+              '3.2 Phí có thể gồm: phí thuê bao Phần mềm; phí vượt hạn mức (phòng, chi nhánh, người dùng, lưu trữ…); phí module bổ sung.',
+              '3.3 Phí Dịch vụ không bao gồm phí Đối tác thứ ba (ngân hàng, VietQR/NAPAS, e-invoice, SMS, Apple/Google…).',
               '3.4 PHHotel có thể điều chỉnh bảng giá theo thị trường và công bố trên website/ứng dụng. Gói đã thanh toán trước được giữ mức phí đã thỏa thuận đến hết kỳ đã trả.',
               '3.5 Chính sách hoàn phí (nếu có) áp dụng theo công bố tại thời điểm mua hoặc hợp đồng riêng; ngoài phạm vi đó, phí đã thanh toán không hoàn lại khi Khách hàng chủ động Huỷ giữa kỳ, trừ trường hợp pháp luật bắt buộc.',
             ],
@@ -165,7 +165,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
         blocks: [
           {
             p: [
-              '10.1 Hỗ trợ qua hotro@phhotel.vn, kênh trong ứng dụng/website hoặc số điện thoại công bố tại https://phhotel.vn.',
+              '10.1 Hỗ trợ qua support@phhotel.vn, kênh trong ứng dụng/website hoặc số điện thoại công bố tại https://phhotel.vn.',
               '10.2 Hỗ trợ tại chỗ, đào tạo chuyên sâu hoặc tùy chỉnh có thể tính phí riêng theo thỏa thuận.',
             ],
           },
@@ -211,9 +211,9 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
         blocks: [
           {
             p: [
-              '14.1 Phần mềm có thể kết nối thanh toán, e-invoice, SMS, đăng nhập Google/Apple, AI provider, AI Markets, kho ứng dụng… Khách hàng tự quyết định bật/tắt và tuân thủ điều khoản của Đối tác.',
+              '14.1 Phần mềm có thể kết nối thanh toán, e-invoice, SMS, đăng nhập Google/Apple, kho ứng dụng… Khách hàng tự quyết định bật/tắt và tuân thủ điều khoản của Đối tác.',
               '14.2 Phí và sự cố thuộc hệ thống Đối tác do Đối tác giải quyết; PHHotel hỗ trợ phần kết nối trên Phần mềm.',
-              '14.3 PHHotel không chịu trách nhiệm nội dung/kết quả do mô hình AI bên thứ ba sinh ra; Khách hàng kiểm tra trước khi dùng cho quyết định vận hành.',
+              '14.3 Nếu Phần mềm có tính năng AI hỗ trợ trong PMS, nội dung do AI tạo mang tính tham khảo; Khách hàng kiểm tra trước khi dùng cho quyết định vận hành.',
             ],
           },
         ],
@@ -292,7 +292,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
               '21.1 Luật áp dụng: pháp luật Việt Nam. Tranh chấp ưu tiên thương lượng; không đạt thì Tòa án nhân dân có thẩm quyền tại Việt Nam.',
               '21.2 PHHotel có thể cập nhật Thỏa thuận và công bố trên https://phhotel.vn/terms-of-service và/hoặc trong ứng dụng. Việc tiếp tục sử dụng sau ngày hiệu lực được xem là chấp thuận phiên bản mới, trừ khi Khách hàng Huỷ Dịch vụ.',
               '21.3 Nếu một điều bị vô hiệu, các điều còn lại vẫn hiệu lực.',
-              '21.4 Liên hệ: Công ty TNHH Giải Pháp Công Nghệ PHGROUP — hotro@phhotel.vn — https://phhotel.vn',
+              '21.4 Liên hệ: Công ty TNHH Giải Pháp Công Nghệ PHGROUP — support@phhotel.vn — https://phhotel.vn',
             ],
           },
         ],
@@ -328,11 +328,11 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
         ],
       },
       {
-        title: 'Điều 25: AI Markets và module AI',
+        title: 'Điều 25: Tính năng AI trong PHHotel PMS',
         blocks: [
           {
             p: [
-              '25.1 Khi Khách hàng sử dụng AI Markets (https://aimarkets.vn) hoặc module AI trong PHHotel PMS, các điều khoản sàn/AI Markets và nhà cung cấp agent/model (nếu có) áp dụng bổ sung.',
+              '25.1 Một số gói PHHotel PMS có thể gồm tính năng AI hỗ trợ vận hành (ví dụ chatbox trong sản phẩm). Đây là một phần của PHHotel PMS, không phải sàn hoặc dịch vụ marketplace riêng.',
               '25.2 Nội dung do AI tạo mang tính hỗ trợ; Khách hàng kiểm tra trước khi áp dụng vào vận hành, giá, hợp đồng hoặc giao tiếp với khách lưu trú.',
               '25.3 Không nhập dữ liệu bí mật nhà nước hoặc dữ liệu bị cấm chia sẻ vào công cụ AI nếu pháp luật hoặc hợp đồng không cho phép.',
             ],
@@ -345,7 +345,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
     title: 'PHHotel Software Services Agreement',
     lastUpdatedLabel: 'Last updated',
     subtitle:
-      'Between the Customer and PHGROUP Technology Solutions Co., Ltd. (“PHHotel”). Applies to PHHotel PMS (web, mobile apps, App Clip) and related services in the PHHotel / AI Markets ecosystem.',
+      'Between the Customer and PHGROUP Technology Solutions Co., Ltd. (“PHHotel”). Applies to PHHotel PMS on web, mobile apps, and App Clip.',
     sections: [
       {
         title: '',
@@ -354,7 +354,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
             p: [
               'This is a legal agreement between the Customer and PHGROUP Technology Solutions Co., Ltd. (“PHHotel”) governing use of PHHotel software and services (the “Agreement”).',
               'By registering, checking consent, paying for, or continuing to use the Service, the Customer agrees to these terms as an electronic service contract.',
-              'Website: https://phhotel.vn — Support: hotro@phhotel.vn — AI Markets: https://aimarkets.vn',
+              'Website: https://phhotel.vn — Support: support@phhotel.vn',
             ],
           },
         ],
@@ -364,7 +364,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
         blocks: [
           {
             p: [
-              '1.1 PHHotel Software: The hotel property management system (PMS) and related modules provided by PHHotel, including web, iOS/Android apps, App Clip, and AI features (chatbox, OpenClaw, AI Markets integrations), as described at https://phhotel.vn.',
+              '1.1 PHHotel Software: The hotel property management system (PMS) and related modules provided by PHHotel, including web, iOS/Android apps, App Clip, and in-product assistive features (such as an in-PMS AI chatbox), as described at https://phhotel.vn.',
               '1.2 Service: The right to access and use the Software for the subscribed term.',
               '1.3 Customer: Any individual or organization that registers for or uses the Service (accommodation businesses and operators).',
               '1.4 Admin Account: The highest-privilege account for the Customer’s tenant.',
@@ -389,7 +389,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
         blocks: [
           {
             p: [
-              'Fees are published at https://phhotel.vn, in-app, or in a separate quote/contract. Fees exclude third-party charges (banks, e-invoice, SMS, app stores, AI providers). Payment is by bank transfer, online gateway, or other accepted methods. Prepaid periods keep the agreed rate until the paid term ends.',
+              'Fees are published at https://phhotel.vn, in-app, or in a separate quote/contract. Fees exclude third-party charges (banks, e-invoice, SMS, app stores). Payment is by bank transfer, online gateway, or other accepted methods. Prepaid periods keep the agreed rate until the paid term ends.',
             ],
           },
         ],
@@ -409,7 +409,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
         blocks: [
           {
             p: [
-              'PHHotel provides the Service, reasonable support (hotro@phhotel.vn), and security measures. Customers must pay on time, use the Service lawfully for hospitality operations, protect accounts, and promptly report security incidents. The Customer is responsible for guest/employee personal data they upload and for obtaining required consents under Decree 13/2023/ND-CP.',
+              'PHHotel provides the Service, reasonable support (support@phhotel.vn), and security measures. Customers must pay on time, use the Service lawfully for hospitality operations, protect accounts, and promptly report security incidents. The Customer is responsible for guest/employee personal data they upload and for obtaining required consents under Decree 13/2023/ND-CP.',
             ],
           },
         ],
@@ -419,7 +419,7 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
         blocks: [
           {
             p: [
-              'The Service is provided “as is”. To the extent permitted by law, PHHotel is not liable for indirect damages or third-party outages; aggregate liability is capped at fees paid in the three (3) months before the claim, except for willful misconduct where limitation is prohibited. Third-party and AI outputs are the Customer’s responsibility to verify. PHHotel retains IP in the Software; Customers retain control of their operational data.',
+              'The Service is provided “as is”. To the extent permitted by law, PHHotel is not liable for indirect damages or third-party outages; aggregate liability is capped at fees paid in the three (3) months before the claim, except for willful misconduct where limitation is prohibited. Third-party services and any in-PMS AI outputs are the Customer’s responsibility to verify. PHHotel retains IP in the Software; Customers retain control of their operational data.',
             ],
           },
         ],
@@ -435,11 +435,11 @@ export const TERMS_DOCS: Record<'vi' | 'en', LegalDoc> = {
         ],
       },
       {
-        title: 'Article 19–25: Personal Data, Term, AI Markets',
+        title: 'Article 19–25: Personal Data, Term, In-product AI',
         blocks: [
           {
             p: [
-              'PHHotel may act as processor for guest/staff data entered by the Customer and as controller for account, billing, and technical logs. See https://phhotel.vn/privacy-policy. Vietnam law governs; disputes go to competent Vietnamese courts after good-faith negotiation. Updated terms are published at https://phhotel.vn/terms-of-service. AI Markets (https://aimarkets.vn) and AI modules are assistive; Customers must review outputs and must not submit prohibited data.',
+              'PHHotel may act as processor for guest/staff data entered by the Customer and as controller for account, billing, and technical logs. See https://phhotel.vn/privacy-policy. Vietnam law governs; disputes go to competent Vietnamese courts after good-faith negotiation. Updated terms are published at https://phhotel.vn/terms-of-service. Any in-PMS AI features are assistive only; Customers must review outputs and must not submit prohibited data.',
             ],
           },
         ],
