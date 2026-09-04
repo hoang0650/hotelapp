@@ -9,7 +9,7 @@ import { LegalDoc, TERMS_DOCS } from './terms-of-service.content';
   styleUrls: ['./terms-of-service.component.css']
 })
 export class TermsOfServiceComponent implements OnInit, OnDestroy {
-  lastUpdated = new Date('2025-01-01');
+  lastUpdated = new Date('2026-09-04');
   doc: LegalDoc = TERMS_DOCS.vi;
   private sub?: Subscription;
 
