@@ -4075,6 +4075,10 @@
     "DELETE_ACCOUNT": {
       "TITLE": "Delete PHHotel account",
       "DESCRIPTION": "PHHotel account deletion instructions for Google Play Account Deletion policy."
+    },
+    "CLIP": {
+      "TITLE": "PHHotel PMS App Clip",
+      "DESCRIPTION": "Open the PHHotel PMS promotional App Clip: rooms, bookings, invoices, and reports."
     }
   },
   "INVOICE": {

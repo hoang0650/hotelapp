@@ -1,0 +1,38 @@
+<div class="clip-page">
+  <div class="clip-hero">
+    <img
+      class="clip-logo"
+      src="assets/images/introduce/duns.png"
+      alt="PHHotel" />
+    <p class="clip-brand">PHHotel PMS</p>
+    <h1>Quản lý khách sạn trên điện thoại</h1>
+    <p class="clip-lead">
+      App Clip / trang mở nhanh PHHotel PMS: phòng realtime, đặt phòng, hóa đơn, báo cáo và AI.
+      Trên iPhone, banner App Clip sẽ gợi ý mở trải nghiệm tức thì.
+    </p>
+
+    <ul class="clip-features">
+      <li>Sơ đồ phòng realtime</li>
+      <li>Đặt phòng &amp; check-in / check-out</li>
+      <li>Hóa đơn PDF &amp; báo cáo doanh thu</li>
+      <li>AI Chatbox &amp; OpenClaw</li>
+    </ul>
+
+    <div class="clip-video" *ngIf="youtubeEmbedUrl">
+      <iframe
+        [src]="youtubeEmbedUrl"
+        title="PHHotel PMS demo"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+        loading="lazy">
+      </iframe>
+    </div>
+
+    <div class="clip-actions">
+      <a class="btn-primary" [href]="appStoreUrl" target="_blank" rel="noopener">App Store</a>
+      <a class="btn-secondary" [href]="playStoreUrl" target="_blank" rel="noopener">Google Play</a>
+      <a class="btn-secondary" [href]="youtubeUrl" target="_blank" rel="noopener">Xem video</a>
+      <a class="btn-secondary" [href]="websiteUrl">phhotel.vn</a>
+    </div>
+  </div>
+</div>

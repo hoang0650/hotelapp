@@ -1,0 +1,103 @@
+.clip-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: linear-gradient(160deg, #0f766e 0%, #134e4a 45%, #0b1f1e 100%);
+  color: #fff;
+}
+
+.clip-hero {
+  max-width: 560px;
+  text-align: center;
+}
+
+.clip-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 44px;
+  margin-bottom: 16px;
+  object-fit: cover;
+  background: #fff;
+}
+
+.clip-brand {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #99f6e4;
+  margin-bottom: 8px;
+}
+
+h1 {
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  font-weight: 800;
+  margin: 0 0 12px;
+  line-height: 1.25;
+}
+
+.clip-lead {
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 24px;
+  line-height: 1.55;
+}
+
+.clip-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px;
+  text-align: left;
+}
+
+.clip-features li {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.clip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.clip-video {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto 24px;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+}
+
+.clip-video iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-block;
+  padding: 12px 18px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.btn-primary {
+  background: #fff;
+  color: #0f766e;
+}
+
+.btn-secondary {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+}

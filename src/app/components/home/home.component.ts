@@ -25,8 +25,8 @@ interface IntroduceImage {
   styleUrls: ['./home.component.css']
 })
 export class HomeComponent implements OnInit, OnDestroy {
-  // Demo hướng dẫn PHHotel: https://youtu.be/LIWt7_BA1Zo
-  youtubeVideoId = 'LIWt7_BA1Zo';
+  // Demo giới thiệu PHHotel PMS: https://youtu.be/8YDrnZSQ2Xc
+  youtubeVideoId = '8YDrnZSQ2Xc';
   safeVideoUrl!: SafeResourceUrl;
   previewImage: IntroduceImage | null = null;
   private previewModal?: NzModalRef;

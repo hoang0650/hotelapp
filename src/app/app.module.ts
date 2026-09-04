@@ -154,6 +154,7 @@ import { SettingsComponent } from './components/settings/settings.component';
 import { MaintenanceComponent } from './components/maintenance/maintenance.component';
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 import { DeleteAccountComponent } from './components/delete-account/delete-account.component';
+import { ClipLandingComponent } from './components/clip-landing/clip-landing.component';
 import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
 import { ContactComponent } from './components/contact/contact.component';
 import { ContactManagementComponent } from './components/contact-management/contact-management.component';
@@ -316,6 +317,7 @@ export function preloadTranslationsFactory(
         ProfileComponent,
         PrivacyPolicyComponent,
         DeleteAccountComponent,
+        ClipLandingComponent,
         TermsOfServiceComponent,
         ContactComponent,
         ContactManagementComponent,

@@ -48,6 +48,7 @@ import { MaintenanceComponent } from './components/maintenance/maintenance.compo
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
 import { DeleteAccountComponent } from './components/delete-account/delete-account.component';
+import { ClipLandingComponent } from './components/clip-landing/clip-landing.component';
 import { ShiftHandoverHistoryComponent } from './components/shift-handover-history/shift-handover-history.component';
 import { DebtManagementComponent } from './components/debt-management/debt-management.component';
 import { BlogManagementComponent } from './components/blog-management/blog-management.component';
@@ -268,6 +269,7 @@ const routes: Routes = [
   { path: 'privacy-policy', component: PrivacyPolicyComponent, data: { titleKey: 'SEO.PRIVACY_POLICY.TITLE', descriptionKey: 'SEO.PRIVACY_POLICY.DESCRIPTION' } },
   { path: 'terms-of-service', component: TermsOfServiceComponent, data: { titleKey: 'SEO.TERMS_OF_SERVICE.TITLE', descriptionKey: 'SEO.TERMS_OF_SERVICE.DESCRIPTION' } },
   { path: 'delete-account', component: DeleteAccountComponent, data: { titleKey: 'SEO.DELETE_ACCOUNT.TITLE', descriptionKey: 'SEO.DELETE_ACCOUNT.DESCRIPTION', robots: 'index,follow' } },
+  { path: 'clip', component: ClipLandingComponent, data: { titleKey: 'SEO.CLIP.TITLE', descriptionKey: 'SEO.CLIP.DESCRIPTION', robots: 'index,follow' } },
 
   // KHỐI 5: LUÔN NẰM CUỐI CÙNG LÀ ROUTE BÁO LỖI
   { path: '**', component: NotfoundComponent }

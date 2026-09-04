@@ -1,0 +1,27 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "XZUV4HFW8S.app.rork.phhotel-pms-interface"
+        ],
+        "components": [
+          {
+            "/": "/clip*",
+            "comment": "PHHotel PMS App Clip invocation"
+          }
+        ]
+      }
+    ]
+  },
+  "appclips": {
+    "apps": [
+      "XZUV4HFW8S.app.rork.phhotel-pms-interface.clip"
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "XZUV4HFW8S.app.rork.phhotel-pms-interface"
+    ]
+  }
+}

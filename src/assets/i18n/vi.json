@@ -4215,6 +4215,10 @@
     "DELETE_ACCOUNT": {
       "TITLE": "Xóa tài khoản PHHotel",
       "DESCRIPTION": "Hướng dẫn và form yêu cầu xóa tài khoản PHHotel theo chính sách Google Play."
+    },
+    "CLIP": {
+      "TITLE": "PHHotel PMS App Clip",
+      "DESCRIPTION": "Mở App Clip quảng cáo PHHotel PMS: quản lý phòng, đặt phòng, hóa đơn và báo cáo."
     }
   },
   "INVOICE": {

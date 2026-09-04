@@ -3,7 +3,14 @@ import { CommonEngine } from '@angular/ssr';
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
 import AppServerModule from './src/main.server';
+
+function sendAasa(res: express.Response, filePath: string): void {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.status(200).send(readFileSync(filePath, 'utf8'));
+}
 
 // The Express app is exported so that it can be used by serverless Functions.
 export function app(): express.Express {
@@ -16,6 +23,21 @@ export function app(): express.Express {
 
   server.set('view engine', 'html');
   server.set('views', browserDistFolder);
+
+  const aasaCandidates = [
+    join(browserDistFolder, '.well-known', 'apple-app-site-association'),
+    join(browserDistFolder, 'apple-app-site-association'),
+    resolve(serverDistFolder, '../../src/.well-known/apple-app-site-association'),
+  ];
+
+  const serveAasa: express.RequestHandler = (_req, res, next) => {
+    const found = aasaCandidates.find((p) => existsSync(p));
+    if (!found) return next();
+    return sendAasa(res, found);
+  };
+
+  server.get('/.well-known/apple-app-site-association', serveAasa);
+  server.get('/apple-app-site-association', serveAasa);
 
   // Example Express Rest API endpoints
   // server.get('/api/**', (req, res) => { });

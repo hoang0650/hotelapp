@@ -3942,6 +3942,10 @@
     "DELETE_ACCOUNT": {
       "TITLE": "PHHotel-Konto löschen",
       "DESCRIPTION": "Anleitung zur Kontolöschung für die Google-Play-Richtlinie zur Kontolöschung."
+    },
+    "CLIP": {
+      "TITLE": "PHHotel PMS App Clip",
+      "DESCRIPTION": "Öffnen Sie den PHHotel-PMS-Werbe-App-Clip: Zimmer, Buchungen, Rechnungen und Berichte."
     }
   },
   "INVOICE": {

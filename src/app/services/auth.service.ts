@@ -180,7 +180,7 @@ export class AuthService {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
       const pathname = window.location.pathname || '/';
-      const marketingPaths = ['/home', '/pricing', '/blog', '/contact', '/about-us', '/duns', '/privacy-policy', '/terms-of-service', '/delete-account'];
+      const marketingPaths = ['/home', '/pricing', '/blog', '/contact', '/about-us', '/duns', '/privacy-policy', '/terms-of-service', '/delete-account', '/clip'];
       const isMarketingPage =
         pathname === '/' ||
         marketingPaths.some(p => pathname === p || pathname.startsWith(`${p}/`));
@@ -302,7 +302,8 @@ export class AuthService {
       '/duns',
       '/privacy-policy',
       '/terms-of-service',
-      '/delete-account'
+      '/delete-account',
+      '/clip'
     ];
     const isPublicPath =
       pathname === '/' ||

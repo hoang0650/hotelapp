@@ -36,6 +36,16 @@
               "src/robots.txt",
               "src/sitemap.xml",
               {
+                "glob": "apple-app-site-association",
+                "input": "src/.well-known",
+                "output": "/.well-known"
+              },
+              {
+                "glob": "apple-app-site-association",
+                "input": "src/.well-known",
+                "output": "/"
+              },
+              {
                 "glob": "**/*",
                 "input": "./node_modules/@ant-design/icons-angular/src/inline-svg/",
                 "output": "/assets/"
