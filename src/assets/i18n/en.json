@@ -567,6 +567,24 @@
     "CONTACT_EMAIL": "Email",
     "APP_META": "App: PHHotel PMS · Package: app.rork.phhotel_pms_interface"
   },
+  "CLIP": {
+    "BRAND": "PHHotel PMS",
+    "TITLE": "Hotel management on your phone",
+    "LEAD": "Quick-open / App Clip page for PHHotel PMS: live rooms, bookings, invoices, reports, and AI. On iPhone, the App Clip banner suggests an instant experience.",
+    "FEATURE_1": "Live room board",
+    "FEATURE_2": "Bookings & check-in / check-out",
+    "FEATURE_3": "PDF invoices & revenue reports",
+    "FEATURE_4": "AI Chatbox & OpenClaw",
+    "VIDEO_TITLE": "PHHotel PMS intro video",
+    "BTN_APP_STORE": "App Store",
+    "BTN_GOOGLE_PLAY": "Google Play",
+    "BTN_VIDEO": "Watch video",
+    "BTN_WEBSITE": "phhotel.vn",
+    "LOGO_ALT": "PHHotel logo",
+    "META_TITLE": "PHHotel PMS — App Clip",
+    "META_DESCRIPTION": "Open the PHHotel PMS App Clip / intro page: rooms, bookings, invoices, reports, and AI on your phone.",
+    "OG_DESCRIPTION": "Hotel management on your phone — rooms, bookings, invoices, reports, AI."
+  },
   "ROOM": {
     "HOTEL": "Hotel",
     "SELECT_HOTEL": "Select Hotel",
@@ -4078,7 +4096,7 @@
     },
     "CLIP": {
       "TITLE": "PHHotel PMS App Clip",
-      "DESCRIPTION": "Open the PHHotel PMS promotional App Clip: rooms, bookings, invoices, and reports."
+      "DESCRIPTION": "Open the PHHotel PMS App Clip / intro page: rooms, bookings, invoices, reports, and AI on your phone."
     }
   },
   "INVOICE": {

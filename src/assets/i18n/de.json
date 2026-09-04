@@ -564,6 +564,24 @@
     "CONTACT_EMAIL": "E-Mail",
     "APP_META": "App: PHHotel PMS · Package: app.rork.phhotel_pms_interface"
   },
+  "CLIP": {
+    "BRAND": "PHHotel PMS",
+    "TITLE": "Hotelverwaltung auf dem Handy",
+    "LEAD": "Schnellseite / App Clip für PHHotel PMS: Zimmer live, Buchungen, Rechnungen, Berichte und KI. Auf dem iPhone schlägt das App-Clip-Banner ein Soforterlebnis vor.",
+    "FEATURE_1": "Live-Zimmerübersicht",
+    "FEATURE_2": "Buchungen & Check-in / Check-out",
+    "FEATURE_3": "PDF-Rechnungen & Umsatzberichte",
+    "FEATURE_4": "AI Chatbox & OpenClaw",
+    "VIDEO_TITLE": "PHHotel-PMS-Vorstellungsvideo",
+    "BTN_APP_STORE": "App Store",
+    "BTN_GOOGLE_PLAY": "Google Play",
+    "BTN_VIDEO": "Video ansehen",
+    "BTN_WEBSITE": "phhotel.vn",
+    "LOGO_ALT": "PHHotel-Logo",
+    "META_TITLE": "PHHotel PMS — App Clip",
+    "META_DESCRIPTION": "Öffnen Sie die PHHotel-PMS-App-Clip-/Intro-Seite: Zimmer, Buchungen, Rechnungen, Berichte und KI auf dem Handy.",
+    "OG_DESCRIPTION": "Hotelverwaltung auf dem Handy — Zimmer, Buchungen, Rechnungen, Berichte, KI."
+  },
   "SERVICE_MANAGEMENT": {
     "EXPORT": {
       "VIEW_STATS_FIRST": "Bitte Statistiken anzeigen, bevor Sie Excel exportieren",
@@ -3945,7 +3963,7 @@
     },
     "CLIP": {
       "TITLE": "PHHotel PMS App Clip",
-      "DESCRIPTION": "Öffnen Sie den PHHotel-PMS-Werbe-App-Clip: Zimmer, Buchungen, Rechnungen und Berichte."
+      "DESCRIPTION": "Öffnen Sie die PHHotel-PMS-App-Clip-/Einführungsseite: Zimmer, Buchungen, Rechnungen, Berichte und KI auf dem Handy."
     }
   },
   "INVOICE": {

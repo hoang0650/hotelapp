@@ -575,6 +575,24 @@
     "CONTACT_EMAIL": "Email",
     "APP_META": "App: PHHotel PMS · Package: app.rork.phhotel_pms_interface"
   },
+  "CLIP": {
+    "BRAND": "PHHotel PMS",
+    "TITLE": "Quản lý khách sạn trên điện thoại",
+    "LEAD": "Trang mở nhanh / App Clip PHHotel PMS: phòng realtime, đặt phòng, hóa đơn, báo cáo và AI. Trên iPhone, banner App Clip sẽ gợi ý mở trải nghiệm tức thì.",
+    "FEATURE_1": "Sơ đồ phòng realtime",
+    "FEATURE_2": "Đặt phòng & check-in / check-out",
+    "FEATURE_3": "Hóa đơn PDF & báo cáo doanh thu",
+    "FEATURE_4": "AI Chatbox & OpenClaw",
+    "VIDEO_TITLE": "Video giới thiệu PHHotel PMS",
+    "BTN_APP_STORE": "App Store",
+    "BTN_GOOGLE_PLAY": "Google Play",
+    "BTN_VIDEO": "Xem video",
+    "BTN_WEBSITE": "phhotel.vn",
+    "LOGO_ALT": "Logo PHHotel",
+    "META_TITLE": "PHHotel PMS — App Clip",
+    "META_DESCRIPTION": "Mở nhanh App Clip / trang giới thiệu PHHotel PMS: quản lý phòng, đặt phòng, hóa đơn, báo cáo và AI trên điện thoại.",
+    "OG_DESCRIPTION": "Phần mềm quản lý khách sạn trên điện thoại — phòng, đặt phòng, hóa đơn, báo cáo, AI."
+  },
   "ROOM": {
     "HOTEL": "Khách sạn",
     "SELECT_HOTEL": "Chọn khách sạn",
@@ -4218,7 +4236,7 @@
     },
     "CLIP": {
       "TITLE": "PHHotel PMS App Clip",
-      "DESCRIPTION": "Mở App Clip quảng cáo PHHotel PMS: quản lý phòng, đặt phòng, hóa đơn và báo cáo."
+      "DESCRIPTION": "Mở nhanh App Clip / trang giới thiệu PHHotel PMS: quản lý phòng, đặt phòng, hóa đơn, báo cáo và AI trên điện thoại."
     }
   },
   "INVOICE": {
