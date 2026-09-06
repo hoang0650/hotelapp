@@ -77,19 +77,20 @@ export class LoginComponent implements OnInit {
   }
 
   /**
-   * Hard Redirect lập tức đến trang quản lý phòng
+   * Hard Redirect sau login: guest → bảng giá/đăng ký gói trong /admin; role khác → quản lý phòng
    */
   private executeFastRedirect(): void {
     if (typeof window === 'undefined') {
       return;
     }
 
+    const homePath = this.authService.getAdminHomePath();
     const hostname = window.location.hostname || '';
     if (hostname.startsWith('admin.') || hostname === 'localhost' || hostname === '127.0.0.1') {
-      this.router.navigateByUrl('/admin/room', { replaceUrl: true });
+      this.router.navigateByUrl(homePath, { replaceUrl: true });
       return;
     }
-    window.location.replace('https://admin.phhotel.vn/admin/room');
+    window.location.replace(`https://admin.phhotel.vn${homePath}`);
   }
 
   submitForm(): void {

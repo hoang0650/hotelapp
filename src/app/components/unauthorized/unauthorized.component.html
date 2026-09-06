@@ -3,9 +3,12 @@
 		<div class="block text-center">
 			<h2><strong>403</strong></h2>
 			<h3>Không đủ quyền truy cập</h3>
-			<p>Tài khoản của bạn chưa được phép mở trang này.
+			<p *ngIf="!showPricingLink">Tài khoản của bạn chưa được phép mở trang này.
                 <br>Vui lòng liên hệ quản trị viên nếu cần hỗ trợ.</p>
-			<a [routerLink]="['/admin/room']" class="btn btn-primary">Vào quản lý phòng</a>
+			<p *ngIf="showPricingLink">Tài khoản guest chưa mở được trang vận hành.
+                <br>Hãy đăng ký gói dịch vụ để bắt đầu sử dụng hệ thống.</p>
+			<a [routerLink]="[primaryLink]" class="btn btn-primary">{{ primaryLabel }}</a>
+			<a *ngIf="showPricingLink" [routerLink]="['/pricing']" class="btn btn-link d-block mt-2">Xem bảng giá công khai</a>
 			<a [routerLink]="['/home']" class="btn btn-link d-block mt-2">Quay về trang chủ</a>
 		</div>
 	</div>

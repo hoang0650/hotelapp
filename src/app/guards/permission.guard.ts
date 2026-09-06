@@ -89,8 +89,16 @@ export class PermissionGuard implements CanActivate {
       }
 
       if (u.role === 'guest') {
-        if (url === '/admin/pricing-management') return true;
-        this.router.navigate([unauthorizedUrl]);
+        // Guest được vào shell /admin để xem UI và đăng ký gói (pricing-management + pricing public)
+        if (
+          url === '/admin/pricing-management' ||
+          url === '/admin/profile' ||
+          url === '/pricing'
+        ) {
+          return true;
+        }
+        // /admin hoặc /admin/room → đưa về trang đăng ký gói thay vì 403
+        this.router.navigate(['/admin/pricing-management']);
         return false;
       }
 

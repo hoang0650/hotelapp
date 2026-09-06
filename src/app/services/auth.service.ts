@@ -269,6 +269,11 @@ export class AuthService {
     return !!user && user.role === 'guest';
   }
 
+  /** Trang admin mặc định sau login: guest → đăng ký gói; role khác → quản lý phòng */
+  getAdminHomePath(): string {
+    return this.isGuest() ? '/admin/pricing-management' : '/admin/room';
+  }
+
   checkSubdomainAndRedirect(): void {
     if (typeof window === 'undefined') return;
 
@@ -283,7 +288,7 @@ export class AuthService {
     const adminSubdomain = 'admin.phhotel.vn';
 
     const redirectToAdmin = () => {
-      window.location.href = `https://${adminSubdomain}/admin/room`;
+      window.location.href = `https://${adminSubdomain}${this.getAdminHomePath()}`;
     };
 
     // Trang public / marketing: không ép sang admin hay /login
