@@ -153,10 +153,10 @@
               <td>{{ sub.expiryDate | date:'dd/MM/yyyy' }}</td>
               <td>
                 <span *ngIf="isUnlimitedSubscriber(sub)">
-                  {{ sub.staffCount || 0 }} / {{ 'PRICING_MANAGEMENT.UNLIMITED' | translate }}
+                  {{ getSubscriberUsedSeats(sub) }} / {{ 'PRICING_MANAGEMENT.UNLIMITED' | translate }}
                 </span>
                 <span *ngIf="!isUnlimitedSubscriber(sub)">
-                  {{ sub.staffCount || 0 }} / {{ getSubscriberDisplayMaxUsers(sub) }}
+                  {{ getSubscriberUsedSeats(sub) }} / {{ getSubscriberDisplayMaxUsers(sub) }}
                 </span>
               </td>
               <td>

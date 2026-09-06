@@ -1110,6 +1110,15 @@ export class PricingManagementComponent implements OnInit {
     return maxUsers === null || maxUsers === undefined ? 0 : maxUsers;
   }
 
+  /** Chủ tài khoản luôn chiếm 1 chỗ trong gói (free 2 người → 1/2 khi chưa thêm staff). */
+  getSubscriberUsedSeats(subscriber: any): number {
+    const counted = Number(subscriber?.userCount);
+    if (Number.isFinite(counted) && counted > 0) {
+      return counted;
+    }
+    return (Number(subscriber?.staffCount) || 0) + 1;
+  }
+
   private normalizePackageLimits(pkg: any): any {
     if (!pkg) {
       return pkg;
