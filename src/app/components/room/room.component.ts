@@ -24,6 +24,7 @@ import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { CurrencyService } from '../../services/currency.service';
 import { getCookie } from '../../utils/cookie-storage';
+import { calculateDailyLateCheckout, calculateNightlyLateCheckout } from '../../utils/late-checkout';
 import { RoomSessionService } from '../../services/room-session.service';
 import { ApiService } from '../../services/api.service';
 import { SessionContextService } from '../../services/session-context.service';
@@ -4112,23 +4113,19 @@ export class RoomComponent implements OnInit, OnDestroy {
           }
         }
         
-        // Tính phụ thu check-out trễ (nếu check-out sau 12:00 ngày hôm sau)
-        if (now) {
-          const checkOutDateOnly = new Date(now);
-          checkOutDateOnly.setHours(0, 0, 0, 0);
+        if (now && dailyLateCheckoutFee > 0) {
           const checkInDateOnly = new Date(checkinTime);
           checkInDateOnly.setHours(0, 0, 0, 0);
-          const isNextDay = checkOutDateOnly.getTime() > checkInDateOnly.getTime();
-          
-          const checkOutMinutes = now.getHours() * 60 + now.getMinutes();
-          const [checkOutHour, checkOutMinute] = dailyCheckOutTime.split(':').map(Number);
-          const checkOutTimeMinutes = checkOutHour * 60 + checkOutMinute;
-          
-          if (isNextDay && checkOutMinutes > checkOutTimeMinutes && dailyLateCheckoutFee > 0) {
-            const lateMinutes = checkOutMinutes - checkOutTimeMinutes;
-            const lateCheckoutHoursDaily = Math.ceil(lateMinutes / 60); // Làm tròn lên
-            surcharge += lateCheckoutHoursDaily * dailyLateCheckoutFee;
-          }
+          const checkOutDateOnly = new Date(now);
+          checkOutDateOnly.setHours(0, 0, 0, 0);
+          const paidDays = Math.max(1, Math.ceil((checkOutDateOnly.getTime() - checkInDateOnly.getTime()) / (1000 * 60 * 60 * 24)));
+          surcharge += calculateDailyLateCheckout(
+            checkinTime,
+            now,
+            paidDays,
+            dailyCheckOutTime,
+            dailyLateCheckoutFee
+          ).amount;
         }
         break;
         
@@ -4153,18 +4150,18 @@ export class RoomComponent implements OnInit, OnDestroy {
           }
         }
         
-        // Tính phụ thu checkout trễ cho nightly (nếu có daily days sau nightly)
-        if (durationInHours > 24 && dailyLateCheckoutFee > 0) {
-          const checkOutMinutes = now.getHours() * 60 + now.getMinutes();
-          const [checkOutHour, checkOutMinute] = dailyCheckOutTime.split(':').map(Number);
-          const checkOutTimeMinutes = checkOutHour * 60 + checkOutMinute;
-          
-          if (checkOutMinutes > checkOutTimeMinutes) {
-            const lateMinutes = checkOutMinutes - checkOutTimeMinutes;
-            const lateCheckoutHoursDaily = Math.ceil(lateMinutes / 60); // Làm tròn lên
-            surcharge += lateCheckoutHoursDaily * dailyLateCheckoutFee;
-          }
-        }
+        const extraDailyDays = durationInHours > 24
+          ? Math.max(0, Math.ceil((now.getTime() - checkinTime.getTime()) / (1000 * 60 * 60 * 24)) - 1)
+          : 0;
+        surcharge += calculateNightlyLateCheckout(
+          checkinTime,
+          now,
+          nightlyEndTime,
+          extraDailyDays,
+          nightlyLateCheckoutSurcharge,
+          dailyCheckOutTime,
+          dailyLateCheckoutFee
+        ).amount;
         break;
         
       case 'hourly':

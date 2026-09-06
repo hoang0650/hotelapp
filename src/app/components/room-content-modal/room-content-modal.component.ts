@@ -24,6 +24,7 @@ import { HttpClient } from '@angular/common/http';
 import { TransactionService } from '../../services/transaction.service';
 import { environment } from '../../../environments/environment';
 import { getCookie } from '../../utils/cookie-storage';
+import { calculateDailyLateCheckout, calculateNightlyLateCheckout } from '../../utils/late-checkout';
 import { debounceTime, distinctUntilChanged, takeUntil, take } from 'rxjs/operators'
 import { Subject } from 'rxjs';
 
@@ -3636,26 +3637,19 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
         }
         
-        // Tính phụ thu check-out trễ (nếu check-out sau 12:00 ngày hôm sau)
-        if (checkOutTime) {
-          const checkOutDateOnly = new Date(checkOutTime);
-          checkOutDateOnly.setHours(0, 0, 0, 0);
-          const checkInDateOnly = new Date(checkInTime || new Date());
-          checkInDateOnly.setHours(0, 0, 0, 0);
-          const isNextDay = checkOutDateOnly.getTime() > checkInDateOnly.getTime();
-          
-          const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
-          const [checkOutHour, checkOutMinute] = dailyCheckOutTime.split(':').map(Number);
-          const checkOutTimeMinutes = checkOutHour * 60 + checkOutMinute;
-          
-          if (isNextDay && checkOutMinutes > checkOutTimeMinutes && dailyLateCheckoutFee > 0) {
-            const lateMinutes = checkOutMinutes - checkOutTimeMinutes;
-            const lateCheckoutHoursDaily = Math.ceil(lateMinutes / 60); // Làm tròn lên
-            const lateCheckoutFeeDaily = lateCheckoutHoursDaily * dailyLateCheckoutFee;
-            total += lateCheckoutFeeDaily;
-            priceDetails.lateCheckoutSurcharge = lateCheckoutFeeDaily;
-            priceDetails.lateCheckoutHours = lateCheckoutHoursDaily;
-            console.log(`Daily late check-out: ${lateCheckoutHoursDaily} hours, fee: ${lateCheckoutFeeDaily}`);
+        // Phụ thu checkout trễ: so với hạn thật (1 ngày = endTime ngày kế tiếp), không so đồng hồ trong ngày
+        if (checkInTime && checkOutTime && dailyLateCheckoutFee > 0) {
+          const lateCheckout = calculateDailyLateCheckout(
+            checkInTime,
+            checkOutTime,
+            durationInDaysCalculated,
+            dailyCheckOutTime,
+            dailyLateCheckoutFee
+          );
+          if (lateCheckout.hours > 0) {
+            total += lateCheckout.amount;
+            priceDetails.lateCheckoutSurcharge = lateCheckout.amount;
+            priceDetails.lateCheckoutHours = lateCheckout.hours;
           }
         }
         
@@ -3804,36 +3798,21 @@ export class RoomContentModalComponent implements OnInit, OnDestroy {
           }
         }
         
-        if (priceDetails.days && Number(priceDetails.days) > 0) {
-          const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
-          const [dailyCoHour, dailyCoMinute] = dailyCheckOutTime.split(':').map(Number);
-          const dailyCheckOutMinutes = (dailyCoHour || 0) * 60 + (dailyCoMinute || 0);
-          if (checkOutMinutes > dailyCheckOutMinutes && dailyLateCheckoutFee > 0) {
-            const lateMinutes = checkOutMinutes - dailyCheckOutMinutes;
-            const lateCheckoutHoursDaily = Math.ceil(lateMinutes / 60);
-            const lateCheckoutFeeDaily = lateCheckoutHoursDaily * dailyLateCheckoutFee;
-            total += lateCheckoutFeeDaily;
-            priceDetails.lateCheckoutSurcharge = lateCheckoutFeeDaily;
-            priceDetails.lateCheckoutHours = lateCheckoutHoursDaily;
-          }
-        } else {
-          const checkOutDateOnly = new Date(checkOutTime);
-          checkOutDateOnly.setHours(0, 0, 0, 0);
-          const checkInDateOnly = new Date(checkInTime || new Date());
-          checkInDateOnly.setHours(0, 0, 0, 0);
-          const isNextDay = checkOutDateOnly.getTime() > checkInDateOnly.getTime();
-          
-          const checkOutMinutes = checkOutTime.getHours() * 60 + checkOutTime.getMinutes();
-          const [endHour, endMinute] = nightlyEndTime.split(':').map(Number);
-          const endTimeMinutes = (endHour || 0) * 60 + (endMinute || 0);
-          
-          if (isNextDay && checkOutMinutes > endTimeMinutes && nightlyLateCheckoutSurcharge > 0) {
-            const lateMinutes = checkOutMinutes - endTimeMinutes;
-            const lateCheckoutHoursNightly = Math.ceil(lateMinutes / 60);
-            const lateCheckoutSurchargeNightly = lateCheckoutHoursNightly * nightlyLateCheckoutSurcharge;
-            total += lateCheckoutSurchargeNightly;
-            priceDetails.lateCheckoutSurcharge = lateCheckoutSurchargeNightly;
-            priceDetails.lateCheckoutHours = lateCheckoutHoursNightly;
+        if (checkInTime && checkOutTime) {
+          const extraDailyDays = Number(priceDetails.days) || 0;
+          const lateCheckout = calculateNightlyLateCheckout(
+            checkInTime,
+            checkOutTime,
+            nightlyEndTime,
+            extraDailyDays,
+            nightlyLateCheckoutSurcharge,
+            dailyCheckOutTime,
+            dailyLateCheckoutFee
+          );
+          if (lateCheckout.hours > 0) {
+            total += lateCheckout.amount;
+            priceDetails.lateCheckoutSurcharge = lateCheckout.amount;
+            priceDetails.lateCheckoutHours = lateCheckout.hours;
           }
         }
         
