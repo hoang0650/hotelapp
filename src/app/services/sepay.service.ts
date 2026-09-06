@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { finalize, shareReplay } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export interface SePayConfig {
@@ -280,6 +281,8 @@ export class SePayService {
   /**
    * Lấy lịch sử thanh toán SePay
    */
+  private paymentHistoryInFlight = new Map<string, Observable<any>>();
+
   getPaymentHistory(params?: {
     userId?: string;
     hotelId?: string;
@@ -305,7 +308,17 @@ export class SePayService {
       if (params.scope) query.append('scope', params.scope);
       queryParams = '?' + query.toString();
     }
-    return this.http.get(`${this.apiUrl}/payment-history${queryParams}`);
+    const cacheKey = queryParams || '?';
+    const existing = this.paymentHistoryInFlight.get(cacheKey);
+    if (existing) {
+      return existing;
+    }
+    const request$ = this.http.get(`${this.apiUrl}/payment-history${queryParams}`).pipe(
+      finalize(() => this.paymentHistoryInFlight.delete(cacheKey)),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+    this.paymentHistoryInFlight.set(cacheKey, request$);
+    return request$;
   }
 
   /**

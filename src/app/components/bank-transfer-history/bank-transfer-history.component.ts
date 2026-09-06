@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { HotelService } from '../../services/hotel.service';
 import { PaymentSpeakerService } from '../../services/payment-speaker.service';
 import { UserService } from '../../services/user.service';
-import { forkJoin, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 
@@ -57,10 +57,12 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   manualTransactionId = '';
   manualSubmitting = false;
 
-  // Auto-refresh interval
+  // Auto-refresh interval — chỉ dùng cho phạm vi khách sạn của mình
   private refreshInterval: any = null;
-  private readonly REFRESH_INTERVAL = 30000; // 30 giây
+  private readonly REFRESH_INTERVAL = 60000;
   private paymentSocket: Socket | null = null;
+  private refreshTimer: any = null;
+  private sepayLoading = false;
 
   private isFirstLoadSePay = true;
   private lastPlayedPaymentId: string | null = null;
@@ -102,7 +104,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     }
     const resolvedHotelId = this.authService.getHotelId() || currentUser?.hotelId || '';
     this.hotelId = typeof resolvedHotelId === 'string' ? resolvedHotelId : String((resolvedHotelId as any)?._id || '');
-    this.systemWideMode = this.authService.isAdmin();
+    this.systemWideMode = false;
     this.searchForm = this.fb.group({
       startDate: [null],
       endDate: [null],
@@ -116,7 +118,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     this.loadTransfers();
     this.loadHotelSettings();
     if (!this.hotelId && this.userId) {
-      this.refreshPaymentHistory();
+      this.scheduleRefresh();
     }
 
     this.authSub = this.authService.currentUser$.subscribe((user) => {
@@ -126,12 +128,9 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
       if (hotel) {
         this.hotelId = typeof hotel === 'string' ? hotel : String(hotel._id || hotel);
       }
-      if (this.authService.isAdmin() && !this.scopeTouched) {
-        this.systemWideMode = true;
-        if (!this.adminHistoryLoaded) {
-          this.adminHistoryLoaded = true;
-          this.refreshPaymentHistory();
-        }
+      if (this.authService.isAdmin() && !this.scopeTouched && !this.adminHistoryLoaded) {
+        this.adminHistoryLoaded = true;
+        this.scheduleRefresh();
       }
     });
 
@@ -164,14 +163,14 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
         this.paymentSpeakerService.setEnabled(this.hotelId, this.enablePaymentSpeaker);
         // SePay mặc định bật, có thể kiểm tra thêm nếu cần
         this.enableSePayPayment = true;
-        this.refreshPaymentHistory();
+        this.scheduleRefresh();
         this.startPaymentSocket();
       },
       error: (error) => {
         console.error('Error loading hotel settings:', error);
         // Fallback: cho phép hiển thị tất cả nếu không load được settings
         this.enableSePayPayment = true;
-        this.refreshPaymentHistory();
+        this.scheduleRefresh();
         this.startPaymentSocket();
       }
     });
@@ -181,6 +180,10 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
+    }
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+      this.refreshTimer = null;
     }
     this.stopPaymentSocket();
     window.removeEventListener('hotelPaymentSpeakerChanged', this.paymentSpeakerChangedHandler);
@@ -222,8 +225,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     const amount = Number(payload?.amount || 0);
 
     if (paymentId && this.lastPlayedPaymentId === paymentId) {
-      this.loadSePayPayments();
-      this.loadAllPayments();
+      this.scheduleRefresh();
       return;
     }
 
@@ -244,8 +246,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     }
     this.paymentSpeakerService.tryPlayForPayment(payload, this.hotelId);
 
-    this.loadSePayPayments();
-    this.loadAllPayments();
+    this.scheduleRefresh();
   }
 
   private stopPaymentSocket(): void {
@@ -299,29 +300,40 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   startAutoRefresh(): void {
     if (!this.canLoadPayments()) return;
 
-    // Clear interval cũ nếu có
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
     }
 
-    // Tạo interval mới để refresh payment history mỗi 30 giây
+    // Toàn hệ thống không poll — payload nặng, dùng socket + nút Làm mới
+    if (this.systemWideMode) {
+      return;
+    }
+
     this.refreshInterval = setInterval(() => {
-      // Chỉ refresh payment history, không refresh SePay transactions (tốn token)
       this.refreshPaymentHistory();
     }, this.REFRESH_INTERVAL);
   }
 
+  private scheduleRefresh(): void {
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+    }
+    this.refreshTimer = setTimeout(() => {
+      this.refreshTimer = null;
+      this.refreshPaymentHistory();
+    }, 250);
+  }
+
   /**
-   * Refresh tất cả payment history (không refresh SePay transactions)
+   * Refresh payment history (một lần SePay, không forkJoin trùng)
    */
   refreshPaymentHistory(): void {
     if (!this.canLoadPayments()) return;
 
-    // Refresh payment history từ các phương thức thanh toán
     this.loadPayPalPayments();
     this.loadCryptoPayments();
     this.loadSePayPayments();
-    this.loadAllPayments();
   }
 
   /**
@@ -431,10 +443,11 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   loadPayPalPayments(): void {
     if (!this.userId || !this.enablePayPalPayment) return;
 
-    this.paypalService.getPaymentHistory({ userId: this.userId, limit: 50 }).subscribe({
+    this.paypalService.getPaymentHistory({ userId: this.userId, limit: 30 }).subscribe({
       next: (response) => {
         if (response?.success && response.data) {
           this.paypalPayments = response.data;
+          this.mergeAllPayments();
         }
       },
       error: (error) => {
@@ -450,10 +463,11 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
   loadCryptoPayments(): void {
     if (!this.userId || !this.enableCryptoPayment) return;
 
-    this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 50 }).subscribe({
+    this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 30 }).subscribe({
       next: (response) => {
         if (response?.success && response.data) {
           this.cryptoPayments = response.data;
+          this.mergeAllPayments();
         }
       },
       error: (error) => {
@@ -467,13 +481,15 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Load lịch sử thanh toán SePay từ PaymentHistory
    */
   loadSePayPayments(): void {
-    if (!this.canLoadPayments() || !this.enableSePayPayment) return;
+    if (!this.canLoadPayments() || !this.enableSePayPayment || this.sepayLoading) return;
 
+    this.sepayLoading = true;
     this.sepayService.getPaymentHistory(this.sepayQueryParams()).subscribe({
       next: (response: any) => {
+        this.sepayLoading = false;
         if (response?.success && response.data) {
           this.sepayPayments = response.data;
-          this.sepayTotal = Number(response.total) || response.data.length;
+          this.sepayTotal = Number(response.total ?? response.data.length);
           
           // LOGIC PHÁT ÂM THANH KHI CÓ TIỀN VÀO
           // Chế độ toàn hệ thống liệt kê giao dịch của mọi khách sạn, nên không phát loa
@@ -509,8 +525,10 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
             }
           }
         }
+        this.mergeAllPayments();
       },
       error: (error) => {
+        this.sepayLoading = false;
         console.error('Error loading SePay payments:', error);
       }
     });
@@ -520,133 +538,48 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
    * Load tất cả lịch sử thanh toán (tổng hợp từ tất cả phương thức)
    */
   loadAllPayments(): void {
-    if (!this.canLoadPayments()) return;
+    this.mergeAllPayments();
+  }
 
-    this.allPaymentsLoading = true;
+  private mergeAllPayments(): void {
+    const allPayments: any[] = [];
 
-    // Load từ tất cả các phương thức thanh toán (chỉ load những phương thức được bật)
-    const requests: any[] = [];
-    
-    if (this.enablePayPalPayment) {
-      requests.push(this.paypalService.getPaymentHistory({ userId: this.userId, limit: 100 }));
-    }
-    if (this.enableCryptoPayment) {
-      requests.push(this.cryptoService.getPaymentHistory({ userId: this.userId, limit: 100 }));
-    }
-    if (this.enableSePayPayment) {
-      requests.push(this.sepayService.getPaymentHistory(this.sepayQueryParams()));
-    }
-
-    if (requests.length === 0) {
-      this.allPayments = [];
-      this.allPaymentsLoading = false;
-      return;
-    }
-
-    // Combine tất cả payment history
-    forkJoin(requests).subscribe({
-      next: (responses) => {
-        const allPayments: any[] = [];
-        let responseIndex = 0;
-        
-        // Thêm PayPal payments
-        if (this.enablePayPalPayment && responses[responseIndex]) {
-          const paypalData = responses[responseIndex];
-          responseIndex++;
-          if (paypalData?.success && paypalData.data) {
-            paypalData.data.forEach((payment: any) => {
-              allPayments.push({
-                ...payment,
-                paymentMethod: 'paypal',
-                paymentMethodLabel: 'PayPal',
-                paymentMethodIcon: 'pay-circle',
-                paymentMethodColor: '#0070ba'
-              });
-            });
-          } else if (paypalData?.data) {
-            // Fallback nếu response không có success field
-            paypalData.data.forEach((payment: any) => {
-              allPayments.push({
-                ...payment,
-                paymentMethod: 'paypal',
-                paymentMethodLabel: 'PayPal',
-                paymentMethodIcon: 'pay-circle',
-                paymentMethodColor: '#0070ba'
-              });
-            });
-          }
-        }
-
-        // Thêm Crypto payments
-        if (this.enableCryptoPayment && responses[responseIndex]) {
-          const cryptoData = responses[responseIndex];
-          responseIndex++;
-          if (cryptoData?.success && cryptoData.data) {
-            cryptoData.data.forEach((payment: any) => {
-              allPayments.push({
-                ...payment,
-                paymentMethod: 'crypto_usdt',
-                paymentMethodLabel: `Crypto USDT (${payment.cryptoNetwork || 'N/A'})`,
-                paymentMethodIcon: 'dollar-circle',
-                paymentMethodColor: '#26a17b'
-              });
-            });
-          } else if (cryptoData?.data) {
-            // Fallback nếu response không có success field
-            cryptoData.data.forEach((payment: any) => {
-              allPayments.push({
-                ...payment,
-                paymentMethod: 'crypto_usdt',
-                paymentMethodLabel: `Crypto USDT (${payment.cryptoNetwork || 'N/A'})`,
-                paymentMethodIcon: 'dollar-circle',
-                paymentMethodColor: '#26a17b'
-              });
-            });
-          }
-        }
-
-        // Thêm SePay payments
-        if (this.enableSePayPayment && responses[responseIndex]) {
-          const sepayData = responses[responseIndex];
-          if (sepayData?.success && sepayData.data) {
-            sepayData.data.forEach((payment: any) => {
-              allPayments.push({
-                ...payment,
-                paymentMethod: 'sepay',
-                paymentMethodLabel: 'SePay',
-                paymentMethodIcon: 'credit-card',
-                paymentMethodColor: '#667eea'
-              });
-            });
-          } else if (sepayData?.data) {
-            // Fallback nếu response không có success field
-            sepayData.data.forEach((payment: any) => {
-              allPayments.push({
-                ...payment,
-                paymentMethod: 'sepay',
-                paymentMethodLabel: 'SePay',
-                paymentMethodIcon: 'credit-card',
-                paymentMethodColor: '#667eea'
-              });
-            });
-          }
-        }
-
-        // Sắp xếp theo ngày tạo (mới nhất trước)
-        this.allPayments = allPayments.sort((a, b) => {
-          const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
-          const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
-          return dateB - dateA;
-        });
-
-        this.allPaymentsLoading = false;
-      },
-      error: (error) => {
-        console.error('Error loading all payment history:', error);
-        this.allPaymentsLoading = false;
-        // Không hiển thị lỗi để không làm phiền user
-      }
+    this.paypalPayments.forEach((payment: any) => {
+      allPayments.push({
+        ...payment,
+        paymentMethod: 'paypal',
+        paymentMethodLabel: 'PayPal',
+        paymentMethodIcon: 'pay-circle',
+        paymentMethodColor: '#0070ba'
+      });
     });
+
+    this.cryptoPayments.forEach((payment: any) => {
+      allPayments.push({
+        ...payment,
+        paymentMethod: 'crypto_usdt',
+        paymentMethodLabel: `Crypto USDT (${payment.cryptoNetwork || 'N/A'})`,
+        paymentMethodIcon: 'dollar-circle',
+        paymentMethodColor: '#26a17b'
+      });
+    });
+
+    this.sepayPayments.forEach((payment: any) => {
+      allPayments.push({
+        ...payment,
+        paymentMethod: 'sepay',
+        paymentMethodLabel: 'SePay',
+        paymentMethodIcon: 'credit-card',
+        paymentMethodColor: '#667eea'
+      });
+    });
+
+    this.allPayments = allPayments.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
+      const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
+      return dateB - dateA;
+    });
+    this.allPaymentsLoading = false;
   }
 
   /**
@@ -886,7 +819,7 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
       status: this.reconcileStatusFilter || undefined,
       search: this.reconcileSearch.trim() || undefined,
       scope: this.isAdmin ? (scopeAll ? 'system' : 'own') : undefined,
-      limit: scopeAll ? 200 : 100
+      limit: scopeAll ? 40 : 40
     };
   }
 
@@ -896,7 +829,8 @@ export class BankTransferHistoryComponent implements OnInit, OnDestroy {
     this.systemWideMode = enabled;
     this.isFirstLoadSePay = true;
     this.lastPlayedPaymentId = null;
-    this.refreshPaymentHistory();
+    this.startAutoRefresh();
+    this.scheduleRefresh();
   }
 
   /** Áp dụng bộ lọc đối soát. */
