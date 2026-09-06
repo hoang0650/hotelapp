@@ -40,6 +40,7 @@ interface PricingPackage {
   draftInvoiceFeature?: boolean; // Tính năng xem hóa đơn nháp
   exportInvoiceFeature?: boolean; // Tính năng xuất hóa đơn
   aiChatboxFeature?: boolean; // Tính năng AI Chatbox
+  cameraAiFeature?: boolean; // Tính năng Camera AI
   hotelNotificationFeature?: boolean; // Tính năng thông báo khách sạn
   aiMonthlyQuota?: number; // Soft quota AI / tháng (turns)
   isActive: boolean;
@@ -170,6 +171,7 @@ export class PricingManagementComponent implements OnInit {
       { value: 'qr_payment', label: this.translate.instant('USER_MANAGEMENT.FEATURES.QR_PAYMENT') },
       { value: 'visa_payment', label: this.translate.instant('USER_MANAGEMENT.FEATURES.VISA_PAYMENT') },
       { value: 'electric_management', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ELECTRIC_MANAGEMENT') },
+      { value: 'camera_ai', label: this.translate.instant('USER_MANAGEMENT.FEATURES.CAMERA_AI') },
       { value: 'fanpage_messages', label: this.translate.instant('USER_MANAGEMENT.FEATURES.FANPAGE_MESSAGES') },
       { value: 'zalo_messages', label: this.translate.instant('USER_MANAGEMENT.FEATURES.ZALO_MESSAGES') },
       { value: 'telegram_messages', label: this.translate.instant('USER_MANAGEMENT.FEATURES.TELEGRAM_MESSAGES') }
@@ -217,6 +219,7 @@ export class PricingManagementComponent implements OnInit {
       draftInvoiceFeature: [false], // Tính năng xem hóa đơn nháp
       exportInvoiceFeature: [false], // Tính năng xuất hóa đơn
       aiChatboxFeature: [false], // Tính năng AI Chatbox
+      cameraAiFeature: [false], // Tính năng Camera AI
       hotelNotificationFeature: [false], // Tính năng thông báo khách sạn
       aiMonthlyQuota: [0, [Validators.min(0)]],
       isActive: [true]
@@ -435,6 +438,7 @@ export class PricingManagementComponent implements OnInit {
           draftInvoiceFeature: normalizedPkg.draftInvoiceFeature || false,
           exportInvoiceFeature: normalizedPkg.exportInvoiceFeature || false,
           aiChatboxFeature: normalizedPkg.aiChatboxFeature || false,
+          cameraAiFeature: normalizedPkg.cameraAiFeature || false,
           hotelNotificationFeature: normalizedPkg.hotelNotificationFeature || false,
           aiMonthlyQuota: Number(normalizedPkg.aiMonthlyQuota) || 0,
           isActive: normalizedPkg.isActive
@@ -474,6 +478,7 @@ export class PricingManagementComponent implements OnInit {
         draftInvoiceFeature: false,
         exportInvoiceFeature: false,
         aiChatboxFeature: false,
+        cameraAiFeature: false,
         hotelNotificationFeature: false,
         aiMonthlyQuota: 0,
         isActive: true
@@ -518,6 +523,7 @@ export class PricingManagementComponent implements OnInit {
       draftInvoiceFeature: false,
       exportInvoiceFeature: false,
       aiChatboxFeature: false,
+      cameraAiFeature: false,
       hotelNotificationFeature: false,
       aiMonthlyQuota: 0,
       isActive: true
@@ -581,7 +587,16 @@ export class PricingManagementComponent implements OnInit {
         yearlyDiscount: formData.isContactOnly ? 0 : formData.yearlyDiscount,
         maxUsers: maxUsers,
         maxRooms: maxRooms,
-        features: formData.features || [],
+        features: (() => {
+          const features = [...(formData.features || [])];
+          if (formData.cameraAiFeature && !features.includes('camera_ai')) {
+            features.push('camera_ai');
+          }
+          if (!formData.cameraAiFeature) {
+            return features.filter((f: string) => f !== 'camera_ai');
+          }
+          return features;
+        })(),
         permissions: formData.permissions || ['view'],
         // Nếu là superadmin, gửi monthlyDuration và yearlyDuration
         // Nếu không, giữ lại duration để tương thích
@@ -840,6 +855,7 @@ export class PricingManagementComponent implements OnInit {
       draftInvoiceFeature: !!preset.draftInvoiceFeature,
       exportInvoiceFeature: !!preset.exportInvoiceFeature,
       aiChatboxFeature: !!preset.aiChatboxFeature,
+      cameraAiFeature: !!preset.cameraAiFeature,
       hotelNotificationFeature: !!preset.hotelNotificationFeature,
       aiMonthlyQuota: Number(preset.aiMonthlyQuota) || 0,
       isActive: preset.isActive !== false
@@ -872,6 +888,7 @@ export class PricingManagementComponent implements OnInit {
       draftInvoiceFeature: !!preset.draftInvoiceFeature,
       exportInvoiceFeature: !!preset.exportInvoiceFeature,
       aiChatboxFeature: !!preset.aiChatboxFeature,
+      cameraAiFeature: !!preset.cameraAiFeature,
       hotelNotificationFeature: !!preset.hotelNotificationFeature,
       aiMonthlyQuota: Number(preset.aiMonthlyQuota) || 0,
       isActive: preset.isActive !== false
@@ -960,6 +977,7 @@ export class PricingManagementComponent implements OnInit {
       draftInvoiceFeature: value,
       exportInvoiceFeature: value,
       aiChatboxFeature: value,
+      cameraAiFeature: value,
       hotelNotificationFeature: value
     });
   }

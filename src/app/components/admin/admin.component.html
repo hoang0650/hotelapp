@@ -98,7 +98,7 @@
       </li>
 
       <!-- Cài đặt hệ thống -->
-      <li nz-submenu *ngIf="canAccessSettings() || canAccessEmailAdmin() || canAccessFile() || canAccessBotSetting()"
+      <li nz-submenu *ngIf="canAccessSettings() || canAccessEmailAdmin() || canAccessFile() || canAccessBotSetting() || canAccessCameraConfig()"
         [nzTitle]="'ADMIN_SIDEBAR.SYSTEM_SETTINGS' | translate" nzIcon="setting">
         <ul>
           <li nz-menu-item *ngIf="canAccessSettings()" routerLink="/admin/settings">
@@ -108,7 +108,7 @@
             <span>{{ 'ADMIN_SIDEBAR.BOT_SETTING' | translate }}</span>
           </li>
 
-          <li nz-menu-item *ngIf="canAccessBotSetting()" routerLink="/admin/camera-config">
+          <li nz-menu-item *ngIf="canAccessCameraConfig()" routerLink="/admin/camera-config">
             <span>{{ 'ADMIN_SIDEBAR.CAMERA_CONFIG' | translate }}</span>
           </li>
           <li nz-menu-item *ngIf="canAccessEmailAdmin()" routerLink="/admin/email-admin">{{ 'ADMIN_SIDEBAR.EMAIL_ADMIN'

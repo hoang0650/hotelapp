@@ -23,6 +23,7 @@ export type PermissionFeature =
   | 'qr_payment'          // Thanh toán QR
   | 'visa_payment'        // Thanh toán Visa
   | 'electric_management' // Quản lý điện
+  | 'camera_ai'           // Cấu hình Camera AI
   | 'zalo_messages'       // Tin nhắn Zalo OA
   | 'telegram_messages'   // Tin nhắn Telegram
   | 'settings_management'; // Quản lý cài đặt
@@ -52,6 +53,7 @@ export const ROUTE_PERMISSIONS: { [key: string]: PermissionFeature[] } = {
   '/admin/qr-payment': ['qr_payment'],
   '/admin/visa-payment': ['visa_payment'],
   '/admin/electric-setting': ['electric_management'],
+  '/admin/camera-config': ['camera_ai'],
   '/admin/financial-summary-report': ['financial_summary_report', 'revenue_chart'],
   '/admin/profile': [], // Profile không cần permission đặc biệt, chỉ cần đăng nhập
   '/admin/settings': ['settings_management'],
@@ -244,6 +246,7 @@ export class PermissionService {
         'qr_payment',
         'visa_payment',
         'electric_management',
+        'camera_ai',
         'pricing_management'
       ],
       hotel: [
@@ -263,6 +266,7 @@ export class PermissionService {
         'qr_payment',
         'visa_payment',
         'electric_management',
+        'camera_ai',
         'pricing_management'
       ],
       staff: [
@@ -280,6 +284,7 @@ export class PermissionService {
         'qr_payment',
         'visa_payment',
         'electric_management',
+        'camera_ai',
         'pricing_management'
       ]
     };
@@ -308,15 +313,28 @@ export class PermissionService {
     }
 
     const pkg = this.currentPackageSubject.value as any;
-    if (feature !== 'pricing_management' && pkg?.features && Array.isArray(pkg.features) && pkg.features.length > 0) {
+    if (feature === 'camera_ai') {
+      const hasCameraAi =
+        !!pkg?.cameraAiFeature ||
+        !!(user as any)?.cameraAiFeature ||
+        (Array.isArray(pkg?.features) && pkg.features.includes('camera_ai'));
+      if (!hasCameraAi) {
+        return false;
+      }
+    } else if (feature !== 'pricing_management' && pkg?.features && Array.isArray(pkg.features) && pkg.features.length > 0) {
       if (!pkg.features.includes(feature)) {
         return false;
       }
     }
 
     const delegatedFeatures = (user as any)?.features;
-    if (feature !== 'pricing_management' && Array.isArray(delegatedFeatures) && delegatedFeatures.length > 0) {
+    if (feature !== 'pricing_management' && feature !== 'camera_ai' && Array.isArray(delegatedFeatures) && delegatedFeatures.length > 0) {
       if (!delegatedFeatures.includes(feature)) {
+        return false;
+      }
+    }
+    if (feature === 'camera_ai' && Array.isArray(delegatedFeatures) && delegatedFeatures.length > 0) {
+      if (!delegatedFeatures.includes('camera_ai') && !(user as any)?.cameraAiFeature) {
         return false;
       }
     }
@@ -351,6 +369,7 @@ export class PermissionService {
       'qr_payment': ['view', 'edit', 'manage'],
       'visa_payment': ['view', 'edit', 'manage'],
       'electric_management': ['view', 'edit', 'manage'],
+      'camera_ai': ['view', 'edit', 'manage'],
       'settings_management': ['view', 'edit', 'manage']
     };
 

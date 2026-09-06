@@ -2735,6 +2735,7 @@
       "QR_PAYMENT": "QR Payment",
       "VISA_PAYMENT": "Visa Payment",
       "ELECTRIC_MANAGEMENT": "Electric Management",
+      "CAMERA_AI": "Camera AI",
       "FANPAGE_MESSAGES": "Fanpage Messages",
       "ZALO_MESSAGES": "Zalo Messages",
       "TELEGRAM_MESSAGES": "Telegram Messages"
@@ -2888,6 +2889,9 @@
       "AI_CHATBOX_ENABLE": "Enable AI Chatbox feature",
       "AI_CHATBOX_DESC": "Customers on this package can use OpenClaw-powered AI assistant features.",
       "AI_CHATBOX_OPENCLAW_NOTE": "When enabled, business and hotel roles in this package get AI Chatbox with OpenClaw as a management assistant. Fanpage/Zalo/Telegram (if those features are also enabled) use OpenClaw as the hotel agent.",
+      "CAMERA_AI": "Camera AI feature",
+      "CAMERA_AI_ENABLE": "Enable Camera AI feature",
+      "CAMERA_AI_DESC": "Customers on this package can access Camera configuration (face recognition / camera AI).",
       "AI_MONTHLY_QUOTA": "AI monthly quota",
       "AI_MONTHLY_QUOTA_DESC": "Soft quota of AI turns (sales + chatbox + OpenClaw). 0 = no AI or contract-based (Enterprise). Suggested: Trial 50 · Growth 1,200 · AI Pro 5,000.",
       "HOTEL_NOTIFICATION": "Hotel notification feature",

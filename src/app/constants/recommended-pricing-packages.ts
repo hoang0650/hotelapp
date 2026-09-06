@@ -27,6 +27,7 @@ export interface RecommendedPricingPackage {
   draftInvoiceFeature?: boolean;
   exportInvoiceFeature?: boolean;
   aiChatboxFeature?: boolean;
+  cameraAiFeature?: boolean;
   hotelNotificationFeature?: boolean;
   /** Soft quota: tổng lượt AI / tháng (sales + chatbox + openclaw) */
   aiMonthlyQuota?: number;
@@ -206,6 +207,7 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
       'zalo_messages',
       'telegram_messages',
       'electric_management',
+      'camera_ai',
       'email_admin'
     ],
     permissions: ['view', 'edit', 'delete', 'manage'],
@@ -218,6 +220,7 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
     emailManagementFeature: true,
     hotelNotificationFeature: true,
     aiChatboxFeature: true,
+    cameraAiFeature: true,
     electricManagementFeature: true,
     paypalPaymentFeature: true,
     aiMonthlyQuota: 5000,
@@ -252,6 +255,7 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
       'qr_payment',
       'visa_payment',
       'electric_management',
+      'camera_ai',
       'fanpage_messages',
       'zalo_messages',
       'telegram_messages'
@@ -268,6 +272,7 @@ export const RECOMMENDED_PRICING_PACKAGES: RecommendedPricingPackage[] = [
     emailManagementFeature: true,
     hotelNotificationFeature: true,
     aiChatboxFeature: true,
+    cameraAiFeature: true,
     electricManagementFeature: true,
     paypalPaymentFeature: true,
     cryptoPaymentFeature: true,

@@ -251,11 +251,15 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   canAccessContactManagement(): boolean {
-    return this.permissionService.canAccessRoute('/admin/contact-management');
+    return this.authService.isAdmin();
   }
 
   canAccessBlogManagement(): boolean {
-    return this.permissionService.canAccessRoute('/admin/blog-management');
+    return this.authService.isAdmin();
+  }
+
+  canAccessCameraConfig(): boolean {
+    return this.permissionService.canAccessRoute('/admin/camera-config');
   }
 
   canAccessOTAManagement(): boolean {

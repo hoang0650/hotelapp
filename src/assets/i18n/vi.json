@@ -3301,6 +3301,7 @@
       "QR_PAYMENT": "Thanh toán QR",
       "VISA_PAYMENT": "Thanh toán Visa",
       "ELECTRIC_MANAGEMENT": "Quản lý điện",
+      "CAMERA_AI": "Camera AI",
       "FANPAGE_MESSAGES": "Tin nhắn Fanpage",
       "ZALO_MESSAGES": "Tin nhắn Zalo",
       "TELEGRAM_MESSAGES": "Tin nhắn Telegram"
@@ -3488,6 +3489,9 @@
       "AI_CHATBOX_ENABLE": "Bật tính năng AI Chatbox tự động",
       "AI_CHATBOX_DESC": "Khi bật, các khách sạn đăng ký gói này sẽ dùng trợ lý AI OpenClaw để hỗ trợ vận hành.",
       "AI_CHATBOX_OPENCLAW_NOTE": "Khi bật, role business và hotel trong gói được mở AI Chatbox dùng OpenClaw như trợ lý quản lý. Fanpage/Zalo/Telegram (nếu bật feature tương ứng) cũng dùng OpenClaw làm hotel agent.",
+      "CAMERA_AI": "Tính năng Camera AI",
+      "CAMERA_AI_ENABLE": "Bật tính năng Camera AI",
+      "CAMERA_AI_DESC": "Khi bật, khách sạn đăng ký gói này được mở menu Cấu hình camera (nhận diện khuôn mặt / AI camera).",
       "AI_MONTHLY_QUOTA": "Định mức AI / tháng",
       "AI_MONTHLY_QUOTA_DESC": "Soft quota lượt AI (sales + chatbox + OpenClaw). 0 = không có AI hoặc theo hợp đồng (Enterprise). Gợi ý: Dùng Thử 50 · Tăng Trưởng 1.200 · AI Pro 5.000.",
       "HOTEL_NOTIFICATION": "Tính năng Thông báo Khách sạn",

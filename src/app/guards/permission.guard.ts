@@ -80,6 +80,19 @@ export class PermissionGuard implements CanActivate {
         return false;
       }
 
+      const isAdminOnlyCmsRoute =
+        url === '/admin/contact-management' ||
+        url.endsWith('/contact-management') ||
+        url === '/admin/blog-management' ||
+        url.endsWith('/blog-management');
+      if (isAdminOnlyCmsRoute) {
+        if (u.role === 'superadmin' || u.role === 'admin') {
+          return true;
+        }
+        this.router.navigate([unauthorizedUrl]);
+        return false;
+      }
+
       if (u.role === 'superadmin' || u.role === 'admin') {
         return true;
       }
