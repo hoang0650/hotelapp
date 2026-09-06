@@ -63,9 +63,12 @@ export class AuthInterceptor implements HttpInterceptor {
         const isPublicApi = typeof request.url === 'string' && (request.url.includes('/forgot-password') || request.url.includes('/reset-password'));
 
         if (error.status === 401 && !isRefreshEndpoint) {
-          if (isOnPublicRoute || isPublicApi) {
-            // Clear phiên chết trên trang public, không gọi logout() (tránh nhảy admin login)
-            this.authService.clearLocalSessionOnly();
+          if (isPublicApi) {
+            return throwError(() => error);
+          }
+          // Trang marketing anonymous: giữ 401, không xóa phiên đang refresh.
+          // /pricing trên admin.phhotel.vn dùng để đăng ký gói khi đã login.
+          if (isOnPublicRoute && !this.authService.getToken()) {
             return throwError(() => error);
           }
           return this.authService.refreshAccessToken().pipe(

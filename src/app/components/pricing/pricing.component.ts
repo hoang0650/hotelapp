@@ -12,6 +12,7 @@ import { UserService } from '../../services/user.service';
 import { SettingsService } from '../../services/settings.service';
 import { NotificationsService, Announcement } from '../../services/notifications.service';
 import { forkJoin } from 'rxjs';
+import { filter, take } from 'rxjs/operators';
 import { HotelService } from '../../services/hotel.service';
 import { TranslateService } from '@ngx-translate/core';
 import { GoogleAdsConversionService } from '../../services/google-ads-conversion.service';
@@ -308,33 +309,32 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
    * Load thông tin user hiện tại
    */
   loadCurrentUser(): void {
-    // Lấy user từ AuthService
-    this.currentUser = this.authService.getCurrentUser();
-    
-    // Nếu chưa có user hoặc chưa có bankAccount, load từ API
-    if (this.userId && (!this.currentUser || !this.currentUser.bankAccount)) {
-      this.userService.getProfile().subscribe({
-        next: (userData: any) => {
-          this.currentUser = userData;
-        },
-        error: (error: any) => {
-          console.error('Error loading user profile:', error);
-          // Fallback: sử dụng user từ AuthService
-          if (!this.currentUser) {
-            this.currentUser = this.authService.getCurrentUser();
-          }
-        }
-      });
+    this.applySessionUser(this.authService.getCurrentUser());
+
+    this.authService.authResolved$.pipe(
+      filter(resolved => resolved),
+      take(1)
+    ).subscribe(() => {
+      this.applySessionUser(this.authService.getCurrentUser());
+    });
+
+    this.authService.currentUser$.subscribe({
+      next: (user) => this.applySessionUser(user)
+    });
+  }
+
+  private applySessionUser(user: any): void {
+    this.currentUser = user || this.currentUser;
+    if (!user?._id) {
+      return;
     }
-    
-    // Nếu chưa có user, subscribe để lấy khi có
-    if (!this.currentUser) {
-      this.authService.currentUser$.subscribe({
-        next: (user) => {
-          this.currentUser = user;
-          // Không cần kiểm tra QR code từ currentUser nữa, chỉ lấy từ hệ thống/superadmin
-        }
-      });
+
+    const nextUserId = String(user._id);
+    const userChanged = this.userId !== nextUserId;
+    this.userId = nextUserId;
+    if (userChanged) {
+      this.loadCurrentPackage();
+      this.loadPaymentHistory();
     }
   }
 

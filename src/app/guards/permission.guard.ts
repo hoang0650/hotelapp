@@ -92,6 +92,7 @@ export class PermissionGuard implements CanActivate {
         // Guest được vào shell /admin để xem UI và đăng ký gói (pricing-management + pricing public)
         if (
           url === '/admin/pricing-management' ||
+          url === '/admin/pricing' ||
           url === '/admin/profile' ||
           url === '/pricing'
         ) {

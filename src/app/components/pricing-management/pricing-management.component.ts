@@ -12,6 +12,7 @@ import {
   RecommendedPricingPackage,
   sortPackagesByRecommendedOrder
 } from '../../constants/recommended-pricing-packages';
+import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
@@ -89,6 +90,7 @@ export class PricingManagementComponent implements OnInit {
     private fb: FormBuilder,
     private pricingService: PricingService,
     private authService: AuthService,
+    private router: Router,
     private message: NzMessageService,
     private modal: NzModalService,
     private translate: TranslateService
@@ -772,8 +774,14 @@ export class PricingManagementComponent implements OnInit {
   }
 
   private redirectToPricing(packageId: string, billingType: 'monthly' | 'yearly'): void {
-    const target = `/pricing?packageId=${encodeURIComponent(packageId)}&billingType=${encodeURIComponent(billingType)}`;
-    window.location.href = target;
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    const inAdminPath = this.router.url.startsWith('/admin');
+    const commands = hostname.startsWith('admin.') || !inAdminPath
+      ? ['/pricing']
+      : ['/admin', 'pricing'];
+    this.router.navigate(commands, {
+      queryParams: { packageId, billingType }
+    });
   }
 
   canEditPackage(): boolean {
