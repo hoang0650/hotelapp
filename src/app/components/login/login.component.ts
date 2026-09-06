@@ -80,14 +80,16 @@ export class LoginComponent implements OnInit {
    * Hard Redirect lập tức đến trang quản lý phòng
    */
   private executeFastRedirect(): void {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname || '';
-      if (hostname.startsWith('admin.') || hostname === 'localhost' || hostname === '127.0.0.1') {
-        this.router.navigateByUrl('/admin/room', { replaceUrl: true });
-        return;
-      }
-      window.location.replace('https://admin.phhotel.vn/admin/room');
+    if (typeof window === 'undefined') {
+      return;
     }
+
+    const hostname = window.location.hostname || '';
+    if (hostname.startsWith('admin.') || hostname === 'localhost' || hostname === '127.0.0.1') {
+      this.router.navigateByUrl('/admin/room', { replaceUrl: true });
+      return;
+    }
+    window.location.replace('https://admin.phhotel.vn/admin/room');
   }
 
   submitForm(): void {

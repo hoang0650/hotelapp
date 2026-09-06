@@ -1126,11 +1126,18 @@ export class PricingManagementComponent implements OnInit {
     }
 
     const packageName = String(subscriber.packageName || '').trim().toUpperCase();
-    const isFreeSubscriber = packageName === 'FREE';
+    const isFreeSubscriber =
+      packageName === 'FREE' ||
+      packageName === 'DÙNG THỬ' ||
+      packageName === 'DUNG THU' ||
+      packageName.includes('THỬ') ||
+      packageName.includes('TRIAL');
     const rawMaxUsers = subscriber.maxUsers;
-    const normalizedMaxUsers = isFreeSubscriber && (rawMaxUsers === null || rawMaxUsers === undefined || rawMaxUsers === 0)
-      ? 1
-      : rawMaxUsers;
+    // Chỉ coi 0 là không giới hạn; null/undefined với gói free/trial lấy từ gói (fallback 2)
+    let normalizedMaxUsers = rawMaxUsers;
+    if (rawMaxUsers === null || rawMaxUsers === undefined) {
+      normalizedMaxUsers = isFreeSubscriber ? 2 : 0;
+    }
 
     return {
       ...subscriber,
