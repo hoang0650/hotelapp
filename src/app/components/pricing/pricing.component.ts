@@ -6,7 +6,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { AuthService } from '../../services/auth.service';
 import { PayPalPaymentData } from '../paypal-payment/paypal-payment.component';
-import { SePayService, SePayPaymentData } from '../../services/sepay.service';
+import { SePayService } from '../../services/sepay.service';
+import { GpayService, GpayConfig, GpayPaymentStatus } from '../../services/gpay.service';
 import { PayPalService } from '../../services/paypal.service';
 import { UserService } from '../../services/user.service';
 import { SettingsService } from '../../services/settings.service';
@@ -61,21 +62,21 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   canUsePayPal: boolean = true; // Mặc định cho phép
   enablePayPalPayment: boolean = true;
 
-  // SePay QR code
-  showSePayModal = false;
-  // Bỏ sepayPaymentCode - không cần mã thanh toán nữa
-  sepayAmount = 0;
-  sepayQrUrl = '';
-  sepayBeneficiaryName = '';
-  sepayPaymentHistoryId = ''; // Lưu paymentHistoryId để kiểm tra trạng thái
-  sepayPaymentCode = ''; // Nội dung chuyển khoản (PHGxxxxxx)
+  // GPay (VietQR + cổng thẻ ATM/quốc tế)
+  gpayConfig: GpayConfig | null = null;
+  showGpayModal = false;
+  gpayAmount = 0;
+  gpayQrImage = '';
+  gpayAccountNumber = '';
+  gpayAccountName = '';
+  gpayProvider = '';
+  gpayPaymentHistoryId = '';
+  gpayPaymentCode = '';
+  gpayRedirecting = false;
+  gpayChecking = false;
   currentUser: any = null;
-  systemQRCode: string = ''; // QR code từ superadmin hoặc settings
-  systemBeneficiaryName: string = ''; // Tên người thụ hưởng từ superadmin hoặc settings
-  systemBankName: string = ''; // Tên ngân hàng từ superadmin hoặc settings
-  systemAccountNumber: string = ''; // Số tài khoản từ superadmin hoặc settings
-  hasQRCode: boolean = false; // Kiểm tra có QR code không
   private paymentStatusCheckInterval: any = null; // Interval để kiểm tra trạng thái thanh toán
+  private static readonly GPAY_PENDING_KEY = 'pricing.gpayPending';
   
   // Navigation buttons
   @ViewChild('pricingPlansContainer', { static: false }) pricingPlansContainer!: ElementRef<HTMLDivElement>;
@@ -94,7 +95,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         { text: 'Chia sẻ biến động số dư', active: true },
         { text: 'Cổng thanh toán trực tuyến', active: true },
         { text: 'Hỗ trợ Webhook, API', active: true },
-        { text: 'Tất cả tính năng của SePay', active: true }
+        { text: 'Tất cả tính năng của GPay', active: true }
       ],
       banks: ['vietcombank', 'acb', 'mb', 'tpb', 'vpb', 'vib', 'ocb', 'shb', 'bacabank'],
       selectText: 'Chọn',
@@ -110,7 +111,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         { text: 'Chia sẻ biến động số dư', active: true },
         { text: 'Cổng thanh toán trực tuyến', active: true },
         { text: 'Hỗ trợ Webhook, API', active: true },
-        { text: 'Tất cả tính năng của SePay', active: true }
+        { text: 'Tất cả tính năng của GPay', active: true }
       ],
       banks: ['vietcombank', 'acb', 'mb', 'tpb', 'vpb', 'vib', 'ocb', 'shb', 'bacabank'],
       highlight: true,
@@ -127,7 +128,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         { text: 'Chia sẻ biến động số dư', active: true },
         { text: 'Cổng thanh toán trực tuyến', active: true },
         { text: 'Hỗ trợ Webhook, API', active: true },
-        { text: 'Tất cả tính năng của SePay', active: true }
+        { text: 'Tất cả tính năng của GPay', active: true }
       ],
       banks: ['vietcombank', 'acb', 'mb', 'tpb', 'vpb', 'vib', 'ocb', 'shb', 'bacabank', 'bidv', 'agribank', 'sacombank', 'techcombank', 'eximbank', 'abbank', 'pvcombank', 'vietinbank', 'seabank', 'lpb', 'hdbank', 'scb', 'namabank', 'vietcapital', 'pgbank', 'banviet', 'cbbank', 'msb', 'baoviet', 'dongabank', 'saigonbank', 'vietbank'],
       selectText: 'Chọn',
@@ -176,6 +177,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
     private sepayService: SePayService,
+    private gpayService: GpayService,
     private paypalService: PayPalService,
     private userService: UserService,
     private settingsService: SettingsService,
@@ -237,7 +239,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       this.currentPackage = null;
     }
 
-    // Xử lý callback từ SePay sau khi thanh toán
+    this.loadGpayConfig();
+    // Xử lý khi GPay redirect về sau khi thanh toán
     this.handlePaymentCallback();
     this.loadHotelSettings();
     window.addEventListener('paymentSettingsChanged', this.onPaymentSettingsChanged as EventListener);
@@ -338,90 +341,74 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  /**
-   * Load QR code từ superadmin hoặc settings
-   * Tất cả các user bất kể role đều có thể lấy QR code này
-   * Sử dụng endpoint mới từ backend (chỉ cần đăng nhập, không yêu cầu quyền đặc biệt)
-   */
-  loadSystemQRCode(): void {
-    this.sepayService.getPricingQRCode().subscribe({
-      next: (response: any) => {
-        if (response.success && response.qrPaymentUrl) {
-          this.systemQRCode = response.qrPaymentUrl;
-          this.systemBeneficiaryName = response.beneficiaryName || '';
-          this.systemBankName = response.bankName || '';
-          this.systemAccountNumber = response.accountNumber || '';
-          this.hasQRCode = true;
-        } else {
-          this.hasQRCode = false;
-        }
+  private loadGpayConfig(): void {
+    this.gpayService.getConfig().subscribe({
+      next: (config) => {
+        this.gpayConfig = config;
+        this.cdr.detectChanges();
       },
-      error: (error: any) => {
-        console.error('Error loading pricing QR code:', error);
-        this.hasQRCode = false;
+      error: (error) => {
+        console.error('Error loading GPay config:', error);
+        this.gpayConfig = null;
       }
     });
   }
 
+  get gpayAvailable(): boolean {
+    return !!(this.gpayConfig?.qrEnabled || this.gpayConfig?.portalEnabled);
+  }
+
   /**
-   * Xử lý callback từ SePay sau khi thanh toán
-   * Với webhook, chỉ cần hiển thị thông báo và reload package
-   * Webhook sẽ tự động xử lý đăng ký gói
+   * GPay redirect về /pricing?paymentMethod=gpay&paymentHistoryId=... sau khi thanh toán qua cổng.
+   * Trạng thái thật lấy từ server (webhook hoặc đối soát bill-info), không tin query string.
    */
   handlePaymentCallback(): void {
     const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get('paymentStatus') || urlParams.get('payment');
     const paymentMethod = urlParams.get('paymentMethod');
-    const packageId = urlParams.get('packageId');
+    const paymentHistoryId = urlParams.get('paymentHistoryId') || '';
 
-    // Chỉ xử lý callback từ SePay
-    if (paymentMethod !== 'sepay') {
+    if (paymentMethod !== 'gpay' || !/^[a-f0-9]{24}$/i.test(paymentHistoryId)) {
       return;
     }
+    window.history.replaceState({}, '', window.location.pathname);
 
-    if (paymentStatus === 'success') {
-      // Thanh toán thành công - webhook sẽ tự động xử lý đăng ký gói
-      this.message.success(this.t('PRICING_PAGE.MESSAGES.PAYMENT_SUCCESS_PROCESSING'));
-      
-      // Lưu thông tin package trước khi reset để tạo thông báo
-      const packageInfo = this.selectedPackage ? { ...this.selectedPackage } : null;
-      this.selectedPackage = null; // Reset selected package
-      
-      // Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
-      this.loadLatestPaymentAndPlaySound();
-      
-      // Tạo thông báo hệ thống cho thanh toán thành công
-      if (packageInfo) {
-        const billingTypeText = packageInfo.billingType === 'yearly' ? 'theo năm' : 'theo tháng';
-        // Kiểm tra xem có phải nâng cấp/cập nhật gói không
-        const isUpgrade = this.currentPackage && this.currentPackage.packageId && this.currentPackage.packageId !== packageInfo.packageId;
-        const isUpdate = this.currentPackage && this.currentPackage.packageId === packageInfo.packageId && this.currentPackage.billingType !== packageInfo.billingType;
-        
-        if (isUpgrade) {
-          this.createSubscriptionAnnouncement(packageInfo.name, billingTypeText, 'upgrade');
-        } else if (isUpdate) {
-          this.createSubscriptionAnnouncement(packageInfo.name, billingTypeText, 'update');
-        } else {
-          this.createSubscriptionAnnouncement(packageInfo.name, billingTypeText, 'payment');
-        }
-      }
-      
-      // Reload package sau 2 giây để kiểm tra xem đã đăng ký chưa
-      setTimeout(() => {
-        this.loadCurrentPackage({ force: true });
-        this.loadPaymentHistory();
-      }, 2000);
-      
-      // Xóa query params để tránh xử lý lại
-      window.history.replaceState({}, '', '/pricing');
-    } else if (paymentStatus === 'error') {
-      this.message.error(this.t('PRICING_PAGE.MESSAGES.PAYMENT_FAILED'));
-      this.selectedPackage = null; // Reset selected package
-      window.history.replaceState({}, '', '/pricing');
-    } else if (paymentStatus === 'cancel') {
-      this.message.warning(this.t('PRICING_PAGE.MESSAGES.PAYMENT_CANCELLED'));
-      this.selectedPackage = null; // Reset selected package
-      window.history.replaceState({}, '', '/pricing');
+    const pending = this.readGpayPending();
+    if (pending?.paymentHistoryId === paymentHistoryId && pending.selectedPackage) {
+      this.selectedPackage = pending.selectedPackage;
+    }
+    this.gpayPaymentHistoryId = paymentHistoryId;
+    this.gpayAmount = Number(pending?.amount) || 0;
+    this.gpayChecking = true;
+    this.message.info(this.t('PRICING_PAGE.GPAY.CHECKING'));
+    this.startPaymentStatusPolling({ intervalMs: 3000, maxChecks: 40 });
+  }
+
+  private saveGpayPending(paymentHistoryId: string, amount: number): void {
+    try {
+      sessionStorage.setItem(PricingComponent.GPAY_PENDING_KEY, JSON.stringify({
+        paymentHistoryId,
+        amount,
+        selectedPackage: this.selectedPackage
+      }));
+    } catch {
+      // sessionStorage có thể bị chặn; chỉ mất thông tin hiển thị sau khi quay lại
+    }
+  }
+
+  private readGpayPending(): { paymentHistoryId: string; amount: number; selectedPackage: any } | null {
+    try {
+      const raw = sessionStorage.getItem(PricingComponent.GPAY_PENDING_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private clearGpayPending(): void {
+    try {
+      sessionStorage.removeItem(PricingComponent.GPAY_PENDING_KEY);
+    } catch {
+      // ignore
     }
   }
 
@@ -727,136 +714,125 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Thanh toán qua SePay
-   * Tạo payment history và hiển thị QR code thanh toán
-   * Webhook sẽ tự động xử lý khi SePay nhận được tiền
+   * Thanh toán qua GPay: ưu tiên VietQR động (hiển thị trong modal, tự đóng khi webhook báo tiền về);
+   * nếu chỉ bật cổng thanh toán thì chuyển thẳng sang trang thẻ ATM/quốc tế của GPay.
+   * Số tiền do server tính lại từ gói + gói hiện tại.
    */
-  payWithSePay(): void {
+  payWithGpay(): void {
     if (!this.selectedPackage || !this.userId) {
       this.message.warning(this.t('PRICING_PAGE.MESSAGES.SELECT_PLAN_BEFORE_PAYMENT'));
       return;
     }
-
-    // Đảm bảo đã load user profile
-    if (!this.currentUser) {
-      this.loadCurrentUser();
+    if (!this.gpayAvailable) {
+      this.message.warning(this.t('PRICING_PAGE.GPAY.UNAVAILABLE'));
+      return;
     }
 
-    const packageId = this.selectedPackage.packageId;
-    const pkg = this.selectedPackage;
-    const packagePrice = (this.selectedPackage.netAmount !== undefined) 
-      ? this.selectedPackage.netAmount 
-      : this.getPackagePrice(pkg);
-    const billingTypeText = this.getBillingLabel(this.selectedPackage.billingType);
-
-    // Luôn load lại QR code từ superadmin profile trước khi thanh toán
-    // Ưu tiên: superadmin profile > settings (chỉ lấy từ hệ thống)
-    this.loadQRCodeFromSuperadminForPayment(packagePrice, packageId, pkg, billingTypeText);
-  }
-
-  /**
-   * Load QR code từ superadmin profile để thanh toán
-   * Ưu tiên: superadmin profile > settings
-   * Chỉ lấy từ hệ thống, không lấy từ currentUser
-   */
-  loadQRCodeFromSuperadminForPayment(packagePrice: number, packageId: string, pkg: any, billingTypeText: string): void {
-    // QR code sẽ được lấy từ backend response trong createPaymentHistory
-    // Không cần gọi API riêng vì backend sẽ tự động trả về QR code từ hệ thống
-    this.proceedWithSePayPayment('', '', packagePrice, packageId, pkg, billingTypeText);
-  }
-
-  /**
-   * Tiến hành thanh toán SePay với QR code đã lấy được
-   */
-  proceedWithSePayPayment(qrPaymentUrl: string, beneficiaryName: string, packagePrice: number, packageId: string, pkg: any, billingTypeText: string): void {
-    // Tạo payment history
-    const sepayPaymentData: SePayPaymentData = {
-      packageId: packageId,
-      packageName: pkg?.name || 'N/A',
-      amount: packagePrice,
-      billingType: this.selectedPackage.billingType,
-      currency: 'VND',
-      description: `Đăng ký gói ${pkg?.name || 'N/A'} - ${billingTypeText}`,
-      customerId: this.userId
-    };
-
-    // Gọi API tạo payment history (backend sẽ trả về QR code từ hệ thống cho pricing payment)
+    const method = this.gpayConfig?.qrEnabled ? 'qr' : 'portal';
     this.loading = true;
-    this.sepayService.createPaymentHistory(sepayPaymentData).subscribe({
-      next: (response: any) => {
-        this.loading = false;
-        console.log('[Pricing] Payment history response:', JSON.stringify(response, null, 2));
-        
-        // Kiểm tra response.success (có thể là true, false, hoặc undefined)
-        if (response.success !== false) {
-          // Ưu tiên sử dụng QR code từ backend response (từ hệ thống/superadmin)
-          // Nếu không có, fallback về QR code đã lấy từ frontend
-          const finalQrUrl = response.qrPaymentUrl || response.data?.qrPaymentUrl || qrPaymentUrl;
-          const finalBeneficiaryName = response.beneficiaryName || response.data?.beneficiaryName || beneficiaryName;
-          const finalBankName = response.bankName || response.data?.bankName || '';
-          const finalAccountNumber = response.accountNumber || response.data?.accountNumber || '';
-          
-          console.log('[Pricing] Final QR URL:', finalQrUrl ? `Found: ${finalQrUrl.substring(0, 50)}...` : 'Not found');
-          console.log('[Pricing] Response keys:', Object.keys(response));
-          
-          if (!finalQrUrl) {
-            // Nếu không có QR code, có thể là do hệ thống chưa có QR code
-            // Nhưng vẫn cho phép tiếp tục nếu có paymentHistoryId (để user có thể thanh toán sau)
-            console.warn('[Pricing] No QR code in response, but payment history created');
-            this.message.warning(this.t('PRICING_PAGE.MESSAGES.QR_NOT_CONFIGURED', {
-              code: response.paymentCode || response.paymentHistoryId || 'N/A'
-            }));
-            return;
-          }
-          
-          // Lưu thông tin payment và hiển thị modal với QR code
-          this.sepayAmount = packagePrice;
-          this.sepayQrUrl = finalQrUrl;
-          this.sepayBeneficiaryName = finalBeneficiaryName;
-          this.sepayPaymentHistoryId = response.paymentHistoryId || ''; // Lưu paymentHistoryId để kiểm tra trạng thái
-          this.sepayPaymentCode = response.paymentCode || response.data?.paymentCode || '';
-          
-          // Cập nhật systemQRCode để lần sau không cần load lại
-          this.systemQRCode = finalQrUrl;
-          this.systemBeneficiaryName = finalBeneficiaryName;
-          this.systemBankName = finalBankName;
-          this.systemAccountNumber = finalAccountNumber;
-          this.hasQRCode = true;
-          
-          // Hiển thị modal với QR code
-          this.showSePayModal = true;
-          
-          // Bắt đầu polling để kiểm tra trạng thái thanh toán và tự động đóng modal khi thành công
-          this.startPaymentStatusPolling();
-        } else {
-          // Response có success: false hoặc error
-          console.error('[Pricing] Payment history creation failed:', response);
-          const errorMsg = response.error || response.message || this.t('PRICING_PAGE.MESSAGES.CREATE_PAYMENT_HISTORY_ERROR');
-          this.message.error(errorMsg);
+    this.gpayService.createPricingPayment({
+      packageId: this.selectedPackage.packageId,
+      billingType: this.selectedPackage.billingType,
+      method,
+      returnUrl: this.gpayReturnUrl()
+    }).subscribe({
+      next: async (response) => {
+        this.gpayPaymentHistoryId = response.paymentHistoryId;
+        this.gpayPaymentCode = response.paymentCode;
+        this.gpayAmount = response.amount;
+
+        if (response.method === 'portal') {
+          this.redirectToGpay(response.billUrl || '', response.paymentHistoryId, response.amount);
+          return;
         }
+
+        this.gpayQrImage = await this.resolveQrImage(response.qrCodeImage, response.qrCode);
+        this.gpayAccountNumber = response.accountNumber || '';
+        this.gpayAccountName = response.accountName || '';
+        this.gpayProvider = response.provider || '';
+        this.loading = false;
+        if (!this.gpayQrImage) {
+          this.message.error(this.t('PRICING_PAGE.GPAY.CREATE_FAILED'));
+          return;
+        }
+        this.showGpayModal = true;
+        this.cdr.detectChanges();
+        this.startPaymentStatusPolling({ intervalMs: 4000, maxChecks: 150 });
       },
       error: (error: any) => {
         this.loading = false;
-        console.error('Error creating SePay payment history:', error);
-        const errorMessage = error.error?.error || error.error?.message || error.message || this.t('PRICING_PAGE.MESSAGES.CREATE_PAYMENT_HISTORY_ERROR');
-        this.message.error(errorMessage);
+        console.error('Error creating GPay payment:', error);
+        this.message.error(error?.error?.message || this.t('PRICING_PAGE.GPAY.CREATE_FAILED'));
       }
     });
   }
 
+  /** Từ modal VietQR: trả bằng thẻ ATM / thẻ quốc tế trên cổng GPay cho cùng khoản thanh toán. */
+  payGpayByCard(): void {
+    if (!this.gpayPaymentHistoryId || this.gpayRedirecting) {
+      return;
+    }
+    this.gpayRedirecting = true;
+    const returnUrl = `${this.gpayReturnUrl()}?paymentMethod=gpay&paymentHistoryId=${encodeURIComponent(this.gpayPaymentHistoryId)}`;
+    this.gpayService.createCheckout(this.gpayPaymentHistoryId, returnUrl).subscribe({
+      next: (response) => this.redirectToGpay(response.billUrl, this.gpayPaymentHistoryId, this.gpayAmount),
+      error: (error: any) => {
+        this.gpayRedirecting = false;
+        console.error('Error creating GPay checkout:', error);
+        this.message.error(error?.error?.message || this.t('PRICING_PAGE.GPAY.CREATE_FAILED'));
+      }
+    });
+  }
+
+  private gpayReturnUrl(): string {
+    return `${window.location.origin}${window.location.pathname}`;
+  }
+
+  private redirectToGpay(billUrl: string, paymentHistoryId: string, amount: number): void {
+    if (!/^https:\/\//i.test(billUrl)) {
+      this.loading = false;
+      this.gpayRedirecting = false;
+      this.message.error(this.t('PRICING_PAGE.GPAY.CREATE_FAILED'));
+      return;
+    }
+    this.stopPaymentStatusPolling();
+    this.saveGpayPending(paymentHistoryId, amount);
+    this.gpayRedirecting = true;
+    this.message.loading(this.t('PRICING_PAGE.GPAY.REDIRECTING'));
+    window.location.href = billUrl;
+  }
+
+  /** GPay trả qr_code_image dạng base64 (có thể thiếu tiền tố data:); nếu không có ảnh thì tự vẽ từ chuỗi VietQR. */
+  private async resolveQrImage(image?: string, qrCode?: string): Promise<string> {
+    const raw = String(image || '').trim();
+    if (raw) {
+      return /^(data:|https?:)/i.test(raw) ? raw : `data:image/png;base64,${raw}`;
+    }
+    if (!qrCode) {
+      return '';
+    }
+    try {
+      const mod: any = await import('qrious');
+      const QRious = mod.default || mod;
+      return new QRious({ value: qrCode, size: 300, level: 'M', padding: 8 }).toDataURL();
+    } catch (error) {
+      console.error('Error rendering VietQR:', error);
+      return '';
+    }
+  }
+
   /**
-   * Đóng modal SePay và reload package/payment history
+   * Đóng modal GPay (khách có thể vẫn chuyển khoản sau; webhook sẽ kích hoạt gói).
    */
-  closeSePayModal(): void {
-    this.showSePayModal = false;
-    // Bỏ copy mã thanh toán - không cần mã thanh toán nữa
-    this.sepayPaymentCode = '';
+  closeGpayModal(): void {
+    this.showGpayModal = false;
+    this.stopPaymentStatusPolling();
+    this.gpayQrImage = '';
+    this.gpayPaymentCode = '';
     this.selectedPackage = null;
     this.loadCurrentPackage({ force: true });
     this.loadPaymentHistory();
   }
-
-  // Bỏ copyPaymentCode - không cần mã thanh toán nữa
 
   /**
    * Hủy chọn gói
@@ -1443,11 +1419,12 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
           if (sepayData?.data) {
             sepayData.data.forEach((payment: any) => {
+              const isGpay = payment.paymentMethod === 'gpay';
               allPayments.push({
                 ...payment,
-                paymentMethod: 'sepay',
-                paymentMethodLabel: 'SePay',
-                paymentMethodIcon: 'credit-card'
+                paymentMethod: isGpay ? 'gpay' : 'sepay',
+                paymentMethodLabel: isGpay ? 'GPay' : 'SePay',
+                paymentMethodIcon: isGpay ? 'qrcode' : 'credit-card'
               });
             });
           }
@@ -1486,6 +1463,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         return '#0070ba';
       case 'sepay':
         return '#667eea';
+      case 'gpay':
+        return '#00a651';
       default:
         return '#999';
     }
@@ -1497,6 +1476,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         return 'rgba(0, 112, 186, 0.1)';
       case 'sepay':
         return 'rgba(102, 126, 234, 0.1)';
+      case 'gpay':
+        return 'rgba(0, 166, 81, 0.1)';
       default:
         return 'rgba(153, 153, 153, 0.1)';
     }
@@ -1566,77 +1547,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
-   */
-  private loadLatestPaymentAndPlaySound(): void {
-    if (!this.userId) {
-      console.warn('[loadLatestPaymentAndPlaySound] Không tìm thấy userId');
-      // Fallback: lấy từ selectedPackage hoặc sepayAmount ngay lập tức
-      const amount = this.selectedPackage?.price || this.sepayAmount || 0;
-      if (amount > 0) {
-        this.playPaymentSuccessSound(amount);
-      }
-      return;
-    }
-    
-    // Đợi một chút để đảm bảo webhook đã cập nhật dữ liệu
-    setTimeout(() => {
-      // Lấy lịch sử chuyển khoản SePay gần nhất
-      this.sepayService.getPaymentHistory({ userId: this.userId, limit: 10 }).subscribe({
-        next: (response: any) => {
-          let amount = 0;
-          
-          // Tìm giao dịch gần nhất có status 'completed' hoặc 'paid'
-          const paymentHistories = Array.isArray(response) 
-            ? response 
-            : (response?.success && response.data ? response.data : []);
-          
-          if (paymentHistories && paymentHistories.length > 0) {
-            // Tìm giao dịch gần nhất đã hoàn thành
-            const completedPayment = paymentHistories.find((p: any) => 
-              (p.status === 'completed' || p.status === 'paid') && 
-              (p.amount > 0 || p.totalAmount > 0)
-            );
-            
-            if (completedPayment) {
-              // Ưu tiên lấy transferAmount từ paymentGatewayResponse (số tiền thực tế nhận được)
-              amount = completedPayment.paymentGatewayResponse?.transferAmount || 
-                      completedPayment.amount || 
-                      completedPayment.totalAmount || 0;
-            } else {
-              // Nếu không tìm thấy completed, lấy giao dịch gần nhất
-              const latestPayment = paymentHistories[0];
-              amount = latestPayment.amount || latestPayment.totalAmount || 0;
-            }
-          }
-          
-          // Nếu không lấy được từ API, thử lấy từ selectedPackage hoặc sepayAmount
-          if (amount === 0) {
-            amount = this.selectedPackage?.price || this.sepayAmount || 0;
-          }
-          
-          if (amount > 0) {
-            console.log('[loadLatestPaymentAndPlaySound] Số tiền thanh toán:', amount);
-            // Phát thông báo âm thanh
-            this.playPaymentSuccessSound(amount);
-          } else {
-            console.warn('[loadLatestPaymentAndPlaySound] Không tìm thấy số tiền thanh toán');
-          }
-        },
-        error: (error) => {
-          console.error('[loadLatestPaymentAndPlaySound] Lỗi khi lấy lịch sử thanh toán:', error);
-          // Fallback: lấy từ selectedPackage hoặc sepayAmount
-          const amount = this.selectedPackage?.price || this.sepayAmount || 0;
-          if (amount > 0) {
-            console.log('[loadLatestPaymentAndPlaySound] Sử dụng số tiền từ selectedPackage/sepayAmount:', amount);
-            this.playPaymentSuccessSound(amount);
-          }
-        }
-      });
-    }, 1000); // Đợi 1 giây để webhook cập nhật dữ liệu
-  }
-  
-  /**
    * Phát thông báo âm thanh khi thanh toán thành công
    */
   private playPaymentSuccessSound(amount: number): void {
@@ -1684,95 +1594,72 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Bắt đầu kiểm tra trạng thái thanh toán (polling)
+   * Kiểm tra trạng thái khoản thanh toán GPay hiện tại (server tự đối soát bill-info nếu lỡ webhook).
    */
-  private startPaymentStatusPolling(): void {
-    // Dừng interval cũ nếu có
-    if (this.paymentStatusCheckInterval) {
-      clearInterval(this.paymentStatusCheckInterval);
+  private startPaymentStatusPolling(options: { intervalMs: number; maxChecks: number }): void {
+    this.stopPaymentStatusPolling();
+    const paymentHistoryId = this.gpayPaymentHistoryId;
+    if (!paymentHistoryId) {
+      return;
     }
-    
-    // Kiểm tra mỗi 5 giây, tối đa 5 phút (60 lần)
+
     let checkCount = 0;
-    const maxChecks = 60;
-    
-    this.paymentStatusCheckInterval = setInterval(() => {
-      checkCount++;
-      
-      if (!this.sepayPaymentHistoryId) {
-        this.stopPaymentStatusPolling();
+    let inFlight = false;
+    const check = () => {
+      if (inFlight || paymentHistoryId !== this.gpayPaymentHistoryId) {
         return;
       }
-      
-      // Kiểm tra trạng thái thanh toán
-      // Tìm payment history bằng paymentHistoryId
-      this.sepayService.getPaymentHistory({
-        limit: 100, // Lấy nhiều hơn để tìm được payment history
-        skip: 0
-      }).subscribe({
-        next: (response: any) => {
-          // Tìm payment history với paymentHistoryId
-          const paymentHistories = Array.isArray(response) 
-            ? response 
-            : (response.data || []);
-          
-          // Tìm bằng paymentHistoryId
-          const paymentHistory = paymentHistories.find((p: any) => {
-            // Tìm bằng paymentHistoryId
-            if (this.sepayPaymentHistoryId && (p._id === this.sepayPaymentHistoryId || p.id === this.sepayPaymentHistoryId)) {
-              return true;
-            }
-            return false;
-          });
-          
-          if (paymentHistory) {
-            // Kiểm tra số tiền có khớp không (so sánh với số tiền cần thanh toán)
-            const expectedAmount = this.sepayAmount;
-            const receivedAmount = paymentHistory.paymentGatewayResponse?.transferAmount || paymentHistory.amount;
-            const amountDifference = Math.abs(receivedAmount - expectedAmount);
-            const amountTolerance = expectedAmount * 0.01; // Cho phép sai số 1%
-            
-            // Kiểm tra trạng thái thanh toán
-            if (paymentHistory.status === 'completed' || paymentHistory.status === 'paid') {
-              // Kiểm tra số tiền có khớp không
-              if (amountDifference <= amountTolerance) {
-                // Thanh toán thành công và số tiền khớp
-                this.stopPaymentStatusPolling();
-                this.onPaymentSuccess();
-              } else {
-                console.warn('Số tiền không khớp:', {
-                  expected: expectedAmount,
-                  received: receivedAmount,
-                  difference: amountDifference
-                });
-                // Vẫn coi là thành công nếu status là completed (có thể do phí giao dịch)
-                this.stopPaymentStatusPolling();
-                this.onPaymentSuccess();
-              }
-            } else if (paymentHistory.status === 'failed' || paymentHistory.status === 'cancelled') {
-              // Thanh toán thất bại
-              this.stopPaymentStatusPolling();
-              this.message.warning('Thanh toán đã bị hủy hoặc thất bại. Vui lòng thử lại.');
-            }
-          }
-          
-          // Dừng polling sau maxChecks lần
-          if (checkCount >= maxChecks) {
-            this.stopPaymentStatusPolling();
-            console.log('Đã kiểm tra trạng thái thanh toán tối đa, dừng polling');
-          }
+      inFlight = true;
+      checkCount++;
+      this.gpayService.getPaymentStatus(paymentHistoryId).subscribe({
+        next: (status) => {
+          inFlight = false;
+          this.handleGpayStatus(status, checkCount >= options.maxChecks);
         },
         error: (error) => {
-          console.error('Error checking payment status:', error);
-          // Tiếp tục polling nếu chưa đạt maxChecks
-          if (checkCount >= maxChecks) {
-            this.stopPaymentStatusPolling();
+          inFlight = false;
+          console.error('Error checking GPay payment status:', error);
+          if (checkCount >= options.maxChecks) {
+            this.handleGpayTimeout();
           }
         }
       });
-    }, 5000); // Kiểm tra mỗi 5 giây
+    };
+
+    this.paymentStatusCheckInterval = setInterval(check, options.intervalMs);
+    check();
   }
-  
+
+  private handleGpayStatus(status: GpayPaymentStatus, lastCheck: boolean): void {
+    if (status.completed) {
+      this.stopPaymentStatusPolling();
+      if (status.amount > 0) {
+        this.gpayAmount = status.amount;
+      }
+      this.onPaymentSuccess();
+      return;
+    }
+    const orderStatus = String(status.orderStatus || '').toUpperCase();
+    if (['failed', 'cancelled'].includes(status.status) || ['FAILED', 'CANCEL'].includes(orderStatus)) {
+      this.stopPaymentStatusPolling();
+      this.gpayChecking = false;
+      this.clearGpayPending();
+      this.message.warning(this.t('PRICING_PAGE.GPAY.PAYMENT_FAILED'));
+      return;
+    }
+    if (lastCheck) {
+      this.handleGpayTimeout();
+    }
+  }
+
+  private handleGpayTimeout(): void {
+    this.stopPaymentStatusPolling();
+    if (this.gpayChecking) {
+      this.gpayChecking = false;
+      this.message.info(this.t('PRICING_PAGE.GPAY.PENDING_LONG'));
+    }
+  }
+
   /**
    * Dừng kiểm tra trạng thái thanh toán
    */
@@ -1782,32 +1669,28 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       this.paymentStatusCheckInterval = null;
     }
   }
-  
+
   /**
    * Xử lý khi thanh toán thành công
    */
   private onPaymentSuccess(): void {
-    console.log('[onPaymentSuccess] Thanh toán thành công, đóng modal QR');
-    
-    // Dừng polling
     this.stopPaymentStatusPolling();
-    
-    // Đóng modal QR trước (tự động đóng)
-    this.showSePayModal = false;
-    
-    // Force change detection để đảm bảo modal đóng ngay lập tức
+    this.showGpayModal = false;
+    this.gpayChecking = false;
+    this.gpayRedirecting = false;
+    this.clearGpayPending();
     this.cdr.detectChanges();
 
-    // Google Ads — Lượt mua hàng (SePay / chuyển khoản)
     this.googleAdsConversion.trackPurchase({
-      transactionId: String(this.sepayPaymentHistoryId || this.sepayPaymentCode || `sepay_${Date.now()}`),
-      value: this.sepayAmount > 0 ? this.sepayAmount : undefined,
-      currency: this.sepayAmount > 0 ? 'VND' : undefined,
+      transactionId: String(this.gpayPaymentHistoryId || this.gpayPaymentCode || `gpay_${Date.now()}`),
+      value: this.gpayAmount > 0 ? this.gpayAmount : undefined,
+      currency: this.gpayAmount > 0 ? 'VND' : undefined,
       newCustomer: !this.currentPackage?.packageId,
     });
-    
-    // Lấy lịch sử chuyển khoản gần nhất và phát thông báo âm thanh
-    this.loadLatestPaymentAndPlaySound();
+
+    if (this.gpayAmount > 0) {
+      this.playPaymentSuccessSound(this.gpayAmount);
+    }
     
     // Hiển thị thông báo thành công
     this.message.success(this.t('PRICING_PAGE.MESSAGES.PAYMENT_SUCCESS_PROCESSING_SHORT'));
@@ -1827,6 +1710,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
         this.createSubscriptionAnnouncement(this.selectedPackage.name, billingTypeText, 'payment');
       }
     }
+    this.selectedPackage = null;
     
     // Reload package sau 2 giây để kiểm tra xem đã đăng ký chưa
     setTimeout(() => {

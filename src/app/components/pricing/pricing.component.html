@@ -29,6 +29,14 @@
       </div>
     </div>
 
+    <nz-alert
+      *ngIf="gpayChecking"
+      nzType="info"
+      nzShowIcon
+      class="gpay-checking-alert"
+      [nzMessage]="'PRICING_PAGE.GPAY.CHECKING' | translate">
+    </nz-alert>
+
     <!-- Thông báo gói đã chọn -->
     <div *ngIf="selectedPackage" class="selected-package-notification selected-package-banner">
       <i nz-icon nzType="check-circle" nzTheme="fill" class="banner-icon"></i>
@@ -201,11 +209,13 @@
                       nz-button
                       nzType="primary"
                       [nzSize]="'large'"
-                      [disabled]="loading"
-                      (click)="payWithSePay()"
-                      class="payment-btn-sepay">
-                      <i nz-icon nzType="credit-card" nzTheme="outline" class="payment-btn-icon"></i>
-                      SePay
+                      [nzLoading]="loading || gpayRedirecting"
+                      [disabled]="loading || gpayRedirecting || !gpayAvailable"
+                      [title]="gpayAvailable ? '' : ('PRICING_PAGE.GPAY.UNAVAILABLE' | translate)"
+                      (click)="payWithGpay()"
+                      class="payment-btn-gpay">
+                      <i nz-icon nzType="qrcode" nzTheme="outline" class="payment-btn-icon"></i>
+                      GPay
                     </button>
                   </div>
                   <button
@@ -467,63 +477,70 @@
     (paymentCancel)="onPayPalPaymentCancel()">
   </app-paypal-payment>
 
-  <!-- SePay QR Payment Modal -->
+  <!-- GPay VietQR Payment Modal -->
   <nz-modal
-    [(nzVisible)]="showSePayModal"
-    [nzTitle]="'PRICING_PAGE.SEPAY_MODAL_TITLE' | translate"
+    [(nzVisible)]="showGpayModal"
+    [nzTitle]="'PRICING_PAGE.GPAY.MODAL_TITLE' | translate"
     [nzWidth]="600"
     [nzFooter]="null"
-    (nzOnCancel)="closeSePayModal()">
+    (nzOnCancel)="closeGpayModal()">
     <div *nzModalContent>
       <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
-        <nz-descriptions-item nzTitle="Gói dịch vụ">
+        <nz-descriptions-item [nzTitle]="'PRICING_PAGE.GPAY.PACKAGE' | translate">
           <strong>{{ selectedPackage?.name || ('PRICING_PAGE.NOT_AVAILABLE' | translate) }}</strong>
         </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Số tiền">
-          <strong class="sepay-amount-text">
-            {{ formatPrice(sepayAmount) }}
+        <nz-descriptions-item [nzTitle]="'PRICING_PAGE.GPAY.AMOUNT' | translate">
+          <strong class="gpay-amount-text">
+            {{ formatPrice(gpayAmount) }}
           </strong>
         </nz-descriptions-item>
-        <nz-descriptions-item *ngIf="sepayPaymentCode" nzTitle="Nội dung chuyển khoản">
-          <strong>{{ sepayPaymentCode }}</strong>
-        </nz-descriptions-item>
-        <nz-descriptions-item *ngIf="sepayBeneficiaryName" nzTitle="Tên người thụ hưởng">
-          <strong>{{ sepayBeneficiaryName }}</strong>
+        <nz-descriptions-item *ngIf="gpayPaymentCode" [nzTitle]="'PRICING_PAGE.GPAY.PAYMENT_CODE' | translate">
+          <strong>{{ gpayPaymentCode }}</strong>
         </nz-descriptions-item>
       </nz-descriptions>
 
-      <!-- QR Code -->
-      <div *ngIf="sepayQrUrl" class="sepay-qr-section">
-        <h3 class="sepay-qr-title">
+      <div *ngIf="gpayQrImage" class="gpay-qr-section">
+        <h3 class="gpay-qr-title">
           <i nz-icon nzType="qrcode" nzTheme="outline" class="payment-btn-icon"></i>
           {{ 'PRICING_PAGE.SCAN_QR_TO_PAY' | translate }}
         </h3>
-        <div class="sepay-qr-wrapper">
-          <img 
-            [src]="sepayQrUrl" 
-            alt="QR Code thanh toán" 
-            class="sepay-qr-img"
-            onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3EKhông thể tải QR code%3C/text%3E%3C/svg%3E';"
-          />
+        <div class="gpay-qr-wrapper">
+          <img [src]="gpayQrImage" [alt]="'PRICING_PAGE.SCAN_QR_TO_PAY' | translate" class="gpay-qr-img" />
         </div>
-        <div class="sepay-bank-info">
-          <p *ngIf="systemBeneficiaryName">
-            <strong>Người thụ hưởng:</strong> {{ systemBeneficiaryName }}
+        <div class="gpay-bank-info">
+          <p *ngIf="gpayAccountName">
+            <strong>{{ 'PRICING_PAGE.GPAY.ACCOUNT_NAME' | translate }}:</strong> {{ gpayAccountName }}
           </p>
-          <p *ngIf="systemBankName">
-            <strong>Ngân hàng:</strong> {{ systemBankName }}
+          <p *ngIf="gpayAccountNumber">
+            <strong>{{ 'PRICING_PAGE.GPAY.ACCOUNT_NUMBER' | translate }}:</strong> {{ gpayAccountNumber }}
           </p>
-          <p *ngIf="systemAccountNumber">
-            <strong>Số tài khoản:</strong> {{ systemAccountNumber }}
+          <p *ngIf="gpayProvider">
+            <strong>{{ 'PRICING_PAGE.GPAY.PROVIDER' | translate }}:</strong> {{ gpayProvider }}
           </p>
         </div>
+        <p class="gpay-waiting">
+          <i nz-icon nzType="loading" nzTheme="outline"></i>
+          {{ 'PRICING_PAGE.GPAY.WAITING' | translate }}
+        </p>
       </div>
 
-      <div class="sepay-notice">
+      <div *ngIf="gpayConfig?.portalEnabled" class="gpay-card-option">
+        <span>{{ 'PRICING_PAGE.GPAY.CARD_HINT' | translate }}</span>
+        <button
+          nz-button
+          nzType="default"
+          [nzLoading]="gpayRedirecting"
+          (click)="payGpayByCard()">
+          <i nz-icon nzType="credit-card" nzTheme="outline"></i>
+          {{ 'PRICING_PAGE.GPAY.CARD_BUTTON' | translate }}
+        </button>
+      </div>
+
+      <div class="gpay-notice">
         <p>
           <i nz-icon nzType="info-circle" nzTheme="outline" class="notice-icon"></i>
-          {{ 'PRICING_PAGE.SEPAY_NOTICE' | translate }}
-          <strong>{{ 'PRICING_PAGE.SEPAY_NOTICE_STRONG' | translate }}</strong>
+          {{ 'PRICING_PAGE.GPAY.NOTICE' | translate }}
+          <strong>{{ 'PRICING_PAGE.GPAY.NOTICE_STRONG' | translate }}</strong>
         </p>
       </div>
     </div>

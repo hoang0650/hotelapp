@@ -1485,17 +1485,17 @@
   box-shadow: 0 4px 12px rgba(0, 112, 186, 0.4);
 }
 
-.payment-btn-sepay {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+.payment-btn-gpay {
+  background: linear-gradient(135deg, #00a651 0%, #007a3d 100%) !important;
   border: none !important;
   font-weight: 600;
   transition: all 0.3s ease !important;
 }
 
-.payment-btn-sepay:hover:not(:disabled) {
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+.payment-btn-gpay:hover:not(:disabled) {
+  background: linear-gradient(135deg, #007a3d 0%, #00a651 100%) !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 166, 81, 0.4);
 }
 
 .payment-btn-icon {
@@ -1708,23 +1708,23 @@
 }
 
 /* ===== SePay Modal Enhancements ===== */
-.sepay-amount-text {
+.gpay-amount-text {
   font-size: 18px;
   color: #1890ff;
 }
 
-.sepay-qr-section {
+.gpay-qr-section {
   text-align: center;
   margin: 20px 0;
 }
 
-.sepay-qr-title {
+.gpay-qr-title {
   margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
 }
 
-.sepay-qr-wrapper {
+.gpay-qr-wrapper {
   display: inline-block;
   padding: 20px;
   background: white;
@@ -1732,24 +1732,24 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.sepay-qr-img {
+.gpay-qr-img {
   max-width: 300px;
   width: 100%;
   height: auto;
   display: block;
 }
 
-.sepay-bank-info {
+.gpay-bank-info {
   margin-top: 12px;
   font-size: 12px;
   color: #666;
 }
 
-.sepay-bank-info p {
+.gpay-bank-info p {
   margin: 4px 0;
 }
 
-.sepay-notice {
+.gpay-notice {
   margin-top: 20px;
   padding: 12px;
   background: #f0f9ff;
@@ -1757,14 +1757,39 @@
   border-left: 4px solid #1890ff;
 }
 
-.sepay-notice p {
+.gpay-notice p {
   margin: 0;
   color: #1890ff;
   font-size: 13px;
 }
 
-.sepay-notice .notice-icon {
+.gpay-notice .notice-icon {
   margin-right: 6px;
+}
+
+.gpay-waiting {
+  margin: 12px 0 0;
+  color: #00a651;
+  font-size: 13px;
+}
+
+.gpay-card-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #595959;
+}
+
+.gpay-checking-alert {
+  margin: 0 auto 16px;
+  max-width: 960px;
 }
 
 /* ===== Mobile Responsive Additions ===== */
