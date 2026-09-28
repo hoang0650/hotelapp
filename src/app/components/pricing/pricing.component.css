@@ -1486,16 +1486,21 @@
 }
 
 .payment-btn-gpay {
-  background: linear-gradient(135deg, #00a651 0%, #007a3d 100%) !important;
+  background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%) !important;
   border: none !important;
+  color: #fff !important;
   font-weight: 600;
   transition: all 0.3s ease !important;
 }
 
 .payment-btn-gpay:hover:not(:disabled) {
-  background: linear-gradient(135deg, #007a3d 0%, #00a651 100%) !important;
+  background: linear-gradient(135deg, #b71c1c 0%, #e53935 100%) !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 166, 81, 0.4);
+  box-shadow: 0 4px 12px rgba(229, 57, 53, 0.4);
+}
+
+.payment-btn-gpay:disabled {
+  opacity: 0.6;
 }
 
 .payment-btn-icon {
@@ -1769,7 +1774,7 @@
 
 .gpay-waiting {
   margin: 12px 0 0;
-  color: #00a651;
+  color: #e53935;
   font-size: 13px;
 }
 
