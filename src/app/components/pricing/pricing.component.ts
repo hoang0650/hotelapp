@@ -728,7 +728,11 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    const method = this.gpayConfig?.qrEnabled ? 'qr' : 'portal';
+    this.startGpayPayment(this.gpayConfig?.qrEnabled ? 'qr' : 'portal');
+  }
+
+  /** QR lỗi phía GPay (5xx) mà cổng thẻ đang bật thì chuyển sang cổng thẻ thay vì bỏ dở. */
+  private startGpayPayment(method: 'qr' | 'portal'): void {
     this.loading = true;
     this.gpayService.createPricingPayment({
       packageId: this.selectedPackage.packageId,
@@ -762,9 +766,22 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       error: (error: any) => {
         this.loading = false;
         console.error('Error creating GPay payment:', error);
-        this.message.error(error?.error?.message || this.t('PRICING_PAGE.GPAY.CREATE_FAILED'));
+        if (method === 'qr' && error?.status >= 500 && this.gpayConfig?.portalEnabled) {
+          this.startGpayPayment('portal');
+          return;
+        }
+        this.message.error(this.gpayErrorMessage(error));
       }
     });
+  }
+
+  /** Lỗi nghiệp vụ (4xx) có thông báo tiếng Việt từ server; lỗi GPay/hệ thống chỉ hiện thông báo chung. */
+  private gpayErrorMessage(error: any): string {
+    const status = Number(error?.status) || 0;
+    const serverMessage = error?.error?.message;
+    return status >= 400 && status < 500 && serverMessage
+      ? serverMessage
+      : this.t('PRICING_PAGE.GPAY.CREATE_FAILED');
   }
 
   /** Từ modal VietQR: trả bằng thẻ ATM / thẻ quốc tế trên cổng GPay cho cùng khoản thanh toán. */
@@ -779,7 +796,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
       error: (error: any) => {
         this.gpayRedirecting = false;
         console.error('Error creating GPay checkout:', error);
-        this.message.error(error?.error?.message || this.t('PRICING_PAGE.GPAY.CREATE_FAILED'));
+        this.message.error(this.gpayErrorMessage(error));
       }
     });
   }
