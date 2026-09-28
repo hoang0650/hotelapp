@@ -2904,11 +2904,16 @@ export class RoomComponent implements OnInit, OnDestroy, DoCheck {
     if (!rooms || rooms.length === 0) return;
 
     let healed = false;
-    for (const room of rooms) {
+    const heal = (room: RoomWithMeta) => {
       const meta = room?.__viewMeta;
-      if (!meta || meta.statusKey === this.roomStatusKey(room)) continue;
+      if (!meta || meta.statusKey === this.roomStatusKey(room)) return;
       room.__viewMeta = this.buildRoomCardMeta(room);
       healed = true;
+    };
+    for (const room of rooms) heal(room);
+    // Card bind theo displayRoomsByFloor — phòng hờ object ở đây lệch ref với this.rooms
+    for (const floor of this.displayFloors || []) {
+      for (const room of this.displayRoomsByFloor?.[floor] || []) heal(room);
     }
     if (!healed) return;
 

@@ -333,7 +333,11 @@ export class RoomsService {
     if (!cached) return;
     const idx = cached.rooms.findIndex(r => r._id === room._id);
     if (idx < 0) return;
-    cached.rooms[idx] = { ...cached.rooms[idx], ...room };
+    // Mảng cache thường chính là this.rooms của sơ đồ (setCachedRooms lưu ref) — phải mutate
+    // tại chỗ; thay phần tử bằng object mới sẽ tách card đang hiển thị khỏi dữ liệu realtime.
+    if (cached.rooms[idx] !== room) {
+      Object.assign(cached.rooms[idx], room);
+    }
     this.roomsCache.set(hotelId, { rooms: cached.rooms, updatedAt: Date.now() });
   }
 
