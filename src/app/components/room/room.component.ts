@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, DoCheck, ViewChild, TemplateRef, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { ProductService } from '../../services/product.service';
 import { Subscription, forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -79,6 +79,8 @@ interface RoomCardMeta {
   transferInfo: RoomTransferInfoView | null;
   transferredFromRoomNumber: string;
   ariaStatusLabel: string;
+  /** status|guestStatus lúc build — lệch với room hiện tại nghĩa là meta đã cũ */
+  statusKey: string;
 }
 
 type RoomWithMeta = Room & {
@@ -91,7 +93,7 @@ type RoomWithMeta = Room & {
   styleUrls: ['./room.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RoomComponent implements OnInit, OnDestroy {
+export class RoomComponent implements OnInit, OnDestroy, DoCheck {
   @ViewChild(TableComponent) tableComponent!: TableComponent;
   @ViewChild(CalendarComponent) calendarComponent!: CalendarComponent;
   @ViewChild(RevenueChartComponent) revenueChartComponent?: RevenueChartComponent;
@@ -2884,7 +2886,37 @@ export class RoomComponent implements OnInit, OnDestroy {
       transferInfo,
       transferredFromRoomNumber,
       ariaStatusLabel: room.status === 'occupied' ? this.translate.instant('ROOM.OCCUPIED') : statusMeta.label,
+      statusKey: this.roomStatusKey(room),
     };
+  }
+
+  private roomStatusKey(room: Room): string {
+    return `${room.status || ''}|${room.guestStatus || ''}`;
+  }
+
+  /**
+   * Directive / modal / Object.assign từ API gán thẳng room.status lên object đang bind
+   * mà không rebuild __viewMeta; với OnPush, card giữ màu cũ tới lần rebuild sau.
+   * Chạy mỗi lượt CD (O(n) so chuỗi) để card + badge đếm đổi ngay trong cùng lượt.
+   */
+  ngDoCheck(): void {
+    const rooms = this.rooms as RoomWithMeta[] | undefined;
+    if (!rooms || rooms.length === 0) return;
+
+    let healed = false;
+    for (const room of rooms) {
+      const meta = room?.__viewMeta;
+      if (!meta || meta.statusKey === this.roomStatusKey(room)) continue;
+      room.__viewMeta = this.buildRoomCardMeta(room);
+      healed = true;
+    }
+    if (!healed) return;
+
+    this.recomputeStatusCountsOnly();
+    if (this.selectedHotelId) {
+      this.roomsService.setCachedRooms(this.selectedHotelId, this.rooms);
+    }
+    this.cdr.markForCheck();
   }
 
   // Lấy thông tin chuyển phòng từ Booking
