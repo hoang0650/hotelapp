@@ -5,9 +5,10 @@ import { environment } from '../../environments/environment';
 
 export interface PayPalOrderRequest {
   packageId: string;
-  userId: string;
+  userId?: string;
   billingType: 'monthly' | 'yearly';
-  amount: number;
+  /** Ignored by the server (it computes the package price). */
+  amount?: number;
   currency?: string;
 }
 

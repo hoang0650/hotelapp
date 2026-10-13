@@ -3,10 +3,11 @@ import { isPlatformBrowser } from '@angular/common';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
-import { Subject, forkJoin, of } from 'rxjs';
+import { Subject, forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError, takeUntil } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { CurrencyService } from '../../services/currency.service';
+import { PayPalService } from '../../services/paypal.service';
 
 declare var paypal: any;
 
@@ -80,7 +81,8 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
     @Inject(PLATFORM_ID) private platformId: Object,
     public currencyService: CurrencyService,
     private http: HttpClient,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private paypalService: PayPalService
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
@@ -336,17 +338,25 @@ export class PaypalPaymentComponent implements OnInit, AfterViewInit, OnDestroy 
       paypal
         .Buttons({
           style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'paypal' },
-          createOrder: (_data: any, actions: any) =>
-            actions.order.create({
-              purchase_units: [
-                {
-                  amount: { value: amountValue, currency_code: 'USD' },
-                  description
-                }
-              ]
+          // The order is created and captured by the server, which computes the package price itself
+          // (the amount shown here is only an estimate; the server value wins).
+          createOrder: () =>
+            firstValueFrom(
+              this.paypalService.createOrder({
+                packageId: this.paymentData.packageId,
+                billingType: this.paymentData.billingType
+              } as any)
+            ).then((order: any) => {
+              if (order?.amount) this.paypalUsdAmount = Number(order.amount);
+              return order.orderId;
             }),
-          onApprove: (_data: any, actions: any) =>
-            actions.order.capture().then((details: any) => this.handlePaymentSuccess(details)),
+          onApprove: (data: any) =>
+            firstValueFrom(this.paypalService.captureOrder({ orderId: data.orderID })).then((capture: any) => {
+              if (!capture?.success) {
+                throw new Error(capture?.underpaid ? 'PayPal payment is less than the package price' : 'PayPal capture failed');
+              }
+              return this.handlePaymentSuccess({ ...(capture.data || {}), id: data.orderID });
+            }),
           onCancel: () => this.handlePaymentCancel(),
           onError: (err: any) => this.handlePaymentError(err)
         })
