@@ -1067,9 +1067,10 @@ export class PricingManagementComponent implements OnInit {
       return 0;
     }
     if (billingType === 'yearly') {
-      const yearlyPrice = Number(pkg.yearlyPrice || ((pkg.monthlyPrice || pkg.price || 0) * 12));
-      const discount = Number(pkg.yearlyDiscount || 0);
-      return Math.round(yearlyPrice * (1 - discount / 100));
+      // Listed yearly price is charged as-is; yearlyDiscount is display-only.
+      if (Number(pkg.yearlyPrice) > 0) return Math.round(Number(pkg.yearlyPrice));
+      const monthly = Number(pkg.monthlyPrice || pkg.price || 0);
+      return Math.round(monthly * 12 * (1 - Number(pkg.yearlyDiscount || 0) / 100));
     }
     return Number(pkg.monthlyPrice || pkg.price || 0);
   }

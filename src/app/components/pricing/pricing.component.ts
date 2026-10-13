@@ -1025,9 +1025,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     if (pkg?.isContactOnly) return 0;
     if (this.billingType === 'yearly') {
       // Khi chọn năm, hiển thị giá năm (đã áp dụng discount)
-      const yearlyPrice = pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0);
-      const discount = pkg.yearlyDiscount || 0;
-      return yearlyPrice * (1 - discount / 100);
+      // yearlyPrice is the listed (already discounted) yearly price; yearlyDiscount is display-only.
+      return this.getPackagePriceForBilling(pkg, 'yearly');
     } else {
       // Khi chọn tháng, hiển thị giá tháng
       return pkg.monthlyPrice || pkg.price || 0;
@@ -1037,9 +1036,11 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   private getPackagePriceForBilling(pkg: any, billing: 'monthly' | 'yearly'): number {
     if (pkg?.isContactOnly) return 0;
     if (billing === 'yearly') {
-      const yearlyPrice = pkg.yearlyPrice || (pkg.price ? pkg.price * 12 : 0);
-      const discount = pkg.yearlyDiscount || 0;
-      return Math.round(yearlyPrice * (1 - discount / 100));
+      // Charge exactly the listed yearly price. yearlyDiscount only describes the saving vs 12 x monthly
+      // and must not be applied on top of yearlyPrice (that double discount under-charged/credited by e.g. 20%).
+      if (Number(pkg.yearlyPrice) > 0) return Math.round(Number(pkg.yearlyPrice));
+      const monthly = Number(pkg.monthlyPrice || pkg.price || 0);
+      return Math.round(monthly * 12 * (1 - (Number(pkg.yearlyDiscount) || 0) / 100));
     }
     return pkg.monthlyPrice || pkg.price || 0;
   }
@@ -1220,7 +1221,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Tính giá gốc (trước khi giảm) khi chọn năm
   getOriginalYearlyPrice(pkg: any): number {
-    return pkg.yearlyPrice || (pkg.monthlyPrice ? pkg.monthlyPrice * 12 : (pkg.price ? pkg.price * 12 : 0));
+    return Number(pkg.monthlyPrice || pkg.price || 0) * 12 || Number(pkg.yearlyPrice || 0);
   }
 
   // Tính % tiết kiệm khi so sánh giá tháng * 12 vs giá năm
@@ -1230,7 +1231,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     
     const monthlyPrice = pkg.monthlyPrice || pkg.price || 0;
-    const yearlyPrice = pkg.yearlyPrice || (monthlyPrice * 12);
+    const yearlyPrice = this.getPackagePriceForBilling(pkg, 'yearly');
     
     if (monthlyPrice === 0 || yearlyPrice === 0) {
       return pkg.yearlyDiscount || 0;
@@ -1240,10 +1241,6 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     const monthlyTotal = monthlyPrice * 12;
     const savings = ((monthlyTotal - yearlyPrice) / monthlyTotal) * 100;
     
-    // Nếu có yearlyDiscount, ưu tiên dùng nó
-    if (pkg.yearlyDiscount && pkg.yearlyDiscount > 0) {
-      return pkg.yearlyDiscount;
-    }
     
     return Math.round(savings * 100) / 100; // Làm tròn 2 chữ số
   }
@@ -1255,8 +1252,8 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     
     const monthlyPrice = pkg.monthlyPrice || pkg.price || 0;
-    const yearlyPrice = pkg.yearlyPrice || (monthlyPrice * 12);
-    const discount = pkg.yearlyDiscount || 0;
+    const yearlyPrice = this.getPackagePriceForBilling(pkg, 'yearly');
+    const discount = 0; // savings = 12 x monthly - charged yearly price
     
     if (discount > 0) {
       // Nếu có discount %, tính dựa trên discount
@@ -1281,7 +1278,7 @@ export class PricingComponent implements OnInit, OnDestroy, AfterViewInit {
   switchBillingType(type: 'monthly' | 'yearly'): void {
     this.billingType = type;
     const message = type === 'yearly' 
-      ? 'Đã chuyển sang gói theo năm - Tiết kiệm 20%'
+      ? 'Đã chuyển sang gói theo năm'
       : 'Đã chuyển sang gói theo tháng';
     this.message.success(message);
   }

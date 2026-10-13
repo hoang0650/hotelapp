@@ -3422,7 +3422,7 @@
       "YEARLY_PRICE_REQUIRED": "Vui lòng nhập giá hợp lệ",
       "YEARLY_DISCOUNT": "Giảm giá theo năm (%)",
       "YEARLY_DISCOUNT_ERROR": "Giảm giá phải từ 0 đến 100%",
-      "YEARLY_DISCOUNT_HINT": "Phần trăm giảm giá khi thanh toán theo năm (0-100%)",
+      "YEARLY_DISCOUNT_HINT": "Phần trăm tiết kiệm hiển thị cho gói năm (0-100%). Chỉ để hiển thị: khách thanh toán đúng giá năm ở trên",
       "MONTHLY_DURATION": "Thời hạn gói tháng (tháng)",
       "MONTHLY_DURATION_REQUIRED": "Vui lòng nhập thời hạn hợp lệ",
       "MONTHLY_DURATION_HINT": "Số tháng gói sẽ có hiệu lực khi người dùng đăng ký theo tháng",

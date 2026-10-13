@@ -2822,7 +2822,7 @@
       "YEARLY_PRICE_REQUIRED": "Please enter a valid price",
       "YEARLY_DISCOUNT": "Yearly Discount (%)",
       "YEARLY_DISCOUNT_ERROR": "Discount must be between 0 and 100%",
-      "YEARLY_DISCOUNT_HINT": "Discount percentage applied when customers pay yearly (0-100%)",
+      "YEARLY_DISCOUNT_HINT": "Saving shown to customers for yearly billing (0-100%). Display only: customers are charged exactly the yearly price above",
       "MONTHLY_DURATION": "Monthly plan duration (months)",
       "MONTHLY_DURATION_REQUIRED": "Please enter a valid duration",
       "MONTHLY_DURATION_HINT": "How many months the package stays active for monthly subscriptions",

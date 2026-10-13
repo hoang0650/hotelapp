@@ -2852,7 +2852,7 @@
       "YEARLY_PRICE_REQUIRED": "Bitte einen gültigen Preis eingeben",
       "YEARLY_DISCOUNT": "Jahresrabatt (%)",
       "YEARLY_DISCOUNT_ERROR": "Der Rabatt muss zwischen 0 und 100% liegen",
-      "YEARLY_DISCOUNT_HINT": "Rabatt in Prozent bei jährlicher Zahlung (0-100%)",
+      "YEARLY_DISCOUNT_HINT": "Angezeigte Ersparnis bei jährlicher Zahlung (0-100%). Nur Anzeige: berechnet wird genau der Jahrespreis oben",
       "MONTHLY_DURATION": "Laufzeit Monatsplan (Monate)",
       "MONTHLY_DURATION_REQUIRED": "Bitte eine gültige Laufzeit eingeben",
       "MONTHLY_DURATION_HINT": "Wie viele Monate das Paket bei monatlichem Abonnement aktiv bleibt",
