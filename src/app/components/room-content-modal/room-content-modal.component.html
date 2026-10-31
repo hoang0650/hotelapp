@@ -444,10 +444,10 @@
       <nz-descriptions [nzTitle]="'ROOM_CONTENT_MODAL.ROOM_INFO' | translate" nzBordered [nzColumn]="1">
         <nz-descriptions-item [nzTitle]="'ROOM_CONTENT_MODAL.ROOM_TYPE' | translate">{{ roomData.type }}</nz-descriptions-item>
         <nz-descriptions-item [nzTitle]="'ROOM_CONTENT_MODAL.CHECKIN_TIME_LABEL' | translate">
-          {{ listData[0]?.checkinTime | date: 'dd/MM/yyyy HH:mm:ss' }}
+          {{ listData[0]?.checkinTime | date: 'dd/MM/yyyy HH:mm:ss' : '+0700' }}
         </nz-descriptions-item>
         <nz-descriptions-item [nzTitle]="'ROOM_CONTENT_MODAL.CURRENT_TIME_LABEL' | translate">
-          {{ currentTime | date: 'dd/MM/yyyy HH:mm:ss' }}
+          {{ currentTime | date: 'dd/MM/yyyy HH:mm:ss' : '+0700' }}
         </nz-descriptions-item>
       </nz-descriptions>
     </div>
@@ -523,7 +523,10 @@
       <div class="totals-summary mb-3 payment-summary">
         <div class="payment-row payment-row--main">
           <span class="payment-label">{{ 'ROOM_CONTENT_MODAL.TOTAL_ROOM_PRICE' | translate }}:</span>
-          <span class="payment-value">{{ roomPriceTotal | number }} đ</span>
+          <span class="payment-value">
+            <span *ngIf="quoteLoading">{{ 'ROOM_CONTENT_MODAL.QUOTE_LOADING' | translate }}</span>
+            <span *ngIf="!quoteLoading">{{ roomPriceTotal | number }} đ</span>
+          </span>
         </div>
         
         <!-- Hiển thị chi tiết diễn giải tính tiền phòng -->
@@ -580,8 +583,8 @@
               <span class="payment-detail-value">+ {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ</span>
             </div>
             
-            <!-- Phụ thu check-out trễ -->
-            <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" class="payment-details-row payment-details-row--surcharge">
+            <!-- Phụ thu check-out trễ: ẩn khi lateCheckoutHours = 0 -->
+            <div *ngIf="showLateCheckout(roomPriceDetails)" class="payment-details-row payment-details-row--surcharge">
               <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.LATE_CHECKOUT_SURCHARGE' | translate }} ({{ roomPriceDetails.lateCheckoutHours }} {{ 'ROOM_CONTENT_MODAL.HOURS' | translate }}):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ</span>
             </div>
@@ -615,8 +618,32 @@
               <span class="payment-detail-value">+ {{ (roomPriceDetails.earlyCheckinSurcharge || 0) | number }} đ</span>
             </div>
             
-            <!-- Phụ thu check-out trễ -->
-            <div *ngIf="roomPriceDetails.lateCheckoutHours > 0" class="payment-details-row payment-details-row--surcharge">
+            <!-- Phụ thu check-out trễ: ẩn khi lateCheckoutHours = 0 -->
+            <div *ngIf="showLateCheckout(roomPriceDetails)" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.LATE_CHECKOUT_SURCHARGE' | translate }} ({{ roomPriceDetails.lateCheckoutHours }} {{ 'ROOM_CONTENT_MODAL.HOURS' | translate }}):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ</span>
+            </div>
+          </div>
+
+          <!-- Chi tiết theo tuần -->
+          <div *ngIf="roomPriceDetails.rateType === 'weekly'">
+            <div class="payment-details-row">
+              <span class="payment-detail-label">{{ roomPriceDetails.weeks }} {{ 'ROOM_CONTENT_MODAL.WEEKS' | translate }} × {{ (roomPriceDetails.basePrice || 0) | number }} {{ 'ROOM_CONTENT_MODAL.PER_WEEK' | translate }}:</span>
+              <span class="payment-detail-value">{{ ((roomPriceDetails.weeks || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ</span>
+            </div>
+            <div *ngIf="showLateCheckout(roomPriceDetails)" class="payment-details-row payment-details-row--surcharge">
+              <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.LATE_CHECKOUT_SURCHARGE' | translate }} ({{ roomPriceDetails.lateCheckoutHours }} {{ 'ROOM_CONTENT_MODAL.HOURS' | translate }}):</span>
+              <span class="payment-detail-value">+ {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ</span>
+            </div>
+          </div>
+
+          <!-- Chi tiết theo tháng -->
+          <div *ngIf="roomPriceDetails.rateType === 'monthly'">
+            <div class="payment-details-row">
+              <span class="payment-detail-label">{{ roomPriceDetails.months }} {{ 'ROOM_CONTENT_MODAL.MONTHS' | translate }} × {{ (roomPriceDetails.basePrice || 0) | number }} {{ 'ROOM_CONTENT_MODAL.PER_MONTH' | translate }}:</span>
+              <span class="payment-detail-value">{{ ((roomPriceDetails.months || 0) * (roomPriceDetails.basePrice || 0)) | number }} đ</span>
+            </div>
+            <div *ngIf="showLateCheckout(roomPriceDetails)" class="payment-details-row payment-details-row--surcharge">
               <span class="payment-detail-label">{{ 'ROOM_CONTENT_MODAL.LATE_CHECKOUT_SURCHARGE' | translate }} ({{ roomPriceDetails.lateCheckoutHours }} {{ 'ROOM_CONTENT_MODAL.HOURS' | translate }}):</span>
               <span class="payment-detail-value">+ {{ (roomPriceDetails.lateCheckoutSurcharge || 0) | number }} đ</span>
             </div>

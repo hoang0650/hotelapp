@@ -7,6 +7,11 @@ import { tap, catchError, finalize, shareReplay, map, timeout } from 'rxjs/opera
 import { throwError, of, TimeoutError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { SessionContextService } from './session-context.service';
+import {
+  CalculateCheckoutRequest,
+  CheckoutQuote,
+  toRealInstantIso
+} from '../utils/checkout-quote';
 
 interface RoomHistoryCacheEntry {
   payload: {
@@ -488,14 +493,19 @@ export class RoomsService {
       idNumber?: string;
       address?: string;
     };
-    checkInDate: Date;
-    checkOutDate?: Date;
-    rateType: 'hourly' | 'daily' | 'nightly';
+    checkInDate: Date | string;
+    checkOutDate?: Date | string;
+    rateType: 'hourly' | 'daily' | 'nightly' | 'weekly' | 'monthly';
     notes?: string;
     advancePayment?: number;
     advancePaymentMethod?: 'cash' | 'card' | 'transfer';
   }): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/booking`, bookingData);
+    const body = {
+      ...bookingData,
+      checkInDate: toRealInstantIso(bookingData.checkInDate),
+      checkOutDate: bookingData.checkOutDate ? toRealInstantIso(bookingData.checkOutDate) : undefined
+    };
+    return this.http.post<any>(`${this.apiUrl}/booking`, body);
   }
 
   // Hủy đặt phòng
@@ -661,6 +671,31 @@ export class RoomsService {
     return this.http.post<any>(`${this.apiUrl}/invoices`, invoiceData);
   }
 
+  /**
+   * Server stay quote. priceDetails carries days, earlyCheckinHours,
+   * lateCheckoutHours and the checkout deadline. Do not recompute those locally.
+   */
+  calculateCheckoutTotal(request: CalculateCheckoutRequest): Observable<CheckoutQuote> {
+    const body = {
+      roomId: request.roomId,
+      rateType: request.rateType,
+      checkInTime: toRealInstantIso(request.checkInTime),
+      checkOutTime: toRealInstantIso(request.checkOutTime),
+      services: (request.services || []).map(service => ({
+        serviceId: service.serviceId || service._id,
+        name: service.name || service.serviceName,
+        price: Number(service.price) || 0,
+        quantity: Number(service.quantity) || 1,
+        totalPrice: service.totalPrice != null
+          ? Number(service.totalPrice)
+          : (Number(service.price) || 0) * (Number(service.quantity) || 1)
+      })),
+      additionalCharges: Number(request.additionalCharges) || 0,
+      discount: Number(request.discount) || 0
+    };
+    return this.http.post<CheckoutQuote>(`${this.apiUrl}/calculate-checkout-total`, body);
+  }
+
   // Tính giá phòng dựa trên priceConfig
   calculateRoomPrice(roomId: string, checkInDate: Date, checkOutDate: Date, rateType: 'hourly' | 'daily' | 'nightly'): Observable<{
     roomId: string;
@@ -680,8 +715,8 @@ export class RoomsService {
       originalRateType?: string;
     }>(`${priceConfigApiUrl}/calculate`, {
       roomId,
-      checkInDate: checkInDate.toISOString(),
-      checkOutDate: checkOutDate.toISOString(),
+      checkInDate: toRealInstantIso(checkInDate),
+      checkOutDate: toRealInstantIso(checkOutDate),
       rateType
     });
   }

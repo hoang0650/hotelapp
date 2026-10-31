@@ -146,6 +146,14 @@
         </nz-form-item>
       </div>
 
+      <div nz-col [nzSpan]="24" *ngIf="bookingQuoteLoading || bookingQuote != null">
+        <p style="margin: 0 0 12px;">
+          {{ 'BOOKING_MODAL.ESTIMATED_ROOM_PRICE' | translate }}:
+          <strong *ngIf="!bookingQuoteLoading">{{ bookingQuote | number }} đ</strong>
+          <span *ngIf="bookingQuoteLoading">...</span>
+        </p>
+      </div>
+
       <!-- Ghi chú -->
       <div nz-col [nzSpan]="24">
         <nz-form-item>

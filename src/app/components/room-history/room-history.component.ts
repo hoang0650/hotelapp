@@ -10,6 +10,7 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
+import { metadataPriceDetailsFromServer, normalizePrintedInvoice, productsFromServer } from '../../utils/checkout-quote';
 
 // Mở rộng BookingHistory để thêm các trường cần thiết cho hiển thị
 export interface ExtendedBookingHistory extends BookingHistory {
@@ -777,6 +778,19 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
       notes: historyItem.notes || ''
     };
     
+    const serverProducts = productsFromServer(historyItem);
+    const priceDetails = metadataPriceDetailsFromServer(historyItem);
+    if (serverProducts) {
+      invoiceData.products = serverProducts;
+    }
+    if (priceDetails) {
+      (invoiceData as any).priceDetails = priceDetails;
+      (invoiceData as any).metadata = {
+        ...((historyItem as any).metadata || {}),
+        priceDetails
+      };
+    }
+
     console.log('=== Final invoiceData ===');
     console.log('invoiceData:', invoiceData);
     console.log('products:', invoiceData.products);
@@ -801,7 +815,7 @@ export class RoomHistoryComponent implements OnInit, OnChanges, OnDestroy {
     this.roomsService.getInvoiceDetails(invoiceId).subscribe({ 
       next: (invoiceData: any) => {
         if (invoiceData) {
-          this.showInvoiceModal(invoiceData);
+          this.showInvoiceModal(normalizePrintedInvoice(invoiceData));
         } else {
           this.message.error(this.translate.instant('ROOM_HISTORY.MESSAGES.INVOICE_NOT_FOUND'));
         }
