@@ -15,6 +15,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { HotelService } from '../services/hotel.service';
 import { SessionContextService } from '../services/session-context.service';
 import { CheckinCacheService } from '../services/checkin-cache.service';
+import { metadataPriceDetailsFromServer, productsFromServer } from '../utils/checkout-quote';
 
 @Directive({
   selector: '[appModalControl]',
@@ -1871,6 +1872,19 @@ export class ModalControlDirective implements OnInit, OnDestroy {
     // Thêm thông tin khách hàng
     invoiceData.guestDetails = checkinInfo?.guestInfo || {};
     
+    const serverProducts = productsFromServer(checkoutEvent) || productsFromServer(checkinEvent);
+    const priceDetails = metadataPriceDetailsFromServer(checkoutEvent) || metadataPriceDetailsFromServer(checkinEvent);
+    if (serverProducts) {
+      invoiceData.products = serverProducts;
+    }
+    if (priceDetails) {
+      invoiceData.priceDetails = priceDetails;
+      invoiceData.metadata = { priceDetails };
+      if (typeof priceDetails.roomTotal === 'number') {
+        invoiceData.roomAmount = priceDetails.roomTotal;
+      }
+    }
+
     return invoiceData;
   }
 
@@ -1931,8 +1945,11 @@ export class ModalControlDirective implements OnInit, OnDestroy {
       advancePayment: invoiceData.advancePayment || 0,
       
       // Hình thức tính tiền
-      rateType: invoiceData.rateType || 'hourly'
+      rateType: invoiceData.rateType || 'hourly',
+      priceDetails: invoiceData.priceDetails || invoiceData.metadata?.priceDetails || null,
+      metadata: invoiceData.metadata || null
     };
+    const hadServerProducts = Array.isArray(invoiceData.products) && invoiceData.products.length > 0;
 
     // Lấy thông tin checkin từ checkin cache nếu có
     const roomId = this.room?._id || invoiceData.roomId;
@@ -1969,8 +1986,8 @@ export class ModalControlDirective implements OnInit, OnDestroy {
           };
         }
         
-        // Thêm dịch vụ đã sử dụng trong checkin
-        if (checkinInfo.selectedServices && Array.isArray(checkinInfo.selectedServices) && checkinInfo.selectedServices.length > 0) {
+        // Thêm dịch vụ đã sử dụng trong checkin (bỏ qua khi products đã là quote server)
+        if (!hadServerProducts && checkinInfo.selectedServices && Array.isArray(checkinInfo.selectedServices) && checkinInfo.selectedServices.length > 0) {
           // Chuyển đổi dịch vụ từ checkinInfo sang định dạng product
           const serviceProducts = checkinInfo.selectedServices.map((service: any) => ({
             name: service.serviceName || 'Dịch vụ',

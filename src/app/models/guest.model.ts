@@ -81,8 +81,8 @@ export interface AssignGuestToRoomRequest {
 
 export interface CreateBookingForGuestRequest {
   roomId: string;
-  checkInDate: Date;
-  checkOutDate?: Date;
+  checkInDate: Date | string;
+  checkOutDate?: Date | string;
   rateType?: 'hourly' | 'daily' | 'nightly';
   advancePayment?: number;
   notes?: string;

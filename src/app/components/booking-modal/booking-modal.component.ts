@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NZ_MODAL_DATA, NzModalRef } from 'ng-zorro-antd/modal';
 import { RoomsService } from '../../services/rooms.service';
@@ -10,6 +10,9 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../services/auth.service';
+import { roomChargeFromQuote, toRealInstantIso } from '../../utils/checkout-quote';
+import { merge, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 
 declare global {
   interface Window {
@@ -23,7 +26,7 @@ declare global {
   templateUrl: './booking-modal.component.html',
   styleUrls: ['./booking-modal.component.css']
 })
-export class BookingModalComponent implements OnInit {
+export class BookingModalComponent implements OnInit, OnDestroy {
   bookingForm: FormGroup;
   rooms: Room[] = [];
   availableRooms: Room[] = [];
@@ -35,6 +38,10 @@ export class BookingModalComponent implements OnInit {
   hotelLogo: string | null = null;
   apiBaseUrl = environment.apiUrl;
   isLoadingHotelInfo = false;
+  bookingQuote: number | null = null;
+  bookingQuoteLoading = false;
+  private bookingQuoteSeq = 0;
+  private quoteSub?: Subscription;
 
   constructor(
     private fb: FormBuilder,
@@ -103,6 +110,16 @@ export class BookingModalComponent implements OnInit {
     if (this.hotelId) {
       this.loadBusinessInfo();
     }
+
+    this.quoteSub = merge(
+      this.bookingForm.get('roomId')!.valueChanges,
+      this.bookingForm.get('checkInDate')!.valueChanges,
+      this.bookingForm.get('checkOutDate')!.valueChanges,
+      this.bookingForm.get('rateType')!.valueChanges
+    ).pipe(debounceTime(250)).subscribe(() => {
+      this.refreshBookingQuote();
+    });
+    this.refreshBookingQuote();
     
     // Đảm bảo roomId được set đúng trong form nếu có
     if (this.data.roomId && this.bookingForm.get('roomId')?.value !== this.data.roomId) {
@@ -156,6 +173,49 @@ export class BookingModalComponent implements OnInit {
         }
         // Filter available rooms
         this.filterAvailableRooms();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.quoteSub?.unsubscribe();
+  }
+
+  refreshBookingQuote(): void {
+    const roomId = this.bookingForm.get('roomId')?.value;
+    const checkInRaw = this.bookingForm.get('checkInDate')?.value;
+    const checkOutRaw = this.bookingForm.get('checkOutDate')?.value;
+    const rateType = this.bookingForm.get('rateType')?.value || 'hourly';
+    if (!roomId || !checkInRaw) {
+      this.bookingQuote = null;
+      this.bookingQuoteLoading = false;
+      return;
+    }
+    const checkInTime = toRealInstantIso(checkInRaw);
+    const checkOutTime = checkOutRaw
+      ? toRealInstantIso(checkOutRaw)
+      : toRealInstantIso(new Date(new Date(checkInTime).getTime() + 60 * 60 * 1000));
+    if (!checkInTime || !checkOutTime || new Date(checkOutTime).getTime() <= new Date(checkInTime).getTime()) {
+      this.bookingQuote = null;
+      return;
+    }
+    const seq = ++this.bookingQuoteSeq;
+    this.bookingQuoteLoading = true;
+    this.roomsService.calculateCheckoutTotal({
+      roomId,
+      rateType,
+      checkInTime,
+      checkOutTime
+    }).subscribe({
+      next: (quote) => {
+        if (seq !== this.bookingQuoteSeq) return;
+        this.bookingQuote = roomChargeFromQuote(quote);
+        this.bookingQuoteLoading = false;
+      },
+      error: () => {
+        if (seq !== this.bookingQuoteSeq) return;
+        this.bookingQuote = null;
+        this.bookingQuoteLoading = false;
       }
     });
   }
@@ -442,8 +502,8 @@ export class BookingModalComponent implements OnInit {
       return false;
     }
     
-    const checkInDate = new Date(formValue.checkInDate);
-    const checkOutDate = formValue.checkOutDate ? new Date(formValue.checkOutDate) : undefined;
+    const checkInDate = new Date(toRealInstantIso(formValue.checkInDate));
+    const checkOutDate = formValue.checkOutDate ? new Date(toRealInstantIso(formValue.checkOutDate)) : undefined;
     
     // Kiểm tra checkOutDate phải sau checkInDate
     if (checkOutDate && checkOutDate <= checkInDate) {
@@ -490,8 +550,8 @@ export class BookingModalComponent implements OnInit {
         email: formValue.guestEmail || '',
         idNumber: formValue.guestIdNumber || ''
       },
-      checkInDate: checkInDate,
-      checkOutDate: checkOutDate,
+      checkInDate: toRealInstantIso(formValue.checkInDate),
+      checkOutDate: formValue.checkOutDate ? toRealInstantIso(formValue.checkOutDate) : undefined,
       rateType: formValue.rateType,
       advancePayment: parseFloat(formValue.advancePayment) || 0,
       advancePaymentMethod: formValue.advancePaymentMethod || 'cash',
@@ -647,8 +707,9 @@ export class BookingModalComponent implements OnInit {
       this.isLoadingHotelInfo = false;
     }
     
-    const checkInDate = new Date(formValue.checkInDate);
-    const checkOutDate = formValue.checkOutDate ? new Date(formValue.checkOutDate) : null;
+    const checkInDate = new Date(toRealInstantIso(formValue.checkInDate));
+    const checkOutDate = formValue.checkOutDate ? new Date(toRealInstantIso(formValue.checkOutDate)) : null;
+    const hotelClock = { timeZone: 'Asia/Ho_Chi_Minh' };
     
     const rateTypeLabels: {[key: string]: string} = {
       'hourly': 'Theo giờ',
@@ -773,7 +834,8 @@ export class BookingModalComponent implements OnInit {
                   month: '2-digit', 
                   year: 'numeric',
                   hour: '2-digit',
-                  minute: '2-digit'
+                  minute: '2-digit',
+                  ...hotelClock
                 }) }
               ],
               [
@@ -783,13 +845,18 @@ export class BookingModalComponent implements OnInit {
                   month: '2-digit', 
                   year: 'numeric',
                   hour: '2-digit',
-                  minute: '2-digit'
+                  minute: '2-digit',
+                  ...hotelClock
                 }) : 'Chưa xác định' }
               ],
               [
                 { text: 'Hình thức:', bold: true },
                 { text: rateTypeLabels[formValue.rateType] || formValue.rateType }
               ],
+              ...(this.bookingQuote != null ? [[
+                { text: 'Tiền phòng:', bold: true },
+                { text: this.formatCurrency(this.bookingQuote) }
+              ]] : []),
               [
                 { text: 'Tiền đặt trước:', bold: true },
                 { text: this.formatCurrency(formValue.advancePayment || 0) }

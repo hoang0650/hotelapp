@@ -13,6 +13,7 @@ import { take } from 'rxjs/operators';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
+import { priceDetailLines, PriceDetailLine, StayPriceDetails } from '../../utils/checkout-quote';
 
 // Khai báo để TypeScript biết về biến toàn cục pdfMake
 declare global {
@@ -90,6 +91,8 @@ interface InvoiceData {
   };
   guestSource?: string; // Nguồn khách (có thể ở ngoài guestInfo)
   servicesTotal?: number; // Tổng tiền dịch vụ
+  priceDetails?: StayPriceDetails;
+  metadata?: { priceDetails?: StayPriceDetails; [key: string]: any };
   [key: string]: any; // Cho phép có các trường khác
 }
 
@@ -122,6 +125,25 @@ export class InvoiceComponent implements OnInit {
     return this.subtotal + (this.invoiceData?.additionalCharges || 0);
   }
   
+  get serverPriceDetailLines(): PriceDetailLine[] {
+    if (!this.invoiceData) return [];
+    const details: StayPriceDetails | null =
+      this.invoiceData.priceDetails ||
+      this.invoiceData.metadata?.priceDetails ||
+      null;
+    return priceDetailLines(details);
+  }
+
+  private priceDetailPdfBlocks(): any[] {
+    const lines = this.serverPriceDetailLines;
+    if (!lines.length) return [];
+    return [{
+      text: lines.map(line => `${line.label}: ${this.formatCurrency(line.amount)}`).join('\n'),
+      fontSize: 10,
+      margin: [0, 0, 0, 8]
+    }];
+  }
+
   get durationText(): string {
     // Nếu có checkInTime và checkOutTime, tính lại từ đó để đảm bảo chính xác
     if (this.invoiceData.checkInTime && this.invoiceData.checkOutTime) {
@@ -1063,6 +1085,8 @@ export class InvoiceComponent implements OnInit {
           },
           margin: [0, 0, 0, 10]
         },
+
+        ...this.priceDetailPdfBlocks(),
 
         // Tổng kết
         {

@@ -384,6 +384,12 @@
           </tr>
         </tbody>
       </nz-table>
+      <div *ngIf="serverPriceDetailLines.length" style="margin: 8px 0 16px; font-size: 13px;">
+        <div *ngFor="let line of serverPriceDetailLines" style="display: flex; justify-content: space-between;">
+          <span>{{ line.label }}</span>
+          <span>{{ formatCurrency(line.amount) }}</span>
+        </div>
+      </div>
 
       <!-- Hiển thị ghi chú nếu có -->
       <div *ngIf="invoiceData.notes" class="notes">

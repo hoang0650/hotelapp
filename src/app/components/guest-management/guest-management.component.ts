@@ -13,6 +13,7 @@ import { NzModalService } from 'ng-zorro-antd/modal';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { TranslateService } from '@ngx-translate/core';
+import { pickedClockToHotelOffset } from '../../utils/checkout-quote';
 
 @Component({
   selector: 'app-guest-management',
@@ -816,8 +817,8 @@ export class GuestManagementComponent implements OnInit {
       
       this.guestsService.createBookingForGuest(this.selectedGuest._id!, {
         roomId: formValue.roomId,
-        checkInDate: formValue.checkInDate,
-        checkOutDate: formValue.checkOutDate,
+        checkInDate: pickedClockToHotelOffset(formValue.checkInDate),
+        checkOutDate: formValue.checkOutDate ? pickedClockToHotelOffset(formValue.checkOutDate) : undefined,
         rateType: formValue.rateType,
         advancePayment: formValue.advancePayment || 0,
         notes: formValue.notes || '',
