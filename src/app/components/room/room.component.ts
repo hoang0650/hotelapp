@@ -3402,6 +3402,13 @@ export class RoomComponent implements OnInit, OnDestroy, DoCheck {
 
     const cacheKey = `${room._id}_${checkinTime.getTime()}_${rawRateType}`;
 
+    // Hiển thị ngay giá dự phòng từ dữ liệu phòng trong lúc chờ quote chuẩn từ
+    // server. Quote thành công phía dưới luôn ghi đè giá này.
+    const fallbackPrice = this.calculateRoomPriceFallback(room, checkinTime, checkoutTime, rawRateType);
+    if (!this.roomPriceMap.has(cacheKey) || forceReload) {
+      this.roomPriceMap.set(cacheKey, fallbackPrice);
+    }
+
     if (!forceReload && this.roomPriceCache.has(cacheKey)) {
       return;
     }
@@ -3425,28 +3432,72 @@ export class RoomComponent implements OnInit, OnDestroy, DoCheck {
     }).subscribe({
       next: (priceResponse) => {
         const roomPrice = roomChargeFromQuote(priceResponse);
-        this.roomPriceCache.set(cacheKey, roomPrice);
-        this.roomPriceMap.set(cacheKey, roomPrice);
+        // Một backend cũ có thể trả 200 nhưng roomPriceTotal = 0 khi chưa nối
+        // đúng PriceConfig. Không để response rỗng đó ghi đè giá phòng hợp lệ.
+        const displayPrice = roomPrice > 0 || fallbackPrice === 0 ? roomPrice : fallbackPrice;
+        this.roomPriceCache.set(cacheKey, displayPrice);
+        this.roomPriceMap.set(cacheKey, displayPrice);
         this.roomPriceCache.delete(loadingKey);
         this.scheduleDisplayRebuild();
       },
       error: (error) => {
         console.error(`[loadRoomPriceFromAPI] Error loading price for room ${room.roomNumber}:`, error);
         this.roomPriceCache.delete(loadingKey);
-        if (!this.roomPriceMap.has(cacheKey)) {
-          this.roomPriceCache.set(cacheKey, 0);
-          this.roomPriceMap.set(cacheKey, 0);
-        }
+        // Không ghi đè thành 0 khi API tạm lỗi. Giữ giá dự phòng để card phòng
+        // vẫn phản ánh đúng thời lượng và cấu hình giá hiện có.
+        const currentFallback = this.calculateRoomPriceFallback(room, checkinTime, new Date(), rawRateType);
+        this.roomPriceMap.set(cacheKey, currentFallback);
         this.scheduleDisplayRebuild();
       }
     });
   }
 
-  // Chỉ số đã quote từ server. Không tính phụ thu local.
+  private positiveRoomPrice(...values: unknown[]): number {
+    for (const value of values) {
+      const amount = Number(value);
+      if (Number.isFinite(amount) && amount > 0) return amount;
+    }
+    return 0;
+  }
+
+  /**
+   * Giá dự phòng cho bảng phòng khi endpoint quote chưa trả về.
+   * Checkout vẫn dùng quote phía server làm nguồn sự thật cuối cùng.
+   */
+  private calculateRoomPriceFallback(room: Room, checkinTime: Date, checkoutTime: Date, rateType: string): number {
+    const durationMinutes = Math.max(0, Math.floor((checkoutTime.getTime() - checkinTime.getTime()) / 60000));
+    const normalizedRateType = String(rateType || 'hourly').toLowerCase();
+
+    if (normalizedRateType === 'hourly') {
+      const firstHourPrice = this.positiveRoomPrice(room.firstHourRate, room.pricing?.hourly);
+      const additionalHourPrice = this.positiveRoomPrice(room.additionalHourRate, room.pricing?.hourly, firstHourPrice);
+      if (!firstHourPrice && !additionalHourPrice) return 0;
+
+      const gracePeriodMinutes = Number(room.priceSettings?.gracePeriodMinutes ?? 15);
+      if (durationMinutes <= 60) return firstHourPrice;
+
+      const afterFirstHour = durationMinutes - 60;
+      const completeAdditionalHours = Math.floor(afterFirstHour / 60);
+      const remainingMinutes = afterFirstHour % 60;
+      const billableAdditionalHours = completeAdditionalHours + (remainingMinutes > gracePeriodMinutes ? 1 : 0);
+      return Math.round(firstHourPrice + billableAdditionalHours * additionalHourPrice);
+    }
+
+    const periodPrice = normalizedRateType === 'weekly'
+      ? room.pricing?.weekly
+      : normalizedRateType === 'monthly'
+        ? room.pricing?.monthly
+        : normalizedRateType === 'nightly'
+          ? room.pricing?.nightly
+          : room.pricing?.daily;
+    return Math.round(this.positiveRoomPrice(periodPrice));
+  }
+
+  // Ưu tiên quote server; nếu chưa có thì tính giá dự phòng từ cấu hình phòng.
   private getRoomPrice(room: Room, checkinTime: Date | null, rateType: string): number {
     if (!room._id || !checkinTime) return 0;
     const cacheKey = `${room._id}_${checkinTime.getTime()}_${rateType}`;
-    return this.roomPriceMap.get(cacheKey) ?? 0;
+    return this.roomPriceMap.get(cacheKey) ?? this.calculateRoomPriceFallback(room, checkinTime, new Date(), rateType);
   }
   
   // Lấy thông tin checkin của phòng đang có khách
