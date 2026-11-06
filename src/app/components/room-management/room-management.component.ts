@@ -344,12 +344,16 @@ export class RoomManagementComponent implements OnInit, OnDestroy {
       this.roomForm.get('pricing.hourly')?.disable();
       this.roomForm.get('pricing.daily')?.disable();
       this.roomForm.get('pricing.nightly')?.disable();
+      this.roomForm.get('pricing.weekly')?.disable();
+      this.roomForm.get('pricing.monthly')?.disable();
       this.roomForm.get('firstHourRate')?.disable();
       this.roomForm.get('additionalHourRate')?.disable();
     } else {
       this.roomForm.get('pricing.hourly')?.enable();
       this.roomForm.get('pricing.daily')?.enable();
       this.roomForm.get('pricing.nightly')?.enable();
+      this.roomForm.get('pricing.weekly')?.enable();
+      this.roomForm.get('pricing.monthly')?.enable();
       this.roomForm.get('firstHourRate')?.enable();
       this.roomForm.get('additionalHourRate')?.enable();
     }

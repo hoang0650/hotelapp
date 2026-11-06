@@ -279,6 +279,12 @@ export class RoomCategoryComponent implements OnInit, OnChanges, OnDestroy {
         lateCheckoutSurcharge: Number(nightlyRates.lateCheckoutSurcharge) || 0,
         autoDailyHours: Number(nightlyRates.autoDailyHours) || 24
       },
+      weeklyRates: {
+        standardPrice: Number(pricing.weekly) || 0
+      },
+      monthlyRates: {
+        standardPrice: Number(pricing.monthly) || 0
+      },
       updateRooms: priceConfig.updateRooms === true
     };
   }
